@@ -260,7 +260,7 @@ namespace Akka.Streams.Tests.Implementation
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
-            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
+            var result = await t.Item2.WaitAsync(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -275,7 +275,7 @@ namespace Akka.Streams.Tests.Implementation
 
             var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
             var materialized = t.Item1;
-            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
+            var result = await t.Item2.WaitAsync(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -290,7 +290,7 @@ namespace Akka.Streams.Tests.Implementation
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
-            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
+            var result = await t.Item2.WaitAsync(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -306,7 +306,7 @@ namespace Akka.Streams.Tests.Implementation
             var m = g.ToMaterialized(Sink.Seq<int>(), Keep.Both);
             var t = m.Run(_materializer);
             var materialized = t.Item1;
-            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
+            var result = await t.Item2.WaitAsync(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -321,7 +321,7 @@ namespace Akka.Streams.Tests.Implementation
 
             var t = g.RunWith(Source.Single(42).MapMaterializedValue(_ => 1), Sink.Seq<int>(), _materializer);
             var materialized = t.Item1;
-            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
+            var result = await t.Item2.WaitAsync(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);
@@ -336,7 +336,7 @@ namespace Akka.Streams.Tests.Implementation
 
             var t = g.ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
             var materialized = t.Item1;
-            var result = await t.Item2.ShouldCompleteWithin(VeryPatient);
+            var result = await t.Item2.WaitAsync(VeryPatient);
 
             materialized.Should().Be(1);
             result.Count.Should().Be(1);

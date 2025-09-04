@@ -38,7 +38,7 @@ namespace Samples.Cluster.Metrics.Common
                 "/user/factorialBackend-6"
             };
 
-            _backend = Context.System.ActorOf(
+            _backend = Context.ActorOf(
                 new ClusterRouterGroup(
                         local: new AdaptiveLoadBalancingGroup(MixMetricsSelector.Instance),
                         settings: new ClusterRouterGroupSettings(

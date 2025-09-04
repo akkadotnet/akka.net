@@ -22,28 +22,28 @@ namespace Akka.Tests
     {
         public class LifeCycleTestActor : UntypedActor
         {
-            private AtomicCounter generationProvider;
-            private string id;
-            private IActorRef testActor;
-            private int CurrentGeneration;
+            private AtomicCounter _generationProvider;
+            private readonly string _id;
+            private readonly IActorRef _testActor;
+            private readonly int _currentGeneration;
             public LifeCycleTestActor(IActorRef testActor,string id,AtomicCounter generationProvider)
             {
-                this.testActor = testActor;
-                this.id = id;
-                this.generationProvider = generationProvider;
-                this.CurrentGeneration = generationProvider.Next();
+                _testActor = testActor;
+                _id = id;
+                _generationProvider = generationProvider;
+                _currentGeneration = generationProvider.Next();
             }
 
             private void Report(object message)
             {
-                testActor.Tell(((string)message,id,CurrentGeneration));
+                _testActor.Tell(((string)message,_id,_currentGeneration));
             }
 
             protected override void OnReceive(object message)
             {
                 if (message is string s && s == "status")
                 {
-                    testActor.Tell(("OK",id,CurrentGeneration));
+                    _testActor.Tell(("OK",_id,_currentGeneration));
                 }
             }
 
@@ -323,16 +323,16 @@ namespace Akka.Tests
 
         public class KillableActor : UntypedActor
         {
-            private IActorRef testActor;
+            private readonly IActorRef _testActor;
             public KillableActor(IActorRef testActor)
             {
-                this.testActor = testActor;
+                _testActor = testActor;
             }
 
             protected override void PostStop()
             {
                 Debug.WriteLine("inside poststop");
-                testActor.Tell(("Terminated", Self.Path.Name));
+                _testActor.Tell(("Terminated", Self.Path.Name));
             }
 
             protected override void OnReceive(object message)
@@ -378,7 +378,7 @@ namespace Akka.Tests
         }
 
 
-        class MyCustomException : Exception {}
+        private class MyCustomException : Exception {}
 
         [Fact(DisplayName="PreRestart should receive correct cause, message and sender")]
         public async Task Call_PreStart_with_correct_message_and_sender()
@@ -393,7 +393,12 @@ namespace Akka.Tests
                 c.OnPreRestart = (ex, mess, context) =>
                 {
                     TestActor.Tell(ex);
-                    TestActor.Tell(mess);
+                    
+                    // can't relay the Restart back because that will blow up the TestActor
+                    if (mess is not IntentionalRestart)
+                    {
+                        TestActor.Tell(mess);
+                    }
                     TestActor.Tell(context.Sender);
                 };
             });
@@ -404,6 +409,11 @@ namespace Akka.Tests
 
             await ExpectMsgAsync<MyCustomException>();
             await ExpectMsgAsync(message);
+            await ExpectMsgAsync(TestActor);
+            
+            // test the `Restart` built-in message
+            broken.Tell(IntentionalRestart.Instance);
+            await ExpectMsgAsync<IntentionalActorRestartException>();
             await ExpectMsgAsync(TestActor);
         }
     }

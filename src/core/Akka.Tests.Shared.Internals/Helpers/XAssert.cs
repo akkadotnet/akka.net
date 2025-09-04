@@ -22,7 +22,7 @@ namespace Akka.TestKit
         /// </summary>
         public static void Fail(string reason)
         {
-            Assert.True(false, reason);
+            Assert.Fail(reason);
         }
 
         /// <summary>

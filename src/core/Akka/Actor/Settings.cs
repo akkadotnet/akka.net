@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Routing;
+using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor
@@ -27,7 +28,7 @@ namespace Akka.Actor
     {
         private readonly Config _userConfig;
         //internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
-        private Config _fallbackConfig;
+        private readonly AtomicReference<Config> _fallbackConfig;
 
         private void RebuildConfig()
         {
@@ -42,13 +43,20 @@ namespace Akka.Actor
         /// <summary>
         /// Injects a system config at the top of the fallback chain
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The latest config to be added to the front of the <see cref="Settings.Config"/> fallback chain</param>
         public void InjectTopLevelFallback(Config config)
         {
             if (Config.Contains(config)) 
                 return;
 
-            _fallbackConfig = config.SafeWithFallback(_fallbackConfig);
+            while(true)
+            {
+                var oldConfig = _fallbackConfig.Value;
+                var newConfig = config.SafeWithFallback(oldConfig);
+                if (_fallbackConfig.CompareAndSet(oldConfig, newConfig))
+                    break;
+            }
+    
             RebuildConfig();
         }
 
@@ -77,7 +85,7 @@ namespace Akka.Actor
         {
             Setup = setup;
             _userConfig = config;
-            _fallbackConfig = ConfigurationFactory.Default();
+            _fallbackConfig = new AtomicReference<Config>(ConfigurationFactory.Default());
             RebuildConfig();
 
             System = system;

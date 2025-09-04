@@ -8,100 +8,101 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tests.MultiNode;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.Cluster.Tests.MultiNode;
+
+public class ClientDowningNodeThatIsUnreachableMultiNodeConfig : MultiNodeConfig
 {
-    public class ClientDowningNodeThatIsUnreachableMultiNodeConfig : MultiNodeConfig
+    public RoleName First { get; }
+
+    public RoleName Second { get; }
+
+    public RoleName Third { get; }
+
+    public RoleName Fourth { get; }
+
+    public ClientDowningNodeThatIsUnreachableMultiNodeConfig(bool failureDetectorPuppet)
     {
-        public RoleName First { get; private set; }
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
+        Fourth = Role("fourth");
 
-        public RoleName Second { get; private set; }
+        CommonConfig= DebugConfig(false).WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
+    }
+}
 
-        public RoleName Third { get; private set; }
+public class ClientDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode : ClientDowningNodeThatIsUnreachableSpec
+{
+    public ClientDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode()
+        : base(true, typeof(ClientDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode))
+    {
+    }
+}
 
-        public RoleName Fourth { get; private set; }
 
-        public ClientDowningNodeThatIsUnreachableMultiNodeConfig(bool failureDetectorPuppet)
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-            Fourth = Role("fourth");
+public class ClientDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode : ClientDowningNodeThatIsUnreachableSpec
+{
+    public ClientDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode()
+        : base(false, typeof(ClientDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode))
+    {
+    }
+}
 
-            CommonConfig= DebugConfig(false).WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
-        }
+public abstract class ClientDowningNodeThatIsUnreachableSpec : MultiNodeClusterSpec
+{
+    private readonly ClientDowningNodeThatIsUnreachableMultiNodeConfig _config;
+
+    protected ClientDowningNodeThatIsUnreachableSpec(bool failureDetectorPuppet, Type type)
+        : this(new ClientDowningNodeThatIsUnreachableMultiNodeConfig(failureDetectorPuppet), type)
+    {
     }
 
-    class ClientDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode : ClientDowningNodeThatIsUnreachableSpec
+    protected ClientDowningNodeThatIsUnreachableSpec(ClientDowningNodeThatIsUnreachableMultiNodeConfig config, Type type)
+        : base(config, type)
     {
-        public ClientDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode()
-            : base(true, typeof(ClientDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode))
-        {
-        }
+        _config = config;
     }
 
-
-    class ClientDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode : ClientDowningNodeThatIsUnreachableSpec
+    [MultiNodeFact]
+    public async Task Client_of_a_4_node_cluster_must_be_able_to_DOWN_a_node_that_is_UNREACHABLE()
     {
-        public ClientDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode()
-            : base(false, typeof(ClientDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode))
+        var thirdAddress = GetAddress(_config.Third);
+        await AwaitClusterUpAsync(CancellationToken.None, _config.First, _config.Second, _config.Third, _config.Fourth);
+
+        await RunOnAsync(async () =>
         {
-        }
-    }
+            // kill 'third' node
+            await TestConductor.ExitAsync(_config.Third, 0);
+            MarkNodeAsUnavailable(thirdAddress);
 
-    public abstract class ClientDowningNodeThatIsUnreachableSpec : MultiNodeClusterSpec
-    {
-        private readonly ClientDowningNodeThatIsUnreachableMultiNodeConfig _config;
+            // mark 'third' node as DOWN
+            Cluster.Down(thirdAddress);
+            await EnterBarrierAsync("down-third-node");
 
-        protected ClientDowningNodeThatIsUnreachableSpec(bool failureDetectorPuppet, Type type)
-            : this(new ClientDowningNodeThatIsUnreachableMultiNodeConfig(failureDetectorPuppet), type)
+            await AwaitMembersUpAsync(3, ImmutableHashSet.Create(thirdAddress));
+            ClusterView.Members.Any(x => x.Address == thirdAddress).ShouldBeFalse();
+        }, _config.First);
+
+        await RunOnAsync(async () =>
         {
-        }
+            await EnterBarrierAsync("down-third-node");
+        }, _config.Third);
 
-        protected ClientDowningNodeThatIsUnreachableSpec(ClientDowningNodeThatIsUnreachableMultiNodeConfig config, Type type)
-            : base(config, type)
+        await RunOnAsync(async () =>
         {
-            _config = config;
-        }
+            await EnterBarrierAsync("down-third-node");
 
-        [MultiNodeFact()]
-        public void Client_of_a_4_node_cluster_must_be_able_to_DOWN_a_node_that_is_UNREACHABLE()
-        {
-            var thirdAddress = GetAddress(_config.Third);
-            AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth);
+            await AwaitMembersUpAsync(3, ImmutableHashSet.Create(thirdAddress));
+        }, _config.Second, _config.Fourth);
 
-            RunOn(() =>
-            {
-                // kill 'third' node
-                TestConductor.Exit(_config.Third, 0).Wait();
-                MarkNodeAsUnavailable(thirdAddress);
-
-                // mark 'third' node as DOWN
-                Cluster.Down(thirdAddress);
-                EnterBarrier("down-third-node");
-
-                AwaitMembersUp(3, ImmutableHashSet.Create(thirdAddress));
-                ClusterView.Members.Any(x => x.Address == thirdAddress).ShouldBeFalse();
-            }, _config.First);
-
-            RunOn(() =>
-            {
-                EnterBarrier("down-third-node");
-            }, _config.Third);
-
-            RunOn(() =>
-            {
-                EnterBarrier("down-third-node");
-
-                AwaitMembersUp(3, ImmutableHashSet.Create(thirdAddress));
-            }, _config.Second, _config.Fourth);
-
-            EnterBarrier("await-completion");
-        }
+        await EnterBarrierAsync("await-completion");
     }
 }

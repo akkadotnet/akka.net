@@ -222,7 +222,7 @@ namespace Akka.Streams.Tests.IO
                 await p.ExpectMsgAsync(datas[0].ToString());
                 await p.ExpectMsgAsync(datas[1].ToString());
                 await p.ExpectMsgAsync(datas[2].ToString());
-                await completion.ShouldCompleteWithin(3.Seconds());
+                await completion.WaitAsync(3.Seconds());
             }, _materializer);
         }
 
@@ -236,7 +236,8 @@ namespace Akka.Streams.Tests.IO
                     .RunWith(StreamConverters.FromOutputStream(() => new CloseOutputStream(p)), _materializer);
 
                 await p.ExpectMsgAsync("closed");
-                await completion.ShouldThrowWithin<AbruptIOTerminationException>(3.Seconds());
+
+                await AssertThrowsAsync<AbruptIOTerminationException>(() => completion).WaitAsync(3.Seconds());
             }, _materializer);
         }
 
@@ -249,7 +250,7 @@ namespace Akka.Streams.Tests.IO
                 {
                     await Source.Failed<ByteString>(new Exception("Boom!"))
                         .RunWith(StreamConverters.FromOutputStream(() => new OutputStream()), _materializer)
-                        .ShouldCompleteWithin(3.Seconds());
+                        .WaitAsync(3.Seconds());
                 }).Should().ThrowAsync<AbruptIOTerminationException>();
             }, _materializer);
         }
@@ -264,7 +265,7 @@ namespace Akka.Streams.Tests.IO
                     .RunWith(StreamConverters.FromOutputStream(() => new CompletionOutputStream(p)), _materializer);
 
                 await p.ExpectMsgAsync("closed");
-                await completion.ShouldCompleteWithin(3.Seconds());
+                await completion.WaitAsync(3.Seconds());
             }, _materializer);
         }
     }

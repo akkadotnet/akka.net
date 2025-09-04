@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 
 namespace Akka.TestKit
 {
@@ -54,5 +55,13 @@ namespace Akka.TestKit
         /// <param name="format">A template string to display if the assertion fails.</param>
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         void AssertEqual<T>(T expected, T actual, Func<T,T,bool> comparer, string format = "", params object[] args);
+
+        Exception AssertThrows(Action action);
+        
+        TException AssertThrows<TException>(Action action) where TException : Exception;
+        
+        Task<Exception> AssertThrowsAsync(Func<Task> action);
+        
+        Task<TException> AssertThrowsAsync<TException>(Func<Task> action) where TException : Exception;
     }
 }

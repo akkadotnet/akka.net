@@ -4,7 +4,7 @@
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#nullable enable
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -32,8 +32,8 @@ namespace Akka.Actor
         {
             get
             {
-                if (_actor != null)
-                    return _actor.GetType();
+                if (Actor != null)
+                    return Actor.GetType();
                 return GetType();
             }
         }
@@ -41,7 +41,7 @@ namespace Akka.Actor
         private int _currentEnvelopeId;
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API
         /// </summary>
         public int CurrentEnvelopeId
         {
@@ -124,7 +124,7 @@ namespace Akka.Actor
             if (message is IScheduledTellMsg scheduled)
                 message = scheduled.Message;
 
-            var actor = _actor;
+            var actor = Actor;
             var actorType = actor?.GetType();
 
             if (System.Settings.DebugAutoReceive)
@@ -132,8 +132,17 @@ namespace Akka.Actor
 
             switch (message)
             {
+                case ActorSelectionMessage selectionMessage:
+                    ReceiveSelection(selectionMessage);
+                    break;
+                case Identify identify:
+                    HandleIdentity(identify);
+                    break;
                 case Terminated terminated:
                     ReceivedTerminated(terminated);
+                    break;
+                case PoisonPill _:
+                    HandlePoisonPill();
                     break;
                 case AddressTerminated terminated:
                     AddressTerminated(terminated.Address);
@@ -141,16 +150,18 @@ namespace Akka.Actor
                 case Kill _:
                     Kill();
                     break;
-                case PoisonPill _:
-                    HandlePoisonPill();
-                    break;
-                case ActorSelectionMessage selectionMessage:
-                    ReceiveSelection(selectionMessage);
-                    break;
-                case Identify identify:
-                    HandleIdentity(identify);
+                case Akka.Actor.IntentionalRestart:
+                    TriggerIntentionalRestart();
                     break;
             }
+        }
+
+        /// <summary>
+        /// Done in response to receiving a <see cref="IntentionalRestart"/> message.
+        /// </summary>
+        private static void TriggerIntentionalRestart()
+        {
+            throw new IntentionalActorRestartException();
         }
 
         /// <summary>
@@ -182,13 +193,13 @@ namespace Akka.Actor
             if (message is IScheduledTellMsg scheduled)
                 message = scheduled.Message;
             
-            var wasHandled = _actor.AroundReceive(_state.GetCurrentBehavior(), message);
+            var wasHandled = Actor!.AroundReceive(_state.GetCurrentBehavior(), message);
 
-            if (System.Settings.AddLoggingReceive && _actor is ILogReceive)
+            if (System.Settings.AddLoggingReceive && Actor is ILogReceive)
             {
                 //TODO: akka alters the receive handler for logging, but the effect is the same. keep it this way?
-                var msg = "received " + (wasHandled ? "handled" : "unhandled") + " message " + message + " from " + Sender.Path;
-                Publish(new Debug(Self.Path.ToString(), _actor.GetType(), msg));
+                var msg = "received " + (wasHandled ? "handled" : "unhandled") + " message " + message + " from " + Sender?.Path;
+                Publish(new Debug(Self.Path.ToString(), Actor.GetType(), msg));
             }
         }
 
@@ -207,7 +218,13 @@ namespace Akka.Actor
         private int CalculateState()
         {
             if(IsWaitingForChildren) return SuspendedWaitForChildrenState;
-            if(Mailbox.IsSuspended()) return SuspendedState;
+
+            global::System.Diagnostics.Debug.Assert(
+                condition: Mailbox != null, 
+                message: $"{nameof(Mailbox)} should never be null at this point. " +
+                         $"A null {nameof(Mailbox)} should have triggered a catastrophic actor initialization failure " +
+                         "and killed this actor before ever reaching this point.");
+            if(Mailbox!.IsSuspended()) return SuspendedState;
             return DefaultState;
         }
 
@@ -286,7 +303,10 @@ namespace Akka.Actor
                             Supervise(s.Child, s.Async);
                             break;
                         default:
-                            throw new NotSupportedException($"Unknown message {message.GetType().Name}");
+                            global::System.Diagnostics.Debug.Assert(
+                                condition: message != null, 
+                                message: $"Something really bad happened in {nameof(SysMsgInvokeAll)}, {nameof(message)} should never be null");
+                            throw new NotSupportedException($"Unknown message {message!.GetType().Name}");
                     }
                 }
                 catch (Exception cause)
@@ -347,7 +367,7 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="mailbox">TBD</param>
         /// <returns>TBD</returns>
-        internal Mailbox SwapMailbox(Mailbox mailbox)
+        internal Mailbox? SwapMailbox(Mailbox mailbox)
         {
             Mailbox.DebugPrint("{0} Swapping mailbox to {1}", Self, mailbox);
             var ret = _mailboxDoNotCallMeDirectly;
@@ -432,7 +452,7 @@ namespace Akka.Actor
         /// <summary>
         /// Overrideable in order to support issues such as https://github.com/petabridge/phobos-issues/issues/82
         /// </summary>
-        protected virtual ActorStarted CreateActorStartedEvent()
+        protected virtual ActorStarted? CreateActorStartedEvent()
         {
             return new ActorStarted(Self, Props.Type);
         }
@@ -440,32 +460,37 @@ namespace Akka.Actor
         /// <summary>
         /// Overrideable in order to support issues such as https://github.com/petabridge/phobos-issues/issues/82
         /// </summary>
-        protected virtual ActorStopped CreateActorStoppedEvent()
+        protected virtual ActorStopped? CreateActorStoppedEvent()
         {
             return new ActorStopped(Self, Props.Type);
         }
 
-        private void Create(Exception failure)
+        private void Create(Exception? failure)
         {
             if (failure != null)
                 throw failure;
             try
             {
                 var created = NewActor();
-                _actor = created;
+                Actor = created;
                 UseThreadContext(() => created.AroundPreStart());
                 CheckReceiveTimeout();
                 if (System.Settings.DebugLifecycle)
                     Publish(new Debug(Self.Path.ToString(), created.GetType(), "Started (" + created + ")"));
-                if(System.Settings.EmitActorTelemetry)
-                    System.EventStream.Publish(CreateActorStartedEvent());
+                if (System.Settings.EmitActorTelemetry)
+                {
+                    var actorStarted = CreateActorStartedEvent();
+                    if(actorStarted != null)
+                        System.EventStream.Publish(actorStarted);
+                }
+                   
             }
             catch (Exception e)
             {
-                if (_actor != null)
+                if (Actor != null)
                 {
-                    ClearActor(_actor);
-                    _actor = null; // ensure that we know that we failed during creation
+                    ClearActor(Actor);
+                    Actor = null; // ensure that we know that we failed during creation
                 }
                 throw new ActorInitializationException(_self, "Exception during creation", e);
             }
@@ -528,7 +553,7 @@ namespace Akka.Actor
             }
             catch (Exception e)
             {
-                _systemImpl.EventStream.Publish(new Error(e, _self.Parent.ToString(), ActorType, "Swallowing exception during message send"));
+                SystemImpl.EventStream.Publish(new Error(e, _self.Parent.ToString(), ActorType, "Swallowing exception during message send"));
             }
         }
 

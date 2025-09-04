@@ -35,6 +35,8 @@ namespace Akka.TestKit.Xunit2.Internals
             Receive<InitializeLogger>(e =>
             {
                 e.LoggingBus.Subscribe(Self, typeof (LogEvent));
+                // Send response to maintain protocol - LoggerInitialized implements IDeadLetterSuppression
+                // so it won't interfere with dead letter detection or TestActor message expectations
                 Sender.Tell(new LoggerInitialized());
             });
         }
@@ -46,17 +48,13 @@ namespace Akka.TestKit.Xunit2.Internals
                 _output.WriteLine(e.ToString());
             }
             catch (FormatException ex)
+                when (e.Message is LogMessage msg)
             {
-                if (e.Message is LogMessage msg)
-                {
-                    var message =
-                        $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Unformatted())}]";
-                    if (e.Cause != null)
-                        throw new AggregateException(message, ex, e.Cause);
-                    throw new FormatException(message, ex);
-                }
-
-                throw;
+                var message =
+                    $"Received a malformed formatted message. Log level: [{e.LogLevel()}], Template: [{msg.Format}], args: [{string.Join(",", msg.Unformatted())}]";
+                if (e.Cause != null)
+                    throw new AggregateException(message, ex, e.Cause);
+                throw new FormatException(message, ex);
             }
             catch (InvalidOperationException ie)
             {

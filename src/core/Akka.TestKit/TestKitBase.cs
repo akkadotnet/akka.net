@@ -116,6 +116,7 @@ namespace Akka.TestKit
         {
             _assertions = assertions ?? throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
             
+            // ReSharper disable once VirtualMemberCallInConstructor
             InitializeTest(system, config, actorSystemName, testActorName);
         }
 
@@ -170,10 +171,11 @@ namespace Akka.TestKit
             if (string.IsNullOrEmpty(testActorName))
                 testActorName = "testActor" + _testActorId.IncrementAndGet();
 
-            var testActor = CreateTestActor(system, testActorName);
+            var testActor = CreateInitialTestActor(system, testActorName);
 
-            // Wait for the testactor to start
-            WaitUntilTestActorIsReady(testActor, _testState.TestKitSettings);
+            // For async initialization, don't wait in constructor to avoid deadlock
+            // The TestActor property getter will ensure it's ready when first accessed
+            _testState.TestActor = testActor;
 
             if (this is not INoImplicitSender)
             {
@@ -187,33 +189,6 @@ namespace Akka.TestKit
             }
             SynchronizationContext.SetSynchronizationContext(
                 new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
-
-            _testState.TestActor = testActor;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        // Do not convert this method to async, it is being called inside the constructor.
-        private static void WaitUntilTestActorIsReady(IActorRef testActor, TestKitSettings settings)
-        {
-            var deadline = settings.TestKitStartupTimeout;
-            var stopwatch = Stopwatch.StartNew();
-            var ready = false;
-            try
-            {
-                while (stopwatch.Elapsed < deadline)
-                {
-                    ready = testActor is not IRepointableRef repRef || repRef.IsStarted;
-                    if (ready) break;
-                    Thread.Sleep(10);
-                }
-            }
-            finally
-            {
-                stopwatch.Stop();
-            }
-
-            if (!ready)
-                throw new Exception("Timeout waiting for test actor to be ready");
         }
         
         /// <summary>
@@ -698,10 +673,31 @@ namespace Akka.TestKit
             return CreateTestActor(_testState.System, name);
         }
 
+        private IActorRef CreateInitialTestActor(ActorSystem system, string name)
+        {
+            // Fix both serialization and deadlock issues:
+            // 1. Use isSystemService=true to skip serialization checks
+            // 2. Use isAsync=false to create LocalActorRef synchronously (avoids RepointableActorRef deadlock)
+            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
+                .WithDispatcher("akka.test.test-actor.dispatcher");
+            
+            var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
+            // Use the new AttachChildWithAsync method to create TestActor synchronously
+            var testActor = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
+                testActorProps, 
+                isSystemService: true,  // Skip serialization checks
+                isAsync: false,         // Create synchronously to avoid deadlock
+                name: name);
+            
+            return testActor;
+        }
+        
         private IActorRef CreateTestActor(ActorSystem system, string name)
         {
             var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
+            
+            // For additional test actors, always use the standard SystemActorOf
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;
         }

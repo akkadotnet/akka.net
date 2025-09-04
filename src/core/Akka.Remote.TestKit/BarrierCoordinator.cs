@@ -483,7 +483,7 @@ namespace Akka.Remote.TestKit
             _failed = true;
         }
 
-        protected void InitFSM()
+        private void InitFSM()
         {
             StartWith(State.Idle, new Data(ImmutableHashSet.Create<Controller.NodeInfo>(), "", ImmutableHashSet.Create<IActorRef>(), null));
 

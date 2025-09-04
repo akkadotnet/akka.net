@@ -113,10 +113,13 @@ namespace Akka.Actor
             ActorRefProvider = actorRefProvider;
         }
 
+#pragma warning disable CS1574, CS1584, CS1581, CS1580
         /// <summary>
         /// Configuration to use for the <see cref="ActorSystem"/>. If no <see cref="Config"/> is given, the default reference
-        /// configuration will be loaded via <see cref="ConfigurationFactory.Load"/>.
+        /// configuration will be loaded via <see cref="ConfigurationFactory.Default()"/> in .NET Core or
+        /// <see cref="ConfigurationFactory.Load()"/> in .NET Standard.
         /// </summary>
+#pragma warning restore CS1574, CS1584, CS1581, CS1580
         public Option<Config> Config { get; }
 
         /// <summary>

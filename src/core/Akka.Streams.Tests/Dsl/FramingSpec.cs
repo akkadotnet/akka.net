@@ -204,7 +204,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Grouped(1000)
                     .RunWith(Sink.First<IEnumerable<string>>(), Materializer);
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.Should().ContainSingle(s => s.Equals("I have no end"));
         }
 
@@ -443,7 +443,7 @@ namespace Akka.Streams.Tests.Dsl
             await Awaiting(async () => await result)
                 .Should().ThrowAsync<Framing.FramingException>()
                 .WithMessage("Decoded frame header reported negative size -4")
-                .ShouldCompleteWithin(3.Seconds());
+                .WaitAsync(3.Seconds());
         }
         
         [Fact]
@@ -459,7 +459,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(Flow.Create<ByteString>().Via(Framing.LengthField(4, 0, 1000, ByteOrder.LittleEndian, ComputeFrameSize)))
                 .RunWith(Sink.Seq<ByteString>(), Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            var complete = await result.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(ImmutableArray.Create(bs));
         }
         
@@ -478,7 +478,7 @@ namespace Akka.Streams.Tests.Dsl
             await Awaiting(async () => await result)
                 .Should().ThrowAsync<Framing.FramingException>()
                 .WithMessage("Computed frame size 3 is less than minimum chunk size 4")
-                .ShouldCompleteWithin(3.Seconds());
+                .WaitAsync(3.Seconds());
         }
 
         [Fact]
@@ -494,7 +494,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(Flow.Create<ByteString>().Via(Framing.LengthField(4, 1000)))
                 .RunWith(Sink.Seq<ByteString>(), Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            var complete = await result.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(bytes.ToImmutableList());
         }
     }

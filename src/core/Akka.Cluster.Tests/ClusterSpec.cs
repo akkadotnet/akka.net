@@ -206,7 +206,7 @@ namespace Akka.Cluster.Tests
             var removed = (ClusterEvent.MemberRemoved)await probe.FishForMessageAsync(m => m is ClusterEvent.MemberRemoved);
             removed.PreviousStatus.Should().BeEquivalentTo(MemberStatus.Exiting);
 
-            await leaveTask.ShouldCompleteWithin(RemainingOrDefault);
+            await leaveTask.WaitAsync(RemainingOrDefault);
 
             // A second call for LeaveAsync should complete immediately (should be the same task as before)
             Cluster.Get(sys2).LeaveAsync().IsCompleted.Should().BeTrue();
@@ -236,7 +236,7 @@ namespace Akka.Cluster.Tests
             });
 
             // LeaveAsync() task expected to complete immediately
-            await _cluster.LeaveAsync().ShouldCompleteWithin(RemainingOrDefault);
+            await _cluster.LeaveAsync().WaitAsync(RemainingOrDefault);
         }
 
         [Fact]
@@ -325,14 +325,14 @@ namespace Akka.Cluster.Tests
 
             try
             {
-                await _cluster.JoinAsync(_selfAddress).ShouldCompleteWithin(timeout);
+                await _cluster.JoinAsync(_selfAddress).WaitAsync(timeout);
                 LeaderActions();
                 // Member should already be up
                 _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, typeof(ClusterEvent.IMemberEvent));
                 await ExpectMsgAsync<ClusterEvent.MemberUp>();
 
                 // join second time - response should be immediate success
-                await _cluster.JoinAsync(_selfAddress).ShouldCompleteWithin(100.Milliseconds());
+                await _cluster.JoinAsync(_selfAddress).WaitAsync(100.Milliseconds());
             }
             finally
             {
@@ -347,7 +347,7 @@ namespace Akka.Cluster.Tests
                     await task;
                 })
                 .Should().ThrowAsync<ClusterJoinFailedException>()
-                .ShouldCompleteWithin(timeout);
+                .WaitAsync(timeout);
         }
 
         [Fact]
@@ -371,7 +371,7 @@ namespace Akka.Cluster.Tests
                         await task;
                     })
                     .Should().ThrowAsync<ClusterJoinFailedException>()
-                    .ShouldCompleteWithin(15.Seconds());
+                    .WaitAsync(15.Seconds());
             }
             finally
             {
@@ -386,14 +386,14 @@ namespace Akka.Cluster.Tests
 
             try
             {
-                await _cluster.JoinSeedNodesAsync(new[] { _selfAddress }).ShouldCompleteWithin(timeout);
+                await _cluster.JoinSeedNodesAsync(new[] { _selfAddress }).WaitAsync(timeout);
                 LeaderActions();
                 // Member should already be up
                 _cluster.Subscribe(TestActor, ClusterEvent.InitialStateAsEvents, typeof(ClusterEvent.IMemberEvent));
                 await ExpectMsgAsync<ClusterEvent.MemberUp>();
 
                 // join second time - response should be immediate success
-                await _cluster.JoinSeedNodesAsync(new[] { _selfAddress }).ShouldCompleteWithin(100.Milliseconds());
+                await _cluster.JoinSeedNodesAsync(new[] { _selfAddress }).WaitAsync(100.Milliseconds());
             }
             finally
             {
@@ -408,7 +408,7 @@ namespace Akka.Cluster.Tests
                     await ExpectMsgAsync<ClusterEvent.MemberRemoved>();
                 })
                 .Should().ThrowAsync<ClusterJoinFailedException>()
-                .ShouldCompleteWithin(timeout);
+                .WaitAsync(timeout);
         }
 
         [Fact]
@@ -432,7 +432,7 @@ namespace Akka.Cluster.Tests
                         await task;
                     })
                     .Should().ThrowAsync<ClusterJoinFailedException>()
-                    .ShouldCompleteWithin(15.Seconds());
+                    .WaitAsync(15.Seconds());
             }
             finally
             {
@@ -478,7 +478,7 @@ namespace Akka.Cluster.Tests
                 var removed = (ClusterEvent.MemberRemoved)await probe.FishForMessageAsync(m => m is ClusterEvent.MemberRemoved);
                 new [] {MemberStatus.Exiting, MemberStatus.Leaving}.Should().Contain(removed.PreviousStatus);
                 
-                await task.ShouldCompleteWithin(3.Seconds());
+                await task.WaitAsync(3.Seconds());
             }
             finally
             {
@@ -538,7 +538,7 @@ namespace Akka.Cluster.Tests
                 var probe = CreateTestProbe(sys2);
                 Cluster.Get(sys2).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
                 await probe.ExpectMsgAsync<ClusterEvent.CurrentClusterState>();
-                await Cluster.Get(sys2).JoinAsync(Cluster.Get(sys2).SelfAddress).ShouldCompleteWithin(10.Seconds());
+                await Cluster.Get(sys2).JoinAsync(Cluster.Get(sys2).SelfAddress).WaitAsync(10.Seconds());
                 await probe.ExpectMsgAsync<ClusterEvent.MemberUp>();
 
                 Cluster.Get(sys2).Leave(Cluster.Get(sys2).SelfAddress);
@@ -547,7 +547,7 @@ namespace Akka.Cluster.Tests
                 // MemberExited might not be published before MemberRemoved
                 var removed = (ClusterEvent.MemberRemoved)await probe.FishForMessageAsync(m => m is ClusterEvent.MemberRemoved);
                 removed.PreviousStatus.Should().BeEquivalentTo(MemberStatus.Exiting);
-                await sys2.WhenTerminated.ShouldCompleteWithin(10.Seconds());
+                await sys2.WhenTerminated.WaitAsync(10.Seconds());
                 Cluster.Get(sys2).IsTerminated.Should().BeTrue();
                 CoordinatedShutdown.Get(sys2).ShutdownReason.Should().BeOfType<CoordinatedShutdown.ClusterLeavingReason>();
             }
@@ -573,14 +573,14 @@ namespace Akka.Cluster.Tests
                 var probe = CreateTestProbe(sys3);
                 Cluster.Get(sys3).Subscribe(probe.Ref, typeof(ClusterEvent.IMemberEvent));
                 await probe.ExpectMsgAsync<ClusterEvent.CurrentClusterState>();
-                await Cluster.Get(sys3).JoinAsync(Cluster.Get(sys3).SelfAddress).ShouldCompleteWithin(10.Seconds());
+                await Cluster.Get(sys3).JoinAsync(Cluster.Get(sys3).SelfAddress).WaitAsync(10.Seconds());
                 await probe.ExpectMsgAsync<ClusterEvent.MemberUp>();
 
                 Cluster.Get(sys3).Down(Cluster.Get(sys3).SelfAddress);
 
                 await probe.ExpectMsgAsync<ClusterEvent.MemberDowned>();
                 await probe.ExpectMsgAsync<ClusterEvent.MemberRemoved>();
-                await sys3.WhenTerminated.ShouldCompleteWithin(10.Seconds());
+                await sys3.WhenTerminated.WaitAsync(10.Seconds());
                 Cluster.Get(sys3).IsTerminated.Should().BeTrue();
                 CoordinatedShutdown.Get(sys3).ShutdownReason.Should().BeOfType<CoordinatedShutdown.ClusterDowningReason>();
             }

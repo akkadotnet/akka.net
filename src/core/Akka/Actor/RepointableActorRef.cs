@@ -20,46 +20,47 @@ using Akka.Util.Internal.Collections;
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// A reference to an actor that can be "repointed" to different actor cells during initialization.
+    /// This is used for actors whose underlying implementation can change during startup.
     /// </summary>
     public class RepointableActorRef : ActorRefWithCell, IRepointableRef
     {
         private volatile ICell _underlying_DoNotCallMeDirectly;
         private volatile ICell _lookup_DoNotCallMeDirectly;
         /// <summary>
-        /// TBD
+        /// The actor system that owns this actor reference.
         /// </summary>
         protected readonly ActorSystemImpl System;
         /// <summary>
-        /// TBD
+        /// The props used to create the actor.
         /// </summary>
         protected readonly Props Props;
         /// <summary>
-        /// TBD
+        /// The message dispatcher used by this actor.
         /// </summary>
         protected readonly MessageDispatcher Dispatcher;
         /// <summary>
-        /// TBD
+        /// The mailbox type used by this actor.
         /// </summary>
         internal readonly MailboxType MailboxType; // used in unit tests, hence why it's internal
         /// <summary>
-        /// TBD
+        /// The supervisor of this actor.
         /// </summary>
         protected readonly IInternalActorRef Supervisor;
         /// <summary>
-        /// TBD
+        /// The actor path of this actor.
         /// </summary>
         protected readonly ActorPath _path;
 
         /// <summary>
-        /// TBD
+        /// Creates a new RepointableActorRef with the specified parameters.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <param name="mailboxType">TBD</param>
-        /// <param name="supervisor">TBD</param>
-        /// <param name="path">TBD</param>
+        /// <param name="system">The actor system that owns this actor reference.</param>
+        /// <param name="props">The props used to create the actor.</param>
+        /// <param name="dispatcher">The message dispatcher used by this actor.</param>
+        /// <param name="mailboxType">The mailbox type used by this actor.</param>
+        /// <param name="supervisor">The supervisor of this actor.</param>
+        /// <param name="path">The actor path of this actor.</param>
         public RepointableActorRef(ActorSystemImpl system, Props props, MessageDispatcher dispatcher, MailboxType mailboxType, IInternalActorRef supervisor, ActorPath path)
         {
             System = system;
@@ -71,16 +72,16 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the underlying cell for this actor reference.
         /// </summary>
         public override ICell Underlying { get { return _underlying_DoNotCallMeDirectly; } }
         /// <summary>
-        /// TBD
+        /// Gets the lookup cell for this actor reference, which is used for child lookup operations.
         /// </summary>
         public ICell Lookup { get { return _lookup_DoNotCallMeDirectly; } }
 
         /// <summary>
-        /// TBD
+        /// Indicates whether this actor reference is terminated.
         /// </summary>
         public override bool IsTerminated
         {
@@ -89,9 +90,9 @@ namespace Akka.Actor
 
 
         /// <summary>
-        /// TBD
+        /// Swaps the underlying cell of this actor reference with the provided cell.
         /// </summary>
-        /// <param name="cell">TBD</param>
+        /// <param name="cell">The new cell to use.</param>
         public void SwapUnderlying(ICell cell)
         {
 #pragma warning disable 0420
@@ -113,9 +114,9 @@ namespace Akka.Actor
         /// supervisor that we exist so that he can create the real Cell in
         /// handleSupervise().
         /// </summary>
-        /// <param name="async">TBD</param>
+        /// <param name="async">Whether to initialize asynchronously or synchronously.</param>
         /// <exception cref="IllegalStateException">This exception is thrown if this function is called more than once.</exception>
-        /// <returns>TBD</returns>
+        /// <returns>This actor reference for fluent chaining.</returns>
         public RepointableActorRef Initialize(bool async)
         {
             var underlying = Underlying;
@@ -166,9 +167,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a new ActorCell for this actor reference.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The created ActorCell.</returns>
         protected virtual ActorCell NewCell()
         {
             var actorCell = new ActorCell(System, this, Props, Dispatcher, Supervisor);
@@ -177,64 +178,12 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the path of this actor reference.
         /// </summary>
         public override ActorPath Path { get { return _path; } }
 
         /// <summary>
-        /// TBD
-        /// </summary>
-        public override IInternalActorRef Parent { get { return Underlying.Parent; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override IActorRefProvider Provider { get { return System.Provider; } }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override bool IsLocal { get { return Underlying.IsLocal; } }
-
-
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override void Start()
-        {
-            //Intentionally left blank
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public override void Suspend()
-        {
-            Underlying.Suspend();
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        public override void SendSystemMessage(ISystemMessage message)
-        {
-            Underlying.SendSystemMessage(message);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="causedByFailure">TBD</param>
-        public override void Resume(Exception causedByFailure = null)
-        {
-            Underlying.Resume(causedByFailure);
-        }
-
-
-        /// <summary>
-        /// TBD
+        /// Stops the actor by sending a <see cref="Terminate"/> system message.
         /// </summary>
         public override void Stop()
         {
@@ -242,16 +191,42 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a system message to the underlying actor cell.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="message">The system message to send.</param>
+        public override void SendSystemMessage(ISystemMessage message)
+        {
+            Underlying.SendSystemMessage(message);
+        }
+
+        /// <summary>
+        /// Resumes the actor after being suspended.
+        /// </summary>
+        /// <param name="causedByFailure">The exception that caused the actor to be suspended, if any.</param>
+        public override void Resume(Exception causedByFailure = null)
+        {
+            Underlying.Resume(causedByFailure);
+        }
+
+        /// <summary>
+        /// Suspends the actor temporarily by sending a Suspend system message.
+        /// </summary>
+        public override void Suspend()
+        {
+            Underlying.Suspend();
+        }
+
+        /// <summary>
+        /// Restarts the actor by sending a Recreate system message with the specified cause.
+        /// </summary>
+        /// <param name="cause">The exception that caused the restart.</param>
         public override void Restart(Exception cause)
         {
             Underlying.Restart(cause);
         }
 
         /// <summary>
-        /// TBD
+        /// Indicates whether this actor has been started and is no longer an UnstartedCell.
         /// </summary>
         /// <exception cref="IllegalStateException">This exception is thrown if this property is called before actor is initialized (<see cref="Initialize(bool)"/>).</exception>
         public bool IsStarted
@@ -265,20 +240,20 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a message to the underlying actor.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
+        /// <param name="message">The message to send.</param>
+        /// <param name="sender">The sender of the message.</param>
         protected override void TellInternal(object message, IActorRef sender)
         {
             Underlying.SendMessage(sender, message);
         }
 
         /// <summary>
-        /// TBD
+        /// Retrieves a child actor by path elements.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The path elements to the child.</param>
+        /// <returns>The child actor reference, or Nobody if no match is found.</returns>
         public override IActorRef GetChild(IReadOnlyList<string> name)
         {
             if (name.Count == 0) return this;
@@ -312,17 +287,17 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a single child actor by name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The name of the child.</param>
+        /// <returns>The child actor reference, or Nobody if no match is found.</returns>
         public override IInternalActorRef GetSingleChild(string name)
         {
             return Lookup.GetSingleChild(name);
         }
 
         /// <summary>
-        /// TBD
+        /// Gets an enumeration of all child actors.
         /// </summary>
         public override IEnumerable<IActorRef> Children
         {
@@ -331,6 +306,10 @@ namespace Akka.Actor
 #pragma warning restore CS0618 // Type or member is obsolete
         }
 
+        public override IInternalActorRef Parent => Supervisor;
+        public override bool IsLocal => true;
+        public override IActorRefProvider Provider => System.Provider;
+        public override void Start() { /* No-op for RepointableActorRef */ }
     }
 
     /// <summary>
@@ -352,12 +331,12 @@ namespace Akka.Actor
         private readonly TimeSpan _timeout;
 
         /// <summary>
-        /// TBD
+        /// Creates a new UnstartedCell for a RepointableActorRef.
         /// </summary>
-        /// <param name="system">TBD</param>
-        /// <param name="self">TBD</param>
-        /// <param name="props">TBD</param>
-        /// <param name="supervisor">TBD</param>
+        /// <param name="system">The actor system that owns this cell.</param>
+        /// <param name="self">The actor reference that this cell belongs to.</param>
+        /// <param name="props">The props used to create the actor.</param>
+        /// <param name="supervisor">The supervisor of this actor.</param>
         public UnstartedCell(ActorSystemImpl system, RepointableActorRef self, Props props, IInternalActorRef supervisor)
         {
             _system = system;
@@ -384,9 +363,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Replaces this UnstartedCell with a real Cell, transferring any queued messages.
         /// </summary>
-        /// <param name="cell">TBD</param>
+        /// <param name="cell">The Cell to replace this one with.</param>
         public void ReplaceWith(ICell cell)
         {
             lock (_lock)
@@ -414,15 +393,15 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the actor system that owns this cell.
         /// </summary>
         public ActorSystem System { get { return _system; } }
         /// <summary>
-        /// TBD
+        /// Gets the actor system implementation that owns this cell.
         /// </summary>
         public ActorSystemImpl SystemImpl { get { return _system; } }
         /// <summary>
-        /// TBD
+        /// No-op for UnstartedCell.
         /// </summary>
         public void Start()
         {
@@ -431,7 +410,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Suspends the actor by sending a Suspend system message.
         /// </summary>
         public void Suspend()
         {
@@ -439,25 +418,25 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Resumes the actor by sending a Resume system message.
         /// </summary>
-        /// <param name="causedByFailure">TBD</param>
+        /// <param name="causedByFailure">The exception that caused the actor to be suspended.</param>
         public void Resume(Exception causedByFailure)
         {
             SendSystemMessage(new Resume(causedByFailure));
         }
 
         /// <summary>
-        /// TBD
+        /// Restarts the actor by sending a Recreate system message.
         /// </summary>
-        /// <param name="cause">TBD</param>
+        /// <param name="cause">The exception that caused the actor to be restarted.</param>
         public void Restart(Exception cause)
         {
             SendSystemMessage(new Recreate(cause));
         }
 
         /// <summary>
-        /// TBD
+        /// Stops the actor by sending a Terminate system message.
         /// </summary>
         public void Stop()
         {
@@ -465,51 +444,50 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the parent actor reference.
         /// </summary>
         public IInternalActorRef Parent { get { return _supervisor; } }
 
         /// <summary>
-        /// TBD
+        /// Returns an empty enumeration of children for this actor reference.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>An empty enumeration of <see cref="IInternalActorRef"/>.</returns>
         public IEnumerable<IInternalActorRef> GetChildren()
         {
             return Enumerable.Empty<IInternalActorRef>();
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the children container, which is always empty for this reference.
         /// </summary>
         public IChildrenContainer ChildrenContainer => EmptyChildrenContainer.Instance;
 
-
         /// <summary>
-        /// TBD
+        /// Returns <see cref="Nobody.Instance"/> for any child name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name.</param>
+        /// <returns>Always <see cref="Nobody.Instance"/>.</returns>
         public IInternalActorRef GetSingleChild(string name)
         {
             return Nobody.Instance;
         }
 
         /// <summary>
-        /// TBD
+        /// Returns <see cref="Nobody.Instance"/> for any child name.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name.</param>
+        /// <returns>Always <see cref="Nobody.Instance"/>.</returns>
         public IInternalActorRef GetChildByName(string name)
         {
             return Nobody.Instance;
         }
 
         /// <summary>
-        /// TBD
+        /// Always returns false and sets <paramref name="child"/> to null.
         /// </summary>
-        /// <param name="name">TBD</param>
-        /// <param name="child">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="name">The child name.</param>
+        /// <param name="child">The output child stats (always null).</param>
+        /// <returns>Always false.</returns>
         public bool TryGetChildStatsByName(string name, out IChildStats child)
         {
             child = null;
@@ -517,10 +495,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a message to this actor reference, dispatching system messages appropriately.
         /// </summary>
-        /// <param name="sender">TBD</param>
-        /// <param name="message">TBD</param>
+        /// <param name="sender">The sender actor reference.</param>
+        /// <param name="message">The message to send.</param>
         public void SendMessage(IActorRef sender, object message)
         {
             if (message is ISystemMessage systemMessage)
@@ -559,9 +537,9 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Sends a system message to the underlying cell or queues it if the cell is not ready.
         /// </summary>
-        /// <param name="message">TBD</param>
+        /// <param name="message">The system message to send.</param>
         public void SendSystemMessage(ISystemMessage message)
         {
             lock (_lock)
@@ -580,7 +558,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a value indicating whether this actor reference is local.
         /// </summary>
         public bool IsLocal { get { return true; } }
 
@@ -590,7 +568,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a value indicating whether this actor reference is terminated.
         /// </summary>
         public bool IsTerminated
         {
@@ -605,7 +583,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets a value indicating whether this actor reference has messages in its queue.
         /// </summary>
         public bool HasMessages
         {
@@ -622,7 +600,7 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the number of messages in the queue for this actor reference.
         /// </summary>
         public int NumberOfMessages
         {
@@ -639,11 +617,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the actor reference itself.
         /// </summary>
         public IActorRef Self { get { return _self; } }
         /// <summary>
-        /// TBD
+        /// Gets the <see cref="Props"/> used to create this actor reference.
         /// </summary>
         public Props Props { get { return _props; } }
     }

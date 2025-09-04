@@ -30,7 +30,10 @@ namespace Akka.Streams.Tests
         public ScriptException() { }
         public ScriptException(string message) : base(message) { }
         public ScriptException(string message, Exception inner) : base(message, inner) { }
+        
+#pragma warning disable SYSLIB0051 // Needed for backward compatibility because of `Serializable` attribute
         protected ScriptException(SerializationInfo info, StreamingContext context) : base(info, context) { }
+#pragma warning restore SYSLIB0051
     }
 
     public abstract class ScriptedTest : AkkaSpec
@@ -312,17 +315,6 @@ namespace Akka.Streams.Tests
         {
         }
 
-        [Obsolete("Will be removed after async_testkit conversion is done. Use RunScriptAsync instead")]
-        protected void RunScript<TIn2, TOut2, TMat2>(
-            Script<TIn2, TOut2> script, 
-            ActorMaterializerSettings settings,
-            Func<Flow<TIn2, TIn2, NotUsed>, Flow<TIn2, TOut2, TMat2>> op,
-            int maximumOverrun = 3,
-            int maximumRequest = 3,
-            int maximumBuffer = 3)
-            => RunScriptAsync(script, settings, op, maximumOverrun, maximumRequest, maximumBuffer)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-        
         protected async Task RunScriptAsync<TIn2, TOut2, TMat2>(
             Script<TIn2, TOut2> script, 
             ActorMaterializerSettings settings,
@@ -349,7 +341,7 @@ namespace Akka.Streams.Tests
             else
             {
                 // guard against deadlocks, assuming that a test would not take more than 30 seconds.
-                await Run().ShouldCompleteWithin(30.Seconds()); 
+                await Run().WaitAsync(30.Seconds()); 
             }
         }
 

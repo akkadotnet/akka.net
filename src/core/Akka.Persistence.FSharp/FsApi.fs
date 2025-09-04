@@ -127,7 +127,7 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.Self = self'
             member __.Context = context
             member __.Sender() = this.Sender()
-            member __.Unhandled msg = this.Unhandled msg
+            member __.Unhandled msg = this.CallUnhandled msg
             member __.ActorOf(props, name) = context.ActorOf(props, name)
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
@@ -151,7 +151,8 @@ type FunPersistentActor<'Command, 'Event, 'State>(aggregate: Aggregate<'Command,
             member __.DeleteSnapshots criteria = this.DeleteSnapshots(criteria) }
             
     member __.Sender() : IActorRef = base.Sender
-    member __.Unhandled msg = base.Unhandled msg
+    override __.Unhandled msg = base.Unhandled msg
+    member private _.CallUnhandled msg = base.Unhandled msg
     override x.OnCommand (msg: obj) = 
         match msg with
         | :? 'Command as cmd -> aggregate.exec mailbox state cmd
@@ -273,7 +274,7 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
     let mutable state: 'State = aggregate.state
     let mailbox = 
         let self' = this.Self
-        let context = AtLeastOnceDeliveryActor.Context :> IActorContext
+        let context = AtLeastOnceDeliveryActor.Context
         let updateState (updater: 'Event -> 'State) e : unit = 
             state <- updater e
             ()
@@ -281,7 +282,7 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.Self = self'
             member __.Context = context
             member __.Sender() = this.Sender()
-            member __.Unhandled msg = this.Unhandled msg
+            member __.Unhandled msg = this.CallUnhandled msg
             member __.ActorOf(props, name) = context.ActorOf(props, name)
             member __.ActorSelection(path : string) = context.ActorSelection(path)
             member __.ActorSelection(path : ActorPath) = context.ActorSelection(path)
@@ -310,7 +311,8 @@ type Deliverer<'Command, 'Event, 'State>(aggregate: DeliveryAggregate<'Command, 
             member __.UnconfirmedCount() = this.UnconfirmedCount }
       
     member __.Sender() : IActorRef = base.Sender
-    member __.Unhandled msg = base.Unhandled msg
+    override __.Unhandled msg = base.Unhandled msg
+    member private _.CallUnhandled msg = base.Unhandled msg
     override x.ReceiveCommand (msg: obj) = 
         match msg with
         | :? 'Command as cmd -> aggregate.exec mailbox state cmd

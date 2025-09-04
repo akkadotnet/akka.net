@@ -79,17 +79,16 @@ namespace Akka.Discovery
                 return Create(className);
             }
             catch (Exception ex)
+                when (ex is TypeLoadException or MissingMethodException)
             {
-                if (ex is TypeLoadException or MissingMethodException)
-                    throw new ArgumentException(
-                        message: $"Illegal akka.discovery.{method}.class value or incompatible class!\n" +
-                                 "The implementation class MUST extend Akka.Discovery.ServiceDiscovery with:\n" +
-                                 "  * parameterless constructor, " +
-                                 $"  * constructor with a single {nameof(ExtendedActorSystem)} parameter, or\n" +
-                                 $"  * constructor with {nameof(ExtendedActorSystem)} and {nameof(Configuration.Config)} parameters.",
-                        paramName: nameof(method), 
-                        innerException: ex);
-                throw;
+                throw new ArgumentException(
+                    message: $"Illegal akka.discovery.{method}.class value or incompatible class!\n" +
+                             "The implementation class MUST extend Akka.Discovery.ServiceDiscovery with:\n" +
+                             "  * parameterless constructor, " +
+                             $"  * constructor with a single {nameof(ExtendedActorSystem)} parameter, or\n" +
+                             $"  * constructor with {nameof(ExtendedActorSystem)} and {nameof(Configuration.Config)} parameters.",
+                    paramName: nameof(method),
+                    innerException: ex);
             }
 
             ServiceDiscovery Create(string typeName)

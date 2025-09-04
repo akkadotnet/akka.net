@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Actors;
 
+#nullable enable
 namespace Akka.Streams.Implementation
 {
     /// <summary>
@@ -40,7 +41,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        protected readonly IBuffer<T> Buffer;
+        protected readonly IBuffer<T>? Buffer;
 
         /// <summary>
         /// TBD
@@ -50,7 +51,6 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         public readonly OverflowStrategy OverflowStrategy;
-        private ILoggingAdapter _log;
 
         /// <summary>
         /// TBD
@@ -63,13 +63,13 @@ namespace Akka.Streams.Implementation
         {
             BufferSize = bufferSize;
             OverflowStrategy = overflowStrategy;
-            Buffer = bufferSize != 0 ? Implementation.Buffer.Create<T>(bufferSize, maxFixedBufferSize) : null;
+            Buffer = bufferSize > 0 ? Implementation.Buffer.Create<T>(bufferSize, maxFixedBufferSize) : null;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
+        protected ILoggingAdapter Log { get; } = Context.GetLogger();
 
         /// <summary>
         /// TBD
@@ -90,7 +90,7 @@ namespace Akka.Streams.Implementation
                 Context.Stop(Self);
             else if (message is Status.Success)
             {
-                if (BufferSize == 0 || Buffer.IsEmpty)
+                if (Buffer is null || Buffer.IsEmpty)
                     OnCompleteThenStop(); // will complete the stream successfully
                 else
                     Context.Become(DrainBufferThenComplete);
@@ -112,7 +112,7 @@ namespace Akka.Streams.Implementation
             if (message is Request)
             {
                 // totalDemand is tracked by base
-                if (BufferSize != 0)
+                if (Buffer is not null)
                     while (TotalDemand > 0L && !Buffer.IsEmpty)
                         OnNext(Buffer.Dequeue());
 
@@ -133,7 +133,7 @@ namespace Akka.Streams.Implementation
             {
                 if (TotalDemand > 0L)
                     OnNext(message);
-                else if (BufferSize == 0)
+                else if (Buffer is null)
                     Log.Debug("Dropping element because there is no downstream demand: [{0}]", message);
                 else if (!Buffer.IsFull)
                     Buffer.Enqueue(message);
@@ -189,7 +189,7 @@ namespace Akka.Streams.Implementation
                 // even if previously valid completion was requested via Status.Success
                 OnErrorThenStop(failure.Cause);
             }
-            else if (message is Request)
+            else if (message is Request && Buffer is not null)
             {
                 // totalDemand is tracked by base
                 while (TotalDemand > 0L && !Buffer.IsEmpty)
@@ -201,7 +201,7 @@ namespace Akka.Streams.Implementation
             else if (IsActive)
                 Log.Debug(
                     "Dropping element because Status.Success received already, only draining already buffered elements: [{0}] (pending: [{1}])",
-                    message, Buffer.Used);
+                    message, Buffer?.Used ?? 0);
             else
                 return false;
 

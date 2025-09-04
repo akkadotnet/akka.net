@@ -3341,6 +3341,7 @@ namespace Akka.IO
         public Akka.IO.ByteString Slice(int index) { }
         public Akka.IO.ByteString Slice(int index, int count) { }
         public byte[] ToArray() { }
+        public System.ReadOnlySpan<byte> ToReadOnlySpan() { }
         public override string ToString() { }
         public string ToString(System.Text.Encoding encoding) { }
         public void WriteTo(System.IO.Stream stream) { }

@@ -81,8 +81,10 @@ namespace Akka.Persistence.Query
         public Akka.Event.ILoggingAdapter Log { get; }
         public static Akka.Persistence.Query.PersistenceQuery Get(Akka.Actor.ActorSystem system) { }
         public static Akka.Configuration.Config GetDefaultConfig<TJournal>() { }
+        public static Akka.Configuration.Config GetDefaultConfig(System.Type journalType) { }
         public TJournal ReadJournalFor<TJournal>(string readJournalPluginId)
             where TJournal : Akka.Persistence.Query.IReadJournal { }
+        public Akka.Persistence.Query.IReadJournal ReadJournalFor(System.Type readJournalType, string readJournalPluginId) { }
     }
     public class static PersistenceQueryExtensions
     {

@@ -233,9 +233,8 @@ namespace Akka.Streams.Tests.Dsl
                 await ExpectMsgAsync(Option<int>.Create(2));
 
                 sub.SendComplete();
-                var future = queue.PullAsync();
-                future.Wait(_pause).Should().BeTrue();
-                future.Result.Should().Be(Option<int>.None);
+                var result = await queue.PullAsync();
+                result.Should().Be(Option<int>.None);
             }, _materializer);
         }
 

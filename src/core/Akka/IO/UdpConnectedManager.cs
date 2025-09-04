@@ -11,8 +11,6 @@ using Akka.Annotations;
 
 namespace Akka.IO
 {
-    using ByteBuffer = ArraySegment<byte>;
-
     /// <summary>
     /// INTERNAL API
     /// </summary>

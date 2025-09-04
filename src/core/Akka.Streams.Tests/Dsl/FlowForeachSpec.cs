@@ -66,7 +66,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async() => {
                 var p = this.CreateManualPublisherProbe<int>();
-                Source.FromPublisher(p).RunForeach(i => TestActor.Tell(i), Materializer).ContinueWith(task =>
+                _ = Source.FromPublisher(p).RunForeach(i => TestActor.Tell(i), Materializer).ContinueWith(task =>
                 {
                     if (task.Exception != null)
                         TestActor.Tell(task.Exception.InnerException);

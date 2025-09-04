@@ -88,11 +88,6 @@ namespace Akka.Cluster.Sharding.Tests
                 : base(message, innerEx)
             {
             }
-
-            protected BadLease(SerializationInfo info, StreamingContext context)
-                : base(info, context)
-            {
-            }
         }
 
         private class Setup
@@ -140,8 +135,8 @@ namespace Akka.Cluster.Sharding.Tests
                 }
                 akka.cluster.sharding.verbose-debug-logging = on
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
-                .WithFallback(ClusterSingletonManager.DefaultConfig()
-                .WithFallback(ClusterSharding.DefaultConfig()));
+                .WithFallback(ClusterSingleton.DefaultConfig())
+                .WithFallback(ClusterSharding.DefaultConfig());
 
         private TimeSpan shortDuration = TimeSpan.FromMilliseconds(100);
         private TestLeaseExt testLeaseExt;

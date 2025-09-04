@@ -1310,7 +1310,8 @@ namespace Akka.Cluster.Sharding
                     _settings,
                     _messageExtractor,
                     _handOffStopMessage,
-                    _rememberEntitiesProvider)
+                    _rememberEntitiesProvider, 
+                    _bufferMessageAdapter)
                 .WithDispatcher(Context.Props.Dispatcher), name));
 
             _shardsByRef = _shardsByRef.SetItem(shardRef, id);
@@ -1415,8 +1416,11 @@ namespace Akka.Cluster.Sharding
                     // if persist fails it will stop
                     _log.Debug("{0}: Shard [{1}] terminated while not being handed off", _typeName, shard);
                     if (_settings.RememberEntities)
+#pragma warning disable AK1004
+                        // we disable AK1004 here because we might have multiple shard failure backoffs inflight at once
                         Context.System.Scheduler.ScheduleTellOnce(_settings.TuningParameters.ShardFailureBackoff, Self,
                             new RestartShard(shard), Self);
+#pragma warning restore AK1004
                 }
 
                 // did this shard get removed because the ShardRegion is shutting down?

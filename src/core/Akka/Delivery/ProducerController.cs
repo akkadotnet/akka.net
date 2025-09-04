@@ -10,6 +10,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Delivery.Internal;
 using Akka.Event;
@@ -47,7 +48,13 @@ public static class ProducerController
         return p;
     }
 
-    internal static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory, string producerId,
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// This method should only be used for testing purposes
+    /// </summary>
+    [InternalApi]
+    public static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory, string producerId,
         Func<object, double> fuzzing,
         Option<Props> durableProducerQueue, Settings? settings = null,
         Action<ConsumerController.SequencedMessage<T>>? sendAdapter = null)

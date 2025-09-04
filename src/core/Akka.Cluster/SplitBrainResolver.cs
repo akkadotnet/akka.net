@@ -257,10 +257,8 @@ namespace Akka.Cluster
 
         public SplitBrainDecider(TimeSpan stableAfter, ISplitBrainStrategy strategy, Cluster cluster)
         {
-            if (strategy == null) throw new ArgumentNullException(nameof(strategy));
-
             _stabilityTimeout = stableAfter;
-            _strategy = strategy;
+            _strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
             _cluster = cluster;
         }
 

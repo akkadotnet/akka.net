@@ -11,6 +11,7 @@ using Akka.Actor.Dsl;
 using Akka.TestKit.Xunit2;
 using Xunit;
 
+#pragma warning disable CS0414 // Field is assigned but its value is never used. This is for documentation purposes, its fine. 
 namespace DocsExamples.Testkit
 {
     public class ParentSampleTest : TestKit

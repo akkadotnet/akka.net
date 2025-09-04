@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -16,139 +17,136 @@ using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Xunit;
 
-namespace Akka.Cluster.Tests.MultiNode
-{
-    public class ConvergenceSpecConfig : MultiNodeConfig
-    {
-        readonly RoleName _first;
-        public RoleName First { get {return _first;} }
-        readonly RoleName _second;
-        public RoleName Second { get { return _second; } }
-        readonly RoleName _third;
-        public RoleName Third { get { return _third; } }
-        readonly RoleName _fourth;
-        public RoleName Fourth { get { return _fourth; } }
-        
-        public ConvergenceSpecConfig(bool failureDetectorPuppet)
-        {
-            _first = Role("first");
-            _second = Role("second");
-            _third = Role("third");
-            _fourth = Role("fourth");
+namespace Akka.Cluster.Tests.MultiNode;
 
-            CommonConfig = ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s")
-                .WithFallback(MultiNodeLoggingConfig.LoggingConfig)
-                .WithFallback(DebugConfig(true))
-                .WithFallback(@"
+public class ConvergenceSpecConfig : MultiNodeConfig
+{
+    public RoleName First { get; }
+    public RoleName Second { get; }
+    public RoleName Third { get; }
+    public RoleName Fourth { get; }
+
+    public ConvergenceSpecConfig(bool failureDetectorPuppet)
+    {
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
+        Fourth = Role("fourth");
+
+        CommonConfig = ConfigurationFactory.ParseString(@"akka.cluster.publish-stats-interval = 25s")
+            .WithFallback(MultiNodeLoggingConfig.LoggingConfig)
+            .WithFallback(DebugConfig(true))
+            .WithFallback(@"
                     akka.cluster.failure-detector.threshold = 4
                     akka.cluster.allow-weakly-up-members = off")
-                .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
-        }
+            .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
     }
+}
     
-    public class ConvergenceWithFailureDetectorPuppetMultiNode : ConvergenceSpec
+public class ConvergenceWithFailureDetectorPuppetMultiNode : ConvergenceSpec
+{
+    public ConvergenceWithFailureDetectorPuppetMultiNode() : base(true, typeof(ConvergenceWithFailureDetectorPuppetMultiNode))
     {
-        public ConvergenceWithFailureDetectorPuppetMultiNode() : base(true, typeof(ConvergenceWithFailureDetectorPuppetMultiNode))
-        {
-        }
     }
+}
 
-    public class ConvergenceWithAccrualFailureDetectorMultiNode : ConvergenceSpec
+public class ConvergenceWithAccrualFailureDetectorMultiNode : ConvergenceSpec
+{
+    public ConvergenceWithAccrualFailureDetectorMultiNode()
+        : base(false, typeof(ConvergenceWithAccrualFailureDetectorMultiNode))
     {
-        public ConvergenceWithAccrualFailureDetectorMultiNode()
-            : base(false, typeof(ConvergenceWithAccrualFailureDetectorMultiNode))
-        {
-        }
     }
+}
     
-    public abstract class ConvergenceSpec : MultiNodeClusterSpec
+public abstract class ConvergenceSpec : MultiNodeClusterSpec
+{
+    private readonly ConvergenceSpecConfig _config;
+
+    protected ConvergenceSpec(bool failureDetectorPuppet, Type type)
+        : this(new ConvergenceSpecConfig(failureDetectorPuppet), type)
     {
-        readonly ConvergenceSpecConfig _config;
+    }
 
-        protected ConvergenceSpec(bool failureDetectorPuppet, Type type)
-            : this(new ConvergenceSpecConfig(failureDetectorPuppet), type)
+    private ConvergenceSpec(ConvergenceSpecConfig config, Type type) : base(config, type)
+    {
+        _config = config;
+        MuteMarkingAsUnreachable();
+    }
+
+    [MultiNodeFact]
+    public async Task ConvergenceSpecTests()
+    {
+        //TODO: This better
+        await A_cluster_of_3_members_must_reach_initial_convergence();
+        await A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable();
+        await A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence();
+    }
+
+    public async Task A_cluster_of_3_members_must_reach_initial_convergence()
+    {
+        await AwaitClusterUpAsync(CancellationToken.None, _config.First, _config.Second, _config.Third);
+
+        RunOn(() => { /*doesn't join immediately*/}, _config.Fourth);
+
+        await EnterBarrierAsync("after-1");
+    }
+
+    public async Task A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable()
+    {
+        var thirdAddress = GetAddress(_config.Third);
+        await EnterBarrierAsync("before-shutdown");
+
+        await RunOnAsync(async () =>
         {
-        }
+            //kill 'third' node
+            await TestConductor.ExitAsync(_config.Third, 0);
+            MarkNodeAsUnavailable(thirdAddress);
+        }, _config.First);
 
-        private ConvergenceSpec(ConvergenceSpecConfig config, Type type) : base(config, type)
+        await RunOnAsync(async () =>
         {
-            _config = config;
-            MuteMarkingAsUnreachable();
-        }
-
-        [MultiNodeFact]
-        public void ConvergenceSpecTests()
-        {
-            //TODO: This better
-            A_cluster_of_3_members_must_reach_initial_convergence();
-            A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable();
-            A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence();
-        }
-
-        public void A_cluster_of_3_members_must_reach_initial_convergence()
-        {
-            AwaitClusterUp(_config.First, _config.Second, _config.Third);
-
-            RunOn(() => { /*doesn't join immediately*/}, _config.Fourth);
-
-            EnterBarrier("after-1");
-        }
-
-        public void A_cluster_of_3_members_must_not_reach_convergence_while_any_nodes_are_unreachable()
-        {
-            var thirdAddress = GetAddress(_config.Third);
-            EnterBarrier("before-shutdown");
-
-            RunOn(() =>
-            {
-                //kill 'third' node
-                TestConductor.Exit(_config.Third, 0).Wait();
-                MarkNodeAsUnavailable(thirdAddress);
-            }, _config.First);
-
-            RunOn(() => Within(TimeSpan.FromSeconds(28), () =>
+            await WithinAsync(TimeSpan.FromSeconds(28), async () =>
             {
                 //third becomes unreachable
-                AwaitAssert(() => ClusterView.UnreachableMembers.Count.ShouldBe(1));
-                AwaitSeenSameState(GetAddress(_config.First), GetAddress(_config.Second));
+                await AwaitAssertAsync(() => ClusterView.UnreachableMembers.Count.ShouldBe(1));
+                await AwaitSeenSameStateAsync(CancellationToken.None, GetAddress(_config.First), GetAddress(_config.Second));
                 // still one unreachable
                 ClusterView.UnreachableMembers.Count.ShouldBe(1);
                 ClusterView.UnreachableMembers.First().Address.ShouldBe(thirdAddress);
                 ClusterView.Members.Count.ShouldBe(3);
-            }), _config.First, _config.Second);
+            });
+        }, _config.First, _config.Second);
 
-            EnterBarrier("after-2");
-        }
+        await EnterBarrierAsync("after-2");
+    }
 
-        public void A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence()
+    public async Task A_cluster_of_3_members_must_not_move_a_new_joining_node_to_up_while_there_is_no_convergence()
+    {
+        RunOn(() => Cluster.Join(GetAddress(_config.First)), _config.Fourth);
+
+        await EnterBarrierAsync("after-join");
+
+        await RunOnAsync(async () =>
         {
-            RunOn(() => Cluster.Join(GetAddress(_config.First)), _config.Fourth);
-
-            EnterBarrier("after-join");
-
-            RunOn(() =>
+            for (var i = 0; i < 5; i++)
             {
-                for (var i = 0; i < 5; i++)
-                {
-                    AwaitAssert(() => ClusterView.Members.Count.ShouldBe(4));
-                    AwaitSeenSameState(GetAddress(_config.First), GetAddress(_config.Second), GetAddress(_config.Fourth));
-                    MemberStatus(GetAddress(_config.First)).ShouldBe(Akka.Cluster.MemberStatus.Up);
-                    MemberStatus(GetAddress(_config.Second)).ShouldBe(Akka.Cluster.MemberStatus.Up);
-                    MemberStatus(GetAddress(_config.Fourth)).ShouldBe(Akka.Cluster.MemberStatus.Joining);
-                    // wait and then check again
-                    Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)));
-                }
-            }, _config.First, _config.Second, _config.Fourth);
+                await AwaitAssertAsync(() => ClusterView.Members.Count.ShouldBe(4));
+                await AwaitSeenSameStateAsync(CancellationToken.None, GetAddress(_config.First), GetAddress(_config.Second), GetAddress(_config.Fourth));
+                MemberStatus(GetAddress(_config.First)).ShouldBe(Akka.Cluster.MemberStatus.Up);
+                MemberStatus(GetAddress(_config.Second)).ShouldBe(Akka.Cluster.MemberStatus.Up);
+                MemberStatus(GetAddress(_config.Fourth)).ShouldBe(Akka.Cluster.MemberStatus.Joining);
+                // wait and then check again
+                await Task.Delay(Dilated(TimeSpan.FromSeconds(1)));
+            }
+        }, _config.First, _config.Second, _config.Fourth);
 
-            EnterBarrier("after-3");
-        }
+        await EnterBarrierAsync("after-3");
+    }
 
-        MemberStatus? MemberStatus(Address address)
-        {
-            var member = ClusterView.Members.FirstOrDefault(m => m.Address == address);
-            if (member == null) return null;
-            return member.Status;
-        }
+    private MemberStatus? MemberStatus(Address address)
+    {
+        var member = ClusterView.Members.FirstOrDefault(m => m.Address == address);
+        if (member == null) return null;
+        return member.Status;
     }
 }
-

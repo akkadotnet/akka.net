@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Persistence.Journal;
 using Akka.Streams.Actors;
+using static Akka.Persistence.Query.InMemory.MemoryQueryJournalHelpers;
 
 namespace Akka.Persistence.Query.InMemory
 {
@@ -115,14 +116,9 @@ namespace Akka.Persistence.Query.InMemory
                 switch (message)
                 {
                     case MemoryJournal.ReplayedTaggedMessage replayed:
-                        Buffer.Add(new EventEnvelope(
-                            offset: new Sequence(replayed.Offset),
-                            persistenceId: replayed.Persistent.PersistenceId,
-                            sequenceNr: replayed.Persistent.SequenceNr,
-                            @event: replayed.Persistent.Payload,
-                            timestamp: replayed.Persistent.Timestamp,
-                            tags: new [] { replayed.Tag }));
-
+                        var e = PrepareEnventEnvelope(replayed.Persistent, new Sequence(replayed.Offset));
+                        
+                        Buffer.Add(e);
                         CurrentOffset = replayed.Offset + 1;
                         Buffer.DeliverBuffer(TotalDemand);
                         return true;

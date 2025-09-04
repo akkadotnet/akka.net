@@ -160,6 +160,13 @@ namespace Akka.Remote.Tests.Serialization
         }
 
         [Fact]
+        public void Can_serialize_IntentionalRestart()
+        {
+            var restart = IntentionalRestart.Instance;
+            AssertEqual(restart);
+        }
+
+        [Fact]
         public void Can_serialize_PoisonPill()
         {
             var poisonPill = PoisonPill.Instance;

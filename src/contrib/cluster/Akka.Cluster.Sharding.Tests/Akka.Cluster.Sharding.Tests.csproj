@@ -22,7 +22,6 @@
     <ProjectReference Include="..\..\..\core\Akka.Coordination.Tests\Akka.Coordination.Tests.csproj" />
     <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
-    <ProjectReference Include="..\..\persistence\Akka.Persistence.Sql.Common\Akka.Persistence.Sql.Common.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 

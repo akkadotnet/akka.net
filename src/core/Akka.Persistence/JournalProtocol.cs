@@ -78,10 +78,7 @@ namespace Akka.Persistence
         /// </exception>
         public DeleteMessagesFailure(Exception cause, long toSequenceNr)
         {
-            if (cause == null)
-                throw new ArgumentNullException(nameof(cause), "DeleteMessagesFailure cause exception cannot be null");
-
-            Cause = cause;
+            Cause = cause ?? throw new ArgumentNullException(nameof(cause), "DeleteMessagesFailure cause exception cannot be null");
             ToSequenceNr = toSequenceNr;
         }
 
@@ -373,11 +370,8 @@ namespace Akka.Persistence
         /// </exception>
         public WriteMessageRejected(IPersistentRepresentation persistent, Exception cause, int actorInstanceId)
         {
-            if (cause == null)
-                throw new ArgumentNullException(nameof(cause), "WriteMessageRejected cause exception cannot be null");
-
             Persistent = persistent;
-            Cause = cause;
+            Cause = cause ?? throw new ArgumentNullException(nameof(cause), "WriteMessageRejected cause exception cannot be null");
             ActorInstanceId = actorInstanceId;
         }
 
@@ -440,11 +434,8 @@ namespace Akka.Persistence
         /// </exception>
         public WriteMessageFailure(IPersistentRepresentation persistent, Exception cause, int actorInstanceId)
         {
-            if (cause == null)
-                throw new ArgumentNullException(nameof(cause), "WriteMessageFailure cause exception cannot be null");
-
             Persistent = persistent;
-            Cause = cause;
+            Cause = cause ?? throw new ArgumentNullException(nameof(cause), "WriteMessageFailure cause exception cannot be null");
             ActorInstanceId = actorInstanceId;
         }
 
@@ -705,20 +696,14 @@ namespace Akka.Persistence
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="cause"/> is undefined.
         /// </exception>
-        public ReplayMessagesFailure(Exception cause)
-        {
-            if (cause == null)
-                throw new ArgumentNullException(nameof(cause), "ReplayMessagesFailure cause exception cannot be null");
-
-            Cause = cause;
-        }
+        public ReplayMessagesFailure(Exception cause) =>
+            Cause = cause ?? throw new ArgumentNullException(nameof(cause), "ReplayMessagesFailure cause exception cannot be null");
 
         /// <summary>
         /// The cause of the failure
         /// </summary>
         public Exception Cause { get; }
 
-       
         public bool Equals(ReplayMessagesFailure other)
         {
             if (ReferenceEquals(other, null)) return false;
@@ -727,13 +712,10 @@ namespace Akka.Persistence
             return Equals(Cause, other.Cause);
         }
 
-        
         public override bool Equals(object obj) => Equals(obj as ReplayMessagesFailure);
 
-        
         public override int GetHashCode() => Cause.GetHashCode();
 
-        
         public override string ToString() => $"ReplayMessagesFailure<cause: {Cause}>";
     }
 }

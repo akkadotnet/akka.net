@@ -258,13 +258,12 @@ namespace Akka.Streams
     internal static class ActorMaterializerHelper
     {
         /// <summary>
-        /// TBD
+        /// Converts an <see cref="IMaterializer"/> to an <see cref="ActorMaterializer"/>.
         /// </summary>
-        /// <param name="materializer">TBD</param>
+        /// <param name="materializer">The original materializer.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="materializer"/> is not of type <see cref="ActorMaterializer"/>.
         /// </exception>
-        /// <returns>TBD</returns>
         internal static ActorMaterializer Downcast(IMaterializer materializer)
         {
             //FIXME this method is going to cause trouble for other Materializer implementations
@@ -357,11 +356,6 @@ namespace Akka.Streams
     /// </summary>
     public sealed class ActorMaterializerSettings
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
         public static ActorMaterializerSettings Create(ActorSystem system)
         {
             // need to make sure the default materializer settings are available
@@ -447,22 +441,7 @@ namespace Akka.Streams
         /// INTERNAL API
         /// </summary>
         public readonly StreamRefSettings StreamRefSettings;
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="initialInputBufferSize">TBD</param>
-        /// <param name="maxInputBufferSize">TBD</param>
-        /// <param name="dispatcher">TBD</param>
-        /// <param name="supervisionDecider">TBD</param>
-        /// <param name="subscriptionTimeoutSettings">TBD</param>
-        /// <param name="streamRefSettings">TBD</param>
-        /// <param name="isDebugLogging">TBD</param>
-        /// <param name="outputBurstLimit">TBD</param>
-        /// <param name="isFuzzingMode">TBD</param>
-        /// <param name="isAutoFusing">TBD</param>
-        /// <param name="maxFixedBufferSize">TBD</param>
-        /// <param name="syncProcessingLimit">TBD</param>
+        
         public ActorMaterializerSettings(
             int initialInputBufferSize, 
             int maxInputBufferSize, 
@@ -681,6 +660,26 @@ namespace Akka.Streams
                 s.IsAutoFusing == IsAutoFusing &&
                 s.MaxFixedBufferSize == MaxFixedBufferSize &&
                 s.StreamRefSettings == StreamRefSettings;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = (17 * 23) ^ InitialInputBufferSize;
+                hash = (hash * 23) ^ MaxInputBufferSize;
+                hash = (hash * 23) ^ Dispatcher.GetHashCode();
+                hash = (hash * 23) ^ SupervisionDecider.GetHashCode();
+                hash = (hash * 23) ^ SubscriptionTimeoutSettings.GetHashCode();
+                hash = (hash * 23) ^ IsDebugLogging.GetHashCode();
+                hash = (hash * 23) ^ OutputBurstLimit;
+                hash = (hash * 23) ^ SyncProcessingLimit;
+                hash = (hash * 23) ^ IsFuzzingMode.GetHashCode();
+                hash = (hash * 23) ^ IsAutoFusing.GetHashCode();
+                hash = (hash * 23) ^ MaxFixedBufferSize;
+                hash = (hash * 23) ^ StreamRefSettings.GetHashCode();
+                return hash;
+            }
         }
 
         internal Attributes ToAttributes()

@@ -992,6 +992,8 @@ namespace Akka.DistributedData
         {
             return obj is FlushChanges;
         }
+
+        public override int GetHashCode() => 809;
     }
 
     /// <summary>

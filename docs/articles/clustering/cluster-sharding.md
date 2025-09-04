@@ -324,14 +324,9 @@ You can inspect current sharding stats by using following messages:
 
 It's possible to query a `ShardRegion` or a `ShardRegionProxy` using a `GetEntityLocation` query:
 
-[!code-csharp[ShardedDaemonProcessSpec.cs](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/ShardRegionQueriesSpecs.cs?name=GetEntityLocationQuery)]
+[!code-csharp[ShardRegionQueriesSpecs.cs](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/ShardRegionQueriesSpecs.cs?name=GetEntityLocationQuery)]
 
 A `GetEntityLocation` query will always return an `EntityLocation` response - even if the query could not be executed.
-
-> [!IMPORTANT]
-> One major caveat is that in order for the `GetEntityLocation` to execute your `IMessageExtractor` or `ShardExtractor` delegate will need to support the `ShardRegion.StartEntity` message - just like you'd have to use in order to support `remember-entities=on`:
-
-[!code-csharp[ShardedDaemonProcessSpec.cs](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/ShardRegionQueriesSpecs.cs?name=GetEntityLocationExtractor)]
 
 ## Integrating Cluster Sharding with Persistent Actors
 

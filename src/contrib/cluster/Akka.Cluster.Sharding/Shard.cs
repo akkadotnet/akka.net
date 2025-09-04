@@ -344,7 +344,8 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor extractor,
             object handOffStopMessage,
-            IRememberEntitiesProvider? rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider,
+            IShardingBufferMessageAdapter? bufferMessageAdapter)
         {
             return Actor.Props.Create(() => new Shard(
                 typeName,
@@ -353,7 +354,8 @@ namespace Akka.Cluster.Sharding
                 settings,
                 extractor,
                 handOffStopMessage,
-                rememberEntitiesProvider)).WithDeploy(Deploy.Local);
+                rememberEntitiesProvider,
+                bufferMessageAdapter)).WithDeploy(Deploy.Local);
         }
 
         [Serializable]
@@ -943,6 +945,7 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        private static readonly SupervisorStrategy DefaultShardSupervisionStrategy = new ShardSupervisionStrategy();
 
         private readonly string _typeName;
         private readonly string _shardId;
@@ -964,6 +967,7 @@ namespace Akka.Cluster.Sharding
         private readonly TimeSpan _leaseRetryInterval = TimeSpan.FromSeconds(5); // won't be used
 
         private readonly IShardingBufferMessageAdapter _bufferMessageAdapter;
+        private readonly SupervisorStrategy? _supervisorStrategy;
         
         public ILoggingAdapter Log { get; } = Context.GetLogger();
         public IStash Stash { get; set; } = null!;
@@ -976,7 +980,8 @@ namespace Akka.Cluster.Sharding
             ClusterShardingSettings settings,
             IMessageExtractor extractor,
             object handOffStopMessage,
-            IRememberEntitiesProvider? rememberEntitiesProvider)
+            IRememberEntitiesProvider? rememberEntitiesProvider,
+            IShardingBufferMessageAdapter? bufferMessageAdapter)
         {
             _typeName = typeName;
             _shardId = shardId;
@@ -1020,12 +1025,13 @@ namespace Akka.Cluster.Sharding
                 _leaseRetryInterval = settings.LeaseSettings.LeaseRetryInterval;
             }
 
-            _bufferMessageAdapter = ClusterSharding.Get(Context.System).BufferMessageAdapter;
+            _bufferMessageAdapter = bufferMessageAdapter ?? EmptyBufferMessageAdapter.Instance;
+            _supervisorStrategy = settings.SupervisorStrategy;
         }
 
         protected override SupervisorStrategy SupervisorStrategy()
         {
-            return base.SupervisorStrategy();
+            return _supervisorStrategy ?? DefaultShardSupervisionStrategy;
         }
 
         protected override bool Receive(object message)
@@ -1255,6 +1261,9 @@ namespace Akka.Cluster.Sharding
                 case Passivate p:
                     Passivate(Sender, p.StopMessage);
                     return true;
+                case SupervisorStopDirectivePassivation ex:
+                    HandleSupervisorStop(ex);
+                    return true;
                 case IShardQuery msg:
                     ReceiveShardQuery(msg);
                     return true;
@@ -1371,6 +1380,9 @@ namespace Akka.Cluster.Sharding
                                 _typeName,
                                 _entities.EntityId(Sender) ?? $"Unknown actor {Sender}");
                         Passivate(Sender, p.StopMessage);
+                        return true;
+                    case SupervisorStopDirectivePassivation ex:
+                        HandleSupervisorStop(ex);
                         return true;
                     case IShardQuery msg:
                         ReceiveShardQuery(msg);
@@ -1839,6 +1851,29 @@ namespace Akka.Cluster.Sharding
             }
         }
 
+        private void HandleSupervisorStop(SupervisorStopDirectivePassivation msg)
+        {
+            // We only have to do this if we have R-E enabled
+            if (!_rememberEntities)
+                return;
+            
+            var id = _entities.EntityId(msg.Child);
+            // Just return if the child actor is not a recorded shard entity
+            if (id is null) 
+                return;
+            
+            // Remove the child actor from the entity list
+            _entities.RemoveEntity(id);
+                
+            // Force stop the child actor, it might have been restarted
+            Context.Stop(msg.Child);
+            
+            Log.Error(
+                msg.LastCause, 
+                "{0}: Remembered entity {1} was stopped: {2}", 
+                _typeName, id, msg.Reason);
+        }
+
         private void DeliverMessage(string entityId, object msg, IActorRef snd)
         {
             var payload = _extractor.EntityMessage(msg); // payload can't be null unless dev really screwed up
@@ -2001,7 +2036,7 @@ namespace Akka.Cluster.Sharding
                     if (WrappedMessage.Unwrap(message) is ShardRegion.StartEntity se)
                         StartEntity(se.EntityId, @ref);
                     else
-                        DeliverMessage(entityId, message, @ref);
+                        DeliverMessage(entityId, _bufferMessageAdapter.UnApply(message, Context), @ref);
                 }
 
                 TouchLastMessageTimestamp(entityId);

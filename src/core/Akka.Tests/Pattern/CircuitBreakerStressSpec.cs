@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
@@ -73,11 +74,11 @@ namespace Akka.Tests.Pattern
                     case JobDone _:
                         _doneCount++;
                         break;
-                    case Status.Failure { Cause: OpenCircuitException _ }:
+                    case Status.Failure { Cause: OpenCircuitException }:
                         _circCount++;
                         _breaker.WithCircuitBreaker(Job).PipeTo(Self);
                         break;
-                    case Status.Failure { Cause: TimeoutException _ }:
+                    case Status.Failure { Cause: TimeoutException }:
                         _timeoutCount++;
                         _breaker.WithCircuitBreaker(Job).PipeTo(Self);
                         break;
@@ -94,9 +95,9 @@ namespace Akka.Tests.Pattern
                 }
             }
 
-            private static async Task<JobDone> Job()
+            private static async Task<JobDone> Job(CancellationToken ct)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(ThreadLocalRandom.Current.Next(300)));
+                await Task.Delay(TimeSpan.FromMilliseconds(ThreadLocalRandom.Current.Next(300)), ct);
                 return JobDone.Instance;
             }
         }
@@ -124,10 +125,10 @@ namespace Akka.Tests.Pattern
             {
                 stressActor.Tell(GetResult.Instance);
                 var result = ExpectMsg<Result>();
-                result.FailCount.ShouldBe(0);
-
                 Output.WriteLine("FailCount:{0}, DoneCount:{1}, CircCount:{2}, TimeoutCount:{3}", 
                     result.FailCount, result.DoneCount, result.CircCount, result.TimeoutCount);
+                
+                result.FailCount.ShouldBe(0);
             }
         }
     }

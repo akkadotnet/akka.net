@@ -38,9 +38,8 @@ namespace Akka.Streams.Implementation
                 ReactiveStreamsCompliance.TryOnComplete(subscriber);
             }
             catch (Exception e)
+                when (e is ISpecViolation)
             {
-                if (!(e is ISpecViolation))
-                    throw;
             }
         }
 
@@ -91,9 +90,8 @@ namespace Akka.Streams.Implementation
                 ReactiveStreamsCompliance.TryOnError(subscriber, Cause);
             }
             catch (Exception e)
+                when (e is ISpecViolation)
             {
-                if (!(e is ISpecViolation))
-                    throw;
             }
         }
 
@@ -270,9 +268,8 @@ namespace Akka.Streams.Implementation
                 ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "Publisher");
             }
             catch (Exception e)
+                when (e is ISpecViolation)
             {
-                if (!(e is ISpecViolation))
-                    throw;
             }
         }
 

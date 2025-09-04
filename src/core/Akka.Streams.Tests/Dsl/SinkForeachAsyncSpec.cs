@@ -37,7 +37,7 @@ namespace Akka.Streams.Tests.Dsl
         public async Task A_ForeachAsync_must_handle_empty_source()
         {
             var p = Source.From(new List<int>()).RunWith(Sink.ForEachAsync<int>(3, _ => Task.CompletedTask), Materializer);
-            (await p.ShouldCompleteWithin(RemainingOrDefault)).Should().Be(Done.Instance);
+            (await p.WaitAsync(RemainingOrDefault)).Should().Be(Done.Instance);
         }
 
         [Fact]
@@ -66,7 +66,7 @@ namespace Akka.Streams.Tests.Dsl
             latch[4].CountDown();
             probe.ExpectMsg(4);
 
-            (await p.ShouldCompleteWithin(TimeSpan.FromSeconds(4))).Should().Be(Done.Instance);
+            (await p.WaitAsync(TimeSpan.FromSeconds(4))).Should().Be(Done.Instance);
         }
 
         [Fact]
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
             latch[4].CountDown();
             probe.ExpectMsg(4);
 
-            (await p.ShouldCompleteWithin(TimeSpan.FromSeconds(4))).Should().Be(Done.Instance);
+            (await p.WaitAsync(TimeSpan.FromSeconds(4))).Should().Be(Done.Instance);
 
             oneCalled.ShouldBeTrue();
             twoCalled.ShouldBeTrue();
@@ -159,7 +159,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ToDictionary(t => t.i, t => t.Item2);
             var p = Source.From(Enumerable.Range(1, 4)).RunWith(Sink.ForEachAsync<int>(4, async n =>
             {
-                await latch[n].WaitAsync().ShouldCompleteWithin(TimeSpan.FromSeconds(5));
+                await latch[n].WaitAsync().WaitAsync(TimeSpan.FromSeconds(5));
                 probe.Ref.Tell(n);
             }), Materializer);
 
@@ -175,7 +175,7 @@ namespace Akka.Streams.Tests.Dsl
             latch[1].Signal();
             probe.ExpectMsg(1);
 
-            (await p.ShouldCompleteWithin(TimeSpan.FromSeconds(4))).Should().Be(Done.Instance);
+            (await p.WaitAsync(TimeSpan.FromSeconds(4))).Should().Be(Done.Instance);
         }
 
         [Fact]
@@ -188,7 +188,7 @@ namespace Akka.Streams.Tests.Dsl
             var p = Source.From(Enumerable.Range(1, 5)).RunWith(Sink.ForEachAsync<int>(4, async n =>
             {
                 probe.Ref.Tell(n);
-                await latch[n].WaitAsync().ShouldCompleteWithin(TimeSpan.FromSeconds(5));
+                await latch[n].WaitAsync().WaitAsync(TimeSpan.FromSeconds(5));
             }), Materializer);
 
             probe.ExpectMsgAllOf(new[] { 1, 2, 3, 4 });
@@ -201,7 +201,7 @@ namespace Akka.Streams.Tests.Dsl
             latch[5].Signal();
             probe.ExpectMsg(5);
 
-            (await p.ShouldCompleteWithin(TimeSpan.FromSeconds(5))).Should().Be(Done.Instance);
+            (await p.WaitAsync(TimeSpan.FromSeconds(5))).Should().Be(Done.Instance);
         }
 
         [Fact]
@@ -216,13 +216,13 @@ namespace Akka.Streams.Tests.Dsl
                     throw new TestException("err1");
 
                 probe.Ref.Tell(n);
-                await latch.WaitAsync().ShouldCompleteWithin(TimeSpan.FromSeconds(10));
+                await latch.WaitAsync().WaitAsync(TimeSpan.FromSeconds(10));
             }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)), Materializer);
 
             latch.Signal();
             probe.ExpectMsgAllOf(new[] { 1, 2, 4, 5 });
 
-            (await p.ShouldCompleteWithin(TimeSpan.FromSeconds(5))).Should().Be(Done.Instance);
+            (await p.WaitAsync(TimeSpan.FromSeconds(5))).Should().Be(Done.Instance);
         }
 
         [Fact]
@@ -237,13 +237,13 @@ namespace Akka.Streams.Tests.Dsl
                 if (n == 3)
                 {
                     // Error will happen only after elements 1, 2 has been processed
-                    await errorLatch.WaitAsync().ShouldCompleteWithin(TimeSpan.FromSeconds(5));
+                    await errorLatch.WaitAsync().WaitAsync(TimeSpan.FromSeconds(5));
                     throw new TestException("err2");
                 }
 
                 probe.Ref.Tell(n);
                 errorLatch.Signal();
-                await element4Latch.WaitAsync().ShouldCompleteWithin(TimeSpan.FromSeconds(5)); // Block element 4, 5, 6, ... from entering
+                await element4Latch.WaitAsync().WaitAsync(TimeSpan.FromSeconds(5)); // Block element 4, 5, 6, ... from entering
             }).WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.StoppingDecider)), Materializer);
 
             // Only the first two messages are guaranteed to arrive due to their enforced ordering related to the time

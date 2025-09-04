@@ -12,8 +12,6 @@ using Akka.Configuration;
 
 namespace Akka.IO.Buffers
 {
-    using ByteBuffer = ArraySegment<byte>;
-    
     internal class DisabledBufferPool : IBufferPool
     {
         private readonly int _bufferSize;

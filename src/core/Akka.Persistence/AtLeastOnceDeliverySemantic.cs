@@ -37,12 +37,9 @@ namespace Akka.Persistence
         /// </exception>
         public AtLeastOnceDeliverySnapshot(long currentDeliveryId, UnconfirmedDelivery[] unconfirmedDeliveries)
         {
-            if (unconfirmedDeliveries == null)
-                throw new ArgumentNullException(nameof(unconfirmedDeliveries),
-                    "AtLeastOnceDeliverySnapshot expects not null array of unconfirmed deliveries");
-
             CurrentDeliveryId = currentDeliveryId;
-            UnconfirmedDeliveries = unconfirmedDeliveries;
+            UnconfirmedDeliveries = unconfirmedDeliveries ?? throw new ArgumentNullException(nameof(unconfirmedDeliveries),
+                "AtLeastOnceDeliverySnapshot expects not null array of unconfirmed deliveries");
         }
 
         /// <summary>
@@ -97,14 +94,9 @@ namespace Akka.Persistence
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="unconfirmedDeliveries"/> array is undefined.
         /// </exception>
-        public UnconfirmedWarning(UnconfirmedDelivery[] unconfirmedDeliveries)
-        {
-            if (unconfirmedDeliveries == null)
-                throw new ArgumentNullException(nameof(unconfirmedDeliveries),
-                    "UnconfirmedWarning expects not null array of unconfirmed deliveries");
-
-            UnconfirmedDeliveries = unconfirmedDeliveries;
-        }
+        public UnconfirmedWarning(UnconfirmedDelivery[] unconfirmedDeliveries) =>
+            UnconfirmedDeliveries = unconfirmedDeliveries ?? throw new ArgumentNullException(nameof(unconfirmedDeliveries),
+                "UnconfirmedWarning expects not null array of unconfirmed deliveries");
 
         /// <summary>
         /// TBD

@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -18,131 +19,130 @@ using Akka.Remote.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.Cluster.Tests.MultiNode;
+
+public class LeaderDowningNodeThatIsUnreachableConfig : MultiNodeConfig
 {
-    public class LeaderDowningNodeThatIsUnreachableConfig : MultiNodeConfig
+    public RoleName First { get; }
+    public RoleName Second { get; }
+    public RoleName Third { get; }
+    public RoleName Fourth { get; }
+
+    public LeaderDowningNodeThatIsUnreachableConfig(bool failureDetectorPuppet)
     {
-        public RoleName First { get; private set; }
-        public RoleName Second { get; private set; }
-        public RoleName Third { get; private set; }
-        public RoleName Fourth { get; private set; }
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
+        Fourth = Role("fourth");
 
-        public LeaderDowningNodeThatIsUnreachableConfig(bool failureDetectorPuppet)
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-            Fourth = Role("fourth");
+        CommonConfig = DebugConfig(false)
+            .WithFallback(ConfigurationFactory.ParseString(@"akka.cluster.auto-down-unreachable-after = 2s"))
+            .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
+    }
+}
 
-            CommonConfig = DebugConfig(false)
-                .WithFallback(ConfigurationFactory.ParseString(@"akka.cluster.auto-down-unreachable-after = 2s"))
-                .WithFallback(MultiNodeClusterSpec.ClusterConfig(failureDetectorPuppet));
-        }
+public class LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode : LeaderDowningNodeThatIsUnreachableSpec
+{
+    public LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode() : base(true, typeof(LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode))
+    {
+    }
+}
+
+public class LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode : LeaderDowningNodeThatIsUnreachableSpec
+{
+    public LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode() : base(false, typeof(LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode))
+    {
+    }
+}
+
+public abstract class LeaderDowningNodeThatIsUnreachableSpec : MultiNodeClusterSpec
+{
+    private readonly LeaderDowningNodeThatIsUnreachableConfig _config;
+
+    protected LeaderDowningNodeThatIsUnreachableSpec(bool failureDetectorPuppet, Type type)
+        : this(new LeaderDowningNodeThatIsUnreachableConfig(failureDetectorPuppet), type)
+    {
+
     }
 
-    public class LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode : LeaderDowningNodeThatIsUnreachableSpec
+    protected LeaderDowningNodeThatIsUnreachableSpec(LeaderDowningNodeThatIsUnreachableConfig config, Type type)
+        : base(config, type)
     {
-        public LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode() : base(true, typeof(LeaderDowningNodeThatIsUnreachableWithFailureDetectorPuppetMultiNode))
-        {
-        }
+        _config = config;
+        MuteMarkingAsUnreachable();
     }
 
-    public class LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode : LeaderDowningNodeThatIsUnreachableSpec
+    [MultiNodeFact]
+    public async Task LeaderDowningNodeThatIsUnreachableSpecs()
     {
-        public LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode() : base(false, typeof(LeaderDowningNodeThatIsUnreachableWithAccrualFailureDetectorMultiNode))
-        {
-        }
+        await Leader_in_4_node_cluster_must_be_able_to_down_last_node_that_is_unreachable();
+        await Leader_in_4_node_cluster_must_be_able_to_down_middle_node_that_is_unreachable();
     }
 
-    public abstract class LeaderDowningNodeThatIsUnreachableSpec : MultiNodeClusterSpec
+    public async Task Leader_in_4_node_cluster_must_be_able_to_down_last_node_that_is_unreachable()
     {
-        private readonly LeaderDowningNodeThatIsUnreachableConfig _config;
+        await AwaitClusterUpAsync(CancellationToken.None, _config.First, _config.Second, _config.Third, _config.Fourth);
 
-        protected LeaderDowningNodeThatIsUnreachableSpec(bool failureDetectorPuppet, Type type)
-            : this(new LeaderDowningNodeThatIsUnreachableConfig(failureDetectorPuppet), type)
+        var fourthAddress = GetAddress(_config.Fourth);
+
+        await EnterBarrierAsync("before-exit-fourth-node");
+        await RunOnAsync(async () =>
         {
+            // kill 'fourth' node
+            await TestConductor.ExitAsync(_config.Fourth, 0);
+            await EnterBarrierAsync("down-fourth-node");
 
-        }
+            // mark the node as unreachable in the failure detector
+            MarkNodeAsUnavailable(fourthAddress);
 
-        protected LeaderDowningNodeThatIsUnreachableSpec(LeaderDowningNodeThatIsUnreachableConfig config, Type type)
-            : base(config, type)
+            // --- HERE THE LEADER SHOULD DETECT FAILURE AND AUTO-DOWN THE UNREACHABLE NODE ---
+            await AwaitMembersUpAsync(3, ImmutableHashSet.Create(fourthAddress), 30.Seconds());
+        }, _config.First);
+
+        await RunOnAsync(async () =>
         {
-            _config = config;
-            MuteMarkingAsUnreachable();
-        }
+            await EnterBarrierAsync("down-fourth-node");
+        }, _config.Fourth);
 
-        [MultiNodeFact]
-        public void LeaderDowningNodeThatIsUnreachableSpecs()
+        await RunOnAsync(async () =>
         {
-            Leader_in_4_node_cluster_must_be_able_to_down_last_node_that_is_unreachable();
-            Leader_in_4_node_cluster_must_be_able_to_down_middle_node_that_is_unreachable();
-        }
+            await EnterBarrierAsync("down-fourth-node");
+            await AwaitMembersUpAsync(3, ImmutableHashSet.Create(fourthAddress), 30.Seconds());
+        }, _config.Second, _config.Third);
 
-        public void Leader_in_4_node_cluster_must_be_able_to_down_last_node_that_is_unreachable()
+        await EnterBarrierAsync("await-completion-1");
+    }
+
+    public async Task Leader_in_4_node_cluster_must_be_able_to_down_middle_node_that_is_unreachable()
+    {
+        var secondAddress = GetAddress(_config.Second);
+
+        await EnterBarrierAsync("before-down-second-node");
+        await RunOnAsync(async () =>
         {
-            AwaitClusterUp(_config.First, _config.Second, _config.Third, _config.Fourth);
+            // kill 'fourth' node
+            await TestConductor.ExitAsync(_config.Second, 0);
+            await EnterBarrierAsync("down-second-node");
 
-            var fourthAddress = GetAddress(_config.Fourth);
+            // mark the node as unreachable in the failure detector
+            MarkNodeAsUnavailable(secondAddress);
 
-            EnterBarrier("before-exit-fourth-node");
-            RunOn(() =>
-            {
-                // kill 'fourth' node
-                TestConductor.Exit(_config.Fourth, 0).Wait();
-                EnterBarrier("down-fourth-node");
+            // --- HERE THE LEADER SHOULD DETECT FAILURE AND AUTO-DOWN THE UNREACHABLE NODE ---
+            await AwaitMembersUpAsync(2, ImmutableHashSet.Create(secondAddress), 30.Seconds());
+        }, _config.First);
 
-                // mark the node as unreachable in the failure detector
-                MarkNodeAsUnavailable(fourthAddress);
-
-                // --- HERE THE LEADER SHOULD DETECT FAILURE AND AUTO-DOWN THE UNREACHABLE NODE ---
-                AwaitMembersUp(3, ImmutableHashSet.Create(fourthAddress), 30.Seconds());
-            }, _config.First);
-
-            RunOn(() =>
-            {
-                EnterBarrier("down-fourth-node");
-            }, _config.Fourth);
-
-            RunOn(() =>
-            {
-                EnterBarrier("down-fourth-node");
-                AwaitMembersUp(3, ImmutableHashSet.Create(fourthAddress), 30.Seconds());
-            }, _config.Second, _config.Third);
-
-            EnterBarrier("await-completion-1");
-        }
-
-        public void Leader_in_4_node_cluster_must_be_able_to_down_middle_node_that_is_unreachable()
+        await RunOnAsync(async () =>
         {
-            var secondAddress = GetAddress(_config.Second);
+            await EnterBarrierAsync("down-second-node");
+        }, _config.Second);
 
-            EnterBarrier("before-down-second-node");
-            RunOn(() =>
-            {
-                // kill 'fourth' node
-                TestConductor.Exit(_config.Second, 0).Wait();
-                EnterBarrier("down-second-node");
+        await RunOnAsync(async () =>
+        {
+            await EnterBarrierAsync("down-second-node");
+            await AwaitMembersUpAsync(2, ImmutableHashSet.Create(secondAddress), 30.Seconds());
+        }, _config.Second, _config.Third);
 
-                // mark the node as unreachable in the failure detector
-                MarkNodeAsUnavailable(secondAddress);
+        await EnterBarrierAsync("await-completion-2");
 
-                // --- HERE THE LEADER SHOULD DETECT FAILURE AND AUTO-DOWN THE UNREACHABLE NODE ---
-                AwaitMembersUp(2, ImmutableHashSet.Create(secondAddress), 30.Seconds());
-            }, _config.First);
-
-            RunOn(() =>
-            {
-                EnterBarrier("down-second-node");
-            }, _config.Second);
-
-            RunOn(() =>
-            {
-                EnterBarrier("down-second-node");
-                AwaitMembersUp(2, ImmutableHashSet.Create(secondAddress), 30.Seconds());
-            }, _config.Second, _config.Third);
-
-            EnterBarrier("await-completion-2");
-
-        }
     }
 }

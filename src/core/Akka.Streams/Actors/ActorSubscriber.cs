@@ -319,11 +319,8 @@ namespace Akka.Streams.Actors
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="impl"/> is undefined.
         /// </exception>
-        public ActorSubscriberImpl(IActorRef impl)
-        {
-            if (impl == null) throw new ArgumentNullException(nameof(impl), "ActorSubscriberImpl requires actor impl to be defined");
-            _impl = impl;
-        }
+        public ActorSubscriberImpl(IActorRef impl) =>
+            _impl = impl ?? throw new ArgumentNullException(nameof(impl), "ActorSubscriberImpl requires actor impl to be defined");
 
         /// <summary>
         /// TBD

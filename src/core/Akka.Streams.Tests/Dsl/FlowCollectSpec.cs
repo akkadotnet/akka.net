@@ -76,9 +76,9 @@ namespace Akka.Streams.Tests.Dsl
                 int ThrowOnTwo(int x) => x == 2 ? throw new TestException("") : x;
 
                 var probe =
+#pragma warning disable CS0618
                     Source.From(Enumerable.Range(1, 3))
                         // This is intentional, testing backward compatibility with old obsolete method 
-#pragma warning disable CS0618
                         .Collect(ThrowOnTwo)
 #pragma warning restore CS0618
                         .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))

@@ -24,25 +24,27 @@ namespace Akka.Tests.IO
     public class UdpConnectedIntegrationSpec : AkkaSpec
     {
         public UdpConnectedIntegrationSpec(ITestOutputHelper output)
-            : base(@"
-                    akka.actor.serialize-creators = on
-                    akka.actor.serialize-messages = on
-
-                    akka.io.udp-connected.buffer-pool = ""akka.io.udp-connected.direct-buffer-pool""
-                    akka.io.udp-connected.nr-of-selectors = 1
-                    # This comes out to be about 1.6 Mib maximum total buffer size
-                    akka.io.udp-connected.direct-buffer-pool.buffer-size = 512
-                    akka.io.udp-connected.direct-buffer-pool.buffers-per-segment = 32
-                    akka.io.udp-connected.direct-buffer-pool.buffer-pool-limit = 100
-
-                    akka.io.udp.buffer-pool = ""akka.io.udp.direct-buffer-pool""
-                    akka.io.udp.nr-of-selectors = 1
-                    # This comes out to be about 1.6 Mib maximum total buffer size
-                    akka.io.udp.direct-buffer-pool.buffer-size = 512
-                    akka.io.udp.direct-buffer-pool.buffers-per-segment = 32
-                    akka.io.udp.direct-buffer-pool.buffer-pool-limit = 100
-                    akka.io.udp.trace-logging = true
-                    akka.loglevel = DEBUG", output)
+            : base("""
+                   
+                                       akka.actor.serialize-creators = on
+                                       akka.actor.serialize-messages = on
+                   
+                                       akka.io.udp-connected.buffer-pool = "akka.io.udp-connected.direct-buffer-pool"
+                                       akka.io.udp-connected.nr-of-selectors = 1
+                                       # This comes out to be about 1.6 Mib maximum total buffer size
+                                       akka.io.udp-connected.direct-buffer-pool.buffer-size = 512
+                                       akka.io.udp-connected.direct-buffer-pool.buffers-per-segment = 32
+                                       akka.io.udp-connected.direct-buffer-pool.buffer-pool-limit = 100
+                   
+                                       akka.io.udp.buffer-pool = "akka.io.udp.direct-buffer-pool"
+                                       akka.io.udp.nr-of-selectors = 1
+                                       # This comes out to be about 1.6 Mib maximum total buffer size
+                                       akka.io.udp.direct-buffer-pool.buffer-size = 512
+                                       akka.io.udp.direct-buffer-pool.buffers-per-segment = 32
+                                       akka.io.udp.direct-buffer-pool.buffer-pool-limit = 100
+                                       akka.io.udp.trace-logging = true
+                                       akka.loglevel = DEBUG
+                   """, output)
         {
         }
 
@@ -61,10 +63,9 @@ namespace Akka.Tests.IO
             IPEndPoint realLocalAddress = null; 
             commander.Send(
                 UdpConnected.Instance.Apply(Sys).Manager, 
-                new UdpConnected.Connect(handler, remoteAddress, localAddress, new []
-                {
+                new UdpConnected.Connect(handler, remoteAddress, localAddress, [
                     new TestSocketOption(socket => realLocalAddress = (IPEndPoint)socket.LocalEndPoint)
-                }));
+                ]));
             await commander.ExpectMsgAsync<UdpConnected.Connected>();
             return (commander.Sender, realLocalAddress);
         }
@@ -75,11 +76,11 @@ namespace Akka.Tests.IO
             IPEndPoint clientEndpoint = null; 
             commander.Send(
                 UdpConnected.Instance.Apply(Sys).Manager, 
-                new UdpConnected.Connect(handler, remoteAddress, options:new []
-                {
+                new UdpConnected.Connect(handler, remoteAddress, options:
+                [
                     new TestSocketOption(socket => 
                         clientEndpoint = (IPEndPoint)socket.LocalEndPoint)
-                }));
+                ]));
             await commander.ExpectMsgAsync<UdpConnected.Connected>();
             return (commander.Sender, clientEndpoint);
         }
@@ -94,15 +95,12 @@ namespace Akka.Tests.IO
             var (client, clientLocalEndpoint) =await ConnectUdpAsync(null, serverLocalEndpoint, TestActor);
             client.Tell(UdpConnected.Send.Create(data1));
 
-            var clientAddress = ExpectMsgPf(TimeSpan.FromSeconds(3), "", msg =>
+            var clientAddress = await ExpectMsgOfAsync(TimeSpan.FromSeconds(3), "", msg =>
             {
-                if (msg is Udp.Received received)
-                {
-                    received.Data.ShouldBe(data1);
-                    received.Sender.ShouldBe(clientLocalEndpoint);
-                    return received.Sender;
-                }
-                throw new Exception();
+                if (msg is not Udp.Received received) throw new Exception();
+                received.Data.ShouldBe(data1);
+                received.Sender.ShouldBe(clientLocalEndpoint);
+                return received.Sender;
             });
 
             server.Tell(Udp.Send.Create(data2, clientAddress));
@@ -121,14 +119,11 @@ namespace Akka.Tests.IO
             var (client, clientLocalEndpoint) = await  ConnectUdpAsync(serverLocalEndpoint, clientProbe);
             client.Tell(UdpConnected.Send.Create(data1));
 
-            ExpectMsgPf(TimeSpan.FromSeconds(3), "", serverProbe, msg =>
+            await ExpectMsgOfAsync(TimeSpan.FromSeconds(3), "", serverProbe, msg =>
             {
-                if (msg is Udp.Received received)
-                {
-                    received.Data.ShouldBe(data1);
-                    return received.Sender;
-                }
-                throw new Exception();
+                if (msg is not Udp.Received received) throw new Exception();
+                received.Data.ShouldBe(data1);
+                return received.Sender;
             });
 
             server.Tell(Udp.Send.Create(data2, clientLocalEndpoint));

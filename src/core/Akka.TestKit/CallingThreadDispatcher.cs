@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using Akka.Configuration;
 using Akka.Dispatch;
 
@@ -43,30 +44,34 @@ namespace Akka.TestKit
     public class CallingThreadDispatcher : MessageDispatcher
     {
         /// <summary>
-        /// TBD 
+        /// HOCON id of the CallingThreadDispatcher
         /// </summary>
-        public static string Id = "akka.test.calling-thread-dispatcher";
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="configurator">TBD</param>
+        public new static string Id = "akka.test.calling-thread-dispatcher";
+        
         public CallingThreadDispatcher(MessageDispatcherConfigurator configurator) : base(configurator)
         {
         }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="run">TBD</param>
+        
         protected override void ExecuteTask(IRunnable run)
         {
-            run.Run();
-        }
+            var currentSyncContext = SynchronizationContext.Current;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+            try
+            {
+                // Actors should not run with ActorCellKeepingSynchronizationContext
+                // (or any sync context that wraps ActorCellKeepingSynchronizationContext, e.g. Xunit's AsyncTestSyncContext)
+                // otherwise continuations in async message handlers will use ActorCellKeepingSynchronizationContext
+                // instead of ActorTaskScheduler which causes ActorContext to be incorrect.
+                SynchronizationContext.SetSynchronizationContext(null);
+
+                run.Run();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(currentSyncContext);
+            }
+        }
+        
         protected override void Shutdown()
         {
             // do nothing

@@ -5,11 +5,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Configuration;
 using Akka.Persistence.Journal;
 using Akka.Persistence.Snapshot;
 using Akka.TestKit;
+using Akka.Util;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -68,6 +72,32 @@ namespace Akka.Persistence.Tests
             }
         }
 
+        public class TestSupervisorConfigurator : SupervisorStrategyConfigurator
+        {
+            public override SupervisorStrategy Create()
+            {
+                return new CustomStrategy(10,TimeSpan.FromSeconds(5),ex =>
+                {
+                    //detect unrecoverable exception here
+                    return Directive.Stop;
+                });
+            }
+        }
+
+        public class CustomStrategy : OneForOneStrategy
+        {
+            public CustomStrategy(int? maxNrOfRetries, TimeSpan? withinTimeRange, Func<Exception, Directive> localOnlyDecider) : base(maxNrOfRetries, withinTimeRange, localOnlyDecider)
+            {
+            }
+
+            public override void HandleChildTerminated(IActorContext actorContext, IActorRef child, IEnumerable<IInternalActorRef> children)
+            {
+               //because the journal does not has child actors, the ref is always the actor itself. So optionally do something special here
+               //to indicate to the system that the journal crashed in an unrecoverable way.
+            }
+        }
+     
+
         #endregion
 
         private static readonly string SpecConfig = @"
@@ -81,6 +111,12 @@ namespace Akka.Persistence.Tests
                     class = ""Akka.Persistence.Tests.PersistenceConfigSpec+TestJournal, Akka.Persistence.Tests""
                     plugin-dispatcher = ""akka.actor.default-dispatcher""
                     test-value = ""B""
+                }
+                test3 {
+                    class = ""Akka.Persistence.Tests.PersistenceConfigSpec+TestJournal, Akka.Persistence.Tests""
+                    plugin-dispatcher = ""akka.actor.default-dispatcher""
+                    test-value = ""B""
+                    supervisor-strategy = ""Akka.Persistence.Tests.PersistenceConfigSpec+TestSupervisorConfigurator, Akka.Persistence.Tests""
                 }
             }
             akka.persistence.snapshot-store {
@@ -98,6 +134,51 @@ namespace Akka.Persistence.Tests
 
         public PersistenceConfigSpec(ITestOutputHelper output) : base(SpecConfig, output)
         {
+        }
+
+        /// <summary>
+        /// Verify that the journal config contains the expected default from our fallback configs
+        /// No spec for when the user overrides that because its not the goal to test the hocon config system.
+        /// Merely that the plugin system here properly applies the fallback config for this config value. 
+        /// </summary>
+        [Fact]
+        public void Journal_has_supervision_strategy_configured()
+        {
+            var persistence = Persistence.Instance.Apply(Sys);
+            
+            var config = persistence.JournalConfigFor("akka.persistence.journal.test2");
+            var defaultstrategy = config.GetString("supervisor-strategy");
+            defaultstrategy.ShouldBe(typeof(Akka.Actor.DefaultSupervisorStrategy).FullName);
+        }
+
+        /// <summary>
+        /// Verify that the snapshot config contains the expected default from our fallback configs
+        /// No spec for when the user overrides that because its not the goal to test the hocon config system.
+        /// Merely that the plugin system here properly applies the fallback config for this config value. 
+        /// </summary>
+        [Fact]
+        public void Snapshot_has_supervision_strategy_configured()
+        {
+            var persistence = Persistence.Instance.Apply(Sys);
+            
+            var config = persistence.JournalConfigFor("akka.persistence.snapshot-store.test1");
+            var defaultstrategy = config.GetString("supervisor-strategy");
+            defaultstrategy.ShouldBe(typeof(Akka.Actor.DefaultSupervisorStrategy).FullName);
+        }
+
+        [Fact]
+        public void Journal_has_custom_supervision_strategy_applied()
+        {
+            var persistence = Persistence.Instance.Apply(Sys);
+            var journal = persistence.JournalFor("akka.persistence.journal.test3"); //get our journal with the custom configuration
+            
+            //waves magic wand
+            var magicref = journal as ActorRefWithCell;
+            var appliedStrat = magicref.Underlying.Props.SupervisorStrategy;
+            //because the configured value for our supervisor strategy is our CustomStrategy
+            //we verify that the strat returned is the same as currently applied
+            var customstrategy = new TestSupervisorConfigurator().Create();
+            appliedStrat.GetType().ShouldBe(customstrategy.GetType());
         }
 
         [Fact]

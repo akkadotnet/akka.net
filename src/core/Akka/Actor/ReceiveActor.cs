@@ -170,7 +170,7 @@ namespace Akka.Actor
         /// <param name="messageType">The type of the message</param>
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified <paramref name="messageType"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
-        protected void ReceiveAsync(Type messageType, Func<object, Task> handler, Predicate<object> shouldHandle = null)
+        protected void ReceiveAsync(Type messageType, Func<object, Task> handler, Predicate<object>? shouldHandle = null)
         {
             AddTypedReceiveHandler(messageType, shouldHandle, message =>
             {
@@ -223,7 +223,7 @@ namespace Akka.Actor
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
         /// <exception cref="InvalidOperationException">This exception is thrown if this method is called outside of the actor's constructor or from <see cref="Become(Action)"/>.</exception>
-        protected void Receive<T>(Action<T> handler, Predicate<T> shouldHandle = null)
+        protected void Receive<T>(Action<T> handler, Predicate<T>? shouldHandle = null)
         {
             AddGenericReceiveHandler<T>(shouldHandle, message =>
             {

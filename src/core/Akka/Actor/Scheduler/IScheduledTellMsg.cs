@@ -31,6 +31,9 @@ internal sealed class ScheduledTellMsg : IScheduledTellMsg
         Message = message;
     }
     public object Message { get; }
+
+    public override string ToString()
+        => $"{{{nameof(ScheduledTellMsg)}: {{Message: {Message}}}}}";
 }
 
 /// <summary>
@@ -44,4 +47,7 @@ internal sealed class ScheduledTellMsgNoInfluenceReceiveTimeout : IScheduledTell
     }
 
     public object Message { get; }
+
+    public override string ToString()
+        => $"{{{nameof(ScheduledTellMsgNoInfluenceReceiveTimeout)}: {{Message: {Message}}}}}";
 }

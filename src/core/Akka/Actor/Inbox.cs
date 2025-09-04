@@ -258,18 +258,18 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Adds an item to the end of the queue.
         /// </summary>
-        /// <param name="item">TBD</param>
+        /// <param name="item">The item to enqueue.</param>
         public void Enqueue(T item)
         {
             _inner.AddLast(item);
         }
 
         /// <summary>
-        /// TBD
+        /// Removes and returns the item at the beginning of the queue.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The item removed from the beginning of the queue.</returns>
         public T Dequeue()
         {
             var item = _inner.First.Value;
@@ -278,10 +278,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Removes and returns the first item that matches the specified predicate, or the default value if no match is found.
         /// </summary>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="predicate">The predicate to match items against.</param>
+        /// <returns>The first matching item, or the default value if no match is found.</returns>
         public T DequeueFirstOrDefault(Predicate<T> predicate)
         {
             var node = _inner.First;
@@ -301,11 +301,11 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the number of elements contained in the queue.
         /// </summary>
         public int Count { get { return _inner.Count; } }
         /// <summary>
-        /// TBD
+        /// Gets a value indicating whether the queue is read-only.
         /// </summary>
         public bool IsReadOnly { get { return false; } }
     }
@@ -438,7 +438,7 @@ namespace Akka.Actor
         public IActorRef Receiver { get; private set; }
         
         /// <summary>
-        /// Make the inbox’s actor watch the <paramref name="subject"/> actor such that 
+        /// Make the inbox's actor watch the <paramref name="subject"/> actor such that 
         /// reception of the <see cref="Terminated"/> message can then be awaited.
         /// </summary>
         /// <param name="subject">TBD</param>

@@ -17,8 +17,6 @@ using Debug = System.Diagnostics.Debug;
 
 namespace Akka.IO.Buffers
 {
-    using ByteBuffer = ArraySegment<byte>;
-
     public class BufferPoolAllocationException : AkkaException
     {
         public BufferPoolAllocationException(string message) : base(message)
@@ -68,8 +66,8 @@ namespace Akka.IO.Buffers
 
         /// <summary>
         /// Rents a sequence of byte buffers representing (potentially non-continuous) range of memory
-        /// that is big enough to fit the <paramref name="minimumSize"/> requested. Once rent, byte 
-        /// buffers are expected to be released using <see cref="Release(System.ArraySegment{byte})"/> 
+        /// that is big enough to fit the <paramref name="minimumSize"/> requested. Once rent, byte
+        /// buffers are expected to be released using <see cref="Release(ByteBuffer)"/>
         /// method.
         /// </summary>
         /// <param name="minimumSize">

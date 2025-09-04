@@ -16,7 +16,7 @@ The registry is eventually consistent, i.e. changes are not immediately visible 
 
 You can send messages via the mediator on any node to registered actors on any other node.
 
-There a two different modes of message delivery, explained in the sections `Publish` and `Send` below.
+There are two different modes of message delivery, explained in the sections `Publish` and `Send` below.
 
 ## Publish
 
@@ -49,6 +49,37 @@ A simple actor that publishes to this "content" topic:
 It can publish messages to the topic from anywhere in the cluster:
 
 [!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SamplePublisher/Program.cs?name=publisher)]
+
+### PublishWithAck
+
+A `PublishWithAck` envelope message works just like a normal `Publish` envelope, but unlike normal `Publish` message, a `PublishWithAck` has an extra `Timeout` property and, if failed to be published, will be stored inside a per-topic buffer to wait until a subscriber in the cluster subscribed to the topic.
+
+#### Buffer
+
+* If the mediator received a `PublishWithAck` message and able to deliver it immediately, it will send back a `PublishSucceeded` message back to the original sender as a signal.
+* If the mediator could not deliver a `PublishWithAck` message, it will store the message inside a buffer.
+* The size of this buffer can be configured using the HOCON setting `akka.cluster.pub-sub.buffered-messages.max-per-topic`
+
+#### Buffer Timeout
+
+* The `PublishWithAck` message contains the `Timeout` property.
+* Every `akka.cluster.pub-sub.buffered-messages.timeout-check-interval` time, the mediator will scan through all the buffered message to check and see if it has been sitting in the buffer for more than timeout period.
+* Timed out buffered message will be removed from the buffer and either silently discarded or sent to the dead letter.
+* A `PublishFailure` message will also be sent to the original sender to signal publish failures.
+
+#### Buffer Delivery
+
+When any subscribers of the same topic as the `PublishWithAck` topic joins the publisher node, all buffered messages will be sent to the subscriber. For each delivered message, the mediator will send a `PublishSucceeded` message to the original sender as a signal.
+
+#### Buffer Overflow
+
+When a new message is inserted and the topic buffer count exceeds `akka.cluster.pub-sub.buffered-messages.max-per-topic`, the mediator will discard the oldest message in the buffer and send a `PublishFailed` to the original sender of that message.
+
+#### Example
+
+This example is the same as the publisher example above, but now it uses `PublishWithAck` and it will wait for 30 minutes for the payload to be consumed.
+
+[!code-csharp[Main](../../../src/examples/Cluster/PublishSubscribe/SamplePublisher/PublisherWithAck.cs?name=SamplePublisherWithAck)]
 
 ### Topic Groups
 

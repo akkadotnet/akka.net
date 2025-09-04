@@ -315,7 +315,9 @@ namespace Akka.Persistence.Tests
                 RunTask(async () =>
                 {
                     await Task.Delay(TimeSpan.FromSeconds(1))
+#pragma warning disable AK1005 // Actor context thread safety is being tested here
                         .ContinueWith(_ => { Sender.Tell("done"); });
+#pragma warning restore AK1005
                 });
             });
         }

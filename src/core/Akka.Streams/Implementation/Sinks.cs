@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -699,6 +700,7 @@ namespace Akka.Streams.Implementation
     /// INTERNAL API
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
+    #nullable enable
     [InternalApi]
     public sealed class QueueSink<T> : GraphStageWithMaterializedValue<SinkShape<T>, ISinkQueue<T>>
     {
@@ -708,7 +710,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly QueueSink<T> _stage;
             private readonly int _maxBuffer;
-            private IBuffer<Result<Option<T>>> _buffer;
+            private IBuffer<Result<Option<T>>>? _buffer;
             private Option<TaskCompletionSource<Option<T>>> _currentRequest;
 
             public Logic(QueueSink<T> stage, int maxBuffer) : base(stage.Shape)
@@ -722,8 +724,10 @@ namespace Akka.Streams.Implementation
 
             public void OnPush()
             {
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
                 EnqueueAndNotify(new Result<Option<T>>(Grab(_stage.In)));
-                if (_buffer.Used < _maxBuffer) Pull(_stage.In);
+                if (_buffer!.Used < _maxBuffer) Pull(_stage.In);
             }
 
             public void OnUpstreamFinish() => EnqueueAndNotify(new Result<Option<T>>(Option<T>.None));
@@ -753,7 +757,9 @@ namespace Akka.Streams.Implementation
                                     "You have to wait for previous future to be resolved to send another request"));
                         else
                         {
-                            if (_buffer.IsEmpty)
+                            Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
+                            if (_buffer!.IsEmpty)
                                 _currentRequest = promise;
                             else
                             {
@@ -767,7 +773,9 @@ namespace Akka.Streams.Implementation
 
             private void SendDownstream(TaskCompletionSource<Option<T>> promise)
             {
-                var e = _buffer.Dequeue();
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
+                var e = _buffer!.Dequeue();
                 if (e.IsSuccess)
                 {
                     promise.SetResult(e.Value);
@@ -776,14 +784,16 @@ namespace Akka.Streams.Implementation
                 }
                 else
                 {
-                    promise.SetException(e.Exception);
+                    promise.SetException(e.Exception!);
                     FailStage(e.Exception);
                 }
             }
 
             private void EnqueueAndNotify(Result<Option<T>> requested)
             {
-                _buffer.Enqueue(requested);
+                Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
+                
+                _buffer!.Enqueue(requested);
                 if (_currentRequest.HasValue)
                 {
                     SendDownstream(_currentRequest.Value);
@@ -859,6 +869,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public override string ToString() => "QueueSink";
     }
+    #nullable restore
 
     /// <summary>
     /// INTERNAL API

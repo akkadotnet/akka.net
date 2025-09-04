@@ -42,7 +42,7 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode
                     }}
                 "))
                 .WithFallback(ClusterSharding.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig())
+                .WithFallback(ClusterSingleton.DefaultConfig())
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
     }

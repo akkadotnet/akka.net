@@ -39,7 +39,7 @@ namespace Akka.Tests.Util
 
         private IActorRef String2ActorRef(string s)
         {
-            return new DummyActorRef(s); ;
+            return new DummyActorRef(s);
         }
 
         [Fact]

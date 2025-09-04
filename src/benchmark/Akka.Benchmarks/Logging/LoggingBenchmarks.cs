@@ -6,11 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading.Tasks;
-using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Event;
 using BenchmarkDotNet.Attributes;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks
 {
@@ -71,6 +70,7 @@ namespace Akka.Benchmarks
         }
 
         [Benchmark(Baseline = true, OperationsPerInvoke = NumOperations)]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
         public LogEvent[] LogInfoNoParams()
         {
             for(var i = 0; i < NumOperations; i++)
@@ -80,6 +80,7 @@ namespace Akka.Benchmarks
         }
         
         [Benchmark( OperationsPerInvoke = NumOperations)]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
         public LogEvent[] LogInfo1Params()
         {
             for(var i = 0; i < NumOperations; i++)
@@ -89,6 +90,7 @@ namespace Akka.Benchmarks
         }
         
         [Benchmark(OperationsPerInvoke = NumOperations)]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
         public LogEvent[] LogInfo2Params()
         {
             for(var i = 0; i < NumOperations; i++)
@@ -98,6 +100,7 @@ namespace Akka.Benchmarks
         }
         
         [Benchmark(OperationsPerInvoke = NumOperations)]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
         public LogEvent[] LogInfoWithException()
         {
             var ex = new ApplicationException();
@@ -108,6 +111,7 @@ namespace Akka.Benchmarks
         }
         
         [Benchmark(OperationsPerInvoke = NumOperations)]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
         public LogEvent[] LogInfoWithException1Params()
         {
             var ex = new ApplicationException();
@@ -118,6 +122,7 @@ namespace Akka.Benchmarks
         }
         
         [Benchmark(OperationsPerInvoke = NumOperations)]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
         public LogEvent[] LogInfoWithException2Params()
         {
             var ex = new ApplicationException();

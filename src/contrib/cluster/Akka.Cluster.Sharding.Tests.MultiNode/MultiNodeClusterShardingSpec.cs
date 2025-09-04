@@ -9,6 +9,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Event;
@@ -223,22 +225,35 @@ namespace Akka.Cluster.Sharding.Tests
                bool assertNodeUp = true,
                TimeSpan? max = null)
         {
-            RunOn(() =>
+            JoinAsync(from, to, onJoinedRunOnFrom, assertNodeUp, max).GetAwaiter().GetResult();
+        }
+        
+        protected async Task JoinAsync(
+            RoleName from,
+            RoleName to,
+            Action onJoinedRunOnFrom = null,
+            bool assertNodeUp = true,
+            TimeSpan? max = null,
+            CancellationToken cancellationToken = default)
+        {
+            await RunOnAsync(async () =>
             {
-                Cluster.Join(Node(to).Address);
+                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                Cluster.Join((await NodeAsync(to, cancellationToken)).Address);
                 if (assertNodeUp)
                 {
-                    Within(max ?? TimeSpan.FromSeconds(20), () =>
-                     {
-                         AwaitAssert(() =>
-                         {
-                             Cluster.State.IsMemberUp(Node(from).Address).Should().BeTrue();
-                         });
-                     });
+                    await WithinAsync(max ?? TimeSpan.FromSeconds(20), async () =>
+                    {
+                        await AwaitAssertAsync(() =>
+                        {
+                            Cluster.State.IsMemberUp(Node(from).Address).Should().BeTrue();
+                        }, cancellationToken: cancellationToken);
+                    }, cancellationToken: cancellationToken);
                 }
                 onJoinedRunOnFrom?.Invoke();
             }, from);
-            EnterBarrier(from.Name + "-joined");
+            
+            await EnterBarrierAsync(cancellationToken, from.Name + "-joined");
         }
         
         protected IActorRef StartSharding(
@@ -270,23 +285,33 @@ namespace Akka.Cluster.Sharding.Tests
 
         protected void SetStoreIfNeeded(ActorSystem sys, RoleName storeOn)
         {
+            SetStoreIfNeededAsync(sys, storeOn, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        protected async Task SetStoreIfNeededAsync(ActorSystem sys, RoleName storeOn, CancellationToken cancellationToken)
+        {
             if (PersistenceIsNeeded)
-                SetStore(sys, storeOn);
+                await SetStoreAsync(sys, storeOn, cancellationToken);
         }
 
         protected void SetStore(ActorSystem sys, RoleName storeOn)
         {
+            SetStoreAsync(sys, storeOn, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        protected async Task SetStoreAsync(ActorSystem sys, RoleName storeOn, CancellationToken cancellationToken = default)
+        {
             Persistence.Persistence.Instance.Apply(sys);
 
             var journalProbe = CreateTestProbe(sys);
-            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.journal.inmem").Tell(new Identify(null), journalProbe.Ref);
-            var sharedjournalStore = journalProbe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
+            sys.ActorSelection(await NodeAsync(storeOn, cancellationToken) / "system" / "akka.persistence.journal.inmem").Tell(new Identify(null), journalProbe.Ref);
+            var sharedjournalStore = (await journalProbe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(20), cancellationToken: cancellationToken)).Subject;
             sharedjournalStore.Should().NotBeNull();
             MemoryJournalShared.SetStore(sharedjournalStore, sys);
 
             var snapshotProbe = CreateTestProbe(sys);
-            sys.ActorSelection(Node(storeOn) / "system" / "akka.persistence.snapshot-store.inmem").Tell(new Identify(null), snapshotProbe.Ref);
-            var sharedSnapshotStore = snapshotProbe.ExpectMsg<ActorIdentity>(TimeSpan.FromSeconds(20)).Subject;
+            sys.ActorSelection(await NodeAsync(storeOn, cancellationToken) / "system" / "akka.persistence.snapshot-store.inmem").Tell(new Identify(null), snapshotProbe.Ref);
+            var sharedSnapshotStore = (await snapshotProbe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(20), cancellationToken: cancellationToken)).Subject;
             sharedSnapshotStore.Should().NotBeNull();
             MemorySnapshotStoreShared.SetStore(sharedSnapshotStore, sys);
         }
@@ -297,8 +322,17 @@ namespace Akka.Cluster.Sharding.Tests
         /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
         protected void StartPersistenceIfNeeded(RoleName startOn, params RoleName[] setStoreOn)
         {
+            StartPersistenceIfNeededAsync(startOn, CancellationToken.None, setStoreOn).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
+        protected async Task StartPersistenceIfNeededAsync(RoleName startOn, CancellationToken cancellationToken, params RoleName[] setStoreOn)
+        {
             if (PersistenceIsNeeded)
-                StartPersistence(startOn, setStoreOn);
+                await StartPersistenceAsync(startOn, cancellationToken, setStoreOn);
         }
 
         /// <summary>
@@ -306,6 +340,15 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
         protected void StartPersistence(RoleName startOn, params RoleName[] setStoreOn)
+        {
+            StartPersistenceAsync(startOn, CancellationToken.None, setStoreOn).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="startOn">the node to start the `MemoryJournalShared` store on</param>
+        protected async Task StartPersistenceAsync(RoleName startOn, CancellationToken cancellationToken, params RoleName[] setStoreOn)
         {
             Log.Info("Setting up setup shared journal & snapshot.");
 
@@ -316,14 +359,14 @@ namespace Akka.Cluster.Sharding.Tests
                 Persistence.Persistence.Instance.Apply(Sys).SnapshotStoreFor("akka.persistence.snapshot-store.inmem");
             }, startOn);
 
-            EnterBarrier("persistence-started");
+            await EnterBarrierAsync(cancellationToken, "persistence-started");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                SetStore(Sys, startOn);
+                await SetStoreAsync(Sys, startOn, cancellationToken);
             }, setStoreOn);
 
-            EnterBarrier($"after-{startOn.Name}");
+            await EnterBarrierAsync(cancellationToken, $"after-{startOn.Name}");
         }
     }
 }

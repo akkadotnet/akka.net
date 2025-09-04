@@ -12,6 +12,7 @@ using Akka.Benchmarks.Configurations;
 using Akka.Routing;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Actor
 {
@@ -113,6 +114,7 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark(Baseline = true, OperationsPerInvoke = MsgCount * 2)]
+        [BenchmarkCategory(MicroBenchmark, ActorMessagingBenchmark)]
         public Task PushMsgs()
         {
             for (var i = 0; i < MsgCount; i++)
@@ -124,6 +126,7 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark(OperationsPerInvoke = MsgCount * 2)]
+        [BenchmarkCategory(MicroBenchmark, ActorMessagingBenchmark)]
         public Task AskMsgs()
         {
             for (var i = 0; i < MsgCount; i++)

@@ -30,7 +30,7 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.actor.provider = cluster
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
                 akka.remote.dot-netty.tcp.port = 0")
-            .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig());
         
         private sealed class EntityEnvelope
@@ -135,17 +135,19 @@ namespace Akka.Cluster.Sharding.Tests
                 settings,
                 new TestMessageExtractor(),
                 PoisonPill.Instance,
-                provider
+                provider,
+                null
             ));
 
-            Sys.EventStream.Subscribe<Error>(TestActor);
+            var errorProbe = CreateTestProbe();
+            Sys.EventStream.Subscribe<Error>(errorProbe);
 
             var persistentShard = Sys.ActorOf(props);
 
             persistentShard.Tell(new EntityEnvelope(1, "Start"));
 
             // entity died here
-            var err = ExpectMsg<Error>();
+            var err = errorProbe.ExpectMsg<Error>();
             err.Cause.Should().BeOfType<ActorInitializationException>();
 
             // Need to wait for the internal state to reset, else everything we sent will go to dead letter

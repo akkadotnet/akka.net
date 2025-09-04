@@ -39,7 +39,7 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
 
     public class TestConductorSpec : MultiNodeSpec
     {
-        private TestConductorSpecConfig _config;
+        private readonly TestConductorSpecConfig _config;
 
         public TestConductorSpec() : this(new TestConductorSpecConfig()) { }
 
@@ -48,34 +48,28 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
             _config = config;
         }
 
-        protected override int InitialParticipantsValueFactory
-        {
-            get
-            {
-                return 2;
-            } 
-        }
+        protected override int InitialParticipantsValueFactory => 2;
 
         private IActorRef _echo;
 
-        protected IActorRef GetEchoActorRef()
+        protected async Task<IActorRef> GetEchoActorRef()
         {
             if (_echo == null)
             {
                 Sys.ActorSelection(Node(_config.Master).Root / "user" / "echo").Tell(new Identify(null));
-                _echo = ExpectMsg<ActorIdentity>().Subject;
+                _echo = (await ExpectMsgAsync<ActorIdentity>()).Subject;
             }
             return _echo;
         }
 
         [MultiNodeFact]
-        public void ATestConductorMust()
+        public async Task ATestConductorMust()
         {
-            Enter_a_Barrier();
-            Support_Throttling_of_Network_Connections();
+            await Enter_a_BarrierAsync();
+            await Support_Throttling_of_Network_ConnectionsAsync();
         }
 
-        public void Enter_a_Barrier()
+        public async Task Enter_a_BarrierAsync()
         {
             RunOn(() =>
             {
@@ -86,55 +80,55 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
                 }), "echo");
             }, _config.Master);
 
-            EnterBarrier("name");
+            await EnterBarrierAsync("name");
         }
 
-        public void Support_Throttling_of_Network_Connections()
+        public async Task Support_Throttling_of_Network_ConnectionsAsync()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // start remote network connection so that it can be throttled
-                GetEchoActorRef().Tell("start");
+                (await GetEchoActorRef()).Tell("start");
             }, _config.Slave);
 
-            ExpectMsg("start");
+            await ExpectMsgAsync("start");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Throttle(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Send, 0.01f).Wait();
+                await TestConductor.ThrottleAsync(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Send, 0.01f);
             }, _config.Master);
 
-            EnterBarrier("throttled_send");
+            await EnterBarrierAsync("throttled_send");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 foreach(var i in Enumerable.Range(0, 10))
                 {
-                    GetEchoActorRef().Tell(i);
+                    (await GetEchoActorRef()).Tell(i);
                 }
             }, _config.Slave);
 
             // fudged the value to 0.5,since messages are a different size in Akka.NET
-            Within(TimeSpan.FromSeconds(0.5), TimeSpan.FromSeconds(2), () =>
+            await WithinAsync(TimeSpan.FromSeconds(0.5), TimeSpan.FromSeconds(2), async () =>
             {
-                ExpectMsg(0, TimeSpan.FromMilliseconds(500));
-                ReceiveN(9).ShouldOnlyContainInOrder(Enumerable.Range(1,9).Cast<object>().ToArray());
+                await ExpectMsgAsync(0, TimeSpan.FromMilliseconds(500));
+                (await ReceiveNAsync(9).ToListAsync()).ShouldOnlyContainInOrder(Enumerable.Range(1,9).Cast<object>().ToArray());
             });
 
-            EnterBarrier("throttled_send2");
-            RunOn(() =>
+            await EnterBarrierAsync("throttled_send2");
+            await RunOnAsync(async () =>
             {
-                TestConductor.Throttle(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Send, -1).Wait();
-                TestConductor.Throttle(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Receive, 0.01F).Wait();
+                await TestConductor.ThrottleAsync(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Send, -1);
+                await TestConductor.ThrottleAsync(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Receive, 0.01F);
             }, _config.Master);
 
-            EnterBarrier("throttled_recv");
+            await EnterBarrierAsync("throttled_recv");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 foreach (var i in Enumerable.Range(10, 10))
                 {
-                    GetEchoActorRef().Tell(i);
+                    (await GetEchoActorRef()).Tell(i);
                 }
             }, _config.Slave);
 
@@ -142,20 +136,20 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
                 ? (TimeSpan.Zero, TimeSpan.FromMilliseconds(500))
                 : (TimeSpan.FromSeconds(0.3), TimeSpan.FromSeconds(3));
 
-            Within(minMax.Item1, minMax.Item2, () =>
+            await WithinAsync(minMax.Item1, minMax.Item2, async () =>
             {
-                ExpectMsg(10, TimeSpan.FromMilliseconds(500));
-                ReceiveN(9).ShouldOnlyContainInOrder(Enumerable.Range(11, 9).Cast<object>().ToArray());
+                await ExpectMsgAsync(10, TimeSpan.FromMilliseconds(500));
+                (await ReceiveNAsync(9).ToListAsync()).ShouldOnlyContainInOrder(Enumerable.Range(11, 9).Cast<object>().ToArray());
             });
 
-            EnterBarrier("throttled_recv2");
+            await EnterBarrierAsync("throttled_recv2");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Throttle(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Receive, -1).Wait();
+                await TestConductor.ThrottleAsync(_config.Slave, _config.Master, ThrottleTransportAdapter.Direction.Receive, -1);
             }, _config.Master);
 
-            EnterBarrier("after");
+            await EnterBarrierAsync("after");
         }
     }
 }

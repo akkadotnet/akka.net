@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectNoMsg(_pulseInterval);
             probe.SendComplete();
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
         }
 
@@ -67,7 +67,7 @@ namespace Akka.Streams.Tests.Dsl
                 .InitialTimeout(Dilated(TimeSpan.FromMilliseconds(2)))
                 .RunWith(Sink.First<int>(), Sys.Materializer());
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.Should().Be(1);
         }
 
@@ -88,7 +88,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectNoMsg(_pulseInterval);
             probe.SendComplete();
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
         }
     }

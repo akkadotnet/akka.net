@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectNext( 1, 2, 3)
                 .ExpectComplete();
 
-            var complete = await lastElement.ShouldCompleteWithin(TimeSpan.FromSeconds(1));
+            var complete = await lastElement.WaitAsync(TimeSpan.FromSeconds(1));
             complete.Should().Be(Option<int>.Create(3));
         }
 
@@ -54,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.Request(3)
                 .ExpectComplete();
 
-            var complete = await lastElement.ShouldCompleteWithin(1.Seconds());
+            var complete = await lastElement.WaitAsync(1.Seconds());
             complete.Should().Be(Option<int>.None);
         }
 

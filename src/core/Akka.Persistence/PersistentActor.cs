@@ -28,7 +28,7 @@ namespace Akka.Persistence
         public static readonly RecoveryCompleted Instance = new();
         private RecoveryCompleted(){}
 
-        public override bool Equals(object obj) => obj is RecoveryCompleted;
+        public override bool Equals(object? obj) => obj is RecoveryCompleted;
         public override int GetHashCode() => nameof(RecoveryCompleted).GetHashCode();
     }
 
@@ -546,7 +546,7 @@ namespace Akka.Persistence
         /// <typeparam name="T">The type of the message</typeparam>
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
-        protected void CommandAsync<T>(Func<T, Task> handler, Predicate<T> shouldHandle = null)
+        protected void CommandAsync<T>(Func<T, Task> handler, Predicate<T>? shouldHandle = null)
         {
             Command(WrapAsyncHandler(handler), shouldHandle);
         }
@@ -580,7 +580,7 @@ namespace Akka.Persistence
         /// <param name="messageType">The type of the message</param>
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <paramref name="messageType"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
-        protected void CommandAsync(Type messageType, Func<object, Task> handler, Predicate<object> shouldHandle = null)
+        protected void CommandAsync(Type messageType, Func<object, Task> handler, Predicate<object>? shouldHandle = null)
         {
             Command(messageType, WrapAsyncHandler(handler), shouldHandle);
         }

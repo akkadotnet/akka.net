@@ -257,6 +257,17 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// Thrown when an actor is sent a <see cref="IntentionalRestart"/> message.
+    /// </summary>
+    /// <remarks>
+    /// Meant to be used primarily for testing purposes.
+    /// </remarks>
+    public sealed class IntentionalActorRestartException : AkkaException
+    {
+        public IntentionalActorRestartException() : base("Intentional actor restart") { }
+    }
+
+    /// <summary>
     /// This exception is thrown when a <see cref="Kill"/> message has been sent to an Actor.
     /// <see cref="SupervisorStrategy.DefaultDecider"/> will by default stop the actor.
     /// </summary>

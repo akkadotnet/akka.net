@@ -66,7 +66,7 @@ namespace Akka.Persistence.TestKit.Performance
 
         internal IActorRef BenchActor(string pid, int replyAfter)
         {
-            return Sys.ActorOf(Props.Create(() => new BenchActor(pid, _testProbe, EventsCount, false)));;
+            return Sys.ActorOf(Props.Create(() => new BenchActor(pid, _testProbe, EventsCount, false)));
         }
         
         internal (IActorRef aut,TestProbe probe) BenchActorNewProbe(string pid, int replyAfter)

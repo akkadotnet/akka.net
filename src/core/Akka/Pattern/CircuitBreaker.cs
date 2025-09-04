@@ -7,7 +7,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -99,37 +98,37 @@ namespace Akka.Pattern
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the scheduler used for circuit breaker timing operations.
         /// </summary>
         public IScheduler Scheduler { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum number of failures allowed before the circuit breaker opens.
         /// </summary>
         public int MaxFailures { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the timeout after which a call is considered a failure.
         /// </summary>
         public TimeSpan CallTimeout { get; }
         
         /// <summary>
-        /// TBD
+        /// Gets the timeout after which to attempt to close the circuit if it is open.
         /// </summary>
         public TimeSpan ResetTimeout { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the maximum reset timeout for exponential backoff.
         /// </summary>
         public TimeSpan MaxResetTimeout { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the factor by which the reset timeout increases when using exponential backoff.
         /// </summary>
         public double ExponentialBackoffFactor { get; }
 
         /// <summary>
-        /// TBD
+        /// Gets the random factor used to add jitter to the reset timeout.
         /// </summary>
         public double RandomFactor { get; }
 
@@ -147,7 +146,7 @@ namespace Akka.Pattern
         /// <param name="maxFailures">Maximum number of failures before opening the circuit</param>
         /// <param name="callTimeout"><see cref="TimeSpan"/> of time after which to consider a call a failure</param>
         /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
-        /// <returns>TBD</returns>
+        /// <returns>A new CircuitBreaker instance</returns>
         public static CircuitBreaker Create(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
         {
             return new CircuitBreaker(scheduler, maxFailures, callTimeout, resetTimeout);
@@ -173,9 +172,9 @@ namespace Akka.Pattern
         /// <param name="maxFailures">Maximum number of failures before opening the circuit</param>
         /// <param name="callTimeout"><see cref="TimeSpan"/> of time after which to consider a call a failure</param>
         /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
-        /// <param name="maxResetTimeout"></param>
-        /// <param name="exponentialBackoffFactor"></param>
-        /// <returns>TBD</returns>
+        /// <param name="maxResetTimeout">The maximum reset timeout when using exponential backoff</param>
+        /// <param name="exponentialBackoffFactor">The factor by which the reset timeout increases when using exponential backoff</param>
+        /// <returns>A new CircuitBreaker instance</returns>
         public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout, TimeSpan maxResetTimeout, double exponentialBackoffFactor)
             : this(scheduler, maxFailures, callTimeout, resetTimeout, maxResetTimeout, exponentialBackoffFactor, 0.0)
         {
@@ -221,22 +220,77 @@ namespace Akka.Pattern
         /// <summary>
         /// Wraps invocation of asynchronous calls that need to be protected
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
+        /// <typeparam name="T">The <see cref="Type"/> returned by the protected function</typeparam>
         /// <param name="body">Call needing protected</param>
         /// <returns><see cref="Task"/> containing the call result</returns>
+        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public Task<T> WithCircuitBreaker<T>(Func<Task<T>> body) => CurrentState.Invoke(body);
 
+        /// <summary>
+        /// Wraps invocation of asynchronous calls that need to be protected
+        /// </summary>
+        /// <typeparam name="T">The <see cref="Type"/> returned by the protected function</typeparam>
+        /// <param name="body">Call needing protected</param>
+        /// <returns><see cref="Task"/> containing the call result</returns>
+        public Task<T> WithCircuitBreaker<T>(Func<CancellationToken, Task<T>> body) => CurrentState.Invoke(body);
+
+        /// <summary>
+        /// Wraps invocation of asynchronous calls that need to be protected
+        /// </summary>
+        /// <typeparam name="T">The <see cref="Type"/> returned by the protected function</typeparam>
+        /// <typeparam name="TState">The <see cref="Type"/> of the state object passed into the protected function</typeparam>
+        /// <param name="state">The state object will be passed into the protected function during invocation</param>
+        /// <param name="body">Call needing protected</param>
+        /// <returns><see cref="Task"/> containing the call result</returns>
+        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public Task<T> WithCircuitBreaker<T, TState>(TState state, Func<TState, Task<T>> body) => 
             CurrentState.InvokeState(state, body);
 
         /// <summary>
         /// Wraps invocation of asynchronous calls that need to be protected
         /// </summary>
+        /// <typeparam name="T">The <see cref="Type"/> returned by the protected function</typeparam>
+        /// <typeparam name="TState">The <see cref="Type"/> of the state object passed into the protected function</typeparam>
+        /// <param name="state">The state object will be passed into the protected function during invocation</param>
         /// <param name="body">Call needing protected</param>
-        /// <returns><see cref="Task"/></returns>
+        /// <returns><see cref="Task"/> containing the call result</returns>
+        public Task<T> WithCircuitBreaker<T, TState>(TState state, Func<TState, CancellationToken, Task<T>> body) => 
+            CurrentState.InvokeState(state, body);
+
+        /// <summary>
+        /// Wraps invocation of asynchronous calls that need to be protected
+        /// </summary>
+        /// <param name="body">Call needing protected</param>
+        /// <returns><see cref="Task"/> containing the call result</returns>
+        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public Task WithCircuitBreaker(Func<Task> body) => CurrentState.Invoke(body);
 
+        /// <summary>
+        /// Wraps invocation of asynchronous calls that need to be protected
+        /// </summary>
+        /// <param name="body">Call needing protected</param>
+        /// <returns><see cref="Task"/> containing the call result</returns>
+        public Task WithCircuitBreaker(Func<CancellationToken, Task> body) => CurrentState.Invoke(body);
+
+        /// <summary>
+        /// Wraps invocation of asynchronous calls that need to be protected
+        /// </summary>
+        /// <typeparam name="TState">The <see cref="Type"/> of the state object passed into the protected function</typeparam>
+        /// <param name="state">The state object will be passed into the protected function during invocation</param>
+        /// <param name="body">Call needing protected</param>
+        /// <returns><see cref="Task"/> containing the call result</returns>
+        [Obsolete(message:"Use WithCircuitBreaker() that accepts functions with CancellationToken parameter. Since 1.5.42")]
         public Task WithCircuitBreaker<TState>(TState state, Func<TState, Task> body) => 
+            CurrentState.InvokeState(state, body);
+
+        /// <summary>
+        /// Wraps invocation of asynchronous calls that need to be protected
+        /// </summary>
+        /// <typeparam name="TState">The <see cref="Type"/> of the state object passed into the protected function</typeparam>
+        /// <param name="state">The state object will be passed into the protected function during invocation</param>
+        /// <param name="body">Call needing protected</param>
+        /// <returns><see cref="Task"/> containing the call result</returns>
+        public Task WithCircuitBreaker<TState>(TState state, Func<TState, CancellationToken, Task> body) => 
             CurrentState.InvokeState(state, body);
 
         /// <summary>
@@ -244,20 +298,21 @@ namespace Akka.Pattern
         /// </summary>
         /// <param name="body">Call needing protected</param>
         public void WithSyncCircuitBreaker(Action body) =>
-            WithCircuitBreaker(body, b => Task.Run(b)).GetAwaiter().GetResult();
+            WithCircuitBreaker(body, (b, ct) => Task.Run(b, ct)).GetAwaiter().GetResult();
 
         /// <summary>
         /// Wraps invocations of asynchronous calls that need to be protected.
         /// </summary>
+        /// <typeparam name="T">The <see cref="Type"/> returned by the protected function</typeparam>
         /// <param name="body">Call needing protected</param>
         /// <returns>The result of the call</returns>
         public T WithSyncCircuitBreaker<T>(Func<T> body) =>
-            WithCircuitBreaker(body, b => Task.Run(b)).Result;
+            WithCircuitBreaker(body, (b, ct) => Task.Run(b, ct)).GetAwaiter().GetResult();
 
         /// <summary>
         /// Mark a successful call through CircuitBreaker. Sometimes the callee of CircuitBreaker sends back a message to the
         /// caller Actor. In such a case, it is convenient to mark a successful call instead of using Future
-        /// via <see cref="WithCircuitBreaker"/>
+        /// via <see cref="WithCircuitBreaker(Func{CancellationToken, Task})"/> or <see cref="WithCircuitBreaker{T}(Func{CancellationToken, Task{T}})"/>
         /// </summary>
         public void Succeed() => _currentState.CallSucceeds();
 
@@ -266,7 +321,7 @@ namespace Akka.Pattern
         /// <summary>
         /// Mark a failed call through CircuitBreaker. Sometimes the callee of CircuitBreaker sends back a message to the
         /// caller Actor. In such a case, it is convenient to mark a failed call instead of using Future
-        /// via <see cref="WithCircuitBreaker"/>
+        /// via <see cref="WithCircuitBreaker(Func{CancellationToken, Task})"/> or <see cref="WithCircuitBreaker{T}(Func{CancellationToken, Task{T}})"/>
         /// </summary>
         public void Fail() => _currentState.CallFails(new UserCalledFailException());
 
@@ -274,7 +329,7 @@ namespace Akka.Pattern
 
         /// <summary>
         /// Return true if the internal state is Closed. WARNING: It is a "power API" call which you should use with care.
-        /// Ordinal use cases of CircuitBreaker expects a remote call to return Future, as in <see cref="WithCircuitBreaker"/>.
+        /// Ordinal use cases of CircuitBreaker expects a remote call to return Future, as in <see cref="WithCircuitBreaker(Func{CancellationToken, Task})"/>.
         /// So, if you check the state by yourself, and make a remote call outside CircuitBreaker, you should
         /// manage the state yourself.
         /// </summary>
@@ -282,7 +337,7 @@ namespace Akka.Pattern
 
         /// <summary>
         /// Return true if the internal state is Open. WARNING: It is a "power API" call which you should use with care.
-        /// Ordinal use cases of CircuitBreaker expects a remote call to return Future, as in <see cref="WithCircuitBreaker"/>.
+        /// Ordinal use cases of CircuitBreaker expects a remote call to return Future, as in <see cref="WithCircuitBreaker(Func{CancellationToken, Task})"/>.
         /// So, if you check the state by yourself, and make a remote call outside CircuitBreaker, you should
         /// manage the state yourself.
         /// </summary>

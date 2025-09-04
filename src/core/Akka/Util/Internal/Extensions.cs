@@ -162,13 +162,15 @@ namespace Akka.Util.Internal
         /// <param name="enumerable">TBD</param>
         /// <param name="item">TBD</param>
         /// <returns>TBD</returns>
-        public static IEnumerable<T> Concat<T>(this IEnumerable<T> enumerable, T item)
+        #nullable enable
+        public static IEnumerable<T> Concat<T>(this IEnumerable<T>? enumerable, T item)
         {
             var itemInArray = new[] {item};
             if (enumerable == null)
                 return itemInArray;
             return enumerable.Concat(itemInArray);
         }
+        #nullable restore
 
         /// <summary>
         /// Applies a delegate <paramref name="action" /> to all elements of this enumerable.

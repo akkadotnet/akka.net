@@ -31,7 +31,6 @@ namespace ClusterSharding.Node
         {
             switch (message)
             {
-                case ShardRegion.StartEntity start: return start.EntityId;
                 case ShardEnvelope e: return e.EntityId;
             }
 

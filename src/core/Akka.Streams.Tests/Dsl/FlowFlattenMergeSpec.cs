@@ -55,7 +55,7 @@ namespace Akka.Streams.Tests.Dsl
                 var task = Source.From(new[] {Src10(0), Src10(10), Src10(20), Src10(30)})
                     .MergeMany(4, s => s)
                     .RunWith(ToSet, Materializer);
-                await task.ShouldCompleteWithin(1.Seconds());
+                await task.WaitAsync(1.Seconds());
                 task.Result.Should().BeEquivalentTo(Enumerable.Range(0, 40));
             }, Materializer);
         }
@@ -69,7 +69,7 @@ namespace Akka.Streams.Tests.Dsl
                     .MergeMany(3, s => s)
                     .Take(40)
                     .RunWith(ToSet, Materializer);
-                await task.ShouldCompleteWithin(1.Seconds());
+                await task.WaitAsync(1.Seconds());
                 task.Result.Should().BeEquivalentTo(Enumerable.Range(0, 40));
             }, Materializer);
         }
@@ -84,7 +84,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Take(40)
                     .RunWith(ToSeq, Materializer);
 
-                await task.ShouldCompleteWithin(1.Seconds());
+                await task.WaitAsync(1.Seconds());
 
                 task.Result.Take(30).Should().BeEquivalentTo(Enumerable.Range(0, 30));
                 task.Result.Drop(30).Should().BeEquivalentTo(Enumerable.Range(30, 10));
@@ -101,7 +101,7 @@ namespace Akka.Streams.Tests.Dsl
                     .MergeMany(1, x => x)
                     .RunWith(Sink.First<int>(), Materializer);
 
-                (await Awaiting(() => future.ShouldCompleteWithin(1.Seconds()))
+                (await Awaiting(() => future.WaitAsync(1.Seconds()))
                     .Should().ThrowAsync<TestException>()).And.Should().Be(ex);
             }, Materializer);
         }
@@ -118,7 +118,7 @@ namespace Akka.Streams.Tests.Dsl
                     .MergeMany(10, x => x)
                     .RunWith(Sink.First<int>(), Materializer);
 
-                (await Awaiting(() => future.ShouldCompleteWithin(1.Seconds()))
+                (await Awaiting(() => future.WaitAsync(1.Seconds()))
                     .Should().ThrowAsync<TestException>()).And.Should().Be(ex);
             }, Materializer);
         }
@@ -138,7 +138,7 @@ namespace Akka.Streams.Tests.Dsl
                     })
                     .RunWith(Sink.First<int>(), Materializer);
 
-                (await Awaiting(() => future.ShouldCompleteWithin(1.Seconds()))
+                (await Awaiting(() => future.WaitAsync(1.Seconds()))
                     .Should().ThrowAsync<TestException>()).And.Should().Be(ex);
             }, Materializer);
         }
@@ -153,7 +153,7 @@ namespace Akka.Streams.Tests.Dsl
                     .MergeMany(10, x => x)
                     .RunWith(Sink.First<int>(), Materializer);
 
-                (await Awaiting(() => future.ShouldCompleteWithin(1.Seconds()))
+                (await Awaiting(() => future.WaitAsync(1.Seconds()))
                     .Should().ThrowAsync<TestException>()).And.Should().Be(ex);
             }, Materializer);
         }
@@ -334,7 +334,7 @@ namespace Akka.Streams.Tests.Dsl
                     .AddAttributes(Attributes.CreateName("outer"))
                     .RunWith(Sink.First<Attributes>(), Materializer);
 
-                var attributes = (await task.ShouldCompleteWithin(3.Seconds())).AttributeList.ToList();
+                var attributes = (await task.WaitAsync(3.Seconds())).AttributeList.ToList();
                 var innerName = new Attributes.Name("inner");
                 var outerName = new Attributes.Name("outer");
 
@@ -355,7 +355,7 @@ namespace Akka.Streams.Tests.Dsl
                     .MergeMany(4, _ => Source.FromGraph(new FailingInnerMat(matFail)))
                     .RunWith(Sink.Ignore<string>(), Materializer);
 
-                await task.ShouldThrowWithin(matFail, 1.Seconds());
+                await AssertThrowsAsync(async () => await task).WaitAsync(1.Seconds());
             }, Materializer);
         }
 
