@@ -51,7 +51,9 @@ namespace Akka.Cluster.Metrics.Tests
             NodeMetrics sample;
             try
             {
-                sample = await CreateTestDataAsync(30.Seconds(), [
+                // Increase timeout to handle slow CI environments and collector initialization
+                // DefaultCollector needs time for first sample (500ms sleep + process access)
+                sample = await CreateTestDataAsync(60.Seconds(), [
                     StandardMetrics.MemoryAvailable,
                     StandardMetrics.MemoryUsed
                 ]);
