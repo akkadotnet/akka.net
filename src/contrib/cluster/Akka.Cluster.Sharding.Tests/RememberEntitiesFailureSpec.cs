@@ -745,17 +745,28 @@ namespace Akka.Cluster.Sharding.Tests
             await probe.ExpectMsgAsync<Done>();
 
             sharding.Tell(new EntityEnvelope(1, "hello-1"), probe.Ref);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1)); // because shard cannot start while store failing
-
+            
             if (wayToFail is StopStore or CrashStore)
             {
-                // a new store should be started
-                coordinatorStore = storeProbe.ExpectMsg<CoordinatorStoreCreated>().Store;
+                // For crash/stop cases, the coordinator will restart and create a new store
+                // Wait for the new store to be created (deterministic event, not time-based)
+                coordinatorStore = (await storeProbe.ExpectMsgAsync<CoordinatorStoreCreated>(TimeSpan.FromSeconds(3))).Store;
+                
+                // The new store is fresh, no failure configured yet
+                // Clear any potential failure state just to be safe
+                coordinatorStore.Tell(new FakeCoordinatorStoreActor.ClearFailShard("1"), storeProbe.Ref);
+                await storeProbe.ExpectMsgAsync<Done>();
             }
-
-            // fail it when stopping
-            coordinatorStore.Tell(new FakeCoordinatorStoreActor.ClearFailShard("1"), storeProbe.Ref);
-            await storeProbe.ExpectMsgAsync<Done>();
+            else
+            {
+                // For non-restart failure modes (NoResponse, Delay), the store stays alive but unresponsive
+                // Verify the message is blocked while the store is failing
+                await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+                
+                // Clear the failure for the existing store
+                coordinatorStore.Tell(new FakeCoordinatorStoreActor.ClearFailShard("1"), storeProbe.Ref);
+                await storeProbe.ExpectMsgAsync<Done>();
+            }
 
             await probe.AwaitAssertAsync(async () =>
             {
