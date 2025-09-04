@@ -125,9 +125,35 @@ namespace Akka.Cluster.Tests
         public async Task A_cluster_must_not_log_verbose_cluster_events_by_default()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            await AssertThrowsAsync<XunitException>(() => JoinAsync(upLogMessage)).WaitAsync(11.Seconds());
+            
+            // Join the cluster but verify verbose log messages are NOT emitted
+            await EventFilter
+                .Info(contains: upLogMessage)
+                .ExpectAsync(0, async () => {
+                    var tcs = new TaskCompletionSource<bool>();
+                    _cluster.RegisterOnMemberUp(() =>
+                    {
+                        tcs.TrySetResult(true);
+                    });
+                    _cluster.Join(_selfAddress);
+                    await tcs.Task.WaitAsync(10.Seconds());
+                });
+            
             await AwaitUpAsync();
-            await AssertThrowsAsync<XunitException>(() => DownAsync(downLogMessage)).WaitAsync(11.Seconds());
+            
+            // Down the cluster but verify verbose log messages are NOT emitted
+            await EventFilter
+                .Info(contains: downLogMessage)
+                .ExpectAsync(0, async () =>
+                {
+                    var tcs = new TaskCompletionSource<bool>();
+                    _cluster.RegisterOnMemberRemoved(() =>
+                    {
+                        tcs.TrySetResult(true);
+                    });
+                    _cluster.Down(_selfAddress);
+                    await tcs.Task.WaitAsync(10.Seconds());
+                });
         }
     }
 
