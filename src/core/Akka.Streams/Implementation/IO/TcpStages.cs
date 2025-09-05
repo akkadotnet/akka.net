@@ -585,10 +585,12 @@ namespace Akka.Streams.Implementation.IO
                         FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed"));
                         break;
                     case Tcp.ErrorClosed closed:
-                        FailStage(new StreamTcpException($"The connection closed with error: {closed.Cause}"));
+                        // Use async callback to ensure proper error propagation timing
+                        GetAsyncCallback<Exception>(ex => FailStage(ex))(new StreamTcpException($"The connection closed with error: {closed.Cause}"));
                         break;
                     case Tcp.Aborted:
-                        FailStage(new StreamTcpException("The connection has been aborted"));
+                        // Use async callback to ensure proper error propagation timing
+                        GetAsyncCallback<Exception>(ex => FailStage(ex))(new StreamTcpException("The connection has been aborted"));
                         break;
                     case Tcp.Closed:
                     case Tcp.ConfirmedClosed:

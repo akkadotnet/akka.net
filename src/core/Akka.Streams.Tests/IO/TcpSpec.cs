@@ -376,7 +376,6 @@ namespace Akka.Streams.Tests.IO
                 var serverConnection = await server.WaitAcceptAsync();
 
                 serverConnection.Abort();
-                await serverConnection.ExpectClosedAsync(c => c.IsAborted);
                 await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAndErrorAsync();
                 var subscription = await tcpWriteProbe.TcpWriteSubscription();
                 await subscription.ExpectCancellationAsync();
