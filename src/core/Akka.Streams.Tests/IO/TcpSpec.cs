@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="TcpSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -18,6 +18,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
+using Akka.Tests.Shared.Internals;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
@@ -356,8 +357,9 @@ namespace Akka.Streams.Tests.IO
             }, Materializer);
         }
 
-        [Fact]
-        public async Task Outgoing_TCP_stream_must_shut_down_both_streams_when_connection_is_aborted_remotely()
+        [Theory]
+        [Repeat(1000)]
+        public async Task Outgoing_TCP_stream_must_shut_down_both_streams_when_connection_is_aborted_remotely(int _)
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
@@ -374,6 +376,7 @@ namespace Akka.Streams.Tests.IO
                 var serverConnection = await server.WaitAcceptAsync();
 
                 serverConnection.Abort();
+                // await serverConnection.ExpectClosedAsync(c => c.IsAborted);
                 await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAndErrorAsync();
                 var subscription = await tcpWriteProbe.TcpWriteSubscription();
                 await subscription.ExpectCancellationAsync();
