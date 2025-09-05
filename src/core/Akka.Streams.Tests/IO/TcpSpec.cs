@@ -375,6 +375,11 @@ namespace Akka.Streams.Tests.IO
                     .Run(Materializer);
                 var serverConnection = await server.WaitAcceptAsync();
 
+                // Ensure the connection is fully established by performing a communication handshake
+                // This is critical on Linux where connection abort timing is different
+                var testData = ByteString.FromBytes([1, 2, 3]);
+                await ValidateServerClientCommunicationAsync(testData, serverConnection, tcpReadProbe, tcpWriteProbe);
+
                 serverConnection.Abort();
                 await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAndErrorAsync();
                 var subscription = await tcpWriteProbe.TcpWriteSubscription();
