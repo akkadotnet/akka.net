@@ -377,12 +377,15 @@ namespace Akka.Streams.Tests.IO
 
                 serverConnection.Abort();
 
-                // 👇 Minimal fix: trigger I/O so Linux surfaces the RST immediately
+                // Ensure subscription established before triggering I/O
+                var writeSub = await tcpWriteProbe.TcpWriteSubscription();
+                writeSub.Request(1);
+
+                // 👇 Force Linux to surface the RST via an actual write
                 await tcpWriteProbe.WriteAsync(ByteString.FromString("trigger reset"));
 
                 await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAndErrorAsync();
-                var subscription = await tcpWriteProbe.TcpWriteSubscription();
-                await subscription.ExpectCancellationAsync();
+                await writeSub.ExpectCancellationAsync();
 
                 await serverConnection.ExpectTerminatedAsync();
             }, Materializer);
