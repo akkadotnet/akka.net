@@ -373,19 +373,24 @@ namespace Akka.Streams.Tests.IO
                     .Via(Sys.TcpStream().OutgoingConnection(server.Address))
                     .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
+
+                // Ensure the client stream is wired up and actually opens a socket
+                // (pre-write so the next accepted connection belongs to this stream)
+                var subscription = await tcpWriteProbe.TcpWriteSubscription();
+                await tcpWriteProbe.WriteAsync(ByteString.FromString("hello"));
+
+                // Accept the connection that was just initiated by the client stream
                 var serverConnection = await server.WaitAcceptAsync();
 
+                // Abort the actual client connection
                 serverConnection.Abort();
 
-                // Ensure subscription established before triggering I/O
-                var writeSub = await tcpWriteProbe.TcpWriteSubscription();
-                writeSub.Request(1);
-
-                // 👇 Force Linux to surface the RST via an actual write
+                // Force Linux to surface the RST immediately (no-op on Windows)
                 await tcpWriteProbe.WriteAsync(ByteString.FromString("trigger reset"));
 
+                // Client side should now see the failure and upstream gets canceled
                 await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAndErrorAsync();
-                await writeSub.ExpectCancellationAsync();
+                await subscription.ExpectCancellationAsync();
 
                 await serverConnection.ExpectTerminatedAsync();
             }, Materializer);
