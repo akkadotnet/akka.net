@@ -541,6 +541,10 @@ namespace Akka.Streams.Implementation.IO
                         FailStage(new StreamTcpException("The IO manager actor (TCP) has terminated. Stopping now."));
                     else if (msg is Tcp.CommandFailed failed)
                         FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed"));
+                    else if (msg is Tcp.ErrorClosed closed)
+                        FailStage(new StreamTcpException($"Connection failed during establishment: {closed.Cause}"));
+                    else if (msg is Tcp.Aborted)
+                        FailStage(new StreamTcpException("Connection was aborted during establishment"));
                     else if (msg is Tcp.Connected connected)
                     {
                         ((Outbound)_role).LocalAddressPromise.TrySetResult(connected.LocalAddress);
@@ -551,8 +555,8 @@ namespace Akka.Streams.Implementation.IO
                         StageActor.Watch(_connection);
                         _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActor.Ref);
 
-                        // Always issue a read operation to detect immediate connection errors (Linux compatibility)
-                        _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                        if (IsAvailable(_bytesOut))
+                            _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
 
                         Pull(_bytesIn);
                     }
