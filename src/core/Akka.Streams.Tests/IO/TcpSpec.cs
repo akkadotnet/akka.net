@@ -369,11 +369,15 @@ namespace Akka.Streams.Tests.IO
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
 
-                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
-                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                var outgoingConnectionTask = Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .ViaMaterialized(Sys.TcpStream().OutgoingConnection(server.Address), Keep.Right)
                     .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
                 var serverConnection = await server.WaitAcceptAsync();
+
+                // Wait for the client-side connection to be fully established
+                // This ensures both sides are synchronized before testing abort behavior
+                await outgoingConnectionTask;
 
                 serverConnection.Abort();
                 await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAndErrorAsync();

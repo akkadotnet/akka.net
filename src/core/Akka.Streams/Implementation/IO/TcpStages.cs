@@ -541,10 +541,6 @@ namespace Akka.Streams.Implementation.IO
                         FailStage(new StreamTcpException("The IO manager actor (TCP) has terminated. Stopping now."));
                     else if (msg is Tcp.CommandFailed failed)
                         FailStage(new StreamTcpException($"Tcp command {failed.Cmd} failed"));
-                    else if (msg is Tcp.ErrorClosed closed)
-                        FailStage(new StreamTcpException($"Connection failed during establishment: {closed.Cause}"));
-                    else if (msg is Tcp.Aborted)
-                        FailStage(new StreamTcpException("Connection was aborted during establishment"));
                     else if (msg is Tcp.Connected connected)
                     {
                         ((Outbound)_role).LocalAddressPromise.TrySetResult(connected.LocalAddress);
