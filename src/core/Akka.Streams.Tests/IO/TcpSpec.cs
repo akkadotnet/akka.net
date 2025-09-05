@@ -375,13 +375,10 @@ namespace Akka.Streams.Tests.IO
                     .Run(Materializer);
                 var serverConnection = await server.WaitAcceptAsync();
 
-                // Ensure both stream subscriptions are established before aborting
-                var writeSubscription = await tcpWriteProbe.TcpWriteSubscription();
-                var readSubscription = await tcpReadProbe.TcpReadSubscription();
-                
                 serverConnection.Abort();
-                await tcpReadProbe.SubscriberProbe.ExpectErrorAsync();
-                await writeSubscription.ExpectCancellationAsync();
+                await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAndErrorAsync();
+                var subscription = await tcpWriteProbe.TcpWriteSubscription();
+                await subscription.ExpectCancellationAsync();
 
                 await serverConnection.ExpectTerminatedAsync();
             }, Materializer);

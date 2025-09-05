@@ -551,8 +551,8 @@ namespace Akka.Streams.Implementation.IO
                         StageActor.Watch(_connection);
                         _connection.Tell(new Tcp.Register(StageActor.Ref, keepOpenOnPeerClosed: true, useResumeWriting: false), StageActor.Ref);
 
-                        if (IsAvailable(_bytesOut))
-                            _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
+                        // Always issue a read operation to detect immediate connection errors (Linux compatibility)
+                        _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
 
                         Pull(_bytesIn);
                     }
