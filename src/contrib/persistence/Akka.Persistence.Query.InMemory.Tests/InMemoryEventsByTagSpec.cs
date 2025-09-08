@@ -34,17 +34,5 @@ namespace Akka.Persistence.Query.InMemory.Tests
         }
 
         protected override bool SupportsTagsInEventEnvelope => true;
-
-        public override void ReadJournal_live_query_EventsByTag_should_find_events_from_offset_exclusive()
-        {
-            // disabled for testing purposes
-        }
-
-        [Theory]
-        [Repeat(1000)]
-        public void ReadJournal_live_query_EventsByTag_should_find_events_from_offset_exclusive_repeated(int _)
-        {
-            base.ReadJournal_live_query_EventsByTag_should_find_events_from_offset_exclusive();
-        }
     }
 }
