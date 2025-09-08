@@ -153,26 +153,28 @@ namespace Akka.Persistence.Query.InMemory
         }
     }
 
-    internal sealed class LiveEventsByTagPublisher : AbstractEventsByTagPublisher
+    internal sealed class LiveEventsByTagPublisher : AbstractEventsByTagPublisher, IWithTimers
     {
-        private readonly ICancelable _tickCancelable;
+        private const string TickTimerKey = nameof(TickTimerKey);
+        private readonly TimeSpan _refreshInterval;
+        
         public LiveEventsByTagPublisher(string tag, int fromOffset, int toOffset, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
             : base(tag, fromOffset, maxBufferSize, writeJournalPluginId)
         {
             ToOffset = toOffset;
-            _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByTagPublisher.Continue.Instance, Self);
+            _refreshInterval = refreshInterval;
+            // Don't start the timer immediately - wait for first Request to avoid race condition
         }
 
         protected override int ToOffset { get; }
-
-        protected override void PostStop()
-        {
-            _tickCancelable.Cancel();
-            base.PostStop();
-        }
+        public ITimerScheduler Timers { get; set; }
 
         protected override void ReceiveInitialRequest()
         {
+            // Start the scheduler now that we have a subscriber with demand
+            if (!Timers.IsTimerActive(TickTimerKey))
+                Timers.StartPeriodicTimer(TickTimerKey, EventsByTagPublisher.Continue.Instance, _refreshInterval, _refreshInterval, Self);
+            
             Replay();
         }
 
