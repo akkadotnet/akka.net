@@ -29,13 +29,14 @@ namespace Akka.Persistence.Journal
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
         private readonly ConcurrentDictionary<string, long> _meta = new();
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
+        private readonly object _lock = new();
         
         protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
         
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
             // Use lock to ensure thread safety when accessing _allMessages and _tagsToMessagesMapping
-            lock (_allMessages)
+            lock (_lock)
             {
                 foreach (var w in messages)
                 {
@@ -116,7 +117,7 @@ namespace Akka.Persistence.Journal
         
         private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            lock (_allMessages)
+            lock (_lock)
             {
                 return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count)); 
             }
@@ -128,7 +129,7 @@ namespace Akka.Persistence.Journal
         private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
             // Use the same lock to ensure thread safety when reading tagged messages
-            lock (_allMessages)
+            lock (_lock)
             {
                 if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
                     return Task.FromResult(0);
@@ -155,7 +156,7 @@ namespace Akka.Persistence.Journal
         
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            lock (_allMessages)
+            lock (_lock)
             {
                 var index = 0;
                 var replayed = _allMessages
