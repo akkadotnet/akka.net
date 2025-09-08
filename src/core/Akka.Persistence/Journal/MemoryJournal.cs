@@ -18,46 +18,36 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence.Journal
 {
-    using Messages = IDictionary<string, LinkedList<IPersistentRepresentation>>;
+    using Messages = IDictionary<string, ImmutableList<IPersistentRepresentation>>;
     
     /// <summary>
     /// In-memory journal for testing purposes.
     /// </summary>
     public class MemoryJournal : AsyncWriteJournal
     {
-        private readonly LinkedList<IPersistentRepresentation> _allMessages = new();
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
+        private ImmutableList<IPersistentRepresentation> _allMessages = ImmutableList<IPersistentRepresentation>.Empty;
         private readonly ConcurrentDictionary<string, long> _meta = new();
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
-        private readonly object _lock = new();
+        private readonly ConcurrentDictionary<string, ImmutableList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
         
-        protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
-        
+        protected virtual ConcurrentDictionary<string, ImmutableList<IPersistentRepresentation>> Messages { get; } = new();
+
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
-            // Use lock to ensure thread safety when accessing _allMessages and _tagsToMessagesMapping
-            lock (_lock)
+            foreach (var w in messages)
             {
-                foreach (var w in messages)
+                foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                 {
-                    foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
-                    {
-                        var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
-                        Add(persistentRepresentation);
-                        _allMessages.AddLast(persistentRepresentation);
-                        if (p.Payload is not Tagged tagged) continue;
+                    var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
+                    Add(persistentRepresentation);
+                    _allMessages = _allMessages.Add(persistentRepresentation);
+                    if (p.Payload is not Tagged tagged) continue;
                         
-                        foreach (var tag in tagged.Tags)
-                        {
-                            _tagsToMessagesMapping.AddOrUpdate(
-                                tag,
-                                (_) => new LinkedList<IPersistentRepresentation>([persistentRepresentation]),
-                                (_, v) =>
-                                {
-                                    v.AddLast(persistentRepresentation);
-                                    return v;
-                                });
-                        }
+                    foreach (var tag in tagged.Tags)
+                    {
+                        _tagsToMessagesMapping.AddOrUpdate(
+                            tag,
+                            _ => ImmutableList<IPersistentRepresentation>.Empty.Add(persistentRepresentation),
+                            (_, v) => v.Add(persistentRepresentation));
                     }
                 }
             }
@@ -117,10 +107,7 @@ namespace Akka.Persistence.Journal
         
         private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            lock (_lock)
-            {
-                return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count)); 
-            }
+            return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count)); 
         }
         
         /// <summary>
@@ -128,48 +115,35 @@ namespace Akka.Persistence.Journal
         /// </summary>
         private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
-            // Use the same lock to ensure thread safety when reading tagged messages
-            lock (_lock)
+            if (!_tagsToMessagesMapping.TryGetValue(replay.Tag, out var taggedMessages))
+                return Task.FromResult(0);
+
+            var index = 0;
+            foreach (var persistence in taggedMessages
+                         .Skip(replay.FromOffset)
+                         .Take(replay.ToOffset))
             {
-                if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
-                    return Task.FromResult(0);
-
-                var taggedMessages = _tagsToMessagesMapping[replay.Tag];
-                var totalCount = taggedMessages.Count;
-                
-                // Create a snapshot of the messages to avoid concurrent modification during iteration
-                var messagesToReplay = taggedMessages
-                    .Skip(replay.FromOffset)
-                    .Take(replay.ToOffset)
-                    .ToArray();
-
-                var index = 0;
-                foreach (var persistence in messagesToReplay)
-                {
-                    replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
-                    index++;
-                }
-
-                return Task.FromResult(totalCount - 1);
+                replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
+                index++;
             }
+            
+            return Task.FromResult(taggedMessages.Count - 1);
         }
         
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            lock (_lock)
+            var index = 0;
+            var allMessages = _allMessages;
+            var replayed = allMessages
+                .Skip(replay.FromOffset)
+                .Take(replay.ToOffset - replay.FromOffset)
+                .ToArray();
+            foreach (var message in replayed)
             {
-                var index = 0;
-                var replayed = _allMessages
-                    .Skip(replay.FromOffset)
-                    .Take(replay.ToOffset - replay.FromOffset)
-                    .ToArray();
-                foreach (var message in replayed)
-                {
-                    replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
-                    index++;
-                }
-                return Task.FromResult(_allMessages.Count - 1);
+                replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
+                index++;
             }
+            return Task.FromResult(allMessages.Count - 1);
         }
         
         #region QueryAPI
@@ -416,41 +390,31 @@ namespace Akka.Persistence.Journal
         
         public Messages Add(IPersistentRepresentation persistent)
         {
-            var list = Messages.GetOrAdd(persistent.PersistenceId, _ => new LinkedList<IPersistentRepresentation>());
-            list.AddLast(persistent);
+            Messages.AddOrUpdate(
+                persistent.PersistenceId, 
+                _ => ImmutableList<IPersistentRepresentation>.Empty.Add(persistent),
+                (_, v) => v.Add(persistent));
             return Messages;
         }
         
         public Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater)
         {
-            if (Messages.TryGetValue(pid, out var persistents))
-            {
-                var node = persistents.First;
-                while (node != null)
-                {
-                    if (node.Value.SequenceNr == seqNr)
-                        node.Value = updater(node.Value);
-
-                    node = node.Next;
-                }
-            }
+            if (!Messages.TryGetValue(pid, out var persistents))
+                return Messages;
+            
+            var list = persistents.Select(updater).ToImmutableList();
+            Messages[pid] = list;
 
             return Messages;
         }
         
         public Messages Delete(string pid, long seqNr)
         {
-            if (Messages.TryGetValue(pid, out var persistents))
-            {
-                var node = persistents.First;
-                while (node != null)
-                {
-                    if (node.Value.SequenceNr == seqNr)
-                        persistents.Remove(node);
+            if (!Messages.TryGetValue(pid, out var persistents))
+                return Messages;
 
-                    node = node.Next;
-                }
-            }
+            var list = persistents.Where(node => node.SequenceNr != seqNr).ToImmutableList();
+            Messages[pid] = list;
 
             return Messages;
         }
@@ -483,9 +447,9 @@ namespace Akka.Persistence.Journal
     
     public class SharedMemoryJournal : MemoryJournal
     {
-        private static readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> SharedMessages = new();
-        
-        protected override ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return SharedMessages; } }
+        private static readonly ConcurrentDictionary<string, ImmutableList<IPersistentRepresentation>> SharedMessages = new();
+
+        protected override ConcurrentDictionary<string, ImmutableList<IPersistentRepresentation>> Messages => SharedMessages;
     }
 }
 
