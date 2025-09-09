@@ -1242,31 +1242,44 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void SetCallback(Action<IActorSubscriberMessage> callback)
             {
-                var status = _stage._status.Value;
-
-                if (status == null)
+                // Single atomic operation that both attempts the change AND returns the previous value
+                var previous = _stage._status.CompareExchange(null, callback);
+                
+                switch (previous)
                 {
-                    if (!_stage._status.CompareAndSet(null, callback))
-                        SetCallback(callback);
+                    case null:
+                        return; // Success - we set the callback, previous was null
+                    // CompareExchange failed - handle the different states based on what was actually there
+                    case OnComplete:
+                        CompleteStage();
+                        break;
+                    case OnError error:
+                        FailStage(error.Cause);
+                        break;
+                    case Action<IActorSubscriberMessage>:
+                        throw new IllegalStateException("Substream Source cannot be materialized more than once");
+                    default:
+                        // Unexpected state - should not happen but be safe
+                        throw new IllegalStateException($"Substream Source cannot be materialized more than once - found [{previous}]");
                 }
-                else if (status is OnComplete)
-                    CompleteStage();
-                else if (status is OnError error)
-                    FailStage(error.Cause);
-                else if (status is Action<IActorSubscriberMessage>)
-                    throw new IllegalStateException("Substream Source cannot be materialized more than once");
             }
 
             public override void PreStart()
             {
                 var ourOwnCallback = GetAsyncCallback<IActorSubscriberMessage>(msg =>
                 {
-                    if (msg is OnComplete)
-                        CompleteStage();
-                    else if (msg is OnError error)
-                        FailStage(error.Cause);
-                    else if (msg is OnNext next)
-                        Push(_stage._out, (T) next.Element);
+                    switch (msg)
+                    {
+                        case OnComplete:
+                            CompleteStage();
+                            break;
+                        case OnError error:
+                            FailStage(error.Cause);
+                            break;
+                        case OnNext next:
+                            Push(_stage._out, (T) next.Element);
+                            break;
+                    }
                 });
                 SetCallback(ourOwnCallback);
             }
