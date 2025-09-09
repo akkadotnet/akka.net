@@ -5406,6 +5406,7 @@ namespace Akka.Util
         public AtomicReference() { }
         public T Value { get; set; }
         public bool CompareAndSet(T expected, T newValue) { }
+        public T CompareExchange(T expected, T newValue) { }
         public T GetAndSet(T newValue) { }
         public static T op_Implicit(Akka.Util.AtomicReference<T> atomicReference) { }
     }

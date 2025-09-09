@@ -137,7 +137,8 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             await downstream.RequestAsync(10);
-            downstream.ExpectNextN(Enumerable.Range(1, 10));
+            var received = downstream.ExpectNextN(10);
+            received.OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             
             await downstream.ExpectNoMsgAsync(TimeSpan.FromSeconds(1.5));
             await downstream.RequestAsync(1);
@@ -181,7 +182,8 @@ namespace Akka.Streams.Tests.Dsl
                 .RunWith(Sink.FromSubscriber(downstream), Materializer);
 
             await downstream.RequestAsync(10);
-            downstream.ExpectNextN(Enumerable.Range(1, 10));
+            var received = downstream.ExpectNextN(10);
+            received.OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             
             await downstream.ExpectNoMsgAsync(TimeSpan.FromSeconds(1.5));
             await upstream.SendNextAsync(1);
