@@ -119,9 +119,13 @@ namespace Akka.Persistence.Journal
                 return Task.FromResult(0);
 
             var index = 0;
+            // Respect Max and ToOffset boundaries to avoid flooding the subscriber.
+            // Use long math to avoid overflow when ToOffset == int.MaxValue.
+            var available = Math.Max(0L, (long)replay.ToOffset - replay.FromOffset + 1L);
+            var toTake = (int)Math.Min(available, replay.Max);
             foreach (var persistence in taggedMessages
                          .Skip(replay.FromOffset)
-                         .Take(replay.ToOffset))
+                         .Take(toTake))
             {
                 replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
                 index++;
@@ -134,9 +138,12 @@ namespace Akka.Persistence.Journal
         {
             var index = 0;
             var allMessages = _allMessages;
+            // Respect Max and ToOffset boundaries and avoid overflow
+            var available = Math.Max(0L, (long)replay.ToOffset - replay.FromOffset + 1L);
+            var toTake = (int)Math.Min(available, replay.Max);
             var replayed = allMessages
                 .Skip(replay.FromOffset)
-                .Take(replay.ToOffset - replay.FromOffset)
+                .Take(toTake)
                 .ToArray();
             foreach (var message in replayed)
             {
