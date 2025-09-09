@@ -153,7 +153,7 @@ namespace Akka.Streams.Tests.Dsl
                 var subscriber2 = this.CreateSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber2)).Run(Materializer);
 
-                subscriber2.ExpectSubscriptionAndError()
+                subscriber2.ExpectSubscriptionAndError(signalDemand: false)
                     .Message.Should()
                     .Be("Substream Source cannot be materialized more than once");
                 await subscriber1.RequestNext(2).ExpectCompleteAsync();
