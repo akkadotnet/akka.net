@@ -366,14 +366,21 @@ namespace Akka.Streams.Tests.IO
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
 
-                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
-                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                // Wait for TCP connection to be fully established before aborting
+                var connectionTask = Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .ViaMaterialized(Sys.TcpStream().OutgoingConnection(server.Address), Keep.Right)
                     .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
+                    
                 var serverConnection = await server.WaitAcceptAsync();
+                var clientConnection = await connectionTask;
+                
+                // Start active reading to ensure Linux can detect TCP RST
+                var readSub = await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAsync();
+                readSub.Request(1);
 
                 serverConnection.Abort();
-                await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAndErrorAsync();
+                await tcpReadProbe.SubscriberProbe.ExpectErrorAsync();
                 var subscription = await tcpWriteProbe.TcpWriteSubscription();
                 await subscription.ExpectCancellationAsync();
 
