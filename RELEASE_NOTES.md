@@ -1,3 +1,21 @@
+#### 1.5.49 September 10th, 2025 ####
+
+Akka.NET v1.5.49 is a minor patch containing several bug fixes.
+
+* [Core: Fix IIS/Windows Service console race condition](https://github.com/akkadotnet/akka.net/pull/7793)
+* [DData: Fix Replicator.ReceiveUnsubscribe boolean logic](https://github.com/akkadotnet/akka.net/pull/7809)
+* [Streams: Fix ConcurrentAsyncCallback with ChannelSource throws NRE](https://github.com/akkadotnet/akka.net/pull/7808)
+
+3 contributors since release 1.5.48
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 18      | 6011 | 9343 | Aaron Stannard      |
+| 18      | 3760 | 3880 | Gregorius Soedharmo |
+| 1       | 1    | 1    | dependabot[bot]     |
+
+To [see the full set of changes in Akka.NET v1.5.49, click here](https://github.com/akkadotnet/akka.net/milestone/132?closed=1)
+
 #### 1.5.48 August 21st, 2025 ####
 
 Akka.NET v1.5.48 is a minor patch containing stability improvement to Akka.TestKit.
