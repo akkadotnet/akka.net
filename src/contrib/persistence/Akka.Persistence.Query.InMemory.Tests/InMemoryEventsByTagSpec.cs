@@ -36,3 +36,4 @@ namespace Akka.Persistence.Query.InMemory.Tests
         protected override bool SupportsTagsInEventEnvelope => true;
     }
 }
+
