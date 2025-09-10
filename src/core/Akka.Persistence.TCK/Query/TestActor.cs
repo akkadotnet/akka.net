@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
@@ -43,10 +44,16 @@ namespace Akka.Persistence.TCK.Query
             switch (message)
             {
                 case DeleteCommand delete:
+                    if (Sender.IsNobody())
+                        throw new Exception("Sender is Nobody. Check implicit sender code.");
+                    
                     DeleteMessages(delete.ToSequenceNr);
                     Become(WhileDeleting(Sender)); // need to wait for delete ACK to return
                     break;
                 case string cmd:
+                    if (Sender.IsNobody())
+                        throw new Exception("Sender is Nobody. Check implicit sender code.");
+                    
                     var sender = Sender;
                     Persist(cmd, e => sender.Tell($"{e}-done"));
                     break;
@@ -60,11 +67,17 @@ namespace Akka.Persistence.TCK.Query
                 switch (message)
                 {
                     case DeleteMessagesSuccess success:
+                        if (originalSender.IsNobody())
+                            throw new Exception("Sender is Nobody. Check implicit sender code.");
+                        
                         originalSender.Tell($"{success.ToSequenceNr}-deleted");
                         Become(OnCommand);
                         Stash.UnstashAll();
                         break;
                     case DeleteMessagesFailure failure:
+                        if (originalSender.IsNobody())
+                            throw new Exception("Sender is Nobody. Check implicit sender code.");
+                    
                         Log.Error(failure.Cause, "Failed to delete messages to sequence number [{0}].", failure.ToSequenceNr);
                         originalSender.Tell($"{failure.ToSequenceNr}-deleted-failed");
                         Become(OnCommand);

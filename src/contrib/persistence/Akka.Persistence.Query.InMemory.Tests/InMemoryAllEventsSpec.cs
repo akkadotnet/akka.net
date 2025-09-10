@@ -13,13 +13,11 @@ namespace Akka.Persistence.Query.InMemory.Tests
 {
     public class InMemoryAllEventsSpec : AllEventsSpec
     {
-        private static Config Config() => ConfigurationFactory.ParseString("akka.loglevel = INFO")
+        private static Config Config() => ConfigurationFactory.ParseString("akka.loglevel = DEBUG")
             .WithFallback(InMemoryPersistenceSpecConfig.Config);
 
         public InMemoryAllEventsSpec(ITestOutputHelper output) : base(Config(), nameof(InMemoryAllEventsSpec), output)
         {
-            // Proactively initialize the write journal to avoid cold-start delays on first persist
-            Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.inmem");
             ReadJournal = Sys.ReadJournalFor<InMemoryReadJournal>(InMemoryReadJournal.Identifier);
         }
     }
