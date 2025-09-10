@@ -172,7 +172,7 @@ namespace Akka.Persistence.Journal
         /// TBD
         /// </summary>
         [Serializable]
-        public sealed class CurrentPersistenceIds : IDeadLetterSuppression
+        public sealed class CurrentPersistenceIds
         {
             /// <summary>
             /// TBD
@@ -241,7 +241,7 @@ namespace Akka.Persistence.Journal
         }
         
         [Serializable]
-        public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded
         {
 
             public readonly IPersistentRepresentation Persistent;
@@ -298,7 +298,7 @@ namespace Akka.Persistence.Journal
         
 
         [Serializable]
-        public sealed class ReplayedEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public sealed class ReplayedEvent : INoSerializationVerificationNeeded
         {
 
             public readonly IPersistentRepresentation Persistent;
