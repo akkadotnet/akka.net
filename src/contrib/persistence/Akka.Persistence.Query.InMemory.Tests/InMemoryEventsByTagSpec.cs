@@ -7,6 +7,7 @@
 
 using Akka.Configuration;
 using Akka.Persistence.TCK.Query;
+using Akka.Persistence;
 using Akka.Tests.Shared.Internals;
 using Xunit;
 using Xunit.Abstractions;
