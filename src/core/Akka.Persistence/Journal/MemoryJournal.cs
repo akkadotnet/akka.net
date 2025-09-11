@@ -30,6 +30,12 @@ namespace Akka.Persistence.Journal
         private readonly ConcurrentDictionary<string, ImmutableList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
         
         protected virtual ConcurrentDictionary<string, ImmutableList<IPersistentRepresentation>> Messages { get; } = new();
+        private readonly ILoggingAdapter _log;
+
+        public MemoryJournal()
+        {
+            _log = Context.GetLogger();
+        }
 
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
@@ -40,7 +46,12 @@ namespace Akka.Persistence.Journal
                     var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
                     Add(persistentRepresentation);
                     _allMessages = _allMessages.Add(persistentRepresentation);
-                    if (p.Payload is not Tagged tagged) continue;
+                    
+                    if (p.Payload is not Tagged tagged)
+                    {
+                        _log.Info("Message written to memory journal: {0}", p.Payload.ToString());
+                        continue;
+                    }
                         
                     foreach (var tag in tagged.Tags)
                     {
@@ -49,6 +60,7 @@ namespace Akka.Persistence.Journal
                             _ => ImmutableList<IPersistentRepresentation>.Empty.Add(persistentRepresentation),
                             (_, v) => v.Add(persistentRepresentation));
                     }
+                    _log.Info("Tagged message written to memory journal: {0}", tagged.Payload.ToString());
                 }
             }
             

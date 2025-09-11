@@ -28,9 +28,12 @@ namespace Akka.Persistence.TCK.Query
             public long ToSequenceNr { get; }
         }
 
+        private readonly ILoggingAdapter _log;
+        
         public TestActor(string persistenceId)
         {
             PersistenceId = persistenceId;
+            _log = Context.GetLogger();
         }
 
         public override string PersistenceId { get; }
@@ -55,7 +58,12 @@ namespace Akka.Persistence.TCK.Query
                         throw new Exception("Sender is Nobody. Check implicit sender code.");
                     
                     var sender = Sender;
-                    Persist(cmd, e => sender.Tell($"{e}-done"));
+                    _log.Info("Persisting message {0}, sender: {1}", cmd, sender);
+                    Persist(cmd, e =>
+                    {
+                        sender.Tell($"{e}-done");
+                        _log.Info("Message persisted {0}, sender: {1}", e, sender);
+                    });
                     break;
             }
         }
