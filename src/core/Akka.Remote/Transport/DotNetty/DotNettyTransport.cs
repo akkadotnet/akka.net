@@ -180,6 +180,17 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
+            // Validate SSL certificate for server mode early (fail-fast)
+            if (Settings.EnableSsl && Settings.Ssl?.Certificate != null)
+            {
+                if (!Settings.Ssl.Certificate.HasPrivateKey)
+                {
+                    throw new ArgumentException(
+                        "The server mode SSL must use a certificate with the associated private key. " +
+                        $"Certificate thumbprint: {Settings.Ssl.Certificate.Thumbprint}");
+                }
+            }
+            
             EndPoint listenAddress;
             if (IPAddress.TryParse(Settings.Hostname, out var ip))
                 listenAddress = new IPEndPoint(ip, Settings.Port);
