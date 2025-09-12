@@ -40,6 +40,18 @@ namespace Akka.Persistence.TCK.Query
 
         protected override void OnRecover(object message)
         {
+            switch (message)
+            {
+                case SnapshotOffer offer:
+                    _log.Info("Recover from snapshot: {0}", offer.Snapshot);
+                    break;
+                case RecoveryCompleted:
+                    _log.Info("Recovery completed");
+                    break;
+                default:
+                    _log.Info("Recovering {0}", message);
+                    break;
+            }
         }
 
         protected override void OnCommand(object message)
@@ -64,6 +76,9 @@ namespace Akka.Persistence.TCK.Query
                         sender.Tell($"{e}-done");
                         _log.Info("Message persisted {0}, sender: {1}", e, sender);
                     });
+                    break;
+                default:
+                    Unhandled(message);
                     break;
             }
         }

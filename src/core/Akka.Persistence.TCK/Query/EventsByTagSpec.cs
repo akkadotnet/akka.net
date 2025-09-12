@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -72,7 +73,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public virtual void ReadJournal_live_query_EventsByTag_should_find_events_from_offset_exclusive()
+        public virtual async Task ReadJournal_live_query_EventsByTag_should_find_events_from_offset_exclusive()
         {
             if (ReadJournal is not IEventsByTagQuery queries)
                 throw IsTypeException.ForMismatchedType(nameof(IEventsByTagQuery), ReadJournal?.GetType().Name ?? "null");
@@ -81,35 +82,54 @@ namespace Akka.Persistence.TCK.Query
             var b = Sys.ActorOf(Query.TestActor.Props("b"));
             var c = Sys.ActorOf(Query.TestActor.Props("c"));
 
+            // Make sure that actors are ready
+            await a.Ask<ActorIdentity>(new Identify(null));
+            await b.Ask<ActorIdentity>(new Identify(null));
+            await c.Ask<ActorIdentity>(new Identify(null));
+            
             a.Tell("hello");
-            ExpectMsg("hello-done");
+            await ExpectMsgAsync("hello-done");
             a.Tell("a green apple");
-            ExpectMsg("a green apple-done");
+            await ExpectMsgAsync("a green apple-done");
             b.Tell("a black car");
-            ExpectMsg("a black car-done");
+            await ExpectMsgAsync("a black car-done");
             a.Tell("something else");
-            ExpectMsg("something else-done");
+            await ExpectMsgAsync("something else-done");
             a.Tell("a green banana");
-            ExpectMsg("a green banana-done");
+            await ExpectMsgAsync("a green banana-done");
             b.Tell("a green leaf");
-            ExpectMsg("a green leaf-done");
+            await ExpectMsgAsync("a green leaf-done");
             c.Tell("a green cucumber");
-            ExpectMsg("a green cucumber-done");
+            await ExpectMsgAsync("a green cucumber-done");
 
             var greenSrc1 = queries.EventsByTag("green", offset: NoOffset());
             var probe1 = greenSrc1.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
-            probe1.Request(2);
-            ExpectEnvelope(probe1, "a", 2L, "a green apple", "green");
-            var offs = ExpectEnvelope(probe1, "a", 4L, "a green banana", "green").Offset;
-            probe1.Cancel();
+            await probe1.RequestAsync(2);
+            await ExpectEnvelopeAsync(probe1, "a", 2L, "a green apple", "green");
+            var offs = (await ExpectEnvelopeAsync(probe1, "a", 4L, "a green banana", "green")).Offset;
+            await probe1.CancelAsync();
 
             var greenSrc2 = queries.EventsByTag("green", offset: offs);
             var probe2 = greenSrc2.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
-            probe2.Request(10);
-            ExpectEnvelope(probe2, "b", 2L, "a green leaf", "green");
-            ExpectEnvelope(probe2, "c", 1L, "a green cucumber", "green");
-            probe2.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
-            probe2.Cancel();
+            await probe2.RequestAsync(10);
+            await ExpectEnvelopeAsync(probe2, "b", 2L, "a green leaf", "green");
+            await ExpectEnvelopeAsync(probe2, "c", 1L, "a green cucumber", "green");
+            await probe2.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await probe2.CancelAsync();
+        }
+        
+        private async Task<EventEnvelope> ExpectEnvelopeAsync(TestSubscriber.Probe<EventEnvelope> probe, string persistenceId, long sequenceNr, string @event, string tag)
+        {
+            var envelope = await probe.ExpectNextAsync<EventEnvelope>(_ => true);
+            envelope.PersistenceId.Should().Be(persistenceId);
+            envelope.SequenceNr.Should().Be(sequenceNr);
+            envelope.Event.Should().Be(@event);
+            if (SupportsTagsInEventEnvelope)
+            {
+                envelope.Tags.Should().NotBeNull();
+                envelope.Tags.Should().Contain(tag);
+            }
+            return envelope;
         }
 
         private EventEnvelope ExpectEnvelope(TestSubscriber.Probe<EventEnvelope> probe, string persistenceId, long sequenceNr, string @event, string tag)
