@@ -612,7 +612,7 @@ namespace Akka.Persistence
     /// Reply message to a <see cref="ReplayMessages"/> request. A separate reply is sent to the requester for each replayed message.
     /// </summary>
     [Serializable]
-    public sealed class ReplayedMessage : IJournalResponse, IEquatable<ReplayedMessage>
+    public sealed class ReplayedMessage : IJournalResponse, IDeadLetterSuppression, INoSerializationVerificationNeeded, IEquatable<ReplayedMessage>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplayedMessage"/> class.
@@ -651,7 +651,7 @@ namespace Akka.Persistence
     /// Note that the replay might have been limited to a lower sequence number.
     /// </summary>
     [Serializable]
-    public sealed class RecoverySuccess : IJournalResponse, IEquatable<RecoverySuccess>
+    public sealed class RecoverySuccess : IJournalResponse, IDeadLetterSuppression, IEquatable<RecoverySuccess>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="RecoverySuccess"/> class.
@@ -687,7 +687,7 @@ namespace Akka.Persistence
     /// if a replay could not be successfully completed.
     /// </summary>
     [Serializable]
-    public sealed class ReplayMessagesFailure : IJournalResponse, IEquatable<ReplayMessagesFailure>
+    public sealed class ReplayMessagesFailure : IJournalResponse, IDeadLetterSuppression, IEquatable<ReplayMessagesFailure>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ReplayMessagesFailure"/> class.

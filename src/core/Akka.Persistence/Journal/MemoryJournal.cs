@@ -42,7 +42,7 @@ namespace Akka.Persistence.Journal
                     Add(persistentRepresentation);
                     _allMessages.AddLast(persistentRepresentation);
                     if (p.Payload is not Tagged tagged) continue;
-                        
+                    
                     foreach (var tag in tagged.Tags)
                     {
                         _tagsToMessagesMapping.AddOrUpdate(
@@ -123,23 +123,16 @@ namespace Akka.Persistence.Journal
             if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
                 return Task.FromResult(0);
 
-            var taggedMessages = _tagsToMessagesMapping[replay.Tag];
-            var totalCount = taggedMessages.Count;
-                
-            // Create a snapshot of the messages to avoid concurrent modification during iteration
-            var messagesToReplay = taggedMessages
-                .Skip(replay.FromOffset)
-                .Take(replay.ToOffset)
-                .ToArray();
-
             var index = 0;
-            foreach (var persistence in messagesToReplay)
+            foreach (var persistence in _tagsToMessagesMapping[replay.Tag]
+                         .Skip(replay.FromOffset)
+                         .Take(replay.ToOffset))
             {
                 replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
                 index++;
             }
 
-            return Task.FromResult(totalCount - 1);
+            return Task.FromResult(_tagsToMessagesMapping[replay.Tag].Count - 1);
         }
         
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
