@@ -287,7 +287,7 @@ namespace Akka.Persistence
         }
 
         [Serializable]
-        public sealed class RedeliveryTick : INotInfluenceReceiveTimeout
+        public sealed class RedeliveryTick : INotInfluenceReceiveTimeout, IDeadLetterSuppression
         {
             /// <summary>
             /// The singleton instance of the redelivery tick

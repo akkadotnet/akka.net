@@ -29,35 +29,30 @@ namespace Akka.Persistence.Journal
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
         private readonly ConcurrentDictionary<string, long> _meta = new();
         private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
-        private readonly object _lock = new();
         
         protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
         
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
-            // Use lock to ensure thread safety when accessing _allMessages and _tagsToMessagesMapping
-            lock (_lock)
+            foreach (var w in messages)
             {
-                foreach (var w in messages)
+                foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                 {
-                    foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
-                    {
-                        var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
-                        Add(persistentRepresentation);
-                        _allMessages.AddLast(persistentRepresentation);
-                        if (p.Payload is not Tagged tagged) continue;
+                    var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
+                    Add(persistentRepresentation);
+                    _allMessages.AddLast(persistentRepresentation);
+                    if (p.Payload is not Tagged tagged) continue;
                         
-                        foreach (var tag in tagged.Tags)
-                        {
-                            _tagsToMessagesMapping.AddOrUpdate(
-                                tag,
-                                (_) => new LinkedList<IPersistentRepresentation>([persistentRepresentation]),
-                                (_, v) =>
-                                {
-                                    v.AddLast(persistentRepresentation);
-                                    return v;
-                                });
-                        }
+                    foreach (var tag in tagged.Tags)
+                    {
+                        _tagsToMessagesMapping.AddOrUpdate(
+                            tag,
+                            (_) => new LinkedList<IPersistentRepresentation>([persistentRepresentation]),
+                            (_, v) =>
+                            {
+                                v.AddLast(persistentRepresentation);
+                                return v;
+                            });
                     }
                 }
             }
@@ -117,10 +112,7 @@ namespace Akka.Persistence.Journal
         
         private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            lock (_lock)
-            {
-                return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count)); 
-            }
+            return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count)); 
         }
         
         /// <summary>
@@ -128,48 +120,41 @@ namespace Akka.Persistence.Journal
         /// </summary>
         private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
-            // Use the same lock to ensure thread safety when reading tagged messages
-            lock (_lock)
-            {
-                if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
-                    return Task.FromResult(0);
+            if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
+                return Task.FromResult(0);
 
-                var taggedMessages = _tagsToMessagesMapping[replay.Tag];
-                var totalCount = taggedMessages.Count;
+            var taggedMessages = _tagsToMessagesMapping[replay.Tag];
+            var totalCount = taggedMessages.Count;
                 
-                // Create a snapshot of the messages to avoid concurrent modification during iteration
-                var messagesToReplay = taggedMessages
-                    .Skip(replay.FromOffset)
-                    .Take(replay.ToOffset)
-                    .ToArray();
+            // Create a snapshot of the messages to avoid concurrent modification during iteration
+            var messagesToReplay = taggedMessages
+                .Skip(replay.FromOffset)
+                .Take(replay.ToOffset)
+                .ToArray();
 
-                var index = 0;
-                foreach (var persistence in messagesToReplay)
-                {
-                    replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
-                    index++;
-                }
-
-                return Task.FromResult(totalCount - 1);
+            var index = 0;
+            foreach (var persistence in messagesToReplay)
+            {
+                replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
+                index++;
             }
+
+            return Task.FromResult(totalCount - 1);
         }
         
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            lock (_lock)
+            var index = 0;
+            var replayed = _allMessages
+                .Skip(replay.FromOffset)
+                .Take(replay.ToOffset - replay.FromOffset)
+                .ToArray();
+            foreach (var message in replayed)
             {
-                var index = 0;
-                var replayed = _allMessages
-                    .Skip(replay.FromOffset)
-                    .Take(replay.ToOffset - replay.FromOffset)
-                    .ToArray();
-                foreach (var message in replayed)
-                {
-                    replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
-                    index++;
-                }
-                return Task.FromResult(_allMessages.Count - 1);
+                replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
+                index++;
             }
+            return Task.FromResult(_allMessages.Count - 1);
         }
         
         #region QueryAPI
