@@ -113,8 +113,8 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = ReadJournal as ICurrentAllEventsQuery;
 
-            var a = Sys.ActorOf(Query.TestActor.Props("a"));
-            var b = Sys.ActorOf(Query.TestActor.Props("b"));
+            var a = Sys.ActorOf(Query.TestActor.Props("a"), "a");
+            var b = Sys.ActorOf(Query.TestActor.Props("b"), "b");
 
             a.Tell("hello");
             ExpectMsg("hello-done");

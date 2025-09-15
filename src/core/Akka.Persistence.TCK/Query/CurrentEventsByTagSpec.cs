@@ -151,9 +151,9 @@ namespace Akka.Persistence.TCK.Query
             if (ReadJournal is not ICurrentEventsByTagQuery queries)
                 throw IsTypeException.ForMismatchedType(nameof(ICurrentEventsByTagQuery), ReadJournal?.GetType().Name ?? "null");
 
-            var a = Sys.ActorOf(Query.TestActor.Props("a"));
-            var b = Sys.ActorOf(Query.TestActor.Props("b"));
-            var c = Sys.ActorOf(Query.TestActor.Props("c"));
+            var a = Sys.ActorOf(Query.TestActor.Props("a"), "a");
+            var b = Sys.ActorOf(Query.TestActor.Props("b"), "b");
+            var c = Sys.ActorOf(Query.TestActor.Props("c"), "c");
 
             a.Tell("hello");
             ExpectMsg("hello-done");

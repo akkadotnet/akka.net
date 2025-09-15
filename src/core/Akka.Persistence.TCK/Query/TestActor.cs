@@ -54,6 +54,12 @@ namespace Akka.Persistence.TCK.Query
             }
         }
 
+        protected override void PreStart()
+        {
+            base.PreStart();
+            _log.Info("TestActor started");
+        }
+
         protected override void OnCommand(object message)
         {
             switch (message)
