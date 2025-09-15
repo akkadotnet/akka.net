@@ -81,7 +81,7 @@ namespace Akka.Persistence
             public Akka.Persistence.AtLeastOnceDeliverySemantic.Delivery IncrementedCopy() { }
             public override string ToString() { }
         }
-        public sealed class RedeliveryTick : Akka.Actor.INotInfluenceReceiveTimeout
+        public sealed class RedeliveryTick : Akka.Actor.INotInfluenceReceiveTimeout, Akka.Event.IDeadLetterSuppression
         {
             public static Akka.Persistence.AtLeastOnceDeliverySemantic.RedeliveryTick Instance { get; }
             public override bool Equals(object obj) { }
@@ -506,7 +506,7 @@ namespace Akka.Persistence
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
     }
-    public sealed class RecoverySuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.RecoverySuccess>
+    public sealed class RecoverySuccess : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.RecoverySuccess>
     {
         public RecoverySuccess(long highestSequenceNr) { }
         public long HighestSequenceNr { get; }
@@ -540,7 +540,7 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class ReplayMessagesFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessagesFailure>
+    public sealed class ReplayMessagesFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayMessagesFailure>
     {
         public ReplayMessagesFailure(System.Exception cause) { }
         public System.Exception Cause { get; }
@@ -549,7 +549,7 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class ReplayedMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayedMessage>
+    public sealed class ReplayedMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage, System.IEquatable<Akka.Persistence.ReplayedMessage>
     {
         public ReplayedMessage(Akka.Persistence.IPersistentRepresentation persistent) { }
         public Akka.Persistence.IPersistentRepresentation Persistent { get; }
@@ -1006,18 +1006,18 @@ namespace Akka.Persistence.Journal
     public class MemoryJournal : Akka.Persistence.Journal.AsyncWriteJournal
     {
         public MemoryJournal() { }
-        protected virtual System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Immutable.ImmutableList<Akka.Persistence.IPersistentRepresentation>> Messages { get; }
-        public System.Collections.Generic.IDictionary<string, System.Collections.Immutable.ImmutableList<Akka.Persistence.IPersistentRepresentation>> Add(Akka.Persistence.IPersistentRepresentation persistent) { }
-        public System.Collections.Generic.IDictionary<string, System.Collections.Immutable.ImmutableList<Akka.Persistence.IPersistentRepresentation>> Delete(string pid, long seqNr) { }
+        protected virtual System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Messages { get; }
+        public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Add(Akka.Persistence.IPersistentRepresentation persistent) { }
+        public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Delete(string pid, long seqNr) { }
         protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         public long HighestSequenceNr(string pid) { }
         public System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max) { }
         public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         protected override bool ReceivePluginInternal(object message) { }
         public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
-        public System.Collections.Generic.IDictionary<string, System.Collections.Immutable.ImmutableList<Akka.Persistence.IPersistentRepresentation>> Update(string pid, long seqNr, System.Func<Akka.Persistence.IPersistentRepresentation, Akka.Persistence.IPersistentRepresentation> updater) { }
+        public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Update(string pid, long seqNr, System.Func<Akka.Persistence.IPersistentRepresentation, Akka.Persistence.IPersistentRepresentation> updater) { }
         protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages, System.Threading.CancellationToken cancellationToken) { }
-        public sealed class CurrentPersistenceIds
+        public sealed class CurrentPersistenceIds : Akka.Event.IDeadLetterSuppression
         {
             public readonly System.Collections.Generic.IEnumerable<string> AllPersistenceIds;
             public readonly int HighestOrderingNumber;
@@ -1063,13 +1063,13 @@ namespace Akka.Persistence.Journal
             public ReplayTaggedMessagesSuccess(int highestSequenceNr) { }
             public int HighestSequenceNr { get; }
         }
-        public sealed class ReplayedEvent : Akka.Actor.INoSerializationVerificationNeeded
+        public sealed class ReplayedEvent : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
         {
             public readonly int Offset;
             public readonly Akka.Persistence.IPersistentRepresentation Persistent;
             public ReplayedEvent(Akka.Persistence.IPersistentRepresentation persistent, int offset) { }
         }
-        public sealed class ReplayedTaggedMessage : Akka.Actor.INoSerializationVerificationNeeded
+        public sealed class ReplayedTaggedMessage : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
         {
             public readonly int Offset;
             public readonly Akka.Persistence.IPersistentRepresentation Persistent;
@@ -1130,7 +1130,7 @@ namespace Akka.Persistence.Journal
     public class SharedMemoryJournal : Akka.Persistence.Journal.MemoryJournal
     {
         public SharedMemoryJournal() { }
-        protected override System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Immutable.ImmutableList<Akka.Persistence.IPersistentRepresentation>> Messages { get; }
+        protected override System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Messages { get; }
     }
     public struct SingleEventSequence : Akka.Persistence.Journal.IEventSequence, System.IEquatable<Akka.Persistence.Journal.IEventSequence>
     {
