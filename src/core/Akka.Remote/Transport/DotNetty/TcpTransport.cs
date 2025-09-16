@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Event;
 using DotNetty.Buffers;
 using DotNetty.Common.Utilities;
+using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Channels;
 using Google.Protobuf;
 
@@ -61,6 +62,25 @@ namespace Akka.Remote.Transport.DotNetty
 
             // decrease the reference count to 0 (releases buffer)
             ReferenceCountUtil.SafeRelease(message);
+        }
+
+        public override void UserEventTriggered(IChannelHandlerContext context, object evt)
+        {
+            if (evt is TlsHandshakeCompletionEvent { IsSuccessful: false } tlsEvent)
+            {
+                var ex = tlsEvent.Exception ?? new Exception("TLS handshake failed.");
+                Log.Error(ex, "TLS handshake failed. Channel [{0}->{1}](Id={2})",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
+
+                // Best-effort surface to higher layers if listener already registered
+                NotifyListener(new UnderlyingTransportError(ex,
+                    $"TLS handshake failed on channel [{context.Channel.LocalAddress}->{context.Channel.RemoteAddress}](Id={context.Channel.Id})"));
+
+                context.CloseAsync();
+                return; // don't pass to next handlers
+            }
+
+            base.UserEventTriggered(context, evt);
         }
 
         /// <summary>
@@ -133,9 +153,11 @@ namespace Akka.Remote.Transport.DotNetty
     internal sealed class TcpClientHandler : TcpHandlers
     {
         private readonly TaskCompletionSource<AssociationHandle> _statusPromise = new();
+        private readonly TaskCompletionSource<bool> _tlsHandshakePromise = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly Address _remoteAddress;
 
         public Task<AssociationHandle> StatusFuture => _statusPromise.Task;
+        public Task TlsHandshakeTask => _tlsHandshakePromise.Task;
         
         public TcpClientHandler(DotNettyTransport transport, ILoggingAdapter log, Address remoteAddress) 
             : base(transport, log)
@@ -148,6 +170,24 @@ namespace Akka.Remote.Transport.DotNetty
             InitOutbound(context.Channel, (IPEndPoint)context.Channel.RemoteAddress, null);
             base.ChannelActive(context);
 
+        }
+
+        public override void UserEventTriggered(IChannelHandlerContext context, object evt)
+        {
+            if (evt is TlsHandshakeCompletionEvent tlsEvent)
+            {
+                if (tlsEvent.IsSuccessful)
+                {
+                    _tlsHandshakePromise.TrySetResult(true);
+                }
+                else
+                {
+                    var ex = tlsEvent.Exception ?? new Exception("TLS handshake failed.");
+                    _tlsHandshakePromise.TrySetException(ex);
+                }
+            }
+
+            base.UserEventTriggered(context, evt);
         }
 
         private void InitOutbound(IChannel channel, IPEndPoint socketAddress, object msg)
@@ -207,7 +247,23 @@ namespace Akka.Remote.Transport.DotNetty
                 socketAddress = await MapEndpointAsync(socketAddress).ConfigureAwait(false);
                 var associate = await clientBootstrap.ConnectAsync(socketAddress).ConfigureAwait(false);
                 var handler = (TcpClientHandler)associate.Pipeline.Last();
-                return await handler.StatusFuture.ConfigureAwait(false);
+                // Wait for channel activation (socket connect)
+                var handle = await handler.StatusFuture.ConfigureAwait(false);
+
+                if (!Settings.EnableSsl) 
+                    return handle;
+                
+                // If SSL is enabled, ensure the TLS handshake has completed successfully
+                try
+                {
+                    await handler.TlsHandshakeTask.ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidAssociationException($"TLS handshake failed for {remoteAddress}: {ex.Message}", ex);
+                }
+
+                return handle;
             }
             catch (ConnectException c)
             {
