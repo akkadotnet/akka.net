@@ -16,6 +16,7 @@ using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Tests.Actor;
 using Akka.TestKit.Extensions;
@@ -266,14 +267,17 @@ namespace Akka.Streams.Tests.Dsl
 
                 await WithinAsync(10.Seconds(), async () =>
                 {
-                    await EventFilter.Error(contains: "Upstream producer failed with exception")
-                        .ExpectOneAsync(async () =>
-                        {
-                            Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
-                            Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
-                            var result = await task.WaitAsync(3.Seconds());
-                            result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                        });
+                    var errorProbe = CreateTestProbe();
+                    Sys.EventStream.Subscribe(errorProbe, typeof(Error));
+                    
+                    Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
+                    Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
+                    
+                    var error = (Error) await errorProbe.FishForMessageAsync(m => m is Error e && e.Message.ToString().Contains("Upstream producer failed with exception"));
+                    error.Cause.Should().BeOfType<MergeHub.ProducerFailed>();
+                    
+                    var result = await task.WaitAsync(3.Seconds());
+                    result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 });
             }, Materializer);
         }
