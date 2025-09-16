@@ -282,4 +282,3 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         }
     }
 }
-
