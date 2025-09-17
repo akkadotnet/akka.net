@@ -5733,8 +5733,6 @@ namespace Akka.Util.Internal
     public class static Extensions
     {
         public static System.Collections.Generic.IDictionary<TKey, TValue> AddAndReturn<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue value) { }
-        [System.ObsoleteAttribute("Use the dictionary setter directly")]
-        public static void AddOrSet<TKey, TValue>(this System.Collections.Generic.IDictionary<TKey, TValue> hash, TKey key, TValue value) { }
         public static T AsInstanceOf<T>(this object self) { }
         public static string BetweenDoubleQuotes(this string self) { }
         public static System.Collections.Generic.IEnumerable<T> Concat<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>([System.Runtime.CompilerServices.NullableAttribute(new byte[] {

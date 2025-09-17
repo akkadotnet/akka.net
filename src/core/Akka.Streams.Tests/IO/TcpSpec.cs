@@ -491,7 +491,7 @@ namespace Akka.Streams.Tests.IO
             var system2 = ActorSystem.Create("system2", Sys.Settings.Config);
             try
             {
-                InitializeLogger(system2);
+                InitializeLogger(system2, "[SYS2]");
                 var mat2 = ActorMaterializer.Create(system2);
 
                 var serverAddress = TestUtils.TemporaryServerAddress();
@@ -501,11 +501,20 @@ namespace Akka.Streams.Tests.IO
                 // Ensure server is bound before creating client connection
                 await binding.WaitAsync(TimeSpan.FromSeconds(3));
 
-                var result = Source.Maybe<ByteString>()
+                // Build a client stream with a controllable upstream and an echo gate to ensure full registration
+                var tapped = Source.Queue<ByteString>(16, OverflowStrategy.Backpressure)
                     .Via(system2.TcpStream().OutgoingConnection(serverAddress))
-                    .RunAggregate(0, (i, s) => i + s.Count, mat2);
+                    .AlsoToMaterialized(Sink.First<ByteString>(), Keep.Both);
 
-                // Get the actual connection actor reference and watch it
+                var ((queue, firstEcho), result) = tapped
+                    .ToMaterialized(Sink.Aggregate<ByteString, int>(0, (i, s) => i + s.Count), Keep.Both)
+                    .Run(mat2);
+
+                // Send a ping and wait for the echo to guarantee Connected+Registered+Watched state
+                (await queue.OfferAsync(ByteString.FromString("ping"))).Should().BeOfType<QueueOfferResult.Enqueued>();
+                await firstEcho.WaitAsync(5.Seconds());
+
+                // Resolve the actual connection actor reference and watch it
                 IActorRef connectionActor = null;
                 await AwaitAssertAsync(async () =>
                 {
@@ -513,7 +522,6 @@ namespace Akka.Streams.Tests.IO
                         .ResolveOne(TimeSpan.FromMilliseconds(100));
                 }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
 
-                // Watch the connection actor so we can verify it's actually dead
                 var probe = CreateTestProbe(system2);
                 await probe.WatchAsync(connectionActor);
 
@@ -524,9 +532,14 @@ namespace Akka.Streams.Tests.IO
                 var terminated = await probe.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(3));
                 terminated.ActorRef.Should().Be(connectionActor);
 
-                // Now the result should throw StreamTcpException since connection is definitely dead
-                await Awaiting(async () => await result.WaitAsync(TimeSpan.FromSeconds(3)))
-                    .Should().ThrowAsync<StreamTcpException>();
+                // Verify the stream fails deterministically with StreamTcpException
+                await AwaitAssertAsync(() =>
+                {
+                    result.IsFaulted.Should().BeTrue();
+                    var flattened = result.Exception?.Flatten();
+                    flattened.Should().NotBeNull();
+                    flattened!.InnerExceptions.Should().Contain(e => e is StreamTcpException);
+                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
 
                 await binding.Result.Unbind().WaitAsync(3.Seconds());
             }
@@ -773,3 +786,4 @@ namespace Akka.Streams.Tests.IO
         }
     }
 }
+
