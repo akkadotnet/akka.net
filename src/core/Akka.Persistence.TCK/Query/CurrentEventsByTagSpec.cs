@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -146,7 +147,7 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public virtual void ReadJournal_query_CurrentEventsByTag_should_find_events_from_offset_exclusive()
+        public virtual async Task ReadJournal_query_CurrentEventsByTag_should_find_events_from_offset_exclusive()
         {
             if (ReadJournal is not ICurrentEventsByTagQuery queries)
                 throw IsTypeException.ForMismatchedType(nameof(ICurrentEventsByTagQuery), ReadJournal?.GetType().Name ?? "null");
@@ -155,6 +156,12 @@ namespace Akka.Persistence.TCK.Query
             var b = Sys.ActorOf(Query.TestActor.Props("b"), "b");
             var c = Sys.ActorOf(Query.TestActor.Props("c"), "c");
 
+            // Make sure that all actors are initialized and running
+            await Task.WhenAll(
+                a.Ask<ActorIdentity>(new Identify("a")),
+                b.Ask<ActorIdentity>(new Identify("b")),
+                c.Ask<ActorIdentity>(new Identify("c")));
+            
             a.Tell("hello");
             ExpectMsg("hello-done");
             a.Tell("a green apple");

@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -109,13 +110,18 @@ namespace Akka.Persistence.TCK.Query
         }
 
         [Fact]
-        public virtual void ReadJournal_query_CurrentAllEvents_should_find_events_from_offset_exclusive()
+        public virtual async Task ReadJournal_query_CurrentAllEvents_should_find_events_from_offset_exclusive()
         {
             var queries = ReadJournal as ICurrentAllEventsQuery;
 
             var a = Sys.ActorOf(Query.TestActor.Props("a"), "a");
             var b = Sys.ActorOf(Query.TestActor.Props("b"), "b");
 
+            // Make sure that all actors are initialized and running
+            await Task.WhenAll(
+                a.Ask<ActorIdentity>(new Identify("a")),
+                b.Ask<ActorIdentity>(new Identify("b")));
+            
             a.Tell("hello");
             ExpectMsg("hello-done");
             a.Tell("world");
