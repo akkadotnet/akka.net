@@ -267,17 +267,30 @@ namespace Akka.Streams.Tests.Dsl
 
                 await WithinAsync(10.Seconds(), async () =>
                 {
-                    var errorProbe = CreateTestProbe();
-                    Sys.EventStream.Subscribe(errorProbe, typeof(Error));
-                    
-                    Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
-                    Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
-                    
-                    var error = (Error) await errorProbe.FishForMessageAsync(m => m is Error e && e.Message.ToString().Contains("Upstream producer failed with exception"));
+                    // Subscribe the spec's TestActor synchronously to avoid EventFilter races
+                    Sys.EventStream.Subscribe(TestActor, typeof(Error));
+
+                    // Attach a controllable failing producer and fail it deterministically after subscription
+                    var failing = this.CreatePublisherProbe<int>();
+                    Source.FromPublisher(failing).RunWith(sink, Materializer);
+                    await failing.EnsureSubscriptionAsync();
+                    await failing.SendErrorAsync(new TestException("failing"));
+
+                    // Observe the MergeHub failure log deterministically
+                    var error = await FishForMessageAsync<Error>(e =>
+                        e.Message.ToString()!.Contains("Upstream producer failed with exception"));
                     error.Cause.Should().BeOfType<MergeHub.ProducerFailed>();
-                    
+                    error.Cause.InnerException.Should().NotBeNull();
+                    error.Cause.InnerException.Should().BeOfType<TestException>();
+                    error.Cause.InnerException!.Message.Should().Be("failing");
+
+                    // Now start the healthy producer and verify downstream behavior
+                    Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
                     var result = await task.WaitAsync(3.Seconds());
                     result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
+
+                    // Cleanup subscription
+                    Sys.EventStream.Unsubscribe(TestActor, typeof(Error));
                 });
             }, Materializer);
         }
