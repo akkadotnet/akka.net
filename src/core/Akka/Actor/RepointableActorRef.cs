@@ -441,6 +441,14 @@ namespace Akka.Actor
         public void Stop()
         {
             SendSystemMessage(new Terminate());
+            
+            // drain all unsent messages to dead letter
+            while (_messageQueue.Count > 0)
+            {
+                var e = _messageQueue.First!.Value;
+                _messageQueue.RemoveFirst();
+                _system.DeadLetters.Tell(new DeadLetter(e.Message, e.Sender, _self));
+            }
         }
 
         /// <summary>
