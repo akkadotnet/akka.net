@@ -22,7 +22,7 @@ namespace Akka.Cluster.Tests
 {
     public abstract class ClusterLogSpec : AkkaSpec
     {
-        public const string Config = @"    
+        public const string Config = @"
             akka.cluster {
               auto-down-unreachable-after = 0s
               publish-stats-interval = 0s # always, when it happens
@@ -46,6 +46,18 @@ namespace Akka.Cluster.Tests
         {
             _selfAddress = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
             _cluster = Cluster.Get(Sys);
+        }
+
+        /// <summary>
+        /// Ensures the EventBusListener is ready by sending an Identify message and waiting for response.
+        /// This prevents race conditions where cluster events are published before the listener is subscribed.
+        /// </summary>
+        protected async Task EnsureEventBusListenerReadyAsync()
+        {
+            var selection = Sys.ActorSelection("/system/clusterEventBusListener");
+            selection.Tell(new Identify(1));
+            var identity = await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(5));
+            identity.Subject.ShouldNotBe(null);
         }
 
         protected async Task AwaitUpAsync()
@@ -109,6 +121,10 @@ namespace Akka.Cluster.Tests
         {
             _cluster.Settings.LogInfo.ShouldBeTrue();
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
+
+            // Ensure EventBusListener is ready before joining
+            await EnsureEventBusListenerReadyAsync();
+
             await JoinAsync("is the new leader");
             await AwaitUpAsync();
             await DownAsync("is no longer leader");
@@ -125,7 +141,10 @@ namespace Akka.Cluster.Tests
         public async Task A_cluster_must_not_log_verbose_cluster_events_by_default()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeFalse();
-            
+
+            // Ensure EventBusListener is ready before joining
+            await EnsureEventBusListenerReadyAsync();
+
             // Join the cluster but verify verbose log messages are NOT emitted
             await EventFilter
                 .Info(contains: upLogMessage)
@@ -138,9 +157,9 @@ namespace Akka.Cluster.Tests
                     _cluster.Join(_selfAddress);
                     await tcs.Task.WaitAsync(10.Seconds());
                 });
-            
+
             await AwaitUpAsync();
-            
+
             // Down the cluster but verify verbose log messages are NOT emitted
             await EventFilter
                 .Info(contains: downLogMessage)
@@ -169,6 +188,10 @@ namespace Akka.Cluster.Tests
         public async Task A_cluster_must_log_verbose_cluster_events_when_log_info_verbose_is_on()
         {
             _cluster.Settings.LogInfoVerbose.ShouldBeTrue();
+
+            // Ensure EventBusListener is ready and subscribed before joining
+            await EnsureEventBusListenerReadyAsync();
+
             await JoinAsync(upLogMessage);
             await AwaitUpAsync();
             await DownAsync(downLogMessage);
