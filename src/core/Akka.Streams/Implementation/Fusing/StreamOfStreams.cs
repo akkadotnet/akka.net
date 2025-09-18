@@ -1257,10 +1257,12 @@ namespace Akka.Streams.Implementation.Fusing
                         FailStage(error.Cause);
                         break;
                     case Action<IActorSubscriberMessage>:
-                        throw new IllegalStateException("Substream Source cannot be materialized more than once");
+                        FailStage(new IllegalStateException("Substream Source cannot be materialized more than once"));
+                        break;
                     default:
                         // Unexpected state - should not happen but be safe
-                        throw new IllegalStateException($"Substream Source cannot be materialized more than once - found [{previous}]");
+                        FailStage(new IllegalStateException($"Substream Source cannot be materialized more than once - found [{previous}]"));
+                        break;
                 }
             }
 
