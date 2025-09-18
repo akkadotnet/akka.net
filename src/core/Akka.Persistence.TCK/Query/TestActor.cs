@@ -34,6 +34,7 @@ namespace Akka.Persistence.TCK.Query
         {
             PersistenceId = persistenceId;
             _log = Context.GetLogger();
+            _log.Info("TestActor constructor called");
         }
 
         public override string PersistenceId { get; }
