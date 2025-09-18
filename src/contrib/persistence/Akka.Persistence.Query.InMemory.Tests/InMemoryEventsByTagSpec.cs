@@ -18,6 +18,8 @@ namespace Akka.Persistence.Query.InMemory.Tests
     {
         private static Config Config() => ConfigurationFactory.ParseString(@"
             akka.loglevel = DEBUG
+            akka.log-dead-letters = on
+            log-dead-letters-during-shutdown = on
             akka.persistence.journal.inmem {
                 event-adapters {
                   color-tagger  = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""

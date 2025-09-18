@@ -13,7 +13,12 @@ namespace Akka.Persistence.Query.InMemory.Tests
 {
     public class InMemoryAllEventsSpec : AllEventsSpec
     {
-        private static Config Config() => ConfigurationFactory.ParseString("akka.loglevel = DEBUG")
+        private static Config Config() => ConfigurationFactory.ParseString(
+                """
+                akka.loglevel = DEBUG
+                akka.log-dead-letters = on
+                log-dead-letters-during-shutdown = on
+                """)
             .WithFallback(InMemoryPersistenceSpecConfig.Config);
 
         public InMemoryAllEventsSpec(ITestOutputHelper output) : base(Config(), nameof(InMemoryAllEventsSpec), output)
