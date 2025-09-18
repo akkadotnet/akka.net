@@ -78,6 +78,7 @@ namespace Akka.Streams.Dsl
             BufferCapacity = bufferCapacity;
             DemandRedeliveryInterval = demandRedeliveryInterval;
             SubscriptionTimeout = subscriptionTimeout;
+            FinalTerminationSignalDeadline = finalTerminationSignalDeadline;
         }
 
         public string ProductPrefix => nameof(StreamRefSettings);
@@ -85,6 +86,7 @@ namespace Akka.Streams.Dsl
         public StreamRefSettings WithBufferCapacity(int value) => Copy(bufferCapacity: value);
         public StreamRefSettings WithDemandRedeliveryInterval(TimeSpan value) => Copy(demandRedeliveryInterval: value);
         public StreamRefSettings WithSubscriptionTimeout(TimeSpan value) => Copy(subscriptionTimeout: value);
+        public StreamRefSettings WithFinalTerminationSignalDeadline(TimeSpan value) => Copy(finalTerminationSignalDeadline: value);
 
         public StreamRefSettings Copy(int? bufferCapacity = null,
             TimeSpan? demandRedeliveryInterval = null,
