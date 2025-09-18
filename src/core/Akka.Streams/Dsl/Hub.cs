@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Annotations;
+using Akka.Event;
 using Akka.Streams.Stage;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -383,8 +384,15 @@ namespace Akka.Streams.Dsl
                     if(e is Implementation.NormalShutdownException)
                         CompleteStage();
                     else {
-                        throw new MergeHub.ProducerFailed(
+                        var producerFailed = new MergeHub.ProducerFailed(
                             "Upstream producer failed with exception, removing from MergeHub now", e);
+
+                        // Defensively log the error before throwing to ensure it's captured even if
+                        // the stage is completing due to downstream cancellation racing with this failure
+                        if (Log.IsErrorEnabled)
+                            Log.Error(producerFailed, producerFailed.Message);
+
+                        throw producerFailed;
                     }
                 }
 
