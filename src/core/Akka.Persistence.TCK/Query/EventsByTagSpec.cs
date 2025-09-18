@@ -82,12 +82,6 @@ namespace Akka.Persistence.TCK.Query
             var b = Sys.ActorOf(Query.TestActor.Props("b"), "b");
             var c = Sys.ActorOf(Query.TestActor.Props("c"), "c");
 
-            // Make sure that all actors are initialized and running
-            await Task.WhenAll(
-                a.Ask<ActorIdentity>(new Identify("a")),
-                b.Ask<ActorIdentity>(new Identify("b")),
-                c.Ask<ActorIdentity>(new Identify("c")));
-            
             a.Tell("hello");
             await ExpectMsgAsync("hello-done");
             a.Tell("a green apple");
