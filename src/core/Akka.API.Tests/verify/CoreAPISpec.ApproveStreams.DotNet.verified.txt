@@ -2271,6 +2271,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.StreamRefSettings Create(Akka.Configuration.Config config) { }
         public Akka.Streams.Dsl.StreamRefSettings WithBufferCapacity(int value) { }
         public Akka.Streams.Dsl.StreamRefSettings WithDemandRedeliveryInterval(System.TimeSpan value) { }
+        public Akka.Streams.Dsl.StreamRefSettings WithFinalTerminationSignalDeadline(System.TimeSpan value) { }
         public Akka.Streams.Dsl.StreamRefSettings WithSubscriptionTimeout(System.TimeSpan value) { }
     }
     [Akka.Annotations.ApiMayChangeAttribute()]
