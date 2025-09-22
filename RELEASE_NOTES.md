@@ -1,3 +1,17 @@
+#### 1.5.50 September 22nd, 2025 ####
+
+Akka.NET v1.5.50 is a minor patch containing a bug fix.
+
+* [Remote: Propagate error from DotNetty TLS Handshake failure to Akka.Remote](https://github.com/akkadotnet/akka.net/pull/7824)
+
+1 contributor since release 1.5.49
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 187  | 1    | Gregorius Soedharmo |
+
+To [see the full set of changes in Akka.NET v1.5.50, click here](https://github.com/akkadotnet/akka.net/milestone/133?closed=1)
+
 #### 1.5.49 September 10th, 2025 ####
 
 Akka.NET v1.5.49 is a minor patch containing several bug fixes.
