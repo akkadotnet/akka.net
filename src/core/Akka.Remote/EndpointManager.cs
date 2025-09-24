@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Remote.Transport.DotNetty;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util.Internal;
@@ -569,6 +570,10 @@ namespace Akka.Remote
 
                 switch (ex)
                 {
+                    case TlsHandshakeErrorAssociation tls:
+                        _log.Error("Shutting down ActorSystem due to TLS handshake failure between [{0}] and [{1}]", tls.LocalAddress, tls.RemoteAddress);
+                        CoordinatedShutdown.Get(Context.System).Run(new TlsHandshakeFailureReason($"TLS handshake failure between [{tls.LocalAddress}] and [{tls.RemoteAddress}]"));
+                        return Directive.Stop;
                     case InvalidAssociation ia:
                         KeepQuarantinedOr(ia.RemoteAddress, () =>
                         {

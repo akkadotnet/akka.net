@@ -149,6 +149,43 @@ namespace Akka.Remote.Transport.DotNetty
             AssociationListenerPromise = new TaskCompletionSource<IAssociationEventListener>();
 
             SchemeIdentifier = (Settings.EnableSsl ? "ssl." : string.Empty) + Settings.TransportMode.ToString().ToLowerInvariant();
+
+            if (Settings.EnableSsl && Settings.Ssl.Certificate != null && Settings.Ssl.FailFastInvalidServerCertificate)
+            {
+                ValidateServerCertificate(Settings.Ssl.Certificate);
+            }
+        }
+
+        private static void ValidateServerCertificate(X509Certificate2 certificate)
+        {
+            if (!certificate.HasPrivateKey)
+                throw new ConfigurationException("Configured SSL certificate is missing a private key and cannot be used for server authentication.");
+
+            try
+            {
+                var eku = certificate.Extensions.OfType<X509EnhancedKeyUsageExtension>().FirstOrDefault();
+                if (eku != null)
+                {
+                    var hasServerAuth = eku.EnhancedKeyUsages
+                        .Cast<System.Security.Cryptography.Oid>()
+                        .Any(o => string.Equals(o.Value, "1.3.6.1.5.5.7.3.1", StringComparison.Ordinal));
+                    if (!hasServerAuth)
+                        throw new ConfigurationException("Configured SSL certificate lacks 'Server Authentication' EKU (1.3.6.1.5.5.7.3.1).");
+                }
+
+                // Ensure we can access a private key handle
+                using var _ = certificate.GetRSAPrivateKey() as IDisposable ?? certificate.GetECDsaPrivateKey() as IDisposable;
+                if (_ == null)
+                    throw new ConfigurationException("Configured SSL certificate does not expose an accessible RSA/ECDSA private key.");
+            }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new ConfigurationException("Configured SSL certificate validation failed.", ex);
+            }
         }
 
         public DotNettyTransportSettings Settings { get; }
@@ -347,9 +384,22 @@ namespace Akka.Remote.Transport.DotNetty
                 var certificate = Settings.Ssl.Certificate;
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
-                var tlsHandler = Settings.Ssl.SuppressValidation
-                    ? new TlsHandler(stream => new SslStream(stream, true, (_, _, _, _) => true), new ClientTlsSettings(host))
-                    : TlsHandler.Client(host, certificate);
+                TlsHandler tlsHandler;
+                if (Settings.Ssl.SuppressValidation)
+                {
+                    // No remote chain validation; do not attach client cert explicitly here
+                    tlsHandler = new TlsHandler(stream => new SslStream(stream, true, (_, _, _, _) => true), new ClientTlsSettings(host));
+                }
+                else if (Settings.Ssl.SendClientCertificate && certificate != null)
+                {
+                    // Present client certificate
+                    tlsHandler = TlsHandler.Client(host, certificate);
+                }
+                else
+                {
+                    // No client certificate presented
+                    tlsHandler = TlsHandler.Client(host);
+                }
 
                 channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
             }
@@ -368,7 +418,21 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (Settings.EnableSsl)
             {
-                channel.Pipeline.AddFirst("TlsHandler", TlsHandler.Server(Settings.Ssl.Certificate));
+                if (Settings.Ssl.RequireClientCertificate)
+                {
+                    // Server requires client certificate
+                    var validator = Settings.Ssl.SuppressValidation
+                        ? new RemoteCertificateValidationCallback((_, _, _, _) => true)
+                        : new RemoteCertificateValidationCallback((_, cert, chain, errors) => errors == SslPolicyErrors.None);
+
+                    var serverSettings = new ServerTlsSettings(Settings.Ssl.Certificate, true);
+                    var tlsHandler = new TlsHandler(stream => new SslStream(stream, true, validator), serverSettings);
+                    channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
+                }
+                else
+                {
+                    channel.Pipeline.AddFirst("TlsHandler", TlsHandler.Server(Settings.Ssl.Certificate));
+                }
             }
 
             SetInitialChannelPipeline(channel);
