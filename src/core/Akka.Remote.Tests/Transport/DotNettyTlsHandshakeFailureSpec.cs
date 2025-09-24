@@ -28,7 +28,7 @@ namespace Akka.Remote.Tests.Transport
         {
         }
 
-        private static Config CreateConfig(bool enableSsl, string certPath, string certPassword, bool suppressValidation = true, bool requireClientCert = false, bool sendClientCert = true)
+        private static Config CreateConfig(bool enableSsl, string certPath, string certPassword, bool suppressValidation = true)
         {
             var baseConfig = ConfigurationFactory.ParseString(@"akka {
                 loglevel = DEBUG
@@ -48,8 +48,6 @@ namespace Akka.Remote.Tests.Transport
             var escapedPath = certPath.Replace("\\", "\\\\");
             var ssl = $@"akka.remote.dot-netty.tcp.ssl {{
                 suppress-validation = {(suppressValidation ? "on" : "off")}
-                require-client-certificate = {(requireClientCert ? "on" : "off")}
-                send-client-certificate = {(sendClientCert ? "on" : "off")}
                 certificate {{
                     path = ""{escapedPath}""
                     password = ""{certPassword ?? string.Empty}""
@@ -68,31 +66,7 @@ namespace Akka.Remote.Tests.Transport
             File.WriteAllBytes(NoKeyCertPath, publicKeyBytes);
         }
 
-        [Fact]
-        public void Server_should_fail_fast_when_server_certificate_has_no_private_key()
-        {
-            CreateCertificateWithoutPrivateKey();
-
-            try
-            {
-                var baseCfg = CreateConfig(true, NoKeyCertPath, null, suppressValidation: true);
-                var failfast = ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.ssl.fail-fast-invalid-server-certificate = on");
-                var serverConfig = baseCfg.WithFallback(failfast);
-
-                Assert.ThrowsAny<Exception>(() =>
-                {
-                    using var _ = ActorSystem.Create("ServerSystem", serverConfig);
-                });
-            }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(NoKeyCertPath)) File.Delete(NoKeyCertPath);
-                }
-                catch { /* ignore */ }
-            }
-        }
+        
 
         [Fact]
         public async Task Tls_handshake_failure_should_be_logged_and_shutdown_server()
@@ -261,81 +235,7 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
-        [Fact]
-        public async Task MutualTLS_should_succeed_when_client_certificate_is_required_and_provided()
-        {
-            ActorSystem server = null;
-            ActorSystem client = null;
-
-            try
-            {
-                // Server requires client certificate but suppresses validation (self-signed ok)
-                var serverConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: true, requireClientCert: true);
-                server = ActorSystem.Create("ServerSystem", serverConfig);
-                InitializeLogger(server, "[SERVER] ");
-
-                // Client sends client certificate
-                var clientConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: true, requireClientCert: false, sendClientCert: true);
-                client = ActorSystem.Create("ClientSystem", clientConfig);
-                InitializeLogger(client, "[CLIENT] ");
-
-                var echo = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
-                var serverAddr = RARP.For(server).Provider.DefaultAddress;
-                var echoPath = new RootActorPath(serverAddr) / "user" / "echo";
-
-                var probe = CreateTestProbe(client);
-                await AwaitAssertAsync(async () =>
-                {
-                    client.ActorSelection(echoPath).Tell("mtls-ok", probe.Ref);
-                    await probe.ExpectMsgAsync("mtls-ok", TimeSpan.FromSeconds(1));
-                }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(200));
-            }
-            finally
-            {
-                if (client != null) Shutdown(client, TimeSpan.FromSeconds(10));
-                if (server != null) Shutdown(server, TimeSpan.FromSeconds(10));
-            }
-        }
-
-        [Fact]
-        public async Task MutualTLS_should_shutdown_when_client_certificate_is_required_but_not_provided()
-        {
-            ActorSystem server = null;
-            ActorSystem client = null;
-
-            try
-            {
-                // Server requires client certificate, suppress validation for self-signed
-                var serverConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: false, requireClientCert: true);
-                server = ActorSystem.Create("ServerSystem", serverConfig);
-                InitializeLogger(server, "[SERVER] ");
-
-                // Client does NOT send client certificate
-                var clientConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: true, requireClientCert: false, sendClientCert: false);
-                client = ActorSystem.Create("ClientSystem", clientConfig);
-                InitializeLogger(client, "[CLIENT] ");
-
-                // Create echo on server
-                var echo = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
-
-                var serverAddr = RARP.For(server).Provider.DefaultAddress;
-                var echoPath = new RootActorPath(serverAddr) / "user" / "echo";
-
-                // Attempt communication; server should shutdown due to TLS failure (client cert required but not provided)
-                client.ActorSelection(echoPath).Tell("should-fail");
-
-                await AwaitAssertAsync(async () =>
-                {
-                    Assert.True(server.WhenTerminated.IsCompleted);
-                    await Task.CompletedTask;
-                }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(200));
-            }
-            finally
-            {
-                if (client != null) Shutdown(client, TimeSpan.FromSeconds(10));
-                if (server != null) Shutdown(server, TimeSpan.FromSeconds(10));
-            }
-        }
+        
 
         private sealed class EchoActor : ReceiveActor
         {

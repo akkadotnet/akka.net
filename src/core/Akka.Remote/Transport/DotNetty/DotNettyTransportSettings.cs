@@ -269,10 +269,6 @@ namespace Akka.Remote.Transport.DotNetty
             if (config.IsNullOrEmpty())
                 throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.tcp.ssl`)");
 
-            var failFast = config.GetBoolean("fail-fast-invalid-server-certificate", false);
-            var requireClientCert = config.GetBoolean("require-client-certificate", false);
-            var sendClientCert = config.GetBoolean("send-client-certificate", true);
-
             if (config.GetBoolean("certificate.use-thumprint-over-file")
                 || config.GetBoolean("certificate.use-thumbprint-over-file"))
             {
@@ -284,10 +280,7 @@ namespace Akka.Remote.Transport.DotNetty
                 return new SslSettings(certificateThumbprint: thumbprint,
                     storeName: config.GetString("certificate.store-name"),
                     storeLocation: ParseStoreLocationName(config.GetString("certificate.store-location")),
-                    suppressValidation: config.GetBoolean("suppress-validation"),
-                    failFastInvalidServerCertificate: failFast,
-                    requireClientCertificate: requireClientCert,
-                    sendClientCertificate: sendClientCert);
+                    suppressValidation: config.GetBoolean("suppress-validation"));
             }
 
             var flagsRaw = config.GetStringList("certificate.flags", new string[] { });
@@ -297,10 +290,7 @@ namespace Akka.Remote.Transport.DotNetty
                 certificatePath: config.GetString("certificate.path"),
                 certificatePassword: config.GetString("certificate.password"),
                 flags: flags,
-                suppressValidation: config.GetBoolean("suppress-validation"),
-                failFastInvalidServerCertificate: failFast,
-                requireClientCertificate: requireClientCert,
-                sendClientCertificate: sendClientCert);
+                suppressValidation: config.GetBoolean("suppress-validation"));
 
         }
 
@@ -339,34 +329,20 @@ namespace Akka.Remote.Transport.DotNetty
         /// Flag used to suppress certificate validation - use true only, when on dev machine or for testing.
         /// </summary>
         public readonly bool SuppressValidation;
-        public readonly bool RequireClientCertificate;
-        public readonly bool SendClientCertificate;
-
-        /// <summary>
-        /// When enabled, the transport will fail fast at startup if the configured server certificate is not usable
-        /// for server-side TLS (e.g. missing private key or invalid EKU).
-        /// </summary>
-        public readonly bool FailFastInvalidServerCertificate;
 
         private SslSettings()
         {
             Certificate = null;
             SuppressValidation = false;
-            RequireClientCertificate = false;
-            SendClientCertificate = true;
-            FailFastInvalidServerCertificate = false;
         }
 
-        public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool failFastInvalidServerCertificate = false, bool requireClientCertificate = false, bool sendClientCertificate = true)
+        public SslSettings(X509Certificate2 certificate, bool suppressValidation)
         {
             Certificate = certificate;
             SuppressValidation = suppressValidation;
-            FailFastInvalidServerCertificate = failFastInvalidServerCertificate;
-            RequireClientCertificate = requireClientCertificate;
-            SendClientCertificate = sendClientCertificate;
         }
 
-        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool failFastInvalidServerCertificate, bool requireClientCertificate, bool sendClientCertificate)
+        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation)
         {
             using var store = new X509Store(storeName, storeLocation);
             store.Open(OpenFlags.ReadOnly);
@@ -380,21 +356,15 @@ namespace Akka.Remote.Transport.DotNetty
 
             Certificate = find[0];
             SuppressValidation = suppressValidation;
-            FailFastInvalidServerCertificate = failFastInvalidServerCertificate;
-            RequireClientCertificate = requireClientCertificate;
-            SendClientCertificate = sendClientCertificate;
         }
 
-        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool failFastInvalidServerCertificate, bool requireClientCertificate, bool sendClientCertificate)
+        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)
         {
             if (string.IsNullOrEmpty(certificatePath))
                 throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
 
             Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
             SuppressValidation = suppressValidation;
-            FailFastInvalidServerCertificate = failFastInvalidServerCertificate;
-            RequireClientCertificate = requireClientCertificate;
-            SendClientCertificate = sendClientCertificate;
         }
     }
 }
