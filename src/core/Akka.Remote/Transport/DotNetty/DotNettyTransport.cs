@@ -150,7 +150,6 @@ namespace Akka.Remote.Transport.DotNetty
 
             SchemeIdentifier = (Settings.EnableSsl ? "ssl." : string.Empty) + Settings.TransportMode.ToString().ToLowerInvariant();
         }
-        
 
         public DotNettyTransportSettings Settings { get; }
         public sealed override string SchemeIdentifier { get; protected set; }
@@ -347,9 +346,11 @@ namespace Akka.Remote.Transport.DotNetty
             {
                 var certificate = Settings.Ssl.Certificate;
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
+
                 var tlsHandler = Settings.Ssl.SuppressValidation
                     ? new TlsHandler(stream => new SslStream(stream, true, (_, _, _, _) => true), new ClientTlsSettings(host))
                     : TlsHandler.Client(host, certificate);
+
                 channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
             }
 

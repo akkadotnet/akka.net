@@ -324,7 +324,7 @@ namespace Akka.Remote.Transport.DotNetty
         /// X509 certificate used to establish Secure Socket Layer (SSL) between two remote endpoints.
         /// </summary>
         public readonly X509Certificate2? Certificate;
-        
+
         /// <summary>
         /// Flag used to suppress certificate validation - use true only, when on dev machine or for testing.
         /// </summary>

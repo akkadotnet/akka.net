@@ -203,7 +203,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        Quarantined = 2,
+        Quarantined = 2
     }
 
     /// <summary>

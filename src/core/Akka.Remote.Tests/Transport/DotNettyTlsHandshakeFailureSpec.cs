@@ -33,7 +33,6 @@ namespace Akka.Remote.Tests.Transport
             var baseConfig = ConfigurationFactory.ParseString(@"akka {
                 loglevel = DEBUG
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
-                remote.retry-gate-closed-for = 3s
                 remote.dot-netty.tcp {
                     port = 0
                     hostname = ""127.0.0.1""
