@@ -204,7 +204,6 @@ namespace Akka.Remote.Transport
         /// TBD
         /// </summary>
         Quarantined = 2,
-        TlsHandshakeError = 3,
     }
 
     /// <summary>

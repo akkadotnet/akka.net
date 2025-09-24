@@ -1970,8 +1970,6 @@ namespace Akka.Remote
                                                    "to the remote system are possible until this system is restarted.", LocalAddress, RemoteAddress, disassociateInfo: DisassociateInfo.Quarantined);
                 case DisassociateInfo.Shutdown:
                     throw new ShutDownAssociation($"The remote system terminated the association because it is shutting down. Shut down address: {RemoteAddress}", LocalAddress, RemoteAddress);
-                case DisassociateInfo.TlsHandshakeError:
-                    throw new TlsHandshakeErrorAssociation("TLS handshake failed.", LocalAddress, RemoteAddress);
                 case DisassociateInfo.Unknown:
                 default:
                     Context.Stop(Self);

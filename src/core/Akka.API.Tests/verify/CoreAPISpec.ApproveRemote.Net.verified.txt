@@ -598,7 +598,6 @@ namespace Akka.Remote.Transport
         Unknown = 0,
         Shutdown = 1,
         Quarantined = 2,
-        TlsHandshakeError = 3,
     }
     public sealed class DisassociateUnderlying : Akka.Remote.Transport.TransportOperation, Akka.Event.IDeadLetterSuppression
     {
