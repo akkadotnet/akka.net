@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
+using Akka.Event;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -64,8 +65,10 @@ namespace Akka.Remote.Tests.Transport
             File.WriteAllBytes(NoKeyCertPath, publicKeyBytes);
         }
 
+
+
         [Fact]
-        public async Task Tls_handshake_failure_should_be_logged_and_detected()
+        public async Task Tls_handshake_failure_should_be_logged_and_shutdown_server()
         {
             CreateCertificateWithoutPrivateKey();
 
@@ -103,6 +106,13 @@ namespace Akka.Remote.Tests.Transport
                 var err = errorProbe.ExpectMsg<Event.Error>(TimeSpan.FromSeconds(10));
                 var msg = err.ToString();
                 Assert.Contains("TLS handshake failed", msg, StringComparison.OrdinalIgnoreCase);
+
+                // Server should shutdown due to TLS failure
+                await AwaitAssertAsync(async () =>
+                {
+                    Assert.True(server.WhenTerminated.IsCompleted);
+                    await Task.CompletedTask;
+                }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(100));
             }
             finally
             {
@@ -118,6 +128,113 @@ namespace Akka.Remote.Tests.Transport
             }
             await Task.CompletedTask;
         }
+
+        [Fact]
+        public async Task Server_side_tls_handshake_failure_should_shutdown_server()
+        {
+            CreateCertificateWithoutPrivateKey();
+
+            ActorSystem server = null;
+            ActorSystem client = null;
+
+            try
+            {
+                // Server with invalid server cert (no private key) -> server TLS handshake fails
+                var serverConfig = CreateConfig(true, NoKeyCertPath, null, suppressValidation: true);
+                server = ActorSystem.Create("ServerSystem", serverConfig);
+                InitializeLogger(server, "[SERVER] ");
+
+                // Client with valid cert
+                var clientConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: true);
+                client = ActorSystem.Create("ClientSystem", clientConfig);
+                InitializeLogger(client, "[CLIENT] ");
+
+                // Echo actor on server and client
+                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
+                var clientEcho = client.ActorOf(Props.Create(() => new EchoActor()), "echo");
+
+                var serverAddr = RARP.For(server).Provider.DefaultAddress;
+                var clientAddr = RARP.For(client).Provider.DefaultAddress;
+
+                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
+                var clientEchoPath = new RootActorPath(clientAddr) / "user" / "echo";
+
+                // Subscribe to server errors to ensure TLS handshake failure is observed
+                var serverErrorProbe = CreateTestProbe(server);
+                server.EventStream.Subscribe(serverErrorProbe.Ref, typeof(Event.Error));
+
+                // Trigger inbound handshake failure on server: client tries to talk to server
+                var clientProbe = CreateTestProbe(client);
+                client.ActorSelection(serverEchoPath).Tell("ping", clientProbe.Ref);
+
+                // Expect server to log TLS handshake failure promptly
+                var err = await serverErrorProbe.ExpectMsgAsync<Event.Error>(TimeSpan.FromSeconds(10));
+                Assert.Contains("TLS handshake failed", err.ToString(), StringComparison.OrdinalIgnoreCase);
+
+                // Server should shutdown due to TLS failure
+                await AwaitAssertAsync(async () =>
+                {
+                    Assert.True(server.WhenTerminated.IsCompleted);
+                    await Task.CompletedTask;
+                }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(100));
+            }
+            finally
+            {
+                if (client != null)
+                    Shutdown(client, TimeSpan.FromSeconds(10));
+                if (server != null)
+                    Shutdown(server, TimeSpan.FromSeconds(10));
+                try
+                {
+                    if (File.Exists(NoKeyCertPath))
+                        File.Delete(NoKeyCertPath);
+                }
+                catch { /* ignore */ }
+            }
+        }
+
+        [Fact]
+        public async Task Client_side_tls_handshake_failure_should_shutdown_client()
+        {
+            // Server has valid cert; client enforces validation so it should reject the self-signed server cert
+            ActorSystem server = null;
+            ActorSystem client = null;
+
+            try
+            {
+                var serverConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: true);
+                server = ActorSystem.Create("ServerSystem", serverConfig);
+                InitializeLogger(server, "[SERVER] ");
+
+                var clientConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: false);
+                client = ActorSystem.Create("ClientSystem", clientConfig);
+                InitializeLogger(client, "[CLIENT] ");
+
+                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
+
+                var serverAddr = RARP.For(server).Provider.DefaultAddress;
+                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
+
+                // Trigger TLS handshake failure during association
+                client.ActorSelection(serverEchoPath).Tell("hello");
+
+                // Client should shutdown due to TLS failure
+                await AwaitAssertAsync(async () =>
+                {
+                    Assert.True(client.WhenTerminated.IsCompleted);
+                    await Task.CompletedTask;
+                }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(200));
+            }
+            finally
+            {
+                if (client != null)
+                    Shutdown(client, TimeSpan.FromSeconds(10));
+                if (server != null)
+                    Shutdown(server, TimeSpan.FromSeconds(10));
+            }
+        }
+
+
 
         private sealed class EchoActor : ReceiveActor
         {

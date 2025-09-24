@@ -21,6 +21,20 @@ using Google.Protobuf;
 
 namespace Akka.Remote.Transport.DotNetty
 {
+    internal sealed class TlsHandshakeFailureReason : CoordinatedShutdown.Reason
+    {
+        public TlsHandshakeFailureReason(string message)
+        {
+            Message = message;
+        }
+
+        public string Message { get; }
+
+        public override int ExitCode => 79;
+
+        public override string ToString() => Message;
+    }
+
     internal abstract class TcpHandlers : CommonHandlers
     {
         private IHandleEventListener _listener;
@@ -72,9 +86,9 @@ namespace Akka.Remote.Transport.DotNetty
                 Log.Error(ex, "TLS handshake failed. Channel [{0}->{1}](Id={2})",
                     context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
 
-                // Best-effort surface to higher layers if listener already registered
-                NotifyListener(new UnderlyingTransportError(ex,
-                    $"TLS handshake failed on channel [{context.Channel.LocalAddress}->{context.Channel.RemoteAddress}](Id={context.Channel.Id})"));
+                // Shutdown the ActorSystem on TLS handshake failure
+                var cs = CoordinatedShutdown.Get(Transport.System);
+                cs.Run(new TlsHandshakeFailureReason($"TLS handshake failed on channel [{context.Channel.LocalAddress}->{context.Channel.RemoteAddress}](Id={context.Channel.Id})"));
 
                 context.CloseAsync();
                 return; // don't pass to next handlers
