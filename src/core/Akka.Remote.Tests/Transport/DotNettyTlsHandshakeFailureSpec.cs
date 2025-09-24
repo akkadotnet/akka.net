@@ -65,7 +65,7 @@ namespace Akka.Remote.Tests.Transport
             File.WriteAllBytes(NoKeyCertPath, publicKeyBytes);
         }
 
-        
+
 
         [Fact]
         public async Task Tls_handshake_failure_should_be_logged_and_shutdown_server()
@@ -234,7 +234,7 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
-        
+
 
         private sealed class EchoActor : ReceiveActor
         {

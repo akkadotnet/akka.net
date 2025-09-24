@@ -209,35 +209,7 @@ namespace Akka.Remote
     /// </summary>
     internal interface IAssociationProblem { }
 
-    /// <summary>
-    /// INTERNAL API
-    /// </summary>
-    internal sealed class TlsHandshakeErrorAssociation : EndpointException, IAssociationProblem
-    {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <param name="localAddress">TBD</param>
-        /// <param name="remoteAddress">TBD</param>
-        /// <param name="cause">TBD</param>
-        public TlsHandshakeErrorAssociation(string message, Address localAddress, Address remoteAddress, Exception cause = null)
-            : base(message, cause)
-        {
-            RemoteAddress = remoteAddress;
-            LocalAddress = localAddress;
-        }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Address LocalAddress { get; private set; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public Address RemoteAddress { get; private set; }
-    }
 
     /// <summary>
     /// INTERNAL API
