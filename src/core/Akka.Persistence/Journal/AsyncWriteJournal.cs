@@ -106,7 +106,8 @@ namespace Akka.Persistence.Journal
             if(_breaker.IsOpen)
                 return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, 
                     $"Circuit breaker is open, some operations may be failing intermittently with error: with error: {_breaker.LastCaughtException?.Message ?? "N/A"}"));
-            return Task.FromResult(_hasFatalError ? new PersistenceHealthCheckResult(PersistenceHealthStatus.Unhealthy, "Fatal error has occurred, some operations may be failing intermittently.") : new PersistenceHealthCheckResult(PersistenceHealthStatus.Healthy, "Healthy"));
+            return Task.FromResult(_hasFatalError ? new PersistenceHealthCheckResult(PersistenceHealthStatus.Unhealthy, "Fatal error has occurred. The ActorSystem must be restarted.") 
+                : new PersistenceHealthCheckResult(PersistenceHealthStatus.Healthy));
         }
 
         /// <inheritdoc/>
@@ -227,6 +228,14 @@ namespace Akka.Persistence.Journal
                     return true;
                 case DeleteMessagesTo deleteMessagesTo:
                     HandleDeleteMessagesTo(deleteMessagesTo);
+                    return true;
+                case CheckHealth checkHealth:
+                    var sender = Sender;
+                    CheckHealthAsync(checkHealth.CancellationToken)
+                        // PipeTo implementation no longer requires a closure, but better safe than sorry
+                        .PipeTo(sender, 
+                            success: result => new HealthCheckResponse(result),
+                            failure: ex => new HealthCheckResponse(new PersistenceHealthCheckResult(PersistenceHealthStatus.Unhealthy, ex.Message)));
                     return true;
                 default:
                     return false;
