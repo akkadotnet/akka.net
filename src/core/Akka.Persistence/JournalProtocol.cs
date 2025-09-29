@@ -213,7 +213,7 @@ namespace Akka.Persistence
         
         public override string ToString()
         {
-            return $"HealthCheckResponse<Status={Result.Status}, Message={Result.Message}>";
+            return $"HealthCheckResponse<{Result}>";
         }
     }
     

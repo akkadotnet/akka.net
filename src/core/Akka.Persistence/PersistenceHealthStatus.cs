@@ -5,6 +5,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+
 namespace Akka.Persistence;
 
 /// <summary>
@@ -28,4 +31,10 @@ public enum PersistenceHealthStatus
     Unhealthy = 2,
 }
 
-public readonly record struct PersistenceHealthCheckResult(PersistenceHealthStatus Status, string Message = "");
+/// <summary>
+/// Results from a health check.
+/// </summary>
+public readonly record struct PersistenceHealthCheckResult(PersistenceHealthStatus Status, 
+    string? Description = null, 
+    Exception? Exception = null, 
+    IReadOnlyDictionary<string, object>? Data = null);

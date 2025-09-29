@@ -25,17 +25,14 @@ namespace Akka.Persistence.Journal
         protected readonly bool CanPublish;
         private readonly CircuitBreaker _breaker;
         
-        /// <summary>
-        /// Set to <c>true</c> when a fatal error has occurred, i.e., the Akka.Persistence configuration is illegal
-        /// </summary>
-        private bool _hasFatalError;
-        
         private readonly ReplayFilterMode _replayFilterMode;
         private readonly bool _isReplayFilterEnabled;
         private readonly int _replayFilterWindowSize;
         private readonly int _replayFilterMaxOldWriters;
         private readonly bool _replayDebugEnabled;
         private readonly IActorRef _resequencer;
+
+        private readonly IReadOnlyDictionary<string, object> _defaultHealthCheckTags;
 
         private long _resequencerCounter = 1L;
 
@@ -54,7 +51,6 @@ namespace Akka.Persistence.Journal
             var extension = Persistence.Instance.Apply(Context.System);
             if (extension == null)
             {
-                _hasFatalError = true;
                 throw new ArgumentException("Couldn't initialize AsyncWriteJournal instance, because associated Persistence extension has not been used in current actor system context.");
             }
 
@@ -82,7 +78,6 @@ namespace Akka.Persistence.Journal
                     _replayFilterMode = ReplayFilterMode.Warn;
                     break;
                 default:
-                    _hasFatalError = true;
                     throw new ConfigurationException($"Invalid replay-filter.mode [{replayFilterMode}], supported values [off, repair-by-discard-old, fail, warn]");
             }
             _isReplayFilterEnabled = _replayFilterMode != ReplayFilterMode.Disabled;
@@ -91,6 +86,10 @@ namespace Akka.Persistence.Journal
             _replayDebugEnabled = config.GetBoolean("replay-filter.debug", false);
 
             _resequencer = Context.ActorOf(Props.Create(() => new Resequencer()), "resequencer");
+            _defaultHealthCheckTags = new Dictionary<string, object>
+            {
+                { "journal", Self.Path.Name }
+            };
         }
 
         /// <summary>
@@ -102,12 +101,11 @@ namespace Akka.Persistence.Journal
         {
             if(_breaker.IsHalfOpen)
                 return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, 
-                    $"Circuit breaker is half-open, some operations may be failing intermittently with error: {_breaker.LastCaughtException?.Message ?? "N/A"}"));
+                    $"Circuit breaker is half-open, some operations may be failing intermittently", _breaker.LastCaughtException, _defaultHealthCheckTags));
             if(_breaker.IsOpen)
                 return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, 
-                    $"Circuit breaker is open, some operations may be failing intermittently with error: with error: {_breaker.LastCaughtException?.Message ?? "N/A"}"));
-            return Task.FromResult(_hasFatalError ? new PersistenceHealthCheckResult(PersistenceHealthStatus.Unhealthy, "Fatal error has occurred. The ActorSystem must be restarted.") 
-                : new PersistenceHealthCheckResult(PersistenceHealthStatus.Healthy));
+                    $"Circuit breaker is open, some operations may be failing intermittently", _breaker.LastCaughtException, _defaultHealthCheckTags));
+            return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Healthy, Description:"Ok", Data: _defaultHealthCheckTags));
         }
 
         /// <inheritdoc/>
