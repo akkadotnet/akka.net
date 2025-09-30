@@ -27,6 +27,6 @@ public class PersistenceHealthCheckSpec : PersistenceSpec
         var pluginHealth = await Extension.CheckJournalHealthAsync(pluginId, cts.Token);
         
         Assert.Equal(PersistenceHealthStatus.Healthy, pluginHealth.Status);
-        Assert.Empty(pluginHealth.Message);
+        Assert.NotNull(pluginHealth.Description);
     }
 }
