@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ namespace Akka.Persistence.Snapshot
         private readonly bool _publish;
         private readonly CircuitBreaker _breaker;
         private readonly ILoggingAdapter _log;
-        private bool _hasFatalError;
+        private readonly IReadOnlyDictionary<string, object> _defaultHealthCheckTags;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotStore"/> class.
@@ -37,7 +38,6 @@ namespace Akka.Persistence.Snapshot
             var extension = Persistence.Instance.Apply(Context.System);
             if (extension == null)
             {
-                _hasFatalError = true;
                 throw new ArgumentException("Couldn't initialize SnapshotStore instance, because associated Persistence extension has not been used in current actor system context.");
             }
 
@@ -48,12 +48,16 @@ namespace Akka.Persistence.Snapshot
                 config.GetInt("circuit-breaker.max-failures", 10),
                 config.GetTimeSpan("circuit-breaker.call-timeout", TimeSpan.FromSeconds(10)),
                 config.GetTimeSpan("circuit-breaker.reset-timeout", TimeSpan.FromSeconds(30)));
-            
+
             _log = Context.GetLogger();
+            _defaultHealthCheckTags = new Dictionary<string, object>
+            {
+                { "snapshot-store", Self.Path.Name }
+            };
         }
         
         /// <summary>
-        /// Health check for the journal.
+        /// Health check for the snapshot store.
         /// </summary>
         /// <param name="cancellationToken">Cancellation token for the health check invocation.</param>
         /// <returns>A <see cref="PersistenceHealthCheckResult"/> with a health status and optional error message.</returns>
@@ -61,12 +65,11 @@ namespace Akka.Persistence.Snapshot
         {
             if(_breaker.IsHalfOpen)
                 return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, 
-                    $"Circuit breaker is half-open, some operations may be failing intermittently with error: {_breaker.LastCaughtException?.Message ?? "N/A"}"));
+                    $"Circuit breaker is half-open, some operations may be failing intermittently.", _breaker.LastCaughtException, _defaultHealthCheckTags));
             if(_breaker.IsOpen)
                 return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, 
-                    $"Circuit breaker is open, some operations may be failing intermittently with error: with error: {_breaker.LastCaughtException?.Message ?? "N/A"}"));
-            return Task.FromResult(_hasFatalError ? new PersistenceHealthCheckResult(PersistenceHealthStatus.Unhealthy, "Fatal error has occurred. The ActorSystem must be restarted.") 
-                : new PersistenceHealthCheckResult(PersistenceHealthStatus.Healthy));
+                    $"Circuit breaker is open, some operations may be failing intermittently.", _breaker.LastCaughtException,  _defaultHealthCheckTags));
+            return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Healthy, "OK.", Data: _defaultHealthCheckTags));
         }
 
         /// <inheritdoc/>
@@ -230,6 +233,17 @@ namespace Akka.Persistence.Snapshot
                         senderPersistentActor.Tell(message);
                     }
 
+                    break;
+                case CheckSnapshotStoreHealth checkHealth:
+                    var sender = Sender;
+                    CheckHealthAsync(checkHealth.CancellationToken)
+                        // PipeTo implementation no longer requires a closure, but better safe than sorry
+                        .PipeTo(sender, 
+                            success: result => new SnapshotStoreHealthCheckResponse(result),
+                            failure: ex => new SnapshotStoreHealthCheckResponse(
+                                new PersistenceHealthCheckResult(PersistenceHealthStatus.Unhealthy,
+                                    "Encountered exception while performing health check",
+                                    ex, _defaultHealthCheckTags)));
                     break;
                 
                 default:

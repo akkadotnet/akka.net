@@ -266,7 +266,24 @@ namespace Akka.Persistence
             timeoutCts.CancelAfter(Settings.AskTimeout);
             
             var pluginRef = JournalFor(journalPluginId);
-            var r = await pluginRef.Ask<HealthCheckResponse>(new CheckHealth(timeoutCts.Token), timeoutCts.Token);
+            var r = await pluginRef.Ask<JournalHealthCheckResponse>(new CheckJournalHealth(timeoutCts.Token), timeoutCts.Token);
+            return r.Result;
+        }
+
+        /// <summary>
+        /// Shortcut for invoking snapshot store health checks.
+        /// </summary>
+        /// <param name="snapshotStorePluginId">The HOCON id of the Akka.Persistence plugin.</param>
+        /// <param name="cancellationToken">An optional cancellation token.</param>
+        /// <returns>A <see cref="PersistenceHealthCheckResult"/> with health status and possibly a descriptive message.</returns>
+        public async Task<PersistenceHealthCheckResult> CheckSnapshotStoreHealthAsync(string snapshotStorePluginId,
+            CancellationToken cancellationToken = default)
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(Settings.AskTimeout);
+            
+            var pluginRef = SnapshotStoreFor(snapshotStorePluginId);
+            var r = await pluginRef.Ask<SnapshotStoreHealthCheckResponse>(new CheckSnapshotStoreHealth(timeoutCts.Token), timeoutCts.Token);
             return r.Result;
         }
 

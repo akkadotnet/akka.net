@@ -227,13 +227,17 @@ namespace Akka.Persistence.Journal
                 case DeleteMessagesTo deleteMessagesTo:
                     HandleDeleteMessagesTo(deleteMessagesTo);
                     return true;
-                case CheckHealth checkHealth:
+                case CheckJournalHealth checkHealth:
                     var sender = Sender;
                     CheckHealthAsync(checkHealth.CancellationToken)
                         // PipeTo implementation no longer requires a closure, but better safe than sorry
                         .PipeTo(sender, 
-                            success: result => new HealthCheckResponse(result),
-                            failure: ex => new HealthCheckResponse(new PersistenceHealthCheckResult(PersistenceHealthStatus.Unhealthy, ex.Message)));
+                            success: result => new JournalHealthCheckResponse(result),
+                            failure: ex => new JournalHealthCheckResponse(
+                                new PersistenceHealthCheckResult(PersistenceHealthStatus.Unhealthy,
+                                        "Encountered an exception while performing health check",
+                                        ex,
+                                        _defaultHealthCheckTags)));
                     return true;
                 default:
                     return false;

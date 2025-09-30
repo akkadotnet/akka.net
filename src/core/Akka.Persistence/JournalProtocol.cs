@@ -184,9 +184,9 @@ namespace Akka.Persistence
     /// <summary>
     /// Invokes a health check on the journal plugin.
     /// </summary>
-    public sealed class CheckHealth : IJournalRequest
+    public sealed class CheckJournalHealth : IJournalRequest
     {
-        public CheckHealth(CancellationToken cancellationToken)
+        public CheckJournalHealth(CancellationToken cancellationToken)
         {
             CancellationToken = cancellationToken;
         }
@@ -195,16 +195,16 @@ namespace Akka.Persistence
 
         public override string ToString()
         {
-            return "CheckHealth";
+            return "CheckJournalHealth";
         }
     }
 
     /// <summary>
     /// Health check response from the journal.
     /// </summary>
-    public sealed class HealthCheckResponse : IJournalResponse
+    public sealed class JournalHealthCheckResponse : IJournalResponse
     {
-        public HealthCheckResponse(PersistenceHealthCheckResult result)
+        public JournalHealthCheckResponse(PersistenceHealthCheckResult result)
         {
             Result = result;
         }
@@ -213,7 +213,7 @@ namespace Akka.Persistence
         
         public override string ToString()
         {
-            return $"HealthCheckResponse<{Result}>";
+            return $"JournalHealthCheckResponse<{Result}>";
         }
     }
     
