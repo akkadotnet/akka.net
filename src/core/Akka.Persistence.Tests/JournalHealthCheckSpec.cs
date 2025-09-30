@@ -19,7 +19,7 @@ using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests;
 
-public class PersistenceHealthCheckSpec : PersistenceSpec
+public class JournalHealthCheckSpec : PersistenceSpec
 {
     private static Config HealthCheckConfig()
     {
@@ -49,7 +49,7 @@ public class PersistenceHealthCheckSpec : PersistenceSpec
             .WithFallback(Configuration("PersistenceHealthCheckSpec", extraConfig: extraConfig));
     }
 
-    public PersistenceHealthCheckSpec(ITestOutputHelper output) : base(HealthCheckConfig(), output)
+    public JournalHealthCheckSpec(ITestOutputHelper output) : base(HealthCheckConfig(), output)
     {
     }
 
