@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Akka.Actor;
 using Akka.Event;
 
@@ -180,6 +181,42 @@ namespace Akka.Persistence
         public override string ToString() => $"DeleteMessagesTo<pid: {PersistenceId}, seqNr: {ToSequenceNr}, persistentActor: {PersistentActor}>";
     }
 
+    /// <summary>
+    /// Invokes a health check on the journal plugin.
+    /// </summary>
+    public sealed class CheckJournalHealth : IJournalRequest
+    {
+        public CheckJournalHealth(CancellationToken cancellationToken)
+        {
+            CancellationToken = cancellationToken;
+        }
+
+        public CancellationToken CancellationToken { get; }
+
+        public override string ToString()
+        {
+            return "CheckJournalHealth";
+        }
+    }
+
+    /// <summary>
+    /// Health check response from the journal.
+    /// </summary>
+    public sealed class JournalHealthCheckResponse : IJournalResponse
+    {
+        public JournalHealthCheckResponse(PersistenceHealthCheckResult result)
+        {
+            Result = result;
+        }
+
+        public PersistenceHealthCheckResult Result { get; }
+        
+        public override string ToString()
+        {
+            return $"JournalHealthCheckResponse<{Result}>";
+        }
+    }
+    
     /// <summary>
     /// Request to write messages.
     /// </summary>

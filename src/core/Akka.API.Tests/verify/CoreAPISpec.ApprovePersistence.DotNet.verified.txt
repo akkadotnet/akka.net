@@ -113,6 +113,18 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    public sealed class CheckJournalHealth : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    {
+        public CheckJournalHealth(System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.CancellationToken CancellationToken { get; }
+        public override string ToString() { }
+    }
+    public sealed class CheckSnapshotStoreHealth : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest
+    {
+        public CheckSnapshotStoreHealth(System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.CancellationToken CancellationToken { get; }
+        public override string ToString() { }
+    }
     public sealed class DeleteMessagesFailure : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Persistence.DeleteMessagesFailure>
     {
         public DeleteMessagesFailure(System.Exception cause, long toSequenceNr) { }
@@ -319,6 +331,12 @@ namespace Akka.Persistence
     {
         Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config);
     }
+    public sealed class JournalHealthCheckResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage
+    {
+        public JournalHealthCheckResponse(Akka.Persistence.PersistenceHealthCheckResult result) { }
+        public Akka.Persistence.PersistenceHealthCheckResult Result { get; }
+        public override string ToString() { }
+    }
     public sealed class LoadSnapshot : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.LoadSnapshot>
     {
         public LoadSnapshot(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, long toSequenceNr) { }
@@ -378,11 +396,36 @@ namespace Akka.Persistence
         public Akka.Persistence.IStashOverflowStrategy DefaultInternalStashOverflowStrategy { get; }
         public Akka.Persistence.PersistenceSettings Settings { get; }
         public Akka.Persistence.Journal.EventAdapters AdaptersFor(string journalPluginId) { }
+        public System.Threading.Tasks.Task<Akka.Persistence.PersistenceHealthCheckResult> CheckJournalHealthAsync(string journalPluginId, System.Threading.CancellationToken cancellationToken = null) { }
+        public System.Threading.Tasks.Task<Akka.Persistence.PersistenceHealthCheckResult> CheckSnapshotStoreHealthAsync(string snapshotStorePluginId, System.Threading.CancellationToken cancellationToken = null) { }
         [Akka.Annotations.InternalStableApiAttribute()]
         public Akka.Actor.IActorRef JournalFor(string journalPluginId) { }
         public string PersistenceId(Akka.Actor.IActorRef actor) { }
         [Akka.Annotations.InternalStableApiAttribute()]
         public Akka.Actor.IActorRef SnapshotStoreFor(string snapshotPluginId) { }
+    }
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public struct PersistenceHealthCheckResult : System.IEquatable<Akka.Persistence.PersistenceHealthCheckResult>
+    {
+        public PersistenceHealthCheckResult(Akka.Persistence.PersistenceHealthStatus Status, string Description = null, System.Exception Exception = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0,
+                0})] System.Collections.Generic.IReadOnlyDictionary<string, object> Data = null) { }
+        [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0,
+                0})]
+        public System.Collections.Generic.IReadOnlyDictionary<string, object> Data { get; set; }
+        public string Description { get; set; }
+        public System.Exception Exception { get; set; }
+        public Akka.Persistence.PersistenceHealthStatus Status { get; set; }
+    }
+    public enum PersistenceHealthStatus
+    {
+        Healthy = 0,
+        Degraded = 1,
+        Unhealthy = 2,
     }
     public sealed class PersistenceSettings : Akka.Actor.Settings
     {
@@ -645,6 +688,12 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
+    public sealed class SnapshotStoreHealthCheckResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse
+    {
+        public SnapshotStoreHealthCheckResponse(Akka.Persistence.PersistenceHealthCheckResult result) { }
+        public Akka.Persistence.PersistenceHealthCheckResult Result { get; }
+        public override string ToString() { }
+    }
     public sealed class StashingHandlerInvocation : Akka.Persistence.IPendingHandlerInvocation
     {
         public StashingHandlerInvocation(object evt, System.Action<object> handler) { }
@@ -877,6 +926,7 @@ namespace Akka.Persistence.Journal
     {
         protected readonly bool CanPublish;
         protected AsyncWriteJournal() { }
+        public virtual System.Threading.Tasks.Task<Akka.Persistence.PersistenceHealthCheckResult> CheckHealthAsync(System.Threading.CancellationToken cancellationToken = null) { }
         protected abstract System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken);
         public abstract System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, System.Threading.CancellationToken cancellationToken);
         protected virtual bool Receive(object message) { }
@@ -1235,6 +1285,7 @@ namespace Akka.Persistence.Snapshot
     public abstract class SnapshotStore : Akka.Actor.ActorBase
     {
         protected SnapshotStore() { }
+        public virtual System.Threading.Tasks.Task<Akka.Persistence.PersistenceHealthCheckResult> CheckHealthAsync(System.Threading.CancellationToken cancellationToken = null) { }
         protected abstract System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata, System.Threading.CancellationToken cancellationToken);
         protected abstract System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken);
         protected abstract System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken);
