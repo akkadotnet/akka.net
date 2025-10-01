@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -25,12 +24,15 @@ namespace Akka.Persistence.Journal
     {
         protected readonly bool CanPublish;
         private readonly CircuitBreaker _breaker;
+        
         private readonly ReplayFilterMode _replayFilterMode;
         private readonly bool _isReplayFilterEnabled;
         private readonly int _replayFilterWindowSize;
         private readonly int _replayFilterMaxOldWriters;
         private readonly bool _replayDebugEnabled;
         private readonly IActorRef _resequencer;
+
+        private readonly IReadOnlyDictionary<string, object> _defaultHealthCheckTags;
 
         private long _resequencerCounter = 1L;
 
@@ -84,6 +86,26 @@ namespace Akka.Persistence.Journal
             _replayDebugEnabled = config.GetBoolean("replay-filter.debug", false);
 
             _resequencer = Context.ActorOf(Props.Create(() => new Resequencer()), "resequencer");
+            _defaultHealthCheckTags = new Dictionary<string, object>
+            {
+                { "journal", Self.Path.Name }
+            };
+        }
+
+        /// <summary>
+        /// Health check for the journal.
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation token for the health check invocation.</param>
+        /// <returns>A <see cref="PersistenceHealthCheckResult"/> with a health status and optional error message.</returns>
+        public virtual Task<PersistenceHealthCheckResult> CheckHealthAsync(CancellationToken cancellationToken = default)
+        {
+            if(_breaker.IsHalfOpen)
+                return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, 
+                    $"Circuit breaker is half-open, some operations may be failing intermittently", _breaker.LastCaughtException, _defaultHealthCheckTags));
+            if(_breaker.IsOpen)
+                return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, 
+                    $"Circuit breaker is open, some operations may be failing intermittently", _breaker.LastCaughtException, _defaultHealthCheckTags));
+            return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Healthy, Description:"Ok", Data: _defaultHealthCheckTags));
         }
 
         /// <inheritdoc/>
@@ -162,7 +184,7 @@ namespace Akka.Persistence.Journal
         /// 
         /// This call is protected with a circuit-breaker.
         /// </summary>
-        /// <param name="messages">TBD</param>
+        /// <param name="messages">The set of messages to write.</param>
         /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled snapshot operation</param> 
         protected abstract Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken);
 
@@ -170,8 +192,8 @@ namespace Akka.Persistence.Journal
         /// Asynchronously deletes all persistent messages up to inclusive <paramref name="toSequenceNr"/>
         /// bound.
         /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
+        /// <param name="persistenceId">The id of the entity.</param>
+        /// <param name="toSequenceNr">The inclusive upper-bound of sequence numbers to delete.</param>
         /// <param name="cancellationToken"><see cref="CancellationToken"/> used to signal cancelled snapshot operation</param> 
         protected abstract Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken);
 
@@ -179,8 +201,8 @@ namespace Akka.Persistence.Journal
         /// Plugin API: Allows plugin implementers to use f.PipeTo(Self)
         /// and handle additional messages for implementing advanced features
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message to receive</param>
+        /// <returns><c>true</c> if the message was handled, <c>false</c> otherwise.</returns>
         protected virtual bool ReceivePluginInternal(object message)
         {
             return false;
@@ -204,6 +226,18 @@ namespace Akka.Persistence.Journal
                     return true;
                 case DeleteMessagesTo deleteMessagesTo:
                     HandleDeleteMessagesTo(deleteMessagesTo);
+                    return true;
+                case CheckJournalHealth checkHealth:
+                    var sender = Sender;
+                    CheckHealthAsync(checkHealth.CancellationToken)
+                        // PipeTo implementation no longer requires a closure, but better safe than sorry
+                        .PipeTo(sender, 
+                            success: result => new JournalHealthCheckResponse(result),
+                            failure: ex => new JournalHealthCheckResponse(
+                                new PersistenceHealthCheckResult(PersistenceHealthStatus.Unhealthy,
+                                        "Encountered an exception while performing health check",
+                                        ex,
+                                        _defaultHealthCheckTags)));
                     return true;
                 default:
                     return false;
@@ -256,16 +290,6 @@ namespace Akka.Persistence.Journal
 
             async Task ExecuteHighestSequenceNr()
             {
-                void CompleteHighSeqNo(long highSeqNo)
-                {
-                    replyTo.Tell(new RecoverySuccess(highSeqNo));
-
-                    if (CanPublish)
-                    {
-                        eventStream.Publish(message);
-                    }
-                }
-                
                 try
                 {
                     var highSequenceNr = await _breaker.WithCircuitBreaker((message, readHighestSequenceNrFrom, awj: this), (state, ct) =>
@@ -306,6 +330,18 @@ namespace Akka.Persistence.Journal
                 {
                     replyTo.Tell(new ReplayMessagesFailure(TryUnwrapException(ex)));
                 }
+
+                return;
+
+                void CompleteHighSeqNo(long highSeqNo)
+                {
+                    replyTo.Tell(new RecoverySuccess(highSeqNo));
+
+                    if (CanPublish)
+                    {
+                        eventStream.Publish(message);
+                    }
+                }
             }
             
             // instead of ContinueWith
@@ -315,10 +351,12 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// TBD
+        /// INTERNAL API.
+        ///
+        /// used to flatten aggregate exceptions.
         /// </summary>
-        /// <param name="e">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="e">The input exception.</param>
+        /// <returns>A possibly flattened exception.</returns>
         protected static Exception TryUnwrapException(Exception e)
         {
             if (e is not AggregateException aggregateException) return e;
@@ -371,7 +409,7 @@ namespace Akka.Persistence.Journal
             }
         }
 
-        private void ProcessResults(IImmutableList<Exception> results, int atomicWriteCount, WriteMessages writeMessage, IActorRef resequencer,
+        private static void ProcessResults(IImmutableList<Exception> results, int atomicWriteCount, WriteMessages writeMessage, IActorRef resequencer,
             long resequencerCounter, IActorRef writeJournal)
         {
             // there should be no circumstances under which `writeResult` can be `null`
@@ -385,11 +423,11 @@ namespace Akka.Persistence.Journal
                 : new WriteMessageRejected(x, exception, writeMessage.ActorInstanceId), results, resequencerCounter, writeMessage, resequencer, writeJournal);
         }
         
-        private void Resequence(Func<IPersistentRepresentation, Exception, object> mapper,
+        private static void Resequence(Func<IPersistentRepresentation, Exception, object> mapper,
             IImmutableList<Exception> results, long resequencerCounter, WriteMessages msg, IActorRef resequencer, IActorRef writeJournal)
         {
             var i = 0;
-            var enumerator = results?.GetEnumerator();
+            using var enumerator = results?.GetEnumerator();
             foreach (var resequencable in msg.Messages)
             {
                 if (resequencable is AtomicWrite aw)

@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Configuration;
@@ -250,6 +251,40 @@ namespace Akka.Persistence
             var configPath = string.IsNullOrEmpty(journalPluginId) ? _defaultJournalPluginId.Value : journalPluginId;
 
             return PluginHolderFor(configPath, JournalFallbackConfigPath).Ref;
+        }
+
+        /// <summary>
+        /// Shortcut for invoking journal health checks.
+        /// </summary>
+        /// <param name="journalPluginId">The HOCON id of the Akka.Persistence plugin./</param>
+        /// <param name="cancellationToken">An optional cancellation token.</param>
+        /// <returns>A <see cref="PersistenceHealthCheckResult"/> with health status and possibly a descriptive message.</returns>
+        public async Task<PersistenceHealthCheckResult> CheckJournalHealthAsync(string journalPluginId,
+            CancellationToken cancellationToken = default)
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(Settings.AskTimeout);
+            
+            var pluginRef = JournalFor(journalPluginId);
+            var r = await pluginRef.Ask<JournalHealthCheckResponse>(new CheckJournalHealth(timeoutCts.Token), timeoutCts.Token);
+            return r.Result;
+        }
+
+        /// <summary>
+        /// Shortcut for invoking snapshot store health checks.
+        /// </summary>
+        /// <param name="snapshotStorePluginId">The HOCON id of the Akka.Persistence plugin.</param>
+        /// <param name="cancellationToken">An optional cancellation token.</param>
+        /// <returns>A <see cref="PersistenceHealthCheckResult"/> with health status and possibly a descriptive message.</returns>
+        public async Task<PersistenceHealthCheckResult> CheckSnapshotStoreHealthAsync(string snapshotStorePluginId,
+            CancellationToken cancellationToken = default)
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(Settings.AskTimeout);
+            
+            var pluginRef = SnapshotStoreFor(snapshotStorePluginId);
+            var r = await pluginRef.Ask<SnapshotStoreHealthCheckResponse>(new CheckSnapshotStoreHealth(timeoutCts.Token), timeoutCts.Token);
+            return r.Result;
         }
 
         /// <summary>
