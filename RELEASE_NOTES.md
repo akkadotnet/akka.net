@@ -12,7 +12,7 @@ Akka.NET v1.5.51 is a minor patch containing a remoting bug fix and add required
 | 1       | 609  | 31   | Aaron Stannard      |
 | 1       | 139  | 5    | Gregorius Soedharmo |
 
-To [see the full set of changes in Akka.NET v1.5.50, click here](https://github.com/akkadotnet/akka.net/milestone/134?closed=1)
+To [see the full set of changes in Akka.NET v1.5.51, click here](https://github.com/akkadotnet/akka.net/milestone/134?closed=1)
 
 #### 1.5.50 September 22nd, 2025 ####
 
