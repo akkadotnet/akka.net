@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Newtonsoft.Json;
 
 namespace Akka.Persistence
@@ -25,6 +26,39 @@ namespace Akka.Persistence
     /// Internal snapshot acknowledgement
     /// </summary>
     public interface ISnapshotResponse : ISnapshotMessage { }
+
+    public sealed class CheckSnapshotStoreHealth : ISnapshotRequest
+    {
+        public CheckSnapshotStoreHealth(CancellationToken cancellationToken)
+        {
+            CancellationToken = cancellationToken;
+        }
+
+        public CancellationToken CancellationToken { get; }
+
+        public override string ToString()
+        {
+            return "CheckSnapshotStoreHealth";
+        }
+    }
+    
+    /// <summary>
+    /// Health check response from the SnapshotStore.
+    /// </summary>
+    public sealed class SnapshotStoreHealthCheckResponse : ISnapshotResponse
+    {
+        public SnapshotStoreHealthCheckResponse(PersistenceHealthCheckResult result)
+        {
+            Result = result;
+        }
+
+        public PersistenceHealthCheckResult Result { get; }
+        
+        public override string ToString()
+        {
+            return $"SnapshotStoreHealthCheckResponse<{Result}>";
+        }
+    }
 
     /// <summary>
     /// Metadata for all persisted snapshot records.
