@@ -68,122 +68,32 @@ namespace Akka.Remote.Tests.Transport
 
 
         [Fact]
-        public async Task Tls_handshake_failure_should_be_logged_and_shutdown_server()
+        public async Task Server_should_fail_at_startup_with_certificate_without_private_key()
         {
             CreateCertificateWithoutPrivateKey();
 
-            ActorSystem server = null;
-            ActorSystem client = null;
-
             try
             {
-                // Start TLS server with a cert that has no private key
+                // Server with cert that has no private key should FAIL TO START
                 var serverConfig = CreateConfig(true, NoKeyCertPath, null, suppressValidation: true);
 
-                server = ActorSystem.Create("ServerSystem", serverConfig);
-                InitializeLogger(server, "[SERVER] ");
-
-                // Server started - add an echo actor and subscribe to errors
-                server.ActorOf(Props.Create(() => new EchoActor()), "echo");
-
-                var errorProbe = CreateTestProbe(server);
-                server.EventStream.Subscribe(errorProbe.Ref, typeof(Event.Error));
-
-                // Start client with valid TLS cert
-                var clientConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: true);
-                client = ActorSystem.Create("ClientSystem", clientConfig);
-                InitializeLogger(client, "[CLIENT] ");
-
-                var serverAddress = RARP.For(server).Provider.DefaultAddress;
-                var echoPath = new RootActorPath(serverAddress) / "user" / "echo";
-                var echoSel = client.ActorSelection(echoPath);
-
-                // Trigger association attempt
-                var probe = CreateTestProbe(client);
-                echoSel.Tell("ping", probe.Ref);
-
-                // Expect server to log TLS handshake failure promptly
-                var err = errorProbe.ExpectMsg<Event.Error>(TimeSpan.FromSeconds(10));
-                var msg = err.ToString();
-                Assert.Contains("TLS handshake failed", msg, StringComparison.OrdinalIgnoreCase);
-
-                // Server should shutdown due to TLS failure
-                await AwaitAssertAsync(async () =>
+                // ActorSystem.Create should throw during startup due to certificate validation
+                var aggregateEx = Assert.Throws<AggregateException>(() =>
                 {
-                    Assert.True(server.WhenTerminated.IsCompleted);
-                    await Task.CompletedTask;
-                }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(100));
+                    using var server = ActorSystem.Create("ServerSystem", serverConfig);
+                });
+
+                // Unwrap to find the ConfigurationException
+                var innerEx = aggregateEx.InnerException ?? aggregateEx;
+                while (innerEx is AggregateException agg && agg.InnerException != null)
+                    innerEx = agg.InnerException;
+
+                // Should be ConfigurationException about private key
+                Assert.IsType<ConfigurationException>(innerEx);
+                Assert.Contains("private key", innerEx.Message, StringComparison.OrdinalIgnoreCase);
             }
             finally
             {
-                if (client != null) 
-                    Shutdown(client, TimeSpan.FromSeconds(10));
-                if (server != null) 
-                    Shutdown(server, TimeSpan.FromSeconds(10));
-                try
-                {
-                    if (File.Exists(NoKeyCertPath)) 
-                        File.Delete(NoKeyCertPath);
-                } catch { /* ignore */ }
-            }
-            await Task.CompletedTask;
-        }
-
-        [Fact]
-        public async Task Server_side_tls_handshake_failure_should_shutdown_server()
-        {
-            CreateCertificateWithoutPrivateKey();
-
-            ActorSystem server = null;
-            ActorSystem client = null;
-
-            try
-            {
-                // Server with invalid server cert (no private key) -> server TLS handshake fails
-                var serverConfig = CreateConfig(true, NoKeyCertPath, null, suppressValidation: true);
-                server = ActorSystem.Create("ServerSystem", serverConfig);
-                InitializeLogger(server, "[SERVER] ");
-
-                // Client with valid cert
-                var clientConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: true);
-                client = ActorSystem.Create("ClientSystem", clientConfig);
-                InitializeLogger(client, "[CLIENT] ");
-
-                // Echo actor on server and client
-                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
-                var clientEcho = client.ActorOf(Props.Create(() => new EchoActor()), "echo");
-
-                var serverAddr = RARP.For(server).Provider.DefaultAddress;
-                var clientAddr = RARP.For(client).Provider.DefaultAddress;
-
-                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
-                var clientEchoPath = new RootActorPath(clientAddr) / "user" / "echo";
-
-                // Subscribe to server errors to ensure TLS handshake failure is observed
-                var serverErrorProbe = CreateTestProbe(server);
-                server.EventStream.Subscribe(serverErrorProbe.Ref, typeof(Event.Error));
-
-                // Trigger inbound handshake failure on server: client tries to talk to server
-                var clientProbe = CreateTestProbe(client);
-                client.ActorSelection(serverEchoPath).Tell("ping", clientProbe.Ref);
-
-                // Expect server to log TLS handshake failure promptly
-                var err = await serverErrorProbe.ExpectMsgAsync<Event.Error>(TimeSpan.FromSeconds(10));
-                Assert.Contains("TLS handshake failed", err.ToString(), StringComparison.OrdinalIgnoreCase);
-
-                // Server should shutdown due to TLS failure
-                await AwaitAssertAsync(async () =>
-                {
-                    Assert.True(server.WhenTerminated.IsCompleted);
-                    await Task.CompletedTask;
-                }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(100));
-            }
-            finally
-            {
-                if (client != null)
-                    Shutdown(client, TimeSpan.FromSeconds(10));
-                if (server != null)
-                    Shutdown(server, TimeSpan.FromSeconds(10));
                 try
                 {
                     if (File.Exists(NoKeyCertPath))
@@ -191,6 +101,7 @@ namespace Akka.Remote.Tests.Transport
                 }
                 catch { /* ignore */ }
             }
+            await Task.CompletedTask;
         }
 
         [Fact]
