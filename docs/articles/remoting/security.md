@@ -100,7 +100,7 @@ The `suppress-validation` setting controls whether certificate validation is enf
 
 If you must use self-signed certificates (development/testing):
 
-**Option 1: Trust the self-signed CA (Better)**
+#### Option 1: Trust the self-signed CA (Better)
 
 ```powershell
 # Generate self-signed CA
@@ -132,7 +132,7 @@ akka.remote.dot-netty.tcp.ssl {
 * Catches expiration/configuration errors
 * More realistic test environment
 
-**Option 2: Suppress validation (Quick but dangerous)**
+#### Option 2: Suppress validation (Quick but dangerous)
 
 ```hocon
 akka.remote.dot-netty.tcp.ssl {
