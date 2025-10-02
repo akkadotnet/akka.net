@@ -354,9 +354,41 @@ namespace Akka.Remote.Transport.DotNetty
                 var certificate = Settings.Ssl.Certificate;
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
-                var tlsHandler = Settings.Ssl.SuppressValidation
-                    ? new TlsHandler(stream => new SslStream(stream, true, (_, _, _, _) => true), new ClientTlsSettings(host))
-                    : TlsHandler.Client(host, certificate);
+                IChannelHandler tlsHandler;
+
+                if (Settings.Ssl.SuppressValidation)
+                {
+                    // Test/dev mode: Accept any server certificate
+                    if (Settings.Ssl.RequireMutualAuthentication)
+                    {
+                        // Provide client cert for mutual TLS
+                        tlsHandler = new TlsHandler(
+                            stream => new SslStream(stream, true, (_, _, _, _) => true,
+                                (_, _, _, _, _) => certificate),
+                            new ClientTlsSettings(host));
+                    }
+                    else
+                    {
+                        // No client cert needed
+                        tlsHandler = new TlsHandler(
+                            stream => new SslStream(stream, true, (_, _, _, _) => true),
+                            new ClientTlsSettings(host));
+                    }
+                }
+                else
+                {
+                    // Production mode: Validate server certificate
+                    if (Settings.Ssl.RequireMutualAuthentication)
+                    {
+                        // Provide client cert for mutual TLS
+                        tlsHandler = TlsHandler.Client(host, certificate);
+                    }
+                    else
+                    {
+                        // Standard TLS: Only validate server certificate, no client cert
+                        tlsHandler = TlsHandler.Client(host);
+                    }
+                }
 
                 channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
             }
@@ -375,7 +407,46 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (Settings.EnableSsl)
             {
-                channel.Pipeline.AddFirst("TlsHandler", TlsHandler.Server(Settings.Ssl.Certificate));
+                IChannelHandler tlsHandler;
+
+                if (Settings.Ssl.RequireMutualAuthentication)
+                {
+                    // Mutual TLS: Require client certificate authentication
+                    tlsHandler = new TlsHandler(
+                        stream => new SslStream(
+                            stream,
+                            leaveInnerStreamOpen: true,
+                            userCertificateValidationCallback: (sender, certificate, chain, errors) =>
+                            {
+                                if (certificate == null)
+                                {
+                                    Log.Warning("Mutual TLS: Client connection rejected - no client certificate provided");
+                                    return false;
+                                }
+
+                                if (Settings.Ssl.SuppressValidation)
+                                {
+                                    // In test/dev mode, accept any client certificate
+                                    return true;
+                                }
+
+                                if (errors != SslPolicyErrors.None)
+                                {
+                                    Log.Warning("Mutual TLS: Client certificate validation failed with errors: {0}", errors);
+                                    return false;
+                                }
+
+                                return true;
+                            }),
+                        new ServerTlsSettings(Settings.Ssl.Certificate, negotiateClientCertificate: true));
+                }
+                else
+                {
+                    // Standard TLS: Server authentication only (backward compatible)
+                    tlsHandler = TlsHandler.Server(Settings.Ssl.Certificate);
+                }
+
+                channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
             }
 
             SetInitialChannelPipeline(channel);
