@@ -52,7 +52,6 @@ TLS encryption was introduced in Akka.NET v1.2 with the DotNetty transport. It p
 - Misconfigured certificates (see startup validation below)
 - Compromised private keys (rotate certificates regularly)
 - Application-level authorization (implement this separately)
-- Denial of Service attacks (use network rate limiting)
 
 ## Certificate Validation: suppress-validation Setting
 
@@ -217,36 +216,15 @@ akka.remote.dot-netty.tcp {
 
 **New in Akka.NET v1.5.52:** The transport now validates certificate configuration at startup, preventing runtime failures.
 
-### What It Checks
+### What It Validates
 
 The startup validation verifies:
-1. ✅ Certificate exists in the specified location
-2. ✅ Certificate has a private key associated
-3. ✅ Application has permissions to access the private key
-4. ✅ Private key is accessible for both RSA and ECDSA algorithms
+- Certificate exists in the specified location
+- Certificate has a private key associated
+- Application has permissions to access the private key
+- Private key is accessible for both RSA and ECDSA algorithms
 
-### Why This Matters
-
-**Before this feature:**
-```
-[09:00:00] Server starts successfully ✓
-[09:00:30] Client connects to server
-[09:00:31] TLS handshake fails: "Cannot access private key"
-[09:00:31] Client disconnects
-[09:00:32] Cluster member marked as unreachable
-[09:00:35] Production outage begins 🔥
-```
-
-**After this feature:**
-```
-[09:00:00] Server startup begins
-[09:00:00] ERROR: SSL certificate private key exists but cannot be accessed
-[09:00:00] Verify application user has permissions to the private key
-[09:00:00] Server fails to start ✓
-[09:00:01] Admin fixes permissions
-[09:00:02] Server starts successfully ✓
-[09:00:03] No outage 🎉
-```
+This fail-fast validation prevents runtime TLS handshake failures by detecting certificate configuration problems during system initialization.
 
 ### Common Private Key Permission Issues
 
@@ -279,19 +257,33 @@ Set-Acl $keyFullPath $acl
 ### Standard TLS vs Mutual TLS
 
 **Standard TLS (Server Authentication Only):**
-```
-Client connects → Server proves identity with certificate
-                → Client validates server certificate
-                → Client does NOT need a certificate
-                → Connection established
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: Connect (no certificate)
+    Server->>Client: Send server certificate
+    Client->>Client: Validate server certificate
+    Client->>Server: Accept connection
+    Note over Client,Server: Encrypted communication established
 ```
 
 **Mutual TLS (Client + Server Authentication):**
-```
-Client connects → Server proves identity with certificate
-                → Client proves identity with certificate
-                → Both sides validate certificates
-                → Connection established
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+
+    Client->>Server: Connect with client certificate
+    Server->>Client: Send server certificate
+    Client->>Client: Validate server certificate
+    Server->>Server: Validate client certificate
+    Client->>Server: Accept connection
+    Server->>Client: Accept connection
+    Note over Client,Server: Mutually authenticated encryption established
 ```
 
 ### Configuration
@@ -363,8 +355,8 @@ For production with Windows Certificate Store:
 akka.remote.dot-netty.tcp {
   enable-ssl = true
   ssl {
-    suppress-validation = false  # ✓ Validates all certificates
-    require-mutual-authentication = true  # ✓ Requires client certs
+    suppress-validation = false  # ✓ Validates all certificates (default when SSL enabled)
+    require-mutual-authentication = true  # ✓ Requires client certs (default when SSL enabled since v1.5.52)
     certificate {
       use-thumbprint-over-file = true
       thumbprint = "2531c78c51e5041d02564697a88af8bc7a7ce3e3"
@@ -374,6 +366,8 @@ akka.remote.dot-netty.tcp {
   }
 }
 ```
+
+**Note:** When SSL is enabled, both `suppress-validation = false` and `require-mutual-authentication = true` are the secure defaults (since v1.5.52), so you only need to explicitly set them if overriding.
 
 **Security level:** Maximum
 - Both client and server prove identity
@@ -430,88 +424,6 @@ The best practice for network security is to make the network itself secure. Run
 - [Tailscale](https://tailscale.com/) - Zero-config VPN mesh networking
 - [ZeroTier](https://www.zerotier.com/) - Software-defined networking
 
-## Common Pitfalls and Solutions
-
-### Pitfall 1: Using suppress-validation = true in Production
-
-**Problem:** Accepts any certificate, including attacker-controlled ones.
-
-**Solution:** Always set `suppress-validation = false` except in local development.
-
-### Pitfall 2: Certificate Without Private Key Access
-
-**Problem:** Certificate appears configured but server fails at runtime with "cannot access private key"
-
-**Solution:** Startup validation (v1.5.52+) now catches this at startup. Grant permissions to application user as shown above.
-
-### Pitfall 3: Self-Signed Certificates in Production
-
-**Problem:** Self-signed certificates must be manually trusted on every machine, error-prone at scale.
-
-**Solution:**
-- Use proper Certificate Authority (CA) for production
-- Options: Internal PKI, Let's Encrypt, commercial CA
-- Automate certificate distribution
-
-### Pitfall 4: Expired Certificates
-
-**Problem:** Certificate expires, entire cluster loses connectivity.
-
-**Solution:**
-- Monitor certificate expiration dates
-- Automate certificate renewal (e.g., with certbot for Let's Encrypt)
-- Set up alerts for certificates expiring within 30 days
-
-### Pitfall 5: Mixed TLS and Non-TLS Nodes
-
-**Problem:** Some nodes have `enable-ssl = true`, others have `enable-ssl = false`. They cannot communicate.
-
-**Solution:**
-- All nodes in a cluster must have matching TLS configuration
-- Use configuration management to ensure consistency
-- Startup validation will catch this early
-
-## Best Practices Summary
-
-1. ✅ **Always use TLS in production** (`enable-ssl = true`)
-2. ✅ **Always validate certificates** (`suppress-validation = false`)
-3. ✅ **Enable mutual TLS by default** (`require-mutual-authentication = true`)
-4. ✅ **Use Windows Certificate Store for production** (better private key protection)
-5. ✅ **Grant proper private key permissions** (see PowerShell example above)
-6. ✅ **Deploy on private networks with VPN access** (defense-in-depth)
-7. ✅ **Monitor certificate expiration** (automate renewal)
-8. ✅ **Use proper CA for production certificates** (not self-signed)
-9. ✅ **Enable untrusted mode for public-facing endpoints**
-10. ✅ **Test TLS configuration in staging first** (startup validation will catch issues)
-
-## Migration Guide: Upgrading to Mutual TLS
-
-If you're upgrading from an older version without mutual TLS:
-
-**Option 1: Enable mutual TLS (Recommended)**
-
-```hocon
-akka.remote.dot-netty.tcp.ssl {
-  require-mutual-authentication = true  # New default in v1.5.52+
-}
-```
-
-All nodes must have valid certificates. Startup validation ensures this.
-
-**Option 2: Disable mutual TLS (Backward Compatible)**
-
-```hocon
-akka.remote.dot-netty.tcp.ssl {
-  require-mutual-authentication = false  # Revert to server-only TLS
-}
-```
-
-Only servers need certificates. Less secure but maintains compatibility.
-
-**Recommended approach:**
-1. Test in staging with `require-mutual-authentication = true`
-2. Verify all nodes have accessible private keys
-3. Deploy to production with mutual TLS enabled
 
 ## Troubleshooting
 
@@ -549,4 +461,4 @@ Only servers need certificates. Less secure but maintains compatibility.
 
 **Related:**
 - [Akka.Remote Configuration](xref:akka-remote-configuration)
-- [DotNetty Transport](xref:dotnetty)
+- [DotNetty Transport](https://github.com/Azure/DotNetty)
