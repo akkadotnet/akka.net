@@ -8,26 +8,29 @@ title: Network Security
 ## Important Context: When You Need TLS
 
 **Akka.Remote is designed for internal cluster communication and should NOT be exposed to the public internet.** Most Akka.NET deployments run within:
-- Private networks (VPNs, VPCs)
-- Internal data centers
-- Kubernetes clusters with network policies
-- Behind firewalls with strict ingress rules
+
+* Private networks (VPNs, VPCs)
+* Internal data centers
+* Kubernetes clusters with network policies
+* Behind firewalls with strict ingress rules
 
 ### When TLS is Optional
 
 For many deployments, TLS is not strictly necessary:
-- ✅ **Internal networks only** - If your cluster runs entirely within a trusted network boundary
-- ✅ **Development/staging environments** - Where data sensitivity is low
-- ✅ **Kubernetes with network policies** - Where the container network provides isolation
+
+* ✅ **Internal networks only** - If your cluster runs entirely within a trusted network boundary
+* ✅ **Development/staging environments** - Where data sensitivity is low
+* ✅ **Kubernetes with network policies** - Where the container network provides isolation
 
 ### When TLS is Recommended
 
 You should enable TLS when:
-- 🔒 **Crossing network boundaries** - Communication between data centers or cloud regions
-- 🔒 **Public internet transit** - Any traffic over public networks (even with VPN)
-- 🔒 **Compliance requirements** - PCI-DSS, HIPAA, or other regulatory needs
-- 🔒 **Defense-in-depth** - Additional security layer even on private networks
-- 🔒 **Multi-tenant environments** - Shared infrastructure with other applications
+
+* 🔒 **Crossing network boundaries** - Communication between data centers or cloud regions
+* 🔒 **Public internet transit** - Any traffic over public networks (even with VPN)
+* 🔒 **Compliance requirements** - PCI-DSS, HIPAA, or other regulatory needs
+* 🔒 **Defense-in-depth** - Additional security layer even on private networks
+* 🔒 **Multi-tenant environments** - Shared infrastructure with other applications
 
 ## Security Layers
 
@@ -44,14 +47,16 @@ You should use **all three layers** in production for defense-in-depth security.
 TLS encryption was introduced in Akka.NET v1.2 with the DotNetty transport. It provides:
 
 ✅ **What TLS Protects Against:**
-- Eavesdropping (all messages are encrypted)
-- Man-in-the-middle attacks (certificates verify server identity)
-- Network packet injection (cryptographic integrity checks)
+
+* Eavesdropping (all messages are encrypted)
+* Man-in-the-middle attacks (certificates verify server identity)
+* Network packet injection (cryptographic integrity checks)
 
 ❌ **What TLS Does NOT Protect Against:**
-- Misconfigured certificates (see startup validation below)
-- Compromised private keys (rotate certificates regularly)
-- Application-level authorization (implement this separately)
+
+* Misconfigured certificates (see startup validation below)
+* Compromised private keys (rotate certificates regularly)
+* Application-level authorization (implement this separately)
 
 ## Certificate Validation: suppress-validation Setting
 
@@ -60,32 +65,36 @@ The `suppress-validation` setting controls whether certificate validation is enf
 ### suppress-validation = false (RECOMMENDED)
 
 **What it does:**
-- Validates certificate chain against trusted root CAs
-- Checks certificate expiration dates
-- Verifies certificate hostname matches connection hostname
-- Ensures certificate hasn't been revoked (if CRL/OCSP configured)
+
+* Validates certificate chain against trusted root CAs
+* Checks certificate expiration dates
+* Verifies certificate hostname matches connection hostname
+* Ensures certificate hasn't been revoked (if CRL/OCSP configured)
 
 **When to use:** Always in production and any networked environment.
 
 ### suppress-validation = true (USE WITH CAUTION)
 
 **What it does:**
-- Accepts ANY certificate, including:
-  - Self-signed certificates
-  - Expired certificates
-  - Certificates from unknown/untrusted CAs
-  - Certificates with hostname mismatches
+
+* Accepts ANY certificate, including:
+  * Self-signed certificates
+  * Expired certificates
+  * Certificates from unknown/untrusted CAs
+  * Certificates with hostname mismatches
 
 **When it's acceptable:**
-- Local development on `localhost` only
-- Automated testing with self-signed test certificates
-- Initial TLS setup/debugging before obtaining proper certificates
+
+* Local development on `localhost` only
+* Automated testing with self-signed test certificates
+* Initial TLS setup/debugging before obtaining proper certificates
 
 **When it's NOT acceptable:**
-- Any production environment
-- Any network-accessible environment (dev, staging, QA)
-- Any environment processing sensitive data
-- Any multi-tenant environment
+
+* Any production environment
+* Any network-accessible environment (dev, staging, QA)
+* Any environment processing sensitive data
+* Any multi-tenant environment
 
 ### Self-Signed Certificates: The Right Way
 
@@ -106,6 +115,7 @@ New-SelfSignedCertificate -Subject "CN=localhost" -Signer $ca -CertStoreLocation
 ```
 
 **Configuration:**
+
 ```hocon
 akka.remote.dot-netty.tcp.ssl {
   suppress-validation = false  # ✓ Still validates, but trusts your CA
@@ -117,9 +127,10 @@ akka.remote.dot-netty.tcp.ssl {
 ```
 
 **Pros:**
-- Maintains validation checks
-- Catches expiration/configuration errors
-- More realistic test environment
+
+* Maintains validation checks
+* Catches expiration/configuration errors
+* More realistic test environment
 
 **Option 2: Suppress validation (Quick but dangerous)**
 
@@ -134,13 +145,15 @@ akka.remote.dot-netty.tcp.ssl {
 ```
 
 **Pros:**
-- Quick setup
-- No certificate installation needed
+
+* Quick setup
+* No certificate installation needed
 
 **Cons:**
-- Doesn't catch real configuration errors
-- False sense of security
-- Easy to accidentally deploy to production
+
+* Doesn't catch real configuration errors
+* False sense of security
+* Easy to accidentally deploy to production
 
 **WARNING:** Never commit `suppress-validation = true` to version control for production configs. Use environment-specific configuration files.
 
@@ -166,13 +179,15 @@ akka.remote.dot-netty.tcp {
 **When to use:** Development, testing, containerized environments where you can mount certificate files.
 
 **Pros:**
-- Easy to deploy with containers
-- Simple to version control (store path, not certificate)
-- Works well with configuration management tools
+
+* Easy to deploy with containers
+* Simple to version control (store path, not certificate)
+* Works well with configuration management tools
 
 **Cons:**
-- Certificate files can be copied if filesystem is compromised
-- Requires file system access for certificate deployment
+
+* Certificate files can be copied if filesystem is compromised
+* Requires file system access for certificate deployment
 
 ### Option 2: Windows Certificate Store (Recommended for Production)
 
@@ -194,17 +209,20 @@ akka.remote.dot-netty.tcp {
 **When to use:** Windows production environments, enterprise deployments with centralized certificate management.
 
 **Pros:**
-- Leverages Windows ACL for private key protection
-- Integrates with enterprise PKI infrastructure
-- Supports hardware security modules (HSM)
-- Private keys can be marked as non-exportable
+
+* Leverages Windows ACL for private key protection
+* Integrates with enterprise PKI infrastructure
+* Supports hardware security modules (HSM)
+* Private keys can be marked as non-exportable
 
 **Cons:**
-- Windows-specific (not portable to Linux)
-- Requires administrative access for certificate installation
-- More complex initial setup
+
+* Windows-specific (not portable to Linux)
+* Requires administrative access for certificate installation
+* More complex initial setup
 
 **Finding Your Thumbprint:**
+
 1. Open `certlm.msc` (Local Machine) or `certmgr.msc` (Current User)
 2. Navigate to Personal > Certificates
 3. Double-click your certificate
@@ -219,10 +237,11 @@ akka.remote.dot-netty.tcp {
 ### What It Validates
 
 The startup validation verifies:
-- Certificate exists in the specified location
-- Certificate has a private key associated
-- Application has permissions to access the private key
-- Private key is accessible for both RSA and ECDSA algorithms
+
+* Certificate exists in the specified location
+* Certificate has a private key associated
+* Application has permissions to access the private key
+* Private key is accessible for both RSA and ECDSA algorithms
 
 This fail-fast validation prevents runtime TLS handshake failures by detecting certificate configuration problems during system initialization.
 
@@ -299,32 +318,34 @@ For production with Windows Certificate Store:
 ### When to Enable Mutual TLS
 
 **✅ Enable mutual TLS when:**
-- All nodes are under your control (typical Akka.NET cluster)
-- You need defense-in-depth security
-- Compliance requires bidirectional authentication (PCI-DSS, HIPAA, etc.)
-- You want to prevent misconfigured nodes from joining
+
+* All nodes are under your control (typical Akka.NET cluster)
+* You need defense-in-depth security
+* Compliance requires bidirectional authentication (PCI-DSS, HIPAA, etc.)
+* You want to prevent misconfigured nodes from joining
 
 **⚠️ Disable mutual TLS when:**
-- Clients cannot provide certificates (rare in Akka.NET)
-- You're using client-server architecture where clients are untrusted
-- Backward compatibility with older clients required
+
+* Clients cannot provide certificates (rare in Akka.NET)
+* You're using client-server architecture where clients are untrusted
+* Backward compatibility with older clients required
 
 **Default is TRUE for security-by-default posture.**
 
 ### Security Benefits of Mutual TLS
 
 1. **Prevents Asymmetric Connectivity Issues**
-   - Without mutual TLS: A node with broken certificate can connect OUT to cluster (client TLS succeeds)
-   - With mutual TLS: Node cannot connect without working certificate (enforced both ways)
+   * Without mutual TLS: A node with broken certificate can connect OUT to cluster (client TLS succeeds)
+   * With mutual TLS: Node cannot connect without working certificate (enforced both ways)
 
 2. **Defense-in-Depth**
-   - Startup validation prevents broken servers
-   - Mutual TLS prevents broken clients
-   - Both together provide complete protection
+   * Startup validation prevents broken servers
+   * Mutual TLS prevents broken clients
+   * Both together provide complete protection
 
 3. **Identity Verification**
-   - Every node must prove it owns the certificate
-   - Prevents certificate theft attacks (attacker needs private key)
+   * Every node must prove it owns the certificate
+   * Prevents certificate theft attacks (attacker needs private key)
 
 ## Configuration Examples and Security Analysis
 
@@ -333,9 +354,10 @@ For production with Windows Certificate Store:
 [!code-csharp[DevTlsConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=DevTlsConfig)]
 
 **Why this is bad:**
-- `suppress-validation = true` accepts ANY certificate (even self-signed or expired)
-- Vulnerable to man-in-the-middle attacks
-- No client authentication
+
+* `suppress-validation = true` accepts ANY certificate (even self-signed or expired)
+* Vulnerable to man-in-the-middle attacks
+* No client authentication
 
 **When to use:** Local development only, never in any environment accessible from network.
 
@@ -344,10 +366,11 @@ For production with Windows Certificate Store:
 [!code-csharp[StandardTlsConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=StandardTlsConfig)]
 
 **Security level:** Medium-High
-- Server proves identity to clients
-- All traffic encrypted
-- Startup validation prevents misconfigurations
-- Suitable when mutual TLS is not feasible
+
+* Server proves identity to clients
+* All traffic encrypted
+* Startup validation prevents misconfigurations
+* Suitable when mutual TLS is not feasible
 
 ### ✅ BEST: Mutual TLS for Maximum Security
 
@@ -370,11 +393,12 @@ akka.remote.dot-netty.tcp {
 **Note:** When SSL is enabled, both `suppress-validation = false` and `require-mutual-authentication = true` are the secure defaults (since v1.5.52), so you only need to explicitly set them if overriding.
 
 **Security level:** Maximum
-- Both client and server prove identity
-- All traffic encrypted
-- Prevents misconfigured nodes from connecting
-- Defense-in-depth security
-- Recommended for all production deployments
+
+* Both client and server prove identity
+* All traffic encrypted
+* Prevents misconfigured nodes from connecting
+* Defense-in-depth security
+* Recommended for all production deployments
 
 ## Untrusted Mode
 
@@ -393,9 +417,10 @@ akka.remote {
 ```
 
 **When to enable:**
-- You're exposing Akka.Remote to untrusted clients
-- You want to prevent remote actor creation/supervision
-- Defense against malicious remote commands
+
+* You're exposing Akka.Remote to untrusted clients
+* You want to prevent remote actor creation/supervision
+* Defense against malicious remote commands
 
 **Note:** This does NOT replace TLS encryption. Use both together.
 
@@ -404,26 +429,29 @@ akka.remote {
 The best practice for network security is to make the network itself secure. Run Akka.Remote on private networks that require VPN access.
 
 **Why VPNs matter:**
-- Restricts who can even attempt to connect
-- Provides network-level access control
-- Adds authentication layer before TLS
-- Protects against network scanning/discovery
+
+* Restricts who can even attempt to connect
+* Provides network-level access control
+* Adds authentication layer before TLS
+* Protects against network scanning/discovery
 
 ### VPN Options
 
 **Self-Hosted:**
-- [WireGuard](https://www.wireguard.com/) - Modern, fast, simple to configure
-- [OpenVPN](https://openvpn.net/) - Mature, widely supported
+
+* [WireGuard](https://www.wireguard.com/) - Modern, fast, simple to configure
+* [OpenVPN](https://openvpn.net/) - Mature, widely supported
 
 **Cloud Provider VPNs:**
-- [AWS Virtual Private Cloud (VPC)](https://aws.amazon.com/vpc/)
-- [Azure Virtual Networks (VNet)](https://azure.microsoft.com/en-us/services/virtual-network/)
-- [Google Cloud VPC](https://cloud.google.com/vpc)
+
+* [AWS Virtual Private Cloud (VPC)](https://aws.amazon.com/vpc/)
+* [Azure Virtual Networks (VNet)](https://azure.microsoft.com/en-us/services/virtual-network/)
+* [Google Cloud VPC](https://cloud.google.com/vpc)
 
 **Managed Solutions:**
-- [Tailscale](https://tailscale.com/) - Zero-config VPN mesh networking
-- [ZeroTier](https://www.zerotier.com/) - Software-defined networking
 
+* [Tailscale](https://tailscale.com/) - Zero-config VPN mesh networking
+* [ZeroTier](https://www.zerotier.com/) - Software-defined networking
 
 ## Troubleshooting
 
@@ -438,27 +466,30 @@ The best practice for network security is to make the network itself secure. Run
 **Cause:** Certificate validation failed (expired, wrong CA, hostname mismatch).
 
 **Fix:**
-- Verify certificate is not expired: `Get-ChildItem Cert:\LocalMachine\My`
-- Check certificate CN/SAN matches hostname
-- For testing only: Set `suppress-validation = true` to identify if it's a validation issue
+
+* Verify certificate is not expired: `Get-ChildItem Cert:\LocalMachine\My`
+* Check certificate CN/SAN matches hostname
+* For testing only: Set `suppress-validation = true` to identify if it's a validation issue
 
 ### Error: "TLS handshake failed" with no client certificate
 
 **Cause:** Server requires mutual TLS but client didn't provide certificate.
 
 **Fix:**
-- Ensure all nodes have `require-mutual-authentication` set consistently
-- Verify client certificate is configured correctly
-- Check client application has private key access
+
+* Ensure all nodes have `require-mutual-authentication` set consistently
+* Verify client certificate is configured correctly
+* Check client application has private key access
 
 ## Additional Resources
 
-- [Windows Firewall Configuration Best Practices](https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/best-practices-configuring)
-- [TLS 1.2 Specification (RFC 5246)](https://datatracker.ietf.org/doc/html/rfc5246)
-- [OWASP Transport Layer Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html)
+* [Windows Firewall Configuration Best Practices](https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/best-practices-configuring)
+* [TLS 1.2 Specification (RFC 5246)](https://datatracker.ietf.org/doc/html/rfc5246)
+* [OWASP Transport Layer Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html)
 
 ---
 
 **Related:**
-- [Akka.Remote Configuration](xref:akka-remote-configuration)
-- [DotNetty Transport](https://github.com/Azure/DotNetty)
+
+* [Akka.Remote Configuration](xref:akka-remote-configuration)
+* [DotNetty Transport](https://github.com/Azure/DotNetty)
