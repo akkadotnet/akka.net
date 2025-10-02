@@ -5,7 +5,29 @@ title: Network Security
 
 # Akka.Remote Security
 
-Akka.Remote provides multiple layers of security to protect your distributed actor systems from unauthorized access and eavesdropping. This document covers the security features available and how to configure them properly.
+## Important Context: When You Need TLS
+
+**Akka.Remote is designed for internal cluster communication and should NOT be exposed to the public internet.** Most Akka.NET deployments run within:
+- Private networks (VPNs, VPCs)
+- Internal data centers
+- Kubernetes clusters with network policies
+- Behind firewalls with strict ingress rules
+
+### When TLS is Optional
+
+For many deployments, TLS is not strictly necessary:
+- ✅ **Internal networks only** - If your cluster runs entirely within a trusted network boundary
+- ✅ **Development/staging environments** - Where data sensitivity is low
+- ✅ **Kubernetes with network policies** - Where the container network provides isolation
+
+### When TLS is Recommended
+
+You should enable TLS when:
+- 🔒 **Crossing network boundaries** - Communication between data centers or cloud regions
+- 🔒 **Public internet transit** - Any traffic over public networks (even with VPN)
+- 🔒 **Compliance requirements** - PCI-DSS, HIPAA, or other regulatory needs
+- 🔒 **Defense-in-depth** - Additional security layer even on private networks
+- 🔒 **Multi-tenant environments** - Shared infrastructure with other applications
 
 ## Security Layers
 
@@ -274,23 +296,13 @@ Client connects → Server proves identity with certificate
 
 ### Configuration
 
-```hocon
-akka.remote.dot-netty.tcp.ssl {
-  suppress-validation = false
+The following example shows how to configure mutual TLS:
 
-  # Mutual TLS enforcement (default: true)
-  # When enabled: both client and server must have valid certificates
-  # When disabled: only server needs a certificate (standard TLS)
-  require-mutual-authentication = true
+[!code-csharp[MutualTlsConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=MutualTlsConfig)]
 
-  certificate {
-    use-thumbprint-over-file = true
-    thumbprint = "2531c78c51e5041d02564697a88af8bc7a7ce3e3"
-    store-name = "My"
-    store-location = "local-machine"
-  }
-}
-```
+For production with Windows Certificate Store:
+
+[!code-csharp[WindowsCertStoreConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=WindowsCertStoreConfig)]
 
 ### When to Enable Mutual TLS
 
@@ -326,19 +338,7 @@ akka.remote.dot-netty.tcp.ssl {
 
 ### ❌ INSECURE: Development/Testing Only
 
-```hocon
-akka.remote.dot-netty.tcp {
-  enable-ssl = true
-  ssl {
-    suppress-validation = true  # ⚠️ ACCEPTS ANY CERTIFICATE!
-    require-mutual-authentication = false
-    certificate {
-      path = "self-signed-cert.pfx"
-      password = "password"
-    }
-  }
-}
-```
+[!code-csharp[DevTlsConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=DevTlsConfig)]
 
 **Why this is bad:**
 - `suppress-validation = true` accepts ANY certificate (even self-signed or expired)
@@ -349,21 +349,7 @@ akka.remote.dot-netty.tcp {
 
 ### ✅ GOOD: Standard TLS for Production
 
-```hocon
-akka.remote.dot-netty.tcp {
-  enable-ssl = true
-  ssl {
-    suppress-validation = false  # ✓ Validates certificates
-    require-mutual-authentication = false  # Server auth only
-    certificate {
-      use-thumbprint-over-file = true
-      thumbprint = "2531c78c51e5041d02564697a88af8bc7a7ce3e3"
-      store-name = "My"
-      store-location = "local-machine"
-    }
-  }
-}
-```
+[!code-csharp[StandardTlsConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=StandardTlsConfig)]
 
 **Security level:** Medium-High
 - Server proves identity to clients
