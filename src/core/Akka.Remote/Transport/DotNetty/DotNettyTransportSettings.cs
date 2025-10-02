@@ -362,14 +362,18 @@ namespace Akka.Remote.Transport.DotNetty
             }
 
             // Actually test private key access (not just presence)
+            // SslStream supports both RSA and ECDSA keys - check both types
             try
             {
-                using (var rsa = Certificate.GetRSAPrivateKey())
+                using (var rsaKey = Certificate.GetRSAPrivateKey())
+                using (var ecdsaKey = Certificate.GetECDsaPrivateKey())
                 {
-                    if (rsa == null)
+                    // Certificate must have either RSA or ECDSA private key accessible
+                    if (rsaKey == null && ecdsaKey == null)
                     {
                         throw new ConfigurationException(
                             "Cannot access private key for SSL certificate. " +
+                            "Certificate has private key but application lacks permissions to access it. " +
                             "Verify application has permissions to the certificate's private key.");
                     }
                     // Successfully accessed private key - validation passed
