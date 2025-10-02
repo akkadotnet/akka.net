@@ -14,7 +14,7 @@ title: Network Security
 * Kubernetes clusters with network policies
 * Behind firewalls with strict ingress rules
 
-### When TLS is Optional
+### When TLS Is Optional
 
 For many deployments, TLS is not strictly necessary:
 
@@ -22,7 +22,7 @@ For many deployments, TLS is not strictly necessary:
 * ✅ **Development/staging environments** - Where data sensitivity is low
 * ✅ **Kubernetes with network policies** - Where the container network provides isolation
 
-### When TLS is Recommended
+### When TLS Is Recommended
 
 You should enable TLS when:
 
@@ -58,11 +58,11 @@ TLS encryption was introduced in Akka.NET v1.2 with the DotNetty transport. It p
 * Compromised private keys (rotate certificates regularly)
 * Application-level authorization (implement this separately)
 
-## Certificate Validation: suppress-validation Setting
+## Certificate Validation: Suppress-Validation Setting
 
 The `suppress-validation` setting controls whether certificate validation is enforced during TLS handshakes.
 
-### suppress-validation = false (RECOMMENDED)
+### Suppress-Validation = False (RECOMMENDED)
 
 **What it does:**
 
@@ -73,7 +73,7 @@ The `suppress-validation` setting controls whether certificate validation is enf
 
 **When to use:** Always in production and any networked environment.
 
-### suppress-validation = true (USE WITH CAUTION)
+### Suppress-Validation = True (USE WITH CAUTION)
 
 **What it does:**
 
@@ -100,7 +100,7 @@ The `suppress-validation` setting controls whether certificate validation is enf
 
 If you must use self-signed certificates (development/testing):
 
-#### Option 1: Trust the self-signed CA (Better)
+#### Option 1: Trust the Self-Signed CA (Better)
 
 ```powershell
 # Generate self-signed CA
@@ -132,7 +132,7 @@ akka.remote.dot-netty.tcp.ssl {
 * Catches expiration/configuration errors
 * More realistic test environment
 
-#### Option 2: Suppress validation (Quick but dangerous)
+#### Option 2: Suppress Validation (Quick but Dangerous)
 
 ```hocon
 akka.remote.dot-netty.tcp.ssl {
@@ -455,13 +455,13 @@ The best practice for network security is to make the network itself secure. Run
 
 ## Troubleshooting
 
-### Error: "SSL certificate private key exists but cannot be accessed"
+### Error: "SSL Certificate Private Key Exists but Cannot Be Accessed"
 
 **Cause:** Application lacks permissions to private key file.
 
 **Fix:** Run PowerShell script above to grant permissions.
 
-### Error: "The remote certificate is invalid according to the validation procedure"
+### Error: "The Remote Certificate Is Invalid According to the Validation Procedure"
 
 **Cause:** Certificate validation failed (expired, wrong CA, hostname mismatch).
 
@@ -471,7 +471,7 @@ The best practice for network security is to make the network itself secure. Run
 * Check certificate CN/SAN matches hostname
 * For testing only: Set `suppress-validation = true` to identify if it's a validation issue
 
-### Error: "TLS handshake failed" with no client certificate
+### Error: "TLS Handshake Failed" with No Client Certificate
 
 **Cause:** Server requires mutual TLS but client didn't provide certificate.
 
