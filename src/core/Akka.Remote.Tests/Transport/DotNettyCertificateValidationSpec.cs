@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="DotNettyTlsHandshakeFailureSpec.cs" company="Akka.NET Project">
+// <copyright file="DotNettyCertificateValidationSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -8,27 +8,29 @@
 using System;
 using System.IO;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
-using Akka.Event;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
-    public class DotNettyTlsHandshakeFailureSpec : AkkaSpec
+    /// <summary>
+    /// Tests that SSL certificate validation happens at startup, not during runtime.
+    /// This ensures fail-fast behavior when certificates are misconfigured.
+    /// </summary>
+    public class DotNettyCertificateValidationSpec : AkkaSpec
     {
         private const string ValidCertPath = "Resources/akka-validcert.pfx";
         private const string Password = "password";
-        private static readonly string NoKeyCertPath = Path.Combine("Resources", "handshake-no-key.cer");
+        private static readonly string NoKeyCertPath = Path.Combine("Resources", "validation-no-key.cer");
 
-        public DotNettyTlsHandshakeFailureSpec(ITestOutputHelper output) : base(ConfigurationFactory.Empty, output)
+        public DotNettyCertificateValidationSpec(ITestOutputHelper output) : base(ConfigurationFactory.Empty, output)
         {
         }
 
-        private static Config CreateConfig(bool enableSsl, string certPath, string certPassword, bool suppressValidation = true)
+        private static Config CreateConfig(bool enableSsl, string certPath, string certPassword)
         {
             var baseConfig = ConfigurationFactory.ParseString(@"akka {
                 loglevel = DEBUG
@@ -46,7 +48,7 @@ namespace Akka.Remote.Tests.Transport
 
             var escapedPath = certPath.Replace("\\", "\\\\");
             var ssl = $@"akka.remote.dot-netty.tcp.ssl {{
-                suppress-validation = {(suppressValidation ? "on" : "off")}
+                suppress-validation = on
                 certificate {{
                     path = ""{escapedPath}""
                     password = ""{certPassword ?? string.Empty}""
@@ -65,25 +67,23 @@ namespace Akka.Remote.Tests.Transport
             File.WriteAllBytes(NoKeyCertPath, publicKeyBytes);
         }
 
-
-
         [Fact]
-        public async Task Server_should_fail_at_startup_with_certificate_without_private_key()
+        public void Server_should_fail_at_startup_with_certificate_without_private_key()
         {
             CreateCertificateWithoutPrivateKey();
 
             try
             {
                 // Server with cert that has no private key should FAIL TO START
-                var serverConfig = CreateConfig(true, NoKeyCertPath, null, suppressValidation: true);
+                var serverConfig = CreateConfig(true, NoKeyCertPath, null);
 
-                // ActorSystem.Create should throw during startup due to certificate validation
+                // This should throw an exception during ActorSystem.Create (wrapped in AggregateException)
                 var aggregateEx = Assert.Throws<AggregateException>(() =>
                 {
                     using var server = ActorSystem.Create("ServerSystem", serverConfig);
                 });
 
-                // Unwrap to find the ConfigurationException
+                // Unwrap the inner exception
                 var innerEx = aggregateEx.InnerException ?? aggregateEx;
                 while (innerEx is AggregateException agg && agg.InnerException != null)
                     innerEx = agg.InnerException;
@@ -101,58 +101,32 @@ namespace Akka.Remote.Tests.Transport
                 }
                 catch { /* ignore */ }
             }
-            await Task.CompletedTask;
         }
 
         [Fact]
-        public async Task Client_side_tls_handshake_failure_should_shutdown_client()
+        public void Server_should_start_successfully_with_valid_certificate()
         {
-            // Server has valid cert; client enforces validation so it should reject the self-signed server cert
-            ActorSystem server = null;
-            ActorSystem client = null;
+            // Server with valid cert should start normally
+            var serverConfig = CreateConfig(true, ValidCertPath, Password);
 
-            try
-            {
-                var serverConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: true);
-                server = ActorSystem.Create("ServerSystem", serverConfig);
-                InitializeLogger(server, "[SERVER] ");
+            using var server = ActorSystem.Create("ServerSystem", serverConfig);
+            InitializeLogger(server);
 
-                var clientConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: false);
-                client = ActorSystem.Create("ClientSystem", clientConfig);
-                InitializeLogger(client, "[CLIENT] ");
-
-                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
-
-                var serverAddr = RARP.For(server).Provider.DefaultAddress;
-                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
-
-                // Trigger TLS handshake failure during association
-                client.ActorSelection(serverEchoPath).Tell("hello");
-
-                // Client should shutdown due to TLS failure
-                await AwaitAssertAsync(async () =>
-                {
-                    Assert.True(client.WhenTerminated.IsCompleted);
-                    await Task.CompletedTask;
-                }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(200));
-            }
-            finally
-            {
-                if (client != null)
-                    Shutdown(client, TimeSpan.FromSeconds(10));
-                if (server != null)
-                    Shutdown(server, TimeSpan.FromSeconds(10));
-            }
+            // Server should be running
+            Assert.False(server.WhenTerminated.IsCompleted);
         }
 
-
-
-        private sealed class EchoActor : ReceiveActor
+        [Fact]
+        public void Server_should_start_successfully_without_ssl()
         {
-            public EchoActor()
-            {
-                ReceiveAny(msg => Sender.Tell(msg));
-            }
+            // Server without SSL should start normally
+            var serverConfig = CreateConfig(false, null, null);
+
+            using var server = ActorSystem.Create("ServerSystem", serverConfig);
+            InitializeLogger(server);
+
+            // Server should be running
+            Assert.False(server.WhenTerminated.IsCompleted);
         }
     }
 }

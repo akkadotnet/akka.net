@@ -342,6 +342,52 @@ namespace Akka.Remote.Transport.DotNetty
             SuppressValidation = suppressValidation;
         }
 
+        /// <summary>
+        /// Validates that the SSL certificate has an accessible private key.
+        /// Should be called before starting the server to ensure proper TLS configuration.
+        /// </summary>
+        /// <exception cref="ConfigurationException">
+        /// Thrown when certificate lacks private key or application cannot access it.
+        /// </exception>
+        public void ValidateCertificate()
+        {
+            if (Certificate == null)
+                return; // No SSL configured
+
+            if (!Certificate.HasPrivateKey)
+            {
+                throw new ConfigurationException(
+                    "SSL certificate does not have a private key. " +
+                    "Ensure certificate is installed with private key permissions.");
+            }
+
+            // Actually test private key access (not just presence)
+            // SslStream supports both RSA and ECDSA keys - check both types
+            try
+            {
+                using (var rsaKey = Certificate.GetRSAPrivateKey())
+                using (var ecdsaKey = Certificate.GetECDsaPrivateKey())
+                {
+                    // Certificate must have either RSA or ECDSA private key accessible
+                    if (rsaKey == null && ecdsaKey == null)
+                    {
+                        throw new ConfigurationException(
+                            "Cannot access private key for SSL certificate. " +
+                            "Certificate has private key but application lacks permissions to access it. " +
+                            "Verify application has permissions to the certificate's private key.");
+                    }
+                    // Successfully accessed private key - validation passed
+                }
+            }
+            catch (System.Security.Cryptography.CryptographicException ex)
+            {
+                throw new ConfigurationException(
+                    "SSL certificate private key exists but cannot be accessed. " +
+                    "Verify application user has permissions to the private key in certificate store. " +
+                    $"Error: {ex.Message}", ex);
+            }
+        }
+
         private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation)
         {
             using var store = new X509Store(storeName, storeLocation);
