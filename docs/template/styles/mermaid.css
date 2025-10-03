@@ -1,0 +1,23 @@
+/* Mermaid Diagram Styling */
+.mermaid {
+    text-align: center;
+    margin: 20px auto;
+    background-color: #fff;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 16px;
+}
+
+/* Ensure mermaid diagrams are responsive */
+.mermaid svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Style for dark mode compatibility (if needed) */
+@media (prefers-color-scheme: dark) {
+    .mermaid {
+        background-color: #0d1117;
+        border-color: #30363d;
+    }
+}

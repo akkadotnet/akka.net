@@ -1,0 +1,84 @@
+{{!Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license. See LICENSE file in the project root for full license information.}}
+
+<script type="text/javascript" src="{{_rel}}styles/docfx.vendor.js"></script>
+<script type="text/javascript" src="{{_rel}}styles/docfx.js"></script>
+<script type="text/javascript" src="{{_rel}}styles/main.js"></script>
+
+<!-- Mermaid CSS -->
+<link rel="stylesheet" href="{{_rel}}styles/mermaid.css">
+
+<!-- Mermaid.js for diagram rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.0/mermaid.min.js"></script>
+<script>
+    // Initialize Mermaid for rendering diagrams
+    document.addEventListener("DOMContentLoaded", function(event) {
+        // Check if there are any mermaid elements
+        var mermaidElements = document.querySelectorAll('.mermaid, pre code.lang-mermaid');
+
+        if (mermaidElements.length > 0) {
+            // Process code blocks with lang-mermaid class
+            document.querySelectorAll('pre code.lang-mermaid').forEach(function(element) {
+                var content = element.textContent;
+                var mermaidDiv = document.createElement('div');
+                mermaidDiv.className = 'mermaid';
+                mermaidDiv.textContent = content;
+
+                // Replace the pre element with the mermaid div
+                var preElement = element.parentElement;
+                preElement.parentNode.replaceChild(mermaidDiv, preElement);
+            });
+
+            // Initialize mermaid with configuration
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: 'base',
+                themeVariables: {
+                    // Primary colors
+                    primaryColor: '#e3f2fd',
+                    primaryTextColor: '#000',
+                    primaryBorderColor: '#1976d2',
+
+                    // Secondary colors
+                    secondaryColor: '#fff3e0',
+                    secondaryTextColor: '#000',
+                    secondaryBorderColor: '#f57c00',
+
+                    // Tertiary colors
+                    tertiaryColor: '#f3e5f5',
+                    tertiaryTextColor: '#000',
+                    tertiaryBorderColor: '#7b1fa2',
+
+                    // Line and text colors
+                    lineColor: '#1976d2',
+                    textColor: '#000',
+                    mainBkg: '#fff',
+                    secondBkg: '#f5f5f5',
+
+                    // Sequence diagram specific
+                    actorBorder: '#1976d2',
+                    actorBkg: '#e3f2fd',
+                    actorTextColor: '#000',
+                    actorLineColor: '#1976d2',
+                    signalColor: '#000',
+                    signalTextColor: '#000',
+                    labelBoxBkgColor: '#e3f2fd',
+                    labelBoxBorderColor: '#1976d2',
+                    labelTextColor: '#000',
+                    loopTextColor: '#000',
+                    noteBorderColor: '#f57c00',
+                    noteBkgColor: '#fff3e0',
+                    noteTextColor: '#000',
+                    activationBorderColor: '#1976d2',
+                    activationBkgColor: '#bbdefb',
+
+                    // Flowchart specific
+                    nodeBorder: '#1976d2',
+                    clusterBkg: '#f5f5f5',
+                    clusterBorder: '#9e9e9e',
+                    defaultLinkColor: '#1976d2',
+                    edgeLabelBackground: '#fff'
+                }
+            });
+        }
+    });
+</script>
