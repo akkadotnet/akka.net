@@ -112,31 +112,11 @@ namespace Akka.Remote.Tests
             Assert.False(s.DnsUseIpv6);
             Assert.False(s.LogTransport);
             Assert.False(s.EnableSsl);
-        }
 
-        [Fact]
-        public void SSL_Settings_should_default_to_secure_values()
-        {
-            // Test with SSL enabled config
-            var config = ConfigurationFactory.ParseString(@"
-                akka.remote.dot-netty.tcp {
-                    enable-ssl = true
-                    ssl {
-                        certificate {
-                            path = ""test.pfx""
-                            password = ""password""
-                        }
-                    }
-                }");
-
-            var c = config.GetConfig("akka.remote.dot-netty.tcp");
-            var s = DotNettyTransportSettings.Create(c);
-
-            // Verify that suppress-validation defaults to false (secure)
-            Assert.False(s.Ssl.SuppressValidation);
-
-            // Verify that require-mutual-authentication defaults to true (secure)
-            Assert.True(s.Ssl.RequireMutualAuthentication);
+            // mutual TLS should be enabled by default, validation should not be suppressed
+            var sslSettings = s.Ssl;
+            Assert.True(sslSettings.RequireMutualAuthentication);
+            Assert.False(sslSettings.SuppressValidation);
         }
 
         [Fact]
