@@ -23,13 +23,14 @@ namespace Akka.Remote.Tests.Transport
     public class DotNettyMutualTlsSpec : AkkaSpec
     {
         private const string ValidCertPath = "Resources/akka-validcert.pfx";
+        private const string ClientCertPath = "Resources/akka-client-cert.pfx";
         private const string Password = "password";
 
         public DotNettyMutualTlsSpec(ITestOutputHelper output) : base(ConfigurationFactory.Empty, output)
         {
         }
 
-        private static Config CreateConfig(bool enableSsl, bool requireMutualAuth, bool suppressValidation = false)
+        private static Config CreateConfig(bool enableSsl, bool requireMutualAuth, bool suppressValidation = false, string certPath = null)
         {
             var config = ConfigurationFactory.ParseString($@"
                 akka {{
@@ -47,7 +48,7 @@ namespace Akka.Remote.Tests.Transport
             if (!enableSsl)
                 return config;
 
-            var escapedPath = ValidCertPath.Replace("\\", "\\\\");
+            var escapedPath = (certPath ?? ValidCertPath).Replace("\\", "\\\\");
             var ssl = $@"
                 akka.remote.dot-netty.tcp.ssl {{
                     suppress-validation = {(suppressValidation ? "on" : "off")}
@@ -221,6 +222,47 @@ namespace Akka.Remote.Tests.Transport
                 // Should successfully connect even with mutual TLS disabled
                 var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
                 Assert.Equal("hello", response);
+            }
+            finally
+            {
+                if (client != null)
+                    Shutdown(client, TimeSpan.FromSeconds(10));
+                if (server != null)
+                    Shutdown(server, TimeSpan.FromSeconds(10));
+            }
+        }
+
+        [Fact]
+        public async Task Mutual_TLS_should_fail_when_client_has_different_valid_certificate()
+        {
+            // Server and client have different valid certificates - mutual TLS should fail
+            // because the certificates are not trusted by each other
+            ActorSystem server = null;
+            ActorSystem client = null;
+
+            try
+            {
+                // Server with mutual TLS using the original certificate
+                var serverConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: false,
+                    certPath: ValidCertPath);
+                server = ActorSystem.Create("ServerSystem", serverConfig);
+                InitializeLogger(server, "[SERVER] ");
+
+                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
+                var serverAddr = RARP.For(server).Provider.DefaultAddress;
+                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
+
+                // Client with mutual TLS using a different certificate
+                var clientConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: false,
+                    certPath: ClientCertPath);
+                client = ActorSystem.Create("ClientSystem", clientConfig);
+                InitializeLogger(client, "[CLIENT] ");
+
+                // Connection should fail due to certificate mismatch
+                await Assert.ThrowsAsync<AskTimeoutException>(async () =>
+                {
+                    await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3));
+                });
             }
             finally
             {
