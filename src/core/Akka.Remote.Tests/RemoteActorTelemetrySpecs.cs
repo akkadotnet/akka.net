@@ -77,17 +77,17 @@ namespace Akka.Remote.Tests
                 // Only count user actors, not system actors
                 Receive<ActorStarted>(e =>
                 {
-                    if (!e.Subject.Path.ToString().Contains("/system/"))
+                    if (!e.Subject.Path.ToString().Contains("/system/") && !e.Subject.Equals(Self))
                         _actorCreated++;
                 });
                 Receive<ActorStopped>(e =>
                 {
-                    if (!e.Subject.Path.ToString().Contains("/system/"))
+                    if (!e.Subject.Path.ToString().Contains("/system/") && !e.Subject.Equals(Self))
                         _actorStopped++;
                 });
                 Receive<ActorRestarted>(e =>
                 {
-                    if (!e.Subject.Path.ToString().Contains("/system/"))
+                    if (!e.Subject.Path.ToString().Contains("/system/") && !e.Subject.Equals(Self))
                         _actorRestarted++;
                 });
                 // receive a request for current counter values and return a GetTelemetry result
