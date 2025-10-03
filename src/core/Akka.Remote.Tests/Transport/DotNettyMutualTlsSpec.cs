@@ -157,6 +157,80 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
+        [Fact]
+        public async Task Mutual_TLS_should_fail_when_client_has_no_certificate()
+        {
+            // Server requires mutual TLS, client doesn't provide certificate
+            ActorSystem server = null;
+            ActorSystem client = null;
+
+            try
+            {
+                // Server with mutual TLS required
+                var serverConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: true);
+                server = ActorSystem.Create("ServerSystem", serverConfig);
+                InitializeLogger(server, "[SERVER] ");
+
+                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
+                var serverAddr = RARP.For(server).Provider.DefaultAddress;
+                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
+
+                // Client without SSL (no certificate)
+                var clientConfig = CreateConfig(enableSsl: false, requireMutualAuth: false, suppressValidation: false);
+                client = ActorSystem.Create("ClientSystem", clientConfig);
+                InitializeLogger(client, "[CLIENT] ");
+
+                // Should fail to connect
+                await Assert.ThrowsAsync<AskTimeoutException>(async () =>
+                {
+                    await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3));
+                });
+            }
+            finally
+            {
+                if (client != null)
+                    Shutdown(client, TimeSpan.FromSeconds(10));
+                if (server != null)
+                    Shutdown(server, TimeSpan.FromSeconds(10));
+            }
+        }
+
+        [Fact]
+        public async Task Mutual_TLS_can_be_disabled_for_backward_compatibility()
+        {
+            // Test that setting require-mutual-authentication = false allows old behavior
+            ActorSystem server = null;
+            ActorSystem client = null;
+
+            try
+            {
+                // Server with mutual TLS explicitly disabled
+                var serverConfig = CreateConfig(enableSsl: true, requireMutualAuth: false, suppressValidation: true);
+                server = ActorSystem.Create("ServerSystem", serverConfig);
+                InitializeLogger(server, "[SERVER] ");
+
+                // Client with SSL but potentially no valid client cert
+                var clientConfig = CreateConfig(enableSsl: true, requireMutualAuth: false, suppressValidation: true);
+                client = ActorSystem.Create("ClientSystem", clientConfig);
+                InitializeLogger(client, "[CLIENT] ");
+
+                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
+                var serverAddr = RARP.For(server).Provider.DefaultAddress;
+                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
+
+                // Should successfully connect even with mutual TLS disabled
+                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
+                Assert.Equal("hello", response);
+            }
+            finally
+            {
+                if (client != null)
+                    Shutdown(client, TimeSpan.FromSeconds(10));
+                if (server != null)
+                    Shutdown(server, TimeSpan.FromSeconds(10));
+            }
+        }
+
         private sealed class EchoActor : ReceiveActor
         {
             public EchoActor()

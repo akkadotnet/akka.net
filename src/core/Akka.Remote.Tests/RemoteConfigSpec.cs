@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Configuration;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -114,12 +115,37 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
+        public void SSL_Settings_should_default_to_secure_values()
+        {
+            // Test with SSL enabled config
+            var config = ConfigurationFactory.ParseString(@"
+                akka.remote.dot-netty.tcp {
+                    enable-ssl = true
+                    ssl {
+                        certificate {
+                            path = ""test.pfx""
+                            password = ""password""
+                        }
+                    }
+                }");
+
+            var c = config.GetConfig("akka.remote.dot-netty.tcp");
+            var s = DotNettyTransportSettings.Create(c);
+
+            // Verify that suppress-validation defaults to false (secure)
+            Assert.False(s.Ssl.SuppressValidation);
+
+            // Verify that require-mutual-authentication defaults to true (secure)
+            Assert.True(s.Ssl.RequireMutualAuthentication);
+        }
+
+        [Fact]
         public void When_remoting_works_in_Mono_ip_enforcement_should_be_defaulted_to_true()
         {
             if (!IsMono) return; // skip IF NOT using Mono
             var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
             var s = DotNettyTransportSettings.Create(c);
-            
+
             Assert.True(s.EnforceIpFamily);
         }
 

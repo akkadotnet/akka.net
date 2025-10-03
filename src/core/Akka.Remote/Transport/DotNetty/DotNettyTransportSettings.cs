@@ -348,7 +348,15 @@ namespace Akka.Remote.Transport.DotNetty
             RequireMutualAuthentication = false;
         }
 
-        public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication = true)
+        /// <summary>
+        /// Constructor for backward compatibility - defaults to RequireMutualAuthentication = true
+        /// </summary>
+        public SslSettings(X509Certificate2 certificate, bool suppressValidation)
+            : this(certificate, suppressValidation, true)
+        {
+        }
+
+        public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication)
         {
             Certificate = certificate;
             SuppressValidation = suppressValidation;
