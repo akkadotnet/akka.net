@@ -119,7 +119,7 @@ namespace Akka.Cluster.Sharding.Tests
             await ExpectMsgAsync(new ShardRegion.StartEntityAck("1", "1"));
             var shard = LastSender;
 
-            Watch(shard);
+            await WatchAsync(shard);
             shard.Tell(PoisonPill.Instance);
             await ExpectTerminatedAsync(shard);
 
