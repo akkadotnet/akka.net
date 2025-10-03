@@ -70,6 +70,7 @@
         "Stannard",
         "substream",
         "substreams",
+        "Tailscale",
         "testkit",
         "threadedness",
         "threadpool",
@@ -83,7 +84,8 @@
         "userspace",
         "watchee",
         "Webcrawler",
-        "Xunit"
+        "Xunit",
+        "ZeroTier"
     ],
     "ignoreWords": [
         "Hanselminutes",
