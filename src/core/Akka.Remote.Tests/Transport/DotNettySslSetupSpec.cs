@@ -28,7 +28,7 @@ namespace Akka.Remote.Tests.Transport
 
         private const string Password = "password";
 
-        private static ActorSystemSetup TestActorSystemSetup(bool enableSsl)
+        private static ActorSystemSetup TestActorSystemSetup(bool enableSsl, bool requireMutualAuth = false)
         {
             var setup = ActorSystemSetup.Empty
                 .And(BootstrapSetup.Create()
@@ -50,7 +50,8 @@ akka {{
                 return setup;
 
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
-            return setup.And(new DotNettySslSetup(certificate, true));
+            // Use the new constructor that supports mutual auth configuration
+            return setup.And(new DotNettySslSetup(certificate, true, requireMutualAuth));
         }
 
         private ActorSystem _sys2;
@@ -94,14 +95,13 @@ akka {{
 
         #if !NET471
         [Fact]
-        public async Task Setup_API_should_work_with_HOCON_mutual_TLS_configuration()
+        public async Task Mutual_TLS_should_be_configurable_via_Setup_API()
         {
             // skip this test due to linux/mono certificate issues
             if (IsMono) return;
 
-            // Test that Setup API can provide certificate while HOCON configures mutual TLS
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
-            var setupWithSsl = ActorSystemSetup.Empty
+            // Create a system with mutual TLS enabled via Setup API
+            var setupWithMutualTls = ActorSystemSetup.Empty
                 .And(BootstrapSetup.Create()
                     .WithConfig(ConfigurationFactory.ParseString(@"
 akka {
@@ -112,31 +112,30 @@ akka {
     hostname = ""127.0.0.1""
     enable-ssl = true
     log-transport = true
-    ssl {
-      require-mutual-authentication = on
-      suppress-validation = on
-    }
   }
 }")))
-                .And(new DotNettySslSetup(certificate, true));
+                .And(new DotNettySslSetup(
+                    new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet),
+                    suppressValidation: true,
+                    requireMutualAuthentication: true));
 
-            var sys3 = ActorSystem.Create("sys3", setupWithSsl);
+            var sys3 = ActorSystem.Create("sys3", setupWithMutualTls);
             try
             {
                 InitializeLogger(sys3);
                 sys3.ActorOf(Props.Create<Echo>(), "echo");
 
-                // System should start successfully with Setup API certificate and HOCON mutual TLS
+                // System should start successfully with mutual TLS
                 await Task.Delay(TimeSpan.FromSeconds(1));
                 Assert.False(sys3.WhenTerminated.IsCompleted);
 
-                // Verify the transport is configured
+                // Verify the transport settings have mutual TLS enabled
                 var transport = RARP.For(sys3).Provider.Transport;
                 Assert.NotNull(transport);
             }
             finally
             {
-                Shutdown(sys3, TimeSpan.FromSeconds(10));
+                await ShutdownAsync(sys3);
             }
         }
         #endif
