@@ -280,7 +280,8 @@ namespace Akka.Remote.Transport.DotNetty
                 return new SslSettings(certificateThumbprint: thumbprint,
                     storeName: config.GetString("certificate.store-name"),
                     storeLocation: ParseStoreLocationName(config.GetString("certificate.store-location")),
-                    suppressValidation: config.GetBoolean("suppress-validation"));
+                    suppressValidation: config.GetBoolean("suppress-validation"),
+                    requireMutualAuthentication: config.GetBoolean("require-mutual-authentication", true));
             }
 
             var flagsRaw = config.GetStringList("certificate.flags", new string[] { });
@@ -290,7 +291,8 @@ namespace Akka.Remote.Transport.DotNetty
                 certificatePath: config.GetString("certificate.path"),
                 certificatePassword: config.GetString("certificate.password"),
                 flags: flags,
-                suppressValidation: config.GetBoolean("suppress-validation"));
+                suppressValidation: config.GetBoolean("suppress-validation"),
+                requireMutualAuthentication: config.GetBoolean("require-mutual-authentication", true));
 
         }
 
@@ -330,19 +332,28 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly bool SuppressValidation;
 
+        /// <summary>
+        /// When true, requires mutual TLS authentication where both client and server
+        /// must present valid certificates with accessible private keys during the TLS handshake.
+        /// Provides defense-in-depth security by ensuring symmetric authentication.
+        /// </summary>
+        public readonly bool RequireMutualAuthentication;
+
         private SslSettings()
         {
             Certificate = null;
             SuppressValidation = false;
+            RequireMutualAuthentication = false;
         }
 
         public SslSettings(X509Certificate2 certificate, bool suppressValidation)
         {
             Certificate = certificate;
             SuppressValidation = suppressValidation;
+            RequireMutualAuthentication = true; // Default to true for security
         }
 
-        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation)
+        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication)
         {
             using var store = new X509Store(storeName, storeLocation);
             store.Open(OpenFlags.ReadOnly);
@@ -356,15 +367,17 @@ namespace Akka.Remote.Transport.DotNetty
 
             Certificate = find[0];
             SuppressValidation = suppressValidation;
+            RequireMutualAuthentication = requireMutualAuthentication;
         }
 
-        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)
+        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool requireMutualAuthentication)
         {
             if (string.IsNullOrEmpty(certificatePath))
                 throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
 
             Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
             SuppressValidation = suppressValidation;
+            RequireMutualAuthentication = requireMutualAuthentication;
         }
     }
 }
