@@ -161,7 +161,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Mutual_TLS_should_fail_when_client_has_no_certificate()
         {
-            // Server requires mutual TLS, client doesn't provide certificate
+            // Server requires mutual TLS, client has SSL enabled but no certificate configured
             ActorSystem server = null;
             ActorSystem client = null;
 
@@ -176,12 +176,12 @@ namespace Akka.Remote.Tests.Transport
                 var serverAddr = RARP.For(server).Provider.DefaultAddress;
                 var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
 
-                // Client without SSL (no certificate)
-                var clientConfig = CreateConfig(enableSsl: false, requireMutualAuth: false, suppressValidation: false);
+                // Client with SSL enabled but mutual TLS disabled (won't send client certificate)
+                var clientConfig = CreateConfig(enableSsl: true, requireMutualAuth: false, suppressValidation: true);
                 client = ActorSystem.Create("ClientSystem", clientConfig);
                 InitializeLogger(client, "[CLIENT] ");
 
-                // Should fail to connect
+                // Should fail to connect because server requires client certificate
                 await Assert.ThrowsAsync<AskTimeoutException>(async () =>
                 {
                     await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3));
