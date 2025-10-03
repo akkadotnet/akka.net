@@ -352,6 +352,9 @@ namespace Akka.Remote.Transport.DotNetty
             if (Settings.EnableSsl)
             {
                 var certificate = Settings.Ssl.Certificate;
+                // need to validate that the certificate is non-null
+                if (certificate == null)
+                    throw new ConfigurationException("SSL is enabled but certificate is not configured");
                 var host = certificate.GetNameInfo(X509NameType.DnsName, false);
 
                 IChannelHandler tlsHandler;

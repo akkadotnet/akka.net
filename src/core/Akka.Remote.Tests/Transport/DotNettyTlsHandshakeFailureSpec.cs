@@ -22,7 +22,6 @@ namespace Akka.Remote.Tests.Transport
     {
         private const string ValidCertPath = "Resources/akka-validcert.pfx";
         private const string Password = "password";
-        private static readonly string NoKeyCertPath = Path.Combine("Resources", "handshake-no-key.cer");
 
         public DotNettyTlsHandshakeFailureSpec(ITestOutputHelper output) : base(ConfigurationFactory.Empty, output)
         {
@@ -55,54 +54,8 @@ namespace Akka.Remote.Tests.Transport
             return baseConfig.WithFallback(ssl);
         }
 
-        private static void CreateCertificateWithoutPrivateKey()
-        {
-            var fullCert = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.Exportable);
-            var publicKeyBytes = fullCert.Export(X509ContentType.Cert);
-            var dir = Path.GetDirectoryName(NoKeyCertPath);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-            File.WriteAllBytes(NoKeyCertPath, publicKeyBytes);
-        }
-
-
-
-        [Fact]
-        public async Task Server_should_fail_at_startup_with_certificate_without_private_key()
-        {
-            CreateCertificateWithoutPrivateKey();
-
-            try
-            {
-                // Server with cert that has no private key should FAIL TO START
-                var serverConfig = CreateConfig(true, NoKeyCertPath, null, suppressValidation: true);
-
-                // ActorSystem.Create should throw during startup due to certificate validation
-                var aggregateEx = Assert.Throws<AggregateException>(() =>
-                {
-                    using var server = ActorSystem.Create("ServerSystem", serverConfig);
-                });
-
-                // Unwrap to find the ConfigurationException
-                var innerEx = aggregateEx.InnerException ?? aggregateEx;
-                while (innerEx is AggregateException agg && agg.InnerException != null)
-                    innerEx = agg.InnerException;
-
-                // Should be ConfigurationException about private key
-                Assert.IsType<ConfigurationException>(innerEx);
-                Assert.Contains("private key", innerEx.Message, StringComparison.OrdinalIgnoreCase);
-            }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(NoKeyCertPath))
-                        File.Delete(NoKeyCertPath);
-                }
-                catch { /* ignore */ }
-            }
-            await Task.CompletedTask;
-        }
+        // NOTE: Test for certificate without private key moved to DotNettyCertificateValidationSpec
+        // to avoid duplication
 
         [Fact]
         public async Task Client_side_tls_handshake_failure_should_shutdown_client()
