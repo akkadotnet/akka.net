@@ -136,10 +136,10 @@ namespace Akka.Remote.Tests
                 // send a request for the current telemetry counters
                 telemetry = await subscriber
                     .Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
-                
-                // verify that created actors is greater than 0 (we created the subscriber)
+
+                // verify that no actors have been created yet (subscriber filters out its own events)
                 var previouslyCreated = telemetry.ActorCreated;
-                Assert.True(previouslyCreated >= 1); // should have at least the subscriber
+                Assert.Equal(0, previouslyCreated);
                 Assert.Equal(0, telemetry.ActorStopped);
                 Assert.Equal(0, telemetry.ActorRestarted);
 
