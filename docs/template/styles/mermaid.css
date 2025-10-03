@@ -14,6 +14,36 @@
     height: auto;
 }
 
+/* Enhanced stroke visibility for better diagram clarity */
+.mermaid svg .actor rect {
+    stroke-width: 2px;
+}
+
+/* Ensure text is always readable */
+.mermaid svg text {
+    fill: #000000;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+}
+
+/* Larger text for actor labels */
+.mermaid svg .actor text {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+/* Clear message text */
+.mermaid svg .messageText {
+    font-size: 15px;
+    font-weight: 400;
+}
+
+/* Thicker message lines for visibility */
+.mermaid svg .messageLine0,
+.mermaid svg .messageLine1 {
+    stroke-width: 1.5px;
+}
+
 /* Style for dark mode compatibility (if needed) */
 @media (prefers-color-scheme: dark) {
     .mermaid {
