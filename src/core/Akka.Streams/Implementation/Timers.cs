@@ -586,15 +586,20 @@ namespace Akka.Streams.Implementation
             public Logic(IdleInject<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _nextDeadline = DateTime.UtcNow.Ticks + _stage._timeout.Ticks;
+                ResetDeadline();
 
                 SetHandler(_stage._in, this);
                 SetHandler(_stage._out, this);
             }
 
-            public void OnPush()
+            private void ResetDeadline()
             {
                 _nextDeadline = DateTime.UtcNow.Ticks + _stage._timeout.Ticks;
+            }
+
+            public void OnPush()
+            {
+                ResetDeadline();
                 CancelTimer(Timers.GraphStageLogicTimer);
                 if (IsAvailable(_stage._out))
                 {
@@ -616,6 +621,7 @@ namespace Akka.Streams.Implementation
                 if (IsAvailable(_stage._in))
                 {
                     Push(_stage._out, Grab(_stage._in));
+                    ResetDeadline();
                     if (IsClosed(_stage._in))
                         CompleteStage();
                     else
@@ -626,8 +632,8 @@ namespace Akka.Streams.Implementation
                     var time = DateTime.UtcNow.Ticks;
                     if (_nextDeadline - time < 0)
                     {
-                        _nextDeadline = time + _stage._timeout.Ticks;
                         Push(_stage._out, _stage._inject());
+                        ResetDeadline();
                     }
                     else
                         ScheduleOnce(Timers.GraphStageLogicTimer, TimeSpan.FromTicks(_nextDeadline - time));
@@ -638,11 +644,15 @@ namespace Akka.Streams.Implementation
 
             protected internal override void OnTimer(object timerKey)
             {
+                // Don't inject if upstream element is already available
+                if (IsAvailable(_stage._in))
+                    return;
+
                 var time = DateTime.UtcNow.Ticks;
                 if ((_nextDeadline - time < 0) && IsAvailable(_stage._out))
                 {
                     Push(_stage._out, _stage._inject());
-                    _nextDeadline = DateTime.UtcNow.Ticks + _stage._timeout.Ticks;
+                    ResetDeadline();
                 }
             }
 
