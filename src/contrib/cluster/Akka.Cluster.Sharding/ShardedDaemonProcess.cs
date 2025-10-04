@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
 using Akka.Routing;
+using Akka.Util;
 using Akka.Util.Internal;
 
 namespace Akka.Cluster.Sharding
@@ -110,6 +111,9 @@ namespace Akka.Cluster.Sharding
             if (_entityIds.Length == 0)
                 throw new ArgumentException("At least one entityId must be provided", nameof(entityIds));
             _shardingRef = shardingRef;
+            
+            // pick a random index to start with to avoid hot-spot formation
+            _index = ThreadLocalRandom.Current.Next(_entityIds.Length);
         }
 
         protected override void OnReceive(object message)
