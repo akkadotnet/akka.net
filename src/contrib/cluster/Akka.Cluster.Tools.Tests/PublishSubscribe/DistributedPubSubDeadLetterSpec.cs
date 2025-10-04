@@ -37,6 +37,16 @@ namespace Akka.Cluster.Tools.Tests.PublishSubscribe
             var mediator = DistributedPubSub.Get(Sys).Mediator;
             var testMessage = "test-message";
 
+            // Ensure DeadLetterListener is active by retrying until it logs a warmup message
+            await AwaitAssertAsync(async () =>
+            {
+                await EventFilter.Info(contains: "was not delivered").ExpectAsync(1, () =>
+                {
+                    Sys.DeadLetters.Tell("warmup", Nobody.Instance);
+                    return Task.CompletedTask;
+                });
+            }, TimeSpan.FromSeconds(5));
+
             // act - publish to a topic that no one is subscribed to
             await EventFilter.Info(contains: "DeadLetterWithNoSubscribers")
                 .ExpectAsync(1, () =>
