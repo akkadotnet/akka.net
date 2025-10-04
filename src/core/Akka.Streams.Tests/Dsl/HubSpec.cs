@@ -566,6 +566,10 @@ namespace Akka.Streams.Tests.Dsl
                 await downstream1.RequestAsync(4);
                 await downstream2.RequestAsync(8);
 
+                // Sending the first element is in a race with downstream subscribing.
+                // Give a bit of time for the downstream to complete subscriptions.
+                await Task.Delay(100);
+
                 await upstream.AsyncBuilder()
                     .SendNext(Enumerable.Range(1, 8))
                     .ExecuteAsync();
