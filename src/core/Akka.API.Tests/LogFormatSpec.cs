@@ -110,6 +110,7 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
         // to resolve https://github.com/akkadotnet/akka.net/issues/7421
         text = SanitizeTestEventListener(text);
         text = SanitizeDefaultLoggersStarted(text);
+        text = SanitizeCustomLoggerRemoved(text);
 
         await Verifier.Verify(text);
     }
@@ -117,6 +118,13 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
     private static string SanitizeDefaultLoggersStarted(string logs)
     {
         var pattern = @"^.*Default Loggers started.*$";
+        var result = Regex.Replace(logs, pattern, string.Empty, RegexOptions.Multiline);
+        return result;
+    }
+
+    private static string SanitizeCustomLoggerRemoved(string logs)
+    {
+        var pattern = @"^.*CustomLogger being removed.*$";
         var result = Regex.Replace(logs, pattern, string.Empty, RegexOptions.Multiline);
         return result;
     }
