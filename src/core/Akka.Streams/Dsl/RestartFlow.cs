@@ -402,6 +402,7 @@ namespace Akka.Streams.Dsl
         {
             var restartDelay = BackoffSupervisor.CalculateDelay(_restartCount, _settings.MinBackoff, _settings.MaxBackoff, _settings.RandomFactor);
             Log.Debug("Restarting graph in {0}", restartDelay);
+            _resetDeadline = _settings.MaxRestartsWithin.FromNow();
             ScheduleOnce("RestartTimer", restartDelay);
             _restartCount += 1;
             // And while we wait, we go into backoff mode
@@ -413,8 +414,8 @@ namespace Akka.Streams.Dsl
         /// </summary>
         protected internal override void OnTimer(object timerKey)
         {
-            StartGraph();
             _resetDeadline = _settings.MaxRestartsWithin.FromNow();
+            StartGraph();
         }
 
         /// <summary>
