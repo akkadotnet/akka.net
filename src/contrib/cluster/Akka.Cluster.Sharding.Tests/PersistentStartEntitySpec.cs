@@ -5,8 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
-using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -100,11 +101,11 @@ namespace Akka.Cluster.Sharding.Tests
             AwaitAssert(() =>
             {
                 cluster.ReadView.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(1);
-            });
+            }, TimeSpan.FromSeconds(10)); // Increased timeout to allow for cluster singleton + persistent coordinator initialization
         }
 
         [Fact]
-        public void Persistent_Shard_must_remember_entities_started_with_StartEntity()
+        public async Task Persistent_Shard_must_remember_entities_started_with_StartEntity()
         {
             var sharding = ClusterSharding.Get(Sys).Start(
               "startEntity",
@@ -115,24 +116,23 @@ namespace Akka.Cluster.Sharding.Tests
               new MessageExtractor());
 
             sharding.Tell(new ShardRegion.StartEntity("1"));
-            ExpectMsg(new ShardRegion.StartEntityAck("1", "1"));
+            await ExpectMsgAsync(new ShardRegion.StartEntityAck("1", "1"));
             var shard = LastSender;
 
-            Watch(shard);
+            await WatchAsync(shard);
             shard.Tell(PoisonPill.Instance);
-            ExpectTerminated(shard);
+            await ExpectTerminatedAsync(shard);
 
             // trigger shard start by messaging other actor in it
-            Thread.Sleep(200);
             Sys.Log.Info("Starting shard again");
             sharding.Tell(new EntityEnvelope(11, "give-me-shard"));
-            var secondShardIncarnation = ExpectMsg<IActorRef>();
+            var secondShardIncarnation = await ExpectMsgAsync<IActorRef>();
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async () =>
             {
                 secondShardIncarnation.Tell(Shard.GetShardStats.Instance);
                 // the remembered 1 and 11 which we just triggered start of
-                ExpectMsg(new Shard.ShardStats("1", 2));
+                await ExpectMsgAsync(new Shard.ShardStats("1", 2));
             });
         }
     }
