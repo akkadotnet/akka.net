@@ -120,7 +120,7 @@ namespace Akka.Streams.Tests.IO
                     Source.FromPublisher(tcpWriteProbe.PublisherProbe)
                         .ViaMaterialized(
                             Sys.TcpStream()
-                                .OutgoingConnection(new DnsEndPoint("example.com", 666),
+                                .OutgoingConnection(new IPEndPoint(IPAddress.Parse("192.0.2.1"), 666),
                                     connectionTimeout: TimeSpan.FromSeconds(1)), Keep.Right)
                         .ToMaterialized(Sink.Ignore<ByteString>(), Keep.Left)
                         .Run(Materializer);
