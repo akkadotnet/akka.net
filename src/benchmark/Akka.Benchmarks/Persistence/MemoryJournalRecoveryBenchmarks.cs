@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="MemoryJournalBenchmarks.cs" company="Akka.NET Project">
+// <copyright file="MemoryJournalRecoveryBenchmarks.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -11,14 +11,13 @@ using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Configuration;
 using Akka.Persistence;
-using Akka.Persistence.Journal;
 using BenchmarkDotNet.Attributes;
 using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Persistence
 {
     [Config(typeof(MicroBenchmarkConfig))]
-    public class MemoryJournalBenchmarks
+    public class MemoryJournalRecoveryBenchmarks
     {
         private static readonly Config Config = ConfigurationFactory.ParseString(@"
             akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
@@ -27,6 +26,7 @@ namespace Akka.Benchmarks.Persistence
 
         private ActorSystem _system;
         private IActorRef _persistentActor;
+        private string _persistenceId;
 
         [Params(10, 100, 1000)]
         public int EventCount { get; set; }
@@ -44,9 +44,21 @@ namespace Akka.Benchmarks.Persistence
         }
 
         [IterationSetup]
-        public void IterationSetup()
+        public async Task IterationSetup()
         {
-            _persistentActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor($"benchmark-{Guid.NewGuid()}")));
+            // Generate unique persistence ID for this iteration
+            _persistenceId = $"benchmark-{Guid.NewGuid()}";
+
+            // Pre-populate the journal with events
+            var prepActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor(_persistenceId)));
+            for (var i = 0; i < EventCount; i++)
+            {
+                await prepActor.Ask<string>($"event-{i}", TimeSpan.FromSeconds(10));
+            }
+            await prepActor.GracefulStop(TimeSpan.FromSeconds(5));
+
+            // Create the actor that will recover (but don't wait for recovery yet)
+            _persistentActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor(_persistenceId)));
         }
 
         [IterationCleanup]
@@ -57,50 +69,44 @@ namespace Akka.Benchmarks.Persistence
 
         [Benchmark]
         [BenchmarkCategory(MicroBenchmark)]
-        public async Task Write_events_to_memory_journal()
+        public async Task Recover_events_from_memory_journal()
         {
+            // Wait for recovery to complete by asking for the event count
+            var count = await _persistentActor.Ask<int>("get-count", TimeSpan.FromSeconds(10));
+            if (count != EventCount)
+            {
+                throw new Exception($"Expected {EventCount} events, but got {count}");
+            }
+        }
+
+        [IterationSetup(Target = nameof(Recover_tagged_events_from_memory_journal))]
+        public async Task IterationSetupTagged()
+        {
+            // Generate unique persistence ID for this iteration
+            _persistenceId = $"benchmark-{Guid.NewGuid()}";
+
+            // Pre-populate the journal with tagged events
+            var prepActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor(_persistenceId)));
             for (var i = 0; i < EventCount; i++)
             {
-                await _persistentActor.Ask<string>($"event-{i}", TimeSpan.FromSeconds(10));
+                await prepActor.Ask<string>($"tagged-event-{i}", TimeSpan.FromSeconds(10));
             }
+            await prepActor.GracefulStop(TimeSpan.FromSeconds(5));
+
+            // Create the actor that will recover (but don't wait for recovery yet)
+            _persistentActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor(_persistenceId)));
         }
 
         [Benchmark]
         [BenchmarkCategory(MicroBenchmark)]
-        public async Task Write_and_replay_events()
+        public async Task Recover_tagged_events_from_memory_journal()
         {
-            // Write events
-            for (var i = 0; i < EventCount; i++)
+            // Wait for recovery to complete by asking for the event count
+            var count = await _persistentActor.Ask<int>("get-count", TimeSpan.FromSeconds(10));
+            if (count != EventCount)
             {
-                await _persistentActor.Ask<string>($"event-{i}", TimeSpan.FromSeconds(10));
+                throw new Exception($"Expected {EventCount} events, but got {count}");
             }
-
-            // Trigger recovery by stopping and restarting
-            var persistenceId = await _persistentActor.Ask<string>("get-id", TimeSpan.FromSeconds(5));
-            await _persistentActor.GracefulStop(TimeSpan.FromSeconds(5));
-
-            _persistentActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor(persistenceId)));
-
-            // Wait for recovery to complete
-            await _persistentActor.Ask<int>("get-count", TimeSpan.FromSeconds(10));
-        }
-
-        [Benchmark]
-        [BenchmarkCategory(MicroBenchmark)]
-        public async Task Write_tagged_events_and_query()
-        {
-            // Write tagged events
-            for (var i = 0; i < EventCount; i++)
-            {
-                await _persistentActor.Ask<string>($"tagged-event-{i}", TimeSpan.FromSeconds(10));
-            }
-
-            // Query by tag (simulated via replay)
-            var persistenceId = await _persistentActor.Ask<string>("get-id", TimeSpan.FromSeconds(5));
-            await _persistentActor.GracefulStop(TimeSpan.FromSeconds(5));
-
-            _persistentActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor(persistenceId)));
-            await _persistentActor.Ask<int>("get-count", TimeSpan.FromSeconds(10));
         }
 
         #region Test Actor
