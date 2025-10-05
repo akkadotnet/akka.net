@@ -304,7 +304,7 @@ namespace Akka.Persistence.Journal
                 snapshot = EventLog
                     .Where(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag))
                     .Skip(replay.FromOffset)
-                    .Take(replay.ToOffset - replay.FromOffset)
+                    .Take(replay.Max)
                     .ToArray();
 
                 count = EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
@@ -335,7 +335,7 @@ namespace Akka.Persistence.Journal
             {
                 snapshot = EventLog
                     .Skip(replay.FromOffset)
-                    .Take(replay.ToOffset - replay.FromOffset)
+                    .Take((int)replay.Max)
                     .ToArray();
 
                 count = EventLog.Count;
