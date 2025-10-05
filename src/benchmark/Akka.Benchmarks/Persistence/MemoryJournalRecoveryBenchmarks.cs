@@ -45,7 +45,7 @@ namespace Akka.Benchmarks.Persistence
         }
 
         [IterationSetup]
-        public async Task IterationSetup()
+        public void IterationSetup()
         {
             // Generate unique persistence ID for this iteration
             _persistenceId = $"benchmark-{Guid.NewGuid()}";
@@ -54,9 +54,9 @@ namespace Akka.Benchmarks.Persistence
             var prepActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor(_persistenceId)));
             for (var i = 0; i < EventCount; i++)
             {
-                await prepActor.Ask<string>($"event-{i}", TimeSpan.FromSeconds(10));
+                prepActor.Ask<string>($"event-{i}", TimeSpan.FromSeconds(10)).Wait();
             }
-            await prepActor.GracefulStop(TimeSpan.FromSeconds(5));
+            prepActor.GracefulStop(TimeSpan.FromSeconds(5)).Wait();
 
             // Create the actor that will recover (but don't wait for recovery yet)
             _persistentActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor(_persistenceId)));
@@ -81,7 +81,7 @@ namespace Akka.Benchmarks.Persistence
         }
 
         [IterationSetup(Target = nameof(Recover_tagged_events_from_memory_journal))]
-        public async Task IterationSetupTagged()
+        public void IterationSetupTagged()
         {
             // Generate unique persistence ID for this iteration
             _persistenceId = $"benchmark-{Guid.NewGuid()}";
@@ -90,9 +90,9 @@ namespace Akka.Benchmarks.Persistence
             var prepActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor(_persistenceId)));
             for (var i = 0; i < EventCount; i++)
             {
-                await prepActor.Ask<string>($"tagged-event-{i}", TimeSpan.FromSeconds(10));
+                prepActor.Ask<string>($"tagged-event-{i}", TimeSpan.FromSeconds(10)).Wait();
             }
-            await prepActor.GracefulStop(TimeSpan.FromSeconds(5));
+            prepActor.GracefulStop(TimeSpan.FromSeconds(5)).Wait();
 
             // Create the actor that will recover (but don't wait for recovery yet)
             _persistentActor = _system.ActorOf(Props.Create(() => new BenchmarkPersistentActor(_persistenceId)));
