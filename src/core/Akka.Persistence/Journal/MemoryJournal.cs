@@ -73,9 +73,9 @@ namespace Akka.Persistence.Journal
                     .DefaultIfEmpty(0L)
                     .Max();
 
-                var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
-
-                return Task.FromResult(Math.Max(highest, deletedToSeq));
+                // Return actual highest sequence number from journal
+                // Deletion is logical only - events remain in EventLog
+                return Task.FromResult(highest);
             }
             finally
             {
@@ -132,35 +132,84 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// Add a persistent representation to the journal (for TestJournal subclass)
+        /// Add a persistent representation to the journal and return all messages.
         /// </summary>
-        protected void Add(IPersistentRepresentation message)
+        public IDictionary<string, LinkedList<IPersistentRepresentation>> Add(IPersistentRepresentation persistent)
         {
             Lock.EnterWriteLock();
             try
             {
-                EventLog.Add(message.WithTimestamp(DateTime.UtcNow.Ticks));
+                EventLog.Add(persistent.WithTimestamp(DateTime.UtcNow.Ticks));
             }
             finally
             {
                 Lock.ExitWriteLock();
             }
+
+            // Return view of all messages as LinkedList per persistence ID for API compatibility
+            Lock.EnterReadLock();
+            try
+            {
+                return EventLog
+                    .GroupBy(e => e.PersistenceId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => new LinkedList<IPersistentRepresentation>(g));
+            }
+            finally
+            {
+                Lock.ExitReadLock();
+            }
         }
 
         /// <summary>
-        /// Read messages for a persistence ID within sequence range (for TestJournal subclass)
+        /// Delete a message and return all remaining messages.
+        /// Public API for compatibility with existing code.
         /// </summary>
-        protected IEnumerable<IPersistentRepresentation> Read(string persistenceId, long fromSequenceNr, long toSequenceNr, long max)
+        public IDictionary<string, LinkedList<IPersistentRepresentation>> Delete(string pid, long seqNr)
+        {
+            Lock.EnterWriteLock();
+            try
+            {
+                var currentDeleted = DeletedTo.GetValueOrDefault(pid, 0L);
+                DeletedTo[pid] = Math.Max(currentDeleted, seqNr);
+            }
+            finally
+            {
+                Lock.ExitWriteLock();
+            }
+
+            // Return view of non-deleted messages as LinkedList per persistence ID for API compatibility
+            Lock.EnterReadLock();
+            try
+            {
+                return EventLog
+                    .GroupBy(e => e.PersistenceId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => new LinkedList<IPersistentRepresentation>(
+                            g.Where(e => e.SequenceNr > DeletedTo.GetValueOrDefault(g.Key, 0L))));
+            }
+            finally
+            {
+                Lock.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Read messages for a persistence ID within sequence range.
+        /// </summary>
+        public IEnumerable<IPersistentRepresentation> Read(string pid, long from, long to, long max)
         {
             Lock.EnterReadLock();
             try
             {
-                var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
+                var deletedToSeq = DeletedTo.GetValueOrDefault(pid, 0L);
 
                 return EventLog
-                    .Where(e => e.PersistenceId == persistenceId)
+                    .Where(e => e.PersistenceId == pid)
                     .Where(e => e.SequenceNr > deletedToSeq)
-                    .Where(e => e.SequenceNr >= fromSequenceNr && e.SequenceNr <= toSequenceNr)
+                    .Where(e => e.SequenceNr >= from && e.SequenceNr <= to)
                     .Take(max > int.MaxValue ? int.MaxValue : (int)max)
                     .ToArray(); // Materialize under lock
             }
@@ -171,22 +220,22 @@ namespace Akka.Persistence.Journal
         }
 
         /// <summary>
-        /// Get highest sequence number for a persistence ID (for TestJournal subclass)
+        /// Get highest sequence number for a persistence ID.
         /// </summary>
-        protected long HighestSequenceNr(string persistenceId)
+        public long HighestSequenceNr(string pid)
         {
             Lock.EnterReadLock();
             try
             {
                 var highest = EventLog
-                    .Where(e => e.PersistenceId == persistenceId)
+                    .Where(e => e.PersistenceId == pid)
                     .Select(e => e.SequenceNr)
                     .DefaultIfEmpty(0L)
                     .Max();
 
-                var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
-
-                return Math.Max(highest, deletedToSeq);
+                // Return actual highest sequence number from journal
+                // Deletion is logical only - events remain in EventLog
+                return highest;
             }
             finally
             {
