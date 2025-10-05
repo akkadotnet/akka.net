@@ -158,6 +158,7 @@ namespace Akka.Streams.Implementation
                     _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.QueueClosed.Instance);
                     _pendingOffer = null;
                 }
+                _terminating = true;
                 _completion.SetResult(new object());
                 CompleteStage();
             }
@@ -218,6 +219,7 @@ namespace Akka.Streams.Implementation
                             var bufferOverflowException =
                                 new BufferOverflowException($"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
                             offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                            _terminating = true;
                             _completion.SetException(bufferOverflowException);
                             FailStage(bufferOverflowException);
                             break;
@@ -242,6 +244,12 @@ namespace Akka.Streams.Implementation
                     {
                         if (input is Offer<TOut> offer)
                         {
+                            if (_terminating)
+                            {
+                                offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
+                                return;
+                            }
+
                             if (_buffer is not null)
                             {
                                 BufferElement(offer);
@@ -278,6 +286,7 @@ namespace Akka.Streams.Implementation
                                             new BufferOverflowException(
                                                 $"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
                                         offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                                        _terminating = true;
                                         _completion.SetException(bufferOverflowException);
                                         FailStage(bufferOverflowException);
                                         break;
@@ -300,6 +309,7 @@ namespace Akka.Streams.Implementation
 
                         if (input is Failure failure)
                         {
+                            _terminating = true;
                             _completion.SetException(failure.Ex);
                             FailStage(failure.Ex);
                         }
