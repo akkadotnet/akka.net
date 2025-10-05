@@ -117,21 +117,21 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
 
     private static string SanitizeDefaultLoggersStarted(string logs)
     {
-        var pattern = @"^.*Default Loggers started.*$";
+        var pattern = @"^.*Default Loggers started.*$\r?\n?";
         var result = Regex.Replace(logs, pattern, string.Empty, RegexOptions.Multiline);
         return result;
     }
 
     private static string SanitizeCustomLoggerRemoved(string logs)
     {
-        var pattern = @"^.*CustomLogger being removed.*$";
+        var pattern = @"^.*CustomLogger being removed.*$\r?\n?";
         var result = Regex.Replace(logs, pattern, string.Empty, RegexOptions.Multiline);
         return result;
     }
 
     private static string SanitizeTestEventListener(string logs)
     {
-        var pattern = @"^.*Akka\.TestKit\.TestEventListener.*$";
+        var pattern = @"^.*Akka\.TestKit\.TestEventListener.*$\r?\n?";
         var result = Regex.Replace(logs, pattern, string.Empty, RegexOptions.Multiline);
         return result;
     }
