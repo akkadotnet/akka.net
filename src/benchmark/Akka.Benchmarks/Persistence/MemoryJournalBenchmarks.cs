@@ -50,19 +50,16 @@ namespace Akka.Benchmarks.Persistence
         }
 
         [IterationCleanup]
-        public async Task IterationCleanup()
+        public void IterationCleanup()
         {
-            if (_persistentActor != null)
-            {
-                await _persistentActor.GracefulStop(TimeSpan.FromSeconds(5));
-            }
+            _persistentActor?.GracefulStop(TimeSpan.FromSeconds(5)).Wait();
         }
 
         [Benchmark]
         [BenchmarkCategory(MicroBenchmark)]
         public async Task Write_events_to_memory_journal()
         {
-            for (int i = 0; i < EventCount; i++)
+            for (var i = 0; i < EventCount; i++)
             {
                 await _persistentActor.Ask<string>($"event-{i}", TimeSpan.FromSeconds(10));
             }
@@ -73,7 +70,7 @@ namespace Akka.Benchmarks.Persistence
         public async Task Write_and_replay_events()
         {
             // Write events
-            for (int i = 0; i < EventCount; i++)
+            for (var i = 0; i < EventCount; i++)
             {
                 await _persistentActor.Ask<string>($"event-{i}", TimeSpan.FromSeconds(10));
             }
@@ -93,7 +90,7 @@ namespace Akka.Benchmarks.Persistence
         public async Task Write_tagged_events_and_query()
         {
             // Write tagged events
-            for (int i = 0; i < EventCount; i++)
+            for (var i = 0; i < EventCount; i++)
             {
                 await _persistentActor.Ask<string>($"tagged-event-{i}", TimeSpan.FromSeconds(10));
             }
@@ -118,30 +115,36 @@ namespace Akka.Benchmarks.Persistence
 
                 Command<string>(msg =>
                 {
-                    if (msg == "get-count")
+                    switch (msg)
                     {
-                        Sender.Tell(_eventCount);
-                    }
-                    else if (msg == "get-id")
-                    {
-                        Sender.Tell(PersistenceId);
-                    }
-                    else if (msg.StartsWith("tagged-event-"))
-                    {
-                        var tagged = new Tagged(msg, new[] { "benchmark-tag" });
-                        Persist(tagged, _ =>
+                        case "get-count":
+                            Sender.Tell(_eventCount);
+                            break;
+                        case "get-id":
+                            Sender.Tell(PersistenceId);
+                            break;
+                        default:
                         {
-                            _eventCount++;
-                            Sender.Tell(msg);
-                        });
-                    }
-                    else
-                    {
-                        Persist(msg, _ =>
-                        {
-                            _eventCount++;
-                            Sender.Tell(msg);
-                        });
+                            if (msg.StartsWith("tagged-event-"))
+                            {
+                                var tagged = new Tagged(msg, new[] { "benchmark-tag" });
+                                Persist(tagged, _ =>
+                                {
+                                    _eventCount++;
+                                    Sender.Tell(msg);
+                                });
+                            }
+                            else
+                            {
+                                Persist(msg, _ =>
+                                {
+                                    _eventCount++;
+                                    Sender.Tell(msg);
+                                });
+                            }
+
+                            break;
+                        }
                     }
                 });
 
