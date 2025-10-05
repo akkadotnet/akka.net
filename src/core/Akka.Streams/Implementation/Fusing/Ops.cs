@@ -3136,6 +3136,7 @@ namespace Akka.Streams.Implementation.Fusing
             private long _totalWeight = 0L;
             private int _totalNumber = 0;
             private bool _hasElements;
+            private bool _groupClosed;
 
             public Logic(GroupedWeightedWithin<T> stage)
                 : base(stage.Shape)
@@ -3232,6 +3233,10 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void StartNewGroup()
             {
+                // Mark that the group is not yet closed - it needs time to mature
+                // This prevents premature timer-based emission
+                _groupClosed = false;
+
                 if (!EqualityComparer<T>.Default.Equals(_pending, default))
                 {
                     _totalWeight = _pendingWeight;
@@ -3260,7 +3265,9 @@ namespace Akka.Streams.Implementation.Fusing
 
             public void OnPull()
             {
-                if (_pushEagerly) EmitGroup();
+                // Only emit eagerly if the group has been closed by the timer
+                // This prevents premature emission when downstream pulls before timer fires
+                if (_pushEagerly && _groupClosed) EmitGroup();
             }
 
             public void OnUpstreamFinish()
@@ -3276,6 +3283,9 @@ namespace Akka.Streams.Implementation.Fusing
 
             protected internal override void OnTimer(object timerKey)
             {
+                // Mark the group as closed - it has matured for the full timer interval
+                _groupClosed = true;
+
                 if (_hasElements)
                 {
                     if (IsAvailable(_stage._out)) EmitGroup();
