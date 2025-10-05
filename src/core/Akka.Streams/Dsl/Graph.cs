@@ -468,7 +468,7 @@ namespace Akka.Streams.Dsl
 
                     SetHandler(inlet, onPush: () =>
                     {
-                        if (IsAvailable(_stage.Out) && !HasPending)
+                        if (IsAvailable(_stage.Out) && !HasOtherInletAvailable(inlet))
                         {
                             Push(_stage.Out, Grab(inlet));
                             TryPull(inlet);
@@ -503,6 +503,9 @@ namespace Akka.Streams.Dsl
             }
 
             public bool HasPending => _allBuffers.Any(c => c.NonEmpty);
+
+            private bool HasOtherInletAvailable(Inlet<T> excludeInlet) =>
+                _stage.In.Any(i => i != excludeInlet && IsAvailable(i));
 
             public bool UpstreamsClosed => _runningUpstreams == 0;
 
