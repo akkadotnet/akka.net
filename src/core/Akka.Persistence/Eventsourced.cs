@@ -996,7 +996,7 @@ namespace Akka.Persistence
                             tcs.TrySetCanceled();
                         else
                             tcs.TrySetResult(null);
-                    }, TaskContinuationOptions.AttachedToParent & TaskContinuationOptions.ExecuteSynchronously);
+                    }, TaskContinuationOptions.ExecuteSynchronously);
 
                     t = tcs.Task;
                 }
