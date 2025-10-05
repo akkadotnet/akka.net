@@ -712,6 +712,7 @@ namespace Akka.Streams.Implementation
             private readonly int _maxBuffer;
             private IBuffer<Result<Option<T>>>? _buffer;
             private Option<TaskCompletionSource<Option<T>>> _currentRequest;
+            private bool _closed;
 
             public Logic(QueueSink<T> stage, int maxBuffer) : base(stage.Shape)
             {
@@ -751,14 +752,16 @@ namespace Akka.Streams.Implementation
                 return GetAsyncCallback<TaskCompletionSource<Option<T>>>(
                     promise =>
                     {
-                        if (_currentRequest.HasValue)
+                        if (_closed)
+                            promise.SetException(new StreamDetachedException());
+                        else if (_currentRequest.HasValue)
                             promise.SetException(
                                 new IllegalStateException(
                                     "You have to wait for previous future to be resolved to send another request"));
                         else
                         {
                             Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
-                
+
                             if (_buffer!.IsEmpty)
                                 _currentRequest = promise;
                             else
@@ -774,13 +777,16 @@ namespace Akka.Streams.Implementation
             private void SendDownstream(TaskCompletionSource<Option<T>> promise)
             {
                 Debug.Assert(_buffer != null, nameof(_buffer) + " != null");
-                
+
                 var e = _buffer!.Dequeue();
                 if (e.IsSuccess)
                 {
                     promise.SetResult(e.Value);
                     if (!e.Value.HasValue)
+                    {
+                        _closed = true;
                         CompleteStage();
+                    }
                 }
                 else
                 {
