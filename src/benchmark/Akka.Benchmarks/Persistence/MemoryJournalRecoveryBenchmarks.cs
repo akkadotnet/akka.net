@@ -11,6 +11,7 @@ using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using Akka.Configuration;
 using Akka.Persistence;
+using Akka.Persistence.Journal;
 using BenchmarkDotNet.Attributes;
 using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
