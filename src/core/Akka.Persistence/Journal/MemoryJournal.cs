@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -18,71 +17,181 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence.Journal
 {
-    using Messages = IDictionary<string, LinkedList<IPersistentRepresentation>>;
-    
     /// <summary>
     /// In-memory journal for testing purposes.
     /// </summary>
     public class MemoryJournal : AsyncWriteJournal
     {
-        private readonly LinkedList<IPersistentRepresentation> _allMessages = new();
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
-        private readonly ConcurrentDictionary<string, long> _meta = new();
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
-        
-        protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
-        
+        /// <summary>
+        /// Single source of truth: all events in append-only order.
+        /// Uses ReaderWriterLockSlim to allow concurrent reads with exclusive writes.
+        ///
+        /// Design rationale:
+        /// - Single collection eliminates synchronization complexity across multiple structures
+        /// - O(n) scans are acceptable for test journals (n ~ 100 events)
+        /// - ReaderWriterLock allows multiple concurrent readers
+        /// - Materialize results under lock, deliver outside lock to avoid deadlocks
+        /// </summary>
+        private readonly List<IPersistentRepresentation> _eventLog = new();
+        private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.NoRecursion);
+        private readonly Dictionary<string, long> _deletedTo = new();
+
+        protected virtual List<IPersistentRepresentation> EventLog => _eventLog;
+        protected virtual ReaderWriterLockSlim Lock => _lock;
+        protected virtual Dictionary<string, long> DeletedTo => _deletedTo;
+
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
-            foreach (var w in messages)
+            Lock.EnterWriteLock();
+            try
             {
-                foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
+                foreach (var w in messages)
                 {
-                    var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
-                    Add(persistentRepresentation);
-                    _allMessages.AddLast(persistentRepresentation);
-                    if (p.Payload is not Tagged tagged) continue;
-                    
-                    foreach (var tag in tagged.Tags)
+                    foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                     {
-                        _tagsToMessagesMapping.AddOrUpdate(
-                            tag,
-                            (_) => new LinkedList<IPersistentRepresentation>([persistentRepresentation]),
-                            (_, v) =>
-                            {
-                                v.AddLast(persistentRepresentation);
-                                return v;
-                            });
+                        var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
+                        EventLog.Add(persistentRepresentation);
                     }
                 }
             }
-            
-            return Task.FromResult<IImmutableList<Exception>>(null); // all good
+            finally
+            {
+                Lock.ExitWriteLock();
+            }
+
+            return Task.FromResult<IImmutableList<Exception>>(null);
         }
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
-            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.GetValueOrDefault(persistenceId, 0L)));
+            Lock.EnterReadLock();
+            try
+            {
+                var highest = EventLog
+                    .Where(e => e.PersistenceId == persistenceId)
+                    .Select(e => e.SequenceNr)
+                    .DefaultIfEmpty(0L)
+                    .Max();
+
+                var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
+
+                return Task.FromResult(Math.Max(highest, deletedToSeq));
+            }
+            finally
+            {
+                Lock.ExitReadLock();
+            }
         }
-        
+
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
-            var highest = HighestSequenceNr(persistenceId);
-            if (highest != 0L && max != 0L)
-                Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max).ForEach(recoveryCallback);
+            IPersistentRepresentation[] messages;
+
+            Lock.EnterReadLock();
+            try
+            {
+                var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
+
+                messages = EventLog
+                    .Where(e => e.PersistenceId == persistenceId)
+                    .Where(e => e.SequenceNr > deletedToSeq) // Skip deleted messages
+                    .Where(e => e.SequenceNr >= fromSequenceNr && e.SequenceNr <= toSequenceNr)
+                    .Take(max > int.MaxValue ? int.MaxValue : (int)max)
+                    .ToArray();
+            }
+            finally
+            {
+                Lock.ExitReadLock();
+            }
+
+            // Execute callbacks outside the lock to avoid potential deadlocks
+            foreach (var message in messages)
+            {
+                recoveryCallback(message);
+            }
+
             return Task.CompletedTask;
         }
-        
+
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {
-            var highestSeqNr = HighestSequenceNr(persistenceId);
-            var toSeqNr = Math.Min(toSequenceNr, highestSeqNr);
-            if (toSeqNr == highestSeqNr)
-                _meta.AddOrUpdate(persistenceId, highestSeqNr, (_, _) => highestSeqNr);
-            for (var snr = 1L; snr <= toSeqNr; snr++)
-                Delete(persistenceId, snr);
+            Lock.EnterWriteLock();
+            try
+            {
+                // Track deletion marker instead of actually removing events
+                // This is simpler and matches the semantics (logical deletion)
+                DeletedTo[persistenceId] = toSequenceNr;
+            }
+            finally
+            {
+                Lock.ExitWriteLock();
+            }
+
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Add a persistent representation to the journal (for TestJournal subclass)
+        /// </summary>
+        protected void Add(IPersistentRepresentation message)
+        {
+            Lock.EnterWriteLock();
+            try
+            {
+                EventLog.Add(message.WithTimestamp(DateTime.UtcNow.Ticks));
+            }
+            finally
+            {
+                Lock.ExitWriteLock();
+            }
+        }
+
+        /// <summary>
+        /// Read messages for a persistence ID within sequence range (for TestJournal subclass)
+        /// </summary>
+        protected IEnumerable<IPersistentRepresentation> Read(string persistenceId, long fromSequenceNr, long toSequenceNr, long max)
+        {
+            Lock.EnterReadLock();
+            try
+            {
+                var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
+
+                return EventLog
+                    .Where(e => e.PersistenceId == persistenceId)
+                    .Where(e => e.SequenceNr > deletedToSeq)
+                    .Where(e => e.SequenceNr >= fromSequenceNr && e.SequenceNr <= toSequenceNr)
+                    .Take(max > int.MaxValue ? int.MaxValue : (int)max)
+                    .ToArray(); // Materialize under lock
+            }
+            finally
+            {
+                Lock.ExitReadLock();
+            }
+        }
+
+        /// <summary>
+        /// Get highest sequence number for a persistence ID (for TestJournal subclass)
+        /// </summary>
+        protected long HighestSequenceNr(string persistenceId)
+        {
+            Lock.EnterReadLock();
+            try
+            {
+                var highest = EventLog
+                    .Where(e => e.PersistenceId == persistenceId)
+                    .Select(e => e.SequenceNr)
+                    .DefaultIfEmpty(0L)
+                    .Max();
+
+                var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
+
+                return Math.Max(highest, deletedToSeq);
+            }
+            finally
+            {
+                Lock.ExitReadLock();
+            }
         }
 
         protected override bool ReceivePluginInternal(object message)
@@ -93,63 +202,109 @@ namespace Akka.Persistence.Journal
                     SelectAllPersistenceIdsAsync(request.Offset)
                         .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result.Item1, result.LastOrdering));
                     return true;
-                
+
                 case ReplayTaggedMessages replay:
                     ReplayTaggedMessagesAsync(replay)
                         .PipeTo(replay.ReplyTo, success: h => new ReplayTaggedMessagesSuccess(h), failure: e => new ReplayMessagesFailure(e));
                     return true;
-                
+
                 case ReplayAllEvents replay:
                     ReplayAllEventsAsync(replay)
                         .PipeTo(replay.ReplyTo, success: h => new EventReplaySuccess(h),
                             failure: e => new EventReplayFailure(e));
                     return true;
-                
+
                 default:
                     return false;
             }
         }
-        
+
         private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count)); 
+            HashSet<string> ids;
+            int count;
+
+            Lock.EnterReadLock();
+            try
+            {
+                ids = new HashSet<string>(EventLog.Skip(offset).Select(p => p.PersistenceId));
+                count = EventLog.Count;
+            }
+            finally
+            {
+                Lock.ExitReadLock();
+            }
+
+            return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((ids, count));
         }
-        
+
         /// <summary>
-        /// Replays all events with given tag withing provided boundaries from memory.
+        /// Replays all events with given tag within provided boundaries from memory.
         /// </summary>
         private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
-            if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
-                return Task.FromResult(0);
+            IPersistentRepresentation[] snapshot;
+            int count;
 
+            Lock.EnterReadLock();
+            try
+            {
+                // Scan for events with matching tag
+                snapshot = EventLog
+                    .Where(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag))
+                    .Skip(replay.FromOffset)
+                    .Take(replay.ToOffset - replay.FromOffset)
+                    .ToArray();
+
+                count = EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
+            }
+            finally
+            {
+                Lock.ExitReadLock();
+            }
+
+            // Send messages outside the lock to avoid potential deadlocks
             var index = 0;
-            foreach (var persistence in _tagsToMessagesMapping[replay.Tag]
-                         .Skip(replay.FromOffset)
-                         .Take(replay.ToOffset))
+            foreach (var persistence in snapshot)
             {
                 replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
                 index++;
             }
 
-            return Task.FromResult(_tagsToMessagesMapping[replay.Tag].Count - 1);
+            return Task.FromResult(count - 1);
         }
-        
+
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
+            IPersistentRepresentation[] snapshot;
+            int count;
+
+            Lock.EnterReadLock();
+            try
+            {
+                snapshot = EventLog
+                    .Skip(replay.FromOffset)
+                    .Take(replay.ToOffset - replay.FromOffset)
+                    .ToArray();
+
+                count = EventLog.Count;
+            }
+            finally
+            {
+                Lock.ExitReadLock();
+            }
+
+            // Send messages outside the lock to avoid potential deadlocks
             var index = 0;
-            var replayed = _allMessages
-                .Skip(replay.FromOffset)
-                .Take(replay.ToOffset - replay.FromOffset)
-                .ToArray();
-            foreach (var message in replayed)
+            foreach (var message in snapshot)
             {
                 replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
                 index++;
             }
-            return Task.FromResult(_allMessages.Count - 1);
+
+            return Task.FromResult(count - 1);
         }
-        
+
         #region QueryAPI
 
         [Serializable]
@@ -164,7 +319,7 @@ namespace Akka.Persistence.Journal
                 ReplyTo = replyTo;
             }
         }
-        
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -189,18 +344,18 @@ namespace Akka.Persistence.Journal
                 HighestOrderingNumber = highestOrderingNumber;
             }
         }
-        
+
         [Serializable]
         public sealed class ReplayTaggedMessages : IJournalRequest
         {
             public readonly int FromOffset;
-            
+
             public readonly int ToOffset;
-            
+
             public readonly int Max;
-            
+
             public readonly string Tag;
-            
+
             public readonly IActorRef ReplyTo;
 
             /// <summary>
@@ -236,7 +391,7 @@ namespace Akka.Persistence.Journal
                 ReplyTo = replyTo;
             }
         }
-        
+
         [Serializable]
         public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
@@ -247,7 +402,7 @@ namespace Akka.Persistence.Journal
             public readonly string Tag;
 
             public readonly int Offset;
-            
+
             public ReplayedTaggedMessage(IPersistentRepresentation persistent, string tag, int offset)
             {
                 Persistent = persistent;
@@ -257,7 +412,7 @@ namespace Akka.Persistence.Journal
                 Offset = offset;
             }
         }
-        
+
         [Serializable]
         public sealed class ReplayAllEvents : IJournalRequest
         {
@@ -292,7 +447,7 @@ namespace Akka.Persistence.Journal
                 ReplyTo = replyTo;
             }
         }
-        
+
 
         [Serializable]
         public sealed class ReplayedEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression
@@ -301,14 +456,14 @@ namespace Akka.Persistence.Journal
             public readonly IPersistentRepresentation Persistent;
 
             public readonly int Offset;
-            
+
             public ReplayedEvent(IPersistentRepresentation persistent, int offset)
             {
                 Persistent = persistent;
                 Offset = offset;
             }
         }
-        
+
         [Serializable]
         public sealed class ReplayTaggedMessagesSuccess
         {
@@ -322,7 +477,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public int HighestSequenceNr { get; }
         }
-        
+
         [Serializable]
         public sealed class EventReplaySuccess
         {
@@ -375,95 +530,30 @@ namespace Akka.Persistence.Journal
                 return Equals(Cause, other.Cause);
             }
 
-        
+
             public override bool Equals(object obj)
             {
                 return obj is EventReplayFailure f && Equals(f);
             }
 
-        
+
             public override int GetHashCode() => Cause.GetHashCode();
 
-        
+
             public override string ToString() => $"EventReplayFailure<cause: {Cause.Message}>";
         }
 
         #endregion
-        
-        #region IMemoryMessages implementation
-        
-        public Messages Add(IPersistentRepresentation persistent)
-        {
-            var list = Messages.GetOrAdd(persistent.PersistenceId, _ => new LinkedList<IPersistentRepresentation>());
-            list.AddLast(persistent);
-            return Messages;
-        }
-        
-        public Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater)
-        {
-            if (Messages.TryGetValue(pid, out var persistents))
-            {
-                var node = persistents.First;
-                while (node != null)
-                {
-                    if (node.Value.SequenceNr == seqNr)
-                        node.Value = updater(node.Value);
-
-                    node = node.Next;
-                }
-            }
-
-            return Messages;
-        }
-        
-        public Messages Delete(string pid, long seqNr)
-        {
-            if (Messages.TryGetValue(pid, out var persistents))
-            {
-                var node = persistents.First;
-                while (node != null)
-                {
-                    if (node.Value.SequenceNr == seqNr)
-                        persistents.Remove(node);
-
-                    node = node.Next;
-                }
-            }
-
-            return Messages;
-        }
-        
-        public IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max)
-        {
-            if (Messages.TryGetValue(pid, out var persistents))
-            {
-                return persistents
-                    .Where(x => x.SequenceNr >= fromSeqNr && x.SequenceNr <= toSeqNr)
-                    .Take(max > int.MaxValue ? int.MaxValue : (int)max);
-            }
-
-            return [];
-        }
-        
-        public long HighestSequenceNr(string pid)
-        {
-            if (Messages.TryGetValue(pid, out var persistents))
-            {
-                var last = persistents.LastOrDefault();
-                return last?.SequenceNr ?? 0L;
-            }
-
-            return 0L;
-        }
-
-        #endregion
     }
-    
+
     public class SharedMemoryJournal : MemoryJournal
     {
-        private static readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> SharedMessages = new();
-        
-        protected override ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return SharedMessages; } }
+        private static readonly List<IPersistentRepresentation> SharedEventLog = new();
+        private static readonly ReaderWriterLockSlim SharedLock = new(LockRecursionPolicy.NoRecursion);
+        private static readonly Dictionary<string, long> SharedDeletedTo = new();
+
+        protected override List<IPersistentRepresentation> EventLog => SharedEventLog;
+        protected override ReaderWriterLockSlim Lock => SharedLock;
+        protected override Dictionary<string, long> DeletedTo => SharedDeletedTo;
     }
 }
-
