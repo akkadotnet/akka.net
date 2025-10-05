@@ -76,7 +76,7 @@ namespace Akka.Benchmarks.Hocon
                                                                           ]
                                                                       }
                                                           """);
-            _fallback3 = Persistence.Persistence.DefaultConfig();
+            _fallback3 = Akka.Persistence.Persistence.DefaultConfig();
         }
 
         [Benchmark]
