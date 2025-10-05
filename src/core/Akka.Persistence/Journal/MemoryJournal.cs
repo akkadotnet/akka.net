@@ -94,9 +94,10 @@ namespace Akka.Persistence.Journal
                 var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
 
                 messages = EventLog
-                    .Where(e => e.PersistenceId == persistenceId)
-                    .Where(e => e.SequenceNr > deletedToSeq) // Skip deleted messages
-                    .Where(e => e.SequenceNr >= fromSequenceNr && e.SequenceNr <= toSequenceNr)
+                    .Where(e => e.PersistenceId == persistenceId
+                             && e.SequenceNr > deletedToSeq  // Skip deleted messages
+                             && e.SequenceNr >= fromSequenceNr
+                             && e.SequenceNr <= toSequenceNr)
                     .Take(max > int.MaxValue ? int.MaxValue : (int)max)
                     .ToArray();
             }
@@ -207,9 +208,10 @@ namespace Akka.Persistence.Journal
                 var deletedToSeq = DeletedTo.GetValueOrDefault(pid, 0L);
 
                 return EventLog
-                    .Where(e => e.PersistenceId == pid)
-                    .Where(e => e.SequenceNr > deletedToSeq)
-                    .Where(e => e.SequenceNr >= from && e.SequenceNr <= to)
+                    .Where(e => e.PersistenceId == pid
+                             && e.SequenceNr > deletedToSeq
+                             && e.SequenceNr >= from
+                             && e.SequenceNr <= to)
                     .Take(max > int.MaxValue ? int.MaxValue : (int)max)
                     .ToArray(); // Materialize under lock
             }
