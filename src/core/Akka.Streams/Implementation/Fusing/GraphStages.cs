@@ -546,7 +546,11 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void PreStart()
             {
-                _cancelCallback.Value = GetAsyncCallback<NotUsed>(_ => CompleteStage());
+                _cancelCallback.Value = GetAsyncCallback<NotUsed>(_ =>
+                {
+                    CancelTimer("TickTimer");
+                    CompleteStage();
+                });
 
                 if (_cancelled.Value)
                     CompleteStage();
