@@ -1,3 +1,25 @@
+#### 1.5.52 October 6th, 2025 ####
+
+**SECURITY PATCH**
+
+Akka.NET v1.5.52 is a security patch containing crucial fixes for enforcing certificate-based authentication using mTLS enforcement. Please see https://getakka.net/articles/remoting/security.html for details on how this works.
+
+* [Akka.Remote: implement mutual TLS authentication support](https://github.com/akkadotnet/akka.net/pull/7851)
+* [Akka.Remote: validate SSL certificate private key access at server startup](https://github.com/akkadotnet/akka.net/pull/7847)
+
+Other fixes:
+
+* [Akka.Cluster.Sharding: ShardedDaemonSets: randomize starting worker index](https://github.com/akkadotnet/akka.net/pull/7857)
+
+1 contributors since release 1.5.51
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 1193 | 149 | Aaron Stannard |
+
+
+To [see the full set of changes in Akka.NET v1.5.52, click here](https://github.com/akkadotnet/akka.net/milestone/135?closed=1)
+
 #### 1.5.51 October 1st, 2025 ####
 
 Akka.NET v1.5.51 is a minor patch containing a remoting bug fix and add required codes to support persistence health check.
