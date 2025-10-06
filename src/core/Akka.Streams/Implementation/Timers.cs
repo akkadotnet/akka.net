@@ -586,7 +586,7 @@ namespace Akka.Streams.Implementation
             public Logic(IdleInject<TIn, TOut> stage) : base(stage.Shape)
             {
                 _stage = stage;
-                ResetDeadline();
+                _nextDeadline = 0; // Sentinel: deadline not set until first pull
 
                 SetHandler(_stage._in, this);
                 SetHandler(_stage._out, this);
@@ -630,6 +630,11 @@ namespace Akka.Streams.Implementation
                 else
                 {
                     var time = DateTime.UtcNow.Ticks;
+
+                    // Initialize deadline on first pull if not set yet
+                    if (_nextDeadline == 0)
+                        ResetDeadline();
+
                     if (_nextDeadline - time < 0)
                     {
                         Push(_stage._out, _stage._inject());
