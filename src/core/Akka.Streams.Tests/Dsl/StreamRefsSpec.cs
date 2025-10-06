@@ -190,12 +190,12 @@ namespace Akka.Streams.Tests
         }
     }
 
-    public class StreamRefsSpec : AkkaSpec
+    public class StreamRefsSpec : AkkaSpec, IAsyncLifetime
     {
         public static Config Config()
         {
             var address = TestUtils.TemporaryServerAddress();
-            return ConfigurationFactory.ParseString($@"        
+            return ConfigurationFactory.ParseString($@"
             akka {{
               loglevel = INFO
               actor {{
@@ -219,18 +219,26 @@ namespace Akka.Streams.Tests
             RemoteSystem = ActorSystem.Create("remote-system", Config());
             InitializeLogger(RemoteSystem);
             _probe = CreateTestProbe();
+        }
 
+        public async Task InitializeAsync()
+        {
             var it = RemoteSystem.ActorOf(DataSourceActor.Props(_probe.Ref), "remoteActor");
             var remoteAddress = ((ActorSystemImpl)RemoteSystem).Provider.DefaultAddress;
             Sys.ActorSelection(it.Path.ToStringWithAddress(remoteAddress)).Tell(new Identify("hi"));
 
-            _remoteActor = ExpectMsg<ActorIdentity>().Subject;
+            _remoteActor = (await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(30))).Subject;
+        }
+
+        public Task DisposeAsync()
+        {
+            return Task.CompletedTask;
         }
 
         protected readonly ActorSystem RemoteSystem;
         protected readonly ActorMaterializer Materializer;
         private readonly TestProbe _probe;
-        private readonly IActorRef _remoteActor;
+        private IActorRef _remoteActor;
 
         protected override void BeforeTermination()
         {
