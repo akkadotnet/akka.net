@@ -23,20 +23,21 @@ namespace Akka.Persistence.Journal
     public class MemoryJournal : AsyncWriteJournal
     {
         /// <summary>
-        /// Single source of truth: all events in append-only order.
-        /// Uses ReaderWriterLockSlim to allow concurrent reads with exclusive writes.
-        ///
-        /// Design rationale:
-        /// - Single collection eliminates synchronization complexity across multiple structures
-        /// - O(n) scans are acceptable for test journals (n ~ 100 events)
-        /// - ReaderWriterLock allows multiple concurrent readers
-        /// - Materialize results under lock, deliver outside lock to avoid deadlocks
+        /// All events in append-only order (for AllEvents queries).
         /// </summary>
         private readonly List<IPersistentRepresentation> _eventLog = new();
+
+        /// <summary>
+        /// Events indexed by persistence ID for O(1) recovery lookup.
+        /// Maintained on write to avoid O(n) scans across all entities during recovery.
+        /// </summary>
+        private readonly Dictionary<string, List<IPersistentRepresentation>> _eventsByPersistenceId = new();
+
         private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.NoRecursion);
         private readonly Dictionary<string, long> _deletedTo = new();
 
         protected virtual List<IPersistentRepresentation> EventLog => _eventLog;
+        protected virtual Dictionary<string, List<IPersistentRepresentation>> EventsByPersistenceId => _eventsByPersistenceId;
         protected virtual ReaderWriterLockSlim Lock => _lock;
         protected virtual Dictionary<string, long> DeletedTo => _deletedTo;
 
@@ -50,7 +51,16 @@ namespace Akka.Persistence.Journal
                     foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                     {
                         var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
+
+                        // Maintain both indexes on write
                         EventLog.Add(persistentRepresentation);
+
+                        if (!EventsByPersistenceId.TryGetValue(persistentRepresentation.PersistenceId, out var pidEvents))
+                        {
+                            pidEvents = new List<IPersistentRepresentation>();
+                            EventsByPersistenceId[persistentRepresentation.PersistenceId] = pidEvents;
+                        }
+                        pidEvents.Add(persistentRepresentation);
                     }
                 }
             }
@@ -67,14 +77,14 @@ namespace Akka.Persistence.Journal
             Lock.EnterReadLock();
             try
             {
-                var highest = EventLog
-                    .Where(e => e.PersistenceId == persistenceId)
-                    .Select(e => e.SequenceNr)
-                    .DefaultIfEmpty(0L)
-                    .Max();
+                // Use index for O(1) lookup instead of O(n) scan
+                if (!EventsByPersistenceId.TryGetValue(persistenceId, out var events) || events.Count == 0)
+                    return Task.FromResult(0L);
+
+                var highest = events[events.Count - 1].SequenceNr;
 
                 // Return actual highest sequence number from journal
-                // Deletion is logical only - events remain in EventLog
+                // Deletion is logical only - events remain in index
                 return Task.FromResult(highest);
             }
             finally
@@ -91,15 +101,22 @@ namespace Akka.Persistence.Journal
             Lock.EnterReadLock();
             try
             {
-                var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
+                // Use index for O(events_for_entity) instead of O(total_events)
+                if (!EventsByPersistenceId.TryGetValue(persistenceId, out var pidEvents))
+                {
+                    messages = Array.Empty<IPersistentRepresentation>();
+                }
+                else
+                {
+                    var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
 
-                messages = EventLog
-                    .Where(e => e.PersistenceId == persistenceId
-                             && e.SequenceNr > deletedToSeq  // Skip deleted messages
-                             && e.SequenceNr >= fromSequenceNr
-                             && e.SequenceNr <= toSequenceNr)
-                    .Take(max > int.MaxValue ? int.MaxValue : (int)max)
-                    .ToArray();
+                    messages = pidEvents
+                        .Where(e => e.SequenceNr > deletedToSeq  // Skip deleted messages
+                                 && e.SequenceNr >= fromSequenceNr
+                                 && e.SequenceNr <= toSequenceNr)
+                        .Take(max > int.MaxValue ? int.MaxValue : (int)max)
+                        .ToArray();
+                }
             }
             finally
             {
@@ -140,7 +157,17 @@ namespace Akka.Persistence.Journal
             Lock.EnterWriteLock();
             try
             {
-                EventLog.Add(persistent.WithTimestamp(DateTime.UtcNow.Ticks));
+                var timestamped = persistent.WithTimestamp(DateTime.UtcNow.Ticks);
+
+                // Maintain both indexes
+                EventLog.Add(timestamped);
+
+                if (!EventsByPersistenceId.TryGetValue(timestamped.PersistenceId, out var pidEvents))
+                {
+                    pidEvents = new List<IPersistentRepresentation>();
+                    EventsByPersistenceId[timestamped.PersistenceId] = pidEvents;
+                }
+                pidEvents.Add(timestamped);
             }
             finally
             {
@@ -151,11 +178,9 @@ namespace Akka.Persistence.Journal
             Lock.EnterReadLock();
             try
             {
-                return EventLog
-                    .GroupBy(e => e.PersistenceId)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => new LinkedList<IPersistentRepresentation>(g));
+                return EventsByPersistenceId.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => new LinkedList<IPersistentRepresentation>(kvp.Value));
             }
             finally
             {
@@ -181,15 +206,14 @@ namespace Akka.Persistence.Journal
             }
 
             // Return view of non-deleted messages as LinkedList per persistence ID for API compatibility
+            // Use index instead of scanning entire event log
             Lock.EnterReadLock();
             try
             {
-                return EventLog
-                    .GroupBy(e => e.PersistenceId)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => new LinkedList<IPersistentRepresentation>(
-                            g.Where(e => e.SequenceNr > DeletedTo.GetValueOrDefault(g.Key, 0L))));
+                return EventsByPersistenceId.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => new LinkedList<IPersistentRepresentation>(
+                        kvp.Value.Where(e => e.SequenceNr > DeletedTo.GetValueOrDefault(kvp.Key, 0L))));
             }
             finally
             {
@@ -205,11 +229,14 @@ namespace Akka.Persistence.Journal
             Lock.EnterReadLock();
             try
             {
+                // Use index for O(events_for_entity) instead of O(total_events)
+                if (!EventsByPersistenceId.TryGetValue(pid, out var pidEvents))
+                    return Array.Empty<IPersistentRepresentation>();
+
                 var deletedToSeq = DeletedTo.GetValueOrDefault(pid, 0L);
 
-                return EventLog
-                    .Where(e => e.PersistenceId == pid
-                             && e.SequenceNr > deletedToSeq
+                return pidEvents
+                    .Where(e => e.SequenceNr > deletedToSeq
                              && e.SequenceNr >= from
                              && e.SequenceNr <= to)
                     .Take(max > int.MaxValue ? int.MaxValue : (int)max)
@@ -229,15 +256,13 @@ namespace Akka.Persistence.Journal
             Lock.EnterReadLock();
             try
             {
-                var highest = EventLog
-                    .Where(e => e.PersistenceId == pid)
-                    .Select(e => e.SequenceNr)
-                    .DefaultIfEmpty(0L)
-                    .Max();
+                // Use index for O(1) lookup instead of O(n) scan
+                if (!EventsByPersistenceId.TryGetValue(pid, out var events) || events.Count == 0)
+                    return 0L;
 
                 // Return actual highest sequence number from journal
-                // Deletion is logical only - events remain in EventLog
-                return highest;
+                // Deletion is logical only - events remain in index
+                return events[events.Count - 1].SequenceNr;
             }
             finally
             {
@@ -600,10 +625,12 @@ namespace Akka.Persistence.Journal
     public class SharedMemoryJournal : MemoryJournal
     {
         private static readonly List<IPersistentRepresentation> SharedEventLog = new();
+        private static readonly Dictionary<string, List<IPersistentRepresentation>> SharedEventsByPersistenceId = new();
         private static readonly ReaderWriterLockSlim SharedLock = new(LockRecursionPolicy.NoRecursion);
         private static readonly Dictionary<string, long> SharedDeletedTo = new();
 
         protected override List<IPersistentRepresentation> EventLog => SharedEventLog;
+        protected override Dictionary<string, List<IPersistentRepresentation>> EventsByPersistenceId => SharedEventsByPersistenceId;
         protected override ReaderWriterLockSlim Lock => SharedLock;
         protected override Dictionary<string, long> DeletedTo => SharedDeletedTo;
     }
