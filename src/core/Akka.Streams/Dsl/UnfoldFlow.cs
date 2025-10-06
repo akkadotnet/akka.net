@@ -18,6 +18,7 @@ namespace Akka.Streams.Dsl
         private readonly Outlet<TState> _feedback;
         protected readonly Outlet<TOut> _output;
         protected readonly Inlet<TIn> _nextElem;
+        private readonly Action _timeoutCallback;
 
         protected TState _pending;
         protected bool _pushedToCycle;
@@ -32,6 +33,13 @@ namespace Akka.Streams.Dsl
 
             _pending = seed;
             _pushedToCycle = false;
+
+            // Create the timeout callback during construction to ensure it's created on the GraphStageLogic thread
+            _timeoutCallback = GetAsyncCallback(() =>
+            {
+                if (!IsClosed(_nextElem))
+                    FailStage(new InvalidOperationException($"unfoldFlow source's inner flow canceled only upstream, while downstream remain available for {_timeout}"));
+            });
 
             SetHandler(_feedback, this);
 
@@ -57,20 +65,11 @@ namespace Akka.Streams.Dsl
             }
         }
 
-        // TODO: Is this correct? check JVM please
         public void OnDownstreamFinish(Exception cause)
         {
             // Do Nothing until `timeout` to try and intercept completion as downstream,
             // but cancel stream after timeout if inlet is not closed to prevent deadlock.
-            Materializer.ScheduleOnce(_timeout, () =>
-            {
-                var cb = GetAsyncCallback(() =>
-                {
-                    if (!IsClosed(_nextElem))
-                        FailStage(new InvalidOperationException($"unfoldFlow source's inner flow canceled only upstream, while downstream remain available for {_timeout}"));
-                });
-                cb();
-            });
+            Materializer.ScheduleOnce(_timeout, () => _timeoutCallback());
         }
     }
 
