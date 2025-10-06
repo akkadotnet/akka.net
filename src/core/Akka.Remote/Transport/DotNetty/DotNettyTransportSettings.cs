@@ -269,18 +269,21 @@ namespace Akka.Remote.Transport.DotNetty
             if (config.IsNullOrEmpty())
                 throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.tcp.ssl`)");
 
+            var requireMutualAuth = config.GetBoolean("require-mutual-authentication", true);
+
             if (config.GetBoolean("certificate.use-thumprint-over-file")
                 || config.GetBoolean("certificate.use-thumbprint-over-file"))
             {
-                var thumbprint = config.GetString("certificate.thumbprint") 
+                var thumbprint = config.GetString("certificate.thumbprint")
                                  ?? config.GetString("certificate.thumpbrint");
                 if (string.IsNullOrWhiteSpace(thumbprint))
                     throw new Exception("`akka.remote.dot-netty.tcp.ssl.certificate.use-thumbprint-over-file` is set to true but `akka.remote.dot-netty.tcp.ssl.certificate.thumbprint` is null or empty");
-                
+
                 return new SslSettings(certificateThumbprint: thumbprint,
                     storeName: config.GetString("certificate.store-name"),
                     storeLocation: ParseStoreLocationName(config.GetString("certificate.store-location")),
-                    suppressValidation: config.GetBoolean("suppress-validation"));
+                    suppressValidation: config.GetBoolean("suppress-validation"),
+                    requireMutualAuthentication: requireMutualAuth);
             }
 
             var flagsRaw = config.GetStringList("certificate.flags", new string[] { });
@@ -290,7 +293,8 @@ namespace Akka.Remote.Transport.DotNetty
                 certificatePath: config.GetString("certificate.path"),
                 certificatePassword: config.GetString("certificate.password"),
                 flags: flags,
-                suppressValidation: config.GetBoolean("suppress-validation"));
+                suppressValidation: config.GetBoolean("suppress-validation"),
+                requireMutualAuthentication: requireMutualAuth);
 
         }
 
@@ -330,19 +334,82 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly bool SuppressValidation;
 
+        /// <summary>
+        /// When true, requires mutual TLS authentication where both client and server
+        /// must present valid certificates with accessible private keys during the TLS handshake.
+        /// Provides defense-in-depth security by ensuring symmetric authentication.
+        /// </summary>
+        public readonly bool RequireMutualAuthentication;
+
         private SslSettings()
         {
             Certificate = null;
             SuppressValidation = false;
+            RequireMutualAuthentication = false;
         }
 
+        /// <summary>
+        /// Constructor for backward compatibility - defaults to RequireMutualAuthentication = true
+        /// </summary>
         public SslSettings(X509Certificate2 certificate, bool suppressValidation)
+            : this(certificate, suppressValidation, true)
+        {
+        }
+
+        public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication)
         {
             Certificate = certificate;
             SuppressValidation = suppressValidation;
+            RequireMutualAuthentication = requireMutualAuthentication;
         }
 
-        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation)
+        /// <summary>
+        /// Validates that the SSL certificate has an accessible private key.
+        /// Should be called before starting the server to ensure proper TLS configuration.
+        /// </summary>
+        /// <exception cref="ConfigurationException">
+        /// Thrown when certificate lacks private key or application cannot access it.
+        /// </exception>
+        public void ValidateCertificate()
+        {
+            if (Certificate == null)
+                return; // No SSL configured
+
+            if (!Certificate.HasPrivateKey)
+            {
+                throw new ConfigurationException(
+                    "SSL certificate does not have a private key. " +
+                    "Ensure certificate is installed with private key permissions.");
+            }
+
+            // Actually test private key access (not just presence)
+            // SslStream supports both RSA and ECDSA keys - check both types
+            try
+            {
+                using (var rsaKey = Certificate.GetRSAPrivateKey())
+                using (var ecdsaKey = Certificate.GetECDsaPrivateKey())
+                {
+                    // Certificate must have either RSA or ECDSA private key accessible
+                    if (rsaKey == null && ecdsaKey == null)
+                    {
+                        throw new ConfigurationException(
+                            "Cannot access private key for SSL certificate. " +
+                            "Certificate has private key but application lacks permissions to access it. " +
+                            "Verify application has permissions to the certificate's private key.");
+                    }
+                    // Successfully accessed private key - validation passed
+                }
+            }
+            catch (System.Security.Cryptography.CryptographicException ex)
+            {
+                throw new ConfigurationException(
+                    "SSL certificate private key exists but cannot be accessed. " +
+                    "Verify application user has permissions to the private key in certificate store. " +
+                    $"Error: {ex.Message}", ex);
+            }
+        }
+
+        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication)
         {
             using var store = new X509Store(storeName, storeLocation);
             store.Open(OpenFlags.ReadOnly);
@@ -356,15 +423,17 @@ namespace Akka.Remote.Transport.DotNetty
 
             Certificate = find[0];
             SuppressValidation = suppressValidation;
+            RequireMutualAuthentication = requireMutualAuthentication;
         }
 
-        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation)
+        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool requireMutualAuthentication)
         {
             if (string.IsNullOrEmpty(certificatePath))
                 throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
 
             Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
             SuppressValidation = suppressValidation;
+            RequireMutualAuthentication = requireMutualAuthentication;
         }
     }
 }

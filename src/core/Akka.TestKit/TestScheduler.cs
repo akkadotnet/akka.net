@@ -82,7 +82,7 @@ namespace Akka.TestKit
             Advance(when.Subtract(_now));
         }
 
-        private void InternalSchedule(TimeSpan? initialDelay, TimeSpan delay, ICanTell receiver, object message, Action action,
+        private void  InternalSchedule(TimeSpan? initialDelay, TimeSpan delay, ICanTell receiver, object message, Action action,
             IActorRef sender, ICancelable cancelable, int deliveryCount = 0)
         {
             var scheduledTime = _now.Add(initialDelay ?? delay).UtcTicks;

@@ -1,3 +1,19 @@
+#### 1.5.51 October 1st, 2025 ####
+
+Akka.NET v1.5.51 is a minor patch containing a remoting bug fix and add required codes to support persistence health check.
+
+* [Remote: Fix DotNetty TLS handshake error handling](https://github.com/akkadotnet/akka.net/pull/7839)
+* [Persistence: Add health check handling code](https://github.com/akkadotnet/akka.net/pull/7842)
+
+2 contributors since release 1.5.50
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 609  | 31   | Aaron Stannard      |
+| 1       | 139  | 5    | Gregorius Soedharmo |
+
+To [see the full set of changes in Akka.NET v1.5.51, click here](https://github.com/akkadotnet/akka.net/milestone/134?closed=1)
+
 #### 1.5.50 September 22nd, 2025 ####
 
 Akka.NET v1.5.50 is a minor patch containing a bug fix.

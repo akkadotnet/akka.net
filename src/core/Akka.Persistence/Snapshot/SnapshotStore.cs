@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,10 +21,11 @@ namespace Akka.Persistence.Snapshot
     /// </summary>
     public abstract class SnapshotStore : ActorBase
     {
-        private readonly TaskContinuationOptions _continuationOptions = TaskContinuationOptions.ExecuteSynchronously;
+        private const TaskContinuationOptions ContinuationOptions = TaskContinuationOptions.ExecuteSynchronously;
         private readonly bool _publish;
         private readonly CircuitBreaker _breaker;
         private readonly ILoggingAdapter _log;
+        private readonly IReadOnlyDictionary<string, object> _defaultHealthCheckTags;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotStore"/> class.
@@ -46,8 +48,28 @@ namespace Akka.Persistence.Snapshot
                 config.GetInt("circuit-breaker.max-failures", 10),
                 config.GetTimeSpan("circuit-breaker.call-timeout", TimeSpan.FromSeconds(10)),
                 config.GetTimeSpan("circuit-breaker.reset-timeout", TimeSpan.FromSeconds(30)));
-            
+
             _log = Context.GetLogger();
+            _defaultHealthCheckTags = new Dictionary<string, object>
+            {
+                { "snapshot-store", Self.Path.Name }
+            };
+        }
+        
+        /// <summary>
+        /// Health check for the snapshot store.
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation token for the health check invocation.</param>
+        /// <returns>A <see cref="PersistenceHealthCheckResult"/> with a health status and optional error message.</returns>
+        public virtual Task<PersistenceHealthCheckResult> CheckHealthAsync(CancellationToken cancellationToken = default)
+        {
+            if(_breaker.IsHalfOpen)
+                return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, 
+                    $"Circuit breaker is half-open, some operations may be failing intermittently.", _breaker.LastCaughtException, _defaultHealthCheckTags));
+            if(_breaker.IsOpen)
+                return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Degraded, 
+                    $"Circuit breaker is open, some operations may be failing intermittently.", _breaker.LastCaughtException,  _defaultHealthCheckTags));
+            return Task.FromResult(new PersistenceHealthCheckResult(PersistenceHealthStatus.Healthy, "OK.", Data: _defaultHealthCheckTags));
         }
 
         /// <inheritdoc/>
@@ -74,7 +96,7 @@ namespace Akka.Persistence.Snapshot
                                 : new LoadSnapshotFailed(t.IsFaulted
                                     ? TryUnwrapException(t.Exception)
                                     : new OperationCanceledException("LoadAsync canceled, possibly due to timing out.")),
-                            _continuationOptions)
+                            ContinuationOptions)
                         .PipeTo(senderPersistentActor);
                     break;
                 
@@ -92,7 +114,7 @@ namespace Akka.Persistence.Snapshot
                                     t.IsFaulted
                                         ? TryUnwrapException(t.Exception)
                                         : new OperationCanceledException("SaveAsync canceled, possibly due to timing out.", TryUnwrapException(t.Exception))),
-                            _continuationOptions)
+                            ContinuationOptions)
                         .PipeTo(self, senderPersistentActor);
                     break;
                 
@@ -138,13 +160,13 @@ namespace Akka.Persistence.Snapshot
                                     t.IsFaulted
                                         ? TryUnwrapException(t.Exception)
                                         : new OperationCanceledException("DeleteAsync canceled, possibly due to timing out.")),
-                            _continuationOptions)
+                            ContinuationOptions)
                         .PipeTo(self, senderPersistentActor)
                         .ContinueWith(_ =>
                         {
                             if (_publish)
                                 eventStream.Publish(message);
-                        }, _continuationOptions);
+                        }, ContinuationOptions);
                     break;
                 }
                 
@@ -180,13 +202,13 @@ namespace Akka.Persistence.Snapshot
                                     t.IsFaulted
                                         ? TryUnwrapException(t.Exception)
                                         : new OperationCanceledException("DeleteAsync canceled, possibly due to timing out.")),
-                            _continuationOptions)
+                            ContinuationOptions)
                         .PipeTo(self, senderPersistentActor)
                         .ContinueWith(_ =>
                         {
                             if (_publish)
                                 eventStream.Publish(message);
-                        }, _continuationOptions);
+                        }, ContinuationOptions);
                     break;
                 }
                 
@@ -211,6 +233,17 @@ namespace Akka.Persistence.Snapshot
                         senderPersistentActor.Tell(message);
                     }
 
+                    break;
+                case CheckSnapshotStoreHealth checkHealth:
+                    var sender = Sender;
+                    CheckHealthAsync(checkHealth.CancellationToken)
+                        // PipeTo implementation no longer requires a closure, but better safe than sorry
+                        .PipeTo(sender, 
+                            success: result => new SnapshotStoreHealthCheckResponse(result),
+                            failure: ex => new SnapshotStoreHealthCheckResponse(
+                                new PersistenceHealthCheckResult(PersistenceHealthStatus.Unhealthy,
+                                    "Encountered exception while performing health check",
+                                    ex, _defaultHealthCheckTags)));
                     break;
                 
                 default:
