@@ -1058,6 +1058,7 @@ namespace Akka.Persistence.Journal
         public MemoryJournal() { }
         protected virtual System.Collections.Generic.Dictionary<string, long> DeletedTo { get; }
         protected virtual System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation> EventLog { get; }
+        protected virtual System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation>> EventsByPersistenceId { get; }
         protected virtual System.Threading.ReaderWriterLockSlim Lock { get; }
         public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Add(Akka.Persistence.IPersistentRepresentation persistent) { }
         public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Delete(string pid, long seqNr) { }
@@ -1183,6 +1184,7 @@ namespace Akka.Persistence.Journal
         public SharedMemoryJournal() { }
         protected override System.Collections.Generic.Dictionary<string, long> DeletedTo { get; }
         protected override System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation> EventLog { get; }
+        protected override System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation>> EventsByPersistenceId { get; }
         protected override System.Threading.ReaderWriterLockSlim Lock { get; }
     }
     public struct SingleEventSequence : Akka.Persistence.Journal.IEventSequence, System.IEquatable<Akka.Persistence.Journal.IEventSequence>
