@@ -1055,16 +1055,18 @@ namespace Akka.Persistence.Journal
     public class MemoryJournal : Akka.Persistence.Journal.AsyncWriteJournal
     {
         public MemoryJournal() { }
-        protected virtual System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Messages { get; }
+        protected virtual System.Collections.Generic.Dictionary<string, long> DeletedTo { get; }
+        protected virtual System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation> EventLog { get; }
+        protected virtual System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation>> EventsByPersistenceId { get; }
+        protected virtual System.Threading.ReaderWriterLockSlim Lock { get; }
         public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Add(Akka.Persistence.IPersistentRepresentation persistent) { }
         public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Delete(string pid, long seqNr) { }
         protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         public long HighestSequenceNr(string pid) { }
-        public System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max) { }
+        public System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> Read(string pid, long from, long to, long max) { }
         public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         protected override bool ReceivePluginInternal(object message) { }
         public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
-        public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Update(string pid, long seqNr, System.Func<Akka.Persistence.IPersistentRepresentation, Akka.Persistence.IPersistentRepresentation> updater) { }
         protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages, System.Threading.CancellationToken cancellationToken) { }
         public sealed class CurrentPersistenceIds : Akka.Event.IDeadLetterSuppression
         {
@@ -1179,7 +1181,10 @@ namespace Akka.Persistence.Journal
     public class SharedMemoryJournal : Akka.Persistence.Journal.MemoryJournal
     {
         public SharedMemoryJournal() { }
-        protected override System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Messages { get; }
+        protected override System.Collections.Generic.Dictionary<string, long> DeletedTo { get; }
+        protected override System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation> EventLog { get; }
+        protected override System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation>> EventsByPersistenceId { get; }
+        protected override System.Threading.ReaderWriterLockSlim Lock { get; }
     }
     public struct SingleEventSequence : Akka.Persistence.Journal.IEventSequence, System.IEquatable<Akka.Persistence.Journal.IEventSequence>
     {
