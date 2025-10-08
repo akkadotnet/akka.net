@@ -120,6 +120,19 @@ namespace Akka.Remote.Transport.DotNetty
 
                 NotifyListener(new Disassociated(DisassociateInfo.Shutdown));
             }
+            // Enhanced TLS exception handling
+            else if (exception is System.Security.Authentication.AuthenticationException
+                     or System.Security.Cryptography.CryptographicException)
+            {
+                // Determine if this is client or server side based on handler type
+                var isClient = this is TcpClientHandler;
+                var detailedError = TlsErrorMessageBuilder.BuildTlsHandshakeErrorMessage(exception, isClient);
+
+                Log.Error(exception, "TLS exception on channel [{0}->{1}](Id={2})\n{3}",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id, detailedError);
+
+                NotifyListener(new Disassociated(DisassociateInfo.Unknown));
+            }
             else
             {
                 base.ExceptionCaught(context, exception);

@@ -127,6 +127,8 @@ namespace Akka.Remote.Tests.Transport
                 var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
 
                 // Trigger TLS handshake failure during association
+                // The enhanced error message will be logged, but we can't easily assert on it
+                // in a multi-system test without using the TestKit's Sys
                 client.ActorSelection(serverEchoPath).Tell("hello");
 
                 // Client should shutdown due to TLS failure

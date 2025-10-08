@@ -432,7 +432,10 @@ namespace Akka.Remote.Transport.DotNetty
 
                                 if (errors != SslPolicyErrors.None)
                                 {
-                                    Log.Warning("Mutual TLS: Client certificate validation failed with errors: {0}", errors);
+                                    // Build detailed error message with certificate details and suggestions
+                                    var cert = certificate as X509Certificate2;
+                                    var detailedError = TlsErrorMessageBuilder.BuildSslPolicyErrorMessage(errors, cert, chain);
+                                    Log.Warning("Mutual TLS: Client certificate validation failed.\n{0}", detailedError);
                                     return false;
                                 }
 
