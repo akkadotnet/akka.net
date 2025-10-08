@@ -142,11 +142,10 @@ namespace Akka.Streams.Tests.Dsl
                 var sub = await c.ExpectSubscriptionAsync();
                 
                 sub.Request(2);
-                await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(600));
-                await c.ExpectNextAsync("tick");
-                await c.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
-                await c.ExpectNextAsync("tick");
-                
+                var ticks = await c.ExpectNextNAsync(2, TimeSpan.FromSeconds(3)).ToListAsync();
+                ticks.Should().HaveCount(2);
+                ticks.Should().OnlyContain(t => t == "tick");
+
                 cancelable.Cancel();
                 await AwaitConditionAsync(() => Task.FromResult(cancelable.IsCancellationRequested));
                 
