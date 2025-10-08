@@ -83,8 +83,14 @@ namespace Akka.Remote.Transport.DotNetty
             if (evt is TlsHandshakeCompletionEvent { IsSuccessful: false } tlsEvent)
             {
                 var ex = tlsEvent.Exception ?? new Exception("TLS handshake failed.");
-                Log.Error(ex, "TLS handshake failed. Channel [{0}->{1}](Id={2})",
-                    context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
+
+                // Determine if this is client or server side based on handler type
+                var isClient = this is TcpClientHandler;
+                var detailedError = TlsErrorMessageBuilder.BuildTlsHandshakeErrorMessage(ex, isClient);
+
+                Log.Error(ex, "TLS handshake failed on channel [{0}->{1}](Id={2})\n{3}",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress,
+                    context.Channel.Id, detailedError);
 
                 // Shutdown the ActorSystem on TLS handshake failure
                 var cs = CoordinatedShutdown.Get(Transport.System);

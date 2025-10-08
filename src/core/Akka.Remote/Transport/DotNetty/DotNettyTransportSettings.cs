@@ -644,7 +644,8 @@ namespace Akka.Remote.Transport.DotNetty
                 message.AppendLine("\nClient-side TLS troubleshooting:");
                 message.AppendLine("  - Verify server certificate is trusted (install root CA if using self-signed)");
                 message.AppendLine("  - Check certificate hostname matches connection target");
-                message.AppendLine("  - For mutual TLS, ensure client certificate is configured and accessible");
+                message.AppendLine("  - For mutual TLS, ensure client certificate is configured, accessible, and trusted by server");
+                message.AppendLine("  - Server and client certificates must have compatible trust chains");
             }
             else
             {
