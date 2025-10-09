@@ -37,6 +37,13 @@ namespace Akka.Persistence.Journal
         private readonly object _lock = new();
         private readonly Dictionary<string, long> _deletedTo = new();
 
+        private ILoggingAdapter _log;
+
+        /// <summary>
+        /// Cached logger instance that's safe to use from any thread after first initialization on actor thread.
+        /// </summary>
+        protected ILoggingAdapter Log => _log ??= Context.GetLogger();
+
         protected virtual List<IPersistentRepresentation> EventLog => _eventLog;
         protected virtual Dictionary<string, List<IPersistentRepresentation>> EventsByPersistenceId => _eventsByPersistenceId;
         protected virtual object Lock => _lock;
@@ -47,16 +54,14 @@ namespace Akka.Persistence.Journal
             var waitStartTime = Stopwatch.GetTimestamp();
             var threadId = Environment.CurrentManagedThreadId;
 
-            // IMPORTANT: Cannot use Context.GetLogger() here - this method is called from async continuation
-            // on thread pool thread (not actor thread) due to ConfigureAwait(false) in ExecuteBatch.
-            // Using System.Diagnostics.Debug.WriteLine instead for diagnostic logging to avoid potential deadlock.
-            System.Diagnostics.Debug.WriteLine($"[DIAG] WriteMessagesAsync called on thread {threadId}, attempting to acquire lock");
+            // Safe to use cached logger from thread pool thread since it was initialized on actor thread
+            Log.Debug("[DIAG] WriteMessagesAsync called on thread {0}, attempting to acquire lock", threadId);
 
             lock (Lock)
             {
                 var lockAcquiredTime = Stopwatch.GetTimestamp();
                 var waitTimeMs = (lockAcquiredTime - waitStartTime) * 1000.0 / Stopwatch.Frequency;
-                System.Diagnostics.Debug.WriteLine($"[DIAG] Lock acquired after {waitTimeMs:F2}ms on thread {threadId}");
+                Log.Debug("[DIAG] Lock acquired after {0:F2}ms on thread {1}", waitTimeMs, threadId);
 
                 foreach (var w in messages)
                 {
@@ -74,13 +79,16 @@ namespace Akka.Persistence.Journal
                         }
                         pidEvents.Add(persistentRepresentation);
 
-                        System.Diagnostics.Debug.WriteLine($"[DIAG] Wrote event for {persistentRepresentation.PersistenceId}, seq {persistentRepresentation.SequenceNr}, total events in log: {EventLog.Count}");
+                        Log.Debug("[DIAG] Wrote event for {0}, seq {1}, total events in log: {2}",
+                            persistentRepresentation.PersistenceId,
+                            persistentRepresentation.SequenceNr,
+                            EventLog.Count);
                     }
                 }
 
                 var lockReleasedTime = Stopwatch.GetTimestamp();
                 var holdTimeMs = (lockReleasedTime - lockAcquiredTime) * 1000.0 / Stopwatch.Frequency;
-                System.Diagnostics.Debug.WriteLine($"[DIAG] Lock released after holding for {holdTimeMs:F2}ms on thread {threadId}");
+                Log.Debug("[DIAG] Lock released after holding for {0:F2}ms on thread {1}", holdTimeMs, threadId);
             }
 
             return Task.FromResult<IImmutableList<Exception>>(null);
@@ -285,8 +293,8 @@ namespace Akka.Persistence.Journal
             var waitStartTime = Stopwatch.GetTimestamp();
             var threadId = Environment.CurrentManagedThreadId;
 
-            // Using System.Diagnostics.Debug.WriteLine to avoid Context access from potentially wrong thread
-            System.Diagnostics.Debug.WriteLine($"[DIAG] ReplayTaggedMessagesAsync starting for tag '{replay.Tag}' on thread {threadId}, attempting to acquire lock");
+            // Safe to use cached logger from thread pool thread since it was initialized on actor thread
+            Log.Debug("[DIAG] ReplayTaggedMessagesAsync starting for tag '{0}' on thread {1}, attempting to acquire lock", replay.Tag, threadId);
 
             IPersistentRepresentation[] snapshot;
             int count;
@@ -295,7 +303,7 @@ namespace Akka.Persistence.Journal
             {
                 var lockAcquiredTime = Stopwatch.GetTimestamp();
                 var waitTimeMs = (lockAcquiredTime - waitStartTime) * 1000.0 / Stopwatch.Frequency;
-                System.Diagnostics.Debug.WriteLine($"[DIAG] ReplayTaggedMessages lock acquired after {waitTimeMs:F2}ms on thread {threadId}");
+                Log.Debug("[DIAG] ReplayTaggedMessages lock acquired after {0:F2}ms on thread {1}", waitTimeMs, threadId);
 
                 // Scan for events with matching tag
                 snapshot = EventLog
@@ -306,7 +314,8 @@ namespace Akka.Persistence.Journal
 
                 count = EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
 
-                System.Diagnostics.Debug.WriteLine($"[DIAG] Found {snapshot.Length} events matching tag '{replay.Tag}', total tagged events: {count}, EventLog size: {EventLog.Count}");
+                Log.Debug("[DIAG] Found {0} events matching tag '{1}', total tagged events: {2}, EventLog size: {3}",
+                    snapshot.Length, replay.Tag, count, EventLog.Count);
             }
 
             // Send messages outside the lock to avoid potential deadlocks
@@ -314,11 +323,12 @@ namespace Akka.Persistence.Journal
             foreach (var persistence in snapshot)
             {
                 replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
-                System.Diagnostics.Debug.WriteLine($"[DIAG] Sent ReplayedTaggedMessage for {persistence.PersistenceId}, seq {persistence.SequenceNr}, offset {replay.FromOffset + index}");
+                Log.Debug("[DIAG] Sent ReplayedTaggedMessage for {0}, seq {1}, offset {2}",
+                    persistence.PersistenceId, persistence.SequenceNr, replay.FromOffset + index);
                 index++;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[DIAG] ReplayTaggedMessagesAsync completed, returning highestSequenceNr={count - 1}");
+            Log.Debug("[DIAG] ReplayTaggedMessagesAsync completed, returning highestSequenceNr={0}", count - 1);
             return Task.FromResult(count - 1);
         }
 
