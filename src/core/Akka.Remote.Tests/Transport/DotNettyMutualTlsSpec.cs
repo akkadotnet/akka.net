@@ -30,7 +30,7 @@ namespace Akka.Remote.Tests.Transport
         {
         }
 
-        private static Config CreateConfig(bool enableSsl, bool requireMutualAuth, bool suppressValidation = false, string certPath = null)
+        private static Config CreateConfig(bool enableSsl, bool requireMutualAuth, bool suppressValidation = false, string certPath = null, bool? validateCertificateHostname = null)
         {
             var config = ConfigurationFactory.ParseString($@"
                 akka {{
@@ -49,10 +49,15 @@ namespace Akka.Remote.Tests.Transport
                 return config;
 
             var escapedPath = (certPath ?? ValidCertPath).Replace("\\", "\\\\");
+            var hostnameValidationConfig = validateCertificateHostname.HasValue
+                ? $"validate-certificate-hostname = {(validateCertificateHostname.Value ? "on" : "off")}"
+                : "";
+
             var ssl = $@"
                 akka.remote.dot-netty.tcp.ssl {{
                     suppress-validation = {(suppressValidation ? "on" : "off")}
                     require-mutual-authentication = {(requireMutualAuth ? "on" : "off")}
+                    {hostnameValidationConfig}
                     certificate {{
                         path = ""{escapedPath}""
                         password = ""{Password}""
@@ -265,6 +270,165 @@ namespace Akka.Remote.Tests.Transport
                 {
                     await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3));
                 });
+            }
+            finally
+            {
+                if (client != null)
+                    Shutdown(client, TimeSpan.FromSeconds(10));
+                if (server != null)
+                    Shutdown(server, TimeSpan.FromSeconds(10));
+            }
+        }
+
+        [Fact(DisplayName = "Different certificates with hostname validation disabled should connect successfully")]
+        public async Task Hostname_validation_disabled_should_allow_different_certificates()
+        {
+            // Per-node certificates should work when hostname validation is disabled
+            // Note: Using suppressValidation=true to bypass chain validation since test certs are self-signed
+            // This isolates the hostname validation logic we're testing
+            ActorSystem server = null;
+            ActorSystem client = null;
+
+            try
+            {
+                // Server with one certificate, hostname validation disabled
+                var serverConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: true,
+                    certPath: ValidCertPath, validateCertificateHostname: false);
+                server = ActorSystem.Create("ServerSystem", serverConfig);
+                InitializeLogger(server, "[SERVER] ");
+
+                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
+                var serverAddr = RARP.For(server).Provider.DefaultAddress;
+                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
+
+                // Client with different certificate, hostname validation disabled
+                var clientConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: true,
+                    certPath: ClientCertPath, validateCertificateHostname: false);
+                client = ActorSystem.Create("ClientSystem", clientConfig);
+                InitializeLogger(client, "[CLIENT] ");
+
+                // Should successfully connect because hostname validation is disabled
+                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
+                Assert.Equal("hello", response);
+            }
+            finally
+            {
+                if (client != null)
+                    Shutdown(client, TimeSpan.FromSeconds(10));
+                if (server != null)
+                    Shutdown(server, TimeSpan.FromSeconds(10));
+            }
+        }
+
+        [Fact(DisplayName = "Different certificates with hostname validation enabled should fail with name mismatch")]
+        public async Task Hostname_validation_enabled_should_reject_different_certificates()
+        {
+            // When hostname validation is enabled, different certificates should fail with RemoteCertificateNameMismatch
+            // Note: Using suppressValidation=true to bypass chain validation and test hostname validation specifically
+            ActorSystem server = null;
+            ActorSystem client = null;
+
+            try
+            {
+                // Server with one certificate, hostname validation enabled
+                var serverConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: true,
+                    certPath: ValidCertPath, validateCertificateHostname: true);
+                server = ActorSystem.Create("ServerSystem", serverConfig);
+                InitializeLogger(server, "[SERVER] ");
+
+                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
+                var serverAddr = RARP.For(server).Provider.DefaultAddress;
+                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
+
+                // Client with different certificate, hostname validation enabled
+                var clientConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: true,
+                    certPath: ClientCertPath, validateCertificateHostname: true);
+                client = ActorSystem.Create("ClientSystem", clientConfig);
+                InitializeLogger(client, "[CLIENT] ");
+
+                // Should fail because hostname in certificate doesn't match connection target (127.0.0.1)
+                await Assert.ThrowsAsync<AskTimeoutException>(async () =>
+                {
+                    await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3));
+                });
+            }
+            finally
+            {
+                if (client != null)
+                    Shutdown(client, TimeSpan.FromSeconds(10));
+                if (server != null)
+                    Shutdown(server, TimeSpan.FromSeconds(10));
+            }
+        }
+
+        [Fact(DisplayName = "Same certificate should connect successfully (typical mutual TLS scenario)")]
+        public async Task Same_certificate_should_connect_in_mutual_tls()
+        {
+            // Typical mutual TLS: Both nodes use the same shared certificate
+            // Hostname validation disabled because we're using IPs/per-node certs
+            ActorSystem server = null;
+            ActorSystem client = null;
+
+            try
+            {
+                // Server with same certificate, hostname validation disabled (typical for mutual TLS)
+                var serverConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: true,
+                    certPath: ValidCertPath, validateCertificateHostname: false);
+                server = ActorSystem.Create("ServerSystem", serverConfig);
+                InitializeLogger(server, "[SERVER] ");
+
+                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
+                var serverAddr = RARP.For(server).Provider.DefaultAddress;
+                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
+
+                // Client with same certificate, hostname validation disabled
+                var clientConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: true,
+                    certPath: ValidCertPath, validateCertificateHostname: false);
+                client = ActorSystem.Create("ClientSystem", clientConfig);
+                InitializeLogger(client, "[CLIENT] ");
+
+                // Should successfully connect - typical mutual TLS scenario
+                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
+                Assert.Equal("hello", response);
+            }
+            finally
+            {
+                if (client != null)
+                    Shutdown(client, TimeSpan.FromSeconds(10));
+                if (server != null)
+                    Shutdown(server, TimeSpan.FromSeconds(10));
+            }
+        }
+
+        [Fact(DisplayName = "Hostname validation unspecified should default to disabled (backward compatibility)")]
+        public async Task Hostname_validation_default_should_be_disabled()
+        {
+            // When validate-certificate-hostname is not specified, it should default to false
+            // Note: Using suppressValidation=true to bypass chain validation and test hostname default behavior
+            ActorSystem server = null;
+            ActorSystem client = null;
+
+            try
+            {
+                // Server without specifying hostname validation (should default to false)
+                var serverConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: true,
+                    certPath: ValidCertPath, validateCertificateHostname: null);
+                server = ActorSystem.Create("ServerSystem", serverConfig);
+                InitializeLogger(server, "[SERVER] ");
+
+                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
+                var serverAddr = RARP.For(server).Provider.DefaultAddress;
+                var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
+
+                // Client with different certificate, hostname validation unspecified (should default to false)
+                var clientConfig = CreateConfig(enableSsl: true, requireMutualAuth: true, suppressValidation: true,
+                    certPath: ClientCertPath, validateCertificateHostname: null);
+                client = ActorSystem.Create("ClientSystem", clientConfig);
+                InitializeLogger(client, "[CLIENT] ");
+
+                // Should successfully connect because hostname validation defaults to disabled
+                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
+                Assert.Equal("hello", response);
             }
             finally
             {
