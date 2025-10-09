@@ -589,11 +589,20 @@ namespace Akka.Persistence.Tests
             await ExpectMsgAsync(ReqAck.Instance);
             await ExpectMsgAsync(ReqAck.Instance);
 
-            var unconfirmed = ReceiveWhile(TimeSpan.FromSeconds(3), x =>
+            // Wait for initial deliveries to ensure messages are timestamped and the redelivery timer has started
+            await probeA.ExpectMsgAsync<Action>(a => a.Id == 1 && a.Payload == "a-1");
+            await probeB.ExpectMsgAsync<Action>(a => a.Id == 2 && a.Payload == "b-1");
+            await probeB.ExpectMsgAsync<Action>(a => a.Id == 3 && a.Payload == "b-2");
+
+            var unconfirmedList = new List<IEnumerable<UnconfirmedDelivery>>();
+            await foreach (var item in ReceiveWhileAsync(TimeSpan.FromSeconds(3), x =>
                 x is UnconfirmedWarning warning
                     ? warning.UnconfirmedDeliveries
-                    : Enumerable.Empty<UnconfirmedDelivery>())
-                .SelectMany(e => e).ToArray();
+                    : Enumerable.Empty<UnconfirmedDelivery>()))
+            {
+                unconfirmedList.Add(item);
+            }
+            var unconfirmed = unconfirmedList.SelectMany(e => e).ToArray();
 
             var resultDestinations = unconfirmed.Select(x => x.Destination).Distinct().ToArray();
             resultDestinations.ShouldOnlyContainInOrder(probeA.Ref.Path, probeB.Ref.Path);
