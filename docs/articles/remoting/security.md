@@ -69,9 +69,9 @@ TLS encryption was introduced in Akka.NET v1.2 with the DotNetty transport. It p
 
 These settings are **independent** and can be configured separately based on your deployment scenario.
 
-### Chain Validation: suppress-validation Setting
+### Chain Validation
 
-Controls whether the certificate chain is validated against trusted root CAs.
+The `suppress-validation` setting controls whether the certificate chain is validated against trusted root CAs.
 
 **Default Certificate Stores Used:**
 
@@ -83,7 +83,9 @@ When `suppress-validation = false`, .NET's `SslStream` validates certificates ag
 
 The validation process follows [RFC 5280 (X.509 PKI Certificate and CRL Profile)](https://datatracker.ietf.org/doc/html/rfc5280) and [RFC 6125 (Service Identity Verification)](https://datatracker.ietf.org/doc/html/rfc6125).
 
-#### Suppress-Validation = False (RECOMMENDED)
+#### Enabled (Recommended)
+
+When `suppress-validation = false` (the default when SSL is enabled):
 
 **What it validates:**
 
@@ -93,11 +95,13 @@ The validation process follows [RFC 5280 (X.509 PKI Certificate and CRL Profile)
 
 **Does NOT validate:**
 
-* Hostname matching (see `validate-certificate-hostname` below)
+* Hostname matching (see Hostname Validation section below)
 
 **When to use:** Always in production and any networked environment.
 
-#### Suppress-Validation = True (USE WITH CAUTION)
+#### Disabled (Use With Caution)
+
+When `suppress-validation = true`:
 
 **What it skips:**
 
@@ -118,13 +122,15 @@ The validation process follows [RFC 5280 (X.509 PKI Certificate and CRL Profile)
 * Any environment processing sensitive data
 * Any multi-tenant environment
 
-### Hostname Validation: validate-certificate-hostname Setting
+### Hostname Validation
 
-**New in v1.5.52+:** Controls whether the certificate CN/SAN must match the target hostname.
+**New in v1.5.52+:** The `validate-certificate-hostname` setting controls whether the certificate CN/SAN must match the target hostname.
 
 **IMPORTANT: This setting defaults to `false` (disabled).** Hostname validation is NOT performed by default to support common Akka.NET deployment patterns like mutual TLS with per-node certificates and IP-based connections.
 
-#### Validate-Certificate-Hostname = False (DEFAULT - Disabled)
+#### Disabled (Default)
+
+When `validate-certificate-hostname = false` (the default):
 
 **What it does:**
 
@@ -138,9 +144,11 @@ The validation process follows [RFC 5280 (X.509 PKI Certificate and CRL Profile)
 * **Dynamic service discovery** - Hostnames change frequently (Kubernetes, auto-scaling)
 * **Internal P2P clusters** - All nodes are trusted and mutually authenticated
 
-**Default is `false` for backward compatibility and to support common Akka.NET cluster patterns.**
+**This is the default** for backward compatibility and to support common Akka.NET cluster patterns.
 
-#### Validate-Certificate-Hostname = True
+#### Enabled
+
+When `validate-certificate-hostname = true`:
 
 **What it validates:**
 
