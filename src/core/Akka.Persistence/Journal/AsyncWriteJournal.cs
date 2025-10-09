@@ -391,8 +391,10 @@ namespace Akka.Persistence.Journal
                 // try in case AsyncWriteMessages throws
                 try
                 {
+                    // NOTE: Not using ConfigureAwait(false) to ensure continuation runs on actor's dispatcher thread
+                    // This ensures proper synchronization context and avoids timing issues with lock contention
                     var writeResult =
-                        await _breaker.WithCircuitBreaker((prepared, awj: this), (state, ct) => state.awj.WriteMessagesAsync(state.prepared, ct)).ConfigureAwait(false);
+                        await _breaker.WithCircuitBreaker((prepared, awj: this), (state, ct) => state.awj.WriteMessagesAsync(state.prepared, ct));
 
                     ProcessResults(writeResult, atomicWriteCount, message, _resequencer, resequencerCounter, self);
                 }
