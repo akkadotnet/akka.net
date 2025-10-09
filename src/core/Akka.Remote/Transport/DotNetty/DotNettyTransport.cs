@@ -352,42 +352,39 @@ namespace Akka.Remote.Transport.DotNetty
             if (Settings.EnableSsl)
             {
                 var certificate = Settings.Ssl.Certificate;
-                var host = certificate.GetNameInfo(X509NameType.DnsName, false);
+                // Use the remote address host for TLS validation, not the client's certificate name
+                var host = remoteAddress.Host;
 
                 IChannelHandler tlsHandler;
 
-                if (Settings.Ssl.SuppressValidation)
+                // Build validation callback using type-safe factory methods
+                // These settings are independent and can be combined:
+                // - suppressValidation: Controls chain/CA validation (for self-signed certs)
+                // - validateCertificateHostname: Controls hostname matching (for per-node certs, IPs, etc.)
+                var chainValidation = Settings.Ssl.SuppressValidation
+                    ? ChainValidationMode.IgnoreChainErrors
+                    : ChainValidationMode.ValidateChain;
+
+                var hostnameValidation = Settings.Ssl.ValidateCertificateHostname
+                    ? HostnameValidationMode.ValidateHostname
+                    : HostnameValidationMode.IgnoreHostnameMismatch;
+
+                var validationCallback = TlsValidationCallbacks.Create(chainValidation, hostnameValidation, Log);
+
+                if (Settings.Ssl.RequireMutualAuthentication)
                 {
-                    // Test/dev mode: Accept any server certificate
-                    if (Settings.Ssl.RequireMutualAuthentication)
-                    {
-                        // Provide client cert for mutual TLS
-                        tlsHandler = new TlsHandler(
-                            stream => new SslStream(stream, true, (_, _, _, _) => true,
-                                (_, _, _, _, _) => certificate),
-                            new ClientTlsSettings(host));
-                    }
-                    else
-                    {
-                        // No client cert needed
-                        tlsHandler = new TlsHandler(
-                            stream => new SslStream(stream, true, (_, _, _, _) => true),
-                            new ClientTlsSettings(host));
-                    }
+                    // Provide client cert for mutual TLS
+                    tlsHandler = new TlsHandler(
+                        stream => new SslStream(stream, true, validationCallback,
+                            (_, _, _, _, _) => certificate),
+                        new ClientTlsSettings(host));
                 }
                 else
                 {
-                    // Production mode: Validate server certificate
-                    if (Settings.Ssl.RequireMutualAuthentication)
-                    {
-                        // Provide client cert for mutual TLS
-                        tlsHandler = TlsHandler.Client(host, certificate);
-                    }
-                    else
-                    {
-                        // Standard TLS: Only validate server certificate, no client cert
-                        tlsHandler = TlsHandler.Client(host);
-                    }
+                    // Standard TLS: Only validate server certificate, no client cert
+                    tlsHandler = new TlsHandler(
+                        stream => new SslStream(stream, true, validationCallback),
+                        new ClientTlsSettings(host));
                 }
 
                 channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
@@ -420,7 +417,12 @@ namespace Akka.Remote.Transport.DotNetty
                             {
                                 if (certificate == null)
                                 {
-                                    Log.Warning("Mutual TLS: Client connection rejected - no client certificate provided");
+                                    Log.Error("Mutual TLS authentication failed: Client did not provide a certificate.\n" +
+                                             "Server requires mutual TLS (require-mutual-authentication = true).\n" +
+                                             "Suggestions:\n" +
+                                             "  - Ensure client has mutual TLS enabled (require-mutual-authentication = true)\n" +
+                                             "  - Verify client certificate is properly configured and accessible\n" +
+                                             "  - Check client-side logs for certificate loading errors");
                                     return false;
                                 }
 
@@ -432,7 +434,10 @@ namespace Akka.Remote.Transport.DotNetty
 
                                 if (errors != SslPolicyErrors.None)
                                 {
-                                    Log.Warning("Mutual TLS: Client certificate validation failed with errors: {0}", errors);
+                                    // Build detailed error message with certificate details and suggestions
+                                    var cert = certificate as X509Certificate2;
+                                    var detailedError = TlsErrorMessageBuilder.BuildSslPolicyErrorMessage(errors, cert, chain);
+                                    Log.Error("Mutual TLS authentication failed: Client certificate validation error.\n{0}", detailedError);
                                     return false;
                                 }
 

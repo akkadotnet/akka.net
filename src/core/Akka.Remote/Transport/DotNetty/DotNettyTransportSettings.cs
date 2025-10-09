@@ -8,10 +8,12 @@
 using System;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;
 
@@ -270,6 +272,7 @@ namespace Akka.Remote.Transport.DotNetty
                 throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.tcp.ssl`)");
 
             var requireMutualAuth = config.GetBoolean("require-mutual-authentication", true);
+            var validateCertificateHostname = config.GetBoolean("validate-certificate-hostname", false);
 
             if (config.GetBoolean("certificate.use-thumprint-over-file")
                 || config.GetBoolean("certificate.use-thumbprint-over-file"))
@@ -283,7 +286,8 @@ namespace Akka.Remote.Transport.DotNetty
                     storeName: config.GetString("certificate.store-name"),
                     storeLocation: ParseStoreLocationName(config.GetString("certificate.store-location")),
                     suppressValidation: config.GetBoolean("suppress-validation"),
-                    requireMutualAuthentication: requireMutualAuth);
+                    requireMutualAuthentication: requireMutualAuth,
+                    validateCertificateHostname: validateCertificateHostname);
             }
 
             var flagsRaw = config.GetStringList("certificate.flags", new string[] { });
@@ -294,7 +298,8 @@ namespace Akka.Remote.Transport.DotNetty
                 certificatePassword: config.GetString("certificate.password"),
                 flags: flags,
                 suppressValidation: config.GetBoolean("suppress-validation"),
-                requireMutualAuthentication: requireMutualAuth);
+                requireMutualAuthentication: requireMutualAuth,
+                validateCertificateHostname: validateCertificateHostname);
 
         }
 
@@ -341,26 +346,44 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly bool RequireMutualAuthentication;
 
+        /// <summary>
+        /// When true, enables traditional TLS hostname validation (certificate CN/SAN must match target hostname).
+        /// When false, only validates certificate chain against CA, ignores hostname mismatches.
+        /// Default is false for backward compatibility and to support mutual TLS scenarios with per-node certificates,
+        /// IP-based connections, or dynamic service discovery.
+        /// </summary>
+        public readonly bool ValidateCertificateHostname;
+
         private SslSettings()
         {
             Certificate = null;
             SuppressValidation = false;
             RequireMutualAuthentication = false;
+            ValidateCertificateHostname = false;
         }
 
         /// <summary>
-        /// Constructor for backward compatibility - defaults to RequireMutualAuthentication = true
+        /// Constructor for backward compatibility - defaults to RequireMutualAuthentication = true, ValidateCertificateHostname = false
         /// </summary>
         public SslSettings(X509Certificate2 certificate, bool suppressValidation)
-            : this(certificate, suppressValidation, true)
+            : this(certificate, suppressValidation, requireMutualAuthentication: true, validateCertificateHostname: false)
         {
         }
 
+        /// <summary>
+        /// Constructor for backward compatibility - defaults to ValidateCertificateHostname = false
+        /// </summary>
         public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication)
+            : this(certificate, suppressValidation, requireMutualAuthentication, validateCertificateHostname: false)
+        {
+        }
+
+        public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
         {
             Certificate = certificate;
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
+            ValidateCertificateHostname = validateCertificateHostname;
         }
 
         /// <summary>
@@ -409,7 +432,7 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
 
-        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication)
+        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
         {
             using var store = new X509Store(storeName, storeLocation);
             store.Open(OpenFlags.ReadOnly);
@@ -424,9 +447,10 @@ namespace Akka.Remote.Transport.DotNetty
             Certificate = find[0];
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
+            ValidateCertificateHostname = validateCertificateHostname;
         }
 
-        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool requireMutualAuthentication)
+        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
         {
             if (string.IsNullOrEmpty(certificatePath))
                 throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
@@ -434,6 +458,360 @@ namespace Akka.Remote.Transport.DotNetty
             Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
+            ValidateCertificateHostname = validateCertificateHostname;
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Specifies how certificate chain validation should be performed during TLS handshake.
+    /// Controls whether to validate certificates against the system CA trust store.
+    /// </summary>
+    internal enum ChainValidationMode
+    {
+        /// <summary>
+        /// Validate certificate chain against system CA trust store.
+        /// Use for production with CA-signed certificates.
+        /// Certificates must chain to a trusted root CA.
+        /// </summary>
+        ValidateChain,
+
+        /// <summary>
+        /// Ignore certificate chain validation errors.
+        /// Use for development/testing with self-signed certificates.
+        /// WARNING: Allows untrusted certificates - use only in non-production environments.
+        /// </summary>
+        IgnoreChainErrors
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Specifies how hostname validation should be performed during TLS handshake.
+    /// Controls whether the certificate CN/SAN must match the connection target hostname.
+    /// </summary>
+    internal enum HostnameValidationMode
+    {
+        /// <summary>
+        /// Validate that certificate CN/SAN matches target hostname.
+        /// Use for traditional client-server TLS with DNS-based connections.
+        /// Prevents man-in-the-middle attacks by ensuring certificate matches expected server.
+        /// </summary>
+        ValidateHostname,
+
+        /// <summary>
+        /// Ignore hostname mismatch errors.
+        /// Use for: Mutual TLS with per-node certificates, IP-based connections, dynamic service discovery.
+        /// Still validates certificate chain (unless IgnoreChainErrors is also set).
+        /// </summary>
+        IgnoreHostnameMismatch
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Factory for creating TLS certificate validation callbacks with different security policies.
+    /// Provides type-safe, self-documenting methods for configuring certificate validation behavior.
+    /// </summary>
+    internal static class TlsValidationCallbacks
+    {
+        /// <summary>
+        /// Creates a configurable validation callback that filters SSL policy errors based on validation modes.
+        /// </summary>
+        /// <param name="chainValidation">Controls certificate chain/CA validation</param>
+        /// <param name="hostnameValidation">Controls hostname matching validation</param>
+        /// <param name="log">Logger for validation failures</param>
+        /// <returns>Validation callback configured according to parameters</returns>
+        public static RemoteCertificateValidationCallback Create(
+            ChainValidationMode chainValidation,
+            HostnameValidationMode hostnameValidation,
+            ILoggingAdapter log)
+        {
+            return (sender, cert, chain, errors) =>
+            {
+                var filteredErrors = errors;
+
+                // Apply chain validation filter
+                if (chainValidation == ChainValidationMode.IgnoreChainErrors)
+                {
+                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateChainErrors;
+                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateNotAvailable;
+                }
+
+                // Apply hostname validation filter
+                if (hostnameValidation == HostnameValidationMode.IgnoreHostnameMismatch)
+                {
+                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateNameMismatch;
+                }
+
+                if (filteredErrors == SslPolicyErrors.None)
+                    return true; // Certificate is valid after applying configured filters
+
+                // Log detailed error for validation failures
+                var cert509 = cert as X509Certificate2;
+                var detailedError = TlsErrorMessageBuilder.BuildSslPolicyErrorMessage(
+                    filteredErrors, cert509, chain);
+                var mode = chainValidation == ChainValidationMode.IgnoreChainErrors ? "suppress-validation enabled" :
+                           hostnameValidation == HostnameValidationMode.ValidateHostname ? "full validation" : "hostname validation disabled";
+                log.Error("TLS certificate validation failed ({0}):\n{1}", mode, detailedError);
+                return false;
+            };
+        }
+
+        /// <summary>
+        /// Creates validation callback for full TLS validation (chain + hostname).
+        /// Use for traditional client-server TLS with CA-signed certificates and DNS names.
+        /// </summary>
+        public static RemoteCertificateValidationCallback ValidateFull(ILoggingAdapter log)
+            => Create(ChainValidationMode.ValidateChain, HostnameValidationMode.ValidateHostname, log);
+
+        /// <summary>
+        /// Creates validation callback that validates chain but ignores hostname mismatches.
+        /// Use for: Mutual TLS with per-node certificates, IP-based connections, dynamic service discovery.
+        /// </summary>
+        public static RemoteCertificateValidationCallback ValidateChainOnly(ILoggingAdapter log)
+            => Create(ChainValidationMode.ValidateChain, HostnameValidationMode.IgnoreHostnameMismatch, log);
+
+        /// <summary>
+        /// Creates validation callback that ignores chain errors but validates hostname.
+        /// Use for: Testing with self-signed certificates where hostname should still match.
+        /// </summary>
+        public static RemoteCertificateValidationCallback ValidateHostnameOnly(ILoggingAdapter log)
+            => Create(ChainValidationMode.IgnoreChainErrors, HostnameValidationMode.ValidateHostname, log);
+
+        /// <summary>
+        /// Creates validation callback that accepts all certificates without validation.
+        /// FOR TESTING ONLY. WARNING: Disables all security checks including chain, hostname, and expiration.
+        /// </summary>
+        public static RemoteCertificateValidationCallback AcceptAll()
+            => (_, _, _, _) => true;
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Helper class for building human-readable error messages for TLS/SSL certificate validation failures.
+    /// Provides detailed diagnostics and actionable suggestions for common certificate issues.
+    /// </summary>
+    internal static class TlsErrorMessageBuilder
+    {
+        /// <summary>
+        /// Builds a detailed error message for SSL policy errors encountered during TLS handshake.
+        /// </summary>
+        /// <param name="errors">The SSL policy errors from certificate validation callback</param>
+        /// <param name="certificate">The certificate that failed validation (may be null)</param>
+        /// <param name="chain">The X509 chain used for validation (may be null)</param>
+        /// <returns>A human-readable error message with diagnostics and suggestions</returns>
+        public static string BuildSslPolicyErrorMessage(
+            System.Net.Security.SslPolicyErrors errors,
+            X509Certificate2? certificate,
+            X509Chain? chain)
+        {
+            var message = new System.Text.StringBuilder();
+            message.AppendLine("TLS/SSL certificate validation failed:");
+
+            // Interpret SslPolicyErrors flags
+            if ((errors & System.Net.Security.SslPolicyErrors.None) != System.Net.Security.SslPolicyErrors.None)
+            {
+                if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable) != 0)
+                {
+                    message.AppendLine("  - Remote certificate not available");
+                    message.AppendLine("    Suggestion: Ensure the remote endpoint provides a valid TLS certificate");
+                }
+
+                if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch) != 0)
+                {
+                    message.AppendLine("  - Remote certificate name mismatch");
+                    message.AppendLine("    Suggestion: Verify certificate CN/SAN matches the target hostname");
+                    if (certificate != null)
+                    {
+                        var cn = certificate.GetNameInfo(X509NameType.DnsName, false);
+                        message.AppendLine($"    Certificate CN: {cn}");
+                    }
+                }
+
+                if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors) != 0)
+                {
+                    message.AppendLine("  - Certificate chain validation errors");
+
+                    if (chain != null && chain.ChainStatus.Length > 0)
+                    {
+                        var chainStatusMsg = BuildX509ChainStatusMessage(chain.ChainStatus);
+                        message.Append(chainStatusMsg);
+                    }
+                    else
+                    {
+                        message.AppendLine("    Suggestion: Certificate chain cannot be validated. " +
+                                          "Install required intermediate CA certificates.");
+                    }
+                }
+            }
+
+            // Add certificate details if available
+            if (certificate != null)
+            {
+                message.AppendLine($"\nCertificate Details:");
+                message.AppendLine($"  Subject: {certificate.Subject}");
+                message.AppendLine($"  Issuer: {certificate.Issuer}");
+                message.AppendLine($"  Thumbprint: {certificate.Thumbprint}");
+                message.AppendLine($"  Valid From: {certificate.NotBefore:yyyy-MM-dd HH:mm:ss}");
+                message.AppendLine($"  Valid To: {certificate.NotAfter:yyyy-MM-dd HH:mm:ss}");
+                message.AppendLine($"  Has Private Key: {certificate.HasPrivateKey}");
+            }
+
+            return message.ToString().TrimEnd();
+        }
+
+        /// <summary>
+        /// Builds a detailed message explaining X509 chain status errors.
+        /// </summary>
+        /// <param name="chainStatus">Array of chain status from X509Chain validation</param>
+        /// <returns>Human-readable explanation of chain errors with suggestions</returns>
+        public static string BuildX509ChainStatusMessage(X509ChainStatus[] chainStatus)
+        {
+            var message = new System.Text.StringBuilder();
+
+            foreach (var status in chainStatus)
+            {
+                // Skip "NoError" status
+                if (status.Status == X509ChainStatusFlags.NoError)
+                    continue;
+
+                message.AppendLine($"    - {status.Status}: {status.StatusInformation}");
+
+                // Add specific suggestions based on chain status
+                var suggestion = GetChainStatusSuggestion(status.Status);
+                if (!string.IsNullOrEmpty(suggestion))
+                {
+                    message.AppendLine($"      Suggestion: {suggestion}");
+                }
+            }
+
+            return message.ToString();
+        }
+
+        /// <summary>
+        /// Maps X509ChainStatusFlags to actionable suggestions for fixing the issue.
+        /// </summary>
+        private static string GetChainStatusSuggestion(X509ChainStatusFlags status)
+        {
+            return status switch
+            {
+                X509ChainStatusFlags.NotTimeValid =>
+                    "Certificate has expired or is not yet valid. Check system clock and certificate validity period.",
+
+                X509ChainStatusFlags.NotTimeNested =>
+                    "Certificate validity period does not nest correctly within the chain.",
+
+                X509ChainStatusFlags.Revoked =>
+                    "Certificate has been revoked. Contact certificate issuer.",
+
+                X509ChainStatusFlags.NotSignatureValid =>
+                    "Certificate signature is invalid. Certificate may be corrupted.",
+
+                X509ChainStatusFlags.NotValidForUsage =>
+                    "Certificate is not valid for the intended usage. Check Extended Key Usage (EKU) extensions.",
+
+                X509ChainStatusFlags.UntrustedRoot =>
+                    "Certificate chain terminates in an untrusted root. Install root CA certificate in Trusted Root Certification Authorities store.",
+
+                X509ChainStatusFlags.RevocationStatusUnknown =>
+                    "Revocation status cannot be determined. Check network connectivity to CRL/OCSP endpoints.",
+
+                X509ChainStatusFlags.Cyclic =>
+                    "Certificate chain contains a cycle. Certificate configuration is invalid.",
+
+                X509ChainStatusFlags.InvalidExtension =>
+                    "Certificate contains an invalid extension.",
+
+                X509ChainStatusFlags.InvalidPolicyConstraints =>
+                    "Certificate policy constraints are invalid.",
+
+                X509ChainStatusFlags.InvalidBasicConstraints =>
+                    "Basic constraints are invalid. CA certificate may be missing CA:TRUE constraint.",
+
+                X509ChainStatusFlags.InvalidNameConstraints =>
+                    "Name constraints in certificate are invalid.",
+
+                X509ChainStatusFlags.HasNotSupportedNameConstraint =>
+                    "Certificate contains name constraints that are not supported.",
+
+                X509ChainStatusFlags.HasNotDefinedNameConstraint =>
+                    "Certificate has undefined name constraints.",
+
+                X509ChainStatusFlags.HasNotPermittedNameConstraint =>
+                    "Certificate name violates name constraints.",
+
+                X509ChainStatusFlags.HasExcludedNameConstraint =>
+                    "Certificate name is explicitly excluded by name constraints.",
+
+                X509ChainStatusFlags.PartialChain =>
+                    "Certificate chain is incomplete. Install all intermediate CA certificates from your certificate provider.",
+
+                X509ChainStatusFlags.CtlNotTimeValid =>
+                    "Certificate Trust List (CTL) is not time-valid.",
+
+                X509ChainStatusFlags.CtlNotSignatureValid =>
+                    "Certificate Trust List (CTL) signature is invalid.",
+
+                X509ChainStatusFlags.CtlNotValidForUsage =>
+                    "Certificate Trust List (CTL) is not valid for this usage.",
+
+                X509ChainStatusFlags.OfflineRevocation =>
+                    "Revocation checking is offline. Enable network access or disable revocation checking for testing.",
+
+                X509ChainStatusFlags.NoIssuanceChainPolicy =>
+                    "Certificate does not have a valid issuance policy.",
+
+                X509ChainStatusFlags.ExplicitDistrust =>
+                    "Certificate is explicitly distrusted. Remove from Distrusted Certificates store if this is incorrect.",
+
+                X509ChainStatusFlags.HasNotSupportedCriticalExtension =>
+                    "Certificate has an unsupported critical extension.",
+
+                X509ChainStatusFlags.HasWeakSignature =>
+                    "Certificate uses a weak signature algorithm (e.g., SHA1). Use SHA256 or stronger.",
+
+                _ => string.Empty
+            };
+        }
+
+        /// <summary>
+        /// Builds an error message for TLS handshake exceptions.
+        /// Attempts to extract meaningful information from CryptographicException and AuthenticationException.
+        /// </summary>
+        public static string BuildTlsHandshakeErrorMessage(Exception exception, bool isClient)
+        {
+            var role = isClient ? "Client" : "Server";
+            var message = new System.Text.StringBuilder();
+
+            message.AppendLine($"TLS handshake failed ({role} side):");
+            message.AppendLine($"  Error: {exception.Message}");
+
+            // Provide role-specific suggestions
+            if (isClient)
+            {
+                message.AppendLine("\nClient-side TLS troubleshooting:");
+                message.AppendLine("  - Verify server certificate is trusted (install root CA if using self-signed)");
+                message.AppendLine("  - Check certificate hostname matches connection target");
+                message.AppendLine("  - For mutual TLS, ensure client certificate is configured, accessible, and trusted by server");
+                message.AppendLine("  - Server and client certificates must have compatible trust chains");
+            }
+            else
+            {
+                message.AppendLine("\nServer-side TLS troubleshooting:");
+                message.AppendLine("  - Verify server certificate has accessible private key");
+                message.AppendLine("  - For mutual TLS, check if client is providing a certificate");
+                message.AppendLine("  - Review certificate validation requirements (suppress-validation for testing)");
+            }
+
+            if (exception.InnerException != null)
+            {
+                message.AppendLine($"\nInner Exception: {exception.InnerException.Message}");
+            }
+
+            return message.ToString().TrimEnd();
         }
     }
 }

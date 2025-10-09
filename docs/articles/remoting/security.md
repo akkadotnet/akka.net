@@ -18,19 +18,19 @@ title: Network Security
 
 For many deployments, TLS is not strictly necessary:
 
-* ✅ **Internal networks only** - If your cluster runs entirely within a trusted network boundary
-* ✅ **Development/staging environments** - Where data sensitivity is low
-* ✅ **Kubernetes with network policies** - Where the container network provides isolation
+* **Internal networks only** - If your cluster runs entirely within a trusted network boundary
+* **Development/staging environments** - Where data sensitivity is low
+* **Kubernetes with network policies** - Where the container network provides isolation
 
 ### When TLS Is Recommended
 
 You should enable TLS when:
 
-* 🔒 **Crossing network boundaries** - Communication between data centers or cloud regions
-* 🔒 **Public internet transit** - Any traffic over public networks (even with VPN)
-* 🔒 **Compliance requirements** - PCI-DSS, HIPAA, or other regulatory needs
-* 🔒 **Defense-in-depth** - Additional security layer even on private networks
-* 🔒 **Multi-tenant environments** - Shared infrastructure with other applications
+* **Crossing network boundaries** - Communication between data centers or cloud regions
+* **Public internet transit** - Any traffic over public networks (even with VPN)
+* **Compliance requirements** - PCI-DSS, HIPAA, or other regulatory needs
+* **Defense-in-depth** - Additional security layer even on private networks
+* **Multi-tenant environments** - Shared infrastructure with other applications
 
 ## Security Layers
 
@@ -46,42 +46,68 @@ You should use **all three layers** in production for defense-in-depth security.
 
 TLS encryption was introduced in Akka.NET v1.2 with the DotNetty transport. It provides:
 
-✅ **What TLS Protects Against:**
+**What TLS Protects Against:**
 
 * Eavesdropping (all messages are encrypted)
 * Man-in-the-middle attacks (certificates verify server identity)
 * Network packet injection (cryptographic integrity checks)
 
-❌ **What TLS Does NOT Protect Against:**
+**What TLS Does NOT Protect Against:**
 
 * Misconfigured certificates (see startup validation below)
 * Compromised private keys (rotate certificates regularly)
 * Application-level authorization (implement this separately)
 
-## Certificate Validation: Suppress-Validation Setting
+## Certificate Validation: Independent Control
 
-The `suppress-validation` setting controls whether certificate validation is enforced during TLS handshakes.
+**New in Akka.NET v1.5.52+:** Certificate validation is now split into two independent settings for greater flexibility.
 
-### Suppress-Validation = False (RECOMMENDED)
+### Two Types of Validation
 
-**What it does:**
+1. **Chain Validation** (`suppress-validation`) - Validates certificate against trusted CAs
+2. **Hostname Validation** (`validate-certificate-hostname`) - Validates certificate CN/SAN matches target hostname
 
-* Validates certificate chain against trusted root CAs
-* Checks certificate expiration dates
-* Verifies certificate hostname matches connection hostname
-* Ensures certificate hasn't been revoked (if CRL/OCSP configured)
+These settings are **independent** and can be configured separately based on your deployment scenario.
+
+### Chain Validation
+
+The `suppress-validation` setting controls whether the certificate chain is validated against trusted root CAs.
+
+**Default Certificate Stores Used:**
+
+When `suppress-validation = false`, .NET's `SslStream` validates certificates against the operating system's trusted root certificate stores:
+
+* **Windows**: Uses the [Windows Certificate Store](https://learn.microsoft.com/en-us/windows-hardware/drivers/install/local-machine-and-current-user-certificate-stores) - specifically the `Trusted Root Certification Authorities` store
+* **Linux**: Uses the system's CA bundle (typically `/etc/ssl/certs/ca-certificates.crt` or `/etc/pki/tls/certs/ca-bundle.crt`)
+* **macOS**: Uses the Keychain Access Trusted Certificates
+
+The validation process follows [RFC 5280 (X.509 PKI Certificate and CRL Profile)](https://datatracker.ietf.org/doc/html/rfc5280) and [RFC 6125 (Service Identity Verification)](https://datatracker.ietf.org/doc/html/rfc6125).
+
+#### Enabled (Recommended)
+
+When `suppress-validation = false` (the default when SSL is enabled):
+
+**What it validates:**
+
+* Certificate chain against system trusted root CAs
+* Certificate expiration dates
+* Certificate hasn't been revoked (if CRL/OCSP configured)
+
+**Does NOT validate:**
+
+* Hostname matching (see Hostname Validation section below)
 
 **When to use:** Always in production and any networked environment.
 
-### Suppress-Validation = True (USE WITH CAUTION)
+#### Disabled (Use With Caution)
 
-**What it does:**
+When `suppress-validation = true`:
 
-* Accepts ANY certificate, including:
-  * Self-signed certificates
-  * Expired certificates
-  * Certificates from unknown/untrusted CAs
-  * Certificates with hostname mismatches
+**What it skips:**
+
+* Certificate chain validation (accepts self-signed certificates)
+* Expiration date checks
+* CA trust checks
 
 **When it's acceptable:**
 
@@ -95,6 +121,55 @@ The `suppress-validation` setting controls whether certificate validation is enf
 * Any network-accessible environment (dev, staging, QA)
 * Any environment processing sensitive data
 * Any multi-tenant environment
+
+### Hostname Validation
+
+**New in v1.5.52+:** The `validate-certificate-hostname` setting controls whether the certificate CN/SAN must match the target hostname.
+
+**IMPORTANT: This setting defaults to `false` (disabled).** Hostname validation is NOT performed by default to support common Akka.NET deployment patterns like mutual TLS with per-node certificates and IP-based connections.
+
+#### Disabled (Default)
+
+When `validate-certificate-hostname = false` (the default):
+
+**What it does:**
+
+* Skips hostname validation
+* Only validates certificate chain (if `suppress-validation = false`)
+
+**When to use:**
+
+* **Mutual TLS with per-node certificates** - Each node has its own unique certificate
+* **IP-based connections** - Connecting via IP addresses instead of DNS names
+* **Dynamic service discovery** - Hostnames change frequently (Kubernetes, auto-scaling)
+* **Internal P2P clusters** - All nodes are trusted and mutually authenticated
+
+**This is the default** for backward compatibility and to support common Akka.NET cluster patterns.
+
+#### Enabled
+
+When `validate-certificate-hostname = true`:
+
+**What it validates:**
+
+* Certificate CN (Common Name) or SAN (Subject Alternative Name) must match the target hostname
+* Traditional TLS hostname validation as used in HTTPS
+
+**When to use:**
+
+* **Client-server architecture** - Clients connecting to known server hostnames
+* **Shared certificates** - Same certificate used across multiple nodes
+* **DNS-based connections** - Connecting via stable DNS names
+* **Maximum security** - Traditional browser-like TLS validation
+
+### Validation Mode Combinations
+
+| suppress-validation | validate-certificate-hostname | Use Case |
+|---------------------|-------------------------------|----------|
+| `false` | `false` | **Common**: Mutual TLS clusters with per-node certs |
+| `false` | `true` | **Traditional**: Client-server TLS with DNS names |
+| `true` | `false` | **Dev/Test**: Self-signed certs, no hostname checks |
+| `true` | `true` | **Test Only**: Self-signed certs WITH hostname validation |
 
 ### Self-Signed Certificates: The Right Way
 
@@ -317,14 +392,14 @@ For production with Windows Certificate Store:
 
 ### When to Enable Mutual TLS
 
-**✅ Enable mutual TLS when:**
+**Enable mutual TLS when:**
 
 * All nodes are under your control (typical Akka.NET cluster)
 * You need defense-in-depth security
 * Compliance requires bidirectional authentication (PCI-DSS, HIPAA, etc.)
 * You want to prevent misconfigured nodes from joining
 
-**⚠️ Disable mutual TLS when:**
+**Disable mutual TLS when:**
 
 * Clients cannot provide certificates (rare in Akka.NET)
 * You're using client-server architecture where clients are untrusted
@@ -349,7 +424,7 @@ For production with Windows Certificate Store:
 
 ## Configuration Examples and Security Analysis
 
-### ❌ INSECURE: Development/Testing Only
+### INSECURE: Development/Testing Only
 
 [!code-csharp[DevTlsConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=DevTlsConfig)]
 
@@ -361,7 +436,7 @@ For production with Windows Certificate Store:
 
 **When to use:** Local development only, never in any environment accessible from network.
 
-### ✅ GOOD: Standard TLS for Production
+### GOOD: Standard TLS for Production
 
 [!code-csharp[StandardTlsConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=StandardTlsConfig)]
 
@@ -372,14 +447,15 @@ For production with Windows Certificate Store:
 * Startup validation prevents misconfigurations
 * Suitable when mutual TLS is not feasible
 
-### ✅ BEST: Mutual TLS for Maximum Security
+### BEST: Mutual TLS for Maximum Security
 
 ```hocon
 akka.remote.dot-netty.tcp {
   enable-ssl = true
   ssl {
-    suppress-validation = false  # ✓ Validates all certificates (default when SSL enabled)
-    require-mutual-authentication = true  # ✓ Requires client certs (default when SSL enabled since v1.5.52)
+    suppress-validation = false  # Validates all certificates (default when SSL enabled)
+    require-mutual-authentication = true  # Requires client certs (default when SSL enabled since v1.5.52)
+    validate-certificate-hostname = false  # DEFAULT: Hostname validation disabled (suitable for P2P with per-node certs)
     certificate {
       use-thumbprint-over-file = true
       thumbprint = "2531c78c51e5041d02564697a88af8bc7a7ce3e3"
@@ -392,6 +468,11 @@ akka.remote.dot-netty.tcp {
 
 **Note:** When SSL is enabled, both `suppress-validation = false` and `require-mutual-authentication = true` are the secure defaults (since v1.5.52), so you only need to explicitly set them if overriding.
 
+**About hostname validation:**
+
+* Set `validate-certificate-hostname = false` for peer-to-peer clusters with per-node certificates (default)
+* Set `validate-certificate-hostname = true` for client-server architectures with DNS-based connections
+
 **Security level:** Maximum
 
 * Both client and server prove identity
@@ -399,6 +480,34 @@ akka.remote.dot-netty.tcp {
 * Prevents misconfigured nodes from connecting
 * Defense-in-depth security
 * Recommended for all production deployments
+
+### Configuration with Hostname Validation Enabled
+
+For client-server architectures where all nodes connect via DNS names and share the same certificate:
+
+```hocon
+akka.remote.dot-netty.tcp {
+  enable-ssl = true
+  ssl {
+    suppress-validation = false
+    require-mutual-authentication = true
+    validate-certificate-hostname = true  # Enable traditional TLS hostname validation
+    certificate {
+      use-thumbprint-over-file = true
+      thumbprint = "2531c78c51e5041d02564697a88af8bc7a7ce3e3"
+      store-name = "My"
+      store-location = "local-machine"
+    }
+  }
+}
+```
+
+**When to use hostname validation:**
+
+* Your cluster uses stable DNS names (not IPs)
+* All nodes share the same certificate (CN matches DNS names)
+* You want browser-like TLS validation behavior
+* Client-server architecture rather than P2P mesh
 
 ## Untrusted Mode
 
@@ -480,6 +589,141 @@ The best practice for network security is to make the network itself secure. Run
 * Ensure all nodes have `require-mutual-authentication` set consistently
 * Verify client certificate is configured correctly
 * Check client application has private key access
+
+### Error: "RemoteCertificateNameMismatch" - Hostname Validation Failure
+
+**Full error message:**
+
+```text
+TLS certificate validation failed (full validation):
+  - Certificate name mismatch
+    - RemoteCertificateNameMismatch: The hostname being connected to does not match
+      the hostname(s) on the server certificate.
+
+Certificate Details:
+  Subject: CN=node1.example.com
+  Issuer: CN=My-CA
+  Valid: 2025-01-01 to 2026-01-01
+
+Connection target: 192.168.1.100:4053
+```
+
+**Cause:** Certificate CN/SAN doesn't match the target hostname/IP address.
+
+**Common scenarios:**
+
+1. **Connecting via IP but certificate has DNS name**
+   * Connecting to: `192.168.1.100`
+   * Certificate CN: `node1.example.com`
+
+2. **Per-node certificates in P2P cluster**
+   * Node A cert CN: `node-a.cluster.local`
+   * Node B cert CN: `node-b.cluster.local`
+   * Each node's certificate doesn't match the other node's hostname
+
+**Fix:**
+
+Option 1 (Recommended for P2P clusters): Disable hostname validation
+
+```hocon
+akka.remote.dot-netty.tcp.ssl {
+  validate-certificate-hostname = false  # Allow per-node certs
+}
+```
+
+Option 2: Use certificates with matching CN/SAN
+
+```bash
+# Ensure certificate CN matches connection target
+# For IP connections, add IP SAN to certificate:
+New-SelfSignedCertificate -Subject "CN=node1" `
+  -DnsName "node1", "node1.example.com" `
+  -TextExtension @("2.5.29.17={text}IPAddress=192.168.1.100")
+```
+
+Option 3: Connect via DNS names that match certificate CN
+
+```hocon
+akka.remote.dot-netty.tcp {
+  hostname = "node1.example.com"  # Must match cert CN
+}
+```
+
+### Error: "UntrustedRoot" - Certificate Chain Validation Failure
+
+**Full error message:**
+
+```text
+TLS/SSL certificate validation failed:
+  - Certificate chain validation errors
+    - UntrustedRoot: A certificate chain processed, but terminated in a root
+      certificate which is not trusted by the trust provider.
+
+Certificate Details:
+  Subject: CN=localhost
+  Issuer: CN=localhost (self-signed)
+```
+
+**Cause:** Certificate is self-signed or signed by untrusted CA.
+
+**Fix:**
+
+Option 1 (Development only): Suppress chain validation
+
+```hocon
+akka.remote.dot-netty.tcp.ssl {
+  suppress-validation = true  # WARNING: Development only!
+}
+```
+
+Option 2 (Recommended): Trust the CA certificate
+
+```powershell
+# Windows: Import CA to Trusted Root store
+Import-Certificate -FilePath ca.cer -CertStoreLocation Cert:\LocalMachine\Root
+
+# Linux: Add to system CA bundle
+sudo cp ca.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+```
+
+### Understanding TLS Error Messages (v1.5.52+)
+
+Since v1.5.52, TLS handshake failures provide detailed diagnostic information including:
+
+* **Error category** (chain validation, hostname mismatch, etc.)
+* **Specific SSL policy error** with explanation
+* **Certificate details** (subject, issuer, validity period)
+* **Connection context** (local/remote addresses)
+* **Actionable recommendations**
+
+**Example comprehensive error:**
+
+```text
+TLS handshake failed on channel [127.0.0.1:4053->127.0.0.1:54321](Id=...)
+
+Detailed TLS Error:
+  - Certificate chain validation errors
+    - UntrustedRoot: A certificate chain processed, but terminated in a root
+      certificate which is not trusted by the trust provider.
+  - Certificate name mismatch
+    - RemoteCertificateNameMismatch: The hostname being connected to does not
+      match the hostname(s) on the server certificate.
+
+Certificate Information:
+  Subject: CN=node-test
+  Issuer: CN=node-test (self-signed)
+  Serial Number: 1A2B3C4D5E6F
+  Valid From: 2025-01-01 00:00:00 UTC
+  Valid To: 2026-01-01 00:00:00 UTC
+  Thumbprint: 2531c78c51e5041d02564697a88af8bc7a7ce3e3
+
+Recommendations:
+  - For development: Set 'suppress-validation = true' (testing only!)
+  - For production: Install certificate in trusted root store
+  - For hostname issues: Set 'validate-certificate-hostname = false' if using
+    per-node certificates or IP-based connections
+```
 
 ## Additional Resources
 
