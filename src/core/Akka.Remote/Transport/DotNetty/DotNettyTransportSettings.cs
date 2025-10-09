@@ -436,4 +436,231 @@ namespace Akka.Remote.Transport.DotNetty
             RequireMutualAuthentication = requireMutualAuthentication;
         }
     }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Helper class for building human-readable error messages for TLS/SSL certificate validation failures.
+    /// Provides detailed diagnostics and actionable suggestions for common certificate issues.
+    /// </summary>
+    internal static class TlsErrorMessageBuilder
+    {
+        /// <summary>
+        /// Builds a detailed error message for SSL policy errors encountered during TLS handshake.
+        /// </summary>
+        /// <param name="errors">The SSL policy errors from certificate validation callback</param>
+        /// <param name="certificate">The certificate that failed validation (may be null)</param>
+        /// <param name="chain">The X509 chain used for validation (may be null)</param>
+        /// <returns>A human-readable error message with diagnostics and suggestions</returns>
+        public static string BuildSslPolicyErrorMessage(
+            System.Net.Security.SslPolicyErrors errors,
+            X509Certificate2? certificate,
+            X509Chain? chain)
+        {
+            var message = new System.Text.StringBuilder();
+            message.AppendLine("TLS/SSL certificate validation failed:");
+
+            // Interpret SslPolicyErrors flags
+            if ((errors & System.Net.Security.SslPolicyErrors.None) != System.Net.Security.SslPolicyErrors.None)
+            {
+                if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable) != 0)
+                {
+                    message.AppendLine("  - Remote certificate not available");
+                    message.AppendLine("    Suggestion: Ensure the remote endpoint provides a valid TLS certificate");
+                }
+
+                if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateNameMismatch) != 0)
+                {
+                    message.AppendLine("  - Remote certificate name mismatch");
+                    message.AppendLine("    Suggestion: Verify certificate CN/SAN matches the target hostname");
+                    if (certificate != null)
+                    {
+                        var cn = certificate.GetNameInfo(X509NameType.DnsName, false);
+                        message.AppendLine($"    Certificate CN: {cn}");
+                    }
+                }
+
+                if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors) != 0)
+                {
+                    message.AppendLine("  - Certificate chain validation errors");
+
+                    if (chain != null && chain.ChainStatus.Length > 0)
+                    {
+                        var chainStatusMsg = BuildX509ChainStatusMessage(chain.ChainStatus);
+                        message.Append(chainStatusMsg);
+                    }
+                    else
+                    {
+                        message.AppendLine("    Suggestion: Certificate chain cannot be validated. " +
+                                          "Install required intermediate CA certificates.");
+                    }
+                }
+            }
+
+            // Add certificate details if available
+            if (certificate != null)
+            {
+                message.AppendLine($"\nCertificate Details:");
+                message.AppendLine($"  Subject: {certificate.Subject}");
+                message.AppendLine($"  Issuer: {certificate.Issuer}");
+                message.AppendLine($"  Thumbprint: {certificate.Thumbprint}");
+                message.AppendLine($"  Valid From: {certificate.NotBefore:yyyy-MM-dd HH:mm:ss}");
+                message.AppendLine($"  Valid To: {certificate.NotAfter:yyyy-MM-dd HH:mm:ss}");
+                message.AppendLine($"  Has Private Key: {certificate.HasPrivateKey}");
+            }
+
+            return message.ToString().TrimEnd();
+        }
+
+        /// <summary>
+        /// Builds a detailed message explaining X509 chain status errors.
+        /// </summary>
+        /// <param name="chainStatus">Array of chain status from X509Chain validation</param>
+        /// <returns>Human-readable explanation of chain errors with suggestions</returns>
+        public static string BuildX509ChainStatusMessage(X509ChainStatus[] chainStatus)
+        {
+            var message = new System.Text.StringBuilder();
+
+            foreach (var status in chainStatus)
+            {
+                // Skip "NoError" status
+                if (status.Status == X509ChainStatusFlags.NoError)
+                    continue;
+
+                message.AppendLine($"    - {status.Status}: {status.StatusInformation}");
+
+                // Add specific suggestions based on chain status
+                var suggestion = GetChainStatusSuggestion(status.Status);
+                if (!string.IsNullOrEmpty(suggestion))
+                {
+                    message.AppendLine($"      Suggestion: {suggestion}");
+                }
+            }
+
+            return message.ToString();
+        }
+
+        /// <summary>
+        /// Maps X509ChainStatusFlags to actionable suggestions for fixing the issue.
+        /// </summary>
+        private static string GetChainStatusSuggestion(X509ChainStatusFlags status)
+        {
+            return status switch
+            {
+                X509ChainStatusFlags.NotTimeValid =>
+                    "Certificate has expired or is not yet valid. Check system clock and certificate validity period.",
+
+                X509ChainStatusFlags.NotTimeNested =>
+                    "Certificate validity period does not nest correctly within the chain.",
+
+                X509ChainStatusFlags.Revoked =>
+                    "Certificate has been revoked. Contact certificate issuer.",
+
+                X509ChainStatusFlags.NotSignatureValid =>
+                    "Certificate signature is invalid. Certificate may be corrupted.",
+
+                X509ChainStatusFlags.NotValidForUsage =>
+                    "Certificate is not valid for the intended usage. Check Extended Key Usage (EKU) extensions.",
+
+                X509ChainStatusFlags.UntrustedRoot =>
+                    "Certificate chain terminates in an untrusted root. Install root CA certificate in Trusted Root Certification Authorities store.",
+
+                X509ChainStatusFlags.RevocationStatusUnknown =>
+                    "Revocation status cannot be determined. Check network connectivity to CRL/OCSP endpoints.",
+
+                X509ChainStatusFlags.Cyclic =>
+                    "Certificate chain contains a cycle. Certificate configuration is invalid.",
+
+                X509ChainStatusFlags.InvalidExtension =>
+                    "Certificate contains an invalid extension.",
+
+                X509ChainStatusFlags.InvalidPolicyConstraints =>
+                    "Certificate policy constraints are invalid.",
+
+                X509ChainStatusFlags.InvalidBasicConstraints =>
+                    "Basic constraints are invalid. CA certificate may be missing CA:TRUE constraint.",
+
+                X509ChainStatusFlags.InvalidNameConstraints =>
+                    "Name constraints in certificate are invalid.",
+
+                X509ChainStatusFlags.HasNotSupportedNameConstraint =>
+                    "Certificate contains name constraints that are not supported.",
+
+                X509ChainStatusFlags.HasNotDefinedNameConstraint =>
+                    "Certificate has undefined name constraints.",
+
+                X509ChainStatusFlags.HasNotPermittedNameConstraint =>
+                    "Certificate name violates name constraints.",
+
+                X509ChainStatusFlags.HasExcludedNameConstraint =>
+                    "Certificate name is explicitly excluded by name constraints.",
+
+                X509ChainStatusFlags.PartialChain =>
+                    "Certificate chain is incomplete. Install all intermediate CA certificates from your certificate provider.",
+
+                X509ChainStatusFlags.CtlNotTimeValid =>
+                    "Certificate Trust List (CTL) is not time-valid.",
+
+                X509ChainStatusFlags.CtlNotSignatureValid =>
+                    "Certificate Trust List (CTL) signature is invalid.",
+
+                X509ChainStatusFlags.CtlNotValidForUsage =>
+                    "Certificate Trust List (CTL) is not valid for this usage.",
+
+                X509ChainStatusFlags.OfflineRevocation =>
+                    "Revocation checking is offline. Enable network access or disable revocation checking for testing.",
+
+                X509ChainStatusFlags.NoIssuanceChainPolicy =>
+                    "Certificate does not have a valid issuance policy.",
+
+                X509ChainStatusFlags.ExplicitDistrust =>
+                    "Certificate is explicitly distrusted. Remove from Distrusted Certificates store if this is incorrect.",
+
+                X509ChainStatusFlags.HasNotSupportedCriticalExtension =>
+                    "Certificate has an unsupported critical extension.",
+
+                X509ChainStatusFlags.HasWeakSignature =>
+                    "Certificate uses a weak signature algorithm (e.g., SHA1). Use SHA256 or stronger.",
+
+                _ => string.Empty
+            };
+        }
+
+        /// <summary>
+        /// Builds an error message for TLS handshake exceptions.
+        /// Attempts to extract meaningful information from CryptographicException and AuthenticationException.
+        /// </summary>
+        public static string BuildTlsHandshakeErrorMessage(Exception exception, bool isClient)
+        {
+            var role = isClient ? "Client" : "Server";
+            var message = new System.Text.StringBuilder();
+
+            message.AppendLine($"TLS handshake failed ({role} side):");
+            message.AppendLine($"  Error: {exception.Message}");
+
+            // Provide role-specific suggestions
+            if (isClient)
+            {
+                message.AppendLine("\nClient-side TLS troubleshooting:");
+                message.AppendLine("  - Verify server certificate is trusted (install root CA if using self-signed)");
+                message.AppendLine("  - Check certificate hostname matches connection target");
+                message.AppendLine("  - For mutual TLS, ensure client certificate is configured, accessible, and trusted by server");
+                message.AppendLine("  - Server and client certificates must have compatible trust chains");
+            }
+            else
+            {
+                message.AppendLine("\nServer-side TLS troubleshooting:");
+                message.AppendLine("  - Verify server certificate has accessible private key");
+                message.AppendLine("  - For mutual TLS, check if client is providing a certificate");
+                message.AppendLine("  - Review certificate validation requirements (suppress-validation for testing)");
+            }
+
+            if (exception.InnerException != null)
+            {
+                message.AppendLine($"\nInner Exception: {exception.InnerException.Message}");
+            }
+
+            return message.ToString().TrimEnd();
+        }
+    }
 }
