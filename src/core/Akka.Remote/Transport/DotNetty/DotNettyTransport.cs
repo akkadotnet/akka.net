@@ -420,7 +420,12 @@ namespace Akka.Remote.Transport.DotNetty
                             {
                                 if (certificate == null)
                                 {
-                                    Log.Warning("Mutual TLS: Client connection rejected - no client certificate provided");
+                                    Log.Error("Mutual TLS authentication failed: Client did not provide a certificate.\n" +
+                                             "Server requires mutual TLS (require-mutual-authentication = true).\n" +
+                                             "Suggestions:\n" +
+                                             "  - Ensure client has mutual TLS enabled (require-mutual-authentication = true)\n" +
+                                             "  - Verify client certificate is properly configured and accessible\n" +
+                                             "  - Check client-side logs for certificate loading errors");
                                     return false;
                                 }
 
@@ -432,7 +437,10 @@ namespace Akka.Remote.Transport.DotNetty
 
                                 if (errors != SslPolicyErrors.None)
                                 {
-                                    Log.Warning("Mutual TLS: Client certificate validation failed with errors: {0}", errors);
+                                    // Build detailed error message with certificate details and suggestions
+                                    var cert = certificate as X509Certificate2;
+                                    var detailedError = TlsErrorMessageBuilder.BuildSslPolicyErrorMessage(errors, cert, chain);
+                                    Log.Error("Mutual TLS authentication failed: Client certificate validation error.\n{0}", detailedError);
                                     return false;
                                 }
 

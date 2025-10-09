@@ -182,6 +182,7 @@ namespace Akka.Remote.Tests.Transport
                 InitializeLogger(client, "[CLIENT] ");
 
                 // Should fail to connect because server requires client certificate
+                // Enhanced error message "no client certificate provided" will be logged to server logs
                 await Assert.ThrowsAsync<AskTimeoutException>(async () =>
                 {
                     await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3));
@@ -259,6 +260,7 @@ namespace Akka.Remote.Tests.Transport
                 InitializeLogger(client, "[CLIENT] ");
 
                 // Connection should fail due to certificate mismatch
+                // Enhanced error message with certificate validation details will be logged to server logs
                 await Assert.ThrowsAsync<AskTimeoutException>(async () =>
                 {
                     await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3));
