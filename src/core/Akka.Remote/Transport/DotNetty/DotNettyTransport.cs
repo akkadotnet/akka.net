@@ -352,42 +352,39 @@ namespace Akka.Remote.Transport.DotNetty
             if (Settings.EnableSsl)
             {
                 var certificate = Settings.Ssl.Certificate;
-                var host = certificate.GetNameInfo(X509NameType.DnsName, false);
+                // Use the remote address host for TLS validation, not the client's certificate name
+                var host = remoteAddress.Host;
 
                 IChannelHandler tlsHandler;
 
-                if (Settings.Ssl.SuppressValidation)
+                // Build validation callback using type-safe factory methods
+                // These settings are independent and can be combined:
+                // - suppressValidation: Controls chain/CA validation (for self-signed certs)
+                // - validateCertificateHostname: Controls hostname matching (for per-node certs, IPs, etc.)
+                var chainValidation = Settings.Ssl.SuppressValidation
+                    ? ChainValidationMode.IgnoreChainErrors
+                    : ChainValidationMode.ValidateChain;
+
+                var hostnameValidation = Settings.Ssl.ValidateCertificateHostname
+                    ? HostnameValidationMode.ValidateHostname
+                    : HostnameValidationMode.IgnoreHostnameMismatch;
+
+                var validationCallback = TlsValidationCallbacks.Create(chainValidation, hostnameValidation, Log);
+
+                if (Settings.Ssl.RequireMutualAuthentication)
                 {
-                    // Test/dev mode: Accept any server certificate
-                    if (Settings.Ssl.RequireMutualAuthentication)
-                    {
-                        // Provide client cert for mutual TLS
-                        tlsHandler = new TlsHandler(
-                            stream => new SslStream(stream, true, (_, _, _, _) => true,
-                                (_, _, _, _, _) => certificate),
-                            new ClientTlsSettings(host));
-                    }
-                    else
-                    {
-                        // No client cert needed
-                        tlsHandler = new TlsHandler(
-                            stream => new SslStream(stream, true, (_, _, _, _) => true),
-                            new ClientTlsSettings(host));
-                    }
+                    // Provide client cert for mutual TLS
+                    tlsHandler = new TlsHandler(
+                        stream => new SslStream(stream, true, validationCallback,
+                            (_, _, _, _, _) => certificate),
+                        new ClientTlsSettings(host));
                 }
                 else
                 {
-                    // Production mode: Validate server certificate
-                    if (Settings.Ssl.RequireMutualAuthentication)
-                    {
-                        // Provide client cert for mutual TLS
-                        tlsHandler = TlsHandler.Client(host, certificate);
-                    }
-                    else
-                    {
-                        // Standard TLS: Only validate server certificate, no client cert
-                        tlsHandler = TlsHandler.Client(host);
-                    }
+                    // Standard TLS: Only validate server certificate, no client cert
+                    tlsHandler = new TlsHandler(
+                        stream => new SslStream(stream, true, validationCallback),
+                        new ClientTlsSettings(host));
                 }
 
                 channel.Pipeline.AddFirst("TlsHandler", tlsHandler);

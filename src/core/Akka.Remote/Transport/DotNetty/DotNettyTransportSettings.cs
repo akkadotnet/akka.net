@@ -8,10 +8,12 @@
 using System;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;
 
@@ -270,6 +272,7 @@ namespace Akka.Remote.Transport.DotNetty
                 throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.tcp.ssl`)");
 
             var requireMutualAuth = config.GetBoolean("require-mutual-authentication", true);
+            var validateCertificateHostname = config.GetBoolean("validate-certificate-hostname", false);
 
             if (config.GetBoolean("certificate.use-thumprint-over-file")
                 || config.GetBoolean("certificate.use-thumbprint-over-file"))
@@ -283,7 +286,8 @@ namespace Akka.Remote.Transport.DotNetty
                     storeName: config.GetString("certificate.store-name"),
                     storeLocation: ParseStoreLocationName(config.GetString("certificate.store-location")),
                     suppressValidation: config.GetBoolean("suppress-validation"),
-                    requireMutualAuthentication: requireMutualAuth);
+                    requireMutualAuthentication: requireMutualAuth,
+                    validateCertificateHostname: validateCertificateHostname);
             }
 
             var flagsRaw = config.GetStringList("certificate.flags", new string[] { });
@@ -294,7 +298,8 @@ namespace Akka.Remote.Transport.DotNetty
                 certificatePassword: config.GetString("certificate.password"),
                 flags: flags,
                 suppressValidation: config.GetBoolean("suppress-validation"),
-                requireMutualAuthentication: requireMutualAuth);
+                requireMutualAuthentication: requireMutualAuth,
+                validateCertificateHostname: validateCertificateHostname);
 
         }
 
@@ -341,26 +346,44 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly bool RequireMutualAuthentication;
 
+        /// <summary>
+        /// When true, enables traditional TLS hostname validation (certificate CN/SAN must match target hostname).
+        /// When false, only validates certificate chain against CA, ignores hostname mismatches.
+        /// Default is false for backward compatibility and to support mutual TLS scenarios with per-node certificates,
+        /// IP-based connections, or dynamic service discovery.
+        /// </summary>
+        public readonly bool ValidateCertificateHostname;
+
         private SslSettings()
         {
             Certificate = null;
             SuppressValidation = false;
             RequireMutualAuthentication = false;
+            ValidateCertificateHostname = false;
         }
 
         /// <summary>
-        /// Constructor for backward compatibility - defaults to RequireMutualAuthentication = true
+        /// Constructor for backward compatibility - defaults to RequireMutualAuthentication = true, ValidateCertificateHostname = false
         /// </summary>
         public SslSettings(X509Certificate2 certificate, bool suppressValidation)
-            : this(certificate, suppressValidation, true)
+            : this(certificate, suppressValidation, requireMutualAuthentication: true, validateCertificateHostname: false)
         {
         }
 
+        /// <summary>
+        /// Constructor for backward compatibility - defaults to ValidateCertificateHostname = false
+        /// </summary>
         public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication)
+            : this(certificate, suppressValidation, requireMutualAuthentication, validateCertificateHostname: false)
+        {
+        }
+
+        public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
         {
             Certificate = certificate;
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
+            ValidateCertificateHostname = validateCertificateHostname;
         }
 
         /// <summary>
@@ -409,7 +432,7 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
 
-        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication)
+        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
         {
             using var store = new X509Store(storeName, storeLocation);
             store.Open(OpenFlags.ReadOnly);
@@ -424,9 +447,10 @@ namespace Akka.Remote.Transport.DotNetty
             Certificate = find[0];
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
+            ValidateCertificateHostname = validateCertificateHostname;
         }
 
-        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool requireMutualAuthentication)
+        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
         {
             if (string.IsNullOrEmpty(certificatePath))
                 throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
@@ -434,7 +458,134 @@ namespace Akka.Remote.Transport.DotNetty
             Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
+            ValidateCertificateHostname = validateCertificateHostname;
         }
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Specifies how certificate chain validation should be performed during TLS handshake.
+    /// Controls whether to validate certificates against the system CA trust store.
+    /// </summary>
+    internal enum ChainValidationMode
+    {
+        /// <summary>
+        /// Validate certificate chain against system CA trust store.
+        /// Use for production with CA-signed certificates.
+        /// Certificates must chain to a trusted root CA.
+        /// </summary>
+        ValidateChain,
+
+        /// <summary>
+        /// Ignore certificate chain validation errors.
+        /// Use for development/testing with self-signed certificates.
+        /// WARNING: Allows untrusted certificates - use only in non-production environments.
+        /// </summary>
+        IgnoreChainErrors
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Specifies how hostname validation should be performed during TLS handshake.
+    /// Controls whether the certificate CN/SAN must match the connection target hostname.
+    /// </summary>
+    internal enum HostnameValidationMode
+    {
+        /// <summary>
+        /// Validate that certificate CN/SAN matches target hostname.
+        /// Use for traditional client-server TLS with DNS-based connections.
+        /// Prevents man-in-the-middle attacks by ensuring certificate matches expected server.
+        /// </summary>
+        ValidateHostname,
+
+        /// <summary>
+        /// Ignore hostname mismatch errors.
+        /// Use for: Mutual TLS with per-node certificates, IP-based connections, dynamic service discovery.
+        /// Still validates certificate chain (unless IgnoreChainErrors is also set).
+        /// </summary>
+        IgnoreHostnameMismatch
+    }
+
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// Factory for creating TLS certificate validation callbacks with different security policies.
+    /// Provides type-safe, self-documenting methods for configuring certificate validation behavior.
+    /// </summary>
+    internal static class TlsValidationCallbacks
+    {
+        /// <summary>
+        /// Creates a configurable validation callback that filters SSL policy errors based on validation modes.
+        /// </summary>
+        /// <param name="chainValidation">Controls certificate chain/CA validation</param>
+        /// <param name="hostnameValidation">Controls hostname matching validation</param>
+        /// <param name="log">Logger for validation failures</param>
+        /// <returns>Validation callback configured according to parameters</returns>
+        public static RemoteCertificateValidationCallback Create(
+            ChainValidationMode chainValidation,
+            HostnameValidationMode hostnameValidation,
+            ILoggingAdapter log)
+        {
+            return (sender, cert, chain, errors) =>
+            {
+                var filteredErrors = errors;
+
+                // Apply chain validation filter
+                if (chainValidation == ChainValidationMode.IgnoreChainErrors)
+                {
+                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateChainErrors;
+                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateNotAvailable;
+                }
+
+                // Apply hostname validation filter
+                if (hostnameValidation == HostnameValidationMode.IgnoreHostnameMismatch)
+                {
+                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateNameMismatch;
+                }
+
+                if (filteredErrors == SslPolicyErrors.None)
+                    return true; // Certificate is valid after applying configured filters
+
+                // Log detailed error for validation failures
+                var cert509 = cert as X509Certificate2;
+                var detailedError = TlsErrorMessageBuilder.BuildSslPolicyErrorMessage(
+                    filteredErrors, cert509, chain);
+                var mode = chainValidation == ChainValidationMode.IgnoreChainErrors ? "suppress-validation enabled" :
+                           hostnameValidation == HostnameValidationMode.ValidateHostname ? "full validation" : "hostname validation disabled";
+                log.Error("TLS certificate validation failed ({0}):\n{1}", mode, detailedError);
+                return false;
+            };
+        }
+
+        /// <summary>
+        /// Creates validation callback for full TLS validation (chain + hostname).
+        /// Use for traditional client-server TLS with CA-signed certificates and DNS names.
+        /// </summary>
+        public static RemoteCertificateValidationCallback ValidateFull(ILoggingAdapter log)
+            => Create(ChainValidationMode.ValidateChain, HostnameValidationMode.ValidateHostname, log);
+
+        /// <summary>
+        /// Creates validation callback that validates chain but ignores hostname mismatches.
+        /// Use for: Mutual TLS with per-node certificates, IP-based connections, dynamic service discovery.
+        /// </summary>
+        public static RemoteCertificateValidationCallback ValidateChainOnly(ILoggingAdapter log)
+            => Create(ChainValidationMode.ValidateChain, HostnameValidationMode.IgnoreHostnameMismatch, log);
+
+        /// <summary>
+        /// Creates validation callback that ignores chain errors but validates hostname.
+        /// Use for: Testing with self-signed certificates where hostname should still match.
+        /// </summary>
+        public static RemoteCertificateValidationCallback ValidateHostnameOnly(ILoggingAdapter log)
+            => Create(ChainValidationMode.IgnoreChainErrors, HostnameValidationMode.ValidateHostname, log);
+
+        /// <summary>
+        /// Creates validation callback that accepts all certificates without validation.
+        /// FOR TESTING ONLY. WARNING: Disables all security checks including chain, hostname, and expiration.
+        /// </summary>
+        public static RemoteCertificateValidationCallback AcceptAll()
+            => (_, _, _, _) => true;
     }
 
     /// <summary>

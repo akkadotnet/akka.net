@@ -36,6 +36,7 @@
         "Hasher",
         "Hipsterize",
         "HOCON",
+        "hostnames",
         "journaled",
         "Kubernetes",
         "lifecycles",
