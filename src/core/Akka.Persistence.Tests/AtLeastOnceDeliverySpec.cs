@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -526,7 +527,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void AtLeastOnceDelivery_must_warn_about_unconfirmed_messages()
+        public async Task AtLeastOnceDelivery_must_warn_about_unconfirmed_messages()
         {
             var probeA = CreateTestProbe();
             var probeB = CreateTestProbe();
@@ -537,13 +538,22 @@ namespace Akka.Persistence.Tests
             sender.Tell(new Req("a-1"));
             sender.Tell(new Req("b-1"));
             sender.Tell(new Req("b-2"));
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
 
-            var unconfirmed = ReceiveWhile(TimeSpan.FromSeconds(3), x =>
-                x is UnconfirmedWarning warning ? warning.UnconfirmedDeliveries : Enumerable.Empty<UnconfirmedDelivery>())
-                .SelectMany(e => e).ToArray();
+            // Wait for initial deliveries to ensure messages are timestamped and the redelivery timer has started
+            await probeA.ExpectMsgAsync<Action>(a => a.Id == 1 && a.Payload == "a-1");
+            await probeB.ExpectMsgAsync<Action>(a => a.Id == 2 && a.Payload == "b-1");
+            await probeB.ExpectMsgAsync<Action>(a => a.Id == 3 && a.Payload == "b-2");
+
+            var unconfirmedList = new List<IEnumerable<UnconfirmedDelivery>>();
+            await foreach (var item in ReceiveWhileAsync(TimeSpan.FromSeconds(3), x =>
+                x is UnconfirmedWarning warning ? warning.UnconfirmedDeliveries : Enumerable.Empty<UnconfirmedDelivery>()))
+            {
+                unconfirmedList.Add(item);
+            }
+            var unconfirmed = unconfirmedList.SelectMany(e => e).ToArray();
 
             var resultDestinations = unconfirmed.Select(x => x.Destination).Distinct().ToArray();
             resultDestinations.Should().BeEquivalentTo(probeA.Ref.Path, probeB.Ref.Path);
