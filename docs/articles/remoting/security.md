@@ -122,7 +122,9 @@ The validation process follows [RFC 5280 (X.509 PKI Certificate and CRL Profile)
 
 **New in v1.5.52+:** Controls whether the certificate CN/SAN must match the target hostname.
 
-#### Validate-Certificate-Hostname = False (DEFAULT)
+**IMPORTANT: This setting defaults to `false` (disabled).** Hostname validation is NOT performed by default to support common Akka.NET deployment patterns like mutual TLS with per-node certificates and IP-based connections.
+
+#### Validate-Certificate-Hostname = False (DEFAULT - Disabled)
 
 **What it does:**
 
@@ -445,7 +447,7 @@ akka.remote.dot-netty.tcp {
   ssl {
     suppress-validation = false  # Validates all certificates (default when SSL enabled)
     require-mutual-authentication = true  # Requires client certs (default when SSL enabled since v1.5.52)
-    validate-certificate-hostname = false  # Skips hostname validation (default, suitable for P2P with per-node certs)
+    validate-certificate-hostname = false  # DEFAULT: Hostname validation disabled (suitable for P2P with per-node certs)
     certificate {
       use-thumbprint-over-file = true
       thumbprint = "2531c78c51e5041d02564697a88af8bc7a7ce3e3"
@@ -583,7 +585,8 @@ The best practice for network security is to make the network itself secure. Run
 ### Error: "RemoteCertificateNameMismatch" - Hostname Validation Failure
 
 **Full error message:**
-```
+
+```text
 TLS certificate validation failed (full validation):
   - Certificate name mismatch
     - RemoteCertificateNameMismatch: The hostname being connected to does not match
@@ -602,17 +605,18 @@ Connection target: 192.168.1.100:4053
 **Common scenarios:**
 
 1. **Connecting via IP but certificate has DNS name**
-   - Connecting to: `192.168.1.100`
-   - Certificate CN: `node1.example.com`
+   * Connecting to: `192.168.1.100`
+   * Certificate CN: `node1.example.com`
 
 2. **Per-node certificates in P2P cluster**
-   - Node A cert CN: `node-a.cluster.local`
-   - Node B cert CN: `node-b.cluster.local`
-   - Each node's certificate doesn't match the other node's hostname
+   * Node A cert CN: `node-a.cluster.local`
+   * Node B cert CN: `node-b.cluster.local`
+   * Each node's certificate doesn't match the other node's hostname
 
 **Fix:**
 
 Option 1 (Recommended for P2P clusters): Disable hostname validation
+
 ```hocon
 akka.remote.dot-netty.tcp.ssl {
   validate-certificate-hostname = false  # Allow per-node certs
@@ -620,6 +624,7 @@ akka.remote.dot-netty.tcp.ssl {
 ```
 
 Option 2: Use certificates with matching CN/SAN
+
 ```bash
 # Ensure certificate CN matches connection target
 # For IP connections, add IP SAN to certificate:
@@ -629,6 +634,7 @@ New-SelfSignedCertificate -Subject "CN=node1" `
 ```
 
 Option 3: Connect via DNS names that match certificate CN
+
 ```hocon
 akka.remote.dot-netty.tcp {
   hostname = "node1.example.com"  # Must match cert CN
@@ -638,7 +644,8 @@ akka.remote.dot-netty.tcp {
 ### Error: "UntrustedRoot" - Certificate Chain Validation Failure
 
 **Full error message:**
-```
+
+```text
 TLS/SSL certificate validation failed:
   - Certificate chain validation errors
     - UntrustedRoot: A certificate chain processed, but terminated in a root
@@ -654,6 +661,7 @@ Certificate Details:
 **Fix:**
 
 Option 1 (Development only): Suppress chain validation
+
 ```hocon
 akka.remote.dot-netty.tcp.ssl {
   suppress-validation = true  # WARNING: Development only!
@@ -661,6 +669,7 @@ akka.remote.dot-netty.tcp.ssl {
 ```
 
 Option 2 (Recommended): Trust the CA certificate
+
 ```powershell
 # Windows: Import CA to Trusted Root store
 Import-Certificate -FilePath ca.cer -CertStoreLocation Cert:\LocalMachine\Root
@@ -681,7 +690,8 @@ Since v1.5.52, TLS handshake failures provide detailed diagnostic information in
 * **Actionable recommendations**
 
 **Example comprehensive error:**
-```
+
+```text
 TLS handshake failed on channel [127.0.0.1:4053->127.0.0.1:54321](Id=...)
 
 Detailed TLS Error:
