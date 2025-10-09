@@ -16,6 +16,10 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.Util.Internal;
 
+#if DEBUG
+using System.IO;
+#endif
+
 namespace Akka.Persistence.Journal
 {
     /// <summary>
@@ -46,13 +50,17 @@ namespace Akka.Persistence.Journal
         {
             var waitStartTime = Stopwatch.GetTimestamp();
             var threadId = Environment.CurrentManagedThreadId;
-            Context.GetLogger().Debug("[DIAG] WriteMessagesAsync called on thread {0}, attempting to acquire lock", threadId);
+
+            // IMPORTANT: Cannot use Context.GetLogger() here - this method is called from async continuation
+            // on thread pool thread (not actor thread) due to ConfigureAwait(false) in ExecuteBatch.
+            // Using Debug.WriteLine instead for diagnostic logging to avoid potential deadlock.
+            Debug.WriteLine($"[DIAG] WriteMessagesAsync called on thread {threadId}, attempting to acquire lock");
 
             lock (Lock)
             {
                 var lockAcquiredTime = Stopwatch.GetTimestamp();
                 var waitTimeMs = (lockAcquiredTime - waitStartTime) * 1000.0 / Stopwatch.Frequency;
-                Context.GetLogger().Debug("[DIAG] Lock acquired after {0:F2}ms on thread {1}", waitTimeMs, threadId);
+                Debug.WriteLine($"[DIAG] Lock acquired after {waitTimeMs:F2}ms on thread {threadId}");
 
                 foreach (var w in messages)
                 {
@@ -70,16 +78,13 @@ namespace Akka.Persistence.Journal
                         }
                         pidEvents.Add(persistentRepresentation);
 
-                        Context.GetLogger().Debug("[DIAG] Wrote event for {0}, seq {1}, total events in log: {2}",
-                            persistentRepresentation.PersistenceId,
-                            persistentRepresentation.SequenceNr,
-                            EventLog.Count);
+                        Debug.WriteLine($"[DIAG] Wrote event for {persistentRepresentation.PersistenceId}, seq {persistentRepresentation.SequenceNr}, total events in log: {EventLog.Count}");
                     }
                 }
 
                 var lockReleasedTime = Stopwatch.GetTimestamp();
                 var holdTimeMs = (lockReleasedTime - lockAcquiredTime) * 1000.0 / Stopwatch.Frequency;
-                Context.GetLogger().Debug("[DIAG] Lock released after holding for {0:F2}ms on thread {1}", holdTimeMs, threadId);
+                Debug.WriteLine($"[DIAG] Lock released after holding for {holdTimeMs:F2}ms on thread {threadId}");
             }
 
             return Task.FromResult<IImmutableList<Exception>>(null);
@@ -283,8 +288,9 @@ namespace Akka.Persistence.Journal
         {
             var waitStartTime = Stopwatch.GetTimestamp();
             var threadId = Environment.CurrentManagedThreadId;
-            var log = Context.GetLogger();
-            log.Debug("[DIAG] ReplayTaggedMessagesAsync starting for tag '{0}' on thread {1}, attempting to acquire lock", replay.Tag, threadId);
+
+            // Using Debug.WriteLine to avoid Context access from potentially wrong thread
+            Debug.WriteLine($"[DIAG] ReplayTaggedMessagesAsync starting for tag '{replay.Tag}' on thread {threadId}, attempting to acquire lock");
 
             IPersistentRepresentation[] snapshot;
             int count;
@@ -293,7 +299,7 @@ namespace Akka.Persistence.Journal
             {
                 var lockAcquiredTime = Stopwatch.GetTimestamp();
                 var waitTimeMs = (lockAcquiredTime - waitStartTime) * 1000.0 / Stopwatch.Frequency;
-                log.Debug("[DIAG] ReplayTaggedMessages lock acquired after {0:F2}ms on thread {1}", waitTimeMs, threadId);
+                Debug.WriteLine($"[DIAG] ReplayTaggedMessages lock acquired after {waitTimeMs:F2}ms on thread {threadId}");
 
                 // Scan for events with matching tag
                 snapshot = EventLog
@@ -304,8 +310,7 @@ namespace Akka.Persistence.Journal
 
                 count = EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
 
-                log.Debug("[DIAG] Found {0} events matching tag '{1}', total tagged events: {2}, EventLog size: {3}",
-                    snapshot.Length, replay.Tag, count, EventLog.Count);
+                Debug.WriteLine($"[DIAG] Found {snapshot.Length} events matching tag '{replay.Tag}', total tagged events: {count}, EventLog size: {EventLog.Count}");
             }
 
             // Send messages outside the lock to avoid potential deadlocks
@@ -313,12 +318,11 @@ namespace Akka.Persistence.Journal
             foreach (var persistence in snapshot)
             {
                 replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
-                log.Debug("[DIAG] Sent ReplayedTaggedMessage for {0}, seq {1}, offset {2}",
-                    persistence.PersistenceId, persistence.SequenceNr, replay.FromOffset + index);
+                Debug.WriteLine($"[DIAG] Sent ReplayedTaggedMessage for {persistence.PersistenceId}, seq {persistence.SequenceNr}, offset {replay.FromOffset + index}");
                 index++;
             }
 
-            log.Debug("[DIAG] ReplayTaggedMessagesAsync completed, returning highestSequenceNr={0}", count - 1);
+            Debug.WriteLine($"[DIAG] ReplayTaggedMessagesAsync completed, returning highestSequenceNr={count - 1}");
             return Task.FromResult(count - 1);
         }
 
