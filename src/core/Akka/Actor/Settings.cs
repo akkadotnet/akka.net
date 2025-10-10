@@ -184,7 +184,7 @@ namespace Akka.Actor
             // set the filter
             StdoutLogger!.Filter = LogFilter;
             
-            Loggers = Config.GetStringList("akka.loggers", new string[] { });
+            Loggers = Config.GetStringList("akka.loggers", []);
             LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
             LoggerAsyncStart = Config.GetBoolean("akka.logger-async-start", false);
@@ -196,6 +196,17 @@ namespace Akka.Actor
             }
             else
             {
+                #if AOT_ENABLED
+                LogFormatter = DefaultLogMessageFormatter.Instance;
+                // log a warning if the configured formatter does not match the AOT default
+                if (loggerFormatterName != typeof(DefaultLogMessageFormatter).FullName)
+                {
+                    System.Log.Warning(
+                        "The configured log message formatter [{0}] does not match the AOT default formatter [{1}]. " +
+                        "Ensure that all types used by the configured formatter are preserved for AOT compilation.",
+                        loggerFormatterName, typeof(DefaultLogMessageFormatter).FullName);
+                }
+                #else
                 var logFormatType = Type.GetType(loggerFormatterName);
                 if (logFormatType == null)
                     throw new ArgumentException($"Could not load type of {loggerFormatterName} for ILogMessageFormatter.");
@@ -219,6 +230,7 @@ namespace Akka.Actor
                             "Log message formatter must inherit from the ILogMessageFormatter and have an empty constructor.");
                     }
                 }
+                #endif
             }
 
             //handled
