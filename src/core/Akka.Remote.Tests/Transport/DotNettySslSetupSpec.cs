@@ -105,6 +105,96 @@ akka {{
             });
         }
 
+        [Fact(DisplayName = "DotNettySslSetup with 2 parameters should configure effective DotNettyTransportSettings with defaults (RequireMutualAuth=true, ValidateHostname=false)")]
+        public void Two_parameter_setup_should_configure_transport_settings_with_defaults()
+        {
+            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var sslSetup = new DotNettySslSetup(certificate, suppressValidation: true);
+
+            var actorSystemSetup = ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(@"
+akka {
+  actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+  remote.dot-netty.tcp {
+    port = 0
+    hostname = ""127.0.0.1""
+    enable-ssl = true
+  }
+}")))
+                .And(sslSetup);
+
+            using var sys = ActorSystem.Create("test", actorSystemSetup);
+
+            // Verify that DotNettyTransportSettings.Create uses the setup correctly
+            var settings = DotNettyTransportSettings.Create(sys);
+
+            Assert.True(settings.EnableSsl);
+            Assert.Equal(certificate, settings.Ssl.Certificate);
+            Assert.True(settings.Ssl.SuppressValidation);
+            Assert.True(settings.Ssl.RequireMutualAuthentication); // default from 2-param constructor
+            Assert.False(settings.Ssl.ValidateCertificateHostname); // default from 2-param constructor
+        }
+
+        [Fact(DisplayName = "DotNettySslSetup with 3 parameters should configure effective DotNettyTransportSettings with specified RequireMutualAuth and default ValidateHostname=false")]
+        public void Three_parameter_setup_should_configure_transport_settings()
+        {
+            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var sslSetup = new DotNettySslSetup(certificate, suppressValidation: false, requireMutualAuthentication: false);
+
+            var actorSystemSetup = ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(@"
+akka {
+  actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+  remote.dot-netty.tcp {
+    port = 0
+    hostname = ""127.0.0.1""
+    enable-ssl = true
+  }
+}")))
+                .And(sslSetup);
+
+            using var sys = ActorSystem.Create("test", actorSystemSetup);
+
+            // Verify that DotNettyTransportSettings.Create uses the setup correctly
+            var settings = DotNettyTransportSettings.Create(sys);
+
+            Assert.True(settings.EnableSsl);
+            Assert.Equal(certificate, settings.Ssl.Certificate);
+            Assert.False(settings.Ssl.SuppressValidation);
+            Assert.False(settings.Ssl.RequireMutualAuthentication); // explicitly set to false
+            Assert.False(settings.Ssl.ValidateCertificateHostname); // default from 3-param constructor
+        }
+
+        [Fact(DisplayName = "DotNettySslSetup with 4 parameters should configure effective DotNettyTransportSettings with all specified values")]
+        public void Four_parameter_setup_should_configure_transport_settings_with_all_values()
+        {
+            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var sslSetup = new DotNettySslSetup(certificate, suppressValidation: true, requireMutualAuthentication: false, validateCertificateHostname: true);
+
+            var actorSystemSetup = ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(@"
+akka {
+  actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+  remote.dot-netty.tcp {
+    port = 0
+    hostname = ""127.0.0.1""
+    enable-ssl = true
+  }
+}")))
+                .And(sslSetup);
+
+            using var sys = ActorSystem.Create("test", actorSystemSetup);
+
+            // Verify that DotNettyTransportSettings.Create uses the setup correctly
+            var settings = DotNettyTransportSettings.Create(sys);
+
+            Assert.True(settings.EnableSsl);
+            Assert.Equal(certificate, settings.Ssl.Certificate);
+            Assert.True(settings.Ssl.SuppressValidation);
+            Assert.False(settings.Ssl.RequireMutualAuthentication); // explicitly set to false
+            Assert.True(settings.Ssl.ValidateCertificateHostname); // explicitly set to true
+        }
+
         #region helper classes / methods
 
         protected override void AfterAll()
