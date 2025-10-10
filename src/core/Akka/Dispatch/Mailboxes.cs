@@ -131,7 +131,7 @@ namespace Akka.Dispatch
 
         private string LookupId(Type queueType)
         {
-            if (!_mailboxBindings.TryGetValue(queueType, out string id))
+            if (!_mailboxBindings.TryGetValue(queueType, out var id))
                 throw new ConfigurationException($"Mailbox Mapping for [{queueType}] not configured");
             return id;
         }
@@ -162,7 +162,9 @@ namespace Akka.Dispatch
 
         // don't care if these happen twice
         private bool _mailboxSizeWarningIssued = false;
+        #if !AOT_ENABLED // we don't support mailboxes that use this config in AOT mode
         private bool _mailboxNonZeroPushTimeoutWarningIssued = false;
+        #endif
 
         private MailboxType LookupConfigurator(string id)
         {
@@ -175,6 +177,11 @@ namespace Akka.Dispatch
                     configurator = new BoundedMailbox(Settings, Config(id));
                 else
                 {
+                    #if AOT_ENABLED
+                    // In AOT mode, we cannot use reflection to load mailbox types.
+                    // TODO: add support for custom mailbox types via Setup classes
+                    throw new ConfigurationException($"Custom mailbox types are not supported in AOT mode. Cannot load mailbox type [{id}].");
+                    #else
                     if (!Settings.Config.HasPath(id)) throw new ConfigurationException($"Mailbox Type [{id}] not configured");
                     var conf = Config(id);
 
@@ -207,6 +214,7 @@ namespace Akka.Dispatch
                         throw new ArgumentException($"Cannot instantiate MailboxType {mailboxType}, defined in [{id}]. Make sure it has a public " +
                                                      "constructor with [Akka.Actor.Settings, Akka.Configuration.Config] parameters", ex);
                     }
+                    #endif
                 }
 
                 // add the new configurator to the mapping, or keep the existing if it was already added
