@@ -37,7 +37,7 @@ namespace Akka.Actor
         private const string NullActorTypeExceptionText = "Props must be instantiated with an actor type.";
 
         private static readonly Deploy DefaultDeploy = new();
-        private static readonly object[] NoArgs = Array.Empty<object>();
+        private static readonly object[] NoArgs = [];
 
         /// <summary>
         ///     A pre-configured <see cref="Akka.Actor.Props" /> that doesn't create actors.
@@ -163,9 +163,7 @@ namespace Akka.Actor
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <exception cref="ArgumentException">This exception is thrown if <paramref name="type" /> is an unknown actor producer.</exception>
         public Props(Deploy deploy, Type type, params object[] args)
-#pragma warning disable CS0618 // Type or member is obsolete
-            : this(CreateProducer(type, args), deploy, args) // have to preserve the "CreateProducer" call here to preserve backwards compat with Akka.DI.Core
-#pragma warning restore CS0618 // Type or member is obsolete
+            : this(new ActivatorProducer(type, args), deploy, args)
         {
 
         }
@@ -576,19 +574,6 @@ namespace Akka.Actor
         protected virtual Props Copy()
         {
             return new Props(_producer, Deploy, Arguments) { SupervisorStrategy = SupervisorStrategy };
-        }
-
-        [Obsolete("we should not be calling this method. Pass in an explicit IIndirectActorProducer reference instead.")]
-        private static IIndirectActorProducer CreateProducer(Type type, object[] args)
-        {
-            if (type == null) return DefaultProducer.Instance;
-
-            if (typeof(IIndirectActorProducer).IsAssignableFrom(type))
-                return Activator.CreateInstance(type, args).AsInstanceOf<IIndirectActorProducer>();
-
-            if (typeof(ActorBase).IsAssignableFrom(type)) return new ActivatorProducer(type, args);
-
-            throw new ArgumentException($"Unknown actor producer [{type.FullName}]", nameof(type));
         }
 
         /// <summary>
