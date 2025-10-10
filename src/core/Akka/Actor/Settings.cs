@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -101,11 +102,23 @@ namespace Akka.Actor
             ProviderClass = ProviderSelectionType.Fqn;
             HasCluster = ProviderSelectionType.HasCluster;
 
+            #if AOT_ENABLED
+            var providerType = TypeHints.DefaultActorRefProviderType;
+            // log a warning if the configured provider does not match the AOT default
+            if (providerType.FullName != ProviderClass)
+            {
+                System.Log.Warning(
+                    "The configured actor provider [{0}] does not match the AOT default provider [{1}]. " +
+                    "Ensure that all types used by the configured provider are preserved for AOT compilation.",
+                    ProviderClass, providerType.FullName);
+            }
+            #else
             var providerType = Type.GetType(ProviderClass);
             if (providerType == null)
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
             if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
+            #endif
 
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy", null);
 
