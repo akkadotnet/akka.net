@@ -152,6 +152,17 @@ namespace Akka.Actor
             }
             else
             {
+                #if AOT_ENABLED
+                StdoutLogger = new StandardOutLogger();
+                // log a warning
+                if (stdoutClassName != typeof(StandardOutLogger).FullName)
+                {
+                    System.Log.Warning(
+                        "The configured standard out logger [{0}] does not match the AOT default logger [{1}]. " +
+                        "Ensure that all types used by the configured logger are preserved for AOT compilation.",
+                        stdoutClassName, typeof(StandardOutLogger).FullName);
+                }
+                #else
                 var stdoutLoggerType = Type.GetType(stdoutClassName);
                 if (stdoutLoggerType == null)
                     throw new ArgumentException($"Could not load type of {stdoutClassName} for standard out logger.");
@@ -167,6 +178,7 @@ namespace Akka.Actor
                     throw new MissingMethodException(
                         "Standard out logger type must inherit from the MinimalLogger abstract class and have an empty constructor.");
                 }
+                #endif
             }
             
             // set the filter
