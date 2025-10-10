@@ -863,7 +863,11 @@ namespace Akka.Remote.Transport.DotNetty
     public sealed class DotNettySslSetup : Akka.Actor.Setup.Setup
     {
         public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation) { }
+        public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication) { }
+        public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname) { }
         public System.Security.Cryptography.X509Certificates.X509Certificate2 Certificate { get; }
+        public bool RequireMutualAuthentication { get; }
         public bool SuppressValidation { get; }
+        public bool ValidateCertificateHostname { get; }
     }
 }
