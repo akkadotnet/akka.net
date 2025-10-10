@@ -223,6 +223,8 @@ namespace Akka.Actor
         /// </summary>
         /// <param name="sendSupervise">TBD</param>
         /// <param name="mailboxType">TBD</param>
+        [UnconditionalSuppressMessage("AssemblyFiles", "IL2072",
+            Justification = "All MailboxType implementations in Akka.NET have IProducesMessageQueue<T> interfaces preserved, and all actor types have IRequiresMessageQueue<T> interfaces preserved")]
         public void Init(bool sendSupervise, MailboxType mailboxType)
         {
             /*

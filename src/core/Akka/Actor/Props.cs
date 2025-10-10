@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Akka.Dispatch;
 using Akka.Routing;
@@ -183,6 +184,7 @@ namespace Akka.Actor
         ///     The type of the actor that is created.
         /// </summary>
         [JsonIgnore]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
         public Type Type
         {
             get
@@ -584,6 +586,7 @@ namespace Akka.Actor
             /// <summary>
             ///     The type of actor to create
             /// </summary>
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
             public Type Type { get; set; }
 
             /// <summary>
@@ -638,6 +641,7 @@ namespace Akka.Actor
                 return (ActorBase)Activator.CreateInstance(ActorType, _args);
             }
 
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
             public Type ActorType { get; }
 
             public void Release(ActorBase actor)
@@ -660,6 +664,7 @@ namespace Akka.Actor
                 return _factory.Invoke();
             }
 
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
             public Type ActorType => typeof(TActor);
 
             public void Release(ActorBase actor)
@@ -753,6 +758,7 @@ namespace Akka.Actor
         ///     The returned type is not used to produce the actor.
         /// </summary>
         /// <returns>The type of the actor created.</returns>
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
         Type ActorType { get; }
 
         /// <summary>
