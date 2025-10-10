@@ -13,11 +13,11 @@ jobs:
     pool:
       vmImage: ${{ parameters.vmImage }}
     steps:
-      - task: UseDotNet@2
-        displayName: 'Use .NET 8 SDK 8.0.402'
+       - task: UseDotNet@2
+        displayName: 'Use .NET'
         inputs:
-          version: 8.0.402
-    
+          packageType: 'sdk'
+          useGlobalJson: true
         
       # Option 1: Use inline script to handle paths properly
       - task: PowerShell@2
