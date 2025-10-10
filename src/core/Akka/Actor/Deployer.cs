@@ -134,6 +134,22 @@ namespace Akka.Actor
             if (deployment.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<RouterConfig>();
 
+            #if AOT_ENABLED
+            // In AOT mode, use factory functions from TypeHints
+            if (!Internal.TypeHints.DefaultRouterFactories.TryGetValue(routerTypeAlias, out var factory))
+            {
+                var message = $"Router type '{routerTypeAlias}' is not supported in AOT mode. " +
+                    "Only built-in routers (round-robin, random, smallest-mailbox, broadcast, scatter-gather, " +
+                    "consistent-hashing, tail-chopping) are available.";
+
+                if (routerTypeAlias is "cluster-metrics-adaptive-group" or "cluster-metrics-adaptive-pool")
+                    message += " Cluster metrics routers require Akka.Cluster.Metrics which is not AOT-compatible yet.";
+
+                throw new ConfigurationException(message);
+            }
+
+            return factory(deployment);
+            #else
             var path = string.Format("akka.actor.router.type-mapping.{0}", routerTypeAlias);
             var routerTypeName = _settings.Config.GetString(path, null);
 
@@ -170,6 +186,7 @@ namespace Akka.Actor
             var routerConfig = (RouterConfig)Activator.CreateInstance(routerType, deployment);
 
             return routerConfig;
+            #endif
         }
     }
 }

@@ -11,6 +11,7 @@ using System.Diagnostics.CodeAnalysis;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
+using Akka.Routing;
 using Akka.Serialization;
 
 namespace Akka.Actor.Internal;
@@ -74,6 +75,30 @@ internal sealed class TypeHints
     {
         { typeof(byte[]), "bytes" },
         //{ typeof(object), "json" }
+    };
+
+    /// <summary>
+    /// Default router factory functions from akka.conf.
+    /// Maps router type aliases to factory functions that create router config instances.
+    /// Using factory functions avoids reflection and is fully AOT-compatible.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, Func<Config, RouterConfig>> DefaultRouterFactories = new Dictionary<string, Func<Config, RouterConfig>>
+    {
+        { "from-code", (config) => NoRouter.Instance },
+        { "round-robin-pool", (config) => new RoundRobinPool(config) },
+        { "round-robin-group", (config) => new RoundRobinGroup(config) },
+        { "random-pool", (config) => new RandomPool(config) },
+        { "random-group", (config) => new RandomGroup(config) },
+        { "smallest-mailbox-pool", (config) => new SmallestMailboxPool(config) },
+        { "broadcast-pool", (config) => new BroadcastPool(config) },
+        { "broadcast-group", (config) => new BroadcastGroup(config) },
+        { "scatter-gather-pool", (config) => new ScatterGatherFirstCompletedPool(config) },
+        { "scatter-gather-group", (config) => new ScatterGatherFirstCompletedGroup(config) },
+        { "consistent-hashing-pool", (config) => new ConsistentHashingPool(config) },
+        { "consistent-hashing-group", (config) => new ConsistentHashingGroup(config) },
+        { "tail-chopping-pool", (config) => new TailChoppingPool(config) },
+        { "tail-chopping-group", (config) => new TailChoppingGroup(config) }
+        // cluster-metrics routers excluded - they're in Akka.Cluster.Metrics assembly
     };
 }
 #endif
