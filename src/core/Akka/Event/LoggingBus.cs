@@ -114,11 +114,23 @@ namespace Akka.Event
             var taskInfos = new Dictionary<Task, string>();
             foreach (var strLoggerType in loggerTypes)
             {
+                #if AOT_ENABLED
+                // TODO: Custom logger types are a popular feature in Akka.NET.
+                // Consider adding LoggerSetup to allow AOT-compatible custom logger registration.
+                if (!Actor.Internal.TypeHints.DefaultLoggers.TryGetValue(strLoggerType, out var loggerType))
+                {
+                    throw new ConfigurationException(
+                        $"Custom logger '{strLoggerType}' is configured in HOCON but is not supported in AOT mode. " +
+                        "Only built-in loggers (Akka.Event.DefaultLogger, Akka.Event.TraceLogger) are available. " +
+                        "Use LoggerSetup to register custom loggers in AOT scenarios.");
+                }
+                #else
                 var loggerType = Type.GetType(strLoggerType);
                 if (loggerType == null)
                 {
                     throw new ConfigurationException($@"Logger specified in config cannot be found: ""{strLoggerType}""");
                 }
+                #endif
 
                 if (typeof(MinimalLogger).IsAssignableFrom(loggerType))
                 {

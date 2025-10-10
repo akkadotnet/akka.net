@@ -28,6 +28,16 @@ internal sealed class TypeHints
     public static readonly Type DefaultSchedulerType = typeof(HashedWheelTimerScheduler);
 
     /// <summary>
+    /// Default logger types from akka.conf.
+    /// Maps logger type names to their implementation types.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, Type> DefaultLoggers = new Dictionary<string, Type>
+    {
+        { "Akka.Event.DefaultLogger", typeof(Event.DefaultLogger) },
+        { "Akka.Event.TraceLogger", typeof(Event.TraceLogger) }
+    };
+
+    /// <summary>
     /// Default mailbox requirement mappings from akka.conf.
     /// Maps message queue semantic types to their corresponding mailbox configuration paths.
     /// </summary>
