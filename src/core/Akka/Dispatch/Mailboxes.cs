@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
@@ -94,7 +95,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="actorType">The type to check.</param>
         /// <returns><c>true</c> if this actor has a message queue type requirement. <c>false</c> otherwise.</returns>
-        public bool HasRequiredType(Type actorType)
+        public bool HasRequiredType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type actorType)
         {
             var interfaces = actorType.GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
@@ -114,7 +115,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="mailboxType">The type of the <see cref="MailboxType"/> to check.</param>
         /// <returns><c>true</c> if this mailboxtype produces queues. <c>false</c> otherwise.</returns>
-        public bool ProducesMessageQueue(Type mailboxType)
+        public bool ProducesMessageQueue([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type mailboxType)
         {
             var interfaces = mailboxType.GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
@@ -243,7 +244,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="actorType">TBD</param>
         /// <returns>TBD</returns>
-        public Type GetRequiredType(Type actorType)
+        public Type GetRequiredType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type actorType)
         {
             var interfaces = actorType.GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
@@ -259,6 +260,9 @@ namespace Akka.Dispatch
         }
 
         private static readonly Type ProducesMessageQueueGenericType = typeof (IProducesMessageQueue<>);
+
+        [UnconditionalSuppressMessage("AssemblyFiles", "IL2075",
+            Justification = "All MailboxType implementations in Akka.NET have IProducesMessageQueue<T> interfaces preserved")]
         private Type GetProducedMessageQueueType(MailboxType mailboxType)
         {
             var interfaces = mailboxType.GetType().GetInterfaces();
