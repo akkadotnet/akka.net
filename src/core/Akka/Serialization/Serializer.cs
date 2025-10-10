@@ -198,6 +198,7 @@ namespace Akka.Serialization
             */
 
             #if AOT_ENABLED
+            // TODO: we could very well just drop this requirement and have users override the Identifier property in AOT mode
             // In AOT mode, use string-based matching to avoid Type.GetType()
             // Config uses format: "TypeFullName, AssemblyShortName" (e.g., "Akka.Serialization.ByteArraySerializer, Akka")
             var identifiers = config.AsEnumerable()
