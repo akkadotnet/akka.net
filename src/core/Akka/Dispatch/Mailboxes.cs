@@ -59,8 +59,15 @@ namespace Akka.Dispatch
             if (mailboxConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<Mailboxes>("akka.actor.mailbox");
 
-            var requirements = mailboxConfig.GetConfig("requirements").AsEnumerable().ToList();
+            #if AOT_ENABLED
+            // In AOT mode, use hard-coded default mailbox requirements from TypeHints
+            // Custom mailbox requirements must be registered via Setup classes
+            _mailboxBindings = Actor.Internal.TypeHints.DefaultMailboxRequirements
+                .ToDictionary(k => k.Key, v => v.Value);
+            #else
+            // In non-AOT mode, load mailbox requirements from configuration
             _mailboxBindings = new Dictionary<Type, string>();
+            var requirements = mailboxConfig.GetConfig("requirements").AsEnumerable().ToList();
             foreach (var kvp in requirements)
             {
                 var type = Type.GetType(kvp.Key);
@@ -71,6 +78,7 @@ namespace Akka.Dispatch
                 }
                 _mailboxBindings.Add(type, kvp.Value.GetString());
             }
+            #endif
 
             _defaultMailboxConfig = Settings.Config.GetConfig(DefaultMailboxId);
             _defaultStashCapacity = StashCapacityFromConfig(Dispatchers.DefaultDispatcherId, DefaultMailboxId);
