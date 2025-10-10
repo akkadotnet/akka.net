@@ -281,7 +281,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.TestKit.Xunit.Tests", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AOT", "AOT", "{2E11BBFC-EA1F-4C20-8076-0D8542397264}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.AOT.App", "aot\Akka.AOT.App\Akka.AOT.App.csproj", "{6732F90D-59C9-45BA-801A-24BE2A12EB62}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.AOT.App", "src\aot\Akka.AOT.App\Akka.AOT.App.csproj", "{6732F90D-59C9-45BA-801A-24BE2A12EB62}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
