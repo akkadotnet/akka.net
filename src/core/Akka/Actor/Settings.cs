@@ -107,7 +107,7 @@ namespace Akka.Actor
             // log a warning if the configured provider does not match the AOT default
             if (providerType.FullName != ProviderClass)
             {
-                System.Log.Warning(
+                Console.WriteLine(
                     "The configured actor provider [{0}] does not match the AOT default provider [{1}]. " +
                     "Ensure that all types used by the configured provider are preserved for AOT compilation.",
                     ProviderClass, providerType.FullName);
@@ -157,7 +157,7 @@ namespace Akka.Actor
                 // log a warning
                 if (stdoutClassName != typeof(StandardOutLogger).FullName)
                 {
-                    System.Log.Warning(
+                    Console.WriteLine(
                         "The configured standard out logger [{0}] does not match the AOT default logger [{1}]. " +
                         "Ensure that all types used by the configured logger are preserved for AOT compilation.",
                         stdoutClassName, typeof(StandardOutLogger).FullName);
@@ -201,7 +201,7 @@ namespace Akka.Actor
                 // log a warning if the configured formatter does not match the AOT default
                 if (loggerFormatterName != typeof(DefaultLogMessageFormatter).FullName)
                 {
-                    System.Log.Warning(
+                    Console.WriteLine(
                         "The configured log message formatter [{0}] does not match the AOT default formatter [{1}]. " +
                         "Ensure that all types used by the configured formatter are preserved for AOT compilation.",
                         loggerFormatterName, typeof(DefaultLogMessageFormatter).FullName);
