@@ -6,7 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Linq.Expressions;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 
@@ -71,7 +70,7 @@ namespace Akka.TestKit
         /// <typeparam name="TActor">The type of the actor.</typeparam>
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
         /// <returns>TBD</returns>
-        public IActorRef ActorOf<TActor>(Expression<Func<TActor>> factory) where TActor : ActorBase
+        public IActorRef ActorOf<TActor>(Func<TActor> factory) where TActor : ActorBase
         {
             return Sys.ActorOf(Props.Create(factory), null);
         }
@@ -87,7 +86,7 @@ namespace Akka.TestKit
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
         /// <param name="name">The name of the actor.</param>
         /// <returns>TBD</returns>
-        public IActorRef ActorOf<TActor>(Expression<Func<TActor>> factory, string name) where TActor : ActorBase
+        public IActorRef ActorOf<TActor>(Func<TActor> factory, string name) where TActor : ActorBase
         {
             return Sys.ActorOf(Props.Create(factory), name);
         }
@@ -201,7 +200,7 @@ namespace Akka.TestKit
         /// <param name="supervisor">The supervisor</param>
         /// <param name="name">Optional: The name.</param>
         /// <returns>TBD</returns>
-        public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Expression<Func<TActor>> factory, IActorRef supervisor, string name = null) where TActor : ActorBase
+        public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Func<TActor> factory, IActorRef supervisor, string name = null) where TActor : ActorBase
         {
             return new TestActorRef<TActor>(Sys, Props.Create(factory), supervisor, name);
         }
@@ -218,7 +217,7 @@ namespace Akka.TestKit
         /// <param name="factory">An expression that calls the constructor of <typeparamref name="TActor"/></param>
         /// <param name="name">Optional: The name.</param>
         /// <returns>TBD</returns>
-        public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Expression<Func<TActor>> factory, string name = null) where TActor : ActorBase
+        public TestActorRef<TActor> ActorOfAsTestActorRef<TActor>(Func<TActor> factory, string name = null) where TActor : ActorBase
         {
             return new TestActorRef<TActor>(Sys, Props.Create(factory), NoSupervisor, name);
         }
@@ -333,7 +332,7 @@ namespace Akka.TestKit
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
         /// <returns>TBD</returns>
-        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Expression<Func<TFsmActor>> factory, IActorRef supervisor, string name = null, bool withLogging = false)
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Func<TFsmActor> factory, IActorRef supervisor, string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>
         {
             return new TestFSMRef<TFsmActor, TState, TData>(Sys, Props.Create(factory), supervisor, name, withLogging);
@@ -351,7 +350,7 @@ namespace Akka.TestKit
         /// <param name="name">Optional: The name.</param>
         /// <param name="withLogging">Optional: If set to <c>true</c> logs state changes of the FSM as Debug messages. Default is <c>false</c>.</param>
         /// <returns>TBD</returns>
-        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Expression<Func<TFsmActor>> factory, string name = null, bool withLogging = false)
+        public TestFSMRef<TFsmActor, TState, TData> ActorOfAsTestFSMRef<TFsmActor, TState, TData>(Func<TFsmActor> factory, string name = null, bool withLogging = false)
             where TFsmActor : FSM<TState, TData>
         {
             return new TestFSMRef<TFsmActor, TState, TData>(Sys, Props.Create(factory), NoSupervisor, name, withLogging);
