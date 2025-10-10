@@ -196,13 +196,29 @@ namespace Akka.Serialization
             if (config.IsNullOrEmpty())
                 throw new ConfigurationException($"Cannot retrieve serialization identifier informations: {SerializationIdentifiers} configuration node not found");
             */
+
+            #if AOT_ENABLED
+            // In AOT mode, use string-based matching to avoid Type.GetType()
+            // Config uses format: "TypeFullName, AssemblyShortName" (e.g., "Akka.Serialization.ByteArraySerializer, Akka")
+            var identifiers = config.AsEnumerable()
+                .ToDictionary(pair => pair.Key, pair => pair.Value.GetInt());
+
+            // Use TypeQualifiedName() to get the short assembly-qualified name without version/culture/token
+            var typeKey = type.TypeQualifiedName();
+
+            if (!identifiers.TryGetValue(typeKey, out var value))
+                throw new ArgumentException($"Couldn't find serializer id for [{type}] (key: '{typeKey}') under [{SerializationIdentifiers}] HOCON path", nameof(type));
+
+            return value;
+            #else
             var identifiers = config.AsEnumerable()
                 .ToDictionary(pair => Type.GetType(pair.Key, true), pair => pair.Value.GetInt());
 
-            if (!identifiers.TryGetValue(type, out int value))
+            if (!identifiers.TryGetValue(type, out var value))
                 throw new ArgumentException($"Couldn't find serializer id for [{type}] under [{SerializationIdentifiers}] HOCON path", nameof(type));
 
             return value;
+            #endif
         }
     }
 }
