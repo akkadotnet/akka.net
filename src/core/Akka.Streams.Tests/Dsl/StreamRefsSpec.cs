@@ -486,10 +486,88 @@ namespace Akka.Streams.Tests
             var p1 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
             p1.EnsureSubscription();
             var req = p1.ExpectRequest();
-            
+
             var p2 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
             p2.EnsureSubscription(); // will be cancelled immediately, since it's 2nd
             p2.ExpectCancellation();
+        }
+
+        [Fact(DisplayName = "SourceRef.Source property should be idempotent (bug reproduction for #7895)")]
+        public async Task SourceRef_Source_property_should_be_idempotent()
+        {
+            // This test demonstrates the bug in issue #7895 from KBRA ticket #548
+            //
+            // THE BUG: Property creates NEW SourceRefStageImpl instance on EVERY access
+            //
+            // KBRA SCENARIO (Mark Zych - 30% intermittent timeout failures):
+            // 1. User code: var source = dateSource.Source  → creates SourceRefStageImpl #1
+            // 2. Debugger: IDE hovers over 'dateSource'      → evaluates .Source → creates #2
+            // 3. User's pipeline (containing #1) is sent to worker
+            // 4. Worker materializes pipeline immediately (no delay!)
+            // 5. RACE: Both #1 and #2 try to handshake with same SinkRef
+            //
+            // OUTCOMES:
+            //   - If #1 wins race: User's pipeline works perfectly ✅ (70% of cases)
+            //   - If #2 wins race: User's pipeline hangs waiting for handshake ❌ (30% of cases)
+            //                      → Timeout after 90 seconds
+            //                      → RemoteStreamRefActorTerminatedException
+            //
+            // This explains why:
+            // - It's intermittent (depends on which instance wins race)
+            // - It happens despite immediate materialization (timing isn't the issue)
+            // - Increasing timeout doesn't help (lost the race, not slow to connect)
+            // - Worker capacity doesn't matter (happens before pipeline reaches worker)
+
+            // Create StreamRef with SHORT timeout for faster test
+            var sourceRef = await Source.From(new[] { 1, 2, 3 })
+                .ToMaterialized(StreamRefs.SourceRef<int>(), Keep.Right)
+                .WithAttributes(StreamRefAttributes.CreateSubscriptionTimeout(TimeSpan.FromSeconds(5)))
+                .Run(Sys.Materializer());
+
+            // Simulate user code + debugger both accessing .Source
+            var userSource = sourceRef.Source;        // User's explicit access (used in pipeline)
+            var debuggerSource = sourceRef.Source;    // Debugger's implicit access (on hover)
+
+            // VERIFY EXPECTED BEHAVIOR: Property should be idempotent
+            // This assertion will FAIL with current buggy code (creates new instances)
+            // After fix is applied, this assertion will PASS (returns same instance)
+            Assert.True(ReferenceEquals(userSource, debuggerSource),
+                "Source property must return the SAME instance on multiple accesses (idempotent). " +
+                "Currently FAILS because each access creates a NEW SourceRefStageImpl instance.");
+
+            // SIMULATE KBRA SCENARIO: User's pipeline materializes immediately
+            // But debugger already created a competing instance that might win the race
+            var userPipelineTask = userSource.RunWith(Sink.Seq<int>(), Sys.Materializer());
+
+            // INTENTIONALLY materialize the debugger's source to create the race condition
+            // In production, the debugger doesn't materialize - it just creates the instance
+            // But to demonstrate the timeout in a test, we need to actually trigger the race
+            var debuggerTask = debuggerSource.RunWith(Sink.Seq<int>(), Sys.Materializer());
+
+            // DEMONSTRATE THE RACE: One wins, one times out
+            // In production, WHICH one wins is random (30% failure rate)
+            var delayTask = Task.Delay(TimeSpan.FromSeconds(7));
+            var completed = await Task.WhenAny(
+                userPipelineTask,
+                debuggerTask,
+                delayTask // Safety timeout
+            );
+
+            // At least one task should complete within timeout (not the delay task)
+            Assert.True(userPipelineTask.IsCompleted || debuggerTask.IsCompleted,
+                "At least one Source should complete within timeout period");
+
+            Output.WriteLine("=== BUG REPRODUCTION for #7895 ===");
+            Output.WriteLine($"Property creates new instances: {!ReferenceEquals(userSource, debuggerSource)}");
+            Output.WriteLine($"User pipeline completed: {userPipelineTask.IsCompleted}");
+            Output.WriteLine($"Debugger source completed: {debuggerTask.IsCompleted}");
+            Output.WriteLine("");
+            Output.WriteLine("Expected behavior AFTER FIX:");
+            Output.WriteLine("  1. sourceRef.Source returns SAME instance every time (idempotent)");
+            Output.WriteLine("  2. No duplicate SourceRefStageImpl instances created");
+            Output.WriteLine("  3. No race condition for handshake");
+            Output.WriteLine("  4. User's pipeline always works (100% success rate)");
+            Output.WriteLine("  5. Second materialization fails immediately (by design), not after timeout");
         }
     }
 }
