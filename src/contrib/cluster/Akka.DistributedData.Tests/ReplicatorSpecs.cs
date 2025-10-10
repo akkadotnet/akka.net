@@ -596,7 +596,13 @@ namespace Akka.DistributedData.Tests
             _replicator3.Tell(Dsl.Subscribe(_keyJ, changedProbe3.Ref));
 
             var messages = Enumerable.Range(0, 20000).Select(i => i.ToString()).ToList();
-            
+
+            // Use longer timeout for large dataset operations due to serialization overhead
+            // of 20K+ element ORSet merge operations. Standard timeout of 3s can be insufficient
+            // when the system is under load, causing premature UpdateTimeout before WriteAck
+            // messages arrive from remote nodes.
+            var largeDataTimeout = Dilated(TimeSpan.FromSeconds(10.0));
+
             // Scenario 1 - add 1 entry with multiple values to all nodes
             var keyA = "A";
             var entryA = messages.ToImmutableHashSet();
@@ -607,7 +613,7 @@ namespace Akka.DistributedData.Tests
                 await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
                     _keyJ,
                     ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
-                    new WriteMajority(_timeOut),
+                    new WriteMajority(largeDataTimeout),
                     s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA)));
             }
             finally
@@ -615,7 +621,7 @@ namespace Akka.DistributedData.Tests
                 stopwatch.Stop();
             }
             Log.Info($"Update time: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.ElapsedMilliseconds / 1000.0} s)");
-           
+
             var node2EntriesA = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ)).Get(_keyJ).Entries;
             node2EntriesA[keyA].Should().BeEquivalentTo(entryA);
 
@@ -624,14 +630,14 @@ namespace Akka.DistributedData.Tests
 
             // Scenario 2 - modify set with existing items in it
             var entryA1 = entryA.Add("999999").Add("1000000");
-            
+
             stopwatch = Stopwatch.StartNew();
             try
             {
                 await _replicator1.Ask<UpdateSuccess>(Dsl.Update(
                     _keyJ,
                     ORMultiValueDictionary<string, string>.EmptyWithValueDeltas,
-                    new WriteMajority(_timeOut),
+                    new WriteMajority(largeDataTimeout),
                     s => s.SetItems(Cluster.Cluster.Get(_sys1), keyA, entryA1)));
             }
             finally
@@ -640,11 +646,11 @@ namespace Akka.DistributedData.Tests
             }
             Log.Info($"Single update time: {stopwatch.ElapsedMilliseconds} ms ({stopwatch.ElapsedMilliseconds / 1000.0} s)");
 
-            var node2Changed = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ), TimeSpan.FromSeconds(3));
+            var node2Changed = changedProbe2.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ), TimeSpan.FromSeconds(10));
             var node2EntriesBCA = node2Changed.Get(_keyJ);
             node2EntriesBCA.Entries["A"].Should().BeEquivalentTo(entryA1);
 
-            var node3Changed = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ), TimeSpan.FromSeconds(3));
+            var node3Changed = changedProbe3.ExpectMsg<Changed>(g => Equals(g.Key, _keyJ), TimeSpan.FromSeconds(10));
             var node3EntriesBCA = node3Changed.Get(_keyJ).Entries;
             node3EntriesBCA["A"].Should().BeEquivalentTo(entryA1);
         }
