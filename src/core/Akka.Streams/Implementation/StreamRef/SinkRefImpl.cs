@@ -46,11 +46,19 @@ namespace Akka.Streams.Implementation.StreamRef
     [InternalApi]
     internal sealed class SinkRefImpl<T> : SinkRefImpl, ISinkRef<T>
     {
-        public SinkRefImpl(IActorRef initialPartnerRef) : base(initialPartnerRef) { }
-        public override Type EventType => typeof(T);
-        public override ISurrogate ToSurrogate(ActorSystem system) => SerializationTools.ToSurrogate(this);
+        private readonly Lazy<Sink<T, NotUsed>> _sink;
 
-        public Sink<T, NotUsed> Sink => Dsl.Sink.FromGraph(new SinkRefStageImpl<T>(InitialPartnerRef)).MapMaterializedValue(_ => NotUsed.Instance);
+        public SinkRefImpl(IActorRef initialPartnerRef) : base(initialPartnerRef)
+        {
+            _sink = new Lazy<Sink<T, NotUsed>>(() =>
+                Dsl.Sink.FromGraph(new SinkRefStageImpl<T>(InitialPartnerRef))
+                    .MapMaterializedValue(_ => NotUsed.Instance));
+        }
+
+        public override Type EventType => typeof(T);
+        public Sink<T, NotUsed> Sink => _sink.Value;
+
+        public override ISurrogate ToSurrogate(ActorSystem system) => SerializationTools.ToSurrogate(this);
     }
 
     /// <summary>
