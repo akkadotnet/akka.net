@@ -22,6 +22,7 @@ namespace Akka.Streams.Dsl
 
         protected TState _pending;
         protected bool _pushedToCycle;
+        private bool _waitingForInitialDemand;
 
         protected UnfoldFlowGraphStageLogic(FanOutShape<TIn, TState, TOut> shape, TState seed, TimeSpan timeout) : base(shape)
         {
@@ -33,6 +34,7 @@ namespace Akka.Streams.Dsl
 
             _pending = seed;
             _pushedToCycle = false;
+            _waitingForInitialDemand = true;
 
             // Create the timeout callback during construction to ensure it's created on the GraphStageLogic thread
             _timeoutCallback = GetAsyncCallback(() =>
@@ -46,22 +48,38 @@ namespace Akka.Streams.Dsl
             SetHandler(_output, onPull: () =>
             {
                 Pull(_nextElem);
-                if (!_pushedToCycle && IsAvailable(_feedback))
-                {
-                    Push(_feedback, _pending);
-                    _pending = default(TState);
-                    _pushedToCycle = true;
-                }
+                TryPushInitialSeed();
             });
         }
 
         public void OnPull()
         {
-            if (!_pushedToCycle && IsAvailable(_output))
+            TryPushInitialSeed();
+        }
+
+        private void TryPushInitialSeed()
+        {
+            if (!_pushedToCycle)
             {
-                Push(_feedback, _pending);
-                _pending = default(TState);
-                _pushedToCycle = true;
+                if (_waitingForInitialDemand)
+                {
+                    // During initialization, push the seed as soon as feedback has demand
+                    // Don't wait for both outlets to be available
+                    if (IsAvailable(_feedback))
+                    {
+                        Push(_feedback, _pending);
+                        _pending = default(TState);
+                        _pushedToCycle = true;
+                        _waitingForInitialDemand = false;
+                    }
+                }
+                else if (IsAvailable(_feedback) && IsAvailable(_output))
+                {
+                    // After initialization, use original logic requiring both outlets
+                    Push(_feedback, _pending);
+                    _pending = default(TState);
+                    _pushedToCycle = true;
+                }
             }
         }
 
