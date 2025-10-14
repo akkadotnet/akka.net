@@ -125,8 +125,12 @@ namespace Akka.Cluster.Sharding.Tests
 
             // trigger shard start by messaging other actor in it
             Sys.Log.Info("Starting shard again");
-            sharding.Tell(new EntityEnvelope(11, "give-me-shard"));
-            var secondShardIncarnation = await ExpectMsgAsync<IActorRef>();
+            IActorRef secondShardIncarnation = null;
+            await AwaitAssertAsync(async () =>
+            {
+                sharding.Tell(new EntityEnvelope(11, "give-me-shard"));
+                secondShardIncarnation = await ExpectMsgAsync<IActorRef>(TimeSpan.FromSeconds(1));
+            }, TimeSpan.FromSeconds(5));
 
             await AwaitAssertAsync(async () =>
             {
