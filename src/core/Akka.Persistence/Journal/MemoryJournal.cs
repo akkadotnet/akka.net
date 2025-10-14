@@ -46,109 +46,117 @@ namespace Akka.Persistence.Journal
 
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
-            var waitStartTime = Stopwatch.GetTimestamp();
-            var threadId = Environment.CurrentManagedThreadId;
-
-            // Safe to use cached logger from thread pool thread since it was initialized on actor thread
-            _log.Debug("[DIAG] WriteMessagesAsync called on thread {0}, attempting to acquire lock", threadId);
-
-            lock (Lock)
+            return Task.Run(() =>
             {
-                var lockAcquiredTime = Stopwatch.GetTimestamp();
-                var waitTimeMs = (lockAcquiredTime - waitStartTime) * 1000.0 / Stopwatch.Frequency;
-                _log.Debug("[DIAG] Lock acquired after {0:F2}ms on thread {1}", waitTimeMs, threadId);
+                var waitStartTime = Stopwatch.GetTimestamp();
+                var threadId = Environment.CurrentManagedThreadId;
 
-                foreach (var w in messages)
+                // Safe to use cached logger from thread pool thread since it was initialized on actor thread
+                _log.Debug("[DIAG] WriteMessagesAsync called on thread {0}, attempting to acquire lock", threadId);
+
+                lock (Lock)
                 {
-                    foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
+                    var lockAcquiredTime = Stopwatch.GetTimestamp();
+                    var waitTimeMs = (lockAcquiredTime - waitStartTime) * 1000.0 / Stopwatch.Frequency;
+                    _log.Debug("[DIAG] Lock acquired after {0:F2}ms on thread {1}", waitTimeMs, threadId);
+
+                    foreach (var w in messages)
                     {
-                        var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
-
-                        // Maintain both indexes on write
-                        EventLog.Add(persistentRepresentation);
-
-                        if (!EventsByPersistenceId.TryGetValue(persistentRepresentation.PersistenceId, out var pidEvents))
+                        foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                         {
-                            pidEvents = new List<IPersistentRepresentation>();
-                            EventsByPersistenceId[persistentRepresentation.PersistenceId] = pidEvents;
-                        }
-                        pidEvents.Add(persistentRepresentation);
+                            var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
 
-                        _log.Debug("[DIAG] Wrote event for {0}, seq {1}, total events in log: {2}",
-                            persistentRepresentation.PersistenceId,
-                            persistentRepresentation.SequenceNr,
-                            EventLog.Count);
+                            // Maintain both indexes on write
+                            EventLog.Add(persistentRepresentation);
+
+                            if (!EventsByPersistenceId.TryGetValue(persistentRepresentation.PersistenceId, out var pidEvents))
+                            {
+                                pidEvents = new List<IPersistentRepresentation>();
+                                EventsByPersistenceId[persistentRepresentation.PersistenceId] = pidEvents;
+                            }
+                            pidEvents.Add(persistentRepresentation);
+
+                            _log.Debug("[DIAG] Wrote event for {0}, seq {1}, total events in log: {2}",
+                                persistentRepresentation.PersistenceId,
+                                persistentRepresentation.SequenceNr,
+                                EventLog.Count);
+                        }
                     }
+
+                    var lockReleasedTime = Stopwatch.GetTimestamp();
+                    var holdTimeMs = (lockReleasedTime - lockAcquiredTime) * 1000.0 / Stopwatch.Frequency;
+                    _log.Debug("[DIAG] Lock released after holding for {0:F2}ms on thread {1}", holdTimeMs, threadId);
                 }
 
-                var lockReleasedTime = Stopwatch.GetTimestamp();
-                var holdTimeMs = (lockReleasedTime - lockAcquiredTime) * 1000.0 / Stopwatch.Frequency;
-                _log.Debug("[DIAG] Lock released after holding for {0:F2}ms on thread {1}", holdTimeMs, threadId);
-            }
-
-            return Task.FromResult<IImmutableList<Exception>>(null);
+                return (IImmutableList<Exception>)null;
+            }, cancellationToken);
         }
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
-            lock (Lock)
+            return Task.Run(() =>
             {
-                // Use index for O(1) lookup instead of O(n) scan
-                if (!EventsByPersistenceId.TryGetValue(persistenceId, out var events) || events.Count == 0)
-                    return Task.FromResult(0L);
+                lock (Lock)
+                {
+                    // Use index for O(1) lookup instead of O(n) scan
+                    if (!EventsByPersistenceId.TryGetValue(persistenceId, out var events) || events.Count == 0)
+                        return 0L;
 
-                var highest = events[events.Count - 1].SequenceNr;
+                    var highest = events[events.Count - 1].SequenceNr;
 
-                // Return actual highest sequence number from journal
-                // Deletion is logical only - events remain in index
-                return Task.FromResult(highest);
-            }
+                    // Return actual highest sequence number from journal
+                    // Deletion is logical only - events remain in index
+                    return highest;
+                }
+            }, cancellationToken);
         }
 
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
-            IPersistentRepresentation[] messages;
-
-            lock (Lock)
+            return Task.Run(() =>
             {
-                // Use index for O(events_for_entity) instead of O(total_events)
-                if (!EventsByPersistenceId.TryGetValue(persistenceId, out var pidEvents))
+                IPersistentRepresentation[] messages;
+
+                lock (Lock)
                 {
-                    messages = Array.Empty<IPersistentRepresentation>();
+                    // Use index for O(events_for_entity) instead of O(total_events)
+                    if (!EventsByPersistenceId.TryGetValue(persistenceId, out var pidEvents))
+                    {
+                        messages = Array.Empty<IPersistentRepresentation>();
+                    }
+                    else
+                    {
+                        var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
+
+                        messages = pidEvents
+                            .Where(e => e.SequenceNr > deletedToSeq  // Skip deleted messages
+                                     && e.SequenceNr >= fromSequenceNr
+                                     && e.SequenceNr <= toSequenceNr)
+                            .Take(max > int.MaxValue ? int.MaxValue : (int)max)
+                            .ToArray();
+                    }
                 }
-                else
+
+                // Execute callbacks outside the lock to avoid potential deadlocks
+                foreach (var message in messages)
                 {
-                    var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
-
-                    messages = pidEvents
-                        .Where(e => e.SequenceNr > deletedToSeq  // Skip deleted messages
-                                 && e.SequenceNr >= fromSequenceNr
-                                 && e.SequenceNr <= toSequenceNr)
-                        .Take(max > int.MaxValue ? int.MaxValue : (int)max)
-                        .ToArray();
+                    recoveryCallback(message);
                 }
-            }
-
-            // Execute callbacks outside the lock to avoid potential deadlocks
-            foreach (var message in messages)
-            {
-                recoveryCallback(message);
-            }
-
-            return Task.CompletedTask;
+            });
         }
 
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {
-            lock (Lock)
+            return Task.Run(() =>
             {
-                // Track deletion marker instead of actually removing events
-                // This is simpler and matches the semantics (logical deletion)
-                DeletedTo[persistenceId] = toSequenceNr;
-            }
-
-            return Task.CompletedTask;
+                lock (Lock)
+                {
+                    // Track deletion marker instead of actually removing events
+                    // This is simpler and matches the semantics (logical deletion)
+                    DeletedTo[persistenceId] = toSequenceNr;
+                }
+            }, cancellationToken);
         }
 
         /// <summary>
@@ -285,72 +293,78 @@ namespace Akka.Persistence.Journal
         /// </summary>
         private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
-            var waitStartTime = Stopwatch.GetTimestamp();
-            var threadId = Environment.CurrentManagedThreadId;
-
-            // Safe to use cached logger from thread pool thread since it was initialized on actor thread
-            _log.Debug("[DIAG] ReplayTaggedMessagesAsync starting for tag '{0}' on thread {1}, attempting to acquire lock", replay.Tag, threadId);
-
-            IPersistentRepresentation[] snapshot;
-            int count;
-
-            lock (Lock)
+            return Task.Run(() =>
             {
-                var lockAcquiredTime = Stopwatch.GetTimestamp();
-                var waitTimeMs = (lockAcquiredTime - waitStartTime) * 1000.0 / Stopwatch.Frequency;
-                _log.Debug("[DIAG] ReplayTaggedMessages lock acquired after {0:F2}ms on thread {1}", waitTimeMs, threadId);
+                var waitStartTime = Stopwatch.GetTimestamp();
+                var threadId = Environment.CurrentManagedThreadId;
 
-                // Scan for events with matching tag
-                snapshot = EventLog
-                    .Where(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag))
-                    .Skip(replay.FromOffset)
-                    .Take(replay.Max)
-                    .ToArray();
+                // Safe to use cached logger from thread pool thread since it was initialized on actor thread
+                _log.Debug("[DIAG] ReplayTaggedMessagesAsync starting for tag '{0}' on thread {1}, attempting to acquire lock", replay.Tag, threadId);
 
-                count = EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
+                IPersistentRepresentation[] snapshot;
+                int count;
 
-                _log.Debug("[DIAG] Found {0} events matching tag '{1}', total tagged events: {2}, EventLog size: {3}",
-                    snapshot.Length, replay.Tag, count, EventLog.Count);
-            }
+                lock (Lock)
+                {
+                    var lockAcquiredTime = Stopwatch.GetTimestamp();
+                    var waitTimeMs = (lockAcquiredTime - waitStartTime) * 1000.0 / Stopwatch.Frequency;
+                    _log.Debug("[DIAG] ReplayTaggedMessages lock acquired after {0:F2}ms on thread {1}", waitTimeMs, threadId);
 
-            // Send messages outside the lock to avoid potential deadlocks
-            var index = 0;
-            foreach (var persistence in snapshot)
-            {
-                replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
-                _log.Debug("[DIAG] Sent ReplayedTaggedMessage for {0}, seq {1}, offset {2}",
-                    persistence.PersistenceId, persistence.SequenceNr, replay.FromOffset + index);
-                index++;
-            }
+                    // Scan for events with matching tag
+                    snapshot = EventLog
+                        .Where(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag))
+                        .Skip(replay.FromOffset)
+                        .Take(replay.Max)
+                        .ToArray();
 
-            _log.Debug("[DIAG] ReplayTaggedMessagesAsync completed, returning highestSequenceNr={0}", count - 1);
-            return Task.FromResult(count - 1);
+                    count = EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
+
+                    _log.Debug("[DIAG] Found {0} events matching tag '{1}', total tagged events: {2}, EventLog size: {3}",
+                        snapshot.Length, replay.Tag, count, EventLog.Count);
+                }
+
+                // Send messages outside the lock to avoid potential deadlocks
+                var index = 0;
+                foreach (var persistence in snapshot)
+                {
+                    replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
+                    _log.Debug("[DIAG] Sent ReplayedTaggedMessage for {0}, seq {1}, offset {2}",
+                        persistence.PersistenceId, persistence.SequenceNr, replay.FromOffset + index);
+                    index++;
+                }
+
+                _log.Debug("[DIAG] ReplayTaggedMessagesAsync completed, returning highestSequenceNr={0}", count - 1);
+                return count - 1;
+            });
         }
 
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            IPersistentRepresentation[] snapshot;
-            int count;
-
-            lock (Lock)
+            return Task.Run(() =>
             {
-                snapshot = EventLog
-                    .Skip(replay.FromOffset)
-                    .Take((int)replay.Max)
-                    .ToArray();
+                IPersistentRepresentation[] snapshot;
+                int count;
 
-                count = EventLog.Count;
-            }
+                lock (Lock)
+                {
+                    snapshot = EventLog
+                        .Skip(replay.FromOffset)
+                        .Take((int)replay.Max)
+                        .ToArray();
 
-            // Send messages outside the lock to avoid potential deadlocks
-            var index = 0;
-            foreach (var message in snapshot)
-            {
-                replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
-                index++;
-            }
+                    count = EventLog.Count;
+                }
 
-            return Task.FromResult(count - 1);
+                // Send messages outside the lock to avoid potential deadlocks
+                var index = 0;
+                foreach (var message in snapshot)
+                {
+                    replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
+                    index++;
+                }
+
+                return count - 1;
+            });
         }
 
         #region QueryAPI
