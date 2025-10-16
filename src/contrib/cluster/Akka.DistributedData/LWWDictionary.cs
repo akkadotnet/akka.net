@@ -402,8 +402,8 @@ namespace Akka.DistributedData
         }
 
         // TODO: optimize this so it doesn't allocate each time it's called
-        public ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation Delta => 
-            new LWWDictionaryDelta(Underlying.Delta);
+        public ORDictionary<TKey, LWWRegister<TValue>>.IDeltaOperation Delta =>
+            Underlying.Delta == null ? null : new LWWDictionaryDelta(Underlying.Delta);
 
         IReplicatedDelta IDeltaReplicatedData.Delta => Delta;
 

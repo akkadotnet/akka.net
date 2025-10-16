@@ -161,5 +161,33 @@ namespace Akka.DistributedData.Tests
             merged1.Entries["b"].Should().BeEquivalentTo("B2");
             merged1.Entries["c"].Should().BeEquivalentTo("C");
         }
+
+        /// <summary>
+        /// Bug reproduction: https://github.com/akkadotnet/akka.net/issues/7910
+        /// LWWDictionary.Delta should return null when underlying ORDictionary.Delta is null
+        /// </summary>
+        [Fact]
+        public void Bugfix_7910_LWWDictionary_Delta_should_handle_null_underlying_delta()
+        {
+            // Empty dictionary has no delta
+            var empty = LWWDictionary<string, string>.Empty;
+            empty.Delta.Should().BeNull("empty dictionary should have null delta");
+
+            // After ResetDelta(), delta should be null
+            var m1 = LWWDictionary<string, string>.Empty
+                .SetItem(_node1, "a", "A")
+                .SetItem(_node1, "b", "B");
+
+            m1.Delta.Should().NotBeNull("dictionary with modifications should have a delta");
+
+            var m2 = m1.ResetDelta();
+            m2.Delta.Should().BeNull("after ResetDelta(), delta should be null");
+
+            // Verify the dictionary still contains the data
+            m2.ContainsKey("a").Should().BeTrue();
+            m2.ContainsKey("b").Should().BeTrue();
+            m2["a"].Should().Be("A");
+            m2["b"].Should().Be("B");
+        }
     }
 }
