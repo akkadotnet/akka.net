@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.53</VersionPrefix>
+    <VersionPrefix>1.5.54</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -50,24 +50,22 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.53 is a security patch containing important fixes for TLS/SSL hostname validation and improved error diagnostics for certificate authentication issues.
+    <PackageReleaseNotes>Akka.NET v1.5.54 is a patch release containing important bug fixes for Akka.Streams and Akka.DistributedData.
 
-**Security Fixes:**
+**Bug Fixes:**
 
-* [Fix TLS hostname validation bug and add configurable validation](https://github.com/akkadotnet/akka.net/pull/7897) - Fixes a critical bug where TLS clients validated against their own certificate DNS name instead of the remote server address, particularly affecting mutual TLS scenarios. This release also adds a new `validate-certificate-hostname` configuration option to `akka.remote.dot-netty.tcp` (defaults to `false` for backward compatibility) and introduces type-safe validation APIs through the new `TlsValidationCallbacks` factory class.
+* [Fix SourceRef.Source and SinkRef.Sink non-idempotent property bug](https://github.com/akkadotnet/akka.net/pull/7907) - Fixes [issue #7895](https://github.com/akkadotnet/akka.net/issues/7895) where `ISourceRef&lt;T&gt;.Source` and `ISinkRef&lt;T&gt;.Sink` properties created new stage instances on every access, causing race conditions and intermittent subscription timeouts. These properties are now idempotent using `Lazy&lt;T&gt;`, preventing failures from accidental property access (debugger inspection, logging, serialization frameworks).
 
-**Improvements:**
+* [Fix LWWDictionary.Delta ArgumentNullException when underlying delta is null](https://github.com/akkadotnet/akka.net/pull/7912) - Fixes [issue #7910](https://github.com/akkadotnet/akka.net/issues/7910) where `LWWDictionary.Delta` would throw `ArgumentNullException` when the underlying `ORDictionary.Delta` was `null`, which is a legitimate state after initialization or calling `ResetDelta()`.
 
-* [Improve TLS/SSL certificate error messages during handshake failures](https://github.com/akkadotnet/akka.net/pull/7891) - Provides human-readable, actionable error messages for TLS/SSL certificate validation failures with detailed troubleshooting guidance, significantly improving the developer experience when configuring certificate-based authentication.
-
-1 contributor since release 1.5.52
+1 contributor since release 1.5.53
 
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 2 | 1060 | 77 | Aaron Stannard |
+| 2 | 159 | 20 | Aaron Stannard |
 
 
-To [see the full set of changes in Akka.NET v1.5.53, click here](https://github.com/akkadotnet/akka.net/milestone/136?closed=1)</PackageReleaseNotes>
+To [see the full set of changes in Akka.NET v1.5.54, click here](https://github.com/akkadotnet/akka.net/milestone/137?closed=1)</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
