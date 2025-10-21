@@ -416,10 +416,18 @@ namespace Akka.Remote.Transport.DotNetty
                     // For server-side, extract the remote peer (client address) from the channel
                     RemoteCertificateValidationCallback validationCallback = (sender, certificate, chain, errors) =>
                     {
+                        // When mutual TLS is required, reject if no client certificate was provided
+                        if (certificate == null)
+                        {
+                            Log.Warning("Mutual TLS required but client did not provide a certificate from {0}",
+                                channel.RemoteAddress?.ToString() ?? "unknown");
+                            return false;
+                        }
+
                         // Extract client address from channel
                         var remoteAddress = channel.RemoteAddress?.ToString() ?? "unknown";
                         // Convert X509Certificate to X509Certificate2 if needed
-                        var x509Cert = certificate as X509Certificate2 ?? (certificate != null ? new X509Certificate2(certificate) : null);
+                        var x509Cert = certificate as X509Certificate2 ?? new X509Certificate2(certificate);
                         return validator(x509Cert, chain, remoteAddress, errors, Log);
                     };
 
