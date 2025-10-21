@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -509,6 +510,25 @@ namespace Akka.Remote.Transport.DotNetty
     }
 
     /// <summary>
+    /// PUBLIC API
+    ///
+    /// Custom certificate validation callback for mTLS connections.
+    /// Invoked during TLS handshake on both client and server sides.
+    /// </summary>
+    /// <param name="certificate">The peer certificate to validate</param>
+    /// <param name="chain">The X509 chain for validation</param>
+    /// <param name="remotePeer">The remote address/peer identifier</param>
+    /// <param name="errors">SSL policy errors from standard validation</param>
+    /// <param name="log">Logger for diagnostics</param>
+    /// <returns>True to accept cert, false to reject</returns>
+    public delegate bool CertificateValidationCallback(
+        X509Certificate2 certificate,
+        X509Chain chain,
+        string remotePeer,
+        SslPolicyErrors errors,
+        ILoggingAdapter log);
+
+    /// <summary>
     /// INTERNAL API
     ///
     /// Factory for creating TLS certificate validation callbacks with different security policies.
@@ -586,6 +606,213 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public static RemoteCertificateValidationCallback AcceptAll()
             => (_, _, _, _) => true;
+    }
+
+    /// <summary>
+    /// PUBLIC API
+    ///
+    /// Factory methods for common certificate validation scenarios.
+    /// Helpers return delegates that can be composed or used standalone.
+    /// Each helper creates a CertificateValidationCallback that can be passed to DotNettySslSetup.
+    /// </summary>
+    public static class CertificateValidation
+    {
+        /// <summary>
+        /// Validate certificate chain against system CA store.
+        /// Use for: CA-signed certificates in production.
+        /// </summary>
+        public static CertificateValidationCallback ValidateChain(
+            ILoggingAdapter? log = null)
+        {
+            return (cert, chain, peer, errors, log_) =>
+            {
+                var filteredErrors = errors & ~SslPolicyErrors.RemoteCertificateNameMismatch;
+                if (filteredErrors == SslPolicyErrors.None)
+                    return true;
+
+                var cert509 = cert as X509Certificate2;
+                var detailedError = TlsErrorMessageBuilder.BuildSslPolicyErrorMessage(
+                    filteredErrors, cert509, chain);
+                (log ?? log_).Error("Certificate chain validation failed for {0}:\n{1}", peer, detailedError);
+                return false;
+            };
+        }
+
+        /// <summary>
+        /// Validate certificate hostname (CN/SAN) matches expected hostname.
+        /// Use for: Per-node certificates, FQDN-based identity.
+        /// Applies bidirectionally on both client and server.
+        /// </summary>
+        public static CertificateValidationCallback ValidateHostname(
+            string? expectedHostname = null,
+            ILoggingAdapter? log = null)
+        {
+            return (cert, chain, peer, errors, log_) =>
+            {
+                var hostname = expectedHostname ?? peer;
+
+                if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) != 0)
+                {
+                    var cn = (cert as X509Certificate2)?.GetNameInfo(X509NameType.DnsName, false);
+                    (log ?? log_).Error(
+                        "Hostname validation failed for {0}: expected '{1}', certificate CN is '{2}'",
+                        peer, hostname, cn);
+                    return false;
+                }
+
+                return true;
+            };
+        }
+
+        /// <summary>
+        /// Pin certificate by thumbprint. Only accept certs matching allowed list.
+        /// Use for: High-security scenarios, known peer certificates.
+        /// Best combined with: Certificate revocation checking.
+        /// </summary>
+        public static CertificateValidationCallback PinnedCertificate(
+            params string[] allowedThumbprints)
+        {
+            if (allowedThumbprints == null || allowedThumbprints.Length == 0)
+                throw new ArgumentException("At least one thumbprint required");
+
+            var normalizedThumbprints = new HashSet<string>(
+                allowedThumbprints!.Select(t => t.ToUpperInvariant()));
+
+            return (cert, chain, peer, errors, log) =>
+            {
+                var cert509 = cert as X509Certificate2;
+                var thumbprint = cert509?.Thumbprint?.ToUpperInvariant();
+
+                if (!normalizedThumbprints.Contains(thumbprint ?? ""))
+                {
+                    log.Error("Certificate pinning failed for {0}: thumbprint '{1}' not in allowed list",
+                        peer, thumbprint);
+                    return false;
+                }
+
+                return true;
+            };
+        }
+
+        /// <summary>
+        /// Validate certificate subject DN matches expected pattern.
+        /// Use for: Organizational CA, issuer-based identity verification.
+        /// Supports wildcards: "CN=Akka-Node-*" matches "CN=Akka-Node-001"
+        /// </summary>
+        public static CertificateValidationCallback ValidateSubject(
+            string expectedSubjectPattern,
+            ILoggingAdapter? log = null)
+        {
+            if (string.IsNullOrEmpty(expectedSubjectPattern))
+                throw new ArgumentException("Subject pattern required");
+
+            return (cert, chain, peer, errors, log_) =>
+            {
+                var cert509 = cert as X509Certificate2;
+                var subject = cert509?.Subject;
+
+                if (!SubjectMatchesPattern(subject, expectedSubjectPattern))
+                {
+                    (log ?? log_).Error(
+                        "Subject validation failed for {0}: '{1}' does not match pattern '{2}'",
+                        peer, subject, expectedSubjectPattern);
+                    return false;
+                }
+
+                return true;
+            };
+        }
+
+        /// <summary>
+        /// Validate certificate issuer matches expected DN pattern.
+        /// Use for: Verifying certificate came from trusted CA.
+        /// </summary>
+        public static CertificateValidationCallback ValidateIssuer(
+            string expectedIssuerPattern,
+            ILoggingAdapter? log = null)
+        {
+            if (string.IsNullOrEmpty(expectedIssuerPattern))
+                throw new ArgumentException("Issuer pattern required");
+
+            return (cert, chain, peer, errors, log_) =>
+            {
+                var cert509 = cert as X509Certificate2;
+                var issuer = cert509?.Issuer;
+
+                if (!SubjectMatchesPattern(issuer, expectedIssuerPattern))
+                {
+                    (log ?? log_).Error(
+                        "Issuer validation failed for {0}: '{1}' does not match pattern '{2}'",
+                        peer, issuer, expectedIssuerPattern);
+                    return false;
+                }
+
+                return true;
+            };
+        }
+
+        /// <summary>
+        /// Compose multiple validation callbacks into a single callback.
+        /// All validators must pass for certificate to be accepted.
+        /// Use for: Combining multiple validation strategies.
+        /// </summary>
+        public static CertificateValidationCallback Combine(
+            params CertificateValidationCallback[] validators)
+        {
+            if (validators == null || validators.Length == 0)
+                throw new ArgumentException("At least one validator required");
+
+            return (cert, chain, peer, errors, log) =>
+            {
+                foreach (var validator in validators!)
+                {
+                    if (!validator(cert, chain, peer, errors, log))
+                        return false;
+                }
+                return true;
+            };
+        }
+
+        /// <summary>
+        /// Chain validator with optional custom validation.
+        /// Validates certificate chain, then calls optional custom logic.
+        /// </summary>
+        public static CertificateValidationCallback ChainPlusThen(
+            Func<X509Certificate2, X509Chain, string, bool> customCheck,
+            ILoggingAdapter? log = null)
+        {
+            if (customCheck == null)
+                throw new ArgumentException("Custom check function required");
+
+            return (cert, chain, peer, errors, log_) =>
+            {
+                // First validate chain
+                var chainValidator = ValidateChain(log ?? log_);
+                if (!chainValidator(cert, chain, peer, errors, log_))
+                    return false;
+
+                // Then custom check
+                var cert509 = cert as X509Certificate2;
+                if (!customCheck(cert509, chain, peer))
+                {
+                    (log ?? log_).Error("Custom certificate validation failed for {0}", peer);
+                    return false;
+                }
+
+                return true;
+            };
+        }
+
+        private static bool SubjectMatchesPattern(string? subject, string pattern)
+        {
+            // Simple wildcard matching: CN=Akka-Node-* matches CN=Akka-Node-001
+            if (string.IsNullOrEmpty(subject))
+                return false;
+
+            var regex = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
+                .Replace("\\*", ".*") + "$";
+            return System.Text.RegularExpressions.Regex.IsMatch(subject, regex);
+        }
     }
 
     /// <summary>
