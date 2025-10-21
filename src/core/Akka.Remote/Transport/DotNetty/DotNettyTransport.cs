@@ -365,7 +365,8 @@ namespace Akka.Remote.Transport.DotNetty
                 // The adapter extracts remote peer information from the remote address
                 RemoteCertificateValidationCallback validationCallback = (sender, cert, chain, errors) =>
                 {
-                    var x509Cert = cert as X509Certificate2;
+                    // Convert X509Certificate to X509Certificate2 if needed
+                    var x509Cert = cert as X509Certificate2 ?? (cert != null ? new X509Certificate2(cert) : null);
                     return validator(x509Cert, chain, remoteAddress.ToString(), errors, Log);
                 };
 
@@ -417,7 +418,8 @@ namespace Akka.Remote.Transport.DotNetty
                     {
                         // Extract client address from channel
                         var remoteAddress = channel.RemoteAddress?.ToString() ?? "unknown";
-                        var x509Cert = certificate as X509Certificate2;
+                        // Convert X509Certificate to X509Certificate2 if needed
+                        var x509Cert = certificate as X509Certificate2 ?? (certificate != null ? new X509Certificate2(certificate) : null);
                         return validator(x509Cert, chain, remoteAddress, errors, Log);
                     };
 
@@ -455,38 +457,25 @@ namespace Akka.Remote.Transport.DotNetty
         /// <returns>A CertificateValidationCallback composed from configuration settings.</returns>
         private CertificateValidationCallback ComposeValidatorFromSettings()
         {
-            // Start with chain validation, optionally ignoring CA validation errors
-            CertificateValidationCallback validator = Settings.Ssl.SuppressValidation
-                ? CertificateValidation.ChainPlusThen((cert, chain, peer) =>
-                {
-                    // In suppress mode, accept any certificate that can be parsed
-                    return cert != null;
-                }, Log)
-                : CertificateValidation.ValidateChain(Log);
+            // Use the original TlsValidationCallbacks for configuration-based validation
+            // This maintains the existing proven validation logic
+            var chainValidation = Settings.Ssl.SuppressValidation
+                ? ChainValidationMode.IgnoreChainErrors
+                : ChainValidationMode.ValidateChain;
 
-            // Optionally compose with hostname validation
-            if (Settings.Ssl.ValidateCertificateHostname)
+            var hostnameValidation = Settings.Ssl.ValidateCertificateHostname
+                ? HostnameValidationMode.ValidateHostname
+                : HostnameValidationMode.IgnoreHostnameMismatch;
+
+            var dotnettyCallback = TlsValidationCallbacks.Create(chainValidation, hostnameValidation, Log);
+
+            // Convert DotNetty's RemoteCertificateValidationCallback to our CertificateValidationCallback
+            // by wrapping it to include the peer address parameter
+            return (cert, chain, peer, errors, log) =>
             {
-                // Hostname validation is applied via Combine which runs both validators
-                // The hostname validator will be called with the peer address extracted from the channel
-                validator = CertificateValidation.ChainPlusThen((cert, chain, peer) =>
-                {
-                    // After chain validation passes, check hostname if enabled
-                    if (Settings.Ssl.ValidateCertificateHostname && cert is X509Certificate2 x509Cert)
-                    {
-                        // Extract hostname from peer address (format is typically "akka://system@host:port")
-                        var host = peer?.Contains("://") == true
-                            ? peer.Substring(peer.LastIndexOf("@") + 1).Split(':')[0]
-                            : peer;
-
-                        // Check if certificate CN or SANs match the expected hostname
-                        return ValidateCertificateHostnameMatch(x509Cert, host);
-                    }
-                    return true;
-                }, Log);
-            }
-
-            return validator;
+                // Call the DotNetty validator which doesn't use the peer parameter
+                return dotnettyCallback(null, cert, chain, errors);
+            };
         }
 
         /// <summary>
