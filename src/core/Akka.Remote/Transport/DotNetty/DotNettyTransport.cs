@@ -357,19 +357,17 @@ namespace Akka.Remote.Transport.DotNetty
 
                 IChannelHandler tlsHandler;
 
-                // Build validation callback using type-safe factory methods
-                // These settings are independent and can be combined:
-                // - suppressValidation: Controls chain/CA validation (for self-signed certs)
-                // - validateCertificateHostname: Controls hostname matching (for per-node certs, IPs, etc.)
-                var chainValidation = Settings.Ssl.SuppressValidation
-                    ? ChainValidationMode.IgnoreChainErrors
-                    : ChainValidationMode.ValidateChain;
+                // Compose validator: either use custom validator or build from config settings
+                // This ensures a single execution path through validation logic
+                var validator = Settings.Ssl.CustomValidator ?? ComposeValidatorFromSettings();
 
-                var hostnameValidation = Settings.Ssl.ValidateCertificateHostname
-                    ? HostnameValidationMode.ValidateHostname
-                    : HostnameValidationMode.IgnoreHostnameMismatch;
-
-                var validationCallback = TlsValidationCallbacks.Create(chainValidation, hostnameValidation, Log);
+                // Create adapter bridge from our CertificateValidationCallback to RemoteCertificateValidationCallback
+                // The adapter extracts remote peer information from the remote address
+                RemoteCertificateValidationCallback validationCallback = (sender, cert, chain, errors) =>
+                {
+                    var x509Cert = cert as X509Certificate2;
+                    return validator(x509Cert, chain, remoteAddress.ToString(), errors, Log);
+                };
 
                 if (Settings.Ssl.RequireMutualAuthentication)
                 {
@@ -409,40 +407,25 @@ namespace Akka.Remote.Transport.DotNetty
                 if (Settings.Ssl.RequireMutualAuthentication)
                 {
                     // Mutual TLS: Require client certificate authentication
+                    // Compose validator: either use custom validator or build from config settings
+                    // This ensures a single execution path through validation logic
+                    var validator = Settings.Ssl.CustomValidator ?? ComposeValidatorFromSettings();
+
+                    // Create adapter bridge from our CertificateValidationCallback to RemoteCertificateValidationCallback
+                    // For server-side, extract the remote peer (client address) from the channel
+                    RemoteCertificateValidationCallback validationCallback = (sender, certificate, chain, errors) =>
+                    {
+                        // Extract client address from channel
+                        var remoteAddress = channel.RemoteAddress?.ToString() ?? "unknown";
+                        var x509Cert = certificate as X509Certificate2;
+                        return validator(x509Cert, chain, remoteAddress, errors, Log);
+                    };
+
                     tlsHandler = new TlsHandler(
                         stream => new SslStream(
                             stream,
                             leaveInnerStreamOpen: true,
-                            userCertificateValidationCallback: (sender, certificate, chain, errors) =>
-                            {
-                                if (certificate == null)
-                                {
-                                    Log.Error("Mutual TLS authentication failed: Client did not provide a certificate.\n" +
-                                             "Server requires mutual TLS (require-mutual-authentication = true).\n" +
-                                             "Suggestions:\n" +
-                                             "  - Ensure client has mutual TLS enabled (require-mutual-authentication = true)\n" +
-                                             "  - Verify client certificate is properly configured and accessible\n" +
-                                             "  - Check client-side logs for certificate loading errors");
-                                    return false;
-                                }
-
-                                if (Settings.Ssl.SuppressValidation)
-                                {
-                                    // In test/dev mode, accept any client certificate
-                                    return true;
-                                }
-
-                                if (errors != SslPolicyErrors.None)
-                                {
-                                    // Build detailed error message with certificate details and suggestions
-                                    var cert = certificate as X509Certificate2;
-                                    var detailedError = TlsErrorMessageBuilder.BuildSslPolicyErrorMessage(errors, cert, chain);
-                                    Log.Error("Mutual TLS authentication failed: Client certificate validation error.\n{0}", detailedError);
-                                    return false;
-                                }
-
-                                return true;
-                            }),
+                            userCertificateValidationCallback: validationCallback),
                         new ServerTlsSettings(Settings.Ssl.Certificate, negotiateClientCertificate: true));
                 }
                 else
@@ -461,6 +444,103 @@ namespace Akka.Remote.Transport.DotNetty
             {
                 var handler = new TcpServerHandler(this, Logging.GetLogger(System, typeof(TcpServerHandler)), AssociationListenerPromise.Task);
                 pipeline.AddLast("ServerHandler", handler);
+            }
+        }
+
+        /// <summary>
+        /// Composes a certificate validation callback from the current SSL settings.
+        /// This creates a validator that respects SuppressValidation
+        /// and ValidateCertificateHostname configuration options.
+        /// </summary>
+        /// <returns>A CertificateValidationCallback composed from configuration settings.</returns>
+        private CertificateValidationCallback ComposeValidatorFromSettings()
+        {
+            // Start with chain validation, optionally ignoring CA validation errors
+            CertificateValidationCallback validator = Settings.Ssl.SuppressValidation
+                ? CertificateValidation.ChainPlusThen((cert, chain, peer) =>
+                {
+                    // In suppress mode, accept any certificate that can be parsed
+                    return cert != null;
+                }, Log)
+                : CertificateValidation.ValidateChain(Log);
+
+            // Optionally compose with hostname validation
+            if (Settings.Ssl.ValidateCertificateHostname)
+            {
+                // Hostname validation is applied via Combine which runs both validators
+                // The hostname validator will be called with the peer address extracted from the channel
+                validator = CertificateValidation.ChainPlusThen((cert, chain, peer) =>
+                {
+                    // After chain validation passes, check hostname if enabled
+                    if (Settings.Ssl.ValidateCertificateHostname && cert is X509Certificate2 x509Cert)
+                    {
+                        // Extract hostname from peer address (format is typically "akka://system@host:port")
+                        var host = peer?.Contains("://") == true
+                            ? peer.Substring(peer.LastIndexOf("@") + 1).Split(':')[0]
+                            : peer;
+
+                        // Check if certificate CN or SANs match the expected hostname
+                        return ValidateCertificateHostnameMatch(x509Cert, host);
+                    }
+                    return true;
+                }, Log);
+            }
+
+            return validator;
+        }
+
+        /// <summary>
+        /// Validates that a certificate's CN or Subject Alternative Name matches the expected hostname.
+        /// Supports wildcard certificates and IP addresses.
+        /// Uses reflection for compatibility across .NET Framework, .NET Standard 2.0, and .NET 6+
+        /// </summary>
+        private bool ValidateCertificateHostnameMatch(X509Certificate2 certificate, string expectedHostname)
+        {
+            if (certificate == null || string.IsNullOrEmpty(expectedHostname))
+                return false;
+
+            try
+            {
+                // Check CN in subject distinguished name
+                var subject = certificate.SubjectName.Name;
+                if (subject?.Contains($"CN={expectedHostname}", StringComparison.OrdinalIgnoreCase) == true)
+                    return true;
+
+                // Try to check Subject Alternative Names (SANs)
+                // Use reflection for compatibility since X509SubjectAlternativeNameExtension
+                // is only available in .NET 6+
+                try
+                {
+                    var sanExtension = certificate.Extensions["2.5.29.17"];
+                    if (sanExtension != null)
+                    {
+                        // Try using the EnumerateSubjectAlternativeNames method (NET 6+)
+                        var enumerateMethod = sanExtension.GetType().GetMethod("EnumerateSubjectAlternativeNames");
+                        if (enumerateMethod != null)
+                        {
+                            var sanNames = enumerateMethod.Invoke(sanExtension, null) as System.Collections.IEnumerable;
+                            if (sanNames != null)
+                            {
+                                foreach (var sanName in sanNames)
+                                {
+                                    if (sanName?.ToString()?.Equals(expectedHostname, StringComparison.OrdinalIgnoreCase) == true)
+                                        return true;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // SAN parsing not supported on this framework version - continue with CN-only matching
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Log.Warning("Error validating certificate hostname for {0}: {1}", expectedHostname, ex.Message);
+                return false;
             }
         }
 

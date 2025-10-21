@@ -355,19 +355,25 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly bool ValidateCertificateHostname;
 
+        /// <summary>
+        /// Custom certificate validation callback (overrides config-based validation when provided)
+        /// </summary>
+        public readonly CertificateValidationCallback? CustomValidator;
+
         private SslSettings()
         {
             Certificate = null;
             SuppressValidation = false;
             RequireMutualAuthentication = false;
             ValidateCertificateHostname = false;
+            CustomValidator = null;
         }
 
         /// <summary>
         /// Constructor for backward compatibility - defaults to RequireMutualAuthentication = true, ValidateCertificateHostname = false
         /// </summary>
         public SslSettings(X509Certificate2 certificate, bool suppressValidation)
-            : this(certificate, suppressValidation, requireMutualAuthentication: true, validateCertificateHostname: false)
+            : this(certificate, suppressValidation, requireMutualAuthentication: true, validateCertificateHostname: false, customValidator: null)
         {
         }
 
@@ -375,16 +381,22 @@ namespace Akka.Remote.Transport.DotNetty
         /// Constructor for backward compatibility - defaults to ValidateCertificateHostname = false
         /// </summary>
         public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication)
-            : this(certificate, suppressValidation, requireMutualAuthentication, validateCertificateHostname: false)
+            : this(certificate, suppressValidation, requireMutualAuthentication, validateCertificateHostname: false, customValidator: null)
         {
         }
 
         public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
+            : this(certificate, suppressValidation, requireMutualAuthentication, validateCertificateHostname, customValidator: null)
+        {
+        }
+
+        public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
         {
             Certificate = certificate;
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
             ValidateCertificateHostname = validateCertificateHostname;
+            CustomValidator = customValidator;
         }
 
         /// <summary>
@@ -434,6 +446,11 @@ namespace Akka.Remote.Transport.DotNetty
         }
 
         private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
+            : this(certificateThumbprint, storeName, storeLocation, suppressValidation, requireMutualAuthentication, validateCertificateHostname, customValidator: null)
+        {
+        }
+
+        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
         {
             using var store = new X509Store(storeName, storeLocation);
             store.Open(OpenFlags.ReadOnly);
@@ -449,9 +466,15 @@ namespace Akka.Remote.Transport.DotNetty
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
             ValidateCertificateHostname = validateCertificateHostname;
+            CustomValidator = customValidator;
         }
 
         private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
+            : this(certificatePath, certificatePassword, flags, suppressValidation, requireMutualAuthentication, validateCertificateHostname, customValidator: null)
+        {
+        }
+
+        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
         {
             if (string.IsNullOrEmpty(certificatePath))
                 throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
@@ -460,6 +483,7 @@ namespace Akka.Remote.Transport.DotNetty
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
             ValidateCertificateHostname = validateCertificateHostname;
+            CustomValidator = customValidator;
         }
     }
 
