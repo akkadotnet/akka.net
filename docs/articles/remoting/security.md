@@ -122,54 +122,82 @@ When `suppress-validation = true`:
 * Any environment processing sensitive data
 * Any multi-tenant environment
 
-### Hostname Validation
+### Validation Strategies: HOCON vs Programmatic (v1.5.52+)
 
-**New in v1.5.52+:** The `validate-certificate-hostname` setting controls whether the certificate CN/SAN must match the target hostname.
+Two independent validation decisions determine your TLS security posture:
 
-**IMPORTANT: This setting defaults to `false` (disabled).** Hostname validation is NOT performed by default to support common Akka.NET deployment patterns like mutual TLS with per-node certificates and IP-based connections.
+1. **Chain Validation** - Verify certificate against trusted CAs (`suppress-validation`)
+2. **Hostname Validation** - Verify certificate CN/SAN matches target (`validate-certificate-hostname`)
+3. **Mutual Authentication** - Require both sides authenticate (`require-mutual-authentication`)
 
-#### Disabled (Default)
+#### Decision Matrix: Which Combination to Use
+
+| Use Case | suppress-validation | validate-hostname | mutual-auth | Config Approach |
+|----------|---------------------|-------------------|-------------|-----------------|
+| **P2P Cluster (Default)** | `false` | `false` | `true` | HOCON ✓ or Programmatic |
+| **Client-Server with Shared Cert** | `false` | `true` | `true` | HOCON ✓ or Programmatic |
+| **Development/Testing** | `true` | `false` | `false` | HOCON only |
+| **Certificate Pinning** | `false` | `false` | `true` | **Programmatic required** |
+| **Custom Subject/Issuer Validation** | `false` | `false` | `true` | **Programmatic required** |
+
+#### HOCON Configuration Approach
 
 When `validate-certificate-hostname = false` (the default):
 
-**What it does:**
-
 * Skips hostname validation
 * Only validates certificate chain (if `suppress-validation = false`)
-
-**When to use:**
-
-* **Mutual TLS with per-node certificates** - Each node has its own unique certificate
-* **IP-based connections** - Connecting via IP addresses instead of DNS names
-* **Dynamic service discovery** - Hostnames change frequently (Kubernetes, auto-scaling)
-* **Internal P2P clusters** - All nodes are trusted and mutually authenticated
-
-**This is the default** for backward compatibility and to support common Akka.NET cluster patterns.
-
-#### Enabled
+* **Best for:** Mutual TLS with per-node certificates, IP-based connections, Kubernetes dynamic discovery
 
 When `validate-certificate-hostname = true`:
 
-**What it validates:**
-
 * Certificate CN (Common Name) or SAN (Subject Alternative Name) must match the target hostname
 * Traditional TLS hostname validation as used in HTTPS
+* **Best for:** Client-server architectures with shared certificates and stable DNS names
 
-**When to use:**
+**HOCON Example - P2P Cluster (Common Default):**
 
-* **Client-server architecture** - Clients connecting to known server hostnames
-* **Shared certificates** - Same certificate used across multiple nodes
-* **DNS-based connections** - Connecting via stable DNS names
-* **Maximum security** - Traditional browser-like TLS validation
+```hocon
+akka.remote.dot-netty.tcp {
+  enable-ssl = true
+  ssl {
+    suppress-validation = false                    # Validate CA chain
+    require-mutual-authentication = true           # Both sides authenticate
+    validate-certificate-hostname = false          # Default: Allow per-node certs
+    certificate {
+      use-thumbprint-over-file = true
+      thumbprint = "2531c78c51e5041d02564697a88af8bc7a7ce3e3"
+    }
+  }
+}
+```
 
-### Validation Mode Combinations
+**HOCON Example - Client-Server with Hostname Validation:**
 
-| suppress-validation | validate-certificate-hostname | Use Case |
-|---------------------|-------------------------------|----------|
-| `false` | `false` | **Common**: Mutual TLS clusters with per-node certs |
-| `false` | `true` | **Traditional**: Client-server TLS with DNS names |
-| `true` | `false` | **Dev/Test**: Self-signed certs, no hostname checks |
-| `true` | `true` | **Test Only**: Self-signed certs WITH hostname validation |
+```hocon
+akka.remote.dot-netty.tcp {
+  enable-ssl = true
+  ssl {
+    suppress-validation = false                    # Validate CA chain
+    require-mutual-authentication = true           # Both sides authenticate
+    validate-certificate-hostname = true           # Hostname must match
+    certificate {
+      use-thumbprint-over-file = true
+      thumbprint = "2531c78c51e5041d02564697a88af8bc7a7ce3e3"
+    }
+  }
+}
+```
+
+#### Programmatic Configuration Approach
+
+Use `DotNettySslSetup` with `CertificateValidation` helpers when you need:
+
+* **Certificate pinning** - Accept only specific certificates
+* **Subject/Issuer validation** - Custom certificate attribute checks
+* **Custom business logic** - Domain-specific validation rules
+* **Dynamic validation** - Load rules from runtime sources
+
+See [Programmatic Certificate Validation](#programmatic-certificate-validation-v1555) below for detailed examples.
 
 ### Self-Signed Certificates: The Right Way
 
@@ -305,6 +333,80 @@ akka.remote.dot-netty.tcp {
 5. Scroll to Thumbprint field
 6. Copy the value (remove spaces)
 
+## Programmatic Certificate Validation (v1.5.55+)
+
+**New in Akka.NET v1.5.55:** Certificate validation can now be configured programmatically using `DotNettySslSetup` with custom validators. This provides fine-grained control over validation logic while maintaining full backward compatibility with HOCON configuration.
+
+### When to Use Programmatic Configuration
+
+Use programmatic setup when you need:
+
+* **Custom validation logic** - Implement domain-specific validation rules
+* **Certificate pinning** - Accept only specific certificates by thumbprint
+* **Subject/Issuer validation** - Verify certificate attributes
+* **Dynamic configuration** - Load validation rules from runtime sources
+* **Composable validators** - Combine multiple validation strategies
+
+### CertificateValidation Helper Factory
+
+The `CertificateValidation` static class provides 7 helper methods for common validation patterns:
+
+#### Basic Chain Validation
+
+[!code-csharp[ProgrammaticMutualTlsSetup](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=ProgrammaticMutualTlsSetup)]
+
+#### Certificate Pinning by Thumbprint
+
+Accept only certificates with specific thumbprints. Prevents man-in-the-middle attacks if CA is compromised:
+
+[!code-csharp[CertificatePinningExample](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=CertificatePinningExample)]
+
+#### Custom Validation Logic with ChainPlusThen
+
+Perform standard chain validation, then apply custom business logic:
+
+[!code-csharp[CustomValidationLogicExample](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=CustomValidationLogicExample)]
+
+#### Hostname Validation
+
+Enable traditional TLS hostname validation (certificate CN/SAN must match target hostname). Use for client-server architectures with shared certificates:
+
+[!code-csharp[HostnameValidationExample](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=HostnameValidationExample)]
+
+#### Subject DN Validation
+
+Accept only certificates with specific subject names:
+
+[!code-csharp[SubjectValidationExample](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=SubjectValidationExample)]
+
+### CertificateValidation Helper Methods
+
+| Method | Purpose |
+|--------|---------|
+| `ValidateChain()` | CA chain validation with full error details |
+| `ValidateHostname()` | Traditional TLS hostname validation (CN/SAN matching) |
+| `PinnedCertificate()` | Certificate pinning by thumbprint whitelist |
+| `ValidateSubject()` | Subject DN pattern matching (e.g., CN, O, OU) |
+| `ValidateIssuer()` | Issuer DN pattern matching |
+| `Combine()` | Compose multiple validators (AND logic) |
+| `ChainPlusThen()` | Chain validation + custom business logic |
+
+### Custom Validator Precedence
+
+When both custom validators and HOCON config are present, custom validators take precedence:
+
+```csharp
+// This validator will be used regardless of HOCON suppress-validation setting
+var customValidator = CertificateValidation.ValidateChain(log);
+var sslSetup = new DotNettySslSetup(
+    certificate: cert,
+    suppressValidation: false,  // Ignored when customValidator provided
+    customValidator: customValidator
+);
+```
+
+This ensures programmatic validation logic always takes priority for explicit security requirements.
+
 ## Startup Certificate Validation (v1.5.52+)
 
 **New in Akka.NET v1.5.52:** The transport now validates certificate configuration at startup, preventing runtime failures.
@@ -344,11 +446,11 @@ $acl.AddAccessRule($accessRule)
 Set-Acl $keyFullPath $acl
 ```
 
-## Mutual TLS Authentication (v1.5.52+)
+## Understanding Mutual TLS (mTLS) vs Standard TLS (v1.5.52+)
 
-**New in Akka.NET v1.5.52:** Support for mutual TLS (mTLS) where both client and server must authenticate with certificates.
+Akka.NET supports both standard TLS and mutual TLS (mTLS), configured via the `require-mutual-authentication` setting in the [Validation Strategies](#validation-strategies-hocon-vs-programmatic-v1552) section above.
 
-### Standard TLS vs Mutual TLS
+### Visual Comparison
 
 **Standard TLS (Server Authentication Only):**
 
@@ -380,38 +482,28 @@ sequenceDiagram
     Note over Client,Server: Mutually authenticated encryption established
 ```
 
-### Configuration
-
-The following example shows how to configure mutual TLS:
-
-[!code-csharp[MutualTlsConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=MutualTlsConfig)]
-
-For production with Windows Certificate Store:
-
-[!code-csharp[WindowsCertStoreConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=WindowsCertStoreConfig)]
-
 ### When to Enable Mutual TLS
 
-**Enable mutual TLS when:**
+**Enable mutual TLS (`require-mutual-authentication = true`) when:**
 
-* All nodes are under your control (typical Akka.NET cluster)
+* All nodes are under your control (typical Akka.NET cluster) ✓ **Recommended**
 * You need defense-in-depth security
 * Compliance requires bidirectional authentication (PCI-DSS, HIPAA, etc.)
 * You want to prevent misconfigured nodes from joining
 
-**Disable mutual TLS when:**
+**Disable mutual TLS (`require-mutual-authentication = false`) when:**
 
 * Clients cannot provide certificates (rare in Akka.NET)
 * You're using client-server architecture where clients are untrusted
 * Backward compatibility with older clients required
 
-**Default is TRUE for security-by-default posture.**
+**Default is TRUE for security-by-default posture** (since v1.5.52).
 
 ### Security Benefits of Mutual TLS
 
 1. **Prevents Asymmetric Connectivity Issues**
-   * Without mutual TLS: A node with broken certificate can connect OUT to cluster (client TLS succeeds)
-   * With mutual TLS: Node cannot connect without working certificate (enforced both ways)
+   * Without mTLS: A node with broken certificate can connect OUT to cluster (client TLS succeeds)
+   * With mTLS: Node cannot connect without working certificate (enforced both ways)
 
 2. **Defense-in-Depth**
    * Startup validation prevents broken servers
@@ -422,92 +514,59 @@ For production with Windows Certificate Store:
    * Every node must prove it owns the certificate
    * Prevents certificate theft attacks (attacker needs private key)
 
+For configuration examples in both HOCON and programmatic styles, see [Validation Strategies](#validation-strategies-hocon-vs-programmatic-v1552) and [Programmatic Certificate Validation](#programmatic-certificate-validation-v1555) sections above.
+
 ## Configuration Examples and Security Analysis
 
-### INSECURE: Development/Testing Only
+This section provides concrete examples of different security configurations and their tradeoffs.
+
+### HOCON Configuration Security Levels
+
+**Development/Testing Only (INSECURE):**
 
 [!code-csharp[DevTlsConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=DevTlsConfig)]
 
-**Why this is bad:**
-
-* `suppress-validation = true` accepts ANY certificate (even self-signed or expired)
+* ⚠️ `suppress-validation = true` accepts ANY certificate (self-signed, expired, invalid chains)
 * Vulnerable to man-in-the-middle attacks
 * No client authentication
+* **Use only:** Local development, never in networked environments
 
-**When to use:** Local development only, never in any environment accessible from network.
-
-### GOOD: Standard TLS for Production
+**Standard TLS (Medium-High Security):**
 
 [!code-csharp[StandardTlsConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=StandardTlsConfig)]
-
-**Security level:** Medium-High
 
 * Server proves identity to clients
 * All traffic encrypted
 * Startup validation prevents misconfigurations
-* Suitable when mutual TLS is not feasible
+* **Use when:** Mutual TLS is not feasible
 
-### BEST: Mutual TLS for Maximum Security
+**Mutual TLS with Windows Certificate Store (Maximum Security - RECOMMENDED):**
 
-```hocon
-akka.remote.dot-netty.tcp {
-  enable-ssl = true
-  ssl {
-    suppress-validation = false  # Validates all certificates (default when SSL enabled)
-    require-mutual-authentication = true  # Requires client certs (default when SSL enabled since v1.5.52)
-    validate-certificate-hostname = false  # DEFAULT: Hostname validation disabled (suitable for P2P with per-node certs)
-    certificate {
-      use-thumbprint-over-file = true
-      thumbprint = "2531c78c51e5041d02564697a88af8bc7a7ce3e3"
-      store-name = "My"
-      store-location = "local-machine"
-    }
-  }
-}
-```
+[!code-csharp[WindowsCertStoreConfig](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=WindowsCertStoreConfig)]
 
-**Note:** When SSL is enabled, both `suppress-validation = false` and `require-mutual-authentication = true` are the secure defaults (since v1.5.52), so you only need to explicitly set them if overriding.
+* ✓ Both client and server prove identity
+* ✓ All traffic encrypted
+* ✓ Prevents misconfigured nodes from connecting
+* ✓ Private keys protected by Windows ACL
+* **Use when:** Production Akka.NET clusters (default recommended configuration)
 
-**About hostname validation:**
+**Mutual TLS for P2P Clusters with Per-Node Certificates:**
 
-* Set `validate-certificate-hostname = false` for peer-to-peer clusters with per-node certificates (default)
-* Set `validate-certificate-hostname = true` for client-server architectures with DNS-based connections
+Refer to the [Validation Strategies](#validation-strategies-hocon-vs-programmatic-v1552) section for HOCON example showing P2P cluster setup.
 
-**Security level:** Maximum
+**Client-Server with Hostname Validation:**
 
-* Both client and server prove identity
-* All traffic encrypted
-* Prevents misconfigured nodes from connecting
-* Defense-in-depth security
-* Recommended for all production deployments
+Refer to the [Validation Strategies](#validation-strategies-hocon-vs-programmatic-v1552) section for HOCON example with hostname validation enabled.
 
-### Configuration with Hostname Validation Enabled
+### Programmatic Configuration Security Levels
 
-For client-server architectures where all nodes connect via DNS names and share the same certificate:
+For certificate pinning, subject/issuer validation, or custom logic, use programmatic setup:
 
-```hocon
-akka.remote.dot-netty.tcp {
-  enable-ssl = true
-  ssl {
-    suppress-validation = false
-    require-mutual-authentication = true
-    validate-certificate-hostname = true  # Enable traditional TLS hostname validation
-    certificate {
-      use-thumbprint-over-file = true
-      thumbprint = "2531c78c51e5041d02564697a88af8bc7a7ce3e3"
-      store-name = "My"
-      store-location = "local-machine"
-    }
-  }
-}
-```
+[!code-csharp[ProgrammaticMutualTlsSetup](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=ProgrammaticMutualTlsSetup)]
 
-**When to use hostname validation:**
+[!code-csharp[CertificatePinningExample](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=CertificatePinningExample)]
 
-* Your cluster uses stable DNS names (not IPs)
-* All nodes share the same certificate (CN matches DNS names)
-* You want browser-like TLS validation behavior
-* Client-server architecture rather than P2P mesh
+See [Programmatic Certificate Validation](#programmatic-certificate-validation-v1555) section for more examples.
 
 ## Untrusted Mode
 
