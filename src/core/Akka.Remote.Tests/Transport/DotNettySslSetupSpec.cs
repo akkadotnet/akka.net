@@ -195,6 +195,58 @@ akka {
             Assert.True(settings.Ssl.ValidateCertificateHostname); // explicitly set to true
         }
 
+        [Fact(DisplayName = "DotNettySslSetup should override HOCON certificate configuration (Bug #7917)")]
+        public void DotNettySslSetup_should_override_HOCON_certificate()
+        {
+            // This test exposes the bug where HOCON certificate wins over DotNettySslSetup
+            // when HOCON has valid certificate configuration
+
+            // HOCON certificate
+            const string hoconCertPath = "Resources/akka-validcert.pfx";
+            var hoconCert = new X509Certificate2(hoconCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+
+            // Programmatic setup certificate (different from HOCON)
+            const string setupCertPath = "Resources/akka-client-cert.pfx";
+            var setupCert = new X509Certificate2(setupCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+
+            var sslSetup = new DotNettySslSetup(setupCert, suppressValidation: true, requireMutualAuthentication: false, validateCertificateHostname: true);
+
+            var actorSystemSetup = ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString($@"
+akka {{
+  actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+  remote.dot-netty.tcp {{
+    port = 0
+    hostname = ""127.0.0.1""
+    enable-ssl = true
+    ssl {{
+      certificate {{
+        path = ""{hoconCertPath}""
+        password = ""{Password}""
+      }}
+      suppress-validation = false
+      require-mutual-authentication = true
+      validate-certificate-hostname = false
+    }}
+  }}
+}}")))
+                .And(sslSetup);
+
+            using var sys = ActorSystem.Create("test", actorSystemSetup);
+
+            // Verify that DotNettyTransportSettings.Create uses the setup correctly
+            var settings = DotNettyTransportSettings.Create(sys);
+
+            Assert.True(settings.EnableSsl);
+
+            // BUG: DotNettySslSetup should take precedence over HOCON, but currently HOCON wins
+            // because CreateOrDefault tries HOCON first, and only uses the setup as an exception fallback
+            Assert.Equal(setupCert.Thumbprint, settings.Ssl.Certificate.Thumbprint); // Should be setupCert, not hoconCert
+            Assert.True(settings.Ssl.SuppressValidation); // From DotNettySslSetup
+            Assert.False(settings.Ssl.RequireMutualAuthentication); // From DotNettySslSetup, not HOCON
+            Assert.True(settings.Ssl.ValidateCertificateHostname); // From DotNettySslSetup, not HOCON
+        }
+
         #region helper classes / methods
 
         protected override void AfterAll()
