@@ -203,7 +203,7 @@ namespace Akka.Remote.Transport.DotNetty
                 ServerSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("server-socket-worker-pool")),
                 ClientSocketWorkerPoolSize: ComputeWorkerPoolSize(config.GetConfig("client-socket-worker-pool")),
                 MaxFrameSize: ToNullableInt(config.GetByteSize("maximum-frame-size", null)) ?? 128000,
-                Ssl: enableSsl ? SslSettings.CreateOrDefault(config.GetConfig("ssl"), sslSettings) : SslSettings.Empty,
+                Ssl: enableSsl ? (sslSettings ?? SslSettings.Create(config.GetConfig("ssl"))) : SslSettings.Empty,
                 DnsUseIpv6: config.GetBoolean("dns-use-ipv6"),
                 TcpReuseAddr: ResolveTcpReuseAddrOption(config.GetString("tcp-reuse-addr", "off-for-windows")),
                 TcpKeepAlive: config.GetBoolean("tcp-keepalive", true),
@@ -266,7 +266,7 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
 
-        private static SslSettings Create(Config config)
+        internal static SslSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
                 throw new ConfigurationException($"Failed to create {typeof(DotNettyTransportSettings)}: DotNetty SSL HOCON config was not found (default path: `akka.remote.dot-netty.tcp.ssl`)");
