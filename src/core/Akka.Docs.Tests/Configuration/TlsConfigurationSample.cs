@@ -85,7 +85,6 @@ namespace Akka.Docs.Tests.Configuration
         #endregion
 
         #region ProgrammaticMutualTlsSetup
-#if NET6_0_OR_GREATER
         /// <summary>
         /// Example of programmatic mutual TLS setup using DotNettySslSetup with custom validation.
         /// This allows full programmatic control over certificate validation logic.
@@ -111,11 +110,9 @@ namespace Akka.Docs.Tests.Configuration
                 customValidator: customValidator
             );
         }
-#endif
         #endregion
 
         #region CertificatePinningExample
-#if NET6_0_OR_GREATER
         /// <summary>
         /// Example of certificate pinning - only accept certificates with specific thumbprints.
         /// Useful for preventing man-in-the-middle attacks with compromised CAs.
@@ -137,11 +134,9 @@ namespace Akka.Docs.Tests.Configuration
                 customValidator: validator
             );
         }
-#endif
         #endregion
 
         #region CustomValidationLogicExample
-#if NET6_0_OR_GREATER
         /// <summary>
         /// Example of custom certificate validation logic combined with standard validation.
         /// Allows complete control over what certificates are accepted.
@@ -171,11 +166,9 @@ namespace Akka.Docs.Tests.Configuration
                 customValidator: validator
             );
         }
-#endif
         #endregion
 
         #region HostnameValidationExample
-#if NET6_0_OR_GREATER
         /// <summary>
         /// Example of enabling traditional hostname validation for client-server architectures.
         /// Use when all nodes share the same certificate with matching CN/SAN.
@@ -192,11 +185,9 @@ namespace Akka.Docs.Tests.Configuration
                 validateCertificateHostname: true  // Enable traditional TLS hostname validation
             );
         }
-#endif
         #endregion
 
         #region SubjectValidationExample
-#if NET6_0_OR_GREATER
         /// <summary>
         /// Example of subject DN validation - only accept certificates with specific subject names.
         /// Useful for verifying peer identity based on certificate subject.
@@ -219,7 +210,6 @@ namespace Akka.Docs.Tests.Configuration
                 customValidator: validator
             );
         }
-#endif
         #endregion
     }
 }
