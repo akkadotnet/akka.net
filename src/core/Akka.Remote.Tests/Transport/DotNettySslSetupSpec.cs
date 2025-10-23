@@ -305,6 +305,7 @@ akka {
             {
                 validatorCalled = true;
                 Output.WriteLine($"CustomValidator called for peer: {peer}, rejecting certificate");
+                log.Error("CustomValidator rejecting certificate for peer: {0}", peer);
                 return false; // Reject all certificates
             };
 
@@ -334,9 +335,13 @@ akka {
 
             var probe = CreateTestProbe();
 
-            // Connection should fail due to custom validator rejection - TLS handshake fails, so message never arrives
-            Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            // Connection should fail due to custom validator rejection
+            // With mTLS enabled, _sys2 (server) validates Sys's (client) certificate
+            await EventFilter.Error(contains: "CustomValidator rejecting certificate").ExpectAsync(1, async () =>
+            {
+                Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
+                await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            }, _sys2);
 
             // Verify that CustomValidator was actually called
             Assert.True(validatorCalled, "CustomValidator should have been invoked during TLS handshake");
@@ -486,8 +491,13 @@ akka {
             var probe = CreateTestProbe();
 
             // Connection should fail due to thumbprint mismatch
-            Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            // With mTLS enabled, _sys2 (server) validates Sys's (client) certificate
+            // The validation error occurs on _sys2's side when it rejects the client certificate
+            await EventFilter.Error(contains: "not in allowed list").ExpectAsync(1, async () =>
+            {
+                Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
+                await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            }, _sys2);
         }
 
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should accept certificates with matching subject")]
@@ -565,8 +575,12 @@ akka {
             var probe = CreateTestProbe();
 
             // Connection should fail due to subject mismatch
-            Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            // With mTLS enabled, _sys2 (server) validates Sys's (client) certificate
+            await EventFilter.Error(contains: "does not match pattern").ExpectAsync(1, async () =>
+            {
+                Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
+                await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            }, _sys2);
         }
 
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should support wildcard patterns")]
