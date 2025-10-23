@@ -247,6 +247,144 @@ akka {{
             Assert.True(settings.Ssl.ValidateCertificateHostname); // From DotNettySslSetup, not HOCON
         }
 
+        #if !NET471
+        [Fact(DisplayName = "DotNettySslSetup with CustomValidator that accepts should allow connection")]
+        public async Task CustomValidator_that_accepts_should_allow_connection()
+        {
+            // skip this test due to linux/mono certificate issues
+            if (IsMono) return;
+
+            var validatorCalled = false;
+
+            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var customValidator = CertificateValidation.Combine(
+                (cert, chain, peer, errors, log) =>
+                {
+                    validatorCalled = true;
+                    Output.WriteLine($"CustomValidator called for peer: {peer}");
+                    return true; // Accept all certificates
+                }
+            );
+
+            var sslSetup = new DotNettySslSetup(certificate, suppressValidation: false, requireMutualAuthentication: true, customValidator: customValidator);
+
+            var sys2Setup = ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create()
+                    .WithConfig(ConfigurationFactory.ParseString(@"
+akka {
+  loglevel = DEBUG
+  actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+  remote.dot-netty.tcp {
+    port = 0
+    hostname = ""127.0.0.1""
+    enable-ssl = true
+    log-transport = true
+  }
+}")))
+                .And(sslSetup);
+
+            _sys2 = ActorSystem.Create("sys2-custom-validator", sys2Setup);
+            InitializeLogger(_sys2);
+            _sys2.ActorOf(Props.Create<Echo>(), "echo");
+
+            var address = RARP.For(_sys2).Provider.DefaultAddress;
+            _echoPath = new RootActorPath(address) / "user" / "echo";
+
+            var probe = CreateTestProbe();
+
+            await AwaitAssertAsync(async () =>
+            {
+                Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+
+            // Verify that CustomValidator was actually called
+            Assert.True(validatorCalled, "CustomValidator should have been invoked during TLS handshake");
+        }
+        #endif
+
+        #if !NET471
+        [Fact(DisplayName = "DotNettySslSetup with CustomValidator that rejects should prevent connection")]
+        public async Task CustomValidator_that_rejects_should_prevent_connection()
+        {
+            // skip this test due to linux/mono certificate issues
+            if (IsMono) return;
+
+            var validatorCalled = false;
+
+            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var customValidator = CertificateValidation.Combine(
+                (cert, chain, peer, errors, log) =>
+                {
+                    validatorCalled = true;
+                    Output.WriteLine($"CustomValidator called for peer: {peer}, rejecting certificate");
+                    return false; // Reject all certificates
+                }
+            );
+
+            var sslSetup = new DotNettySslSetup(certificate, suppressValidation: false, requireMutualAuthentication: true, customValidator: customValidator);
+
+            var sys2Setup = ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create()
+                    .WithConfig(ConfigurationFactory.ParseString(@"
+akka {
+  loglevel = DEBUG
+  actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+  remote.dot-netty.tcp {
+    port = 0
+    hostname = ""127.0.0.1""
+    enable-ssl = true
+    log-transport = true
+  }
+}")))
+                .And(sslSetup);
+
+            _sys2 = ActorSystem.Create("sys2-reject-validator", sys2Setup);
+            InitializeLogger(_sys2);
+            _sys2.ActorOf(Props.Create<Echo>(), "echo");
+
+            var address = RARP.For(_sys2).Provider.DefaultAddress;
+            _echoPath = new RootActorPath(address) / "user" / "echo";
+
+            var probe = CreateTestProbe();
+
+            // Connection should fail due to custom validator rejection - TLS handshake fails, so message never arrives
+            Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+
+            // Verify that CustomValidator was actually called
+            Assert.True(validatorCalled, "CustomValidator should have been invoked during TLS handshake");
+        }
+        #endif
+
+        [Fact(DisplayName = "DotNettySslSetup should pass CustomValidator to SslSettings")]
+        public void DotNettySslSetup_should_pass_CustomValidator_to_SslSettings()
+        {
+            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+
+            var customValidator = CertificateValidation.ValidateChain();
+            var sslSetup = new DotNettySslSetup(certificate, suppressValidation: false, requireMutualAuthentication: true, customValidator: customValidator);
+
+            var actorSystemSetup = ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString(@"
+akka {
+  actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+  remote.dot-netty.tcp {
+    port = 0
+    hostname = ""127.0.0.1""
+    enable-ssl = true
+  }
+}")))
+                .And(sslSetup);
+
+            using var sys = ActorSystem.Create("test-custom-validator", actorSystemSetup);
+
+            // Verify that CustomValidator is passed through to SslSettings
+            var settings = DotNettyTransportSettings.Create(sys);
+            Assert.NotNull(settings.Ssl.CustomValidator);
+            Assert.Same(customValidator, settings.Ssl.CustomValidator);
+        }
+
         #region helper classes / methods
 
         protected override void AfterAll()

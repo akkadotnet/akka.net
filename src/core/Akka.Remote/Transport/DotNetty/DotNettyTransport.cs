@@ -486,61 +486,6 @@ namespace Akka.Remote.Transport.DotNetty
             };
         }
 
-        /// <summary>
-        /// Validates that a certificate's CN or Subject Alternative Name matches the expected hostname.
-        /// Supports wildcard certificates and IP addresses.
-        /// Uses reflection for compatibility across .NET Framework, .NET Standard 2.0, and .NET 6+
-        /// </summary>
-        private bool ValidateCertificateHostnameMatch(X509Certificate2 certificate, string expectedHostname)
-        {
-            if (certificate == null || string.IsNullOrEmpty(expectedHostname))
-                return false;
-
-            try
-            {
-                // Check CN in subject distinguished name
-                var subject = certificate.SubjectName.Name;
-                if (subject?.Contains($"CN={expectedHostname}", StringComparison.OrdinalIgnoreCase) == true)
-                    return true;
-
-                // Try to check Subject Alternative Names (SANs)
-                // Use reflection for compatibility since X509SubjectAlternativeNameExtension
-                // is only available in .NET 6+
-                try
-                {
-                    var sanExtension = certificate.Extensions["2.5.29.17"];
-                    if (sanExtension != null)
-                    {
-                        // Try using the EnumerateSubjectAlternativeNames method (NET 6+)
-                        var enumerateMethod = sanExtension.GetType().GetMethod("EnumerateSubjectAlternativeNames");
-                        if (enumerateMethod != null)
-                        {
-                            var sanNames = enumerateMethod.Invoke(sanExtension, null) as System.Collections.IEnumerable;
-                            if (sanNames != null)
-                            {
-                                foreach (var sanName in sanNames)
-                                {
-                                    if (sanName?.ToString()?.Equals(expectedHostname, StringComparison.OrdinalIgnoreCase) == true)
-                                        return true;
-                                }
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // SAN parsing not supported on this framework version - continue with CN-only matching
-                }
-
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Log.Warning("Error validating certificate hostname for {0}: {1}", expectedHostname, ex.Message);
-                return false;
-            }
-        }
-
         private ServerBootstrap ServerFactory()
         {
             if (InternalTransport != TransportMode.Tcp)

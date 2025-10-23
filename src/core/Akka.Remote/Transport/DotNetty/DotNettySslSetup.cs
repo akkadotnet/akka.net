@@ -111,5 +111,5 @@ public sealed class DotNettySslSetup: Setup
     /// </summary>
     public CertificateValidationCallback? CustomValidator { get; }
 
-    internal SslSettings Settings => new SslSettings(Certificate, SuppressValidation, RequireMutualAuthentication, ValidateCertificateHostname);
+    internal SslSettings Settings => new SslSettings(Certificate, SuppressValidation, RequireMutualAuthentication, ValidateCertificateHostname, CustomValidator);
 }
