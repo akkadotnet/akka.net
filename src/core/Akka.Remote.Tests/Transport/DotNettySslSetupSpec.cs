@@ -73,13 +73,9 @@ akka {{
         {
         }
 
-        #if !NET471
         [Fact]
         public async Task Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
-            // skip this test due to linux/mono certificate issues
-            if (IsMono) return;
-
             Setup(true);
 
             var probe = CreateTestProbe();
@@ -90,7 +86,6 @@ akka {{
                 await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
             }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
-        #endif
 
         [Fact]
         public async Task Secure_transport_should_NOT_be_possible_between_systems_using_SSL_and_one_not_using_it()
@@ -247,13 +242,9 @@ akka {{
             Assert.True(settings.Ssl.ValidateCertificateHostname); // From DotNettySslSetup, not HOCON
         }
 
-        #if !NET471
         [Fact(DisplayName = "DotNettySslSetup with CustomValidator that accepts should allow connection")]
         public async Task CustomValidator_that_accepts_should_allow_connection()
         {
-            // skip this test due to linux/mono certificate issues
-            if (IsMono) return;
-
             var validatorCalled = false;
 
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
@@ -301,15 +292,10 @@ akka {
             // Verify that CustomValidator was actually called
             Assert.True(validatorCalled, "CustomValidator should have been invoked during TLS handshake");
         }
-        #endif
 
-        #if !NET471
         [Fact(DisplayName = "DotNettySslSetup with CustomValidator that rejects should prevent connection")]
         public async Task CustomValidator_that_rejects_should_prevent_connection()
         {
-            // skip this test due to linux/mono certificate issues
-            if (IsMono) return;
-
             var validatorCalled = false;
 
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
@@ -355,7 +341,6 @@ akka {
             // Verify that CustomValidator was actually called
             Assert.True(validatorCalled, "CustomValidator should have been invoked during TLS handshake");
         }
-        #endif
 
         [Fact(DisplayName = "DotNettySslSetup should pass CustomValidator to SslSettings")]
         public void DotNettySslSetup_should_pass_CustomValidator_to_SslSettings()
@@ -426,7 +411,6 @@ akka {{
             Assert.True(settings.Ssl.SuppressValidation); // From DotNettySslSetup, not HOCON (which has false)
         }
 
-        #if !NET471
         [Fact(DisplayName = "CertificateValidation.PinnedCertificate should accept certificates with matching thumbprint")]
         public async Task PinnedCertificate_should_accept_matching_thumbprint()
         {
@@ -467,9 +451,7 @@ akka {
                 await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
             }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
-        #endif
 
-        #if !NET471
         [Fact(DisplayName = "CertificateValidation.PinnedCertificate should reject certificates with non-matching thumbprint")]
         public async Task PinnedCertificate_should_reject_non_matching_thumbprint()
         {
@@ -507,9 +489,7 @@ akka {
             Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
             await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
         }
-        #endif
 
-        #if !NET471
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should accept certificates with matching subject")]
         public async Task ValidateSubject_should_accept_matching_subject()
         {
@@ -550,9 +530,7 @@ akka {
                 await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
             }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
-        #endif
 
-        #if !NET471
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should reject certificates with non-matching subject")]
         public async Task ValidateSubject_should_reject_non_matching_subject()
         {
@@ -590,7 +568,6 @@ akka {
             Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
             await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
         }
-        #endif
 
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should support wildcard patterns")]
         public void ValidateSubject_should_support_wildcards()
@@ -627,7 +604,6 @@ akka {
             }
         }
 
-        #if !NET471
         [Fact(DisplayName = "CertificateValidation.ValidateIssuer should accept certificates with matching issuer")]
         public async Task ValidateIssuer_should_accept_matching_issuer()
         {
@@ -668,9 +644,7 @@ akka {
                 await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
             }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
         }
-        #endif
 
-        #if !NET471
         [Fact(DisplayName = "CertificateValidation.ChainPlusThen should combine chain validation with custom logic")]
         public async Task ChainPlusThen_should_combine_validation()
         {
@@ -729,9 +703,7 @@ akka {
             // Verify custom validation was actually called
             Assert.True(customCheckCalled, "Custom validation logic should have been invoked");
         }
-        #endif
 
-        #if !NET471
         [Fact(DisplayName = "CustomValidator should take precedence over validateCertificateHostname setting")]
         public async Task CustomValidator_should_override_hostname_validation_setting()
         {
@@ -789,7 +761,6 @@ akka {
             // Verify custom validator was called (proving it took precedence)
             Assert.True(customValidatorCalled, "CustomValidator should have been invoked, proving it takes precedence");
         }
-        #endif
 
         #region helper classes / methods
 
