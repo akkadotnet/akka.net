@@ -542,6 +542,12 @@ namespace Akka.Remote.Transport.DotNetty
         {
             return (cert, chain, peer, errors, noClosureLog) =>
             {
+                if (cert == null)
+                {
+                    (log ?? noClosureLog).Error("Certificate chain validation failed for {0}: certificate is null", peer);
+                    return false;
+                }
+
                 var filteredErrors = errors & ~SslPolicyErrors.RemoteCertificateNameMismatch;
                 if (filteredErrors == SslPolicyErrors.None)
                     return true;
@@ -562,20 +568,25 @@ namespace Akka.Remote.Transport.DotNetty
             string? expectedHostname = null,
             ILoggingAdapter? log = null)
         {
-            return (cert, chain, peer, errors, log_) =>
+            return (cert, chain, peer, errors, nonClosureLog) =>
             {
-                var hostname = expectedHostname ?? peer;
-
-                if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) != 0)
+                if (cert == null)
                 {
-                    var cn = (cert as X509Certificate2)?.GetNameInfo(X509NameType.DnsName, false);
-                    (log ?? log_).Error(
-                        "Hostname validation failed for {0}: expected '{1}', certificate CN is '{2}'",
-                        peer, hostname, cn);
+                    (log ?? nonClosureLog).Error(
+                        "Hostname validation failed for {0}: certificate is null",
+                        peer);
                     return false;
                 }
 
-                return true;
+                var hostname = expectedHostname ?? peer;
+
+                if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) == 0) return true;
+                var cn = cert.GetNameInfo(X509NameType.DnsName, false);
+                (log ?? nonClosureLog).Error(
+                    "Hostname validation failed for {0}: expected '{1}', certificate CN is '{2}'",
+                    peer, hostname, cn);
+                return false;
+
             };
         }
 
@@ -590,15 +601,32 @@ namespace Akka.Remote.Transport.DotNetty
             if (allowedThumbprints == null || allowedThumbprints.Length == 0)
                 throw new ArgumentException("At least one thumbprint required");
 
+            // Normalize and filter out any null/empty thumbprints to prevent security issues
             var normalizedThumbprints = new HashSet<string>(
-                allowedThumbprints!.Select(t => t.ToUpperInvariant()));
+                allowedThumbprints
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Select(t => t.ToUpperInvariant()));
+
+            if (normalizedThumbprints.Count == 0)
+                throw new ArgumentException("At least one valid (non-empty) thumbprint required");
 
             return (cert, chain, peer, errors, log) =>
             {
-                var cert509 = cert as X509Certificate2;
-                var thumbprint = cert509?.Thumbprint?.ToUpperInvariant();
+                if (cert == null)
+                {
+                    log.Error("Certificate pinning failed for {0}: certificate is null", peer);
+                    return false;
+                }
 
-                if (!normalizedThumbprints.Contains(thumbprint ?? ""))
+                var thumbprint = cert.Thumbprint?.ToUpperInvariant();
+
+                if (string.IsNullOrEmpty(thumbprint))
+                {
+                    log.Error("Certificate pinning failed for {0}: certificate has no thumbprint", peer);
+                    return false;
+                }
+
+                if (!normalizedThumbprints.Contains(thumbprint!))
                 {
                     log.Error("Certificate pinning failed for {0}: thumbprint '{1}' not in allowed list",
                         peer, thumbprint);
@@ -618,13 +646,29 @@ namespace Akka.Remote.Transport.DotNetty
             string expectedSubjectPattern,
             ILoggingAdapter? log = null)
         {
-            if (string.IsNullOrEmpty(expectedSubjectPattern))
+            if (string.IsNullOrWhiteSpace(expectedSubjectPattern))
                 throw new ArgumentException("Subject pattern required");
 
             return (cert, chain, peer, errors, log_) =>
             {
+                if (cert == null)
+                {
+                    (log ?? log_).Error(
+                        "Subject validation failed for {0}: certificate is null",
+                        peer);
+                    return false;
+                }
+
                 var cert509 = cert as X509Certificate2;
                 var subject = cert509?.Subject;
+
+                if (string.IsNullOrEmpty(subject))
+                {
+                    (log ?? log_).Error(
+                        "Subject validation failed for {0}: certificate has no subject",
+                        peer);
+                    return false;
+                }
 
                 if (!SubjectMatchesPattern(subject, expectedSubjectPattern))
                 {
@@ -646,13 +690,29 @@ namespace Akka.Remote.Transport.DotNetty
             string expectedIssuerPattern,
             ILoggingAdapter? log = null)
         {
-            if (string.IsNullOrEmpty(expectedIssuerPattern))
+            if (string.IsNullOrWhiteSpace(expectedIssuerPattern))
                 throw new ArgumentException("Issuer pattern required");
 
             return (cert, chain, peer, errors, log_) =>
             {
+                if (cert == null)
+                {
+                    (log ?? log_).Error(
+                        "Issuer validation failed for {0}: certificate is null",
+                        peer);
+                    return false;
+                }
+
                 var cert509 = cert as X509Certificate2;
                 var issuer = cert509?.Issuer;
+
+                if (string.IsNullOrEmpty(issuer))
+                {
+                    (log ?? log_).Error(
+                        "Issuer validation failed for {0}: certificate has no issuer",
+                        peer);
+                    return false;
+                }
 
                 if (!SubjectMatchesPattern(issuer, expectedIssuerPattern))
                 {
