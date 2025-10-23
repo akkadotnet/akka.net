@@ -601,7 +601,12 @@ namespace Akka.Remote.Transport.DotNetty
             if (allowedThumbprints == null || allowedThumbprints.Length == 0)
                 throw new ArgumentException("At least one thumbprint required");
 
-            // Normalize and filter out any null/empty thumbprints to prevent security issues
+            // Normalize thumbprints to uppercase for case-insensitive comparison.
+            // This is SAFE because thumbprints are hexadecimal representations of SHA hashes.
+            // "2A8B4C" and "2a8b4c" represent the same binary value - just different display conventions.
+            // Different tools display thumbprints differently (Windows=uppercase, OpenSSL=lowercase),
+            // so case-insensitive comparison improves usability without compromising security.
+            // Also filter out any null/empty thumbprints to prevent security issues.
             var normalizedThumbprints = new HashSet<string>(
                 allowedThumbprints
                     .Where(t => !string.IsNullOrWhiteSpace(t))
