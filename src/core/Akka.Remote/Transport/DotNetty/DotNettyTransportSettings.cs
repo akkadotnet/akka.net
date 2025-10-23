@@ -5,7 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -143,9 +145,26 @@ namespace Akka.Remote.Transport.DotNetty
             var config = system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>("akka.remote.dot-netty.tcp");
-            
+
             var setup = system.Settings.Setup.Get<DotNettySslSetup>();
             var sslSettings = setup.HasValue ? setup.Value.Settings : null;
+
+            // Warn if both DotNettySslSetup and HOCON SSL are configured (DotNettySslSetup takes precedence)
+            if (sslSettings != null && config.GetBoolean("enable-ssl"))
+            {
+                var sslConfig = config.GetConfig("ssl");
+                // Only warn if HOCON has explicit certificate configuration
+                var hasCertPath = sslConfig.HasPath("certificate.path") && !string.IsNullOrWhiteSpace(sslConfig.GetString("certificate.path"));
+                var hasCertThumbprint = sslConfig.HasPath("certificate.thumbprint") && !string.IsNullOrWhiteSpace(sslConfig.GetString("certificate.thumbprint"));
+
+                if (hasCertPath || hasCertThumbprint)
+                {
+                    var log = Logging.GetLogger(system, typeof(DotNettyTransportSettings));
+                    log.Warning("Both DotNettySslSetup and HOCON SSL configuration are present. " +
+                               "DotNettySslSetup takes precedence and HOCON SSL settings will be ignored.");
+                }
+            }
+
             return Create(config, sslSettings);
         }
 
@@ -354,19 +373,25 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         public readonly bool ValidateCertificateHostname;
 
+        /// <summary>
+        /// Custom certificate validation callback (overrides config-based validation when provided)
+        /// </summary>
+        public readonly CertificateValidationCallback? CustomValidator;
+
         private SslSettings()
         {
             Certificate = null;
             SuppressValidation = false;
             RequireMutualAuthentication = false;
             ValidateCertificateHostname = false;
+            CustomValidator = null;
         }
 
         /// <summary>
         /// Constructor for backward compatibility - defaults to RequireMutualAuthentication = true, ValidateCertificateHostname = false
         /// </summary>
         public SslSettings(X509Certificate2 certificate, bool suppressValidation)
-            : this(certificate, suppressValidation, requireMutualAuthentication: true, validateCertificateHostname: false)
+            : this(certificate, suppressValidation, requireMutualAuthentication: true, validateCertificateHostname: false, customValidator: null)
         {
         }
 
@@ -374,16 +399,22 @@ namespace Akka.Remote.Transport.DotNetty
         /// Constructor for backward compatibility - defaults to ValidateCertificateHostname = false
         /// </summary>
         public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication)
-            : this(certificate, suppressValidation, requireMutualAuthentication, validateCertificateHostname: false)
+            : this(certificate, suppressValidation, requireMutualAuthentication, validateCertificateHostname: false, customValidator: null)
         {
         }
 
         public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
+            : this(certificate, suppressValidation, requireMutualAuthentication, validateCertificateHostname, customValidator: null)
+        {
+        }
+
+        public SslSettings(X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
         {
             Certificate = certificate;
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
             ValidateCertificateHostname = validateCertificateHostname;
+            CustomValidator = customValidator;
         }
 
         /// <summary>
@@ -433,6 +464,11 @@ namespace Akka.Remote.Transport.DotNetty
         }
 
         private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
+            : this(certificateThumbprint, storeName, storeLocation, suppressValidation, requireMutualAuthentication, validateCertificateHostname, customValidator: null)
+        {
+        }
+
+        private SslSettings(string certificateThumbprint, string storeName, StoreLocation storeLocation, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
         {
             using var store = new X509Store(storeName, storeLocation);
             store.Open(OpenFlags.ReadOnly);
@@ -448,9 +484,15 @@ namespace Akka.Remote.Transport.DotNetty
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
             ValidateCertificateHostname = validateCertificateHostname;
+            CustomValidator = customValidator;
         }
 
         private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname)
+            : this(certificatePath, certificatePassword, flags, suppressValidation, requireMutualAuthentication, validateCertificateHostname, customValidator: null)
+        {
+        }
+
+        private SslSettings(string certificatePath, string certificatePassword, X509KeyStorageFlags flags, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, CertificateValidationCallback? customValidator)
         {
             if (string.IsNullOrEmpty(certificatePath))
                 throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
@@ -459,133 +501,297 @@ namespace Akka.Remote.Transport.DotNetty
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
             ValidateCertificateHostname = validateCertificateHostname;
+            CustomValidator = customValidator;
         }
     }
 
     /// <summary>
-    /// INTERNAL API
+    /// PUBLIC API
     ///
-    /// Specifies how certificate chain validation should be performed during TLS handshake.
-    /// Controls whether to validate certificates against the system CA trust store.
+    /// Custom certificate validation callback for mTLS connections.
+    /// Invoked during TLS handshake on both client and server sides.
     /// </summary>
-    internal enum ChainValidationMode
-    {
-        /// <summary>
-        /// Validate certificate chain against system CA trust store.
-        /// Use for production with CA-signed certificates.
-        /// Certificates must chain to a trusted root CA.
-        /// </summary>
-        ValidateChain,
-
-        /// <summary>
-        /// Ignore certificate chain validation errors.
-        /// Use for development/testing with self-signed certificates.
-        /// WARNING: Allows untrusted certificates - use only in non-production environments.
-        /// </summary>
-        IgnoreChainErrors
-    }
+    /// <param name="certificate">The peer certificate to validate</param>
+    /// <param name="chain">The X509 chain for validation</param>
+    /// <param name="remotePeer">The remote address/peer identifier</param>
+    /// <param name="errors">SSL policy errors from standard validation</param>
+    /// <param name="log">Logger for diagnostics</param>
+    /// <returns>True to accept cert, false to reject</returns>
+    public delegate bool CertificateValidationCallback(
+        X509Certificate2? certificate,
+        X509Chain? chain,
+        string remotePeer,
+        SslPolicyErrors errors,
+        ILoggingAdapter log);
 
     /// <summary>
-    /// INTERNAL API
+    /// PUBLIC API
     ///
-    /// Specifies how hostname validation should be performed during TLS handshake.
-    /// Controls whether the certificate CN/SAN must match the connection target hostname.
+    /// Factory methods for common certificate validation scenarios.
+    /// Helpers return delegates that can be composed or used standalone.
+    /// Each helper creates a CertificateValidationCallback that can be passed to DotNettySslSetup.
     /// </summary>
-    internal enum HostnameValidationMode
+    public static class CertificateValidation
     {
         /// <summary>
-        /// Validate that certificate CN/SAN matches target hostname.
-        /// Use for traditional client-server TLS with DNS-based connections.
-        /// Prevents man-in-the-middle attacks by ensuring certificate matches expected server.
+        /// Validate certificate chain against system CA store.
+        /// Use for: CA-signed certificates in production.
         /// </summary>
-        ValidateHostname,
-
-        /// <summary>
-        /// Ignore hostname mismatch errors.
-        /// Use for: Mutual TLS with per-node certificates, IP-based connections, dynamic service discovery.
-        /// Still validates certificate chain (unless IgnoreChainErrors is also set).
-        /// </summary>
-        IgnoreHostnameMismatch
-    }
-
-    /// <summary>
-    /// INTERNAL API
-    ///
-    /// Factory for creating TLS certificate validation callbacks with different security policies.
-    /// Provides type-safe, self-documenting methods for configuring certificate validation behavior.
-    /// </summary>
-    internal static class TlsValidationCallbacks
-    {
-        /// <summary>
-        /// Creates a configurable validation callback that filters SSL policy errors based on validation modes.
-        /// </summary>
-        /// <param name="chainValidation">Controls certificate chain/CA validation</param>
-        /// <param name="hostnameValidation">Controls hostname matching validation</param>
-        /// <param name="log">Logger for validation failures</param>
-        /// <returns>Validation callback configured according to parameters</returns>
-        public static RemoteCertificateValidationCallback Create(
-            ChainValidationMode chainValidation,
-            HostnameValidationMode hostnameValidation,
-            ILoggingAdapter log)
+        public static CertificateValidationCallback ValidateChain(
+            ILoggingAdapter? log = null)
         {
-            return (sender, cert, chain, errors) =>
+            return (cert, chain, peer, errors, noClosureLog) =>
             {
-                var filteredErrors = errors;
-
-                // Apply chain validation filter
-                if (chainValidation == ChainValidationMode.IgnoreChainErrors)
+                if (cert == null)
                 {
-                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateChainErrors;
-                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateNotAvailable;
+                    (log ?? noClosureLog).Error("Certificate chain validation failed for {0}: certificate is null", peer);
+                    return false;
                 }
 
-                // Apply hostname validation filter
-                if (hostnameValidation == HostnameValidationMode.IgnoreHostnameMismatch)
-                {
-                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateNameMismatch;
-                }
-
+                var filteredErrors = errors & ~SslPolicyErrors.RemoteCertificateNameMismatch;
                 if (filteredErrors == SslPolicyErrors.None)
-                    return true; // Certificate is valid after applying configured filters
+                    return true;
 
-                // Log detailed error for validation failures
-                var cert509 = cert as X509Certificate2;
                 var detailedError = TlsErrorMessageBuilder.BuildSslPolicyErrorMessage(
-                    filteredErrors, cert509, chain);
-                var mode = chainValidation == ChainValidationMode.IgnoreChainErrors ? "suppress-validation enabled" :
-                           hostnameValidation == HostnameValidationMode.ValidateHostname ? "full validation" : "hostname validation disabled";
-                log.Error("TLS certificate validation failed ({0}):\n{1}", mode, detailedError);
+                    filteredErrors, cert, chain);
+                (log ?? noClosureLog).Error("Certificate chain validation failed for {0}:\n{1}", peer, detailedError);
                 return false;
             };
         }
 
         /// <summary>
-        /// Creates validation callback for full TLS validation (chain + hostname).
-        /// Use for traditional client-server TLS with CA-signed certificates and DNS names.
+        /// Validate certificate hostname (CN/SAN) matches expected hostname.
+        /// Use for: Per-node certificates, FQDN-based identity.
+        /// Applies bidirectionally on both client and server.
         /// </summary>
-        public static RemoteCertificateValidationCallback ValidateFull(ILoggingAdapter log)
-            => Create(ChainValidationMode.ValidateChain, HostnameValidationMode.ValidateHostname, log);
+        public static CertificateValidationCallback ValidateHostname(
+            string? expectedHostname = null,
+            ILoggingAdapter? log = null)
+        {
+            return (cert, chain, peer, errors, nonClosureLog) =>
+            {
+                if (cert == null)
+                {
+                    (log ?? nonClosureLog).Error(
+                        "Hostname validation failed for {0}: certificate is null",
+                        peer);
+                    return false;
+                }
+
+                var hostname = expectedHostname ?? peer;
+
+                if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) == 0) return true;
+                var cn = cert.GetNameInfo(X509NameType.DnsName, false);
+                (log ?? nonClosureLog).Error(
+                    "Hostname validation failed for {0}: expected '{1}', certificate CN is '{2}'",
+                    peer, hostname, cn);
+                return false;
+
+            };
+        }
 
         /// <summary>
-        /// Creates validation callback that validates chain but ignores hostname mismatches.
-        /// Use for: Mutual TLS with per-node certificates, IP-based connections, dynamic service discovery.
+        /// Pin certificate by thumbprint. Only accept certs matching allowed list.
+        /// Use for: High-security scenarios, known peer certificates.
+        /// Best combined with: Certificate revocation checking.
         /// </summary>
-        public static RemoteCertificateValidationCallback ValidateChainOnly(ILoggingAdapter log)
-            => Create(ChainValidationMode.ValidateChain, HostnameValidationMode.IgnoreHostnameMismatch, log);
+        public static CertificateValidationCallback PinnedCertificate(
+            params string[] allowedThumbprints)
+        {
+            if (allowedThumbprints == null || allowedThumbprints.Length == 0)
+                throw new ArgumentException("At least one thumbprint required");
+
+            // Normalize thumbprints to uppercase for case-insensitive comparison.
+            // This is SAFE because thumbprints are hexadecimal representations of SHA hashes.
+            // "2A8B4C" and "2a8b4c" represent the same binary value - just different display conventions.
+            // Different tools display thumbprints differently (Windows=uppercase, OpenSSL=lowercase),
+            // so case-insensitive comparison improves usability without compromising security.
+            // Also filter out any null/empty thumbprints to prevent security issues.
+            var normalizedThumbprints = new HashSet<string>(
+                allowedThumbprints
+                    .Where(t => !string.IsNullOrWhiteSpace(t))
+                    .Select(t => t.ToUpperInvariant()));
+
+            if (normalizedThumbprints.Count == 0)
+                throw new ArgumentException("At least one valid (non-empty) thumbprint required");
+
+            return (cert, chain, peer, errors, log) =>
+            {
+                if (cert == null)
+                {
+                    log.Error("Certificate pinning failed for {0}: certificate is null", peer);
+                    return false;
+                }
+
+                var thumbprint = cert.Thumbprint?.ToUpperInvariant();
+
+                if (string.IsNullOrEmpty(thumbprint))
+                {
+                    log.Error("Certificate pinning failed for {0}: certificate has no thumbprint", peer);
+                    return false;
+                }
+
+                if (!normalizedThumbprints.Contains(thumbprint!))
+                {
+                    log.Error("Certificate pinning failed for {0}: thumbprint '{1}' not in allowed list",
+                        peer, thumbprint);
+                    return false;
+                }
+
+                return true;
+            };
+        }
 
         /// <summary>
-        /// Creates validation callback that ignores chain errors but validates hostname.
-        /// Use for: Testing with self-signed certificates where hostname should still match.
+        /// Validate certificate subject DN matches expected pattern.
+        /// Use for: Organizational CA, issuer-based identity verification.
+        /// Supports wildcards: "CN=Akka-Node-*" matches "CN=Akka-Node-001"
         /// </summary>
-        public static RemoteCertificateValidationCallback ValidateHostnameOnly(ILoggingAdapter log)
-            => Create(ChainValidationMode.IgnoreChainErrors, HostnameValidationMode.ValidateHostname, log);
+        public static CertificateValidationCallback ValidateSubject(
+            string expectedSubjectPattern,
+            ILoggingAdapter? log = null)
+        {
+            if (string.IsNullOrWhiteSpace(expectedSubjectPattern))
+                throw new ArgumentException("Subject pattern required");
+
+            return (cert, chain, peer, errors, log_) =>
+            {
+                if (cert == null)
+                {
+                    (log ?? log_).Error(
+                        "Subject validation failed for {0}: certificate is null",
+                        peer);
+                    return false;
+                }
+
+                var cert509 = cert as X509Certificate2;
+                var subject = cert509?.Subject;
+
+                if (string.IsNullOrEmpty(subject))
+                {
+                    (log ?? log_).Error(
+                        "Subject validation failed for {0}: certificate has no subject",
+                        peer);
+                    return false;
+                }
+
+                if (!SubjectMatchesPattern(subject, expectedSubjectPattern))
+                {
+                    (log ?? log_).Error(
+                        "Subject validation failed for {0}: '{1}' does not match pattern '{2}'",
+                        peer, subject, expectedSubjectPattern);
+                    return false;
+                }
+
+                return true;
+            };
+        }
 
         /// <summary>
-        /// Creates validation callback that accepts all certificates without validation.
-        /// FOR TESTING ONLY. WARNING: Disables all security checks including chain, hostname, and expiration.
+        /// Validate certificate issuer matches expected DN pattern.
+        /// Use for: Verifying certificate came from trusted CA.
         /// </summary>
-        public static RemoteCertificateValidationCallback AcceptAll()
-            => (_, _, _, _) => true;
+        public static CertificateValidationCallback ValidateIssuer(
+            string expectedIssuerPattern,
+            ILoggingAdapter? log = null)
+        {
+            if (string.IsNullOrWhiteSpace(expectedIssuerPattern))
+                throw new ArgumentException("Issuer pattern required");
+
+            return (cert, chain, peer, errors, log_) =>
+            {
+                if (cert == null)
+                {
+                    (log ?? log_).Error(
+                        "Issuer validation failed for {0}: certificate is null",
+                        peer);
+                    return false;
+                }
+
+                var cert509 = cert as X509Certificate2;
+                var issuer = cert509?.Issuer;
+
+                if (string.IsNullOrEmpty(issuer))
+                {
+                    (log ?? log_).Error(
+                        "Issuer validation failed for {0}: certificate has no issuer",
+                        peer);
+                    return false;
+                }
+
+                if (!SubjectMatchesPattern(issuer, expectedIssuerPattern))
+                {
+                    (log ?? log_).Error(
+                        "Issuer validation failed for {0}: '{1}' does not match pattern '{2}'",
+                        peer, issuer, expectedIssuerPattern);
+                    return false;
+                }
+
+                return true;
+            };
+        }
+
+        /// <summary>
+        /// Compose multiple validation callbacks into a single callback.
+        /// All validators must pass for certificate to be accepted.
+        /// Use for: Combining multiple validation strategies.
+        /// </summary>
+        public static CertificateValidationCallback Combine(
+            params CertificateValidationCallback[] validators)
+        {
+            if (validators == null || validators.Length == 0)
+                throw new ArgumentException("At least one validator required");
+
+            return (cert, chain, peer, errors, log) =>
+            {
+                foreach (var validator in validators!)
+                {
+                    if (!validator(cert, chain, peer, errors, log))
+                        return false;
+                }
+                return true;
+            };
+        }
+
+        /// <summary>
+        /// Chain validator with optional custom validation.
+        /// Validates certificate chain, then calls optional custom logic.
+        /// </summary>
+        public static CertificateValidationCallback ChainPlusThen(
+            Func<X509Certificate2?, X509Chain?, string, bool> customCheck,
+            ILoggingAdapter? log = null)
+        {
+            if (customCheck == null)
+                throw new ArgumentException("Custom check function required");
+
+            return (cert, chain, peer, errors, log_) =>
+            {
+                // First validate chain
+                var chainValidator = ValidateChain(log ?? log_);
+                if (!chainValidator(cert, chain, peer, errors, log_))
+                    return false;
+
+                // Then custom check
+                if (!customCheck(cert, chain, peer))
+                {
+                    (log ?? log_).Error("Custom certificate validation failed for {0}", peer);
+                    return false;
+                }
+
+                return true;
+            };
+        }
+
+        private static bool SubjectMatchesPattern(string? subject, string pattern)
+        {
+            // Simple wildcard matching: CN=Akka-Node-* matches CN=Akka-Node-001
+            if (string.IsNullOrEmpty(subject))
+                return false;
+
+            var regex = "^" + System.Text.RegularExpressions.Regex.Escape(pattern)
+                .Replace("\\*", ".*") + "$";
+            return System.Text.RegularExpressions.Regex.IsMatch(subject, regex);
+        }
     }
 
     /// <summary>
@@ -612,7 +818,7 @@ namespace Akka.Remote.Transport.DotNetty
             message.AppendLine("TLS/SSL certificate validation failed:");
 
             // Interpret SslPolicyErrors flags
-            if ((errors & System.Net.Security.SslPolicyErrors.None) != System.Net.Security.SslPolicyErrors.None)
+            if (errors != System.Net.Security.SslPolicyErrors.None)
             {
                 if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable) != 0)
                 {

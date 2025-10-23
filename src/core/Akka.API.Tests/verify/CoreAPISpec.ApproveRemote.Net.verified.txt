@@ -860,12 +860,34 @@ namespace Akka.Remote.Transport
 }
 namespace Akka.Remote.Transport.DotNetty
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static CertificateValidation
+    {
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ChainPlusThen([System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                1,
+                2,
+                2,
+                1})] System.Func<System.Security.Cryptography.X509Certificates.X509Certificate2, System.Security.Cryptography.X509Certificates.X509Chain, string, bool> customCheck, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Event.ILoggingAdapter log = null) { }
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback Combine(params Akka.Remote.Transport.DotNetty.CertificateValidationCallback[] validators) { }
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback PinnedCertificate(params string[] allowedThumbprints) { }
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateChain([System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Event.ILoggingAdapter log = null) { }
+        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateHostname(string expectedHostname = null, Akka.Event.ILoggingAdapter log = null) { }
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateIssuer(string expectedIssuerPattern, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Event.ILoggingAdapter log = null) { }
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateSubject(string expectedSubjectPattern, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Event.ILoggingAdapter log = null) { }
+    }
+    public delegate bool CertificateValidationCallback([System.Runtime.CompilerServices.NullableAttribute(2)] System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, [System.Runtime.CompilerServices.NullableAttribute(2)] System.Security.Cryptography.X509Certificates.X509Chain chain, string remotePeer, System.Net.Security.SslPolicyErrors errors, Akka.Event.ILoggingAdapter log);
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class DotNettySslSetup : Akka.Actor.Setup.Setup
     {
         public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation) { }
         public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication) { }
         public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname) { }
+        public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Remote.Transport.DotNetty.CertificateValidationCallback customValidator) { }
+        public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Remote.Transport.DotNetty.CertificateValidationCallback customValidator) { }
         public System.Security.Cryptography.X509Certificates.X509Certificate2 Certificate { get; }
+        [System.Runtime.CompilerServices.NullableAttribute(2)]
+        public Akka.Remote.Transport.DotNetty.CertificateValidationCallback CustomValidator { get; }
         public bool RequireMutualAuthentication { get; }
         public bool SuppressValidation { get; }
         public bool ValidateCertificateHostname { get; }
