@@ -470,29 +470,14 @@ namespace Akka.Remote.Transport.DotNetty
             var suppressChain = Settings.Ssl.SuppressValidation;
             var validateHostname = Settings.Ssl.ValidateCertificateHostname;
 
-            if (suppressChain && !validateHostname)
+            return suppressChain switch
             {
-                // Accept all certificates (for development/testing only)
-                return (cert, chain, peer, errors, log) => true;
-            }
-            else if (suppressChain && validateHostname)
-            {
-                // Ignore chain errors, but validate hostname
-                return CertificateValidation.ValidateHostname(log: Log);
-            }
-            else if (!suppressChain && validateHostname)
-            {
-                // Full validation: chain + hostname
-                return CertificateValidation.Combine(
-                    CertificateValidation.ValidateChain(log: Log),
-                    CertificateValidation.ValidateHostname(log: Log)
-                );
-            }
-            else // !suppressChain && !validateHostname
-            {
-                // Chain validation only (default for peer-to-peer mutual TLS)
-                return CertificateValidation.ValidateChain(log: Log);
-            }
+                true when validateHostname => CertificateValidation.ValidateHostname(log: Log),
+                true => (cert, chain, peer, errors, log) => true,
+                false when validateHostname => CertificateValidation.Combine(
+                    CertificateValidation.ValidateChain(log: Log), CertificateValidation.ValidateHostname(log: Log)),
+                _ => CertificateValidation.ValidateChain(log: Log)
+            };
         }
 
         private ServerBootstrap ServerFactory()
