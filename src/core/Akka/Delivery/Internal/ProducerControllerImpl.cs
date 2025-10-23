@@ -638,6 +638,12 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
     {
         AssertLocalProducer(start.Producer);
         _log.Debug("Registering new producer [{0}], currentSeqNr [{1}]", start.Producer, CurrentState.CurrentSeqNr);
+
+        // Cancel aggressive resend timer on producer restart
+        // New messages from restarted producer should take priority over aggressive resends of old unconfirmed messages
+        // The parent ShardingProducerController's idle timeout will handle eventual redelivery if needed
+        Timers.Cancel(ResendFirst.Instance);
+
         if (CurrentState is { Requested: true, RemainingChunks.IsEmpty: true })
             start.Producer.Tell(new RequestNext<T>(ProducerId, CurrentState.CurrentSeqNr, CurrentState.ConfirmedSeqNr,
                 Self));
