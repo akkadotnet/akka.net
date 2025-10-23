@@ -144,9 +144,26 @@ namespace Akka.Remote.Transport.DotNetty
             var config = system.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
             if (config.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<DotNettyTransportSettings>("akka.remote.dot-netty.tcp");
-            
+
             var setup = system.Settings.Setup.Get<DotNettySslSetup>();
             var sslSettings = setup.HasValue ? setup.Value.Settings : null;
+
+            // Warn if both DotNettySslSetup and HOCON SSL are configured (DotNettySslSetup takes precedence)
+            if (sslSettings != null && config.GetBoolean("enable-ssl"))
+            {
+                var sslConfig = config.GetConfig("ssl");
+                // Only warn if HOCON has explicit certificate configuration
+                var hasCertPath = sslConfig.HasPath("certificate.path") && !string.IsNullOrWhiteSpace(sslConfig.GetString("certificate.path"));
+                var hasCertThumbprint = sslConfig.HasPath("certificate.thumbprint") && !string.IsNullOrWhiteSpace(sslConfig.GetString("certificate.thumbprint"));
+
+                if (hasCertPath || hasCertThumbprint)
+                {
+                    var log = Logging.GetLogger(system, typeof(DotNettyTransportSettings));
+                    log.Warning("Both DotNettySslSetup and HOCON SSL configuration are present. " +
+                               "DotNettySslSetup takes precedence and HOCON SSL settings will be ignored.");
+                }
+            }
+
             return Create(config, sslSettings);
         }
 

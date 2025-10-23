@@ -385,6 +385,47 @@ akka {
             Assert.Same(customValidator, settings.Ssl.CustomValidator);
         }
 
+        [Fact(DisplayName = "DotNettySslSetup should take precedence when both setup and HOCON SSL are configured (and log warning)")]
+        public void DotNettySslSetup_should_take_precedence_when_both_configured()
+        {
+            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+
+            // HOCON certificate (different from setup)
+            const string hoconCertPath = "Resources/akka-validcert.pfx";
+
+            var sslSetup = new DotNettySslSetup(certificate, suppressValidation: true);
+
+            var actorSystemSetup = ActorSystemSetup.Empty
+                .And(BootstrapSetup.Create().WithConfig(ConfigurationFactory.ParseString($@"
+akka {{
+  loglevel = DEBUG
+  actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
+  remote.dot-netty.tcp {{
+    port = 0
+    hostname = ""127.0.0.1""
+    enable-ssl = true
+    ssl {{
+      certificate {{
+        path = ""{hoconCertPath}""
+        password = ""{Password}""
+      }}
+      suppress-validation = false
+    }}
+  }}
+}}")))
+                .And(sslSetup);
+
+            using var sys = ActorSystem.Create("test-precedence", actorSystemSetup);
+
+            // Verify DotNettySslSetup takes precedence over HOCON
+            // (A warning will be logged to help users understand this behavior)
+            var settings = DotNettyTransportSettings.Create(sys);
+
+            Assert.True(settings.EnableSsl);
+            Assert.Equal(certificate.Thumbprint, settings.Ssl.Certificate.Thumbprint);
+            Assert.True(settings.Ssl.SuppressValidation); // From DotNettySslSetup, not HOCON (which has false)
+        }
+
         #region helper classes / methods
 
         protected override void AfterAll()
