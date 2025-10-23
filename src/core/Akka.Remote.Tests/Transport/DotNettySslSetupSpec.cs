@@ -257,14 +257,14 @@ akka {{
             var validatorCalled = false;
 
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
-            var customValidator = CertificateValidation.Combine(
-                (cert, chain, peer, errors, log) =>
-                {
-                    validatorCalled = true;
-                    Output.WriteLine($"CustomValidator called for peer: {peer}");
-                    return true; // Accept all certificates
-                }
-            );
+
+            // Custom validator that accepts all certificates
+            CertificateValidationCallback customValidator = (cert, chain, peer, errors, log) =>
+            {
+                validatorCalled = true;
+                Output.WriteLine($"CustomValidator called for peer: {peer}");
+                return true; // Accept all certificates
+            };
 
             var sslSetup = new DotNettySslSetup(certificate, suppressValidation: false, requireMutualAuthentication: true, customValidator: customValidator);
 
@@ -313,14 +313,14 @@ akka {
             var validatorCalled = false;
 
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
-            var customValidator = CertificateValidation.Combine(
-                (cert, chain, peer, errors, log) =>
-                {
-                    validatorCalled = true;
-                    Output.WriteLine($"CustomValidator called for peer: {peer}, rejecting certificate");
-                    return false; // Reject all certificates
-                }
-            );
+
+            // Custom validator that rejects all certificates
+            CertificateValidationCallback customValidator = (cert, chain, peer, errors, log) =>
+            {
+                validatorCalled = true;
+                Output.WriteLine($"CustomValidator called for peer: {peer}, rejecting certificate");
+                return false; // Reject all certificates
+            };
 
             var sslSetup = new DotNettySslSetup(certificate, suppressValidation: false, requireMutualAuthentication: true, customValidator: customValidator);
 
