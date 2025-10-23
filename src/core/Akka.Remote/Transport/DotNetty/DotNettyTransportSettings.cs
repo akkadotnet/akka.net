@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -517,8 +518,8 @@ namespace Akka.Remote.Transport.DotNetty
     /// <param name="log">Logger for diagnostics</param>
     /// <returns>True to accept cert, false to reject</returns>
     public delegate bool CertificateValidationCallback(
-        X509Certificate2 certificate,
-        X509Chain chain,
+        X509Certificate2? certificate,
+        X509Chain? chain,
         string remotePeer,
         SslPolicyErrors errors,
         ILoggingAdapter log);
@@ -539,16 +540,15 @@ namespace Akka.Remote.Transport.DotNetty
         public static CertificateValidationCallback ValidateChain(
             ILoggingAdapter? log = null)
         {
-            return (cert, chain, peer, errors, log_) =>
+            return (cert, chain, peer, errors, noClosureLog) =>
             {
                 var filteredErrors = errors & ~SslPolicyErrors.RemoteCertificateNameMismatch;
                 if (filteredErrors == SslPolicyErrors.None)
                     return true;
 
-                var cert509 = cert as X509Certificate2;
                 var detailedError = TlsErrorMessageBuilder.BuildSslPolicyErrorMessage(
-                    filteredErrors, cert509, chain);
-                (log ?? log_).Error("Certificate chain validation failed for {0}:\n{1}", peer, detailedError);
+                    filteredErrors, cert, chain);
+                (log ?? noClosureLog).Error("Certificate chain validation failed for {0}:\n{1}", peer, detailedError);
                 return false;
             };
         }
@@ -693,7 +693,7 @@ namespace Akka.Remote.Transport.DotNetty
         /// Validates certificate chain, then calls optional custom logic.
         /// </summary>
         public static CertificateValidationCallback ChainPlusThen(
-            Func<X509Certificate2, X509Chain, string, bool> customCheck,
+            Func<X509Certificate2?, X509Chain?, string, bool> customCheck,
             ILoggingAdapter? log = null)
         {
             if (customCheck == null)
@@ -707,8 +707,7 @@ namespace Akka.Remote.Transport.DotNetty
                     return false;
 
                 // Then custom check
-                var cert509 = cert as X509Certificate2;
-                if (!customCheck(cert509, chain, peer))
+                if (!customCheck(cert, chain, peer))
                 {
                     (log ?? log_).Error("Custom certificate validation failed for {0}", peer);
                     return false;

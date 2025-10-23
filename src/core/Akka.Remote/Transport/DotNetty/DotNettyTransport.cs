@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,7 +71,7 @@ namespace Akka.Remote.Transport.DotNetty
         protected abstract void RegisterListener(IChannel channel, IHandleEventListener listener, object msg, IPEndPoint remoteAddress);
 
         protected void Init(IChannel channel, IPEndPoint remoteSocketAddress, Address remoteAddress, object msg,
-            out AssociationHandle op)
+            out AssociationHandle? op)
         {
             var localAddress = DotNettyTransport.MapSocketToAddress((IPEndPoint)channel.LocalAddress, Transport.SchemeIdentifier, Transport.System.Name, Transport.Settings.Hostname);
 
@@ -100,7 +101,7 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
         /// <param name="cause">The exception that is the cause of the current exception.</param>
-        public DotNettyTransportException(string message, Exception cause = null) : base(message, cause)
+        public DotNettyTransportException(string message, Exception? cause = null) : base(message, cause)
         {
         }
 
@@ -120,8 +121,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         protected readonly TaskCompletionSource<IAssociationEventListener> AssociationListenerPromise;
         protected readonly ILoggingAdapter Log;
-        protected volatile Address LocalAddress;
-        protected internal volatile IChannel ServerChannel;
+        protected volatile Address? LocalAddress;
+        protected internal volatile IChannel? ServerChannel;
 
         private readonly IEventLoopGroup _serverEventLoopGroup;
         private readonly IEventLoopGroup _clientEventLoopGroup;
@@ -240,8 +241,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override Task<AssociationHandle> Associate(Address remoteAddress)
         {
-            if (!ServerChannel.Open)
-                throw new ChannelException("Transport is not open");
+            if (ServerChannel == null || !ServerChannel.Open)
+                throw new ChannelException("Transport is not bound or not open");
 
             return AssociateInternal(remoteAddress);
         }
@@ -372,6 +373,10 @@ namespace Akka.Remote.Transport.DotNetty
 
                 if (Settings.Ssl.RequireMutualAuthentication)
                 {
+                    // Mutual TLS requires a certificate to be configured
+                    if (certificate == null)
+                        throw new InvalidOperationException("Mutual TLS authentication is enabled but no certificate is configured. Please provide a certificate via DotNettySslSetup or HOCON configuration.");
+
                     // Provide client cert for mutual TLS
                     tlsHandler = new TlsHandler(
                         stream => new SslStream(stream, true, validationCallback,
@@ -532,14 +537,14 @@ namespace Akka.Remote.Transport.DotNetty
 
         #region static methods
 
-        public static Address MapSocketToAddress(IPEndPoint socketAddress, string schemeIdentifier, string systemName, string hostName = null, int? publicPort = null)
+        public static Address? MapSocketToAddress(IPEndPoint socketAddress, string schemeIdentifier, string systemName, string? hostName = null, int? publicPort = null)
         {
             return socketAddress == null
                 ? null
                 : new Address(schemeIdentifier, systemName, SafeMapHostName(hostName) ?? SafeMapIPv6(socketAddress.Address), publicPort ?? socketAddress.Port);
         }
 
-        private static string SafeMapHostName(string hostName)
+        private static string? SafeMapHostName(string? hostName)
         {
             return !string.IsNullOrEmpty(hostName) && IPAddress.TryParse(hostName, out var ip) ? SafeMapIPv6(ip) : hostName;
         }
