@@ -505,52 +505,6 @@ namespace Akka.Remote.Transport.DotNetty
     }
 
     /// <summary>
-    /// INTERNAL API
-    ///
-    /// Specifies how certificate chain validation should be performed during TLS handshake.
-    /// Controls whether to validate certificates against the system CA trust store.
-    /// </summary>
-    internal enum ChainValidationMode
-    {
-        /// <summary>
-        /// Validate certificate chain against system CA trust store.
-        /// Use for production with CA-signed certificates.
-        /// Certificates must chain to a trusted root CA.
-        /// </summary>
-        ValidateChain,
-
-        /// <summary>
-        /// Ignore certificate chain validation errors.
-        /// Use for development/testing with self-signed certificates.
-        /// WARNING: Allows untrusted certificates - use only in non-production environments.
-        /// </summary>
-        IgnoreChainErrors
-    }
-
-    /// <summary>
-    /// INTERNAL API
-    ///
-    /// Specifies how hostname validation should be performed during TLS handshake.
-    /// Controls whether the certificate CN/SAN must match the connection target hostname.
-    /// </summary>
-    internal enum HostnameValidationMode
-    {
-        /// <summary>
-        /// Validate that certificate CN/SAN matches target hostname.
-        /// Use for traditional client-server TLS with DNS-based connections.
-        /// Prevents man-in-the-middle attacks by ensuring certificate matches expected server.
-        /// </summary>
-        ValidateHostname,
-
-        /// <summary>
-        /// Ignore hostname mismatch errors.
-        /// Use for: Mutual TLS with per-node certificates, IP-based connections, dynamic service discovery.
-        /// Still validates certificate chain (unless IgnoreChainErrors is also set).
-        /// </summary>
-        IgnoreHostnameMismatch
-    }
-
-    /// <summary>
     /// PUBLIC API
     ///
     /// Custom certificate validation callback for mTLS connections.
@@ -568,86 +522,6 @@ namespace Akka.Remote.Transport.DotNetty
         string remotePeer,
         SslPolicyErrors errors,
         ILoggingAdapter log);
-
-    /// <summary>
-    /// INTERNAL API
-    ///
-    /// Factory for creating TLS certificate validation callbacks with different security policies.
-    /// Provides type-safe, self-documenting methods for configuring certificate validation behavior.
-    /// </summary>
-    internal static class TlsValidationCallbacks
-    {
-        /// <summary>
-        /// Creates a configurable validation callback that filters SSL policy errors based on validation modes.
-        /// </summary>
-        /// <param name="chainValidation">Controls certificate chain/CA validation</param>
-        /// <param name="hostnameValidation">Controls hostname matching validation</param>
-        /// <param name="log">Logger for validation failures</param>
-        /// <returns>Validation callback configured according to parameters</returns>
-        public static RemoteCertificateValidationCallback Create(
-            ChainValidationMode chainValidation,
-            HostnameValidationMode hostnameValidation,
-            ILoggingAdapter log)
-        {
-            return (sender, cert, chain, errors) =>
-            {
-                var filteredErrors = errors;
-
-                // Apply chain validation filter
-                if (chainValidation == ChainValidationMode.IgnoreChainErrors)
-                {
-                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateChainErrors;
-                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateNotAvailable;
-                }
-
-                // Apply hostname validation filter
-                if (hostnameValidation == HostnameValidationMode.IgnoreHostnameMismatch)
-                {
-                    filteredErrors &= ~SslPolicyErrors.RemoteCertificateNameMismatch;
-                }
-
-                if (filteredErrors == SslPolicyErrors.None)
-                    return true; // Certificate is valid after applying configured filters
-
-                // Log detailed error for validation failures
-                var cert509 = cert as X509Certificate2;
-                var detailedError = TlsErrorMessageBuilder.BuildSslPolicyErrorMessage(
-                    filteredErrors, cert509, chain);
-                var mode = chainValidation == ChainValidationMode.IgnoreChainErrors ? "suppress-validation enabled" :
-                           hostnameValidation == HostnameValidationMode.ValidateHostname ? "full validation" : "hostname validation disabled";
-                log.Error("TLS certificate validation failed ({0}):\n{1}", mode, detailedError);
-                return false;
-            };
-        }
-
-        /// <summary>
-        /// Creates validation callback for full TLS validation (chain + hostname).
-        /// Use for traditional client-server TLS with CA-signed certificates and DNS names.
-        /// </summary>
-        public static RemoteCertificateValidationCallback ValidateFull(ILoggingAdapter log)
-            => Create(ChainValidationMode.ValidateChain, HostnameValidationMode.ValidateHostname, log);
-
-        /// <summary>
-        /// Creates validation callback that validates chain but ignores hostname mismatches.
-        /// Use for: Mutual TLS with per-node certificates, IP-based connections, dynamic service discovery.
-        /// </summary>
-        public static RemoteCertificateValidationCallback ValidateChainOnly(ILoggingAdapter log)
-            => Create(ChainValidationMode.ValidateChain, HostnameValidationMode.IgnoreHostnameMismatch, log);
-
-        /// <summary>
-        /// Creates validation callback that ignores chain errors but validates hostname.
-        /// Use for: Testing with self-signed certificates where hostname should still match.
-        /// </summary>
-        public static RemoteCertificateValidationCallback ValidateHostnameOnly(ILoggingAdapter log)
-            => Create(ChainValidationMode.IgnoreChainErrors, HostnameValidationMode.ValidateHostname, log);
-
-        /// <summary>
-        /// Creates validation callback that accepts all certificates without validation.
-        /// FOR TESTING ONLY. WARNING: Disables all security checks including chain, hostname, and expiration.
-        /// </summary>
-        public static RemoteCertificateValidationCallback AcceptAll()
-            => (_, _, _, _) => true;
-    }
 
     /// <summary>
     /// PUBLIC API

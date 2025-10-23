@@ -465,25 +465,34 @@ namespace Akka.Remote.Transport.DotNetty
         /// <returns>A CertificateValidationCallback composed from configuration settings.</returns>
         private CertificateValidationCallback ComposeValidatorFromSettings()
         {
-            // Use the original TlsValidationCallbacks for configuration-based validation
-            // This maintains the existing proven validation logic
-            var chainValidation = Settings.Ssl.SuppressValidation
-                ? ChainValidationMode.IgnoreChainErrors
-                : ChainValidationMode.ValidateChain;
+            // Build validator from configuration settings
+            // Note: SuppressValidation and ValidateCertificateHostname are independent settings
+            var suppressChain = Settings.Ssl.SuppressValidation;
+            var validateHostname = Settings.Ssl.ValidateCertificateHostname;
 
-            var hostnameValidation = Settings.Ssl.ValidateCertificateHostname
-                ? HostnameValidationMode.ValidateHostname
-                : HostnameValidationMode.IgnoreHostnameMismatch;
-
-            var dotnettyCallback = TlsValidationCallbacks.Create(chainValidation, hostnameValidation, Log);
-
-            // Convert DotNetty's RemoteCertificateValidationCallback to our CertificateValidationCallback
-            // by wrapping it to include the peer address parameter
-            return (cert, chain, peer, errors, log) =>
+            if (suppressChain && !validateHostname)
             {
-                // Call the DotNetty validator which doesn't use the peer parameter
-                return dotnettyCallback(null, cert, chain, errors);
-            };
+                // Accept all certificates (for development/testing only)
+                return (cert, chain, peer, errors, log) => true;
+            }
+            else if (suppressChain && validateHostname)
+            {
+                // Ignore chain errors, but validate hostname
+                return CertificateValidation.ValidateHostname(log: Log);
+            }
+            else if (!suppressChain && validateHostname)
+            {
+                // Full validation: chain + hostname
+                return CertificateValidation.Combine(
+                    CertificateValidation.ValidateChain(log: Log),
+                    CertificateValidation.ValidateHostname(log: Log)
+                );
+            }
+            else // !suppressChain && !validateHostname
+            {
+                // Chain validation only (default for peer-to-peer mutual TLS)
+                return CertificateValidation.ValidateChain(log: Log);
+            }
         }
 
         private ServerBootstrap ServerFactory()
