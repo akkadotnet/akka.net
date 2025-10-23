@@ -38,12 +38,12 @@ namespace Akka.Remote.Tests.Transport
             // Arrange
             var validator = CertificateValidation.PinnedCertificate("ABCD1234");
 
-            // Act
-            var result = validator(null, null, "test-peer", SslPolicyErrors.None, _log);
-
-            // Assert
-            Assert.False(result);
-            ExpectMsg<Error>(msg => msg.Message.ToString().Contains("certificate is null"), TimeSpan.FromSeconds(1));
+            // Act & Assert
+            EventFilter.Error(contains: "certificate is null").ExpectOne(() =>
+            {
+                var result = validator(null, null, "test-peer", SslPolicyErrors.None, _log);
+                Assert.False(result);
+            });
         }
 
         // Note: X509Certificate2 always has a thumbprint when properly constructed,
@@ -121,6 +121,23 @@ namespace Akka.Remote.Tests.Transport
             Assert.True(result);
         }
 
+        [Fact(DisplayName = "PinnedCertificate should reject certificate with non-matching thumbprint")]
+        public void PinnedCertificate_should_reject_non_matching_thumbprint()
+        {
+            // Arrange
+            var cert = new X509Certificate2(ValidCertPath, Password);
+            var validator = CertificateValidation.PinnedCertificate(
+                "1111111111111111111111111111111111111111",
+                "2222222222222222222222222222222222222222");
+
+            // Act & Assert
+            EventFilter.Error(contains: "not in allowed list").ExpectOne(() =>
+            {
+                var result = validator(cert, null, "test-peer", SslPolicyErrors.None, _log);
+                Assert.False(result);
+            });
+        }
+
         #endregion
 
         #region ValidateSubject Tests
@@ -131,12 +148,12 @@ namespace Akka.Remote.Tests.Transport
             // Arrange
             var validator = CertificateValidation.ValidateSubject("CN=TestSubject");
 
-            // Act
-            var result = validator(null, null, "test-peer", SslPolicyErrors.None, _log);
-
-            // Assert
-            Assert.False(result);
-            ExpectMsg<Error>(msg => msg.Message.ToString().Contains("has no subject"), TimeSpan.FromSeconds(1));
+            // Act & Assert
+            EventFilter.Error(contains: "certificate is null").ExpectOne(() =>
+            {
+                var result = validator(null, null, "test-peer", SslPolicyErrors.None, _log);
+                Assert.False(result);
+            });
         }
 
         [Fact(DisplayName = "ValidateSubject should throw if pattern is null or empty")]
@@ -158,12 +175,12 @@ namespace Akka.Remote.Tests.Transport
             // Arrange
             var validator = CertificateValidation.ValidateIssuer("CN=TestIssuer");
 
-            // Act
-            var result = validator(null, null, "test-peer", SslPolicyErrors.None, _log);
-
-            // Assert
-            Assert.False(result);
-            ExpectMsg<Error>(msg => msg.Message.ToString().Contains("has no issuer"), TimeSpan.FromSeconds(1));
+            // Act & Assert
+            EventFilter.Error(contains: "certificate is null").ExpectOne(() =>
+            {
+                var result = validator(null, null, "test-peer", SslPolicyErrors.None, _log);
+                Assert.False(result);
+            });
         }
 
         [Fact(DisplayName = "ValidateIssuer should throw if pattern is null or empty")]
@@ -202,23 +219,26 @@ namespace Akka.Remote.Tests.Transport
             CertificateValidationCallback validator1 = (cert, chain, peer, errors, log) =>
             {
                 callCount++;
+                log.Error("First validator failed");
                 return false; // Fail
             };
             CertificateValidationCallback validator2 = (cert, chain, peer, errors, log) =>
             {
                 callCount++;
+                log.Error("Second validator should never be reached");
                 return true; // This should never be called
             };
 
             var combined = CertificateValidation.Combine(validator1, validator2);
             var cert = new X509Certificate2(ValidCertPath, Password);
 
-            // Act
-            var result = combined(cert, null, "test-peer", SslPolicyErrors.None, _log);
-
-            // Assert
-            Assert.False(result);
-            Assert.Equal(1, callCount); // Only first validator should be called
+            // Act & Assert
+            EventFilter.Error(contains: "First validator failed").ExpectOne(() =>
+            {
+                var result = combined(cert, null, "test-peer", SslPolicyErrors.None, _log);
+                Assert.False(result);
+                Assert.Equal(1, callCount); // Only first validator should be called - short-circuit behavior
+            });
         }
 
         #endregion
