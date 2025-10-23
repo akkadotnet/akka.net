@@ -818,7 +818,7 @@ namespace Akka.Remote.Transport.DotNetty
             message.AppendLine("TLS/SSL certificate validation failed:");
 
             // Interpret SslPolicyErrors flags
-            if ((errors & System.Net.Security.SslPolicyErrors.None) != System.Net.Security.SslPolicyErrors.None)
+            if (errors != System.Net.Security.SslPolicyErrors.None)
             {
                 if ((errors & System.Net.Security.SslPolicyErrors.RemoteCertificateNotAvailable) != 0)
                 {
