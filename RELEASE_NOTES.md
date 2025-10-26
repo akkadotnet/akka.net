@@ -1,3 +1,26 @@
+#### 1.5.55 October 26th, 2025 ####
+
+Akka.NET v1.5.55 is a patch release containing important stability and security improvements for Akka.Remote.
+
+**Akka.Remote Stability Improvements:**
+
+* [Akka.Remote: harden EndpointWriter against serialization failures](https://github.com/akkadotnet/akka.net/pull/7925) - Fixes [issue #7922](https://github.com/akkadotnet/akka.net/issues/7922) by hardening the `EndpointWriter` against a broader range of potential serialization failures, improving overall remoting stability.
+
+**Akka.Remote Security Improvements:**
+
+* [Custom certificate validation with single execution path - fixes mTLS asymmetry bug](https://github.com/akkadotnet/akka.net/pull/7921) - Fixes [issue #7914](https://github.com/akkadotnet/akka.net/issues/7914) by introducing programmatic certificate validation helpers through the new `CertificateValidation` factory class. This release adds 7 new validation helper methods including `ValidateChain()`, `ValidateHostname()`, `PinnedCertificate()`, `ValidateSubject()`, `ValidateIssuer()`, `Combine()`, and `ChainPlusThen()`. The update also fixes an mTLS asymmetry bug where server-side hostname validation was not being applied consistently with client-side validation, all while maintaining full backward compatibility with existing HOCON-based validation.
+
+* [Fix DotNettySslSetup being ignored when HOCON has valid SSL config](https://github.com/akkadotnet/akka.net/pull/7919) - Fixes [issue #7917](https://github.com/akkadotnet/akka.net/issues/7917) where programmatic `DotNettySslSetup` settings were incorrectly being overridden by HOCON configuration. Programmatic configuration now correctly takes precedence over HOCON defaults as intended.
+
+1 contributor since release 1.5.54
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 1605 | 289 | Aaron Stannard |
+
+
+To [see the full set of changes in Akka.NET v1.5.55, click here](https://github.com/akkadotnet/akka.net/milestone/138?closed=1)
+
 #### 1.5.54 October 17th, 2025 ####
 
 Akka.NET v1.5.54 is a patch release containing important bug fixes for Akka.Streams and Akka.DistributedData.

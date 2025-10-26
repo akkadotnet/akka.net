@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.54</VersionPrefix>
+    <VersionPrefix>1.5.55</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -50,22 +50,26 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.54 is a patch release containing important bug fixes for Akka.Streams and Akka.DistributedData.
+    <PackageReleaseNotes>Akka.NET v1.5.55 is a patch release containing important stability and security improvements for Akka.Remote.
 
-**Bug Fixes:**
+**Akka.Remote Stability Improvements:**
 
-* [Fix SourceRef.Source and SinkRef.Sink non-idempotent property bug](https://github.com/akkadotnet/akka.net/pull/7907) - Fixes [issue #7895](https://github.com/akkadotnet/akka.net/issues/7895) where `ISourceRef&lt;T&gt;.Source` and `ISinkRef&lt;T&gt;.Sink` properties created new stage instances on every access, causing race conditions and intermittent subscription timeouts. These properties are now idempotent using `Lazy&lt;T&gt;`, preventing failures from accidental property access (debugger inspection, logging, serialization frameworks).
+* [Akka.Remote: harden EndpointWriter against serialization failures](https://github.com/akkadotnet/akka.net/pull/7925) - Fixes [issue #7922](https://github.com/akkadotnet/akka.net/issues/7922) by hardening the `EndpointWriter` against a broader range of potential serialization failures, improving overall remoting stability.
 
-* [Fix LWWDictionary.Delta ArgumentNullException when underlying delta is null](https://github.com/akkadotnet/akka.net/pull/7912) - Fixes [issue #7910](https://github.com/akkadotnet/akka.net/issues/7910) where `LWWDictionary.Delta` would throw `ArgumentNullException` when the underlying `ORDictionary.Delta` was `null`, which is a legitimate state after initialization or calling `ResetDelta()`.
+**Akka.Remote Security Improvements:**
 
-1 contributor since release 1.5.53
+* [Custom certificate validation with single execution path - fixes mTLS asymmetry bug](https://github.com/akkadotnet/akka.net/pull/7921) - Fixes [issue #7914](https://github.com/akkadotnet/akka.net/issues/7914) by introducing programmatic certificate validation helpers through the new `CertificateValidation` factory class. This release adds 7 new validation helper methods including `ValidateChain()`, `ValidateHostname()`, `PinnedCertificate()`, `ValidateSubject()`, `ValidateIssuer()`, `Combine()`, and `ChainPlusThen()`. The update also fixes an mTLS asymmetry bug where server-side hostname validation was not being applied consistently with client-side validation, all while maintaining full backward compatibility with existing HOCON-based validation.
+
+* [Fix DotNettySslSetup being ignored when HOCON has valid SSL config](https://github.com/akkadotnet/akka.net/pull/7919) - Fixes [issue #7917](https://github.com/akkadotnet/akka.net/issues/7917) where programmatic `DotNettySslSetup` settings were incorrectly being overridden by HOCON configuration. Programmatic configuration now correctly takes precedence over HOCON defaults as intended.
+
+1 contributor since release 1.5.54
 
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 2 | 159 | 20 | Aaron Stannard |
+| 3 | 1605 | 289 | Aaron Stannard |
 
 
-To [see the full set of changes in Akka.NET v1.5.54, click here](https://github.com/akkadotnet/akka.net/milestone/137?closed=1)</PackageReleaseNotes>
+To [see the full set of changes in Akka.NET v1.5.55, click here](https://github.com/akkadotnet/akka.net/milestone/138?closed=1)</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
