@@ -22,8 +22,8 @@ namespace Akka.Streams.Dsl
         /// <param name="writer">A <see cref="ChannelWriter{T}"/> to pass events emitted from the materialized graph to.</param>
         /// <param name="isOwner">
         /// Determines whether the materialized graph should take ownership of the <paramref name="writer"/>.
-        /// When <c>true</c>, the sink will call <see cref="ChannelWriter{T}.Complete()"/> when the stream completes normally,
-        /// and <see cref="ChannelWriter{T}.TryComplete(Exception)"/> if the stream fails.
+        /// When <c>true</c>, the sink will call <c>Complete()</c> when the stream completes normally,
+        /// and <c>TryComplete(Exception)</c> if the stream fails.
         /// When <c>false</c>, the sink will not complete the writer, allowing it to be used by multiple producers
         /// or managed externally.
         /// </param>
