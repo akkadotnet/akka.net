@@ -19,6 +19,7 @@ using Akka.Event;
 using System.Reflection;
 using System.Text;
 using Akka.Actor.Setup;
+using Akka.Actor.Telemetry;
 using Akka.Serialization;
 using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
@@ -294,6 +295,12 @@ namespace Akka.Actor.Internal
 
         private void LoadExtensions()
         {
+            // Autoload telemetry if enabled
+            if (_settings.EmitActorTelemetry)
+            {
+                TelemetryExtension.Get(this);
+            }
+            
             var extensions = new List<IExtensionId>();
             foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))
             {

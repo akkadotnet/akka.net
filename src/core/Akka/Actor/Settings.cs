@@ -115,7 +115,7 @@ namespace Akka.Actor
 
             SerializeAllMessages = Config.GetBoolean("akka.actor.serialize-messages", false);
             SerializeAllCreators = Config.GetBoolean("akka.actor.serialize-creators", false);
-            EmitActorTelemetry = Config.GetBoolean("akka.actor.telemetry.enabled", false);
+            EmitActorTelemetry = Config.GetBoolean("akka.actor.telemetry.enabled", true);
 
             LogLevel = Config.GetString("akka.loglevel", null);
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel", null);
@@ -305,7 +305,7 @@ namespace Akka.Actor
         /// When set to <c>true</c>, all actors will emit <see cref="IActorTelemetryEvent"/>s when they are created, stopped, or restarted.
         /// </summary>
         /// <remarks>
-        /// Defaults to <c>false</c>.
+        /// Defaults to <c>true</c>.
         /// </remarks>
         /// <code>
         /// akka.actor.telemetry.enabled = on
