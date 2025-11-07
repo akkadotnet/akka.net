@@ -2244,6 +2244,13 @@ namespace Akka.Actor.Setup
         public Akka.Actor.Setup.ActorSystemSetup And(Akka.Actor.Setup.Setup other) { }
     }
 }
+namespace Akka.Actor.Telemetry
+{
+    public class GetAliveActorsTelemetryRequest : Akka.Actor.INoSerializationVerificationNeeded
+    {
+        public static readonly Akka.Actor.Telemetry.GetAliveActorsTelemetryRequest Instance;
+    }
+}
 namespace Akka.Annotations
 {
     [System.AttributeUsageAttribute(System.AttributeTargets.Module | System.AttributeTargets.Class | System.AttributeTargets.Struct | System.AttributeTargets.Enum | System.AttributeTargets.Constructor | System.AttributeTargets.Method | System.AttributeTargets.Property | System.AttributeTargets.Field | System.AttributeTargets.Interface | System.AttributeTargets.All, AllowMultiple=false, Inherited=true)]
