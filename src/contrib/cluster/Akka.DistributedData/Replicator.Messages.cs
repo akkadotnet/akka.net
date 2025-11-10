@@ -309,7 +309,7 @@ namespace Akka.DistributedData
 
         public T Get<T>(IKey<T> key) where T : IReplicatedData
         {
-            throw new TimeoutException($"A timeout occurred when trying to retrieve a value for key '{Key}' withing given read consistency");
+            throw new TimeoutException($"A timeout occurred when trying to retrieve a value for key '{Key}' within given read consistency");
         }
 
         
@@ -522,9 +522,9 @@ namespace Akka.DistributedData
     /// <summary>
     /// A response message for the <see cref="Update"/> request. It can be one of the 3 possible types:
     /// <ul>
-    /// <li><see cref="UpdateSuccess"/> when update has finished successfully with given write consistency withing provided time limit.</li>
+    /// <li><see cref="UpdateSuccess"/> when update has finished successfully with given write consistency within provided time limit.</li>
     /// <li><see cref="ModifyFailure"/> if a <see cref="Update.Modify"/> delegate has thrown a failure.</li>
-    /// <li><see cref="UpdateTimeout"/> if a request couldn't complete withing given timeout and write consistency constraints.</li>
+    /// <li><see cref="UpdateTimeout"/> if a request couldn't complete within given timeout and write consistency constraints.</li>
     /// </ul>
     /// </summary>
     public interface IUpdateResponse : INoSerializationVerificationNeeded
