@@ -563,6 +563,9 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
             var assembledSeqMsg = !seqMsg.Message.IsMessage
                 ? AssembleChunks(previouslyCollectedChunks.Add(seqMsg))
                 : seqMsg;
+            
+            _log.Info("TRACK:[ConsumerController.Deliver-Delivery,{0},{1}]", "", DateTime.UtcNow.ToString("mm:ss.ffff"));
+            
             CurrentState.Consumer.Tell(new Delivery<T>(assembledSeqMsg.Message.Message!, Context.Self,
                 seqMsg.ProducerId, seqMsg.SeqNr));
             CurrentState = CurrentState.ClearCollectedChunks();

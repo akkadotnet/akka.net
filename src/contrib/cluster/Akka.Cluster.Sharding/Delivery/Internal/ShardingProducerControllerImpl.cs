@@ -7,6 +7,7 @@
 
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
@@ -276,6 +277,8 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             // there is demand, send immediately
             if (outState.NextTo.HasValue)
             {
+                _log.Info("TRACK:[ProducerController.OnMsg-Send,{0},{1},{2}]", msg?.ToString(), entityId, DateTime.UtcNow.ToString("mm:ss.ffff"));
+                
                 Send(msg, outKey, outState.SeqNr, outState.NextTo.Value);
                 var newUnconfirmed = outState.Unconfirmed.Add(new Unconfirmed<T>(totalSeqNr, outState.SeqNr, replyTo));
 
@@ -309,6 +312,9 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                     OutStates = CurrentState.OutStates.SetItem(outKey, outState with { Buffered = newBuffered }),
                     ReplyAfterStore = newReplyAfterStore
                 };
+                
+                _log.Info("TRACK:[ProducerController.OnMsg-RequestNext,{0},{1}]", entityId, DateTime.UtcNow.ToString("mm:ss.ffff"));
+
                 // send an updated RequestNext to indicate buffer usage
                 CurrentState.Producer.Tell(CreateRequestNext(newS));
                 CurrentState = newS;
@@ -326,6 +332,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                 Context.ActorOf(
                     Props.Create(() => new ProducerController<T>(outKey, Option<Props>.None, customSend,
                         Settings.ProducerControllerSettings, _timeProvider, null)), Uri.EscapeDataString(entityId));
+            _log.Info("TRACK:[ProducerController.OnMsg-Start,{0},{1}]", entityId, DateTime.UtcNow.ToString("mm:ss.ffff"));
             producer.Tell(new ProducerController.Start<T>(RequestNextAdapter));
             CurrentState = CurrentState with
             {
@@ -346,6 +353,8 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
 
         if (confirmed.Any())
         {
+            _log.Info("TRACK:[ProducerController.OnAck,{0},{1}]", outState.EntityId, DateTime.UtcNow.ToString("mm:ss.ffff"));
+            
             foreach (var c in confirmed)
             {
                 switch (c)
@@ -443,6 +452,8 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
             if (outState.Buffered.Any())
             {
                 var buf = outState.Buffered.First();
+                _log.Info("TRACK:[ProducerController.ReceiveWrappedRequestNext-Send,{0},{1}]", outState.EntityId, DateTime.UtcNow.ToString("mm:ss.ffff"));
+                
                 Send(buf.Msg, outKey, outState.SeqNr, next.SendNextTo);
                 var newUnconfirmed2 =
                     newUnconfirmed.Add(new Unconfirmed<T>(buf.TotalSeqNr, outState.SeqNr, buf.ReplyTo));
@@ -469,6 +480,8 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
                     });
                 var newState = CurrentState with { OutStates = newProducers };
 
+                _log.Info("TRACK:[ProducerController.ReceiveWrappedRequestNext-RequestNext,{0},{1}]", outState.EntityId, DateTime.UtcNow.ToString("mm:ss.ffff"));
+
                 // send an updated RequestNext
                 CurrentState.Producer.Tell(CreateRequestNext(newState));
                 CurrentState = newState;
@@ -485,6 +498,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
     {
         ProducerController.AssertLocalProducer(start.Producer);
         _log.Debug("Register new Producer [{0}], currentSeqNr [{1}].", start.Producer, CurrentState.CurrentSeqNr);
+        _log.Info("TRACK:[ProducerController.ReceiveStart-RequestNext,{0},{1}]", "", DateTime.UtcNow.ToString("mm:ss.ffff"));
         start.Producer.Tell(CreateRequestNext(CurrentState));
         CurrentState = CurrentState with { Producer = start.Producer };
     }
