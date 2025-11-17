@@ -19,6 +19,8 @@ namespace Akka.Persistence.Query.InMemory.Tests
         public InMemoryEventsByPersistenceIdSpec(ITestOutputHelper output) :
             base(Config(), nameof(InMemoryCurrentPersistenceIdsSpec), output)
         {
+            // Proactively initialize the write journal to avoid cold-start delays on first persist
+            Persistence.Instance.Apply(Sys).JournalFor("akka.persistence.journal.inmem");
             ReadJournal = Sys.ReadJournalFor<InMemoryReadJournal>(InMemoryReadJournal.Identifier);
         }
     }
