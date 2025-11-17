@@ -10,15 +10,26 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Streams.Stage;
 
+#nullable enable
 namespace Akka.Streams.Implementation
 {
     sealed class ChannelSourceLogic<T> : OutGraphStageLogic
     {
+        private struct ReaderCompleted
+        {
+            public ReaderCompleted(Exception? reason)
+            {
+                Reason = reason;
+            }
+
+            public Exception? Reason { get; }
+        }
+        
         private readonly Outlet<T> _outlet;
         private readonly ChannelReader<T> _reader;
         private readonly Action<bool> _onValueRead;
         private readonly Action<Exception> _onValueReadFailure;
-        private readonly Action<Exception> _onReaderComplete;
+        private readonly Action<ReaderCompleted> _onReaderComplete;
         private readonly Action<Task<bool>> _onReadReady;
 
         public ChannelSourceLogic(SourceShape<T> source, Outlet<T> outlet,
@@ -29,25 +40,35 @@ namespace Akka.Streams.Implementation
             _onValueRead = GetAsyncCallback<bool>(OnValueRead);
             _onValueReadFailure =
                 GetAsyncCallback<Exception>(OnValueReadFailure);
-            _onReaderComplete = GetAsyncCallback<Exception>(OnReaderComplete);
+            _onReaderComplete = GetAsyncCallback<ReaderCompleted>(OnReaderComplete);
             _onReadReady = ContinueAsyncRead;
             _reader.Completion.ContinueWith(t =>
             {
-                if (t.IsFaulted) _onReaderComplete(t.Exception);
+                if (t.IsFaulted) _onReaderComplete(new ReaderCompleted(FlattenException(t.Exception)));
                 else if (t.IsCanceled)
-                    _onReaderComplete(new TaskCanceledException(t));
-                else _onReaderComplete(null);
+                    _onReaderComplete(new ReaderCompleted(new TaskCanceledException(t)));
+                else _onReaderComplete(new ReaderCompleted(null));
             });
 
             SetHandler(_outlet, this);
         }
 
-        private void OnReaderComplete(Exception reason)
+        private static Exception? FlattenException(Exception? exception)
         {
-            if (reason is null)
+            if (exception is AggregateException agg)
+            {
+                var flat = agg.Flatten();
+                return flat.InnerExceptions.Count == 1 ? flat.InnerExceptions[0] : exception;
+            }
+            return exception;
+        }
+        
+        private void OnReaderComplete(ReaderCompleted completion)
+        {
+            if (completion.Reason is null)
                 CompleteStage();
             else
-                FailStage(reason);
+                FailStage(completion.Reason);
         }
 
         private void OnValueReadFailure(Exception reason) => FailStage(reason);
@@ -84,8 +105,8 @@ namespace Akka.Streams.Implementation
 
         private void ContinueAsyncRead(Task<bool> t)
         {
-            if (t.IsFaulted)
-                _onValueReadFailure(t.Exception);
+            if (t.IsFaulted) 
+                _onValueReadFailure(t.Exception ?? new Exception("Channel read failed"));
             else if (t.IsCanceled)
                 _onValueReadFailure(new TaskCanceledException(t));
             else
@@ -135,7 +156,6 @@ namespace Akka.Streams.Implementation
 
     internal sealed class ChannelReaderSource<T> : GraphStage<SourceShape<T>>
     {
-
         private readonly ChannelReader<T> _reader;
 
         public ChannelReaderSource(ChannelReader<T> reader)
