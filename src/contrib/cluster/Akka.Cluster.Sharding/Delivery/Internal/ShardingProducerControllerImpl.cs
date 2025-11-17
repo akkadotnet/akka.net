@@ -27,7 +27,7 @@ using EntityId = String;
 using TotalSeqNr = Int64;
 using OutSeqNr = Int64;
 
-internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, IWithTimers
+internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash
 {
     public string ProducerId { get; }
 
@@ -48,7 +48,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
     private readonly ILoggingAdapter _log = Context.GetLogger();
     public IStash Stash { get; set; } = null!;
 
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
 
     public ShardingProducerController(string producerId, IActorRef shardRegion, Option<Props> durableQueueProps,
         ShardingProducerController.Settings settings, ITimeProvider? timeProvider = null)
@@ -59,6 +59,7 @@ internal sealed class ShardingProducerController<T> : ReceiveActor, IWithStash, 
         Settings = settings;
         _timeProvider = timeProvider ?? Context.System.Scheduler;
 
+        Timers = Context.Timers;
         WaitingForStart(Option<IActorRef>.None, CreateInitialState(_durableQueueProps.HasValue));
     }
 

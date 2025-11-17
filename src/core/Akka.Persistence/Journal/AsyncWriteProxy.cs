@@ -252,7 +252,7 @@ namespace Akka.Persistence.Journal
     /// <summary>
     /// A journal that delegates actual storage to a target actor. For testing only.
     /// </summary>
-    public abstract class AsyncWriteProxy : AsyncWriteJournal, IWithUnboundedStash, IWithTimers
+    public abstract class AsyncWriteProxy : AsyncWriteJournal, IWithUnboundedStash
     {
         private const string InitTimeoutTimerKey = nameof(InitTimeoutTimerKey);
         
@@ -265,6 +265,8 @@ namespace Akka.Persistence.Journal
             _isInitialized = false;
             _isInitTimedOut = false;
             _store = null;
+            
+            Timers = Context.Timers;
         }
 
         /// <summary>
@@ -419,7 +421,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public IStash Stash { get; set; } = null!;
 
-        public ITimerScheduler Timers { get; set; } = null!;
+        private ITimerScheduler Timers { get; }
 
         // sent to self only
         /// <summary>

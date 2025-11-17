@@ -26,7 +26,7 @@ namespace Akka.Delivery.Internal;
 ///     INTERNAL API
 /// </summary>
 /// <typeparam name="T">The type of message handled by this producer</typeparam>
-internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
+internal sealed class ProducerController<T> : ReceiveActor
 {
     /// <summary>
     ///     Default send function for when none are specified.
@@ -57,6 +57,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
     {
         ProducerId = producerId;
         Settings = settings ?? ProducerController.Settings.Create(Context.System);
+        Timers = Context.Timers;
         _durableProducerQueueProps = durableProducerQueue;
         _timeProvider = timeProvider ?? Context.System.Scheduler;
         _fuzzingControl = fuzzingControl;
@@ -86,6 +87,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
     {
         ProducerId = producerId;
         Settings = settings ?? ProducerController.Settings.Create(Context.System);
+        Timers = Context.Timers;
         _durableProducerQueueProps = durableProducerQueue;
         _timeProvider = timeProvider ?? Context.System.Scheduler;
         _fuzzingControl = fuzzingControl;
@@ -106,7 +108,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
 
     public ProducerController.Settings Settings { get; }
 
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
 
     protected internal override bool AroundReceive(Receive receive, object message)
     {

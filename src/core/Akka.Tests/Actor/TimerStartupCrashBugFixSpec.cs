@@ -27,7 +27,7 @@ public class TimerStartupCrashBugFixSpec : AkkaSpec
         Sys.Log.Info("Starting TimerStartupCrashBugFixSpec");
     }
 
-    private class TimerActor : UntypedActor, IWithTimers
+    private class TimerActor : UntypedActor
     {
         public sealed class Check
         {
@@ -49,8 +49,13 @@ public class TimerStartupCrashBugFixSpec : AkkaSpec
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private int _counter = 0;
-        public ITimerScheduler? Timers { get; set; } = null;
+        private ITimerScheduler Timers { get; }
 
+        public TimerActor()
+        {
+            Timers = Context.Timers;
+        }
+        
         protected override void PreStart()
         {
             Timers?.StartPeriodicTimer("key", Hit.Instance, TimeSpan.FromMilliseconds(1));

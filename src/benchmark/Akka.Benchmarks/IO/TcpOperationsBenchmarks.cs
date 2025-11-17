@@ -191,7 +191,7 @@ namespace Akka.Benchmarks
             }
         }
 
-        private class ClientCoordinator : ReceiveActor, IWithTimers, IWithStash
+        private class ClientCoordinator : ReceiveActor, IWithStash
         {
             private readonly IActorRef _echoServer;
             private readonly HashSet<IActorRef> _waitingChildren = new();
@@ -211,6 +211,7 @@ namespace Akka.Benchmarks
             {
                 _echoServer = echoServer;
                 _clientsCount = clientsCount;
+                Timers = Context.Timers;
                 
                 Receive<EndPoint>(endpoint =>
                 {
@@ -281,7 +282,7 @@ namespace Akka.Benchmarks
                 _echoServer.Tell(GetBindAddress.Instance);
             }
 
-            public ITimerScheduler Timers { get; set; }
+            private ITimerScheduler Timers { get; }
             public IStash Stash { get; set; }
         }
 
@@ -322,7 +323,7 @@ namespace Akka.Benchmarks
             }
         }
 
-        private class Client : ReceiveActor, IWithTimers
+        private class Client : ReceiveActor
         {
             private readonly ILoggingAdapter _log = Context.GetLogger();
             private int _receivedCount = 0;
@@ -344,6 +345,8 @@ namespace Akka.Benchmarks
             public Client(EndPoint endpoint, int messagesToSend, byte[] message)
             {
                 _framer = new Framer(message.Length);
+                Timers = Context.Timers;
+                
                 var write =
                     // create the write only once
                     Tcp.Write.Create(ByteString.FromBytes(message));
@@ -409,7 +412,7 @@ namespace Akka.Benchmarks
                 Context.System.Tcp().Tell(new Tcp.Connect(endpoint, timeout: TimeSpan.FromSeconds(5)));
             }
 
-            public ITimerScheduler Timers { get; set; }
+            private ITimerScheduler Timers { get; }
         }
     }
 }

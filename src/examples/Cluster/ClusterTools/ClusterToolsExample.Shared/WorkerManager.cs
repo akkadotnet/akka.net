@@ -13,7 +13,7 @@ using Akka.Routing;
 
 namespace ClusterToolsExample.Shared;
 
-public class WorkerManager : ReceiveActor, IWithTimers
+public class WorkerManager : ReceiveActor
 {
     private const string BatchKey = nameof(BatchKey);
     private const string ReportKey = nameof(ReportKey);
@@ -25,6 +25,7 @@ public class WorkerManager : ReceiveActor, IWithTimers
         var log = Context.GetLogger();
         var counter = Context.ActorOf<WorkLoadCounter>(name: "workload-counter");
         var workerRouter = GetWorkerRouter(counter);
+        Timers = Context.Timers;
 
         Receive<Batch>(batch =>
         {
@@ -56,7 +57,7 @@ public class WorkerManager : ReceiveActor, IWithTimers
         Timers.StartPeriodicTimer(ReportKey, SendReport.Instance, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(10));
     }
 
-    public ITimerScheduler Timers { get; set; }
+    private ITimerScheduler Timers { get; }
 
     private IActorRef GetWorkerRouter(IActorRef counter)
     {

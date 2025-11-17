@@ -20,7 +20,7 @@ namespace Akka.Tests.Delivery;
 /// <summary>
 /// INTERNAL API
 /// </summary>
-public sealed class TestConsumer : ReceiveActor, IWithTimers
+public sealed class TestConsumer : ReceiveActor
 {
     public static readonly TimeSpan DefaultConsumerDelay = TimeSpan.FromMilliseconds(10);
 
@@ -44,6 +44,7 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
         EndCondition = endCondition;
         EndReplyTo = endReplyTo;
         ConsumerController = consumerController;
+        Timers = Context.Timers;
         _supportRestarts = supportRestarts;
         
         Active();
@@ -195,7 +196,7 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
         IActorRef consumerController, bool supportsRestarts = false) =>
         Props.Create(() => new TestConsumer(delay, endCondition, endReplyTo, consumerController, supportsRestarts));
 
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
 }
 
 /// <summary>

@@ -15,7 +15,7 @@ namespace Akka.Tests.Delivery;
 /// <summary>
 /// INTERNAL API.
 /// </summary>
-public sealed class TestProducer : ReceiveActor, IWithTimers
+public sealed class TestProducer : ReceiveActor
 {
     public static readonly TimeSpan DefaultProducerDelay = TimeSpan.FromMilliseconds(20);
 
@@ -30,7 +30,7 @@ public sealed class TestProducer : ReceiveActor, IWithTimers
 
     public int CurrentSequenceNr { get; private set; }
     public TimeSpan Delay { get; }
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
     private readonly IActorRef _producerController;
     private readonly ILoggingAdapter _log = Context.GetLogger();
 
@@ -38,6 +38,7 @@ public sealed class TestProducer : ReceiveActor, IWithTimers
     {
         Delay = delay;
         _producerController = producerController;
+        Timers = Context.Timers;
         if (Delay == TimeSpan.Zero)
             ActiveNoDelay();
         else

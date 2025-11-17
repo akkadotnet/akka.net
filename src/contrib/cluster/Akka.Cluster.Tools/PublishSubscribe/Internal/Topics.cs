@@ -41,7 +41,7 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
     /// <summary>
     /// Base class for both topics and groups.
     /// </summary>
-    internal abstract class TopicLike : ActorBase, IWithTimers
+    internal abstract class TopicLike : ActorBase
     {
         private const string PruneTimerKey = "PruneTimer";
         
@@ -87,9 +87,10 @@ namespace Akka.Cluster.Tools.PublishSubscribe.Internal
             EmptyTimeToLive = emptyTimeToLive;
             SendToDeadLettersWhenNoSubscribers = sendToDeadLettersWhenNone;
             PruneInterval = new TimeSpan(emptyTimeToLive.Ticks / 2);
+            Timers = Context.Timers;
         }
 
-        public ITimerScheduler Timers { get; set; }
+        private ITimerScheduler Timers { get; }
 
         protected override void PreStart()
         {

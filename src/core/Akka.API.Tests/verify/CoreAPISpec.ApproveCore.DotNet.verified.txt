@@ -72,6 +72,7 @@ namespace Akka.Actor
         public object CurrentMessage { get; }
         public Akka.Dispatch.MessageDispatcher Dispatcher { get; }
         public bool HasMessages { get; }
+        public bool HaveTimers { get; }
         public bool IsLocal { get; }
         protected bool IsNormal { get; }
         public bool IsTerminated { get; }
@@ -88,6 +89,7 @@ namespace Akka.Actor
         public Akka.Actor.ActorSystem System { get; }
         public Akka.Actor.Internal.ActorSystemImpl SystemImpl { get; }
         public virtual Akka.Dispatch.ActorTaskScheduler TaskScheduler { get; }
+        public Akka.Actor.ITimerScheduler Timers { get; }
         public virtual Akka.Actor.IActorRef ActorOf(Akka.Actor.Props props, [System.Runtime.CompilerServices.NullableAttribute(2)] string name = null) { }
         public Akka.Actor.ActorSelection ActorSelection(string path) { }
         public Akka.Actor.ActorSelection ActorSelection(Akka.Actor.ActorPath path) { }
@@ -984,12 +986,14 @@ namespace Akka.Actor
     public interface IActorContext : Akka.Actor.IActorRefFactory, Akka.Actor.ICanWatch
     {
         Akka.Dispatch.MessageDispatcher Dispatcher { get; }
+        bool HaveTimers { get; }
         Akka.Actor.IActorRef Parent { get; }
         Akka.Actor.Props Props { get; }
         System.Nullable<System.TimeSpan> ReceiveTimeout { get; }
         Akka.Actor.IActorRef Self { get; }
         Akka.Actor.IActorRef Sender { get; }
         Akka.Actor.ActorSystem System { get; }
+        Akka.Actor.ITimerScheduler Timers { get; }
         void Become(Akka.Actor.Receive receive);
         void BecomeStacked(Akka.Actor.Receive receive);
         Akka.Actor.IActorRef Child(string name);
@@ -1229,10 +1233,6 @@ namespace Akka.Actor
     [System.ObsoleteAttribute("Use `IWithStash` with a configured BoundedDeque-based mailbox instead.")]
     public interface IWithBoundedStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IBoundedDequeBasedMessageQueueSemantics> { }
     public interface IWithStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IDequeBasedMessageQueueSemantics> { }
-    public interface IWithTimers
-    {
-        Akka.Actor.ITimerScheduler Timers { get; set; }
-    }
     public interface IWithUnboundedStash : Akka.Actor.IActorStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics> { }
     public interface IWithUnrestrictedStash : Akka.Actor.IActorStash { }
     public interface IWrappedMessage

@@ -13,7 +13,7 @@ using Akka.Pattern;
 
 namespace Akka.Tests.Delivery;
 
-public sealed class TestProducerWithAsk : ReceiveActor, IWithTimers
+public sealed class TestProducerWithAsk : ReceiveActor
 {
     public static readonly TimeSpan DefaultAskTimeout = TimeSpan.FromSeconds(10);
 
@@ -57,6 +57,7 @@ public sealed class TestProducerWithAsk : ReceiveActor, IWithTimers
         _replyProbe = replyProbe;
         _producerController = producerController;
 
+        Timers = Context.Timers;
         Timers.StartPeriodicTimer(Tick.Instance, Tick.Instance, Delay);
         Idle();
     }
@@ -114,5 +115,5 @@ public sealed class TestProducerWithAsk : ReceiveActor, IWithTimers
         _producerController.Tell(new ProducerController.Start<TestConsumer.Job>(Self));
     }
 
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
 }

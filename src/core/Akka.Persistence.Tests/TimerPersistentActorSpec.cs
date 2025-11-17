@@ -69,7 +69,7 @@ namespace Akka.Persistence.Tests
             }
         }
 
-        internal class TestPersistentActor : PersistentActor, IWithTimers
+        internal class TestPersistentActor : PersistentActor
         {
             public static Props TestProps(string name)
             {
@@ -80,10 +80,11 @@ namespace Akka.Persistence.Tests
 
             public override string PersistenceId => name;
 
-            public ITimerScheduler Timers { get; set; }
+            private ITimerScheduler Timers { get; }
 
             public TestPersistentActor(string name)
             {
+                Timers = Context.Timers;
                 this.name = name;
             }
 

@@ -20,7 +20,7 @@ namespace Akka.Cluster.Sharding.Delivery.Internal;
 /// INTERNAL API
 /// </summary>
 /// <typeparam name="T">The types of messages handled by the ConsumerController</typeparam>
-internal class ShardingConsumerController<T> : ReceiveActor, IWithStash, IWithTimers
+internal class ShardingConsumerController<T> : ReceiveActor, IWithStash
 {
     private const string ShutdownTimeoutTimerKey = nameof(ShutdownTimeoutTimerKey);
     
@@ -35,6 +35,7 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash, IWithTi
     {
         ConsumerProps = consumerProps;
         Settings = settings;
+        Timers = Context.Timers;
         WaitForStart();
     }
 
@@ -257,5 +258,5 @@ internal class ShardingConsumerController<T> : ReceiveActor, IWithStash, IWithTi
     }
 
     public IStash Stash { get; set; } = null!;
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
 }

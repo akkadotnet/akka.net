@@ -15,13 +15,14 @@ namespace Akka.Cluster.Sharding.Tests.MultiNode.Delivery;
 /// <summary>
 /// INTERNAL API
 /// </summary>
-public sealed class SlowStopConsumerEntity : ReceiveActor, IWithTimers
+public sealed class SlowStopConsumerEntity : ReceiveActor
 {
     private readonly IActorRef _consumerController;
 
     public SlowStopConsumerEntity(string persistenceId, IActorRef consumerController)
     {
         _consumerController = consumerController;
+        Timers = Context.Timers;
         
         Receive<ConsumerController.Delivery<Job>>(delivery =>
         {
@@ -57,5 +58,5 @@ public sealed class SlowStopConsumerEntity : ReceiveActor, IWithTimers
 
     public sealed record Job(int Payload, IActorRef Probe);
     
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
 }

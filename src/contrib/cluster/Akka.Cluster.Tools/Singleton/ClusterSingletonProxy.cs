@@ -37,7 +37,7 @@ namespace Akka.Cluster.Tools.Singleton
     /// Note that this is a best effort implementation: messages can always be lost due to the distributed nature of the actors involved.
     /// </remarks>
     /// </summary>
-    public sealed class ClusterSingletonProxy : ReceiveActor, IWithTimers
+    public sealed class ClusterSingletonProxy : ReceiveActor
     {
         /// <summary>
         /// TBD
@@ -142,6 +142,7 @@ namespace Akka.Cluster.Tools.Singleton
 
             _memberAgeComparer = Member.AgeOrdering;
             _membersByAge = ImmutableSortedSet<Member>.Empty.WithComparer(_memberAgeComparer);
+            Timers = Context.Timers;
 
             Receive<ClusterEvent.CurrentClusterState>(s => HandleInitial(s));
             Receive<ClusterEvent.MemberUp>(m => Add(m.Member));
@@ -226,7 +227,7 @@ namespace Akka.Cluster.Tools.Singleton
                 });
         }
 
-        public ITimerScheduler Timers { get; set; }
+        private ITimerScheduler Timers { get; }
 
         private ILoggingAdapter Log => _log ??= Context.GetLogger();
 

@@ -198,7 +198,7 @@ public class DeliveryDocSpecs : TestKit
     // </Consumer>
 
     // <Producer>
-    public sealed class ProducerActor : UntypedActor, IWithTimers, IWithStash
+    public sealed class ProducerActor : UntypedActor, IWithStash
     {
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
@@ -216,6 +216,11 @@ public class DeliveryDocSpecs : TestKit
             public static Tick Instance { get; } = new();
         }
 
+        public ProducerActor()
+        {
+            Timers = Context.Timers;
+        }
+        
         protected override void PreStart()
         {
             Timers.StartPeriodicTimer("Tick", Tick.Instance, TimeSpan.FromSeconds(0.25));
@@ -271,7 +276,7 @@ public class DeliveryDocSpecs : TestKit
         }
 
         private string GetRandomItem() => Items[ThreadLocalRandom.Current.Next(Items.Count)];
-        public ITimerScheduler Timers { get; set; }
+        private ITimerScheduler Timers { get; }
         public IStash Stash { get; set; }
     }
     // </Producer>

@@ -39,7 +39,7 @@ namespace Akka.IO
     ///
     /// TcpListener is an internal actor that binds to a local address and listens for incoming TCP connections.
     /// </summary>
-    internal sealed class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>, IWithTimers
+    internal sealed class TcpListener : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         private readonly TcpExt _tcp;
         private readonly IActorRef _bindCommander; // forwarded destination for Connected
@@ -95,6 +95,7 @@ namespace Akka.IO
         public TcpListener(TcpExt tcp, IActorRef bindCommander,
             Tcp.Bind bind)
         {
+            Timers = Context.Timers;
             _tcp = tcp;
             _acceptLimit = tcp.Settings.BatchAcceptLimit;
 
@@ -406,6 +407,6 @@ namespace Akka.IO
             }
         }
 
-        public ITimerScheduler Timers { get; set; }
+        private ITimerScheduler Timers { get; }
     }
 }

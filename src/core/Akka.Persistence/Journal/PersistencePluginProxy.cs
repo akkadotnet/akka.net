@@ -18,7 +18,7 @@ namespace Akka.Persistence.Journal
     /// <summary>
     /// TBD
     /// </summary>
-    public class PersistencePluginProxy : ActorBase, IWithUnboundedStash, IWithTimers
+    public class PersistencePluginProxy : ActorBase, IWithUnboundedStash
     {
         private const string InitTimeoutTimerKey = nameof(InitTimeoutTimerKey);
         
@@ -106,6 +106,8 @@ namespace Akka.Persistence.Journal
         /// </exception>
         public PersistencePluginProxy(Config config)
         {
+            Timers = Context.Timers;
+            
             _config = config;
             var pluginId = Self.Path.Name;
             if (pluginId.Equals("akka.persistence.journal.proxy"))
@@ -129,7 +131,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public IStash Stash { get; set; } = null!;
 
-        public ITimerScheduler Timers { get; set; } = null!;
+        private ITimerScheduler Timers { get; }
 
         /// <summary>
         /// TBD

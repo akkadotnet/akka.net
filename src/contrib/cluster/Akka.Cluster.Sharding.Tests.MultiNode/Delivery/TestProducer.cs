@@ -12,7 +12,7 @@ using Akka.Event;
 
 namespace Akka.Cluster.Sharding.Tests.MultiNode.Delivery;
 
-internal class TestShardingProducer : ReceiveActor, IWithTimers, IWithStash
+internal class TestShardingProducer : ReceiveActor, IWithStash
 {
     private readonly ILoggingAdapter _log = Context.GetLogger();
     private readonly IActorRef _producerController;
@@ -22,10 +22,11 @@ internal class TestShardingProducer : ReceiveActor, IWithTimers, IWithStash
     {
         _producerController = producerController;
         _probe = probe;
+        Timers = Context.Timers;
         Idle();
     }
 
-    public ITimerScheduler Timers { get; set; } = null!;
+    private ITimerScheduler Timers { get; }
     public IStash Stash { get; set; } = null!;
     public IActorRef SendNext { get; set; } = ActorRefs.Nobody;
 

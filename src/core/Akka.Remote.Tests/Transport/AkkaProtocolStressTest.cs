@@ -64,7 +64,7 @@ namespace Akka.Remote.Tests.Transport
             public static ResendFinal Instance { get; } = new();
         }
 
-        private class SequenceVerifier : UntypedActor, IWithTimers
+        private class SequenceVerifier : UntypedActor
         {
             private const string SendNextTimerKey = nameof(SendNextTimerKey);
             private const string SendFinalTimerKey = nameof(SendFinalTimerKey);
@@ -81,9 +81,10 @@ namespace Akka.Remote.Tests.Transport
             {
                 _remote = remote;
                 _controller = controller;
+                Timers = Context.Timers;
             }
 
-            public ITimerScheduler Timers { get; set; } = null!;
+            private ITimerScheduler Timers { get; }
 
             protected override void OnReceive(object message)
             {
