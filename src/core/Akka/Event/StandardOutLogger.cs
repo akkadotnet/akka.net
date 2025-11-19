@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Linq;
 using Akka.Actor;
 using Akka.Util;
 using System.Text;
@@ -126,7 +127,7 @@ namespace Akka.Event
                 // short circuit if we're not going to print this message
                 if (!filter.ShouldTryKeepMessage(logEvent, out var expandedLogMessage))
                     return;
-                
+
                 ConsoleColor? color = null;
 
                 if (UseColors)
