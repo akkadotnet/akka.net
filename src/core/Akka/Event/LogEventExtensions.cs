@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,7 +39,7 @@ namespace Akka.Event
         /// </example>
         public static bool TryGetProperties(
             this LogEvent evt,
-            out IReadOnlyDictionary<string, object> properties)
+            out IReadOnlyDictionary<string, object>? properties)
         {
             if (evt.Message is LogMessage msg)
             {
