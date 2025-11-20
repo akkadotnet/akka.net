@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
@@ -17,6 +18,14 @@ namespace Akka.Tests.Loggers
 {
     public class SemanticLoggingSpecs : AkkaSpec
     {
+        public SemanticLoggingSpecs() : base(ConfigurationFactory.ParseString(@"
+            akka {
+                loglevel = INFO
+                stdout-loglevel = INFO
+            }
+        "))
+        {
+        }
         [Fact(DisplayName = "MessageTemplateParser should parse positional templates correctly")]
         public void MessageTemplateParser_should_parse_positional_templates()
         {
@@ -330,6 +339,46 @@ namespace Akka.Tests.Loggers
 
             // Message formatting
             logMessage.ToString().Should().Be("User 123 performed action Login");
+        }
+
+        [Fact(DisplayName = "EventFilter should match semantic logging templates with named properties")]
+        public void EventFilter_should_match_semantic_templates()
+        {
+            // This test demonstrates the issue from GitHub #7932
+            // EventFilter should match against the template pattern, not just the formatted output
+
+            EventFilter.Info("OnCreateBet BetId:{BetId} created").ExpectOne(() =>
+            {
+                Log.Info("OnCreateBet BetId:{BetId} created", 12345);
+            });
+        }
+
+        [Fact(DisplayName = "EventFilter should match semantic logging templates with contains")]
+        public void EventFilter_should_match_semantic_templates_with_contains()
+        {
+            EventFilter.Info(contains: "BetId:{BetId}").ExpectOne(() =>
+            {
+                Log.Info("OnCreateBet BetId:{BetId} created", 12345);
+            });
+        }
+
+        [Fact(DisplayName = "EventFilter should match semantic logging templates with partial pattern")]
+        public void EventFilter_should_match_semantic_partial_pattern()
+        {
+            EventFilter.Info(start: "User {UserId}").ExpectOne(() =>
+            {
+                Log.Info("User {UserId} logged in from {IpAddress}", 123, "192.168.1.1");
+            });
+        }
+
+        [Fact(DisplayName = "EventFilter should still match formatted output when template doesn't match")]
+        public void EventFilter_should_fallback_to_formatted_output()
+        {
+            // Should also be able to match against the actual formatted values
+            EventFilter.Info(contains: "12345").ExpectOne(() =>
+            {
+                Log.Info("OnCreateBet BetId:{BetId} created", 12345);
+            });
         }
     }
 }

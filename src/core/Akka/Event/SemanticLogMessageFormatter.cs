@@ -77,14 +77,9 @@ namespace Akka.Event
                     for (int i = 0; i < readOnlyList.Count; i++)
                         argArray[i] = readOnlyList[i];
 
-                    try
-                    {
-                        return string.Format(format, argArray);
-                    }
-                    catch (FormatException)
-                    {
-                        return $"{format} [{string.Join(", ", argArray)}]";
-                    }
+                    // For positional templates, use string.Format directly without catching FormatException
+                    // to maintain backward compatibility with DefaultLogMessageFormatter behavior
+                    return string.Format(format, argArray);
                 }
                 else
                 {
@@ -110,16 +105,9 @@ namespace Akka.Event
 
             if (isPositional2)
             {
-                // Use standard string.Format for positional templates
-                try
-                {
-                    return string.Format(format, argArray);
-                }
-                catch (FormatException)
-                {
-                    // If formatting fails, return the format string with args appended
-                    return $"{format} [{string.Join(", ", argArray)}]";
-                }
+                // For positional templates, use string.Format directly without catching FormatException
+                // to maintain backward compatibility with DefaultLogMessageFormatter behavior
+                return string.Format(format, argArray);
             }
             else
             {
