@@ -383,7 +383,7 @@ namespace Akka.Persistence
                     // enables an early return to `processingCommands`, because if this counter hits `0`,
                     // we know the remaining pendingInvocations are all `persistAsync` created, which
                     // means we can go back to processing commands also - and these callbacks will be called as soon as possible
-                    if (invocation is StashingHandlerInvocation)
+                    if (invocation is IStashingInvocation)
                         _pendingStashingPersistInvocations--;
 
                     if (_pendingStashingPersistInvocations == 0)
@@ -398,15 +398,90 @@ namespace Akka.Persistence
             });
         }
 
-        private void PeekApplyHandler(object payload)
+        private void PeekApplyHandler(object payload, Action<bool> onComplete)
         {
-            try
+            var invocation = _pendingInvocations.First.Value;
+
+            // Check if we have any async work (handler or completion callback)
+            bool hasAsyncHandler = invocation is IAsyncHandlerInvocation;
+            bool hasAsyncCompletion = invocation.IsLastInBatch &&
+                invocation is IAsyncCompletionInvocation asyncComp &&
+                asyncComp.AsyncCompletionCallback != null;
+
+            if (hasAsyncHandler || hasAsyncCompletion)
             {
-                _pendingInvocations.First.Value.Handler(payload);
+                // Chain all async operations together in a single RunTask call to avoid nested RunTask calls
+                RunTask(async () =>
+                {
+                    try
+                    {
+                        // Invoke handler (async or sync)
+                        if (hasAsyncHandler)
+                        {
+                            await ((IAsyncHandlerInvocation)invocation).AsyncHandler(payload);
+                        }
+                        else if (invocation is ISyncHandlerInvocation sync)
+                        {
+                            sync.Handler(payload);
+                        }
+
+                        // Invoke completion callback if this is the last event in the batch
+                        if (invocation.IsLastInBatch)
+                        {
+                            if (invocation is IAsyncCompletionInvocation asyncCompInv && asyncCompInv.AsyncCompletionCallback != null)
+                            {
+                                await asyncCompInv.AsyncCompletionCallback();
+                            }
+                            else if (invocation is ISyncCompletionInvocation syncComp)
+                            {
+                                syncComp.CompletionCallback?.Invoke();
+                            }
+                        }
+
+                        onComplete(false);
+                    }
+                    catch
+                    {
+                        onComplete(true);
+                        throw;
+                    }
+                    finally
+                    {
+                        FlushBatch();
+                    }
+                });
             }
-            finally
+            else
             {
-                FlushBatch();
+                try
+                {
+                    // All synchronous - execute directly without RunTask overhead
+                    if (invocation is ISyncHandlerInvocation sync)
+                    {
+                        sync.Handler(payload);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Invocation type {invocation.GetType().Name} does not implement ISyncHandlerInvocation or IAsyncHandlerInvocation");
+                    }
+
+                    // Invoke sync completion callback if this is the last event in the batch
+                    if (invocation.IsLastInBatch && invocation is ISyncCompletionInvocation syncComp)
+                    {
+                        syncComp.CompletionCallback?.Invoke();
+                    }
+
+                    onComplete(false);
+                }
+                catch
+                {
+                    onComplete(true);
+                    throw;
+                }
+                finally
+                {
+                    FlushBatch();
+                }
             }
         }
 
@@ -421,16 +496,7 @@ namespace Akka.Persistence
                     if (m1.ActorInstanceId == _instanceId)
                     {
                         UpdateLastSequenceNr(m1.Persistent);
-                        try
-                        {
-                            PeekApplyHandler(m1.Persistent.Payload);
-                            onWriteMessageComplete(false);
-                        }
-                        catch
-                        {
-                            onWriteMessageComplete(true);
-                            throw;
-                        }
+                        PeekApplyHandler(m1.Persistent.Payload, onWriteMessageComplete);
                     }
 
                     break;
@@ -469,16 +535,7 @@ namespace Akka.Persistence
                 {
                     if (m.ActorInstanceId == _instanceId)
                     {
-                        try
-                        {
-                            PeekApplyHandler(m.Message);
-                            onWriteMessageComplete(false);
-                        }
-                        catch (Exception)
-                        {
-                            onWriteMessageComplete(true);
-                            throw;
-                        }
+                        PeekApplyHandler(m.Message, onWriteMessageComplete);
                     }
 
                     break;

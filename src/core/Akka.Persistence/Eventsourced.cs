@@ -16,44 +16,207 @@ using System.Threading.Tasks;
 
 namespace Akka.Persistence
 {
-    public interface IPendingHandlerInvocation
+    internal interface IPendingHandlerInvocation
     {
         object Event { get; }
+        bool IsLastInBatch { get; }
+    }
+
+    internal interface ISyncHandlerInvocation : IPendingHandlerInvocation
+    {
         Action<object> Handler { get; }
+    }
+
+    internal interface IAsyncHandlerInvocation : IPendingHandlerInvocation
+    {
+        Func<object, Task> AsyncHandler { get; }
+    }
+
+    internal interface ISyncCompletionInvocation : IPendingHandlerInvocation
+    {
+        Action CompletionCallback { get; }
+    }
+
+    internal interface IAsyncCompletionInvocation : IPendingHandlerInvocation
+    {
+        Func<Task> AsyncCompletionCallback { get; }
+    }
+
+    /// <summary>
+    /// Marker interface for stashing invocations that require command stashing.
+    /// </summary>
+    internal interface IStashingInvocation : IPendingHandlerInvocation
+    {
     }
 
     /// <summary>
     /// Forces actor to stash incoming commands until all invocations are handled.
+    /// Sync handler with optional sync completion.
     /// </summary>
-    public sealed class StashingHandlerInvocation : IPendingHandlerInvocation
+    internal sealed class StashingHandlerInvocation : ISyncHandlerInvocation, ISyncCompletionInvocation, IStashingInvocation
     {
-        public StashingHandlerInvocation(object evt, Action<object> handler)
+        public StashingHandlerInvocation(object evt, Action<object> handler, bool isLastInBatch = false,
+            Action completionCallback = null)
         {
             Event = evt;
             Handler = handler;
+            IsLastInBatch = isLastInBatch;
+            CompletionCallback = completionCallback;
         }
 
         public object Event { get; }
-
         public Action<object> Handler { get; }
+        public bool IsLastInBatch { get; }
+        public Action CompletionCallback { get; }
+    }
+
+    /// <summary>
+    /// Forces actor to stash incoming commands until all invocations are handled.
+    /// Sync handler with optional async completion.
+    /// </summary>
+    internal sealed class StashingHandlerInvocationWithAsyncCompletion : ISyncHandlerInvocation, IAsyncCompletionInvocation, IStashingInvocation
+    {
+        public StashingHandlerInvocationWithAsyncCompletion(object evt, Action<object> handler, bool isLastInBatch = false,
+            Func<Task> asyncCompletionCallback = null)
+        {
+            Event = evt;
+            Handler = handler;
+            IsLastInBatch = isLastInBatch;
+            AsyncCompletionCallback = asyncCompletionCallback;
+        }
+
+        public object Event { get; }
+        public Action<object> Handler { get; }
+        public bool IsLastInBatch { get; }
+        public Func<Task> AsyncCompletionCallback { get; }
+    }
+
+    /// <summary>
+    /// Forces actor to stash incoming commands until all invocations are handled.
+    /// Async handler with optional sync completion.
+    /// </summary>
+    internal sealed class StashingAsyncHandlerInvocation : IAsyncHandlerInvocation, ISyncCompletionInvocation, IStashingInvocation
+    {
+        public StashingAsyncHandlerInvocation(object evt, Func<object, Task> asyncHandler, bool isLastInBatch = false,
+            Action completionCallback = null)
+        {
+            Event = evt;
+            AsyncHandler = asyncHandler;
+            IsLastInBatch = isLastInBatch;
+            CompletionCallback = completionCallback;
+        }
+
+        public object Event { get; }
+        public Func<object, Task> AsyncHandler { get; }
+        public bool IsLastInBatch { get; }
+        public Action CompletionCallback { get; }
+    }
+
+    /// <summary>
+    /// Forces actor to stash incoming commands until all invocations are handled.
+    /// Async handler with optional async completion.
+    /// </summary>
+    internal sealed class StashingAsyncHandlerInvocationWithAsyncCompletion : IAsyncHandlerInvocation, IAsyncCompletionInvocation, IStashingInvocation
+    {
+        public StashingAsyncHandlerInvocationWithAsyncCompletion(object evt, Func<object, Task> asyncHandler, bool isLastInBatch = false,
+            Func<Task> asyncCompletionCallback = null)
+        {
+            Event = evt;
+            AsyncHandler = asyncHandler;
+            IsLastInBatch = isLastInBatch;
+            AsyncCompletionCallback = asyncCompletionCallback;
+        }
+
+        public object Event { get; }
+        public Func<object, Task> AsyncHandler { get; }
+        public bool IsLastInBatch { get; }
+        public Func<Task> AsyncCompletionCallback { get; }
     }
 
     /// <summary>
     /// Unlike <see cref="StashingHandlerInvocation"/> this one does not force actor to stash commands.
     /// Originates from <see cref="Eventsourced.PersistAsync{TEvent}(TEvent,Action{TEvent})"/>
     /// or <see cref="Eventsourced.DeferAsync{TEvent}"/> method calls.
+    /// Sync handler with optional sync completion.
     /// </summary>
-    public sealed class AsyncHandlerInvocation : IPendingHandlerInvocation
+    internal sealed class NonStashingHandlerInvocation : ISyncHandlerInvocation, ISyncCompletionInvocation
     {
-        public AsyncHandlerInvocation(object evt, Action<object> handler)
+        public NonStashingHandlerInvocation(object evt, Action<object> handler, bool isLastInBatch = false,
+            Action completionCallback = null)
         {
             Event = evt;
             Handler = handler;
+            IsLastInBatch = isLastInBatch;
+            CompletionCallback = completionCallback;
         }
 
         public object Event { get; }
-
         public Action<object> Handler { get; }
+        public bool IsLastInBatch { get; }
+        public Action CompletionCallback { get; }
+    }
+
+    /// <summary>
+    /// Unlike <see cref="StashingHandlerInvocation"/> this one does not force actor to stash commands.
+    /// Sync handler with optional async completion.
+    /// </summary>
+    internal sealed class NonStashingHandlerInvocationWithAsyncCompletion : ISyncHandlerInvocation, IAsyncCompletionInvocation
+    {
+        public NonStashingHandlerInvocationWithAsyncCompletion(object evt, Action<object> handler, bool isLastInBatch = false,
+            Func<Task> asyncCompletionCallback = null)
+        {
+            Event = evt;
+            Handler = handler;
+            IsLastInBatch = isLastInBatch;
+            AsyncCompletionCallback = asyncCompletionCallback;
+        }
+
+        public object Event { get; }
+        public Action<object> Handler { get; }
+        public bool IsLastInBatch { get; }
+        public Func<Task> AsyncCompletionCallback { get; }
+    }
+
+    /// <summary>
+    /// Unlike <see cref="StashingHandlerInvocation"/> this one does not force actor to stash commands.
+    /// Async handler with optional sync completion.
+    /// </summary>
+    internal sealed class NonStashingAsyncHandlerInvocation : IAsyncHandlerInvocation, ISyncCompletionInvocation
+    {
+        public NonStashingAsyncHandlerInvocation(object evt, Func<object, Task> asyncHandler, bool isLastInBatch = false,
+            Action completionCallback = null)
+        {
+            Event = evt;
+            AsyncHandler = asyncHandler;
+            IsLastInBatch = isLastInBatch;
+            CompletionCallback = completionCallback;
+        }
+
+        public object Event { get; }
+        public Func<object, Task> AsyncHandler { get; }
+        public bool IsLastInBatch { get; }
+        public Action CompletionCallback { get; }
+    }
+
+    /// <summary>
+    /// Unlike <see cref="StashingHandlerInvocation"/> this one does not force actor to stash commands.
+    /// Async handler with optional async completion.
+    /// </summary>
+    internal sealed class NonStashingAsyncHandlerInvocationWithAsyncCompletion : IAsyncHandlerInvocation, IAsyncCompletionInvocation
+    {
+        public NonStashingAsyncHandlerInvocationWithAsyncCompletion(object evt, Func<object, Task> asyncHandler, bool isLastInBatch = false,
+            Func<Task> asyncCompletionCallback = null)
+        {
+            Event = evt;
+            AsyncHandler = asyncHandler;
+            IsLastInBatch = isLastInBatch;
+            AsyncCompletionCallback = asyncCompletionCallback;
+        }
+
+        public object Event { get; }
+        public Func<object, Task> AsyncHandler { get; }
+        public bool IsLastInBatch { get; }
+        public Func<Task> AsyncCompletionCallback { get; }
     }
 
     /// <summary>
@@ -311,6 +474,27 @@ namespace Akka.Persistence
         }
 
         /// <summary>
+        /// Asynchronously persists an <paramref name="event"/> with an async handler. On successful persistence, the <paramref name="handler"/>
+        /// is called with the persisted event. This method guarantees that no new commands will be received by a persistent actor
+        /// between a call to <see cref="Persist{TEvent}(TEvent,Func{TEvent,Task})"/> and execution of its handler.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="event">TBD</param>
+        /// <param name="handler">Async handler invoked for the persisted event</param>
+        public void Persist<TEvent>(TEvent @event, Func<TEvent, Task> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            _pendingStashingPersistInvocations++;
+            _pendingInvocations.AddLast(new StashingAsyncHandlerInvocation(@event, o => handler((TEvent)o)));
+            _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
+                sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
+        }
+
+        /// <summary>
         /// Asynchronously persists series of <paramref name="events"/> in specified order.
         /// This is equivalent of multiple calls of <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> calls
         /// with the same handler, except that events are persisted atomically with this method.
@@ -333,6 +517,229 @@ namespace Akka.Persistence
             {
                 _pendingStashingPersistInvocations++;
                 _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, Inv));
+                persistents.Add(new Persistent(@event, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender));
+            }
+
+            if (persistents.Count > 0)
+                _eventBatch.AddLast(new AtomicWrite(persistents.ToImmutable()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with a completion callback.
+        /// The <paramref name="onComplete"/> callback is invoked after all event handlers have been executed.
+        /// This method stashes incoming commands until all events are persisted and handlers executed.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="events">TBD</param>
+        /// <param name="handler">TBD</param>
+        /// <param name="onComplete">Callback invoked after all events are persisted and their handlers executed</param>
+        public void PersistAll<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler, Action onComplete)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            if (events == null)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            void Inv(object o) => handler((TEvent)o);
+            var persistents = ImmutableList.CreateBuilder<IPersistentRepresentation>();
+            var eventsList = events.ToList();
+            var eventCount = eventsList.Count;
+
+            if (eventCount == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            for (int i = 0; i < eventCount; i++)
+            {
+                var @event = eventsList[i];
+                var isLast = i == eventCount - 1;
+                _pendingStashingPersistInvocations++;
+                _pendingInvocations.AddLast(new StashingHandlerInvocation(@event, Inv, isLast, isLast ? onComplete : null));
+                persistents.Add(new Persistent(@event, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender));
+            }
+
+            if (persistents.Count > 0)
+                _eventBatch.AddLast(new AtomicWrite(persistents.ToImmutable()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with an async completion callback.
+        /// The <paramref name="onCompleteAsync"/> callback is invoked after all event handlers have been executed.
+        /// This method stashes incoming commands until all events are persisted and handlers executed.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="events">TBD</param>
+        /// <param name="handler">TBD</param>
+        /// <param name="onCompleteAsync">Async callback invoked after all events are persisted and their handlers executed</param>
+        public void PersistAll<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler, Func<Task> onCompleteAsync)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            if (events == null)
+            {
+                if (onCompleteAsync != null)
+                    RunTask(onCompleteAsync);
+                return;
+            }
+
+            void Inv(object o) => handler((TEvent)o);
+            var persistents = ImmutableList.CreateBuilder<IPersistentRepresentation>();
+            var eventsList = events.ToList();
+            var eventCount = eventsList.Count;
+
+            if (eventCount == 0)
+            {
+                if (onCompleteAsync != null)
+                    RunTask(onCompleteAsync);
+                return;
+            }
+
+            for (int i = 0; i < eventCount; i++)
+            {
+                var @event = eventsList[i];
+                var isLast = i == eventCount - 1;
+                _pendingStashingPersistInvocations++;
+                _pendingInvocations.AddLast(new StashingHandlerInvocationWithAsyncCompletion(@event, Inv, isLast, isLast ? onCompleteAsync : null));
+                persistents.Add(new Persistent(@event, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender));
+            }
+
+            if (persistents.Count > 0)
+                _eventBatch.AddLast(new AtomicWrite(persistents.ToImmutable()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with async event handlers.
+        /// The <paramref name="handler"/> is an async function that will be executed for each event.
+        /// This method stashes incoming commands until all events are persisted and handlers executed.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="events">TBD</param>
+        /// <param name="handler">Async handler invoked for each persisted event</param>
+        public void PersistAll<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            if (events == null) return;
+
+            Task Inv(object o) => handler((TEvent)o);
+            var persistents = ImmutableList.CreateBuilder<IPersistentRepresentation>();
+            foreach (var @event in events)
+            {
+                _pendingStashingPersistInvocations++;
+                _pendingInvocations.AddLast(new StashingAsyncHandlerInvocation(@event, Inv));
+                persistents.Add(new Persistent(@event, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender));
+            }
+
+            if (persistents.Count > 0)
+                _eventBatch.AddLast(new AtomicWrite(persistents.ToImmutable()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with async event handlers and a completion callback.
+        /// The <paramref name="onComplete"/> callback is invoked after all event handlers have been executed.
+        /// This method stashes incoming commands until all events are persisted and handlers executed.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="events">TBD</param>
+        /// <param name="handler">Async handler invoked for each persisted event</param>
+        /// <param name="onComplete">Callback invoked after all events are persisted and their handlers executed</param>
+        public void PersistAll<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler, Action onComplete)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            if (events == null)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            Task Inv(object o) => handler((TEvent)o);
+            var persistents = ImmutableList.CreateBuilder<IPersistentRepresentation>();
+            var eventsList = events.ToList();
+            var eventCount = eventsList.Count;
+
+            if (eventCount == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            for (int i = 0; i < eventCount; i++)
+            {
+                var @event = eventsList[i];
+                var isLast = i == eventCount - 1;
+                _pendingStashingPersistInvocations++;
+                _pendingInvocations.AddLast(new StashingAsyncHandlerInvocation(@event, Inv, isLast, isLast ? onComplete : null));
+                persistents.Add(new Persistent(@event, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender));
+            }
+
+            if (persistents.Count > 0)
+                _eventBatch.AddLast(new AtomicWrite(persistents.ToImmutable()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with async event handlers and an async completion callback.
+        /// The <paramref name="onCompleteAsync"/> callback is invoked after all event handlers have been executed.
+        /// This method stashes incoming commands until all events are persisted and handlers executed.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="events">TBD</param>
+        /// <param name="handler">Async handler invoked for each persisted event</param>
+        /// <param name="onCompleteAsync">Async callback invoked after all events are persisted and their handlers executed</param>
+        public void PersistAll<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler, Func<Task> onCompleteAsync)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            if (events == null)
+            {
+                if (onCompleteAsync != null)
+                    RunTask(onCompleteAsync);
+                return;
+            }
+
+            Task Inv(object o) => handler((TEvent)o);
+            var persistents = ImmutableList.CreateBuilder<IPersistentRepresentation>();
+            var eventsList = events.ToList();
+            var eventCount = eventsList.Count;
+
+            if (eventCount == 0)
+            {
+                if (onCompleteAsync != null)
+                    RunTask(onCompleteAsync);
+                return;
+            }
+
+            for (int i = 0; i < eventCount; i++)
+            {
+                var @event = eventsList[i];
+                var isLast = i == eventCount - 1;
+                _pendingStashingPersistInvocations++;
+                _pendingInvocations.AddLast(new StashingAsyncHandlerInvocationWithAsyncCompletion(@event, Inv, isLast, isLast ? onCompleteAsync : null));
                 persistents.Add(new Persistent(@event, persistenceId: PersistenceId,
                     sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender));
             }
@@ -376,7 +783,27 @@ namespace Akka.Persistence
                 throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
             }
 
-            _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, o => handler((TEvent)o)));
+            _pendingInvocations.AddLast(new NonStashingHandlerInvocation(@event, o => handler((TEvent)o)));
+            _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
+                sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
+        }
+
+        /// <summary>
+        /// Asynchronously persists an <paramref name="event"/> with an async handler. On successful persistence, the <paramref name="handler"/>
+        /// is called with the persisted event. Unlike <see cref="Persist{TEvent}(TEvent,Func{TEvent,Task})"/> method,
+        /// this one will continue to receive incoming commands between calls and executing it's event <paramref name="handler"/>.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="event">TBD</param>
+        /// <param name="handler">Async handler invoked for the persisted event</param>
+        public void PersistAsync<TEvent>(TEvent @event, Func<TEvent, Task> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            _pendingInvocations.AddLast(new NonStashingAsyncHandlerInvocation(@event, o => handler((TEvent)o)));
             _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
                 sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
         }
@@ -400,7 +827,179 @@ namespace Akka.Persistence
             var enumerable = events as TEvent[] ?? events.ToArray();
             foreach (var @event in enumerable)
             {
-                _pendingInvocations.AddLast(new AsyncHandlerInvocation(@event, Inv));
+                _pendingInvocations.AddLast(new NonStashingHandlerInvocation(@event, Inv));
+            }
+
+            _eventBatch.AddLast(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
+                .ToImmutableList<IPersistentRepresentation>()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with a completion callback.
+        /// The <paramref name="onComplete"/> callback is invoked after all event handlers have been executed.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="events">TBD</param>
+        /// <param name="handler">TBD</param>
+        /// <param name="onComplete">Callback invoked after all events are persisted and their handlers executed</param>
+        public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler, Action onComplete)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            void Inv(object o) => handler((TEvent)o);
+            var enumerable = events as TEvent[] ?? events.ToArray();
+            var eventCount = enumerable.Length;
+
+            if (eventCount == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            for (int i = 0; i < eventCount; i++)
+            {
+                var isLast = i == eventCount - 1;
+                _pendingInvocations.AddLast(new NonStashingHandlerInvocation(enumerable[i], Inv, isLast, isLast ? onComplete : null));
+            }
+
+            _eventBatch.AddLast(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
+                .ToImmutableList<IPersistentRepresentation>()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with an async completion callback.
+        /// The <paramref name="onCompleteAsync"/> callback is invoked after all event handlers have been executed.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="events">TBD</param>
+        /// <param name="handler">TBD</param>
+        /// <param name="onCompleteAsync">Async callback invoked after all events are persisted and their handlers executed</param>
+        public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler, Func<Task> onCompleteAsync)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            void Inv(object o) => handler((TEvent)o);
+            var enumerable = events as TEvent[] ?? events.ToArray();
+            var eventCount = enumerable.Length;
+
+            if (eventCount == 0)
+            {
+                if (onCompleteAsync != null)
+                    RunTask(onCompleteAsync);
+                return;
+            }
+
+            for (int i = 0; i < eventCount; i++)
+            {
+                var isLast = i == eventCount - 1;
+                _pendingInvocations.AddLast(new NonStashingHandlerInvocationWithAsyncCompletion(enumerable[i], Inv, isLast, isLast ? onCompleteAsync : null));
+            }
+
+            _eventBatch.AddLast(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
+                .ToImmutableList<IPersistentRepresentation>()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with async event handlers.
+        /// The <paramref name="handler"/> is an async function that will be executed for each event.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="events">TBD</param>
+        /// <param name="handler">Async handler invoked for each persisted event</param>
+        public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            Task Inv(object o) => handler((TEvent)o);
+            var enumerable = events as TEvent[] ?? events.ToArray();
+            foreach (var @event in enumerable)
+            {
+                _pendingInvocations.AddLast(new NonStashingAsyncHandlerInvocation(@event, Inv));
+            }
+
+            _eventBatch.AddLast(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
+                .ToImmutableList<IPersistentRepresentation>()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with async event handlers and a completion callback.
+        /// The <paramref name="onComplete"/> callback is invoked after all event handlers have been executed.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="events">TBD</param>
+        /// <param name="handler">Async handler invoked for each persisted event</param>
+        /// <param name="onComplete">Callback invoked after all events are persisted and their handlers executed</param>
+        public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler, Action onComplete)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            Task Inv(object o) => handler((TEvent)o);
+            var enumerable = events as TEvent[] ?? events.ToArray();
+            var eventCount = enumerable.Length;
+
+            if (eventCount == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            for (int i = 0; i < eventCount; i++)
+            {
+                var isLast = i == eventCount - 1;
+                _pendingInvocations.AddLast(new NonStashingAsyncHandlerInvocation(enumerable[i], Inv, isLast, isLast ? onComplete : null));
+            }
+
+            _eventBatch.AddLast(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
+                .ToImmutableList<IPersistentRepresentation>()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with async event handlers and an async completion callback.
+        /// The <paramref name="onCompleteAsync"/> callback is invoked after all event handlers have been executed.
+        /// </summary>
+        /// <typeparam name="TEvent">TBD</typeparam>
+        /// <param name="events">TBD</param>
+        /// <param name="handler">Async handler invoked for each persisted event</param>
+        /// <param name="onCompleteAsync">Async callback invoked after all events are persisted and their handlers executed</param>
+        public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler, Func<Task> onCompleteAsync)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            Task Inv(object o) => handler((TEvent)o);
+            var enumerable = events as TEvent[] ?? events.ToArray();
+            var eventCount = enumerable.Length;
+
+            if (eventCount == 0)
+            {
+                if (onCompleteAsync != null)
+                    RunTask(onCompleteAsync);
+                return;
+            }
+
+            for (int i = 0; i < eventCount; i++)
+            {
+                var isLast = i == eventCount - 1;
+                _pendingInvocations.AddLast(new NonStashingAsyncHandlerInvocationWithAsyncCompletion(enumerable[i], Inv, isLast, isLast ? onCompleteAsync : null));
             }
 
             _eventBatch.AddLast(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
@@ -442,7 +1041,7 @@ namespace Akka.Persistence
             }
             else
             {
-                _pendingInvocations.AddLast(new AsyncHandlerInvocation(evt, o => handler((TEvent)o)));
+                _pendingInvocations.AddLast(new NonStashingHandlerInvocation(evt, o => handler((TEvent)o)));
                 _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
             }
         }
