@@ -380,5 +380,64 @@ namespace Akka.Tests.Loggers
                 Log.Info("OnCreateBet BetId:{BetId} created", 12345);
             });
         }
+
+        // BUG: Placeholder followed by }} fails
+        [Fact(DisplayName = "SemanticLogMessageFormatter should format '{UserId}}' with [123] to '123}'")]
+        public void Placeholder_followed_by_escaped_closing_brace_fails()
+        {
+            // CRITICAL: Parser treats }}} as "escaped brace", ignoring placeholder content
+            var propertyNames = MessageTemplateParser.GetPropertyNames("{UserId}}");
+            propertyNames.Should().HaveCount(1, "parser must extract UserId");
+            propertyNames[0].Should().Be("UserId");
+
+            var formatter = SemanticLogMessageFormatter.Instance;
+            var result = formatter.Format("{UserId}}", 123);
+            result.Should().Be("123}", "} closes placeholder, }} becomes }");
+        }
+
+        // BUG: Literal escaped braces not unescaped
+        [Fact(DisplayName = "SemanticLogMessageFormatter should format 'Use {{ and }}' to 'Use { and }'")]
+        public void Literal_escaped_braces_not_unescaped()
+        {
+            // CRITICAL: Templates without placeholders return raw string, no unescape
+            var formatter = SemanticLogMessageFormatter.Instance;
+            var result = formatter.Format("Use {{ and }} braces");
+            result.Should().Be("Use { and } braces", "{{ → {, }} → }");
+        }
+
+        // BUG: Escaped braces around placeholders not unescaped
+        [Fact(DisplayName = "SemanticLogMessageFormatter should format '{First}}} text {{more {Second}' with [1, 2] to '1} text {more 2'")]
+        public void Escaped_braces_around_placeholders_not_unescaped()
+        {
+            // CRITICAL: Literal text between/after placeholders not processed for escaped braces
+            var formatter = SemanticLogMessageFormatter.Instance;
+            var result = formatter.Format("{First}}} text {{more {Second}", 1, 2);
+            result.Should().Be("1} text {more 2", "should unescape }} and {{ in literal text");
+        }
+
+        // BUG: Complex template {{{UserId}}} fails
+        [Fact(DisplayName = "SemanticLogMessageFormatter should format '{{{UserId}}}' with [123] to '{123}'")]
+        public void Complex_mixed_escaped_braces_and_placeholder_fails()
+        {
+            // CRITICAL: Combination of escaped braces + placeholder fails completely
+            var propertyNames = MessageTemplateParser.GetPropertyNames("{{{UserId}}}");
+            propertyNames.Should().HaveCount(1, "must extract UserId");
+
+            var formatter = SemanticLogMessageFormatter.Instance;
+            var result = formatter.Format("{{{UserId}}}", 123);
+            result.Should().Be("{123}", "{{ → {, {UserId} → 123, }} → }");
+        }
+
+        // BUG: Empty property name with format specifier. Do we support empty property name?
+        [Fact(DisplayName = "SemanticLogMessageFormatter should format {:N2} to ':N2'")]
+        public void Empty_property_name_with_format_specifier_not_handled()
+        {
+            // CRITICAL: Parser checks colonIndex > 0 instead of >= 0
+            var propertyNames = MessageTemplateParser.GetPropertyNames("{:N2}");
+            if (propertyNames.Count > 0)
+            {
+                propertyNames[0].Should().NotContain(":", "format specifier must be stripped");
+            }
+        }
     }
 }
