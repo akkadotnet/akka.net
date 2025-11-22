@@ -86,12 +86,10 @@ namespace Akka.Event
                 if (closeBrace == -1)
                     break; // Malformed template, stop parsing
 
-                // Check for escaped brace }}
-                if (closeBrace + 1 < length && template[closeBrace + 1] == '}')
-                {
-                    i = closeBrace + 2;
-                    continue;
-                }
+                // Note: We do NOT check for }} here. The }} escape sequence only applies to literal
+                // text during formatting, not during property name extraction. After finding a valid
+                // placeholder {Name}, any subsequent } is a literal character, not an escape.
+                // For example: "{UserId}}" has placeholder "UserId" followed by literal "}"
 
                 // Extract property name
                 var propertyLength = closeBrace - openBrace - 1;

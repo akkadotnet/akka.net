@@ -82,7 +82,7 @@ namespace Akka.Event
                 // Only convert to array for string.Format which requires object[]
                 var propertyNames = MessageTemplateParser.GetPropertyNames(format);
                 if (propertyNames.Count == 0)
-                    return format;
+                    return UnescapeBraces(format);
 
                 var isPositional = propertyNames.Count > 0 && int.TryParse(propertyNames[0], out _);
 
@@ -109,12 +109,12 @@ namespace Akka.Event
             }
 
             if (argArray.Length == 0)
-                return format;
+                return UnescapeBraces(format);
 
             // Get property names from the template
             var propertyNames2 = MessageTemplateParser.GetPropertyNames(format);
             if (propertyNames2.Count == 0)
-                return format;
+                return UnescapeBraces(format);
 
             // Check if this is a positional template or named template
             var isPositional2 = propertyNames2.Count > 0 && int.TryParse(propertyNames2[0], out _);
@@ -133,7 +133,45 @@ namespace Akka.Event
         }
 
         /// <summary>
+        /// Unescapes {{ to { and }} to } in a string that has no placeholders.
+        /// </summary>
+        private static string UnescapeBraces(string format)
+        {
+            // Fast path: if no escaped braces, return as-is
+            if (format.IndexOf('{') == -1 && format.IndexOf('}') == -1)
+                return format;
+
+            var result = new StringBuilder(format.Length);
+            var length = format.Length;
+            var i = 0;
+
+            while (i < length)
+            {
+                var ch = format[i];
+
+                if (ch == '{' && i + 1 < length && format[i + 1] == '{')
+                {
+                    result.Append('{');
+                    i += 2;
+                }
+                else if (ch == '}' && i + 1 < length && format[i + 1] == '}')
+                {
+                    result.Append('}');
+                    i += 2;
+                }
+                else
+                {
+                    result.Append(ch);
+                    i++;
+                }
+            }
+
+            return result.ToString();
+        }
+
+        /// <summary>
         /// Formats a named template by replacing {PropertyName} with values.
+        /// Handles escaped braces: {{ → {, }} → }
         /// </summary>
         private static string FormatNamedTemplate(string format, IReadOnlyList<string> propertyNames, IReadOnlyList<object> args)
         {
@@ -144,101 +182,103 @@ namespace Akka.Event
 
             while (i < length)
             {
-                var openBrace = format.IndexOf('{', i);
-                if (openBrace == -1)
-                {
-                    // No more placeholders, append rest of string
-                    result.Append(format.Substring(i));
-                    break;
-                }
+                var ch = format[i];
 
-                // Append everything before the placeholder
-                result.Append(format.Substring(i, openBrace - i));
-
-                // Check for escaped brace {{
-                if (openBrace + 1 < length && format[openBrace + 1] == '{')
-                {
-                    result.Append('{');
-                    i = openBrace + 2;
-                    continue;
-                }
-
-                var closeBrace = format.IndexOf('}', openBrace + 1);
-                if (closeBrace == -1)
-                {
-                    // Malformed template, append rest and break
-                    result.Append(format.Substring(openBrace));
-                    break;
-                }
-
-                // Check for escaped brace }}
-                if (closeBrace + 1 < length && format[closeBrace + 1] == '}')
+                // Check for escaped }} in literal text
+                if (ch == '}' && i + 1 < length && format[i + 1] == '}')
                 {
                     result.Append('}');
-                    i = closeBrace + 2;
+                    i += 2;
                     continue;
                 }
 
-                // Extract the placeholder content
-                var placeholderLength = closeBrace - openBrace - 1;
-                if (placeholderLength > 0)
+                // Check for placeholder start
+                if (ch == '{')
                 {
-                    var placeholder = format.Substring(openBrace + 1, placeholderLength).Trim();
-
-                    // Remove format specifiers (e.g., {Value:N2} -> Value)
-                    var colonIndex = placeholder.IndexOf(':');
-                    string formatSpec = null;
-                    if (colonIndex > 0)
+                    // Check for escaped brace {{
+                    if (i + 1 < length && format[i + 1] == '{')
                     {
-                        formatSpec = placeholder.Substring(colonIndex + 1);
-                        placeholder = placeholder.Substring(0, colonIndex).Trim();
+                        result.Append('{');
+                        i += 2;
+                        continue;
                     }
 
-                    // Remove alignment specifiers (e.g., {Value,10} -> Value)
-                    var commaIndex = placeholder.IndexOf(',');
-                    if (commaIndex > 0)
+                    // Find closing brace for placeholder
+                    var closeBrace = format.IndexOf('}', i + 1);
+                    if (closeBrace == -1)
                     {
-                        placeholder = placeholder.Substring(0, commaIndex).Trim();
+                        // Malformed template, append rest and break
+                        result.Append(format.Substring(i));
+                        break;
                     }
 
-                    // Substitute the value
-                    if (argIndex < args.Count)
+                    // Extract the placeholder content
+                    var placeholderLength = closeBrace - i - 1;
+                    if (placeholderLength > 0)
                     {
-                        var value = args[argIndex];
-                        if (value != null)
+                        var placeholder = format.Substring(i + 1, placeholderLength).Trim();
+
+                        // Remove format specifiers (e.g., {Value:N2} -> Value)
+                        var colonIndex = placeholder.IndexOf(':');
+                        string formatSpec = null;
+                        if (colonIndex > 0)
                         {
-                            // Apply format specifier if present
-                            if (!string.IsNullOrEmpty(formatSpec))
+                            formatSpec = placeholder.Substring(colonIndex + 1);
+                            placeholder = placeholder.Substring(0, colonIndex).Trim();
+                        }
+
+                        // Remove alignment specifiers (e.g., {Value,10} -> Value)
+                        var commaIndex = placeholder.IndexOf(',');
+                        if (commaIndex > 0)
+                        {
+                            placeholder = placeholder.Substring(0, commaIndex).Trim();
+                        }
+
+                        // Substitute the value
+                        if (argIndex < args.Count)
+                        {
+                            var value = args[argIndex];
+                            if (value != null)
                             {
-                                try
+                                // Apply format specifier if present
+                                if (!string.IsNullOrEmpty(formatSpec))
                                 {
-                                    result.Append(string.Format($"{{0:{formatSpec}}}", value));
+                                    try
+                                    {
+                                        result.Append(string.Format($"{{0:{formatSpec}}}", value));
+                                    }
+                                    catch
+                                    {
+                                        // If formatting fails, just use ToString()
+                                        result.Append(value.ToString());
+                                    }
                                 }
-                                catch
+                                else
                                 {
-                                    // If formatting fails, just use ToString()
                                     result.Append(value.ToString());
                                 }
                             }
                             else
                             {
-                                result.Append(value.ToString());
+                                result.Append("null");
                             }
+                            argIndex++;
                         }
                         else
                         {
-                            result.Append("null");
+                            // Not enough args, keep the placeholder
+                            result.Append('{').Append(placeholder).Append('}');
                         }
-                        argIndex++;
                     }
-                    else
-                    {
-                        // Not enough args, keep the placeholder
-                        result.Append('{').Append(placeholder).Append('}');
-                    }
-                }
 
-                i = closeBrace + 1;
+                    i = closeBrace + 1;
+                }
+                else
+                {
+                    // Regular character
+                    result.Append(ch);
+                    i++;
+                }
             }
 
             return result.ToString();
@@ -246,6 +286,7 @@ namespace Akka.Event
 
         /// <summary>
         /// Formats a named template by replacing {PropertyName} with values.
+        /// Handles escaped braces: {{ → {, }} → }
         /// </summary>
         private static string FormatNamedTemplate(string format, IReadOnlyList<string> propertyNames, object[] args)
         {
@@ -256,101 +297,103 @@ namespace Akka.Event
 
             while (i < length)
             {
-                var openBrace = format.IndexOf('{', i);
-                if (openBrace == -1)
-                {
-                    // No more placeholders, append rest of string
-                    result.Append(format.Substring(i));
-                    break;
-                }
+                var ch = format[i];
 
-                // Append everything before the placeholder
-                result.Append(format.Substring(i, openBrace - i));
-
-                // Check for escaped brace {{
-                if (openBrace + 1 < length && format[openBrace + 1] == '{')
-                {
-                    result.Append('{');
-                    i = openBrace + 2;
-                    continue;
-                }
-
-                var closeBrace = format.IndexOf('}', openBrace + 1);
-                if (closeBrace == -1)
-                {
-                    // Malformed template, append rest and break
-                    result.Append(format.Substring(openBrace));
-                    break;
-                }
-
-                // Check for escaped brace }}
-                if (closeBrace + 1 < length && format[closeBrace + 1] == '}')
+                // Check for escaped }} in literal text
+                if (ch == '}' && i + 1 < length && format[i + 1] == '}')
                 {
                     result.Append('}');
-                    i = closeBrace + 2;
+                    i += 2;
                     continue;
                 }
 
-                // Extract the placeholder content
-                var placeholderLength = closeBrace - openBrace - 1;
-                if (placeholderLength > 0)
+                // Check for placeholder start
+                if (ch == '{')
                 {
-                    var placeholder = format.Substring(openBrace + 1, placeholderLength).Trim();
-
-                    // Remove format specifiers (e.g., {Value:N2} -> Value)
-                    var colonIndex = placeholder.IndexOf(':');
-                    string formatSpec = null;
-                    if (colonIndex > 0)
+                    // Check for escaped brace {{
+                    if (i + 1 < length && format[i + 1] == '{')
                     {
-                        formatSpec = placeholder.Substring(colonIndex + 1);
-                        placeholder = placeholder.Substring(0, colonIndex).Trim();
+                        result.Append('{');
+                        i += 2;
+                        continue;
                     }
 
-                    // Remove alignment specifiers (e.g., {Value,10} -> Value)
-                    var commaIndex = placeholder.IndexOf(',');
-                    if (commaIndex > 0)
+                    // Find closing brace for placeholder
+                    var closeBrace = format.IndexOf('}', i + 1);
+                    if (closeBrace == -1)
                     {
-                        placeholder = placeholder.Substring(0, commaIndex).Trim();
+                        // Malformed template, append rest and break
+                        result.Append(format.Substring(i));
+                        break;
                     }
 
-                    // Substitute the value
-                    if (argIndex < args.Length)
+                    // Extract the placeholder content
+                    var placeholderLength = closeBrace - i - 1;
+                    if (placeholderLength > 0)
                     {
-                        var value = args[argIndex];
-                        if (value != null)
+                        var placeholder = format.Substring(i + 1, placeholderLength).Trim();
+
+                        // Remove format specifiers (e.g., {Value:N2} -> Value)
+                        var colonIndex = placeholder.IndexOf(':');
+                        string formatSpec = null;
+                        if (colonIndex > 0)
                         {
-                            // Apply format specifier if present
-                            if (!string.IsNullOrEmpty(formatSpec))
+                            formatSpec = placeholder.Substring(colonIndex + 1);
+                            placeholder = placeholder.Substring(0, colonIndex).Trim();
+                        }
+
+                        // Remove alignment specifiers (e.g., {Value,10} -> Value)
+                        var commaIndex = placeholder.IndexOf(',');
+                        if (commaIndex > 0)
+                        {
+                            placeholder = placeholder.Substring(0, commaIndex).Trim();
+                        }
+
+                        // Substitute the value
+                        if (argIndex < args.Length)
+                        {
+                            var value = args[argIndex];
+                            if (value != null)
                             {
-                                try
+                                // Apply format specifier if present
+                                if (!string.IsNullOrEmpty(formatSpec))
                                 {
-                                    result.Append(string.Format($"{{0:{formatSpec}}}", value));
+                                    try
+                                    {
+                                        result.Append(string.Format($"{{0:{formatSpec}}}", value));
+                                    }
+                                    catch
+                                    {
+                                        // If formatting fails, just use ToString()
+                                        result.Append(value.ToString());
+                                    }
                                 }
-                                catch
+                                else
                                 {
-                                    // If formatting fails, just use ToString()
                                     result.Append(value.ToString());
                                 }
                             }
                             else
                             {
-                                result.Append(value.ToString());
+                                result.Append("null");
                             }
+                            argIndex++;
                         }
                         else
                         {
-                            result.Append("null");
+                            // Not enough args, keep the placeholder
+                            result.Append('{').Append(placeholder).Append('}');
                         }
-                        argIndex++;
                     }
-                    else
-                    {
-                        // Not enough args, keep the placeholder
-                        result.Append('{').Append(placeholder).Append('}');
-                    }
-                }
 
-                i = closeBrace + 1;
+                    i = closeBrace + 1;
+                }
+                else
+                {
+                    // Regular character
+                    result.Append(ch);
+                    i++;
+                }
             }
 
             return result.ToString();
