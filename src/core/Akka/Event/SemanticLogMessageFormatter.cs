@@ -14,9 +14,25 @@ namespace Akka.Event
 {
     /// <summary>
     /// Message formatter that supports semantic logging with both positional and named templates.
-    /// Supports Serilog-style message templates like "User {UserId} logged in from {IpAddress}".
-    /// Also supports traditional positional templates like "Value is {0} and status {1}".
+    /// Implements the <see href="https://messagetemplates.org/">Message Templates</see> specification,
+    /// which is the language-neutral standard used by Serilog, Microsoft.Extensions.Logging, NLog,
+    /// and other structured logging frameworks.
     /// </summary>
+    /// <remarks>
+    /// <para>Supported syntax:</para>
+    /// <list type="bullet">
+    ///   <item><description>Named properties: <c>{PropertyName}</c></description></item>
+    ///   <item><description>Positional properties: <c>{0}</c>, <c>{1}</c></description></item>
+    ///   <item><description>Format specifiers: <c>{Value:N2}</c>, <c>{Date:yyyy-MM-dd}</c></description></item>
+    ///   <item><description>Alignment: <c>{Value,10}</c>, <c>{Value,-10}</c></description></item>
+    ///   <item><description>Escaped braces: <c>{{</c> → <c>{</c>, <c>}}</c> → <c>}</c></description></item>
+    /// </list>
+    /// <para>Not supported:</para>
+    /// <list type="bullet">
+    ///   <item><description>Destructuring operators: <c>{@Object}</c>, <c>{$Object}</c> (Serilog-specific)</description></item>
+    ///   <item><description>Empty property names: <c>{:N2}</c> (invalid per spec)</description></item>
+    /// </list>
+    /// </remarks>
     public sealed class SemanticLogMessageFormatter : ILogMessageFormatter
     {
         /// <summary>
