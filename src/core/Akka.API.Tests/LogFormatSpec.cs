@@ -131,8 +131,8 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
             // Positional properties (old style)
             Sys.Log.Warning("Processing item {0} of {1}", 5, 10);
 
-            // Mixed types
-            Sys.Log.Info("Order total is {Amount:C} with {ItemCount} items", 123.45m, 3);
+            // Mixed types - use F2 instead of C for culture-independent output
+            Sys.Log.Info("Order total is ${Amount:F2} with {ItemCount} items", 123.45m, 3);
 
             // Edge cases
             Sys.Log.Debug("Empty template");
@@ -143,8 +143,8 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
             // Special characters and escaping
             Sys.Log.Debug("Path: {FilePath}, Size: {FileSize} bytes", @"C:\temp\file.txt", 1024);
 
-            // Boolean and date types
-            Sys.Log.Info("User {Username} is active: {IsActive}, joined on {JoinDate}", "john.doe", true, DateTime.Parse("2024-01-15"));
+            // Boolean and date types - use explicit date format for culture-independent output
+            Sys.Log.Info("User {Username} is active: {IsActive}, joined on {JoinDate:yyyy-MM-dd}", "john.doe", true, DateTime.Parse("2024-01-15"));
 
             // Long strings and alignment
             Sys.Log.Debug("Request from {RemoteAddress} to endpoint {Endpoint} took {DurationMs}ms", "192.168.1.100:54321", "/api/v1/users", 250);
