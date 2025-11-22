@@ -1,0 +1,11 @@
+﻿[DEBUG][DateTime][Thread 0001][ActorSystem(test)] User 12345 logged in from 192.168.1.1
+[INFO][DateTime][Thread 0001][ActorSystem(test)] Processing order ORD-001 for customer CUST-999
+[WARNING][DateTime][Thread 0001][ActorSystem(test)] Processing item 5 of 10
+[INFO][DateTime][Thread 0001][ActorSystem(test)] Order total is $123.45 with 3 items
+[DEBUG][DateTime][Thread 0001][ActorSystem(test)] Empty template
+[INFO][DateTime][Thread 0001][ActorSystem(test)] Single property 42
+[WARNING][DateTime][Thread 0001][ActorSystem(test)] Null value: {NullValue}
+[ERROR][DateTime][Thread 0001][ActorSystem(test)] Exception occurred for user 999
+[DEBUG][DateTime][Thread 0001][ActorSystem(test)] Path: C:\temp\file.txt, Size: 1024 bytes
+[INFO][DateTime][Thread 0001][ActorSystem(test)] User john.doe is active: True, joined on 2024-01-15
+[DEBUG][DateTime][Thread 0001][ActorSystem(test)] Request from 192.168.1.100:54321 to endpoint /api/v1/users took 250ms

@@ -448,7 +448,51 @@ namespace Akka.Benchmarks.Logging
         }
 
         // ============================================================================
-        // CATEGORY 7: Stress Tests - Real-world Patterns
+        // CATEGORY 7: Escaped Brace Handling
+        // ============================================================================
+
+        private const string EscapedBracesOnly = "Use {{ and }} for literals";
+        private const string EscapedBracesWithPlaceholder = "{First}}} text {{more {Second}";
+        private const string NestedEscapedBraces = "{{{UserId}}}";
+        private const string TrailingEscapedBrace = "{UserId}}";
+
+        [Benchmark(Description = "Format - Escaped braces only (no placeholders)")]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
+        public string Format_EscapedBracesOnly()
+        {
+            // Tests UnescapeBraces path - no placeholders, just {{ and }}
+            return SemanticLogMessageFormatter.Instance.Format(EscapedBracesOnly, Array.Empty<object>());
+        }
+
+        [Benchmark(Description = "Format - Escaped braces with placeholders")]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
+        public string Format_EscapedBracesWithPlaceholders()
+        {
+            // Tests FormatNamedTemplate with mixed escaped braces and placeholders
+            return SemanticLogMessageFormatter.Instance.Format(
+                EscapedBracesWithPlaceholder,
+                new object[] { 1, 2 }
+            );
+        }
+
+        [Benchmark(Description = "Format - Nested escaped braces {{{Value}}}")]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
+        public string Format_NestedEscapedBraces()
+        {
+            // Tests {{{ }}} pattern: escaped brace + placeholder + escaped brace
+            return SemanticLogMessageFormatter.Instance.Format(NestedEscapedBraces, new object[] { 123 });
+        }
+
+        [Benchmark(Description = "Format - Trailing escaped brace {Value}}")]
+        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
+        public string Format_TrailingEscapedBrace()
+        {
+            // Tests placeholder followed by literal }
+            return SemanticLogMessageFormatter.Instance.Format(TrailingEscapedBrace, new object[] { 123 });
+        }
+
+        // ============================================================================
+        // CATEGORY 8: Stress Tests - Real-world Patterns
         // ============================================================================
 
         private const int BatchSize = 1000;
