@@ -3483,6 +3483,17 @@ namespace Akka.Event
         public abstract Akka.Event.LogLevel LogLevel();
         public override string ToString() { }
     }
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public class static LogEventExtensions
+    {
+        public static System.Collections.Generic.IEnumerable<object> GetParameters(this Akka.Event.LogEvent evt) { }
+        public static System.Collections.Generic.IReadOnlyList<string> GetPropertyNames(this Akka.Event.LogEvent evt) { }
+        public static string GetTemplate(this Akka.Event.LogEvent evt) { }
+        public static bool TryGetProperties(this Akka.Event.LogEvent evt, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                1,
+                1})] out System.Collections.Generic.IReadOnlyDictionary<string, object> properties) { }
+    }
     public abstract class LogFilterBase : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
     {
         protected LogFilterBase() { }
@@ -3542,6 +3553,8 @@ namespace Akka.Event
         protected readonly Akka.Event.ILogMessageFormatter Formatter;
         public LogMessage(Akka.Event.ILogMessageFormatter formatter, string format) { }
         public string Format { get; }
+        public System.Collections.Generic.IReadOnlyList<string> PropertyNames { get; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, object> GetProperties() { }
         [Akka.Annotations.InternalApiAttribute()]
         public abstract System.Collections.Generic.IEnumerable<object> Parameters();
         [Akka.Annotations.InternalApiAttribute()]
@@ -3718,6 +3731,12 @@ namespace Akka.Event
         public RegexLogSourceFilter(System.Text.RegularExpressions.Regex sourceRegex) { }
         public override Akka.Event.LogFilterType FilterType { get; }
         public override Akka.Event.LogFilterDecision ShouldKeepMessage(Akka.Event.LogEvent content, [System.Runtime.CompilerServices.NullableAttribute(2)] string expandedMessage = null) { }
+    }
+    public sealed class SemanticLogMessageFormatter : Akka.Event.ILogMessageFormatter
+    {
+        public static readonly Akka.Event.SemanticLogMessageFormatter Instance;
+        public string Format(string format, params object[] args) { }
+        public string Format(string format, System.Collections.Generic.IEnumerable<object> args) { }
     }
     public class StandardOutLogger : Akka.Event.MinimalLogger
     {

@@ -18,9 +18,9 @@ namespace Akka.TestKit.Internal
     /// <param name="logEvent">TBD</param>
     public delegate void EventMatched(EventFilterBase eventFilter, LogEvent logEvent);
 
-    /// <summary>Internal! 
+    /// <summary>Internal!
     /// Facilities for selectively filtering out expected events from logging so
-    /// that you can keep your test run’s console output clean and do not miss real
+    /// that you can keep your test run's console output clean and do not miss real
     /// error messages.
     /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
     /// </summary>
@@ -86,8 +86,26 @@ namespace Akka.TestKit.Internal
         /// <returns>TBD</returns>
         protected bool InternalDoMatch(string src, object msg)
         {
-            var msgstr = msg == null ? "null" : msg.ToString();
-            return _sourceMatcher.IsMatch(src) && _messageMatcher.IsMatch(msgstr);
+            // Check source matcher first (fast path)
+            if (!_sourceMatcher.IsMatch(src))
+                return false;
+
+            // For semantic logging support, try matching against both the formatted message
+            // and the unformatted template pattern
+            if (msg is LogMessage logMessage)
+            {
+                // Try matching against the template pattern first (e.g., "User {UserId} logged in")
+                if (_messageMatcher.IsMatch(logMessage.Format))
+                    return true;
+
+                // Fall back to matching the formatted message (e.g., "User 12345 logged in")
+                var formattedMsg = logMessage.ToString() ?? "null";
+                return _messageMatcher.IsMatch(formattedMsg);
+            }
+
+            // Non-semantic logging or legacy messages
+            var msgstr = msg == null ? "null" : msg.ToString() ?? "null";
+            return _messageMatcher.IsMatch(msgstr);
         }
 
         /// <summary>
