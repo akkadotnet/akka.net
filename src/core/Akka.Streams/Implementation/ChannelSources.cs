@@ -49,9 +49,9 @@ namespace Akka.Streams.Implementation
 
         private void OnReaderComplete(Exception reason)
         {
-            // Use atomic exchange to ensure only one completion path runs
+            // Use atomic compare-exchange to ensure only one completion path runs
             // This prevents race with OnValueRead when both fire simultaneously
-            if (Interlocked.Exchange(ref _completing, 1) == 1)
+            if (Interlocked.CompareExchange(ref _completing, 1, 0) != 0)
                 return; // Already completing from another path
 
             if (reason is null)
@@ -62,8 +62,8 @@ namespace Akka.Streams.Implementation
 
         private void OnValueReadFailure(Exception reason)
         {
-            // Use atomic exchange to ensure only one completion path runs
-            if (Interlocked.Exchange(ref _completing, 1) == 1)
+            // Use atomic compare-exchange to ensure only one completion path runs
+            if (Interlocked.CompareExchange(ref _completing, 1, 0) != 0)
                 return; // Already completing from another path
 
             FailStage(reason);
@@ -77,9 +77,9 @@ namespace Akka.Streams.Implementation
             }
             else
             {
-                // Use atomic exchange to ensure only one completion path runs
+                // Use atomic compare-exchange to ensure only one completion path runs
                 // This prevents race with OnReaderComplete when both fire simultaneously
-                if (Interlocked.Exchange(ref _completing, 1) == 1)
+                if (Interlocked.CompareExchange(ref _completing, 1, 0) != 0)
                     return; // Already completing from another path
 
                 CompleteStage();
@@ -104,8 +104,8 @@ namespace Akka.Streams.Implementation
                     }
                     else
                     {
-                        // Use atomic exchange to ensure only one completion path runs
-                        if (Interlocked.Exchange(ref _completing, 1) == 1)
+                        // Use atomic compare-exchange to ensure only one completion path runs
+                        if (Interlocked.CompareExchange(ref _completing, 1, 0) != 0)
                             return; // Already completing from another path
 
                         CompleteStage();
