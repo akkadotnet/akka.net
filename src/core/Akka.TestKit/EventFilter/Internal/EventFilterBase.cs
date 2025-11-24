@@ -87,8 +87,26 @@ public abstract class EventFilterBase : IEventFilter
     /// <returns>TBD</returns>
     protected bool InternalDoMatch(string src, object? msg)
     {
+        // Check source matcher first (fast path)
+        if (!_sourceMatcher.IsMatch(src))
+            return false;
+
+        // For semantic logging support, try matching against both the formatted message
+        // and the unformatted template pattern
+        if (msg is LogMessage logMessage)
+        {
+            // Try matching against the template pattern first (e.g., "User {UserId} logged in")
+            if (_messageMatcher.IsMatch(logMessage.Format))
+                return true;
+
+            // Fall back to matching the formatted message (e.g., "User 12345 logged in")
+            var formattedMsg = logMessage.ToString() ?? "null";
+            return _messageMatcher.IsMatch(formattedMsg);
+        }
+
+        // Non-semantic logging or legacy messages
         var msgstr = msg == null ? "null" : msg.ToString() ?? "null";
-        return _sourceMatcher.IsMatch(src) && _messageMatcher.IsMatch(msgstr);
+        return _messageMatcher.IsMatch(msgstr);
     }
 
     /// <summary>
