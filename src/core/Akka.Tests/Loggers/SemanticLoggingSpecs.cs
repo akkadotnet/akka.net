@@ -445,5 +445,51 @@ namespace Akka.Tests.Loggers
             // The colon is included because colonIndex > 0 check doesn't handle colon at position 0
             // This is intentional - we don't want to add complexity to handle invalid templates
         }
+
+        // BUG: Alignment specifiers ignored
+        [Fact(DisplayName = "SemanticLogMessageFormatter should format {Value,10:N2} with width and format")]
+        public void Alignment_specifiers_completely_ignored_in_named_templates()
+        {
+            // Per Message Templates spec, alignment IS supported: {PropertyName,Alignment:Format}
+            // Current code strips alignment but never applies it
+            var formatter = SemanticLogMessageFormatter.Instance;
+
+            // Test 1: Simple alignment
+            var result1 = formatter.Format(">{Value,10}<", 123);
+            result1.Should().Be(">       123<", "positive alignment = right-align to 10 chars");
+
+            // Test 2: Negative alignment (left-align)
+            var result2 = formatter.Format("{Value,-10}<", 123);
+            result2.Should().Be(">123       <", "negative alignment = left-align to 10 chars");
+
+            // Test 3: Combined alignment + format specifier
+            var result3 = formatter.Format("{Value,10:N2}", 123.456);
+            result3.Should().HaveLength(10, "alignment width must be applied");
+            result3.Should().MatchRegex(@"^\s+\d{3}[.,]\d{2}$", "should be right-aligned with 2 decimals");
+        }
+
+        // BUG: ToString() returning null causes silent data loss
+        [Fact(DisplayName = "SemanticLogMessageFormatter should format ToString() returning null correctly")]
+        public void ToString_returning_null_should_be_handled()
+        {
+            // If type's ToString() returns null (violates .NET guidelines but possible),
+            // value silently disappears instead of showing "null"
+            var formatter = SemanticLogMessageFormatter.Instance;
+            var badObject = new TypeWithNullToString();
+
+            // Without format specifier - exercises line 258
+            var result1 = formatter.Format("{Value}", badObject);
+            result1.Should().Be("null", "ToString() null should be treated as explicit null");
+
+            // With format specifier - exercises catch block line 253
+            var result2 = formatter.Format("{Value:N2}", badObject);
+            result2.Should().Be("null", "ToString() null in catch block should be handled");
+        }
+
+        // Helper class for testing ToString() returning null
+        private class TypeWithNullToString
+        {
+            public override string ToString() => null;
+        }
     }
 }
