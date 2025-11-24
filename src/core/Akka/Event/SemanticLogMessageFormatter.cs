@@ -218,50 +218,96 @@ namespace Akka.Event
                     {
                         var placeholder = format.Substring(i + 1, placeholderLength).Trim();
 
-                        // Remove format specifiers (e.g., {Value:N2} -> Value)
+                        // Parse placeholder: {Name,alignment:format}
+                        // First, find the property name (before comma or colon)
+                        var commaIndex = placeholder.IndexOf(',');
                         var colonIndex = placeholder.IndexOf(':');
+                        string propertyName;
+                        string alignmentSpec = null;
                         string formatSpec = null;
-                        if (colonIndex > 0)
+
+                        // Determine the property name endpoint
+                        var endOfName = placeholder.Length;
+                        if (commaIndex >= 0 && (colonIndex < 0 || commaIndex < colonIndex))
                         {
-                            formatSpec = placeholder.Substring(colonIndex + 1);
-                            placeholder = placeholder.Substring(0, colonIndex).Trim();
+                            // Comma comes first (or no colon)
+                            endOfName = commaIndex;
+                        }
+                        else if (colonIndex >= 0)
+                        {
+                            // Colon comes first (or no comma)
+                            endOfName = colonIndex;
                         }
 
-                        // Remove alignment specifiers (e.g., {Value,10} -> Value)
-                        var commaIndex = placeholder.IndexOf(',');
-                        if (commaIndex > 0)
+                        propertyName = placeholder.Substring(0, endOfName).Trim();
+
+                        // Extract alignment if present
+                        if (commaIndex >= 0)
                         {
-                            placeholder = placeholder.Substring(0, commaIndex).Trim();
+                            var alignmentStart = commaIndex + 1;
+                            var alignmentEnd = colonIndex >= 0 ? colonIndex : placeholder.Length;
+                            alignmentSpec = placeholder.Substring(alignmentStart, alignmentEnd - alignmentStart).Trim();
                         }
+
+                        // Extract format specifier if present
+                        if (colonIndex >= 0)
+                        {
+                            formatSpec = placeholder.Substring(colonIndex + 1).Trim();
+                        }
+
+                        placeholder = propertyName;
 
                         // Substitute the value
                         if (argIndex < args.Count)
                         {
                             var value = args[argIndex];
+                            string formattedValue;
+
                             if (value != null)
                             {
-                                // Apply format specifier if present
-                                if (!string.IsNullOrEmpty(formatSpec))
+                                // First get the string representation
+                                var strValue = value.ToString();
+
+                                if (strValue != null)
                                 {
-                                    try
+                                    // Apply format specifier if present
+                                    if (!string.IsNullOrEmpty(formatSpec))
                                     {
-                                        result.Append(string.Format($"{{0:{formatSpec}}}", value));
+                                        try
+                                        {
+                                            formattedValue = string.Format($"{{0:{formatSpec}}}", value);
+                                        }
+                                        catch
+                                        {
+                                            // If formatting fails, use the plain string
+                                            formattedValue = strValue;
+                                        }
                                     }
-                                    catch
+                                    else
                                     {
-                                        // If formatting fails, just use ToString()
-                                        result.Append(value.ToString());
+                                        formattedValue = strValue;
                                     }
                                 }
                                 else
                                 {
-                                    result.Append(value.ToString());
+                                    // ToString() returned null
+                                    formattedValue = "null";
                                 }
                             }
                             else
                             {
-                                result.Append("null");
+                                formattedValue = "null";
                             }
+
+                            // Apply alignment if present
+                            if (!string.IsNullOrEmpty(alignmentSpec) && int.TryParse(alignmentSpec, out var alignment))
+                            {
+                                formattedValue = alignment > 0
+                                    ? formattedValue.PadLeft(alignment)
+                                    : formattedValue.PadRight(-alignment);
+                            }
+
+                            result.Append(formattedValue);
                             argIndex++;
                         }
                         else
@@ -333,50 +379,96 @@ namespace Akka.Event
                     {
                         var placeholder = format.Substring(i + 1, placeholderLength).Trim();
 
-                        // Remove format specifiers (e.g., {Value:N2} -> Value)
+                        // Parse placeholder: {Name,alignment:format}
+                        // First, find the property name (before comma or colon)
+                        var commaIndex = placeholder.IndexOf(',');
                         var colonIndex = placeholder.IndexOf(':');
+                        string propertyName;
+                        string alignmentSpec = null;
                         string formatSpec = null;
-                        if (colonIndex > 0)
+
+                        // Determine the property name endpoint
+                        var endOfName = placeholder.Length;
+                        if (commaIndex >= 0 && (colonIndex < 0 || commaIndex < colonIndex))
                         {
-                            formatSpec = placeholder.Substring(colonIndex + 1);
-                            placeholder = placeholder.Substring(0, colonIndex).Trim();
+                            // Comma comes first (or no colon)
+                            endOfName = commaIndex;
+                        }
+                        else if (colonIndex >= 0)
+                        {
+                            // Colon comes first (or no comma)
+                            endOfName = colonIndex;
                         }
 
-                        // Remove alignment specifiers (e.g., {Value,10} -> Value)
-                        var commaIndex = placeholder.IndexOf(',');
-                        if (commaIndex > 0)
+                        propertyName = placeholder.Substring(0, endOfName).Trim();
+
+                        // Extract alignment if present
+                        if (commaIndex >= 0)
                         {
-                            placeholder = placeholder.Substring(0, commaIndex).Trim();
+                            var alignmentStart = commaIndex + 1;
+                            var alignmentEnd = colonIndex >= 0 ? colonIndex : placeholder.Length;
+                            alignmentSpec = placeholder.Substring(alignmentStart, alignmentEnd - alignmentStart).Trim();
                         }
+
+                        // Extract format specifier if present
+                        if (colonIndex >= 0)
+                        {
+                            formatSpec = placeholder.Substring(colonIndex + 1).Trim();
+                        }
+
+                        placeholder = propertyName;
 
                         // Substitute the value
                         if (argIndex < args.Length)
                         {
                             var value = args[argIndex];
+                            string formattedValue;
+
                             if (value != null)
                             {
-                                // Apply format specifier if present
-                                if (!string.IsNullOrEmpty(formatSpec))
+                                // First get the string representation
+                                var strValue = value.ToString();
+
+                                if (strValue != null)
                                 {
-                                    try
+                                    // Apply format specifier if present
+                                    if (!string.IsNullOrEmpty(formatSpec))
                                     {
-                                        result.Append(string.Format($"{{0:{formatSpec}}}", value));
+                                        try
+                                        {
+                                            formattedValue = string.Format($"{{0:{formatSpec}}}", value);
+                                        }
+                                        catch
+                                        {
+                                            // If formatting fails, use the plain string
+                                            formattedValue = strValue;
+                                        }
                                     }
-                                    catch
+                                    else
                                     {
-                                        // If formatting fails, just use ToString()
-                                        result.Append(value.ToString());
+                                        formattedValue = strValue;
                                     }
                                 }
                                 else
                                 {
-                                    result.Append(value.ToString());
+                                    // ToString() returned null
+                                    formattedValue = "null";
                                 }
                             }
                             else
                             {
-                                result.Append("null");
+                                formattedValue = "null";
                             }
+
+                            // Apply alignment if present
+                            if (!string.IsNullOrEmpty(alignmentSpec) && int.TryParse(alignmentSpec, out var alignment))
+                            {
+                                formattedValue = alignment > 0
+                                    ? formattedValue.PadLeft(alignment)
+                                    : formattedValue.PadRight(-alignment);
+                            }
+
+                            result.Append(formattedValue);
                             argIndex++;
                         }
                         else

@@ -459,7 +459,7 @@ namespace Akka.Tests.Loggers
             result1.Should().Be(">       123<", "positive alignment = right-align to 10 chars");
 
             // Test 2: Negative alignment (left-align)
-            var result2 = formatter.Format("{Value,-10}<", 123);
+            var result2 = formatter.Format(">{Value,-10}<", 123);
             result2.Should().Be(">123       <", "negative alignment = left-align to 10 chars");
 
             // Test 3: Combined alignment + format specifier
