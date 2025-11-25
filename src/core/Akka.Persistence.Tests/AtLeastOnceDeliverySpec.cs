@@ -547,17 +547,26 @@ namespace Akka.Persistence.Tests
             await probeB.ExpectMsgAsync<Action>(a => a.Id == 2 && a.Payload == "b-1");
             await probeB.ExpectMsgAsync<Action>(a => a.Id == 3 && a.Payload == "b-2");
 
-            var unconfirmedList = new List<IEnumerable<UnconfirmedDelivery>>();
-            await foreach (var item in ReceiveWhileAsync(TimeSpan.FromSeconds(3), x =>
-                x is UnconfirmedWarning warning ? warning.UnconfirmedDeliveries : Enumerable.Empty<UnconfirmedDelivery>()))
-            {
-                unconfirmedList.Add(item);
-            }
-            var unconfirmed = unconfirmedList.SelectMany(e => e).ToArray();
+            // Collect warnings until we have all expected unconfirmed deliveries
+            // Using count-based collection instead of timeout-based to avoid race conditions in CI
+            var unconfirmed = new List<UnconfirmedDelivery>();
+            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
 
-            var resultDestinations = unconfirmed.Select(x => x.Destination).Distinct().ToArray();
+            while (unconfirmed.Count < 3 && DateTime.UtcNow < deadline)
+            {
+                var remainingTime = deadline - DateTime.UtcNow;
+                if (remainingTime <= TimeSpan.Zero) break;
+
+                var msg = await ReceiveOneAsync(remainingTime);
+                if (msg is UnconfirmedWarning warning)
+                    unconfirmed.AddRange(warning.UnconfirmedDeliveries);
+            }
+
+            var unconfirmedArray = unconfirmed.ToArray();
+
+            var resultDestinations = unconfirmedArray.Select(x => x.Destination).Distinct().ToArray();
             resultDestinations.Should().BeEquivalentTo(probeA.Ref.Path, probeB.Ref.Path);
-            var resultMessages = unconfirmed.Select(x => x.Message).Distinct().ToArray();
+            var resultMessages = unconfirmedArray.Select(x => x.Message).Distinct().ToArray();
             resultMessages.Should().BeEquivalentTo(new Action(1, "a-1"), new Action(2, "b-1"), new Action(3, "b-2"));
 
             Sys.Stop(sender);
