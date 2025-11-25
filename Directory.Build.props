@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.55</VersionPrefix>
+    <VersionPrefix>1.5.56</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -50,26 +50,15 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.55 is a patch release containing important stability and security improvements for Akka.Remote.
+    <PackageReleaseNotes>Akka.NET v1.5.56 is a patch release containing important bug fixes for Akka.Remote and Akka.Streams.
 
-**Akka.Remote Stability Improvements:**
+**Bug Fixes:**
 
-* [Akka.Remote: harden EndpointWriter against serialization failures](https://github.com/akkadotnet/akka.net/pull/7925) - Fixes [issue #7922](https://github.com/akkadotnet/akka.net/issues/7922) by hardening the `EndpointWriter` against a broader range of potential serialization failures, improving overall remoting stability.
+* [Fix: Akka.Remote should not shutdown on invalid TLS traffic](https://github.com/akkadotnet/akka.net/pull/7952) - Fixes [issue #7938](https://github.com/akkadotnet/akka.net/issues/7938) where invalid traffic (like HTTP requests) hitting a TLS-enabled Akka.Remote port would cause the entire ActorSystem to shut down. Server now rejects invalid connections gracefully without terminating.
 
-**Akka.Remote Security Improvements:**
+* [fix(streams): prevent race condition in ChannelSource on channel completion](https://github.com/akkadotnet/akka.net/pull/7951) - Fixes [issue #7940](https://github.com/akkadotnet/akka.net/issues/7940) where a `NullReferenceException` could occur when completing a `ChannelWriter` while the stream is waiting for data. Added atomic flag to prevent race condition between `OnReaderComplete` and `OnValueRead` callbacks.
 
-* [Custom certificate validation with single execution path - fixes mTLS asymmetry bug](https://github.com/akkadotnet/akka.net/pull/7921) - Fixes [issue #7914](https://github.com/akkadotnet/akka.net/issues/7914) by introducing programmatic certificate validation helpers through the new `CertificateValidation` factory class. This release adds 7 new validation helper methods including `ValidateChain()`, `ValidateHostname()`, `PinnedCertificate()`, `ValidateSubject()`, `ValidateIssuer()`, `Combine()`, and `ChainPlusThen()`. The update also fixes an mTLS asymmetry bug where server-side hostname validation was not being applied consistently with client-side validation, all while maintaining full backward compatibility with existing HOCON-based validation.
-
-* [Fix DotNettySslSetup being ignored when HOCON has valid SSL config](https://github.com/akkadotnet/akka.net/pull/7919) - Fixes [issue #7917](https://github.com/akkadotnet/akka.net/issues/7917) where programmatic `DotNettySslSetup` settings were incorrectly being overridden by HOCON configuration. Programmatic configuration now correctly takes precedence over HOCON defaults as intended.
-
-1 contributor since release 1.5.54
-
-| COMMITS | LOC+ | LOC- | AUTHOR |
-| --- | --- | --- | --- |
-| 3 | 1605 | 289 | Aaron Stannard |
-
-
-To [see the full set of changes in Akka.NET v1.5.55, click here](https://github.com/akkadotnet/akka.net/milestone/138?closed=1)</PackageReleaseNotes>
+To see the full set of changes in Akka.NET v1.5.56, click here: https://github.com/akkadotnet/akka.net/milestone/139?closed=1</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />

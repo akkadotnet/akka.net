@@ -1,3 +1,21 @@
+#### 1.5.56 November 25th, 2025 ####
+
+Akka.NET v1.5.56 is a patch release containing important bug fixes for Akka.Remote and Akka.Streams.
+
+**Bug Fixes:**
+
+* [Fix: Akka.Remote should not shutdown on invalid TLS traffic](https://github.com/akkadotnet/akka.net/pull/7952) - Fixes [issue #7938](https://github.com/akkadotnet/akka.net/issues/7938) where invalid traffic (like HTTP requests) hitting a TLS-enabled Akka.Remote port would cause the entire ActorSystem to shut down. Server now rejects invalid connections gracefully without terminating.
+
+* [fix(streams): prevent race condition in ChannelSource on channel completion](https://github.com/akkadotnet/akka.net/pull/7951) - Fixes [issue #7940](https://github.com/akkadotnet/akka.net/issues/7940) where a `NullReferenceException` could occur when completing a `ChannelWriter` while the stream is waiting for data. Added atomic flag to prevent race condition between `OnReaderComplete` and `OnValueRead` callbacks.
+
+1 contributor since release 1.5.55
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 162 | 6 | Aaron Stannard |
+
+To [see the full set of changes in Akka.NET v1.5.56, click here](https://github.com/akkadotnet/akka.net/milestone/139?closed=1)
+
 #### 1.5.55 October 26th, 2025 ####
 
 Akka.NET v1.5.55 is a patch release containing important stability and security improvements for Akka.Remote.
