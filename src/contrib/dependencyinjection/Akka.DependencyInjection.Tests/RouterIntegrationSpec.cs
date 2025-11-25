@@ -32,13 +32,35 @@ namespace Akka.DependencyInjection.Tests
                 .AddSingleton<InjectedService>()
                 .AddSingleton<AkkaService>()
                 .AddHostedService<AkkaService>();
-            
+
             _serviceProvider = services.BuildServiceProvider();
             _akkaService = _serviceProvider.GetRequiredService<AkkaService>();
         }
 
+        /// <summary>
+        /// Ensures a router has fully initialized all its routees before returning.
+        /// Uses GetRoutees message to query actual router state - no timing assumptions.
+        /// </summary>
+        private async Task<IActorRef> CreateAndWaitForRouter(Props props, string name, int expectedRouteeCount, TimeSpan? timeout = null)
+        {
+            var system = _akkaService.ActorSystem;
+            var router = system.ActorOf(props, name);
+            var actualTimeout = timeout ?? TimeSpan.FromSeconds(10);
+
+            // Use Ask pattern to query router's actual state
+            var routees = await router.Ask<Routees>(new GetRoutees(), actualTimeout);
+
+            if (routees.Members.Count() != expectedRouteeCount)
+            {
+                throw new InvalidOperationException(
+                    $"Router {name} initialization failed: expected {expectedRouteeCount} routees but got {routees.Members.Count()}");
+            }
+
+            return router;
+        }
+
         [Fact(DisplayName = "DI should work with ConsistentHashingPool router")]
-        public void ShouldWorkWithConsistentHashingPoolTest()
+        public async Task ShouldWorkWithConsistentHashingPoolTest()
         {
             TestDiActor.Counter.Reset();
             var system = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
@@ -46,7 +68,9 @@ namespace Akka.DependencyInjection.Tests
             system.EventStream.Subscribe(probe, typeof(Error));
 
             var props = DependencyResolver.For(system).Props<TestDiActor>().WithRouter(new ConsistentHashingPool(100));
-            var actor = system.ActorOf(props.WithDeploy(Deploy.Local), "testDIActorRouter");
+
+            // Structural synchronization: wait for router to have all 100 routees ready
+            var actor = await CreateAndWaitForRouter(props.WithDeploy(Deploy.Local), "testDIActorRouter", 100);
 
             var counterHash = new HashSet<long>();
             foreach (var i in Enumerable.Range(0, 500))
@@ -63,7 +87,7 @@ namespace Akka.DependencyInjection.Tests
         }
         
         [Fact(DisplayName = "DI should work with RoundRobinPool router")]
-        public void ShouldWorkWithRoundRobinPoolTest()
+        public async Task ShouldWorkWithRoundRobinPoolTest()
         {
             TestDiActor.Counter.Reset();
             var system = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
@@ -71,7 +95,9 @@ namespace Akka.DependencyInjection.Tests
             system.EventStream.Subscribe(probe, typeof(Error));
 
             var props = DependencyResolver.For(system).Props<TestDiActor>().WithRouter(new RoundRobinPool(100));
-            var actor = system.ActorOf(props.WithDeploy(Deploy.Local), "testDIActorRouter");
+
+            // Structural synchronization: wait for router to have all 100 routees ready
+            var actor = await CreateAndWaitForRouter(props.WithDeploy(Deploy.Local), "testDIActorRouter2", 100);
 
             var counterHash = new HashSet<long>();
             foreach (var i in Enumerable.Range(0, 100))
@@ -92,7 +118,7 @@ namespace Akka.DependencyInjection.Tests
         }
 
         [Fact(DisplayName = "DI should work with RandomPool router")]
-        public void ShouldWorkWithRandomPoolTest()
+        public async Task ShouldWorkWithRandomPoolTest()
         {
             TestDiActor.Counter.Reset();
             var system = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
@@ -100,7 +126,9 @@ namespace Akka.DependencyInjection.Tests
             system.EventStream.Subscribe(probe, typeof(Error));
 
             var props = DependencyResolver.For(system).Props<TestDiActor>().WithRouter(new RandomPool(100));
-            var actor = system.ActorOf(props.WithDeploy(Deploy.Local), "testDIActorRouter");
+
+            // Structural synchronization: wait for router to have all 100 routees ready
+            var actor = await CreateAndWaitForRouter(props.WithDeploy(Deploy.Local), "testDIActorRouter3", 100);
 
             var counterHash = new HashSet<long>();
             foreach (var i in Enumerable.Range(0, 500))
