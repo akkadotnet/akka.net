@@ -4,7 +4,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("e3bcba88-003c-4cda-8a60-f0c2553fe3c8")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Persistence
 {
     public abstract class AtLeastOnceDeliveryActor : Akka.Persistence.PersistentActor
@@ -406,7 +406,6 @@ namespace Akka.Persistence
         [Akka.Annotations.InternalStableApiAttribute()]
         public Akka.Actor.IActorRef SnapshotStoreFor(string snapshotPluginId) { }
     }
-    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public struct PersistenceHealthCheckResult : System.IEquatable<Akka.Persistence.PersistenceHealthCheckResult>
     {
@@ -1195,9 +1194,7 @@ namespace Akka.Persistence.Journal
     {
         public Tagged(object payload, System.Collections.Generic.IEnumerable<string> tags) { }
         public Tagged(object payload, System.Collections.Immutable.IImmutableSet<string> tags) { }
-        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public object Payload { get; }
-        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public System.Collections.Immutable.IImmutableSet<string> Tags { get; }
     }
     public abstract class WriteJournalBase : Akka.Actor.ActorBase
