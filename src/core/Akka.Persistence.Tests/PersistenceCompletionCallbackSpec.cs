@@ -465,7 +465,7 @@ namespace Akka.Persistence.Tests
         }
 
         /// <summary>
-        /// Actor that tests empty event list with completion callback
+        /// Actor that tests empty event list with various completion callback overloads
         /// </summary>
         private class EmptyEventsWithCompletionActor : UntypedPersistentActor
         {
@@ -486,7 +486,8 @@ namespace Akka.Persistence.Tests
             {
                 switch (message)
                 {
-                    case "persist-empty":
+                    // PersistAll with sync completion callback
+                    case "persist-empty-sync":
                         PersistAll(Array.Empty<TestEvent>(), _ => { }, () =>
                         {
                             _completionCalled = true;
@@ -494,8 +495,42 @@ namespace Akka.Persistence.Tests
                         });
                         break;
 
+                    // PersistAll with async completion callback
+                    case "persist-empty-async":
+                        PersistAll(Array.Empty<TestEvent>(), _ => { }, async () =>
+                        {
+                            await Task.Yield();
+                            _completionCalled = true;
+                            _probe.Tell("completed");
+                        });
+                        break;
+
+                    // PersistAllAsync with sync completion callback
+                    case "persist-async-empty-sync":
+                        PersistAllAsync(Array.Empty<TestEvent>(), _ => { }, () =>
+                        {
+                            _completionCalled = true;
+                            _probe.Tell("completed");
+                        });
+                        break;
+
+                    // PersistAllAsync with async completion callback
+                    case "persist-async-empty-async":
+                        PersistAllAsync(Array.Empty<TestEvent>(), _ => { }, async () =>
+                        {
+                            await Task.Yield();
+                            _completionCalled = true;
+                            _probe.Tell("completed");
+                        });
+                        break;
+
                     case "check":
                         Sender.Tell(_completionCalled);
+                        break;
+
+                    case "reset":
+                        _completionCalled = false;
+                        Sender.Tell("reset-done");
                         break;
                 }
             }
@@ -506,17 +541,17 @@ namespace Akka.Persistence.Tests
         #region Tests
 
         [Fact(DisplayName = "PersistAll with sync completion callback should invoke callback after all handlers")]
-        public void PersistAll_WithSyncCompletion_Should_InvokeAfterAllHandlers()
+        public async Task PersistAll_WithSyncCompletion_Should_InvokeAfterAllHandlers()
         {
             var probe = CreateTestProbe();
             var actor = ActorOf(Props.Create(() =>
                 new PersistAllWithCompletionActor(Name, probe)));
 
             actor.Tell(new[] { "event1", "event2", "event3" });
-            probe.ExpectMsg("completed");
+            await probe.ExpectMsgAsync("completed");
 
             actor.Tell(GetCompletionOrder.Instance);
-            var order = ExpectMsg<string[]>();
+            var order = await ExpectMsgAsync<string[]>();
 
             order.Should().BeEquivalentTo(new[]
             {
@@ -528,17 +563,17 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact(DisplayName = "PersistAll with async completion callback should invoke callback after all handlers")]
-        public void PersistAll_WithAsyncCompletion_Should_InvokeAfterAllHandlers()
+        public async Task PersistAll_WithAsyncCompletion_Should_InvokeAfterAllHandlers()
         {
             var probe = CreateTestProbe();
             var actor = ActorOf(Props.Create(() =>
                 new PersistAllWithAsyncCompletionActor(Name, probe)));
 
             actor.Tell(new[] { "event1", "event2", "event3" });
-            probe.ExpectMsg("completed");
+            await probe.ExpectMsgAsync("completed");
 
             actor.Tell(GetCompletionOrder.Instance);
-            var order = ExpectMsg<string[]>();
+            var order = await ExpectMsgAsync<string[]>();
 
             order.Should().BeEquivalentTo(new[]
             {
@@ -550,17 +585,17 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact(DisplayName = "PersistAllAsync with sync completion callback should invoke callback after all handlers")]
-        public void PersistAllAsync_WithSyncCompletion_Should_InvokeAfterAllHandlers()
+        public async Task PersistAllAsync_WithSyncCompletion_Should_InvokeAfterAllHandlers()
         {
             var probe = CreateTestProbe();
             var actor = ActorOf(Props.Create(() =>
                 new PersistAllAsyncWithCompletionActor(Name, probe)));
 
             actor.Tell(new[] { "event1", "event2", "event3" });
-            probe.ExpectMsg("completed");
+            await probe.ExpectMsgAsync("completed");
 
             actor.Tell(GetCompletionOrder.Instance);
-            var order = ExpectMsg<string[]>();
+            var order = await ExpectMsgAsync<string[]>();
 
             order.Should().BeEquivalentTo(new[]
             {
@@ -572,49 +607,49 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact(DisplayName = "Persist with async handler should execute handler asynchronously")]
-        public void Persist_WithAsyncHandler_Should_ExecuteAsynchronously()
+        public async Task Persist_WithAsyncHandler_Should_ExecuteAsynchronously()
         {
             var probe = CreateTestProbe();
             var actor = ActorOf(Props.Create(() =>
                 new PersistWithAsyncHandlerActor(Name, probe)));
 
             actor.Tell("event1");
-            probe.ExpectMsg("handled");
+            await probe.ExpectMsgAsync("handled");
 
             actor.Tell(GetCompletionOrder.Instance);
-            var order = ExpectMsg<string[]>();
+            var order = await ExpectMsgAsync<string[]>();
 
             order.Should().Contain("async-handler:event1");
         }
 
         [Fact(DisplayName = "PersistAsync with async handler should execute handler asynchronously")]
-        public void PersistAsync_WithAsyncHandler_Should_ExecuteAsynchronously()
+        public async Task PersistAsync_WithAsyncHandler_Should_ExecuteAsynchronously()
         {
             var probe = CreateTestProbe();
             var actor = ActorOf(Props.Create(() =>
                 new PersistAsyncWithAsyncHandlerActor(Name, probe)));
 
             actor.Tell("event1");
-            probe.ExpectMsg("handled");
+            await probe.ExpectMsgAsync("handled");
 
             actor.Tell(GetCompletionOrder.Instance);
-            var order = ExpectMsg<string[]>();
+            var order = await ExpectMsgAsync<string[]>();
 
             order.Should().Contain("async-handler:event1");
         }
 
         [Fact(DisplayName = "DeferAsync with async handler should execute after pending invocations")]
-        public void DeferAsync_WithAsyncHandler_Should_ExecuteAfterPending()
+        public async Task DeferAsync_WithAsyncHandler_Should_ExecuteAfterPending()
         {
             var probe = CreateTestProbe();
             var actor = ActorOf(Props.Create(() =>
                 new DeferAsyncWithAsyncHandlerActor(Name, probe)));
 
             actor.Tell(new[] { "event1", "event2" });
-            probe.ExpectMsg("deferred");
+            await probe.ExpectMsgAsync("deferred");
 
             actor.Tell(GetCompletionOrder.Instance);
-            var order = ExpectMsg<string[]>();
+            var order = await ExpectMsgAsync<string[]>();
 
             order.Should().BeEquivalentTo(new[]
             {
@@ -625,17 +660,17 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact(DisplayName = "PersistAll with async handlers should execute handlers and completion in order")]
-        public void PersistAll_WithAsyncHandlers_Should_ExecuteInOrder()
+        public async Task PersistAll_WithAsyncHandlers_Should_ExecuteInOrder()
         {
             var probe = CreateTestProbe();
             var actor = ActorOf(Props.Create(() =>
                 new PersistAllWithAsyncHandlerActor(Name, probe)));
 
             actor.Tell(new[] { "event1", "event2" });
-            probe.ExpectMsg("completed");
+            await probe.ExpectMsgAsync("completed");
 
             actor.Tell(GetCompletionOrder.Instance);
-            var order = ExpectMsg<string[]>();
+            var order = await ExpectMsgAsync<string[]>();
 
             order.Should().BeEquivalentTo(new[]
             {
@@ -646,7 +681,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact(DisplayName = "PersistAll should stash commands until completion callback finishes")]
-        public void PersistAll_Should_StashCommandsUntilCompletion()
+        public async Task PersistAll_Should_StashCommandsUntilCompletion()
         {
             var probe = CreateTestProbe();
             var actor = ActorOf(Props.Create(() =>
@@ -657,10 +692,10 @@ namespace Akka.Persistence.Tests
             actor.Tell("other");
 
             // Wait for the other command to be processed (after completion)
-            probe.ExpectMsg("other-processed");
+            await probe.ExpectMsgAsync("other-processed");
 
             actor.Tell("get-order");
-            var order = ExpectMsg<string[]>();
+            var order = await ExpectMsgAsync<string[]>();
 
             // The "other" command should be processed after the completion callback
             order.Should().BeEquivalentTo(new[]
@@ -674,18 +709,63 @@ namespace Akka.Persistence.Tests
             }, options => options.WithStrictOrdering());
         }
 
-        [Fact(DisplayName = "PersistAll with empty events should invoke completion callback immediately")]
-        public void PersistAll_WithEmptyEvents_Should_InvokeCompletionImmediately()
+        [Fact(DisplayName = "PersistAll with empty events and sync completion should invoke completion callback immediately")]
+        public async Task PersistAll_WithEmptyEvents_SyncCompletion_Should_InvokeCompletionImmediately()
         {
             var probe = CreateTestProbe();
             var actor = ActorOf(Props.Create(() =>
                 new EmptyEventsWithCompletionActor(Name, probe)));
 
-            actor.Tell("persist-empty");
-            probe.ExpectMsg("completed");
+            actor.Tell("persist-empty-sync");
+            await probe.ExpectMsgAsync("completed");
 
             actor.Tell("check");
-            var completionCalled = ExpectMsg<bool>();
+            var completionCalled = await ExpectMsgAsync<bool>();
+            completionCalled.Should().BeTrue();
+        }
+
+        [Fact(DisplayName = "PersistAll with empty events and async completion should invoke completion callback immediately")]
+        public async Task PersistAll_WithEmptyEvents_AsyncCompletion_Should_InvokeCompletionImmediately()
+        {
+            var probe = CreateTestProbe();
+            var actor = ActorOf(Props.Create(() =>
+                new EmptyEventsWithCompletionActor(Name, probe)));
+
+            actor.Tell("persist-empty-async");
+            await probe.ExpectMsgAsync("completed");
+
+            actor.Tell("check");
+            var completionCalled = await ExpectMsgAsync<bool>();
+            completionCalled.Should().BeTrue();
+        }
+
+        [Fact(DisplayName = "PersistAllAsync with empty events and sync completion should invoke completion callback immediately")]
+        public async Task PersistAllAsync_WithEmptyEvents_SyncCompletion_Should_InvokeCompletionImmediately()
+        {
+            var probe = CreateTestProbe();
+            var actor = ActorOf(Props.Create(() =>
+                new EmptyEventsWithCompletionActor(Name, probe)));
+
+            actor.Tell("persist-async-empty-sync");
+            await probe.ExpectMsgAsync("completed");
+
+            actor.Tell("check");
+            var completionCalled = await ExpectMsgAsync<bool>();
+            completionCalled.Should().BeTrue();
+        }
+
+        [Fact(DisplayName = "PersistAllAsync with empty events and async completion should invoke completion callback immediately")]
+        public async Task PersistAllAsync_WithEmptyEvents_AsyncCompletion_Should_InvokeCompletionImmediately()
+        {
+            var probe = CreateTestProbe();
+            var actor = ActorOf(Props.Create(() =>
+                new EmptyEventsWithCompletionActor(Name, probe)));
+
+            actor.Tell("persist-async-empty-async");
+            await probe.ExpectMsgAsync("completed");
+
+            actor.Tell("check");
+            var completionCalled = await ExpectMsgAsync<bool>();
             completionCalled.Should().BeTrue();
         }
 
