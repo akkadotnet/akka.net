@@ -434,7 +434,8 @@ namespace Akka.Persistence
         {
             if (events == null || !events.Any())
             {
-                onComplete?.Invoke();
+                if (onComplete != null)
+                    Defer<object>(null, _ => onComplete());
                 return;
             }
 
@@ -456,7 +457,8 @@ namespace Akka.Persistence
         {
             if (events == null || !events.Any())
             {
-                if (onCompleteAsync != null) RunTask(onCompleteAsync);
+                if (onCompleteAsync != null)
+                    Defer<object>(null, async _ => await onCompleteAsync());
                 return;
             }
 
@@ -509,7 +511,8 @@ namespace Akka.Persistence
         {
             if (events == null || !events.Any())
             {
-                onComplete?.Invoke();
+                if (onComplete != null)
+                    Defer<object>(null, _ => onComplete());
                 return;
             }
 
@@ -531,7 +534,8 @@ namespace Akka.Persistence
         {
             if (events == null || !events.Any())
             {
-                if (onCompleteAsync != null) RunTask(onCompleteAsync);
+                if (onCompleteAsync != null)
+                    Defer<object>(null, async _ => await onCompleteAsync());
                 return;
             }
 
@@ -641,7 +645,8 @@ namespace Akka.Persistence
         {
             if (events == null || !events.Any())
             {
-                onComplete?.Invoke();
+                if (onComplete != null)
+                    DeferAsync<object>(null, _ => onComplete());
                 return;
             }
 
@@ -664,7 +669,8 @@ namespace Akka.Persistence
         {
             if (events == null || !events.Any())
             {
-                if (onCompleteAsync != null) RunTask(onCompleteAsync);
+                if (onCompleteAsync != null)
+                    DeferAsync<object>(null, async _ => await onCompleteAsync());
                 return;
             }
 
@@ -715,7 +721,8 @@ namespace Akka.Persistence
         {
             if (events == null || !events.Any())
             {
-                onComplete?.Invoke();
+                if (onComplete != null)
+                    DeferAsync<object>(null, _ => onComplete());
                 return;
             }
 
@@ -738,7 +745,8 @@ namespace Akka.Persistence
         {
             if (events == null || !events.Any())
             {
-                if (onCompleteAsync != null) RunTask(onCompleteAsync);
+                if (onCompleteAsync != null)
+                    DeferAsync<object>(null, async _ => await onCompleteAsync());
                 return;
             }
 

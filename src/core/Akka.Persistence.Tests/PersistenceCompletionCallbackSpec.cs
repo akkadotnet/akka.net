@@ -465,6 +465,73 @@ namespace Akka.Persistence.Tests
         }
 
         /// <summary>
+        /// Actor that tests sequential persist operations to verify ordering is maintained
+        /// even when empty events are involved
+        /// </summary>
+        private class SequentialPersistOrderingActor : UntypedPersistentActor
+        {
+            private readonly List<string> _executionOrder = new();
+            private readonly IActorRef _probe;
+
+            public override string PersistenceId { get; }
+
+            public SequentialPersistOrderingActor(string persistenceId, IActorRef probe)
+            {
+                PersistenceId = persistenceId;
+                _probe = probe;
+            }
+
+            protected override void OnRecover(object message) { }
+
+            protected override void OnCommand(object message)
+            {
+                switch (message)
+                {
+                    // Test: Persist followed by PersistAll with empty events
+                    // The empty PersistAll completion should run AFTER the Persist handler
+                    case "persist-then-empty":
+                        Persist(new TestEvent("first"), evt =>
+                        {
+                            _executionOrder.Add($"persist-handler:{evt.Data}");
+                        });
+                        PersistAll(Array.Empty<TestEvent>(), _ => { }, () =>
+                        {
+                            _executionOrder.Add("empty-completion");
+                            _probe.Tell("done");
+                        });
+                        break;
+
+                    // Test: Multiple PersistAll calls where middle one is empty
+                    case "persist-empty-persist":
+                        PersistAll(new[] { new TestEvent("first") }, evt =>
+                        {
+                            _executionOrder.Add($"first-handler:{evt.Data}");
+                        }, () =>
+                        {
+                            _executionOrder.Add("first-completion");
+                        });
+                        PersistAll(Array.Empty<TestEvent>(), _ => { }, () =>
+                        {
+                            _executionOrder.Add("empty-completion");
+                        });
+                        PersistAll(new[] { new TestEvent("last") }, evt =>
+                        {
+                            _executionOrder.Add($"last-handler:{evt.Data}");
+                        }, () =>
+                        {
+                            _executionOrder.Add("last-completion");
+                            _probe.Tell("done");
+                        });
+                        break;
+
+                    case "get-order":
+                        Sender.Tell(_executionOrder.ToArray());
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
         /// Actor that tests empty event list with various completion callback overloads
         /// </summary>
         private class EmptyEventsWithCompletionActor : UntypedPersistentActor
@@ -767,6 +834,51 @@ namespace Akka.Persistence.Tests
             actor.Tell("check");
             var completionCalled = await ExpectMsgAsync<bool>();
             completionCalled.Should().BeTrue();
+        }
+
+        [Fact(DisplayName = "Persist followed by PersistAll with empty events should maintain execution order")]
+        public async Task Persist_ThenEmptyPersistAll_Should_MaintainOrder()
+        {
+            var probe = CreateTestProbe();
+            var actor = ActorOf(Props.Create(() =>
+                new SequentialPersistOrderingActor(Name, probe)));
+
+            actor.Tell("persist-then-empty");
+            await probe.ExpectMsgAsync("done");
+
+            actor.Tell("get-order");
+            var order = await ExpectMsgAsync<string[]>();
+
+            // The empty PersistAll completion must run AFTER the Persist handler
+            order.Should().BeEquivalentTo(new[]
+            {
+                "persist-handler:first",
+                "empty-completion"
+            }, options => options.WithStrictOrdering());
+        }
+
+        [Fact(DisplayName = "Sequential PersistAll with empty events in middle should maintain execution order")]
+        public async Task SequentialPersistAll_WithEmptyInMiddle_Should_MaintainOrder()
+        {
+            var probe = CreateTestProbe();
+            var actor = ActorOf(Props.Create(() =>
+                new SequentialPersistOrderingActor(Name, probe)));
+
+            actor.Tell("persist-empty-persist");
+            await probe.ExpectMsgAsync("done");
+
+            actor.Tell("get-order");
+            var order = await ExpectMsgAsync<string[]>();
+
+            // All callbacks should execute in the order they were queued
+            order.Should().BeEquivalentTo(new[]
+            {
+                "first-handler:first",
+                "first-completion",
+                "empty-completion",
+                "last-handler:last",
+                "last-completion"
+            }, options => options.WithStrictOrdering());
         }
 
         #endregion
