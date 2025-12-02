@@ -1,3 +1,24 @@
+#### 1.5.57-beta1 December 2nd, 2025 ####
+
+Akka.NET v1.5.57-beta1 is a beta release containing a significant new feature for structured/semantic logging.
+
+**New Features:**
+
+* [Add native semantic logging support with property extraction](https://github.com/akkadotnet/akka.net/pull/7955) - Fixes [issue #7932](https://github.com/akkadotnet/akka.net/issues/7932). This release adds comprehensive structured logging support to Akka.NET with both positional (`{0}`) and named (`{PropertyName}`) message template parsing, enabling seamless integration with modern logging frameworks like Serilog, NLog, and Microsoft.Extensions.Logging. Key capabilities include:
+  - New `LogMessage.PropertyNames` and `GetProperties()` APIs for property extraction
+  - `SemanticLogMessageFormatter` as the new default formatter
+  - Performance optimized with 75% allocation reduction compared to the previous implementation
+  - Zero new dependencies and fully backward compatible
+  - EventFilter support for semantic templates in unit tests
+
+1 contributor since release 1.5.56
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 1 | 2317 | 14 | Aaron Stannard |
+
+To [see the full set of changes in Akka.NET v1.5.57-beta1, click here](https://github.com/akkadotnet/akka.net/milestone/140?closed=1)
+
 #### 1.5.56 November 25th, 2025 ####
 
 Akka.NET v1.5.56 is a patch release containing important bug fixes for Akka.Remote and Akka.Streams.
