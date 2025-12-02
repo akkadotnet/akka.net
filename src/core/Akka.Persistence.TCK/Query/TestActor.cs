@@ -8,6 +8,7 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
+using Akka.Event;
 using Akka.Persistence.Journal;
 
 namespace Akka.Persistence.TCK.Query
