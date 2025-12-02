@@ -8,7 +8,6 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
-using Akka.Event;
 using Akka.Persistence.Journal;
 
 namespace Akka.Persistence.TCK.Query
@@ -34,20 +33,12 @@ namespace Akka.Persistence.TCK.Query
 
         public override string PersistenceId { get; }
 
-        protected override void PreStart()
-        {
-            Log.Debug("[DIAG-ACTOR] TestActor {0} PreStart called", PersistenceId);
-            base.PreStart();
-        }
-
         protected override void OnRecover(object message)
         {
-            Log.Debug("[DIAG-ACTOR] TestActor {0} OnRecover: {1}", PersistenceId, message);
         }
 
         protected override void OnCommand(object message)
         {
-            Log.Debug("[DIAG-ACTOR] TestActor {0} OnCommand received: {1}", PersistenceId, message);
             switch (message)
             {
                 case DeleteCommand delete:
@@ -55,14 +46,8 @@ namespace Akka.Persistence.TCK.Query
                     Become(WhileDeleting(Sender)); // need to wait for delete ACK to return
                     break;
                 case string cmd:
-                    Log.Debug("[DIAG-ACTOR] TestActor {0} calling Persist for: {1}", PersistenceId, cmd);
                     var sender = Sender;
-                    Persist(cmd, e =>
-                    {
-                        Log.Debug("[DIAG-ACTOR] TestActor {0} Persist callback executing for: {1}", PersistenceId, e);
-                        sender.Tell($"{e}-done");
-                    });
-                    Log.Debug("[DIAG-ACTOR] TestActor {0} Persist call returned for: {1}", PersistenceId, cmd);
+                    Persist(cmd, e => sender.Tell($"{e}-done"));
                     break;
             }
         }
