@@ -383,7 +383,7 @@ namespace Akka.Persistence
                     // enables an early return to `processingCommands`, because if this counter hits `0`,
                     // we know the remaining pendingInvocations are all `persistAsync` created, which
                     // means we can go back to processing commands also - and these callbacks will be called as soon as possible
-                    if (invocation is StashingHandlerInvocation)
+                    if (invocation is IStashingInvocation)
                         _pendingStashingPersistInvocations--;
 
                     if (_pendingStashingPersistInvocations == 0)
@@ -398,15 +398,54 @@ namespace Akka.Persistence
             });
         }
 
-        private void PeekApplyHandler(object payload)
+        /// <summary>
+        /// Applies the handler for the first pending invocation.
+        /// For sync handlers, invokes directly. For async handlers, uses RunTask.
+        /// </summary>
+        /// <param name="payload">The event payload to pass to the handler.</param>
+        /// <param name="onComplete">Callback invoked when the handler completes (true if error).</param>
+        private void PeekApplyHandler(object payload, Action<bool> onComplete)
         {
-            try
+            var invocation = _pendingInvocations.First.Value;
+
+            if (invocation is IAsyncHandlerInvocation asyncInv)
             {
-                _pendingInvocations.First.Value.Handler(payload);
+                // Async handler - run via RunTask
+                RunTask(async () =>
+                {
+                    try
+                    {
+                        await asyncInv.AsyncHandler(payload);
+                        onComplete(false);
+                    }
+                    catch
+                    {
+                        onComplete(true);
+                        throw;
+                    }
+                    finally
+                    {
+                        FlushBatch();
+                    }
+                });
             }
-            finally
+            else if (invocation is ISyncHandlerInvocation syncInv)
             {
-                FlushBatch();
+                // Sync handler - invoke directly
+                try
+                {
+                    syncInv.Handler(payload);
+                    onComplete(false);
+                }
+                catch
+                {
+                    onComplete(true);
+                    throw;
+                }
+                finally
+                {
+                    FlushBatch();
+                }
             }
         }
 
@@ -421,16 +460,7 @@ namespace Akka.Persistence
                     if (m1.ActorInstanceId == _instanceId)
                     {
                         UpdateLastSequenceNr(m1.Persistent);
-                        try
-                        {
-                            PeekApplyHandler(m1.Persistent.Payload);
-                            onWriteMessageComplete(false);
-                        }
-                        catch
-                        {
-                            onWriteMessageComplete(true);
-                            throw;
-                        }
+                        PeekApplyHandler(m1.Persistent.Payload, onWriteMessageComplete);
                     }
 
                     break;
@@ -469,16 +499,7 @@ namespace Akka.Persistence
                 {
                     if (m.ActorInstanceId == _instanceId)
                     {
-                        try
-                        {
-                            PeekApplyHandler(m.Message);
-                            onWriteMessageComplete(false);
-                        }
-                        catch (Exception)
-                        {
-                            onWriteMessageComplete(true);
-                            throw;
-                        }
+                        PeekApplyHandler(m.Message, onWriteMessageComplete);
                     }
 
                     break;

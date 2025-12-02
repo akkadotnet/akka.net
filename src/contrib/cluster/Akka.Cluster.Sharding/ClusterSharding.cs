@@ -273,7 +273,7 @@ namespace Akka.Cluster.Sharding
     /// </para>
     /// <para>
     /// '''Shard Allocation''':
-    /// The logic deciding which shards to rebalance is defined in a plugable shard allocation
+    /// The logic deciding which shards to rebalance is defined in a pluggable shard allocation
     /// strategy. The default implementation <see cref="LeastShardAllocationStrategy"/>
     /// picks shards for handoff from the <see cref="Sharding.ShardRegion"/> with highest number of previously allocated shards.
     /// They will then be allocated to the <see cref="Sharding.ShardRegion"/> with lowest number of previously allocated shards,

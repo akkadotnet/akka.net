@@ -92,9 +92,20 @@ namespace Akka.Remote.Transport.DotNetty
                     context.Channel.LocalAddress, context.Channel.RemoteAddress,
                     context.Channel.Id, detailedError);
 
-                // Shutdown the ActorSystem on TLS handshake failure
-                var cs = CoordinatedShutdown.Get(Transport.System);
-                cs.Run(new TlsHandshakeFailureReason($"TLS handshake failed on channel [{context.Channel.LocalAddress}->{context.Channel.RemoteAddress}](Id={context.Channel.Id})"));
+                // Only shutdown the ActorSystem if this is a client-side failure
+                // Server-side failures (incoming connections) should just reject the connection
+                if (isClient)
+                {
+                    // Client-side: We initiated the connection and TLS failed - this is critical
+                    var cs = CoordinatedShutdown.Get(Transport.System);
+                    cs.Run(new TlsHandshakeFailureReason($"TLS handshake failed on outbound connection to [{context.Channel.RemoteAddress}]"));
+                }
+                else
+                {
+                    // Server-side: Someone connected to us with invalid TLS - just reject them
+                    Log.Warning("Rejected incoming connection from [{0}] due to TLS handshake failure. This is likely invalid or malicious traffic.",
+                        context.Channel.RemoteAddress);
+                }
 
                 context.CloseAsync();
                 return; // don't pass to next handlers

@@ -16,16 +16,43 @@ using System.Threading.Tasks;
 
 namespace Akka.Persistence
 {
-    public interface IPendingHandlerInvocation
+    /// <summary>
+    /// Base interface for pending handler invocations.
+    /// </summary>
+    internal interface IPendingHandlerInvocation
     {
         object Event { get; }
+    }
+
+    /// <summary>
+    /// Interface for invocations with synchronous handlers.
+    /// </summary>
+    internal interface ISyncHandlerInvocation : IPendingHandlerInvocation
+    {
         Action<object> Handler { get; }
     }
 
     /// <summary>
-    /// Forces actor to stash incoming commands until all invocations are handled.
+    /// Interface for invocations with asynchronous handlers.
     /// </summary>
-    public sealed class StashingHandlerInvocation : IPendingHandlerInvocation
+    internal interface IAsyncHandlerInvocation : IPendingHandlerInvocation
+    {
+        Func<object, Task> AsyncHandler { get; }
+    }
+
+    /// <summary>
+    /// Marker interface for stashing invocations that increment the stashing counter.
+    /// </summary>
+    internal interface IStashingInvocation : IPendingHandlerInvocation
+    {
+    }
+
+    /// <summary>
+    /// Forces actor to stash incoming commands until all invocations are handled.
+    /// Used by <see cref="Eventsourced.Persist{TEvent}(TEvent,Action{TEvent})"/> and
+    /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent})"/>.
+    /// </summary>
+    internal sealed class StashingHandlerInvocation : ISyncHandlerInvocation, IStashingInvocation
     {
         public StashingHandlerInvocation(object evt, Action<object> handler)
         {
@@ -34,16 +61,32 @@ namespace Akka.Persistence
         }
 
         public object Event { get; }
-
         public Action<object> Handler { get; }
+    }
+
+    /// <summary>
+    /// Stashing invocation with an asynchronous handler.
+    /// Used by <see cref="Eventsourced.Persist{TEvent}(TEvent,Func{TEvent,Task})"/> and
+    /// <see cref="Eventsourced.PersistAll{TEvent}(IEnumerable{TEvent},Func{TEvent,Task})"/>.
+    /// </summary>
+    internal sealed class StashingAsyncHandlerInvocation : IAsyncHandlerInvocation, IStashingInvocation
+    {
+        public StashingAsyncHandlerInvocation(object evt, Func<object, Task> asyncHandler)
+        {
+            Event = evt;
+            AsyncHandler = asyncHandler;
+        }
+
+        public object Event { get; }
+        public Func<object, Task> AsyncHandler { get; }
     }
 
     /// <summary>
     /// Unlike <see cref="StashingHandlerInvocation"/> this one does not force actor to stash commands.
     /// Originates from <see cref="Eventsourced.PersistAsync{TEvent}(TEvent,Action{TEvent})"/>
-    /// or <see cref="Eventsourced.DeferAsync{TEvent}"/> method calls.
+    /// or <see cref="Eventsourced.DeferAsync{TEvent}(TEvent,Action{TEvent})"/> method calls.
     /// </summary>
-    public sealed class AsyncHandlerInvocation : IPendingHandlerInvocation
+    internal sealed class AsyncHandlerInvocation : ISyncHandlerInvocation
     {
         public AsyncHandlerInvocation(object evt, Action<object> handler)
         {
@@ -52,8 +95,24 @@ namespace Akka.Persistence
         }
 
         public object Event { get; }
-
         public Action<object> Handler { get; }
+    }
+
+    /// <summary>
+    /// Non-stashing invocation with an asynchronous handler.
+    /// Used by <see cref="Eventsourced.PersistAsync{TEvent}(TEvent,Func{TEvent,Task})"/> and
+    /// <see cref="Eventsourced.DeferAsync{TEvent}(TEvent,Func{TEvent,Task})"/>.
+    /// </summary>
+    internal sealed class AsyncAsyncHandlerInvocation : IAsyncHandlerInvocation
+    {
+        public AsyncAsyncHandlerInvocation(object evt, Func<object, Task> asyncHandler)
+        {
+            Event = evt;
+            AsyncHandler = asyncHandler;
+        }
+
+        public object Event { get; }
+        public Func<object, Task> AsyncHandler { get; }
     }
 
     /// <summary>
@@ -311,6 +370,27 @@ namespace Akka.Persistence
         }
 
         /// <summary>
+        /// Asynchronously persists an <paramref name="event"/> with an async handler.
+        /// This method guarantees that no new commands will be received by a persistent actor
+        /// between a call to <see cref="Persist{TEvent}(TEvent,Func{TEvent,Task})"/> and execution of its handler.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="event">The event to persist.</param>
+        /// <param name="handler">The async handler to invoke after persistence.</param>
+        public void Persist<TEvent>(TEvent @event, Func<TEvent, Task> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            _pendingStashingPersistInvocations++;
+            _pendingInvocations.AddLast(new StashingAsyncHandlerInvocation(@event, o => handler((TEvent)o)));
+            _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
+                sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
+        }
+
+        /// <summary>
         /// Asynchronously persists series of <paramref name="events"/> in specified order.
         /// This is equivalent of multiple calls of <see cref="Persist{TEvent}(TEvent,System.Action{TEvent})"/> calls
         /// with the same handler, except that events are persisted atomically with this method.
@@ -339,6 +419,129 @@ namespace Akka.Persistence
 
             if (persistents.Count > 0)
                 _eventBatch.AddLast(new AtomicWrite(persistents.ToImmutable()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with a completion callback.
+        /// The <paramref name="onComplete"/> callback is invoked after all events have been persisted and their handlers executed.
+        /// This method guarantees that no new commands will be received until all handlers and the completion callback have finished.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="events">The events to persist.</param>
+        /// <param name="handler">The handler to invoke for each persisted event.</param>
+        /// <param name="onComplete">The callback to invoke after all events have been persisted and handled.</param>
+        public void PersistAll<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler, Action onComplete)
+        {
+            if (events == null || !events.Any())
+            {
+                if (onComplete != null)
+                    Defer<object>(null, _ => onComplete());
+                return;
+            }
+
+            PersistAll(events, handler);
+            if (onComplete != null)
+                Defer<object>(null, _ => onComplete());
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with an async completion callback.
+        /// The <paramref name="onCompleteAsync"/> callback is invoked after all events have been persisted and their handlers executed.
+        /// This method guarantees that no new commands will be received until all handlers and the completion callback have finished.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="events">The events to persist.</param>
+        /// <param name="handler">The handler to invoke for each persisted event.</param>
+        /// <param name="onCompleteAsync">The async callback to invoke after all events have been persisted and handled.</param>
+        public void PersistAll<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler, Func<Task> onCompleteAsync)
+        {
+            if (events == null || !events.Any())
+            {
+                if (onCompleteAsync != null)
+                    Defer<object>(null, async _ => await onCompleteAsync());
+                return;
+            }
+
+            PersistAll(events, handler);
+            if (onCompleteAsync != null)
+                Defer<object>(null, async _ => await onCompleteAsync());
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> with an async handler.
+        /// This method guarantees that no new commands will be received until all handlers have finished.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="events">The events to persist.</param>
+        /// <param name="handler">The async handler to invoke for each persisted event.</param>
+        public void PersistAll<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            if (events == null) return;
+
+            Func<object, Task> Inv(Func<TEvent, Task> h) => o => h((TEvent)o);
+            var asyncInv = Inv(handler);
+            var persistents = ImmutableList.CreateBuilder<IPersistentRepresentation>();
+            foreach (var @event in events)
+            {
+                _pendingStashingPersistInvocations++;
+                _pendingInvocations.AddLast(new StashingAsyncHandlerInvocation(@event, asyncInv));
+                persistents.Add(new Persistent(@event, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender));
+            }
+
+            if (persistents.Count > 0)
+                _eventBatch.AddLast(new AtomicWrite(persistents.ToImmutable()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> with an async handler and completion callback.
+        /// The <paramref name="onComplete"/> callback is invoked after all events have been persisted and their handlers executed.
+        /// This method guarantees that no new commands will be received until all handlers and the completion callback have finished.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="events">The events to persist.</param>
+        /// <param name="handler">The async handler to invoke for each persisted event.</param>
+        /// <param name="onComplete">The callback to invoke after all events have been persisted and handled.</param>
+        public void PersistAll<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler, Action onComplete)
+        {
+            if (events == null || !events.Any())
+            {
+                if (onComplete != null)
+                    Defer<object>(null, _ => onComplete());
+                return;
+            }
+
+            PersistAll(events, handler);
+            if (onComplete != null)
+                Defer<object>(null, _ => onComplete());
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> with an async handler and async completion callback.
+        /// The <paramref name="onCompleteAsync"/> callback is invoked after all events have been persisted and their handlers executed.
+        /// This method guarantees that no new commands will be received until all handlers and the completion callback have finished.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="events">The events to persist.</param>
+        /// <param name="handler">The async handler to invoke for each persisted event.</param>
+        /// <param name="onCompleteAsync">The async callback to invoke after all events have been persisted and handled.</param>
+        public void PersistAll<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler, Func<Task> onCompleteAsync)
+        {
+            if (events == null || !events.Any())
+            {
+                if (onCompleteAsync != null)
+                    Defer<object>(null, async _ => await onCompleteAsync());
+                return;
+            }
+
+            PersistAll(events, handler);
+            if (onCompleteAsync != null)
+                Defer<object>(null, async _ => await onCompleteAsync());
         }
 
         /// <summary>
@@ -382,6 +585,26 @@ namespace Akka.Persistence
         }
 
         /// <summary>
+        /// Asynchronously persists an <paramref name="event"/> with an async handler.
+        /// Unlike <see cref="Persist{TEvent}(TEvent,Func{TEvent,Task})"/>, this method allows
+        /// commands to be processed between the persist call and handler execution.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="event">The event to persist.</param>
+        /// <param name="handler">The async handler to invoke after persistence.</param>
+        public void PersistAsync<TEvent>(TEvent @event, Func<TEvent, Task> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            _pendingInvocations.AddLast(new AsyncAsyncHandlerInvocation(@event, o => handler((TEvent)o)));
+            _eventBatch.AddLast(new AtomicWrite(new Persistent(@event, persistenceId: PersistenceId,
+                sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender)));
+        }
+
+        /// <summary>
         /// Asynchronously persists series of <paramref name="events"/> in specified order.
         /// This is equivalent of multiple calls of <see cref="PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> calls
         /// with the same handler, except that events are persisted atomically with this method.
@@ -409,11 +632,135 @@ namespace Akka.Persistence
         }
 
         /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with a completion callback.
+        /// Unlike <see cref="PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent},Action)"/>, this method allows
+        /// commands to be processed between event handler executions.
+        /// The <paramref name="onComplete"/> callback is invoked after all events have been persisted and their handlers executed.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="events">The events to persist.</param>
+        /// <param name="handler">The handler to invoke for each persisted event.</param>
+        /// <param name="onComplete">The callback to invoke after all events have been persisted and handled.</param>
+        public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler, Action onComplete)
+        {
+            if (events == null || !events.Any())
+            {
+                if (onComplete != null)
+                    DeferAsync<object>(null, _ => onComplete());
+                return;
+            }
+
+            PersistAllAsync(events, handler);
+            if (onComplete != null)
+                DeferAsync<object>(null, _ => onComplete());
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> in specified order with an async completion callback.
+        /// Unlike <see cref="PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent},Func{Task})"/>, this method allows
+        /// commands to be processed between event handler executions.
+        /// The <paramref name="onCompleteAsync"/> callback is invoked after all events have been persisted and their handlers executed.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="events">The events to persist.</param>
+        /// <param name="handler">The handler to invoke for each persisted event.</param>
+        /// <param name="onCompleteAsync">The async callback to invoke after all events have been persisted and handled.</param>
+        public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Action<TEvent> handler, Func<Task> onCompleteAsync)
+        {
+            if (events == null || !events.Any())
+            {
+                if (onCompleteAsync != null)
+                    DeferAsync<object>(null, async _ => await onCompleteAsync());
+                return;
+            }
+
+            PersistAllAsync(events, handler);
+            if (onCompleteAsync != null)
+                DeferAsync<object>(null, async _ => await onCompleteAsync());
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> with an async handler.
+        /// Unlike <see cref="PersistAll{TEvent}(IEnumerable{TEvent},Func{TEvent,Task})"/>, this method allows
+        /// commands to be processed between event handler executions.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="events">The events to persist.</param>
+        /// <param name="handler">The async handler to invoke for each persisted event.</param>
+        public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            Func<object, Task> Inv(Func<TEvent, Task> h) => o => h((TEvent)o);
+            var asyncInv = Inv(handler);
+            var enumerable = events as TEvent[] ?? events.ToArray();
+            foreach (var @event in enumerable)
+            {
+                _pendingInvocations.AddLast(new AsyncAsyncHandlerInvocation(@event, asyncInv));
+            }
+
+            _eventBatch.AddLast(new AtomicWrite(enumerable.Select(e => new Persistent(e, persistenceId: PersistenceId,
+                    sequenceNr: NextSequenceNr(), writerGuid: _writerGuid, sender: Sender))
+                .ToImmutableList<IPersistentRepresentation>()));
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> with an async handler and completion callback.
+        /// Unlike <see cref="PersistAll{TEvent}(IEnumerable{TEvent},Func{TEvent,Task},Action)"/>, this method allows
+        /// commands to be processed between event handler executions.
+        /// The <paramref name="onComplete"/> callback is invoked after all events have been persisted and their handlers executed.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="events">The events to persist.</param>
+        /// <param name="handler">The async handler to invoke for each persisted event.</param>
+        /// <param name="onComplete">The callback to invoke after all events have been persisted and handled.</param>
+        public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler, Action onComplete)
+        {
+            if (events == null || !events.Any())
+            {
+                if (onComplete != null)
+                    DeferAsync<object>(null, _ => onComplete());
+                return;
+            }
+
+            PersistAllAsync(events, handler);
+            if (onComplete != null)
+                DeferAsync<object>(null, _ => onComplete());
+        }
+
+        /// <summary>
+        /// Asynchronously persists series of <paramref name="events"/> with an async handler and async completion callback.
+        /// Unlike <see cref="PersistAll{TEvent}(IEnumerable{TEvent},Func{TEvent,Task},Func{Task})"/>, this method allows
+        /// commands to be processed between event handler executions.
+        /// The <paramref name="onCompleteAsync"/> callback is invoked after all events have been persisted and their handlers executed.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="events">The events to persist.</param>
+        /// <param name="handler">The async handler to invoke for each persisted event.</param>
+        /// <param name="onCompleteAsync">The async callback to invoke after all events have been persisted and handled.</param>
+        public void PersistAllAsync<TEvent>(IEnumerable<TEvent> events, Func<TEvent, Task> handler, Func<Task> onCompleteAsync)
+        {
+            if (events == null || !events.Any())
+            {
+                if (onCompleteAsync != null)
+                    DeferAsync<object>(null, async _ => await onCompleteAsync());
+                return;
+            }
+
+            PersistAllAsync(events, handler);
+            if (onCompleteAsync != null)
+                DeferAsync<object>(null, async _ => await onCompleteAsync());
+        }
+
+        /// <summary>
         /// Defer the <paramref name="handler"/> execution until all pending handlers have been executed.
         /// Allows to define logic within the actor, which will respect the invocation-order-guarantee
         /// in respect to <see cref="PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> calls.
         /// That is, if <see cref="PersistAsync{TEvent}(TEvent,System.Action{TEvent})"/> was invoked before
-        /// <see cref="DeferAsync{TEvent}"/>, the corresponding handlers will be
+        /// <see cref="DeferAsync{TEvent}(TEvent,Action{TEvent})"/>, the corresponding handlers will be
         /// invoked in the same order as they were registered in.
         ///
         /// This call will NOT result in <paramref name="evt"/> being persisted, use
@@ -445,6 +792,79 @@ namespace Akka.Persistence
                 _pendingInvocations.AddLast(new AsyncHandlerInvocation(evt, o => handler((TEvent)o)));
                 _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
             }
+        }
+
+        /// <summary>
+        /// Defer the <paramref name="handler"/> execution until all pending handlers have been executed.
+        /// This is the async variant that accepts an async handler.
+        ///
+        /// This call will NOT result in <paramref name="evt"/> being persisted.
+        ///
+        /// If there are no pending persist handler calls, the <paramref name="handler"/> will be called immediately
+        /// via <see cref="RunTask"/>.
+        ///
+        /// If persistence of an earlier event fails, the persistent actor will stop, and the
+        /// <paramref name="handler"/> will not be run.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="evt">The event to pass to the handler.</param>
+        /// <param name="handler">The async handler to invoke.</param>
+        public void DeferAsync<TEvent>(TEvent evt, Func<TEvent, Task> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            if (_pendingInvocations.Count == 0)
+            {
+                RunTask(() => handler(evt));
+            }
+            else
+            {
+                _pendingInvocations.AddLast(new AsyncAsyncHandlerInvocation(evt, o => handler((TEvent)o)));
+                _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
+            }
+        }
+
+        /// <summary>
+        /// Internal stashing variant of Defer. Increments <c>_pendingStashingPersistInvocations</c>
+        /// to ensure commands remain stashed until this handler completes.
+        /// Used internally for completion callbacks on <see cref="PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent},Action)"/>.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="evt">The event to pass to the handler.</param>
+        /// <param name="handler">The handler to invoke.</param>
+        internal void Defer<TEvent>(TEvent evt, Action<TEvent> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            _pendingStashingPersistInvocations++;
+            _pendingInvocations.AddLast(new StashingHandlerInvocation(evt, o => handler((TEvent)o)));
+            _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
+        }
+
+        /// <summary>
+        /// Internal stashing variant of Defer with async handler. Increments <c>_pendingStashingPersistInvocations</c>
+        /// to ensure commands remain stashed until this handler completes.
+        /// Used internally for async completion callbacks on <see cref="PersistAll{TEvent}(IEnumerable{TEvent},Action{TEvent},Func{Task})"/>.
+        /// </summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="evt">The event to pass to the handler.</param>
+        /// <param name="handler">The async handler to invoke.</param>
+        internal void Defer<TEvent>(TEvent evt, Func<TEvent, Task> handler)
+        {
+            if (IsRecovering)
+            {
+                throw new InvalidOperationException("Cannot persist during replay. Events can be persisted when receiving RecoveryCompleted or later.");
+            }
+
+            _pendingStashingPersistInvocations++;
+            _pendingInvocations.AddLast(new StashingAsyncHandlerInvocation(evt, o => handler((TEvent)o)));
+            _eventBatch.AddLast(new NonPersistentMessage(evt, Sender));
         }
 
         /// <summary>

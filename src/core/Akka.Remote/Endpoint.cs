@@ -1481,8 +1481,17 @@ namespace Akka.Remote
                         send.Recipient, send.Recipient.Path, send.SenderOption ?? _system.DeadLetters);
                 }
 
-                var pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
-                    SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+                ByteString pdu;
+                try
+                {
+                    pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
+                        SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+                }
+                catch (Exception e) when (e is not SerializationException)
+                {
+                    // resolves https://github.com/akkadotnet/akka.net/issues/7922
+                    throw new SerializationException("Serializer failed with exception", e);
+                }
 
                 _remoteMetrics.LogPayloadBytes(send.Message, pdu.Length);
 
@@ -1515,14 +1524,6 @@ namespace Akka.Remote
                 _log.Error(
                   ex,
                   "Serialization failed for message [{0}]. Transient association error (association remains live)",
-                  LogPossiblyWrappedMessageType(send.Message));
-                return true;
-            }
-            catch (ArgumentException ex)
-            {
-                _log.Error(
-                  ex,
-                  "Serializer threw ArgumentException for message type [{0}]. Transient association error (association remains live)",
                   LogPossiblyWrappedMessageType(send.Message));
                 return true;
             }

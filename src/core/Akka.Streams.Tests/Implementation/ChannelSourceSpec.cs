@@ -6,6 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -91,6 +94,53 @@ namespace Akka.Streams.Tests.Implementation
             probe.ExpectNext(3);
             probe.ExpectNext(4);
             probe.ExpectNext(5);
+        }
+
+        /// <summary>
+        /// Reproduces GitHub issue #7940: NullReferenceException when completing
+        /// a ChannelReader while the stream is waiting for data.
+        /// </summary>
+        [Fact(DisplayName = "ChannelSource should not throw NRE when completing channel while waiting for data")]
+        public async Task ChannelSource_should_not_throw_NRE_when_completing_channel_while_waiting_for_data()
+        {
+            // This test reproduces the race condition from #7940
+            // Run multiple iterations to increase chance of hitting the race
+            for (var iteration = 0; iteration < 20; iteration++)
+            {
+                var channel = Channel.CreateUnbounded<string>();
+                var processed = new ConcurrentBag<string>();
+
+                // Exactly matches the repro from the issue - using ImmutableArray.Create and Sink.Ignore<Done>
+                var streamTask = ChannelSource.FromReader(channel.Reader)
+                    .Select(ImmutableArray.Create)
+                    .Select(s =>
+                    {
+                        foreach (var item in s) processed.Add(item);
+                        return Done.Instance;
+                    })
+                    .ToMaterialized(Sink.Ignore<Done>(), Keep.Right)
+                    .Run(_materializer);
+
+                // Write some items
+                var testInput = Enumerable.Range(1, 5).Select(i => i.ToString()).ToList();
+                foreach (var item in testInput)
+                    await channel.Writer.WriteAsync(item);
+
+                // Wait 1 second for stream to process items and then wait for more data
+                // This is the key to reproducing the race - the stream needs to be
+                // waiting in WaitToReadAsync when we complete the writer (channel is empty)
+                await Task.Delay(1000);
+
+                // Complete the channel - this can cause NRE if there's a race
+                // between OnReaderComplete and the async continuation of WaitToReadAsync
+                channel.Writer.Complete();
+
+                // Stream should complete cleanly without exceptions
+                await streamTask;
+
+                // Verify all items were processed
+                processed.Count.Should().Be(5, $"iteration {iteration} failed");
+            }
         }
     }
 }

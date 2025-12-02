@@ -7,7 +7,9 @@
 
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -28,13 +30,13 @@ namespace Akka.Remote.Tests.Transport
         {
         }
 
-        private static Config CreateConfig(bool enableSsl, string certPath, string certPassword, bool suppressValidation = true)
+        private static Config CreateConfig(bool enableSsl, string certPath, string certPassword, bool suppressValidation = true, int port = 0)
         {
             var baseConfig = ConfigurationFactory.ParseString(@"akka {
                 loglevel = DEBUG
                 actor.provider = ""Akka.Remote.RemoteActorRefProvider,Akka.Remote""
                 remote.dot-netty.tcp {
-                    port = 0
+                    port = " + port + @"
                     hostname = ""127.0.0.1""
                     enable-ssl = " + (enableSsl ? "on" : "off") + @"
                     log-transport = off
@@ -147,7 +149,66 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
+        [Fact(DisplayName = "Server should NOT shutdown when invalid traffic (like HTTP) hits TLS port")]
+        public async Task Server_side_invalid_traffic_should_not_shutdown_server()
+        {
+            // This test addresses issue https://github.com/akkadotnet/akka.net/issues/7938
+            // When invalid traffic (like HTTP requests) hits a TLS-enabled port,
+            // the server should reject the connection but NOT shut down
+            ActorSystem server = null;
 
+            try
+            {
+                // Start server with TLS enabled on a specific port
+                var port = 15557; // Use a fixed port for this test
+                var serverConfig = CreateConfig(true, ValidCertPath, Password, suppressValidation: true, port: port);
+                server = ActorSystem.Create("ServerSystem", serverConfig);
+
+                var serverEcho = server.ActorOf(Props.Create(() => new EchoActor()), "echo");
+
+                // Ensure the server is ready by waiting for the remote transport to be bound
+                var serverAddress = RARP.For(server).Provider.DefaultAddress;
+                Assert.NotNull(serverAddress);
+                Assert.Equal(port, serverAddress.Port.Value);
+
+                // Send invalid HTTP traffic to the TLS port (simulating the issue)
+                try
+                {
+                    using var tcpClient = new TcpClient();
+                    await tcpClient.ConnectAsync("127.0.0.1", port);
+
+                    // Send an HTTP OPTIONS request (as described in the bug report)
+                    var httpRequest = Encoding.UTF8.GetBytes("OPTIONS / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
+                    await tcpClient.GetStream().WriteAsync(httpRequest, 0, httpRequest.Length);
+                    await tcpClient.GetStream().FlushAsync();
+
+                    // Connection should be closed by server after rejecting invalid TLS
+                    tcpClient.Close();
+                }
+                catch
+                {
+                    // Connection might be closed by server, that's expected
+                }
+
+                // Verify the server hasn't initiated shutdown
+                // If it was going to shut down due to TLS failure, it would have done so immediately
+                await AwaitConditionAsync(() => !server.WhenTerminated.IsCompleted,
+                    TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100));
+
+                // CRITICAL ASSERTION: Server should NOT have shut down
+                Assert.False(server.WhenTerminated.IsCompleted,
+                    "Server should NOT shut down after receiving invalid HTTP traffic on TLS port");
+
+                // Also verify the system is still functional
+                var testActor = server.ActorOf(Props.Empty, "test-actor");
+                Assert.NotNull(testActor);
+            }
+            finally
+            {
+                if (server != null)
+                    Shutdown(server, TimeSpan.FromSeconds(10));
+            }
+        }
 
         private sealed class EchoActor : ReceiveActor
         {
