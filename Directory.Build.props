@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.56</VersionPrefix>
+    <VersionPrefix>1.5.57-beta2</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -50,15 +50,62 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.56 is a patch release containing important bug fixes for Akka.Remote and Akka.Streams.
+    <PackageReleaseNotes>Akka.NET v1.5.57-beta2 is a beta release containing significant new APIs for Akka.Persistence that add completion callbacks and async handler support.
 
-**Bug Fixes:**
+**New Features:**
 
-* [Fix: Akka.Remote should not shutdown on invalid TLS traffic](https://github.com/akkadotnet/akka.net/pull/7952) - Fixes [issue #7938](https://github.com/akkadotnet/akka.net/issues/7938) where invalid traffic (like HTTP requests) hitting a TLS-enabled Akka.Remote port would cause the entire ActorSystem to shut down. Server now rejects invalid connections gracefully without terminating.
+* [Persistence completion callbacks via Defer - simplified alternative](https://github.com/akkadotnet/akka.net/pull/7957) - This release adds completion callback and async handler support to `Persist`, `PersistAsync`, `PersistAll`, and `PersistAllAsync` methods in Akka.Persistence. Key improvements include:
+  - **Async Handler Support**: All persist methods now support `Func&lt;TEvent, Task&gt;` handlers for async event processing
+  - **Completion Callbacks**: `PersistAll` and `PersistAllAsync` now accept optional completion callbacks (both sync `Action` and async `Func&lt;Task&gt;`) that execute after all events are persisted and handled
+  - **Ordering Guarantees**: Completion callbacks use `Defer`/`DeferAsync` internally to maintain strict ordering guarantees
+  - **Zero Breaking Changes**: All new APIs are additive overloads
 
-* [fix(streams): prevent race condition in ChannelSource on channel completion](https://github.com/akkadotnet/akka.net/pull/7951) - Fixes [issue #7940](https://github.com/akkadotnet/akka.net/issues/7940) where a `NullReferenceException` could occur when completing a `ChannelWriter` while the stream is waiting for data. Added atomic flag to prevent race condition between `OnReaderComplete` and `OnValueRead` callbacks.
+**Code Examples:**
 
-To see the full set of changes in Akka.NET v1.5.56, click here: https://github.com/akkadotnet/akka.net/milestone/139?closed=1</PackageReleaseNotes>
+```csharp
+// Async handler support - process events asynchronously
+Persist(new OrderPlaced(orderId), async evt =&gt;
+{
+    await _orderService.ProcessOrderAsync(evt);
+});
+
+// PersistAll with completion callback - know when all events are done
+PersistAll(orderEvents, evt =&gt;
+{
+    _state.Apply(evt);
+}, onComplete: () =&gt;
+{
+    // All events persisted and handlers executed
+    _logger.Info("Order batch completed");
+    Sender.Tell(new BatchComplete());
+});
+
+// PersistAll with async handler AND async completion callback
+PersistAll(events,
+    handler: async evt =&gt; await ProcessEventAsync(evt),
+    onCompleteAsync: async () =&gt;
+    {
+        await NotifyCompletionAsync();
+        Sender.Tell(Done.Instance);
+    });
+
+// PersistAllAsync with completion - allows commands between handlers
+PersistAllAsync(largeEventBatch,
+    handler: evt =&gt; _state.Apply(evt),
+    onComplete: () =&gt; Sender.Tell(new BatchProcessed()));
+```
+
+**Technical Details:**
+
+The implementation maintains Akka.Persistence's strict ordering guarantees by using `Defer`/`DeferAsync` for completion callbacks, ensuring they execute in order even when called with empty event collections. The new async handler invocations (`IAsyncHandlerInvocation`) are processed via `RunTask` to preserve the actor's single-threaded execution model.
+
+1 contributor since release 1.5.57-beta1
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 1 | 1386 | 67 | Aaron Stannard |
+
+To [see the full set of changes in Akka.NET v1.5.57-beta2, click here](https://github.com/akkadotnet/akka.net/milestone/141?closed=1)</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
