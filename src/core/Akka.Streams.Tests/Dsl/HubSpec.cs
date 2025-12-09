@@ -270,7 +270,10 @@ namespace Akka.Streams.Tests.Dsl
                         .ExpectOneAsync(async () =>
                         {
                             Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
-                            Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
+                            // Throttle the successful producer to ensure the failing producer has time to fail and log
+                            Source.From(Enumerable.Range(1, 10))
+                                .Throttle(5, TimeSpan.FromMilliseconds(150), 5, ThrottleMode.Shaping)
+                                .RunWith(sink, Materializer);
                             var result = await task.WaitAsync(3.Seconds());
                             result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
                         });
@@ -562,6 +565,10 @@ namespace Akka.Streams.Tests.Dsl
 
                 await downstream1.RequestAsync(4);
                 await downstream2.RequestAsync(8);
+
+                // Sending the first element is in a race with downstream subscribing.
+                // Give a bit of time for the downstream to complete subscriptions.
+                await Task.Delay(100);
 
                 await upstream.AsyncBuilder()
                     .SendNext(Enumerable.Range(1, 8))

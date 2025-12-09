@@ -7,12 +7,6 @@
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
 namespace Akka.Persistence
 {
-    public sealed class AsyncHandlerInvocation : Akka.Persistence.IPendingHandlerInvocation
-    {
-        public AsyncHandlerInvocation(object evt, System.Action<object> handler) { }
-        public object Event { get; }
-        public System.Action<object> Handler { get; }
-    }
     public abstract class AtLeastOnceDeliveryActor : Akka.Persistence.PersistentActor
     {
         protected AtLeastOnceDeliveryActor() { }
@@ -111,6 +105,18 @@ namespace Akka.Persistence
         public bool Equals(Akka.Persistence.AtomicWrite other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class CheckJournalHealth : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+    {
+        public CheckJournalHealth(System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.CancellationToken CancellationToken { get; }
+        public override string ToString() { }
+    }
+    public sealed class CheckSnapshotStoreHealth : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest
+    {
+        public CheckSnapshotStoreHealth(System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.CancellationToken CancellationToken { get; }
         public override string ToString() { }
     }
     public sealed class DeleteMessagesFailure : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Persistence.DeleteMessagesFailure>
@@ -235,6 +241,7 @@ namespace Akka.Persistence
         public override void AroundPreStart() { }
         protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public void DeferAsync<TEvent>(TEvent evt, System.Action<TEvent> handler) { }
+        public void DeferAsync<TEvent>(TEvent evt, System.Func<TEvent, System.Threading.Tasks.Task> handler) { }
         public void DeleteMessages(long toSequenceNr) { }
         public void DeleteSnapshot(long sequenceNr) { }
         public void DeleteSnapshots(Akka.Persistence.SnapshotSelectionCriteria criteria) { }
@@ -244,9 +251,21 @@ namespace Akka.Persistence
         protected virtual void OnRecoveryFailure(System.Exception reason, object message = null) { }
         protected virtual void OnReplaySuccess() { }
         public void Persist<TEvent>(TEvent @event, System.Action<TEvent> handler) { }
+        public void Persist<TEvent>(TEvent @event, System.Func<TEvent, System.Threading.Tasks.Task> handler) { }
         public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
+        public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler, System.Action onComplete) { }
+        public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler, System.Func<System.Threading.Tasks.Task> onCompleteAsync) { }
+        public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler) { }
+        public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler, System.Action onComplete) { }
+        public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler, System.Func<System.Threading.Tasks.Task> onCompleteAsync) { }
         public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
+        public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler, System.Action onComplete) { }
+        public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler, System.Func<System.Threading.Tasks.Task> onCompleteAsync) { }
+        public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler) { }
+        public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler, System.Action onComplete) { }
+        public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler, System.Func<System.Threading.Tasks.Task> onCompleteAsync) { }
         public void PersistAsync<TEvent>(TEvent @event, System.Action<TEvent> handler) { }
+        public void PersistAsync<TEvent>(TEvent @event, System.Func<TEvent, System.Threading.Tasks.Task> handler) { }
         protected abstract bool ReceiveCommand(object message);
         protected abstract bool ReceiveRecover(object message);
         protected void RunTask(System.Func<System.Threading.Tasks.Task> action) { }
@@ -261,11 +280,6 @@ namespace Akka.Persistence
     }
     public interface IJournalRequest : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
     public interface IJournalResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
-    public interface IPendingHandlerInvocation
-    {
-        object Event { get; }
-        System.Action<object> Handler { get; }
-    }
     public interface IPersistenceMessage : Akka.Actor.INoSerializationVerificationNeeded { }
     public interface IPersistenceRecovery
     {
@@ -318,6 +332,12 @@ namespace Akka.Persistence
     public interface IStashOverflowStrategyConfigurator
     {
         Akka.Persistence.IStashOverflowStrategy Create(Akka.Configuration.Config config);
+    }
+    public sealed class JournalHealthCheckResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalResponse, Akka.Persistence.IPersistenceMessage
+    {
+        public JournalHealthCheckResponse(Akka.Persistence.PersistenceHealthCheckResult result) { }
+        public Akka.Persistence.PersistenceHealthCheckResult Result { get; }
+        public override string ToString() { }
     }
     public sealed class LoadSnapshot : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotRequest, System.IEquatable<Akka.Persistence.LoadSnapshot>
     {
@@ -378,11 +398,36 @@ namespace Akka.Persistence
         public Akka.Persistence.IStashOverflowStrategy DefaultInternalStashOverflowStrategy { get; }
         public Akka.Persistence.PersistenceSettings Settings { get; }
         public Akka.Persistence.Journal.EventAdapters AdaptersFor(string journalPluginId) { }
+        public System.Threading.Tasks.Task<Akka.Persistence.PersistenceHealthCheckResult> CheckJournalHealthAsync(string journalPluginId, System.Threading.CancellationToken cancellationToken = null) { }
+        public System.Threading.Tasks.Task<Akka.Persistence.PersistenceHealthCheckResult> CheckSnapshotStoreHealthAsync(string snapshotStorePluginId, System.Threading.CancellationToken cancellationToken = null) { }
         [Akka.Annotations.InternalStableApiAttribute()]
         public Akka.Actor.IActorRef JournalFor(string journalPluginId) { }
         public string PersistenceId(Akka.Actor.IActorRef actor) { }
         [Akka.Annotations.InternalStableApiAttribute()]
         public Akka.Actor.IActorRef SnapshotStoreFor(string snapshotPluginId) { }
+    }
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public struct PersistenceHealthCheckResult : System.IEquatable<Akka.Persistence.PersistenceHealthCheckResult>
+    {
+        public PersistenceHealthCheckResult(Akka.Persistence.PersistenceHealthStatus Status, string Description = null, System.Exception Exception = null, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0,
+                0})] System.Collections.Generic.IReadOnlyDictionary<string, object> Data = null) { }
+        [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0,
+                0})]
+        public System.Collections.Generic.IReadOnlyDictionary<string, object> Data { get; set; }
+        public string Description { get; set; }
+        public System.Exception Exception { get; set; }
+        public Akka.Persistence.PersistenceHealthStatus Status { get; set; }
+    }
+    public enum PersistenceHealthStatus
+    {
+        Healthy = 0,
+        Degraded = 1,
+        Unhealthy = 2,
     }
     public sealed class PersistenceSettings : Akka.Actor.Settings
     {
@@ -645,11 +690,11 @@ namespace Akka.Persistence
         public override int GetHashCode() { }
         public override string ToString() { }
     }
-    public sealed class StashingHandlerInvocation : Akka.Persistence.IPendingHandlerInvocation
+    public sealed class SnapshotStoreHealthCheckResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IPersistenceMessage, Akka.Persistence.ISnapshotMessage, Akka.Persistence.ISnapshotResponse
     {
-        public StashingHandlerInvocation(object evt, System.Action<object> handler) { }
-        public object Event { get; }
-        public System.Action<object> Handler { get; }
+        public SnapshotStoreHealthCheckResponse(Akka.Persistence.PersistenceHealthCheckResult result) { }
+        public Akka.Persistence.PersistenceHealthCheckResult Result { get; }
+        public override string ToString() { }
     }
     public sealed class ThrowExceptionConfigurator : Akka.Persistence.IStashOverflowStrategyConfigurator
     {
@@ -877,6 +922,7 @@ namespace Akka.Persistence.Journal
     {
         protected readonly bool CanPublish;
         protected AsyncWriteJournal() { }
+        public virtual System.Threading.Tasks.Task<Akka.Persistence.PersistenceHealthCheckResult> CheckHealthAsync(System.Threading.CancellationToken cancellationToken = null) { }
         protected abstract System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken);
         public abstract System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, System.Threading.CancellationToken cancellationToken);
         protected virtual bool Receive(object message) { }
@@ -1006,16 +1052,18 @@ namespace Akka.Persistence.Journal
     public class MemoryJournal : Akka.Persistence.Journal.AsyncWriteJournal
     {
         public MemoryJournal() { }
-        protected virtual System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Messages { get; }
+        protected virtual System.Collections.Generic.Dictionary<string, long> DeletedTo { get; }
+        protected virtual System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation> EventLog { get; }
+        protected virtual System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation>> EventsByPersistenceId { get; }
+        protected virtual System.Threading.ReaderWriterLockSlim Lock { get; }
         public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Add(Akka.Persistence.IPersistentRepresentation persistent) { }
         public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Delete(string pid, long seqNr) { }
         protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         public long HighestSequenceNr(string pid) { }
-        public System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max) { }
+        public System.Collections.Generic.IEnumerable<Akka.Persistence.IPersistentRepresentation> Read(string pid, long from, long to, long max) { }
         public override System.Threading.Tasks.Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         protected override bool ReceivePluginInternal(object message) { }
         public override System.Threading.Tasks.Task ReplayMessagesAsync(Akka.Actor.IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max, System.Action<Akka.Persistence.IPersistentRepresentation> recoveryCallback) { }
-        public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Update(string pid, long seqNr, System.Func<Akka.Persistence.IPersistentRepresentation, Akka.Persistence.IPersistentRepresentation> updater) { }
         protected override System.Threading.Tasks.Task<System.Collections.Immutable.IImmutableList<System.Exception>> WriteMessagesAsync(System.Collections.Generic.IEnumerable<Akka.Persistence.AtomicWrite> messages, System.Threading.CancellationToken cancellationToken) { }
         public sealed class CurrentPersistenceIds : Akka.Event.IDeadLetterSuppression
         {
@@ -1130,7 +1178,10 @@ namespace Akka.Persistence.Journal
     public class SharedMemoryJournal : Akka.Persistence.Journal.MemoryJournal
     {
         public SharedMemoryJournal() { }
-        protected override System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Messages { get; }
+        protected override System.Collections.Generic.Dictionary<string, long> DeletedTo { get; }
+        protected override System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation> EventLog { get; }
+        protected override System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<Akka.Persistence.IPersistentRepresentation>> EventsByPersistenceId { get; }
+        protected override System.Threading.ReaderWriterLockSlim Lock { get; }
     }
     public struct SingleEventSequence : Akka.Persistence.Journal.IEventSequence, System.IEquatable<Akka.Persistence.Journal.IEventSequence>
     {
@@ -1235,6 +1286,7 @@ namespace Akka.Persistence.Snapshot
     public abstract class SnapshotStore : Akka.Actor.ActorBase
     {
         protected SnapshotStore() { }
+        public virtual System.Threading.Tasks.Task<Akka.Persistence.PersistenceHealthCheckResult> CheckHealthAsync(System.Threading.CancellationToken cancellationToken = null) { }
         protected abstract System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata, System.Threading.CancellationToken cancellationToken);
         protected abstract System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken);
         protected abstract System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken);

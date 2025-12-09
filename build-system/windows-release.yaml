@@ -3,7 +3,6 @@
 
 pool:
   vmImage: windows-latest
-  demands: Cmd
 
 trigger:
   branches:

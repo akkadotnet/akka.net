@@ -240,3 +240,4 @@ launchSettings.json
 
 # Claude worktree management
 .claude-wt/worktrees
+/.playwright-mcp

@@ -15,6 +15,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
@@ -143,23 +144,35 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 2)).PrefixAndTail(1).RunWith(futureSink, Materializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut.Result.Item1.Should().BeEquivalentTo(Enumerable.Range(1, 1));
-                var tail = fut.Result.Item2;
+                var (list, tail) = await fut.WaitAsync(3.Seconds());
+                list.Should().BeEquivalentTo(Enumerable.Range(1, 1));
 
                 var subscriber1 = this.CreateSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber1)).Run(Materializer);
+                await subscriber1.EnsureSubscriptionAsync();
 
                 var subscriber2 = this.CreateSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber2)).Run(Materializer);
+                await subscriber2.EnsureSubscriptionAsync();
 
-                subscriber2.ExpectSubscriptionAndError(signalDemand: false)
-                    .Message.Should()
-                    .Be("Substream Source cannot be materialized more than once");
-                await subscriber1.RequestNext(2).ExpectCompleteAsync();
+                // One of the subscriber must fail, which one, we don't know yet
+                TestSubscriber.Probe<int> success;
+                using (var cts = new CancellationTokenSource())
+                {
+                    var t1 = subscriber1.ExpectErrorAsync(cts.Token);
+                    var t2 = subscriber2.ExpectErrorAsync(cts.Token);
+                    var failed = await Task.WhenAny(t1, t2);
+                    await cts.CancelAsync();
+                    
+                    (await failed).Message.Should().Be("Substream Source cannot be materialized more than once");
+                    
+                    success = failed == t1 ? subscriber2 : subscriber1;
+                }
+
+                await success.RequestNext(2).ExpectCompleteAsync();
             }, Materializer);
         }
-
+        
         [Fact]
         public async Task PrefixAndTail_must_signal_error_if_substream_has_been_not_subscribed_in_time()
         {

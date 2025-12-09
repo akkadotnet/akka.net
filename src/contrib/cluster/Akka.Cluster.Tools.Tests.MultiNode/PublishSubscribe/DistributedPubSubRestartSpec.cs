@@ -103,11 +103,13 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
             await ExpectMsgAsync("msg1");
             await EnterBarrierAsync("got-msg1");
 
+            // All nodes capture baseline DeltaCount before node-specific logic
+            Mediator.Tell(DeltaCount.Instance);
+            var oldDeltaCount = await ExpectMsgAsync<long>();
+            await EnterBarrierAsync("old-delta-count");
+
             await RunOnAsync(async () =>
             {
-                Mediator.Tell(DeltaCount.Instance);
-                var oldDeltaCount = await ExpectMsgAsync<long>();
-
                 await EnterBarrierAsync("end");
 
                 Mediator.Tell(DeltaCount.Instance);
@@ -117,9 +119,6 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
             await RunOnAsync(async () =>
             {
-                Mediator.Tell(DeltaCount.Instance);
-                var oldDeltaCount = await ExpectMsgAsync<long>();
-
                 var thirdAddress = (await NodeAsync(_config.Third)).Address;
                 await TestConductor.Shutdown(_config.Third).WaitAsync(30.Seconds());
 
