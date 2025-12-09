@@ -104,7 +104,7 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
             // schedule to simulate slower consumer
             Timers.StartSingleTimer(delivery, // have to use a unique-per-message key here, otherwise messages from multiple producers will cancel each other
                 new SomeAsyncJob(delivery.Msg, delivery.ConfirmTo, delivery.ProducerId, delivery.SeqNr),
-                TimeSpan.FromMilliseconds(10));
+                Delay);
         }
     }
 

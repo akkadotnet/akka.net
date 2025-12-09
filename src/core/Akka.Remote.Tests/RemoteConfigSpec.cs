@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Akka.Configuration;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Akka.Util.Internal;
@@ -114,12 +115,36 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
+        public void SSL_should_have_secure_defaults_when_enabled()
+        {
+            // Simple test - just enable SSL and check the defaults from reference.conf
+            var certPath = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "Resources", "akka-validcert.pfx");
+            var config = ConfigurationFactory.ParseString($@"
+                akka.remote.dot-netty.tcp.enable-ssl = true
+                akka.remote.dot-netty.tcp.ssl.certificate {{
+                    path = ""{certPath.Replace("\\", "\\\\")}""
+                    password = ""password""
+                }}
+            ").WithFallback(RARP.For(Sys).Provider.RemoteSettings.Config);
+
+            var c = config.GetConfig("akka.remote.dot-netty.tcp");
+            var s = DotNettyTransportSettings.Create(c);
+
+            // Verify SSL is enabled
+            Assert.True(s.EnableSsl);
+
+            // Verify secure defaults
+            Assert.True(s.Ssl.RequireMutualAuthentication, "Mutual TLS should be enabled by default");
+            Assert.False(s.Ssl.SuppressValidation, "Certificate validation should not be suppressed by default");
+        }
+
+        [Fact]
         public void When_remoting_works_in_Mono_ip_enforcement_should_be_defaulted_to_true()
         {
             if (!IsMono) return; // skip IF NOT using Mono
             var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
             var s = DotNettyTransportSettings.Create(c);
-            
+
             Assert.True(s.EnforceIpFamily);
         }
 

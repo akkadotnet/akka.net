@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Streams.Stage;
@@ -20,6 +21,10 @@ namespace Akka.Streams.Implementation
         private readonly Action<Exception> _onValueReadFailure;
         private readonly Action<Exception> _onReaderComplete;
         private readonly Action<Task<bool>> _onReadReady;
+
+        // Flag to prevent race condition between OnReaderComplete and OnValueRead
+        // when channel completion and WaitToReadAsync fire simultaneously (issue #7940)
+        private int _completing;
 
         public ChannelSourceLogic(SourceShape<T> source, Outlet<T> outlet,
             ChannelReader<T> reader) : base(source)
@@ -44,20 +49,41 @@ namespace Akka.Streams.Implementation
 
         private void OnReaderComplete(Exception reason)
         {
+            // Use atomic compare-exchange to ensure only one completion path runs
+            // This prevents race with OnValueRead when both fire simultaneously
+            if (Interlocked.CompareExchange(ref _completing, 1, 0) != 0)
+                return; // Already completing from another path
+
             if (reason is null)
                 CompleteStage();
             else
                 FailStage(reason);
         }
 
-        private void OnValueReadFailure(Exception reason) => FailStage(reason);
+        private void OnValueReadFailure(Exception reason)
+        {
+            // Use atomic compare-exchange to ensure only one completion path runs
+            if (Interlocked.CompareExchange(ref _completing, 1, 0) != 0)
+                return; // Already completing from another path
+
+            FailStage(reason);
+        }
 
         private void OnValueRead(bool dataAvailable)
         {
             if (dataAvailable && _reader.TryRead(out var element))
+            {
                 Push(_outlet, element);
+            }
             else
+            {
+                // Use atomic compare-exchange to ensure only one completion path runs
+                // This prevents race with OnReaderComplete when both fire simultaneously
+                if (Interlocked.CompareExchange(ref _completing, 1, 0) != 0)
+                    return; // Already completing from another path
+
                 CompleteStage();
+            }
         }
 
         public override void OnPull()
@@ -73,9 +99,17 @@ namespace Akka.Streams.Implementation
                 {
                     var dataAvailable = continuation.GetAwaiter().GetResult();
                     if (dataAvailable && _reader.TryRead(out element))
+                    {
                         Push(_outlet, element);
+                    }
                     else
+                    {
+                        // Use atomic compare-exchange to ensure only one completion path runs
+                        if (Interlocked.CompareExchange(ref _completing, 1, 0) != 0)
+                            return; // Already completing from another path
+
                         CompleteStage();
+                    }
                 }
                 else
                     continuation.AsTask().ContinueWith(_onReadReady);

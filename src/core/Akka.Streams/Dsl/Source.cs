@@ -844,10 +844,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> Failed<T>(Exception cause)
         {
-            return new Source<T, NotUsed>(new PublisherSource<T>(
-                new ErrorPublisher<T>(cause, "FailedSource"),
-                DefaultAttributes.FailedSource,
-                Shape<T>("FailedSource")));
+            return Source.FromGraph(new Implementation.FailedSource<T>(cause, "FailedSource"));
         }
 
         /// <summary>

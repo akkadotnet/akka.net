@@ -382,10 +382,9 @@ namespace Akka.Streams.Dsl
                 {
                     if(e is Implementation.NormalShutdownException)
                         CompleteStage();
-                    else {
+                    else
                         throw new MergeHub.ProducerFailed(
                             "Upstream producer failed with exception, removing from MergeHub now", e);
-                    }
                 }
 
                 private void OnDemand(long moreDemand)

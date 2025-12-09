@@ -569,14 +569,21 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                             _producerController.Tell(new ShardingProducerController.Start<Job>(ctx.Self));
                     }, "sendNextAdapter");
 
-            // simulate fast producer
-            Timers.StartPeriodicTimer("tick", Tick.Instance, TimeSpan.FromMilliseconds(20));
+            // Timer will start when first RequestNext arrives (see Idle method)
         }
 
         private void Idle(int n)
         {
             Receive<Tick>(_ => { }); // ignore
-            Receive<RequestNext>(next => { Become(() => Active(n + 1, next.SendNextTo)); });
+            Receive<RequestNext>(next =>
+            {
+                // Start timer on first RequestNext to avoid race condition
+                // where ticks arrive before producer is ready to send messages
+                if (!Timers.IsTimerActive("tick"))
+                    Timers.StartPeriodicTimer("tick", Tick.Instance, TimeSpan.FromMilliseconds(20));
+
+                Become(() => Active(n + 1, next.SendNextTo));
+            });
         }
 
         private void Active(int n, IActorRef sendTo)

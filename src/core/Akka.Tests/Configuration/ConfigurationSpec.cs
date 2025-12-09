@@ -50,7 +50,7 @@ namespace Akka.Tests.Configuration
             settings.LogDeadLetters.ShouldBe(10);
             settings.LogDeadLettersDuringShutdown.ShouldBeFalse();
             settings.LogDeadLettersSuspendDuration.ShouldBe(TimeSpan.FromMinutes(5));
-            settings.LogFormatter.Should().BeOfType<DefaultLogMessageFormatter>();
+            settings.LogFormatter.Should().BeOfType<SemanticLogMessageFormatter>();
 
             settings.ProviderClass.ShouldBe(typeof (LocalActorRefProvider).FullName);
             settings.SupervisorStrategyClass.ShouldBe(typeof (DefaultSupervisorStrategy).FullName);

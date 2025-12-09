@@ -33,11 +33,11 @@ akka.remote.dot-netty.tcp.port = {port}";
 
         private ActorSystem _sys1;
         private ActorSystem _sys2;
-        
-        public RemoteAskFailureSpec(ITestOutputHelper output) : base(Config(12552), nameof(RemoteAskFailureSpec), output)
+
+        public RemoteAskFailureSpec(ITestOutputHelper output) : base(Config(0), nameof(RemoteAskFailureSpec), output)
         {
             _sys1 = Sys;
-            _sys2 = ActorSystem.Create(Sys.Name, Config(19999));
+            _sys2 = ActorSystem.Create(Sys.Name, Config(0));
             InitializeLogger(_sys2);
         }
 
@@ -51,7 +51,8 @@ akka.remote.dot-netty.tcp.port = {port}";
         public async Task RemoteSelectorFailureMessageTest()
         {
             _sys2.ActorOf(Props.Create(() => new FailActor()), "fail");
-            var selector = _sys1.ActorSelection($"akka.tcp://{_sys2.Name}@localhost:19999/user/fail");
+            var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
+            var selector = _sys1.ActorSelection($"akka.tcp://{_sys2.Name}@{sys2Address.Host}:{sys2Address.Port}/user/fail");
 
             var fail = await selector.Ask<Status.Failure>("doesn't matter");
             fail.Cause.Should().NotBeNull();
@@ -63,7 +64,8 @@ akka.remote.dot-netty.tcp.port = {port}";
         public async Task RemoteSelectorFailureExceptionTest()
         {
             _sys2.ActorOf(Props.Create(() => new FailActor()), "fail");
-            var selector = _sys1.ActorSelection($"akka.tcp://{_sys2.Name}@localhost:19999/user/fail");
+            var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
+            var selector = _sys1.ActorSelection($"akka.tcp://{_sys2.Name}@{sys2Address.Host}:{sys2Address.Port}/user/fail");
 
             (await Awaiting(async () =>
             {

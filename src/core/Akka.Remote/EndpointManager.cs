@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Remote.Transport.DotNetty;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util.Internal;
