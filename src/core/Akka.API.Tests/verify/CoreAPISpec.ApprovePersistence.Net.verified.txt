@@ -7,12 +7,6 @@
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Persistence
 {
-    public sealed class AsyncHandlerInvocation : Akka.Persistence.IPendingHandlerInvocation
-    {
-        public AsyncHandlerInvocation(object evt, System.Action<object> handler) { }
-        public object Event { get; }
-        public System.Action<object> Handler { get; }
-    }
     public abstract class AtLeastOnceDeliveryActor : Akka.Persistence.PersistentActor
     {
         protected AtLeastOnceDeliveryActor() { }
@@ -246,6 +240,7 @@ namespace Akka.Persistence
         public override void AroundPreStart() { }
         protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public void DeferAsync<TEvent>(TEvent evt, System.Action<TEvent> handler) { }
+        public void DeferAsync<TEvent>(TEvent evt, System.Func<TEvent, System.Threading.Tasks.Task> handler) { }
         public void DeleteMessages(long toSequenceNr) { }
         public void DeleteSnapshot(long sequenceNr) { }
         public void DeleteSnapshots(Akka.Persistence.SnapshotSelectionCriteria criteria) { }
@@ -255,9 +250,21 @@ namespace Akka.Persistence
         protected virtual void OnRecoveryFailure(System.Exception reason, object message = null) { }
         protected virtual void OnReplaySuccess() { }
         public void Persist<TEvent>(TEvent @event, System.Action<TEvent> handler) { }
+        public void Persist<TEvent>(TEvent @event, System.Func<TEvent, System.Threading.Tasks.Task> handler) { }
         public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
+        public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler, System.Action onComplete) { }
+        public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler, System.Func<System.Threading.Tasks.Task> onCompleteAsync) { }
+        public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler) { }
+        public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler, System.Action onComplete) { }
+        public void PersistAll<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler, System.Func<System.Threading.Tasks.Task> onCompleteAsync) { }
         public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler) { }
+        public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler, System.Action onComplete) { }
+        public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Action<TEvent> handler, System.Func<System.Threading.Tasks.Task> onCompleteAsync) { }
+        public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler) { }
+        public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler, System.Action onComplete) { }
+        public void PersistAllAsync<TEvent>(System.Collections.Generic.IEnumerable<TEvent> events, System.Func<TEvent, System.Threading.Tasks.Task> handler, System.Func<System.Threading.Tasks.Task> onCompleteAsync) { }
         public void PersistAsync<TEvent>(TEvent @event, System.Action<TEvent> handler) { }
+        public void PersistAsync<TEvent>(TEvent @event, System.Func<TEvent, System.Threading.Tasks.Task> handler) { }
         protected abstract bool ReceiveCommand(object message);
         protected abstract bool ReceiveRecover(object message);
         protected void RunTask(System.Func<System.Threading.Tasks.Task> action) { }
@@ -272,11 +279,6 @@ namespace Akka.Persistence
     }
     public interface IJournalRequest : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
     public interface IJournalResponse : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IPersistenceMessage { }
-    public interface IPendingHandlerInvocation
-    {
-        object Event { get; }
-        System.Action<object> Handler { get; }
-    }
     public interface IPersistenceMessage : Akka.Actor.INoSerializationVerificationNeeded { }
     public interface IPersistenceRecovery
     {
@@ -674,12 +676,6 @@ namespace Akka.Persistence
         public SnapshotStoreHealthCheckResponse(Akka.Persistence.PersistenceHealthCheckResult result) { }
         public Akka.Persistence.PersistenceHealthCheckResult Result { get; }
         public override string ToString() { }
-    }
-    public sealed class StashingHandlerInvocation : Akka.Persistence.IPendingHandlerInvocation
-    {
-        public StashingHandlerInvocation(object evt, System.Action<object> handler) { }
-        public object Event { get; }
-        public System.Action<object> Handler { get; }
     }
     public sealed class ThrowExceptionConfigurator : Akka.Persistence.IStashOverflowStrategyConfigurator
     {

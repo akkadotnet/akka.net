@@ -25,15 +25,34 @@ namespace Akka.Event
     /// </summary>
     /// <remarks>
     /// Call ToString to get the formatted output.
+    /// Supports semantic logging by extracting property names from message templates.
     /// </remarks>
     public abstract class LogMessage
     {
         protected readonly ILogMessageFormatter Formatter;
+        private IReadOnlyList<string>? _propertyNames;
+        private IReadOnlyDictionary<string, object>? _properties;
 
         /// <summary>
         /// Gets the format string of this log message.
         /// </summary>
         public string Format { get; private set; }
+
+        /// <summary>
+        /// Gets the property names extracted from the message template.
+        /// For positional templates like "{0} and {1}", returns ["0", "1"].
+        /// For named templates like "{UserId} logged in", returns ["UserId"].
+        /// This property uses lazy initialization and caching for performance.
+        /// </summary>
+        public IReadOnlyList<string> PropertyNames
+        {
+            get
+            {
+                if (_propertyNames == null)
+                    _propertyNames = MessageTemplateParser.GetPropertyNames(Format);
+                return _propertyNames;
+            }
+        }
 
         /// <summary>
         /// Initializes an instance of the LogMessage with the specified formatter, format and args.
@@ -45,6 +64,98 @@ namespace Akka.Event
             Formatter = formatter;
             Format = format;
         }
+
+        /// <summary>
+        /// Gets a dictionary of property names to their values.
+        /// Combines PropertyNames with Parameters() to create name-value pairs.
+        /// This method uses lazy initialization and caching for performance.
+        /// </summary>
+        /// <returns>A read-only dictionary of property names and values</returns>
+        public IReadOnlyDictionary<string, object> GetProperties()
+        {
+            if (_properties == null)
+            {
+                var names = PropertyNames;
+                var parameters = Parameters();
+
+                // Optimize: avoid ToArray() if Parameters() already returns IReadOnlyList
+                if (parameters is IReadOnlyList<object> readOnlyList)
+                {
+                    _properties = CreatePropertyDictionary(names, readOnlyList);
+                }
+                else if (parameters is object[] array)
+                {
+                    _properties = CreatePropertyDictionary(names, array);
+                }
+                else
+                {
+                    // Fallback: convert to array
+                    _properties = CreatePropertyDictionary(names, parameters.ToArray());
+                }
+            }
+            return _properties;
+        }
+
+        private static IReadOnlyDictionary<string, object> CreatePropertyDictionary(
+            IReadOnlyList<string> names,
+            IReadOnlyList<object> values)
+        {
+            // Handle empty case
+            if (names.Count == 0)
+                return EmptyDictionary;
+
+            // Handle mismatched counts (more values than names, or vice versa)
+            var count = Math.Min(names.Count, values.Count);
+            if (count == 0)
+                return EmptyDictionary;
+
+            var dict = new Dictionary<string, object>(count);
+            for (int i = 0; i < count; i++)
+            {
+                dict[names[i]] = values[i];
+            }
+
+#if NET8_0_OR_GREATER
+            // Use FrozenDictionary for optimal read performance on .NET 8+
+            return System.Collections.Frozen.FrozenDictionary.ToFrozenDictionary(dict);
+#else
+            return dict;
+#endif
+        }
+
+        private static IReadOnlyDictionary<string, object> CreatePropertyDictionary(
+            IReadOnlyList<string> names,
+            object[] values)
+        {
+            // Handle empty case
+            if (names.Count == 0)
+                return EmptyDictionary;
+
+            // Handle mismatched counts (more values than names, or vice versa)
+            var count = Math.Min(names.Count, values.Length);
+            if (count == 0)
+                return EmptyDictionary;
+
+            var dict = new Dictionary<string, object>(count);
+            for (int i = 0; i < count; i++)
+            {
+                dict[names[i]] = values[i];
+            }
+
+#if NET8_0_OR_GREATER
+            // Use FrozenDictionary for optimal read performance on .NET 8+
+            return System.Collections.Frozen.FrozenDictionary.ToFrozenDictionary(dict);
+#else
+            return dict;
+#endif
+        }
+
+        private static readonly IReadOnlyDictionary<string, object> EmptyDictionary =
+#if NET8_0_OR_GREATER
+            System.Collections.Frozen.FrozenDictionary<string, object>.Empty;
+#else
+            new Dictionary<string, object>();
+#endif
 
         /// <summary>
         /// INTERNAL API

@@ -1,3 +1,164 @@
+#### 1.5.57-beta2 December 2nd, 2025 ####
+
+Akka.NET v1.5.57-beta2 is a beta release containing significant new APIs for Akka.Persistence that add completion callbacks and async handler support.
+
+**New Features:**
+
+* [Persistence completion callbacks via Defer - simplified alternative](https://github.com/akkadotnet/akka.net/pull/7957) - This release adds completion callback and async handler support to `Persist`, `PersistAsync`, `PersistAll`, and `PersistAllAsync` methods in Akka.Persistence. Key improvements include:
+  - **Async Handler Support**: All persist methods now support `Func<TEvent, Task>` handlers for async event processing
+  - **Completion Callbacks**: `PersistAll` and `PersistAllAsync` now accept optional completion callbacks (both sync `Action` and async `Func<Task>`) that execute after all events are persisted and handled
+  - **Ordering Guarantees**: Completion callbacks use `Defer`/`DeferAsync` internally to maintain strict ordering guarantees
+  - **Zero Breaking Changes**: All new APIs are additive overloads
+
+**Code Examples:**
+
+```csharp
+// Async handler support - process events asynchronously
+Persist(new OrderPlaced(orderId), async evt =>
+{
+    await _orderService.ProcessOrderAsync(evt);
+});
+
+// PersistAll with completion callback - know when all events are done
+PersistAll(orderEvents, evt =>
+{
+    _state.Apply(evt);
+}, onComplete: () =>
+{
+    // All events persisted and handlers executed
+    _logger.Info("Order batch completed");
+    Sender.Tell(new BatchComplete());
+});
+
+// PersistAll with async handler AND async completion callback
+PersistAll(events,
+    handler: async evt => await ProcessEventAsync(evt),
+    onCompleteAsync: async () =>
+    {
+        await NotifyCompletionAsync();
+        Sender.Tell(Done.Instance);
+    });
+
+// PersistAllAsync with completion - allows commands between handlers
+PersistAllAsync(largeEventBatch,
+    handler: evt => _state.Apply(evt),
+    onComplete: () => Sender.Tell(new BatchProcessed()));
+```
+
+**Technical Details:**
+
+The implementation maintains Akka.Persistence's strict ordering guarantees by using `Defer`/`DeferAsync` for completion callbacks, ensuring they execute in order even when called with empty event collections. The new async handler invocations (`IAsyncHandlerInvocation`) are processed via `RunTask` to preserve the actor's single-threaded execution model.
+
+1 contributor since release 1.5.57-beta1
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 1 | 1386 | 67 | Aaron Stannard |
+
+To [see the full set of changes in Akka.NET v1.5.57-beta2, click here](https://github.com/akkadotnet/akka.net/milestone/141?closed=1)
+
+#### 1.5.57-beta1 December 2nd, 2025 ####
+
+Akka.NET v1.5.57-beta1 is a beta release containing a significant new feature for structured/semantic logging.
+
+**New Features:**
+
+* [Add native semantic logging support with property extraction](https://github.com/akkadotnet/akka.net/pull/7955) - Fixes [issue #7932](https://github.com/akkadotnet/akka.net/issues/7932). This release adds comprehensive structured logging support to Akka.NET with both positional (`{0}`) and named (`{PropertyName}`) message template parsing, enabling seamless integration with modern logging frameworks like Serilog, NLog, and Microsoft.Extensions.Logging. Key capabilities include:
+  - New `LogMessage.PropertyNames` and `GetProperties()` APIs for property extraction
+  - `SemanticLogMessageFormatter` as the new default formatter
+  - Performance optimized with 75% allocation reduction compared to the previous implementation
+  - Zero new dependencies and fully backward compatible
+  - EventFilter support for semantic templates in unit tests
+
+1 contributor since release 1.5.56
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 1 | 2317 | 14 | Aaron Stannard |
+
+To [see the full set of changes in Akka.NET v1.5.57-beta1, click here](https://github.com/akkadotnet/akka.net/milestone/140?closed=1)
+
+#### 1.5.56 November 25th, 2025 ####
+
+Akka.NET v1.5.56 is a patch release containing important bug fixes for Akka.Remote and Akka.Streams.
+
+**Bug Fixes:**
+
+* [Fix: Akka.Remote should not shutdown on invalid TLS traffic](https://github.com/akkadotnet/akka.net/pull/7952) - Fixes [issue #7938](https://github.com/akkadotnet/akka.net/issues/7938) where invalid traffic (like HTTP requests) hitting a TLS-enabled Akka.Remote port would cause the entire ActorSystem to shut down. Server now rejects invalid connections gracefully without terminating.
+
+* [fix(streams): prevent race condition in ChannelSource on channel completion](https://github.com/akkadotnet/akka.net/pull/7951) - Fixes [issue #7940](https://github.com/akkadotnet/akka.net/issues/7940) where a `NullReferenceException` could occur when completing a `ChannelWriter` while the stream is waiting for data. Added atomic flag to prevent race condition between `OnReaderComplete` and `OnValueRead` callbacks.
+
+1 contributor since release 1.5.55
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 162 | 6 | Aaron Stannard |
+
+To [see the full set of changes in Akka.NET v1.5.56, click here](https://github.com/akkadotnet/akka.net/milestone/139?closed=1)
+
+#### 1.5.55 October 26th, 2025 ####
+
+Akka.NET v1.5.55 is a patch release containing important stability and security improvements for Akka.Remote.
+
+**Akka.Remote Stability Improvements:**
+
+* [Akka.Remote: harden EndpointWriter against serialization failures](https://github.com/akkadotnet/akka.net/pull/7925) - Fixes [issue #7922](https://github.com/akkadotnet/akka.net/issues/7922) by hardening the `EndpointWriter` against a broader range of potential serialization failures, improving overall remoting stability.
+
+**Akka.Remote Security Improvements:**
+
+* [Custom certificate validation with single execution path - fixes mTLS asymmetry bug](https://github.com/akkadotnet/akka.net/pull/7921) - Fixes [issue #7914](https://github.com/akkadotnet/akka.net/issues/7914) by introducing programmatic certificate validation helpers through the new `CertificateValidation` factory class. This release adds 7 new validation helper methods including `ValidateChain()`, `ValidateHostname()`, `PinnedCertificate()`, `ValidateSubject()`, `ValidateIssuer()`, `Combine()`, and `ChainPlusThen()`. The update also fixes an mTLS asymmetry bug where server-side hostname validation was not being applied consistently with client-side validation, all while maintaining full backward compatibility with existing HOCON-based validation.
+
+* [Fix DotNettySslSetup being ignored when HOCON has valid SSL config](https://github.com/akkadotnet/akka.net/pull/7919) - Fixes [issue #7917](https://github.com/akkadotnet/akka.net/issues/7917) where programmatic `DotNettySslSetup` settings were incorrectly being overridden by HOCON configuration. Programmatic configuration now correctly takes precedence over HOCON defaults as intended.
+
+1 contributor since release 1.5.54
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 1605 | 289 | Aaron Stannard |
+
+
+To [see the full set of changes in Akka.NET v1.5.55, click here](https://github.com/akkadotnet/akka.net/milestone/138?closed=1)
+
+#### 1.5.54 October 17th, 2025 ####
+
+Akka.NET v1.5.54 is a patch release containing important bug fixes for Akka.Streams and Akka.DistributedData.
+
+**Bug Fixes:**
+
+* [Fix SourceRef.Source and SinkRef.Sink non-idempotent property bug](https://github.com/akkadotnet/akka.net/pull/7907) - Fixes [issue #7895](https://github.com/akkadotnet/akka.net/issues/7895) where `ISourceRef<T>.Source` and `ISinkRef<T>.Sink` properties created new stage instances on every access, causing race conditions and intermittent subscription timeouts. These properties are now idempotent using `Lazy<T>`, preventing failures from accidental property access (debugger inspection, logging, serialization frameworks).
+
+* [Fix LWWDictionary.Delta ArgumentNullException when underlying delta is null](https://github.com/akkadotnet/akka.net/pull/7912) - Fixes [issue #7910](https://github.com/akkadotnet/akka.net/issues/7910) where `LWWDictionary.Delta` would throw `ArgumentNullException` when the underlying `ORDictionary.Delta` was `null`, which is a legitimate state after initialization or calling `ResetDelta()`.
+
+1 contributor since release 1.5.53
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 159 | 20 | Aaron Stannard |
+
+
+To [see the full set of changes in Akka.NET v1.5.54, click here](https://github.com/akkadotnet/akka.net/milestone/137?closed=1)
+
+#### 1.5.53 October 9th, 2025 ####
+
+Akka.NET v1.5.53 is a security patch containing important fixes for TLS/SSL hostname validation and improved error diagnostics for certificate authentication issues.
+
+**Security Fixes:**
+
+* [Fix TLS hostname validation bug and add configurable validation](https://github.com/akkadotnet/akka.net/pull/7897) - Fixes a critical bug where TLS clients validated against their own certificate DNS name instead of the remote server address, particularly affecting mutual TLS scenarios. This release also adds a new `validate-certificate-hostname` configuration option to `akka.remote.dot-netty.tcp` (defaults to `false` for backward compatibility) and introduces type-safe validation APIs through the new `TlsValidationCallbacks` factory class.
+
+**Improvements:**
+
+* [Improve TLS/SSL certificate error messages during handshake failures](https://github.com/akkadotnet/akka.net/pull/7891) - Provides human-readable, actionable error messages for TLS/SSL certificate validation failures with detailed troubleshooting guidance, significantly improving the developer experience when configuring certificate-based authentication.
+
+1 contributor since release 1.5.52
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 1060 | 77 | Aaron Stannard |
+
+
+To [see the full set of changes in Akka.NET v1.5.53, click here](https://github.com/akkadotnet/akka.net/milestone/136?closed=1)
+
 #### 1.5.52 October 6th, 2025 ####
 
 **SECURITY PATCH**

@@ -48,13 +48,20 @@ namespace Akka.Streams.Implementation.StreamRef
     /// <summary>
     /// INTERNAL API:  Implementation class, not intended to be touched directly by end-users.
     /// </summary>
-    [InternalApi]   
+    [InternalApi]
     internal sealed class SourceRefImpl<T> : SourceRefImpl, ISourceRef<T>
     {
-        public SourceRefImpl(IActorRef initialPartnerRef) : base(initialPartnerRef) { }
+        private readonly Lazy<Source<T, NotUsed>> _source;
+
+        public SourceRefImpl(IActorRef initialPartnerRef) : base(initialPartnerRef)
+        {
+            _source = new Lazy<Source<T, NotUsed>>(() =>
+                Dsl.Source.FromGraph(new SourceRefStageImpl<T>(InitialPartnerRef))
+                    .MapMaterializedValue(_ => NotUsed.Instance));
+        }
+
         public override Type EventType => typeof(T);
-        public Source<T, NotUsed> Source =>
-            Dsl.Source.FromGraph(new SourceRefStageImpl<T>(InitialPartnerRef)).MapMaterializedValue(_ => NotUsed.Instance);
+        public Source<T, NotUsed> Source => _source.Value;
 
         public override ISurrogate ToSurrogate(ActorSystem system) => SerializationTools.ToSurrogate(this);
     }
