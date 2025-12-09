@@ -10,9 +10,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Akka.TestKit.Internal;
 
+#nullable enable
 namespace Akka.TestKit;
 
 public abstract partial class TestKitBase
@@ -27,7 +27,7 @@ public abstract partial class TestKitBase
         CancellationToken cancellationToken)
     {
         return ExpectMsgAllOfMatchingPredicatesAsync(predicates, cancellationToken)
-            .ToListAsync(cancellationToken)
+            .ToListAsync(cancellationToken).AsTask()
             .GetAwaiter().GetResult();
     }
 
@@ -36,8 +36,7 @@ public abstract partial class TestKitBase
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var enumerable = InternalExpectMsgAllOfMatchingPredicatesAsync(new TimeSpan(0, 0, 60), predicates,
-                cancellationToken: cancellationToken)
-            .WithCancellation(cancellationToken);
+            cancellationToken: cancellationToken);
         await foreach (var item in enumerable)
         {
             yield return item;
@@ -54,7 +53,7 @@ public abstract partial class TestKitBase
         IReadOnlyCollection<PredicateInfo> predicates, CancellationToken cancellationToken)
     {
         return ExpectMsgAllOfMatchingPredicatesAsync(max, predicates, cancellationToken)
-            .ToListAsync(cancellationToken)
+            .ToListAsync(cancellationToken).AsTask()
             .GetAwaiter().GetResult();
     }
 
@@ -86,8 +85,7 @@ public abstract partial class TestKitBase
         var receivedMessages = InternalReceiveNAsync(predicateInfos.Count, max, shouldLog, cancellationToken);
         await foreach (var msg in receivedMessages)
         {
-            var foundPredicateInfo = predicateInfoList.FirstOrDefault(p =>
-                p.Type == msg.GetType() && (bool)p.PredicateT.DynamicInvoke(msg));
+            var foundPredicateInfo = predicateInfoList.FirstOrDefault(p => p.Matches(msg));
             if (foundPredicateInfo == null)
                 unexpectedMessages.Add(msg);
             else
@@ -106,23 +104,26 @@ public abstract partial class TestKitBase
 public class PredicateInfo
 {
     public Type Type { get; }
-    public Delegate PredicateT { get; }
+    private readonly Func<object, bool> _matches;
 
-    private PredicateInfo(Delegate predicateT, Type type)
+    private PredicateInfo(Type type, Func<object, bool> matches)
     {
         Type = type;
-        PredicateT = predicateT;
+        _matches = matches;
     }
 
     public static PredicateInfo Create<T>(Predicate<T> predicateT)
     {
-        return new PredicateInfo(predicateT, typeof(T));
+        if (predicateT is null) throw new ArgumentNullException(nameof(predicateT));
+        return new PredicateInfo(typeof(T), Matches);
+
+        // Wrap: only evaluate if the message is exactly the declared Type (preserves original equality check)
+        bool Matches(object o) => o is T t && o.GetType() == typeof(T) && predicateT(t);
     }
 
-    public override string ToString()
-    {
-        return $"{GetType().FullName}<{Type.FullName}>";
-    }
+    internal bool Matches(object message) => _matches(message);
+    
+    public override string ToString() => $"{GetType().FullName}<{Type.FullName}>";
 }
 
 
