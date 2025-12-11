@@ -1,3 +1,71 @@
+#### 1.5.57 December 11th, 2025 ####
+
+Akka.NET v1.5.57 is a minor release containing significant new features for Akka.Persistence and structured/semantic logging.
+
+**Akka.Persistence Completion Callbacks and Async Handler Support**
+
+* [Persistence completion callbacks via Defer - simplified alternative](https://github.com/akkadotnet/akka.net/pull/7957) - This release adds completion callback and async handler support to `Persist`, `PersistAsync`, `PersistAll`, and `PersistAllAsync` methods in Akka.Persistence. Key improvements include:
+    - **Async Handler Support**: All persist methods now support `Func<TEvent, Task>` handlers for async event processing
+    - **Completion Callbacks**: `PersistAll` and `PersistAllAsync` now accept optional completion callbacks (both sync `Action` and async `Func<Task>`) that execute after all events are persisted and handled
+    - **Ordering Guarantees**: Completion callbacks use `Defer`/`DeferAsync` internally to maintain strict ordering guarantees
+    - **Zero Breaking Changes**: All new APIs are additive overloads
+
+**Persistence Code Examples:**
+
+```csharp
+// Async handler support - process events asynchronously
+Persist(new OrderPlaced(orderId), async evt =>
+{
+    await _orderService.ProcessOrderAsync(evt);
+});
+
+// PersistAll with completion callback - know when all events are done
+PersistAll(orderEvents, evt =>
+{
+    _state.Apply(evt);
+}, onComplete: () =>
+{
+    // All events persisted and handlers executed
+    _logger.Info("Order batch completed");
+    Sender.Tell(new BatchComplete());
+});
+
+// PersistAll with async handler AND async completion callback
+PersistAll(events,
+    handler: async evt => await ProcessEventAsync(evt),
+    onCompleteAsync: async () =>
+    {
+        await NotifyCompletionAsync();
+        Sender.Tell(Done.Instance);
+    });
+
+// PersistAllAsync with completion - allows commands between handlers
+PersistAllAsync(largeEventBatch,
+    handler: evt => _state.Apply(evt),
+    onComplete: () => Sender.Tell(new BatchProcessed()));
+```
+
+The implementation maintains Akka.Persistence's strict ordering guarantees by using `Defer`/`DeferAsync` for completion callbacks, ensuring they execute in order even when called with empty event collections. The new async handler invocations (`IAsyncHandlerInvocation`) are processed via `RunTask` to preserve the actor's single-threaded execution model.
+
+**Native Semantic Logging Support**
+
+* [Add native semantic logging support with property extraction](https://github.com/akkadotnet/akka.net/pull/7955) - Fixes [issue #7932](https://github.com/akkadotnet/akka.net/issues/7932). This release adds comprehensive structured logging support to Akka.NET with both positional (`{0}`) and named (`{PropertyName}`) message template parsing, enabling seamless integration with modern logging frameworks like Serilog, NLog, and Microsoft.Extensions.Logging. Key capabilities include:
+    - New `LogMessage.PropertyNames` and `GetProperties()` APIs for property extraction
+    - `SemanticLogMessageFormatter` as the new default formatter
+    - Performance optimized with 75% allocation reduction compared to the previous implementation
+    - Zero new dependencies and fully backward compatible
+    - EventFilter support for semantic templates in unit tests
+
+1 contributor since release 1.5.56
+
+| COMMITS | LOC+ | LOC- | AUTHOR         |
+|---------|------|------|----------------|
+| 2       | 3703 | 81   | Aaron Stannard |
+
+To see the full set of changes in Akka.NET v1.5.57, click here:
+* [1.5.57-beta1 milestone](https://github.com/akkadotnet/akka.net/milestone/140?closed=1)
+* [1.5.57-beta2 milestone](https://github.com/akkadotnet/akka.net/milestone/141?closed=1)
+
 #### 1.5.57-beta2 December 2nd, 2025 ####
 
 Akka.NET v1.5.57-beta2 is a beta release containing significant new APIs for Akka.Persistence that add completion callbacks and async handler support.
