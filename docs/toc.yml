@@ -7,7 +7,7 @@
 - name: Community
   href: community/
   homepage: community/online-resources.md
-- name: Project Chat
+- name: Discord
   href: https://discord.gg/GSCfPwhbWP
 - name: Discussion Forum
   href: https://github.com/akkadotnet/akka.net/discussions
