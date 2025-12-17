@@ -98,7 +98,7 @@ jobs:
       name: "net10_tests_windows"
       displayName: ".NET 10 CLR Hook Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test src/core/Akka.Tests/Akka.Tests.csproj -c Release --no-build --framework net10.0 --filter FullyQualifiedName~TerminationSignalHandlerSpec --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/net10-Clr-testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --filter FullyQualifiedName~TerminationSignalHandlerSpec --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "net10_tests_windows-$(Build.BuildId)"
 
@@ -107,7 +107,7 @@ jobs:
       name: "net10_tests_linux"
       displayName: ".NET 10 CLR Hook Tests (Linux)"
       vmImage: "ubuntu-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test src/core/Akka.Tests/Akka.Tests.csproj -c Release --no-build --framework net10.0 --filter FullyQualifiedName~TerminationSignalHandlerSpec --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/net10-Clr-testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --filter FullyQualifiedName~TerminationSignalHandlerSpec --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "net10_tests_linux-$(Build.BuildId)"
 
