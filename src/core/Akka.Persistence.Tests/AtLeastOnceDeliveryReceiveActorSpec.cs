@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliveryReceiveActorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -127,6 +128,8 @@ namespace Akka.Persistence.Tests
             {
                 return obj is InvalidReq;
             }
+
+            public override int GetHashCode() => 19;
         }
 
         internal class Receiver : AtLeastOnceDeliveryReceiveActor
@@ -271,6 +274,8 @@ namespace Akka.Persistence.Tests
             {
                 return obj is ReqAck;
             }
+
+            public override int GetHashCode() => 31;
         }
 
         [Serializable]
@@ -564,13 +569,13 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void PersistentReceive_must_warn_about_unconfirmed_messages()
+        public async Task PersistentReceive_must_warn_about_unconfirmed_messages()
         {
-            TestProbe probeA = CreateTestProbe();
-            TestProbe probeB = CreateTestProbe();
+            var probeA = CreateTestProbe();
+            var probeB = CreateTestProbe();
 
             var destinations = new Dictionary<string, ActorPath> {{"A", probeA.Ref.Path}, {"B", probeB.Ref.Path}};
-            IActorRef sender =
+            var sender =
                 Sys.ActorOf(
                     Props.Create(
                         () =>
@@ -580,19 +585,28 @@ namespace Akka.Persistence.Tests
             sender.Tell(new Req("a-1"));
             sender.Tell(new Req("b-1"));
             sender.Tell(new Req("b-2"));
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
 
-            UnconfirmedDelivery[] unconfirmed = ReceiveWhile(TimeSpan.FromSeconds(3), x =>
+            // Wait for initial deliveries to ensure messages are timestamped and the redelivery timer has started
+            await probeA.ExpectMsgAsync<Action>(a => a.Id == 1 && a.Payload == "a-1");
+            await probeB.ExpectMsgAsync<Action>(a => a.Id == 2 && a.Payload == "b-1");
+            await probeB.ExpectMsgAsync<Action>(a => a.Id == 3 && a.Payload == "b-2");
+
+            var unconfirmedList = new List<IEnumerable<UnconfirmedDelivery>>();
+            await foreach (var item in ReceiveWhileAsync(TimeSpan.FromSeconds(3), x =>
                 x is UnconfirmedWarning warning
                     ? warning.UnconfirmedDeliveries
-                    : Enumerable.Empty<UnconfirmedDelivery>())
-                .SelectMany(e => e).ToArray();
+                    : Enumerable.Empty<UnconfirmedDelivery>()))
+            {
+                unconfirmedList.Add(item);
+            }
+            var unconfirmed = unconfirmedList.SelectMany(e => e).ToArray();
 
-            ActorPath[] resultDestinations = unconfirmed.Select(x => x.Destination).Distinct().ToArray();
+            var resultDestinations = unconfirmed.Select(x => x.Destination).Distinct().ToArray();
             resultDestinations.ShouldOnlyContainInOrder(probeA.Ref.Path, probeB.Ref.Path);
-            object[] resultMessages = unconfirmed.Select(x => x.Message).Distinct().ToArray();
+            var resultMessages = unconfirmed.Select(x => x.Message).Distinct().ToArray();
             resultMessages.ShouldOnlyContainInOrder(new Action(1, "a-1"), new Action(2, "b-1"), new Action(3, "b-2"));
 
             Sys.Stop(sender);

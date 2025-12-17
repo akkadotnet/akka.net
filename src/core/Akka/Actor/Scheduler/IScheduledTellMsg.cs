@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="IScheduledMsg.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// <copyright file="IScheduledTellMsg.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -31,6 +31,9 @@ internal sealed class ScheduledTellMsg : IScheduledTellMsg
         Message = message;
     }
     public object Message { get; }
+
+    public override string ToString()
+        => $"{{{nameof(ScheduledTellMsg)}: {{Message: {Message}}}}}";
 }
 
 /// <summary>
@@ -44,4 +47,7 @@ internal sealed class ScheduledTellMsgNoInfluenceReceiveTimeout : IScheduledTell
     }
 
     public object Message { get; }
+
+    public override string ToString()
+        => $"{{{nameof(ScheduledTellMsgNoInfluenceReceiveTimeout)}: {{Message: {Message}}}}}";
 }

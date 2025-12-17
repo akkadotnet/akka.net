@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BugSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ namespace Akka.Streams.Tests
             var readFromStreamTask = StreamConverters.FromInputStream(() => clientPipe, 1)
                 .RunForeach(bs => result.Add(bs.ToString(Encoding.ASCII)), Materializer);
 
-            await Task.WhenAll(writeToStreamTask, readFromStreamTask).ShouldCompleteWithin(3.Seconds());
+            await Task.WhenAll(writeToStreamTask, readFromStreamTask).WaitAsync(3.Seconds());
 
             var expected = Enumerable.Range(0, 100)
                 .SelectMany(i => i == 10 ? Array.Empty<string>() : i.ToString().Select(c => c.ToString()));

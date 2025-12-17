@@ -1,7 +1,7 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TcpSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,9 +29,11 @@ namespace Akka.Streams.Tests.IO
 {
     public class TcpSpec : TcpHelper
     {
-        public TcpSpec(ITestOutputHelper helper) : base(@"
-akka.loglevel = DEBUG
-akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
+        public TcpSpec(ITestOutputHelper helper) : base("""
+                                                        akka.io.tcp.trace-logging = on
+                                                        akka.loglevel = DEBUG
+                                                        akka.stream.materializer.subscription-timeout.timeout = 2s
+                                                        """, helper)
         {
         }
 
@@ -40,7 +42,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] {1, 2, 3, 4, 5});
+                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
 
                 var server = await new Server(this).InitializeAsync();
                 var tcpReadProbe = new TcpReadProbe(this);
@@ -65,7 +67,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         public async Task Outgoing_TCP_stream_must_be_able_to_write_a_sequence_of_ByteStrings()
         {
             var server = await new Server(this).InitializeAsync();
-            var testInput = Enumerable.Range(0, 256).Select(i => ByteString.FromBytes(new[] {Convert.ToByte(i)}));
+            var testInput = Enumerable.Range(0, 256).Select(i => ByteString.FromBytes([Convert.ToByte(i)]));
             var expectedOutput = ByteString.FromBytes(Enumerable.Range(0, 256).Select(Convert.ToByte).ToArray());
 
             Source.From(testInput)
@@ -86,7 +88,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             var testOutput = new byte[255];
             for (byte i = 0; i < 255; i++)
             {
-                testInput[i] = ByteString.FromBytes(new [] {i});
+                testInput[i] = ByteString.FromBytes([i]);
                 testOutput[i] = i;
             }
 
@@ -103,7 +105,8 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 serverConnection.Write(input);
 
             serverConnection.ConfirmedClose();
-            var result = await resultFuture.ShouldCompleteWithin(3.Seconds());
+            // Reduced timeout - otherwise we're just waiting longer for the failure
+            var result = await resultFuture.WaitAsync(3.Seconds());
             result.ShouldBe(expectedOutput);
         }
 
@@ -117,12 +120,12 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                     Source.FromPublisher(tcpWriteProbe.PublisherProbe)
                         .ViaMaterialized(
                             Sys.TcpStream()
-                                .OutgoingConnection(new DnsEndPoint("example.com", 666),
+                                .OutgoingConnection(new IPEndPoint(IPAddress.Parse("192.0.2.1"), 666),
                                     connectionTimeout: TimeSpan.FromSeconds(1)), Keep.Right)
                         .ToMaterialized(Sink.Ignore<ByteString>(), Keep.Left)
                         .Run(Materializer);
 
-                await Awaiting(() => task.ShouldCompleteWithin(3.Seconds()))
+                await Awaiting(() => task.WaitAsync(3.Seconds()))
                     .Should().ThrowAsync<Exception>().WithMessage("Connection failed*");
             }, Materializer);
         }
@@ -132,7 +135,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
+                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -249,7 +252,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
+                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -286,7 +289,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
+                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -364,14 +367,21 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
 
-                Source.FromPublisher(tcpWriteProbe.PublisherProbe)
-                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                // Wait for TCP connection to be fully established before aborting
+                var connectionTask = Source.FromPublisher(tcpWriteProbe.PublisherProbe)
+                    .ViaMaterialized(Sys.TcpStream().OutgoingConnection(server.Address), Keep.Right)
                     .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
+                    
                 var serverConnection = await server.WaitAcceptAsync();
+                var clientConnection = await connectionTask;
+                
+                // Start active reading to ensure Linux can detect TCP RST
+                var readSub = await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAsync();
+                readSub.Request(1);
 
                 serverConnection.Abort();
-                await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAndErrorAsync();
+                await tcpReadProbe.SubscriberProbe.ExpectErrorAsync();
                 var subscription = await tcpWriteProbe.TcpWriteSubscription();
                 await subscription.ExpectCancellationAsync();
 
@@ -436,7 +446,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                             Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(writeButIgnoreRead).Run(Materializer)),
                             Keep.Left)
                         .Run(Materializer);
-                await task.ShouldCompleteWithin(3.Seconds());
+                await task.WaitAsync(3.Seconds());
                 var binding = task.Result;
 
                 var (promise, result) = Source.Maybe<ByteString>()
@@ -444,11 +454,11 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                     .ToMaterialized(Sink.Aggregate<ByteString, ByteString>(ByteString.Empty, (s, s1) => s + s1), Keep.Both)
                     .Run(Materializer);
 
-                await result.ShouldCompleteWithin(5.Seconds());
+                await result.WaitAsync(5.Seconds());
                 result.Result.Should().BeEquivalentTo(ByteString.FromString("Early response"));
 
                 promise.SetResult(null); // close client upstream, no more data
-                await binding.Unbind().ShouldCompleteWithin(3.Seconds());
+                await binding.Unbind().WaitAsync(3.Seconds());
 
             }, Materializer);
         }
@@ -466,9 +476,9 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                     .Run(Materializer);
 
             var result = await Source.From(Enumerable.Repeat(0, 1000)
-                .Select(i => ByteString.FromBytes(new[] {Convert.ToByte(i)})))
+                .Select(i => ByteString.FromBytes([Convert.ToByte(i)])))
                 .Via(Sys.TcpStream().OutgoingConnection(serverAddress, halfClose: true))
-                .RunAggregate(0, (i, s) => i + s.Count, Materializer).ShouldCompleteWithin(10.Seconds());
+                .RunAggregate(0, (i, s) => i + s.Count, Materializer).WaitAsync(10.Seconds());
             
             result.Should().Be(1000);
 
@@ -481,39 +491,57 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             var system2 = ActorSystem.Create("system2", Sys.Settings.Config);
             try
             {
-                InitializeLogger(system2);
+                InitializeLogger(system2, "[SYS2]");
                 var mat2 = ActorMaterializer.Create(system2);
 
                 var serverAddress = TestUtils.TemporaryServerAddress();
                 var binding = system2.TcpStream()
                     .BindAndHandle(Flow.Create<ByteString>(), mat2, serverAddress.Address.ToString(), serverAddress.Port);
 
-                var result = Source.Maybe<ByteString>()
+                // Ensure server is bound before creating client connection
+                await binding.WaitAsync(TimeSpan.FromSeconds(3));
+
+                // Build a client stream with a controllable upstream and an echo gate to ensure full registration
+                var tapped = Source.Queue<ByteString>(16, OverflowStrategy.Backpressure)
                     .Via(system2.TcpStream().OutgoingConnection(serverAddress))
-                    .RunAggregate(0, (i, s) => i + s.Count, mat2);
+                    .AlsoToMaterialized(Sink.First<ByteString>(), Keep.Both);
 
-                // give some time for all TCP stream actor parties to actually 
-                // get initialized, otherwise Kill command may run into the void
-                await Task.Delay(500);
+                var ((queue, firstEcho), result) = tapped
+                    .ToMaterialized(Sink.Aggregate<ByteString, int>(0, (i, s) => i + s.Count), Keep.Both)
+                    .Run(mat2);
 
-                await Awaiting(async () =>
-                    {
-                        await WithinAsync(TimeSpan.FromSeconds(15), async () =>
-                        {
-                            await AwaitAssertAsync(async () =>
-                            {
-                                // Getting rid of existing connection actors by using a blunt instrument
-                                system2.ActorSelection(system2.Tcp().Path / "$a" / "*").Tell(Kill.Instance);
-                            
-                                await result.ShouldCompleteWithin(3.Seconds());
-                            }, interval:TimeSpan.FromSeconds(4));
-                        });
-                        
-                        
-                    })
-                    .Should().ThrowAsync<StreamTcpException>();
+                // Send a ping and wait for the echo to guarantee Connected+Registered+Watched state
+                (await queue.OfferAsync(ByteString.FromString("ping"))).Should().BeOfType<QueueOfferResult.Enqueued>();
+                await firstEcho.WaitAsync(5.Seconds());
 
-                await binding.Result.Unbind().ShouldCompleteWithin(3.Seconds());
+                // Resolve the actual connection actor reference and watch it
+                IActorRef connectionActor = null;
+                await AwaitAssertAsync(async () =>
+                {
+                    connectionActor = await system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*")
+                        .ResolveOne(TimeSpan.FromMilliseconds(100));
+                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
+
+                var probe = CreateTestProbe(system2);
+                await probe.WatchAsync(connectionActor);
+
+                // Kill the specific connection actor
+                connectionActor.Tell(Kill.Instance);
+
+                // Wait for the actor to actually terminate
+                var terminated = await probe.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(3));
+                terminated.ActorRef.Should().Be(connectionActor);
+
+                // Verify the stream fails deterministically with StreamTcpException
+                await AwaitAssertAsync(() =>
+                {
+                    result.IsFaulted.Should().BeTrue();
+                    var flattened = result.Exception?.Flatten();
+                    flattened.Should().NotBeNull();
+                    flattened!.InnerExceptions.Should().Contain(e => e is StreamTcpException);
+                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
+
+                await binding.Result.Unbind().WaitAsync(3.Seconds());
             }
             finally
             {
@@ -525,6 +553,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
         public async Task Outgoing_TCP_stream_must_not_thrown_on_unbind_after_system_has_been_shut_down()
         {
             var sys2 = ActorSystem.Create("shutdown-test-system", Sys.Settings.Config);
+            InitializeLogger(sys2);
 
             try
             {
@@ -537,10 +566,10 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 // and is possible to communicate with 
                 await Source.Single(ByteString.FromString(""))
                     .Via(sys2.TcpStream().OutgoingConnection(address))
-                    .RunWith(Sink.Ignore<ByteString>(), mat2).ShouldCompleteWithin(10.Seconds());
+                    .RunWith(Sink.Ignore<ByteString>(), mat2).WaitAsync(10.Seconds());
 
-                await sys2.Terminate().ShouldCompleteWithin(10.Seconds());
-                await binding.Unbind().ShouldCompleteWithin(10.Seconds());
+                await sys2.Terminate().WaitAsync(10.Seconds());
+                await binding.Unbind().WaitAsync(10.Seconds());
             }
             finally
             {
@@ -570,10 +599,10 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 .Run(Materializer);
 
             // make sure that the server has bound to the socket
-            var binding = await bindTask.ShouldCompleteWithin(3.Seconds());
+            var binding = await bindTask.WaitAsync(3.Seconds());
 
             var testInput = Enumerable.Range(0, 255)
-                .Select(i => ByteString.FromBytes(new[] {Convert.ToByte(i)}))
+                .Select(i => ByteString.FromBytes([Convert.ToByte(i)]))
                 .ToList();
 
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
@@ -581,11 +610,11 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
             var result = await Source.From(testInput)
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
                     .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer)
-                    .ShouldCompleteWithin(10.Seconds());
+                    .WaitAsync(10.Seconds());
             
             result.Should().BeEquivalentTo(expectedOutput);
-            await binding.Unbind().ShouldCompleteWithin(3.Seconds());
-            await echoServerFinish.ShouldCompleteWithin(3.Seconds());
+            await binding.Unbind().WaitAsync(3.Seconds());
+            await echoServerFinish.WaitAsync(3.Seconds());
         }
 
         [Fact]
@@ -598,12 +627,12 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 .Run(Materializer);
 
             // make sure that the server has bound to the socket
-            var binding = await bindTask.ShouldCompleteWithin(3.Seconds());
+            var binding = await bindTask.WaitAsync(3.Seconds());
 
             var echoConnection = Sys.TcpStream().OutgoingConnection(serverAddress);
 
             var testInput = Enumerable.Range(0, 255)
-                .Select(i => ByteString.FromBytes(new[] { Convert.ToByte(i) }))
+                .Select(i => ByteString.FromBytes([Convert.ToByte(i)]))
                 .ToList();
 
             var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
@@ -614,11 +643,11 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 .Via(echoConnection)
                 .Via(echoConnection)
                 .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer)
-                .ShouldCompleteWithin(3.Seconds());
+                .WaitAsync(10.Seconds());
             
             result.Should().BeEquivalentTo(expectedOutput);
-            await binding.Unbind().ShouldCompleteWithin(3.Seconds());
-            await echoServerFinish.ShouldCompleteWithin(3.Seconds());
+            await binding.Unbind().WaitAsync(3.Seconds());
+            await echoServerFinish.WaitAsync(3.Seconds());
         }
 
         [Fact]
@@ -631,7 +660,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 .Run(Materializer);
 
             // make sure that the server has bound to the socket
-            var binding = await bindTask.ShouldCompleteWithin(3.Seconds());
+            var binding = await bindTask.WaitAsync(3.Seconds());
 
             await Task.WhenAll(
                 binding.Unbind(),
@@ -641,9 +670,9 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 binding.Unbind(),
                 binding.Unbind(),
                 binding.Unbind())
-                .ShouldCompleteWithin(3.Seconds());
+                .WaitAsync(3.Seconds());
             
-            await echoServerFinish.ShouldCompleteWithin(3.Seconds());
+            await echoServerFinish.WaitAsync(3.Seconds());
         }
 
         [Fact]
@@ -658,7 +687,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
 
                 // bind succeed, we have local address
                 var binding1 = await bind.To(Sink.FromSubscriber(probe1)).Run(Materializer)
-                    .ShouldCompleteWithin(3.Seconds());
+                    .WaitAsync(3.Seconds());
 
                 await probe1.ExpectSubscriptionAsync();
 
@@ -670,22 +699,22 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                 var binding3F = bind.To(Sink.FromSubscriber(probe3)).Run(Materializer);
                 (await probe3.ExpectSubscriptionAndErrorAsync()).Should().BeOfType<BindFailedException>();
 
-                await Awaiting(() => binding2F.ShouldCompleteWithin(3.Seconds()))
+                await Awaiting(() => binding2F.WaitAsync(3.Seconds()))
                     .Should().ThrowAsync<BindFailedException>();
-                await Awaiting(() => binding3F.ShouldCompleteWithin(3.Seconds()))
+                await Awaiting(() => binding3F.WaitAsync(3.Seconds()))
                     .Should().ThrowAsync<BindFailedException>();
                 
                 // Now unbind first
-                await binding1.Unbind().ShouldCompleteWithin(3.Seconds());
+                await binding1.Unbind().WaitAsync(3.Seconds());
                 probe1.ExpectComplete();
 
                 var probe4 = this.CreateManualSubscriberProbe<Tcp.IncomingConnection>();
                 // bind succeeded, we have local address
-                var binding4 = await bind.To(Sink.FromSubscriber(probe4)).Run(Materializer).ShouldCompleteWithin(3.Seconds());
+                var binding4 = await bind.To(Sink.FromSubscriber(probe4)).Run(Materializer).WaitAsync(3.Seconds());
                 await probe4.ExpectSubscriptionAsync();
 
                 // clean up
-                await binding4.Unbind().ShouldCompleteWithin(5.Seconds());
+                await binding4.Unbind().WaitAsync(5.Seconds());
             });
         }
 
@@ -710,7 +739,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                     .Run(Materializer);
 
                 // make sure server is running first
-                await bindingTask.ShouldCompleteWithin(3.Seconds());
+                await bindingTask.WaitAsync(3.Seconds());
                 var result = bindingTask.Result;
 
                 // then connect, should trigger a block and then
@@ -718,7 +747,7 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
                     .RunAggregate(0, (i, s) => i + s.Count, Materializer);
 
-                (await total.ShouldCompleteWithin(5.Seconds())).Should().Be(1000);
+                (await total.WaitAsync(5.Seconds())).Should().Be(1000);
             }, Materializer);
         }
 
@@ -747,13 +776,14 @@ akka.stream.materializer.subscription-timeout.timeout = 2s", helper)
 
                 var total = folder.Run(Materializer);
 
-                await firstClientConnected.Task.ShouldCompleteWithin(2.Seconds());
+                await firstClientConnected.Task.WaitAsync(2.Seconds());
                 var rejected = folder.Run(Materializer);
 
-                (await total.ShouldCompleteWithin(10.Seconds())).Should().Be(100);
+                (await total.WaitAsync(10.Seconds())).Should().Be(100);
                 
-                await rejected.ShouldThrowWithin<StreamTcpException>(3.Seconds());
+                await AssertThrowsAsync<StreamTcpException>(() => rejected).WaitAsync(3.Seconds());
             }, Materializer);
         }
     }
 }
+

@@ -787,6 +787,17 @@ a function has to be provided to calculate the individual cost of each element.
 
 **completes** when upstream completes
 
+### Valve
+
+Materializes into a Task with an [`IValveSwitch`](xref:Akka.Streams.Dsl.IValveSwitch) which provides a method that will pause or resume elements being emitted from the stream.
+
+As long as the valve is closed it will backpressure.
+
+> [!NOTE]
+> Closing the valve could result in one element being buffered inside the stage, and if the stream completes or fails while being closed, that element may be lost.
+
+[!code-csharp[Valve](../../../src/core/Akka.Streams.Tests/Dsl/ValveSpec.cs?name=OpenValve)]
+
 ### DivertTo
 
 Each upstream element will either be diverted to the given sink, or the downstream consumer according to the predicate function applied to the element.

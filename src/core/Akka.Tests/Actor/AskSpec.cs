@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AskSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ namespace Akka.Tests.Actor
                             Sender.Tell(123);
                             break;
                         case "system":
-                            Sender.Tell(new DummySystemMessage());
+                            Sender.As<IInternalActorRef>().SendSystemMessage(new DummySystemMessage());
                             break;
                     }
                 
@@ -214,11 +214,11 @@ namespace Akka.Tests.Actor
             try
             {
                 await actor.Ask<string>("timeout");
-                Assert.True(false, "the ask should have timed out with default timeout");
+                Assert.Fail("the ask should have timed out with default timeout");
             }
             catch (AskTimeoutException e)
             {
-                Assert.Equal("Timeout after 00:00:03 seconds", e.Message);
+                Assert.Equal("Timeout after 3.00 seconds", e.Message);
             }
         }
 
@@ -280,6 +280,47 @@ namespace Akka.Tests.Actor
             // expect a string, but the answer should be `null`
             var resp = await actor.Ask<string>(1);
             resp.Should().BeNullOrEmpty();
+        }
+
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/7254
+        /// </summary>
+        [Fact]
+        public async Task Bugfix7254_should_throw_error_when_expecting_object_type()
+        {
+            const string textExceptionMessage = "THIS IS TEST";
+
+            var actor = Sys.ActorOf(act => act.ReceiveAny((_, context) =>
+            {
+                context.Sender.Tell(new Status.Failure(new Exception(textExceptionMessage)));
+            }));
+
+            var ex = await Assert.ThrowsAsync<Exception>(async () => await actor.Ask("answer"));
+            ex.Message.ShouldBe(textExceptionMessage);
+
+            ex = await Assert.ThrowsAsync<Exception>(async () => await actor.Ask<object>("answer"));
+            ex.Message.ShouldBe(textExceptionMessage);
+        }
+
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/7254
+        /// </summary>
+        [Fact]
+        public async Task Bugfix7254_should_not_throw_error_when_expecting_Status_type()
+        {
+            const string textExceptionMessage = "THIS IS TEST";
+
+            var actor = Sys.ActorOf(act => act.ReceiveAny((_, context) =>
+            {
+                context.Sender.Tell(new Status.Failure(new Exception(textExceptionMessage)));
+            }));
+
+            var failure = await actor.Ask<Status.Failure>("answer");
+            failure.Cause.Message.ShouldBe(textExceptionMessage);
+
+            var status = await actor.Ask<Status>("answer");
+            Assert.IsType<Status.Failure>(status);
+            ((Status.Failure)status).Cause.Message.ShouldBe(textExceptionMessage);
         }
 
         [Fact]

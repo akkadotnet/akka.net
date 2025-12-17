@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TransitionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -71,14 +71,7 @@ namespace Akka.Cluster.Tests.MultiNode
                 .Select(m => m.Status)
                 .ToList();
 
-            if (status.Any())
-            {
-                return status.First();
-            }
-            else
-            {
-                return Akka.Cluster.MemberStatus.Removed;
-            }
+            return status.Count != 0 ? status.First() : Akka.Cluster.MemberStatus.Removed;
         }
 
         private ImmutableHashSet<Address> MemberAddresses()

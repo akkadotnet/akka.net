@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SupervisorHierarchySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -74,10 +74,12 @@ namespace Akka.Tests.Actor
             public ResumerAsync()
             {
 #pragma warning disable CS1998
+#pragma warning disable AK1003
                 ReceiveAsync<string>(s => s.StartsWith("spawn:"), async s => Sender.Tell(Context.ActorOf<ResumerAsync>(s.Substring(6))));
                 ReceiveAsync<string>(s => s.Equals("spawn"), async _ => Sender.Tell(Context.ActorOf<ResumerAsync>()));
                 ReceiveAsync<string>(s => s.Equals("fail"), async _ => { throw new Exception("expected"); });
                 ReceiveAsync<string>(s => s.Equals("ping"), async _ => Sender.Tell("pong"));
+#pragma warning restore AK1003
 #pragma warning restore CS1998
             }
 
@@ -138,7 +140,7 @@ namespace Akka.Tests.Actor
                 // manager + all workers should be restarted by only killing a worker
                 // manager doesn't trap exits, so boss will restart manager
 
-                await countDown.WaitAsync().ShouldCompleteWithin(5.Seconds());
+                await countDown.WaitAsync().WaitAsync(5.Seconds());
                 //countDown.Wait(TimeSpan.FromSeconds(5)).ShouldBe(true);
             });
 
@@ -174,8 +176,8 @@ namespace Akka.Tests.Actor
                 boss.Tell("killCrasher");
                 return Task.CompletedTask;
             });
-            await countDownMessages.WaitAsync().ShouldCompleteWithin(2.Seconds());
-            await countDownMax.WaitAsync().ShouldCompleteWithin(2.Seconds());
+            await countDownMessages.WaitAsync().WaitAsync(2.Seconds());
+            await countDownMax.WaitAsync().WaitAsync(2.Seconds());
         }
 
         private async Task Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<T>() 

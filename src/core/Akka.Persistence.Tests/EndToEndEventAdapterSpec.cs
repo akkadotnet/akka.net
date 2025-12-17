@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndToEndEventAdapterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -240,7 +240,10 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveRecover(object message)
             {
-                if (message is RecoveryCompleted) ;
+                if (message is RecoveryCompleted)
+                {
+                    // skip
+                }
                 else _state.AddLast(message);
                 return true;
             }

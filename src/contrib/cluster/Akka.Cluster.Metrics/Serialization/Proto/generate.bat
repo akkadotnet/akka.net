@@ -1,1 +1,0 @@
-..\..\..\..\..\..\tools\Google.Protobuf.Tools\tools\windows_x64\protoc.exe --csharp_out=.. --csharp_opt=file_extension=.g.cs --proto_path=. ClusterMetricsMessages.proto

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ProviderSelectionSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,7 +16,7 @@ namespace Akka.Cluster.Tests
     public class ProviderSelectionSpec
     {
         public ActorSystemSetup Setup { get; } = ActorSystemSetup.Create();
-        public Config LocalConfig { get; } = ConfigurationFactory.Load();
+        public Config LocalConfig { get; } = ConfigurationFactory.Default();
 
         public Settings SettingsWith(string key)
         {

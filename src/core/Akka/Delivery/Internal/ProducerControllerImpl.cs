@@ -1,9 +1,10 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="ProducerControllerImpl.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-//  </copyright>
-// -----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ProducerControllerImpl.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Collections.Generic;
@@ -57,7 +58,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         ProducerId = producerId;
         Settings = settings ?? ProducerController.Settings.Create(Context.System);
         _durableProducerQueueProps = durableProducerQueue;
-        _timeProvider = timeProvider ?? DateTimeOffsetNowTimeProvider.Instance;
+        _timeProvider = timeProvider ?? Context.System.Scheduler;
         _fuzzingControl = fuzzingControl;
 
         // this state gets overridden during the loading sequence, so it's not used at all really
@@ -86,7 +87,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         ProducerId = producerId;
         Settings = settings ?? ProducerController.Settings.Create(Context.System);
         _durableProducerQueueProps = durableProducerQueue;
-        _timeProvider = timeProvider ?? DateTimeOffsetNowTimeProvider.Instance;
+        _timeProvider = timeProvider ?? Context.System.Scheduler;
         _fuzzingControl = fuzzingControl;
 
         // this state gets overridden during the loading sequence, so it's not used at all really
@@ -490,10 +491,10 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             : newRequestedSeqNr;
 
         if (newRequestedSeqNr2 != newRequestedSeqNr)
-            _log.Debug("Expanded requestedSeqNr from [{0}] to [{1}], because current [{3}] and all were probably lost.",
+            _log.Debug("Expanded requestedSeqNr from [{0}] to [{1}], because current [{2}] and all were probably lost.",
                 newRequestedSeqNr, newRequestedSeqNr2, stateAfterAck.CurrentSeqNr);
 
-        if (newRequestedSeqNr > CurrentState.RequestedSeqNr)
+        if (newRequestedSeqNr2 > CurrentState.RequestedSeqNr)
         {
             bool newRequested;
             if (CurrentState.StoreMessageSentInProgress != 0)

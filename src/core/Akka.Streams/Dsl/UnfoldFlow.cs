@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnfoldFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,9 +18,11 @@ namespace Akka.Streams.Dsl
         private readonly Outlet<TState> _feedback;
         protected readonly Outlet<TOut> _output;
         protected readonly Inlet<TIn> _nextElem;
+        private readonly Action _timeoutCallback;
 
         protected TState _pending;
         protected bool _pushedToCycle;
+        private bool _waitingForInitialDemand;
 
         protected UnfoldFlowGraphStageLogic(FanOutShape<TIn, TState, TOut> shape, TState seed, TimeSpan timeout) : base(shape)
         {
@@ -32,45 +34,60 @@ namespace Akka.Streams.Dsl
 
             _pending = seed;
             _pushedToCycle = false;
+            _waitingForInitialDemand = true;
+
+            // Create the timeout callback during construction to ensure it's created on the GraphStageLogic thread
+            _timeoutCallback = GetAsyncCallback(() =>
+            {
+                if (!IsClosed(_nextElem))
+                    FailStage(new InvalidOperationException($"unfoldFlow source's inner flow canceled only upstream, while downstream remain available for {_timeout}"));
+            });
 
             SetHandler(_feedback, this);
 
             SetHandler(_output, onPull: () =>
             {
                 Pull(_nextElem);
-                if (!_pushedToCycle && IsAvailable(_feedback))
-                {
-                    Push(_feedback, _pending);
-                    _pending = default(TState);
-                    _pushedToCycle = true;
-                }
+                TryPushInitialSeed();
             });
         }
 
         public void OnPull()
         {
-            if (!_pushedToCycle && IsAvailable(_output))
+            TryPushInitialSeed();
+        }
+
+        private void TryPushInitialSeed()
+        {
+            if (!_pushedToCycle)
             {
-                Push(_feedback, _pending);
-                _pending = default(TState);
-                _pushedToCycle = true;
+                if (_waitingForInitialDemand)
+                {
+                    // During initialization, push the seed as soon as feedback has demand
+                    // Don't wait for both outlets to be available
+                    if (IsAvailable(_feedback))
+                    {
+                        Push(_feedback, _pending);
+                        _pending = default(TState);
+                        _pushedToCycle = true;
+                        _waitingForInitialDemand = false;
+                    }
+                }
+                else if (IsAvailable(_feedback) && IsAvailable(_output))
+                {
+                    // After initialization, use original logic requiring both outlets
+                    Push(_feedback, _pending);
+                    _pending = default(TState);
+                    _pushedToCycle = true;
+                }
             }
         }
 
-        // TODO: Is this correct? check JVM please
         public void OnDownstreamFinish(Exception cause)
         {
             // Do Nothing until `timeout` to try and intercept completion as downstream,
             // but cancel stream after timeout if inlet is not closed to prevent deadlock.
-            Materializer.ScheduleOnce(_timeout, () =>
-            {
-                var cb = GetAsyncCallback(() =>
-                {
-                    if (!IsClosed(_nextElem))
-                        FailStage(new InvalidOperationException($"unfoldFlow source's inner flow canceled only upstream, while downstream remain available for {_timeout}"));
-                });
-                cb();
-            });
+            Materializer.ScheduleOnce(_timeout, () => _timeoutCallback());
         }
     }
 

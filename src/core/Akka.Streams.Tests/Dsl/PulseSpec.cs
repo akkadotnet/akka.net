@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PulseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectNoMsg(_pulseInterval);
             probe.SendComplete();
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
         }
 
@@ -67,7 +67,7 @@ namespace Akka.Streams.Tests.Dsl
                 .InitialTimeout(Dilated(TimeSpan.FromMilliseconds(2)))
                 .RunWith(Sink.First<int>(), Sys.Materializer());
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.Should().Be(1);
         }
 
@@ -88,7 +88,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.ExpectNoMsg(_pulseInterval);
             probe.SendComplete();
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
         }
     }

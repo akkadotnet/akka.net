@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncEnumerableSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         cts.Cancel();
                     }
-                }).Should().ThrowAsync<OperationCanceledException>().ShouldCompleteWithin(3.Seconds());
+                }).Should().ThrowAsync<OperationCanceledException>().WaitAsync(3.Seconds());
             }, Materializer);
         }
 
@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var input = Enumerable.Range(1, 6).ToList();
                 var asyncEnumerable = Source.From(input).RunAsAsyncEnumerable(Materializer);
-                var output = await asyncEnumerable.ToListAsync().AsTask().ShouldCompleteWithin(3.Seconds());
+                var output = await asyncEnumerable.ToListAsync().AsTask().WaitAsync(3.Seconds());
                 output.Should().BeEquivalentTo(input, options => options.WithStrictOrdering());
             }, Materializer);
         }
@@ -83,10 +83,10 @@ namespace Akka.Streams.Tests.Dsl
                 var input = Enumerable.Range(1, 6).ToList();
                 var asyncEnumerable = Source.From(input).RunAsAsyncEnumerable(Materializer);
 
-                var output = await asyncEnumerable.ToListAsync().AsTask().ShouldCompleteWithin(3.Seconds());
+                var output = await asyncEnumerable.ToListAsync().AsTask().WaitAsync(3.Seconds());
                 output.Should().BeEquivalentTo(input, options => options.WithStrictOrdering());
 
-                output = await asyncEnumerable.ToListAsync().AsTask().ShouldCompleteWithin(3.Seconds());
+                output = await asyncEnumerable.ToListAsync().AsTask().WaitAsync(3.Seconds());
                 output.Should().BeEquivalentTo(input, options => options.WithStrictOrdering());
             }, Materializer);
         }
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
             var thrown = false;
             try
             {
-                await a.ShouldCompleteWithin(10.Seconds());
+                await a.WaitAsync(10.Seconds());
             }
             catch (StreamDetachedException)
             {
@@ -142,7 +142,7 @@ namespace Akka.Streams.Tests.Dsl
                 await foreach (var a in task)
                 {
                 }
-            }).Should().ThrowAsync<IllegalStateException>().ShouldCompleteWithin(3.Seconds());
+            }).Should().ThrowAsync<IllegalStateException>().WaitAsync(3.Seconds());
         }
 
         [Fact]
@@ -225,7 +225,11 @@ namespace Akka.Streams.Tests.Dsl
                 subscription.Cancel();
 
                 // The cancellation token inside the IAsyncEnumerable should be cancelled
-                await WithinAsync(3.Seconds(), async () => latch.Value);
+                await WithinAsync(3.Seconds(), async () =>
+                {
+                    await Task.Yield();
+                    return latch.Value;
+                });
             }, Materializer);
         }
 
@@ -431,6 +435,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             foreach (var i in Enumerable.Range(start, count))
             {
+                await Task.Yield();
                 if(token.IsCancellationRequested)
                     yield break;
 
@@ -447,6 +452,7 @@ namespace Akka.Streams.Tests.Dsl
             token.Register(() => { latch.GetAndSet(true); });
             foreach (var i in Enumerable.Range(start, count))
             {
+                await Task.Yield();
                 if(token.IsCancellationRequested)
                     yield break;
 

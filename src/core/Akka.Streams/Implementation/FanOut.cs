@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FanOut.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -415,7 +415,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamRequestMore : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -442,7 +442,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamCancel : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -463,7 +463,7 @@ namespace Akka.Streams.Implementation
         /// TBD
         /// </summary>
         [Serializable]
-        public struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct SubstreamSubscribePending : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -519,7 +519,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         [Serializable]
-        public struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        public readonly struct ExposedPublishers<T> : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             /// <summary>
             /// TBD
@@ -740,7 +740,7 @@ namespace Akka.Streams.Implementation
         /// This exception is thrown when the elements in <see cref="Akka.Streams.Implementation.FanOut{T}.PrimaryInputs"/>
         /// are of an unknown type.
         /// </exception>>
-        /// If this gets changed you must change <see cref="Akka.Streams.Implementation.FanOut.Unzip{T}"/> as well!
+        /// If this gets changed you must change <see cref="Unzip{T}"/> as well!
         public Unzip(ActorMaterializerSettings settings, int outputCount = 2) : base(settings, outputCount)
         {
             OutputBunch.MarkAllOutputs();

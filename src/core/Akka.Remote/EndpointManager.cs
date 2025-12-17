@@ -1,20 +1,20 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EndpointManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
-
+#pragma warning disable AK1004
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
+using Akka.Remote.Transport.DotNetty;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Util.Internal;
@@ -24,7 +24,7 @@ namespace Akka.Remote
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class EndpointManager : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    internal sealed class EndpointManager : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
 
         #region Policy definitions
@@ -516,10 +516,9 @@ namespace Akka.Remote
 
         private void HandleStashedInbound(IActorRef endpoint, bool writerIsIdle)
         {
-            var stashed = _stashedInbound.GetOrElse(endpoint, new List<InboundAssociation>());
-            _stashedInbound.Remove(endpoint);
-            foreach (var ia in stashed)
-                HandleInboundAssociation(ia, writerIsIdle);
+            if (_stashedInbound.Remove(endpoint, out var value))
+                foreach (var ia in value)
+                    HandleInboundAssociation(ia, writerIsIdle);
         }
 
         private void KeepQuarantinedOr(Address remoteAddress, Action body)
@@ -550,14 +549,14 @@ namespace Akka.Remote
                 {
                     switch (e)
                     {
-                        case HopelessAssociation h when h.Uid != null:
-                            _log.Error(e.InnerException ?? e, "Association to [{0}] with UID [{1}] is irrecoverably failed. Quarantining address.", h.RemoteAddress, h.Uid);
+                        case HopelessAssociation { Uid: not null }:
+                            _log.Error(e.InnerException ?? e, "Association to [{0}] with UID [{1}] is irrecoverably failed. Quarantining address.", e.RemoteAddress, e.Uid);
                             if (_settings.QuarantineDuration.HasValue && _settings.QuarantineDuration != TimeSpan.MaxValue)
                             {
                                 // have a finite quarantine duration specified in settings.
                                 // If we don't have one specified, don't bother quarantining - it's disabled.
-                                _endpoints.MarkAsQuarantined(h.RemoteAddress, h.Uid.Value, Deadline.Now + _settings.QuarantineDuration);
-                                _eventPublisher.NotifyListeners(new QuarantinedEvent(h.RemoteAddress, h.Uid.Value));
+                                _endpoints.MarkAsQuarantined(e.RemoteAddress, e.Uid.Value, Deadline.Now + _settings.QuarantineDuration);
+                                _eventPublisher.NotifyListeners(new QuarantinedEvent(e.RemoteAddress, e.Uid.Value));
                             }
 
                             return Directive.Stop;
@@ -701,7 +700,7 @@ namespace Akka.Remote
         /// Message-processing behavior when the <see cref="EndpointManager"/> is able to accept
         /// inbound association requests.
         /// </summary>
-        protected void Accepting()
+        private void Accepting()
         {
             Receive<ManagementCommand>(mc =>
                 {
@@ -819,9 +818,6 @@ namespace Akka.Remote
             Receive<Send>(send =>
             {
                 var recipientAddress = send.Recipient.Path.Address;
-                IActorRef CreateAndRegisterWritingEndpoint() => _endpoints.RegisterWritableEndpoint(recipientAddress, 
-                    CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse, _transportMapping[send.Recipient.LocalAddressToUse], 
-                        _settings, writing: true, handleOption: null), uid: null);
 
                 // pattern match won't throw a NullReferenceException if one is returned by WritableEndpointWithPolicyFor
                 switch (_endpoints.WritableEndpointWithPolicyFor(recipientAddress))
@@ -842,6 +838,12 @@ namespace Akka.Remote
                         CreateAndRegisterWritingEndpoint().Tell(send);
                         break;
                 }
+
+                return;
+
+                IActorRef CreateAndRegisterWritingEndpoint() => _endpoints.RegisterWritableEndpoint(recipientAddress, 
+                    CreateEndpoint(recipientAddress, send.Recipient.LocalAddressToUse, _transportMapping[send.Recipient.LocalAddressToUse], 
+                        _settings, writing: true, handleOption: null), uid: null);
             });
             Receive<InboundAssociation>(ia => HandleInboundAssociation(ia, false));
             Receive<EndpointWriter.StoppedReading>(endpoint => AcceptPendingReader(endpoint.Writer));
@@ -895,8 +897,7 @@ namespace Akka.Remote
                         {
                             if (result.IsFaulted || result.IsCanceled)
                             {
-                                if (result.Exception != null)
-                                    result.Exception.Handle(_ => true);
+                                result.Exception?.Handle(_ => true);
                                 return false;
                             }
                             return result.Result.All(x => x);
@@ -929,7 +930,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        protected void Flushing()
+        private void Flushing()
         {
             Receive<Send>(send => Context.System.DeadLetters.Tell(send));
             Receive<InboundAssociation>(

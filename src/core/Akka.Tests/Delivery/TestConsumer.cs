@@ -1,10 +1,10 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="TestConsumer.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-//  </copyright>
-// -----------------------------------------------------------------------
-#nullable enable
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestConsumer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Immutable;
 using System.Linq;
@@ -104,7 +104,7 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
             // schedule to simulate slower consumer
             Timers.StartSingleTimer(delivery, // have to use a unique-per-message key here, otherwise messages from multiple producers will cancel each other
                 new SomeAsyncJob(delivery.Msg, delivery.ConfirmTo, delivery.ProducerId, delivery.SeqNr),
-                TimeSpan.FromMilliseconds(10));
+                Delay);
         }
     }
 

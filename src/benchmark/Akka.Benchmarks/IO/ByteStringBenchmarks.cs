@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ByteStringBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using Akka.Benchmarks.Configurations;
 using Akka.IO;
 using BenchmarkDotNet.Attributes;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks
 {
@@ -42,18 +43,21 @@ namespace Akka.Benchmarks
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaIOBenchmark)]
         public ByteString ByteString_create_unsafe()
         {
             return ByteString.FromBytes(_bytes);
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaIOBenchmark)]
         public ByteString ByteString_create_copying()
         {
             return ByteString.CopyFrom(_bytes);
         }
         
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaIOBenchmark)]
         public ByteString ByteString_create_from_string()
         {
             return ByteString.FromString(_str);
@@ -61,6 +65,7 @@ namespace Akka.Benchmarks
 
         [Benchmark]
         [Arguments(10)]
+        [BenchmarkCategory(MicroBenchmark, AkkaIOBenchmark)]
         public ByteString ByteString_concatenation(int times)
         {
             var acc = ByteString.Empty;
@@ -73,12 +78,14 @@ namespace Akka.Benchmarks
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaIOBenchmark)]
         public ByteString ByteString_multipart_slice()
         {
             return _multipart.Slice(10, 40);
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaIOBenchmark)]
         public ByteString ByteString_multipart_compact()
         {
             return _multipart.Compact();
@@ -86,6 +93,7 @@ namespace Akka.Benchmarks
 
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaIOBenchmark)]
         public bool ByteString_multipart_has_substring()
         {
             byte[] array = { 6, 7, 8, 9 };

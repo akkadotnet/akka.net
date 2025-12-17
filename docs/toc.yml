@@ -7,9 +7,13 @@
 - name: Community
   href: community/
   homepage: community/online-resources.md
-- name: Project Chat
+- name: Discord
   href: https://discord.gg/GSCfPwhbWP
 - name: Discussion Forum
   href: https://github.com/akkadotnet/akka.net/discussions
 - name: Source Code
   href: https://github.com/akkadotnet/akka.net
+- name: Mailing List
+  href: https://m.petabridge.com/
+- name: Videos and Livestreams
+  href: https://www.youtube.com/@petabridge?sub_confirmation=1

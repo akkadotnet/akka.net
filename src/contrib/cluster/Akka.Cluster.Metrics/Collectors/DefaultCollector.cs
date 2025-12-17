@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DefaultCollector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -70,11 +70,19 @@ namespace Akka.Cluster.Metrics.Collectors
                 if(processorCount.HasValue)
                     metrics.Add(processorCount.Value);
 
-                if (process.MaxWorkingSet != IntPtr.Zero)
+                try
                 {
-                    var workingSet = NodeMetrics.Types.Metric.Create(StandardMetrics.MaxMemoryRecommended, process.MaxWorkingSet.ToInt64());
-                    if(workingSet.HasValue)
-                        metrics.Add(workingSet.Value);
+                    if (process.MaxWorkingSet != IntPtr.Zero)
+                    {
+                        var workingSet = NodeMetrics.Types.Metric.Create(StandardMetrics.MaxMemoryRecommended, process.MaxWorkingSet.ToInt64());
+                        if(workingSet.HasValue)
+                            metrics.Add(workingSet.Value);
+                    }
+                }
+                catch (Exception)
+                {
+                    // MaxWorkingSet may throw on some platforms (e.g., Linux/Mono)
+                    // Ignore and continue without this metric
                 }
 
                 var (processCpuUsage, totalCpuUsage) = GetCpuUsages(process.Id);

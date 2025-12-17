@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FileSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -242,7 +242,7 @@ namespace Akka.Streams.Tests.IO
 
                 c.ExpectSubscription();
                 c.ExpectError();
-                var complete = await r.ShouldCompleteWithin(Dilated(TimeSpan.FromSeconds(3)));
+                var complete = await r.WaitAsync(Dilated(TimeSpan.FromSeconds(3)));
                 complete.WasSuccessful.ShouldBeFalse();
             }, _materializer);
         }
@@ -341,20 +341,21 @@ namespace Akka.Streams.Tests.IO
         private FileInfo ManyLines()
         {
             _manyLinesPath = new FileInfo(Path.Combine(Path.GetTempPath(), $"file-source-spec-lines_{LinesCount}.tmp"));
-            var line = "";
-            var lines = new List<string>();
-            for (var i = 0; i < LinesCount; i++)
-                line += "a";
+
+            // Create a reasonable line of text (not LinesCount characters long!)
+            var line = new string('a', 100); // Fixed line length of 100 characters
+            var lines = new List<string>(LinesCount);
             for (var i = 0; i < LinesCount; i++)
                 lines.Add(line);
 
-            File.AppendAllLines(_manyLinesPath.FullName, lines);
+            // Use WriteAllLines to ensure we're not appending to an existing file
+            File.WriteAllLines(_manyLinesPath.FullName, lines);
             return _manyLinesPath;
         }
 
         private FileInfo TestFile()
         {
-            File.AppendAllText(_testFilePath.FullName, _testText);
+            File.WriteAllText(_testFilePath.FullName, _testText);
             return _testFilePath;
         }
 

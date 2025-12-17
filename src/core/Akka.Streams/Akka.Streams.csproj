@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyTitle>Akka.Streams</AssemblyTitle>
         <Description>Streaming support for Akka.NET. Introduces a LINQ-like interface for writing asynchronous,
             back-pressure-aware streams built on top of Akka.NET actors.</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
@@ -13,7 +12,7 @@
     </ItemGroup>
     <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
         <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftLibVersion)" />
     </ItemGroup>
     <ItemGroup>
         <None Update="CodeGen\Dsl\GraphApply.tt">
@@ -64,6 +63,15 @@
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
-        <PackageReference Include="Reactive.Streams" Version="1.0.2" />
+        <PackageReference Include="Reactive.Streams" Version="1.0.4" />
+        <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Access="internal" Include="../../protobuf/StreamRefMessages.proto" />
+
+  </ItemGroup>
 </Project>

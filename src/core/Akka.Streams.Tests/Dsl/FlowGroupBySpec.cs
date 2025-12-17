@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowGroupBySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -101,7 +101,7 @@ namespace Akka.Streams.Tests.Dsl
                     ((Source<IEnumerable<IEnumerable<string>>, NotUsed>)source).RunWith(
                         Sink.First<IEnumerable<IEnumerable<string>>>(), Materializer);
 
-                await task.ShouldCompleteWithin(3.Seconds());
+                await task.WaitAsync(3.Seconds());
                 task.Result.OrderBy(e => e.First())
                     .Should().BeEquivalentTo(new[] { "Aaa", "Abb" }, new[] { "Bcc" }, new[] { "Cdd", "Cee" });
             }, Materializer);
@@ -377,6 +377,29 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
+        [Fact(DisplayName = "GroupBy must not have substream limit when maxSubStream is set to negative numbers")]
+        public async Task GroupBy_UnlimitedSubstreamTest()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var f = Flow.Create<int>().GroupBy(-1, x => x).PrefixAndTail(0).MergeSubstreams();
+                var (up, down) = ((Flow<int, (IImmutableList<int>, Source<int, NotUsed>), NotUsed>)f)
+                    .RunWith(this.SourceProbe<int>(), this.SinkProbe<(IImmutableList<int>, Source<int, NotUsed>)>(), Materializer);
+                
+                await down.RequestAsync(100);
+                
+                foreach (var i in Enumerable.Range(0, 100))
+                {
+                    await up.SendNextAsync(i);
+                    var (_, source) = await down.ExpectNextAsync();
+                    var (sub, probe) = await StreamPuppet(source.RunWith(Sink.AsPublisher<int>(false), Materializer), this);
+                    
+                    sub.Request(1);
+                    await probe.ExpectNextAsync(i);
+                }
+            }, Materializer);
+        }
+        
         [Fact]
         public async Task GroupBy_must_resume_when_exceeding_maxSubStreams()
         {
@@ -403,7 +426,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Select(t => t.Item2)
                     .ConcatSubstream();
                 var futureGroupSource = source.RunWith(Sink.First<Source<int, NotUsed>>(), Materializer);
-                await futureGroupSource.ShouldCompleteWithin(3.Seconds());
+                await futureGroupSource.WaitAsync(3.Seconds());
                 var publisher = futureGroupSource.Result.RunWith(Sink.AsPublisher<int>(false), Materializer);
                 
                 var probe = this.CreateSubscriberProbe<int>();
@@ -709,7 +732,7 @@ namespace Akka.Streams.Tests.Dsl
                     }
                     else
                     {
-                        var probe = await props.Probes[props.ProbesReaderTop].Task.ShouldCompleteWithin(3.Seconds());
+                        var probe = await props.Probes[props.ProbesReaderTop].Task.WaitAsync(3.Seconds());
                         props.ProbesReaderTop++;
                         map[index] = new SubFlowState(probe, false, byteString);
                         //stream automatically requests next element 

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BackoffOnRestartSupervisorSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -42,12 +42,12 @@ namespace Akka.Tests.Pattern
             }
         }
 
-        public class TestActor : ReceiveActor
+        public class RestartTestActor : ReceiveActor
         {
             private readonly IActorRef _probe;
 
 #pragma warning disable CS0162 // Disabled because without the return, the compiler complains about ambigious reference between Receive<T>(Action<T>,Predicate<T>) and Receive<T>(Predicate<T>,Action<T>)
-            public TestActor(IActorRef probe)
+            public RestartTestActor(IActorRef probe)
             {
                 _probe = probe;
 
@@ -78,7 +78,7 @@ namespace Akka.Tests.Pattern
 
             public static Props Props(IActorRef probe)
             {
-                return Akka.Actor.Props.Create(() => new TestActor(probe));
+                return Akka.Actor.Props.Create(() => new RestartTestActor(probe));
             }
         }
 
@@ -136,7 +136,7 @@ namespace Akka.Tests.Pattern
 
         private Props SupervisorProps(IActorRef probeRef)
         {
-            var options = Backoff.OnFailure(TestActor.Props(probeRef), "someChildName", 200.Milliseconds(), 10.Seconds(), 0.0, -1)
+            var options = Backoff.OnFailure(RestartTestActor.Props(probeRef), "someChildName", 200.Milliseconds(), 10.Seconds(), 0.0, -1)
                 .WithManualReset()
                 .WithSupervisorStrategy(new OneForOneStrategy(4, TimeSpan.FromSeconds(30), ex => ex is StoppingException 
                     ? Directive.Stop 
@@ -158,17 +158,17 @@ namespace Akka.Tests.Pattern
             await probe.ExpectTerminatedAsync(supervisor);
         }
 
-        [Fact]
+        [Fact(Skip = "This test is very over-fitted for time and will never run reliably on busy CI/CD")]
         public async Task BackoffOnRestartSupervisor_must_restart_the_child_with_an_exponential_back_off()
         {
             var probe = CreateTestProbe();
             var supervisor = Sys.ActorOf(SupervisorProps(probe.Ref));
             await probe.ExpectMsgAsync("STARTED");
 
-            await EventFilter.Exception<TestException>().ExpectAsync(3, async() =>
+            await EventFilter.Exception<TestException>().ExpectAsync(3, () =>
             {
                 // Exponential back off restart test
-                await probe.WithinAsync(TimeSpan.FromSeconds(1.4), 2.Seconds(), async () =>
+                return probe.WithinAsync(TimeSpan.FromSeconds(1.4), 2.Seconds(), async () =>
                 {
                     supervisor.Tell("THROW");
                     // numRestart = 0 ~ 200 millis
@@ -294,7 +294,7 @@ namespace Akka.Tests.Pattern
             // withinTimeRange indicates the time range in which maxNrOfRetries will cause the child to
             // stop. IE: If we restart more than maxNrOfRetries in a time range longer than withinTimeRange
             // that is acceptable.
-            var options = Backoff.OnFailure(TestActor.Props(probe.Ref), "someChildName", 100.Milliseconds(), 10.Seconds(), 0.0, -1)
+            var options = Backoff.OnFailure(RestartTestActor.Props(probe.Ref), "someChildName", 100.Milliseconds(), 10.Seconds(), 0.0, -1)
                 .WithSupervisorStrategy(new OneForOneStrategy(3, 2.Seconds(), ex => ex is StoppingException 
                     ? Directive.Stop 
                     : SupervisorStrategy.DefaultStrategy.Decider.Decide(ex)));

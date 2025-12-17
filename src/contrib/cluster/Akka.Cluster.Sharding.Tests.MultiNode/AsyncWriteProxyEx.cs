@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncWriteProxyEx.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -65,13 +65,8 @@ namespace Akka.Cluster.Sharding.Tests
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="store"/> is undefined.
         /// </exception>
-        public SetStore(IActorRef store)
-        {
-            if (store == null)
-                throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
-
-            Store = store;
-        }
+        public SetStore(IActorRef store) =>
+            Store = store ?? throw new ArgumentNullException(nameof(store), "SetStore requires non-null reference to store actor");
 
         /// <summary>
         /// TBD
@@ -82,8 +77,10 @@ namespace Akka.Cluster.Sharding.Tests
     /// <summary>
     /// A journal that delegates actual storage to a target actor. For testing only.
     /// </summary>
-    public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash
+    public abstract class AsyncWriteProxyEx : AsyncWriteJournal, IWithUnboundedStash, IWithTimers
     {
+        private const string InitTimeoutTimerKey = nameof(InitTimeoutTimerKey);
+        
         private class InitTimeout
         {
             public static readonly InitTimeout Instance = new();
@@ -114,7 +111,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         public override void AroundPreStart()
         {
-            Context.System.Scheduler.ScheduleTellOnce(Timeout, Self, InitTimeout.Instance, Self);
+            Timers.StartSingleTimer(InitTimeoutTimerKey, InitTimeout.Instance, Timeout, Self);
             base.AroundPreStart();
         }
 
@@ -156,24 +153,14 @@ namespace Akka.Cluster.Sharding.Tests
             return true;
         }
 
-
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="messages">TBD</param>
-        /// <exception cref="TimeoutException">
-        /// This exception is thrown when the store has not been initialized.
-        /// </exception>
-        /// <returns>TBD</returns>
-        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages)
+        protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
             var trueMsgs = messages.ToArray();
             
             if (_store == null)
                 return StoreNotInitialized<IImmutableList<Exception>>();
 
-            return _store.Ask<object>(sender => new WriteMessages(trueMsgs, sender, 1), Timeout, CancellationToken.None)
+            return _store.Ask<object>(sender => new WriteMessages(trueMsgs, sender, 1), Timeout, cancellationToken)
                 .ContinueWith(r =>
                 {
                     if (r.IsCanceled)
@@ -190,23 +177,14 @@ namespace Akka.Cluster.Sharding.Tests
                 }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="toSequenceNr">TBD</param>
-        /// <exception cref="TimeoutException">
-        /// This exception is thrown when the store has not been initialized.
-        /// </exception>
-        /// <returns>TBD</returns>
-        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr)
+        protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {
             if (_store == null)
                 return StoreNotInitialized<object>();
 
             var result = new TaskCompletionSource<object>();
 
-            _store.Ask<object>(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout, CancellationToken.None).ContinueWith(r =>
+            _store.Ask<object>(sender => new DeleteMessagesTo(persistenceId, toSequenceNr, sender), Timeout, cancellationToken).ContinueWith(r =>
             {
                 if (r.IsFaulted)
                     result.TrySetException(r.Exception);
@@ -245,23 +223,14 @@ namespace Akka.Cluster.Sharding.Tests
             return replayCompletionPromise.Task;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="persistenceId">TBD</param>
-        /// <param name="fromSequenceNr">TBD</param>
-        /// <exception cref="TimeoutException">
-        /// This exception is thrown when the store has not been initialized.
-        /// </exception>
-        /// <returns>TBD</returns>
-        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr)
+        public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
             if (_store == null)
                 return StoreNotInitialized<long>();
 
             var result = new TaskCompletionSource<long>();
 
-            _store.Ask<object>(sender => new ReplayMessages(0, 0, 0, persistenceId, sender), Timeout, CancellationToken.None)
+            _store.Ask<object>(sender => new ReplayMessages(0, 0, 0, persistenceId, sender), Timeout, cancellationToken)
                 .ContinueWith(t =>
                 {
                     if (t.IsFaulted)
@@ -287,6 +256,8 @@ namespace Akka.Cluster.Sharding.Tests
         /// TBD
         /// </summary>
         public IStash Stash { get; set; }
+
+        public ITimerScheduler Timers { get; set; }
     }
 
     /// <summary>

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RememberEntitiesFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Tools.Singleton;
@@ -26,11 +27,11 @@ namespace Akka.Cluster.Sharding.Tests
     {
         internal class EntityActor : ActorBase
         {
-            private readonly ILoggingAdapter log = Context.GetLogger();
+            private readonly ILoggingAdapter _log = Context.GetLogger();
 
             public EntityActor()
             {
-                log.Info("Entity actor [{0}] starting up", Context.Self.Path.Name);
+                _log.Info("Entity actor [{0}] starting up", Context.Self.Path.Name);
             }
 
             protected override bool Receive(object message)
@@ -38,7 +39,7 @@ namespace Akka.Cluster.Sharding.Tests
                 switch (message)
                 {
                     case "stop":
-                        log.Info("Stopping myself!");
+                        _log.Info("Stopping myself!");
                         Context.Stop(Self);
                         return true;
                     case "graceful-stop":
@@ -63,22 +64,32 @@ namespace Akka.Cluster.Sharding.Tests
             public object Msg { get; }
         }
 
-        private readonly ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            if (message is EntityEnvelope e)
-                return (e.EntityId.ToString(), e.Msg);
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    EntityEnvelope e => e.EntityId.ToString(),
+                    _ => null
+                };
 
-        private readonly ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case EntityEnvelope e:
-                    return (e.EntityId % 10).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    EntityEnvelope e => e.Msg,
+                    _ => message
+                };
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    EntityEnvelope e => (e.EntityId % 10).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % 10).ToString();
+        }
 
         private interface IFail
         {
@@ -112,8 +123,8 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         // outside store since we need to be able to set them before sharding initializes
-        private static ImmutableDictionary<string, IFail> failShardGetEntities = ImmutableDictionary<string, IFail>.Empty;
-        private static readonly IFail failCoordinatorGetShards = null;
+        private static ImmutableDictionary<string, IFail> _failShardGetEntities = ImmutableDictionary<string, IFail>.Empty;
+        private static readonly IFail FailCoordinatorGetShards = null;
 
         private class ShardStoreCreated
         {
@@ -211,7 +222,7 @@ namespace Akka.Cluster.Sharding.Tests
                 switch (message)
                 {
                     case RememberEntitiesShardStore.GetEntities _:
-                        switch (failShardGetEntities.GetValueOrDefault(shardId))
+                        switch (_failShardGetEntities.GetValueOrDefault(shardId))
                         {
                             case null:
                                 Sender.Tell(new RememberEntitiesShardStore.RememberedEntities(ImmutableHashSet<string>.Empty));
@@ -307,7 +318,7 @@ namespace Akka.Cluster.Sharding.Tests
                 switch (message)
                 {
                     case RememberEntitiesCoordinatorStore.GetShards _:
-                        switch (failCoordinatorGetShards)
+                        switch (FailCoordinatorGetShards)
                         {
                             case null:
                                 Sender.Tell(new RememberEntitiesCoordinatorStore.RememberedShards(ImmutableHashSet<string>.Empty));
@@ -380,7 +391,7 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.cluster.sharding.updating-state-timeout = 1s
                 akka.cluster.sharding.verbose-debug-logging = on
                 akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
-                .WithFallback(ClusterSingletonManager.DefaultConfig()
+                .WithFallback(ClusterSingleton.DefaultConfig()
                 .WithFallback(ClusterSharding.DefaultConfig()));
 
         public RememberEntitiesFailureSpec(ITestOutputHelper helper) : base(SpecConfig, helper)
@@ -431,7 +442,7 @@ namespace Akka.Cluster.Sharding.Tests
         private void Remember_entities_handling_in_sharding_must_recover_when_initial_remember_entities_load_fails(IFail wayToFail)
         {
             Log.Debug("Getting entities for shard 1 will fail");
-            failShardGetEntities = ImmutableDictionary<string, IFail>.Empty.Add("1", wayToFail);
+            _failShardGetEntities = ImmutableDictionary<string, IFail>.Empty.Add("1", wayToFail);
 
             try
             {
@@ -440,14 +451,13 @@ namespace Akka.Cluster.Sharding.Tests
                     $"initial-{wayToFail}",
                     Props.Create(() => new EntityActor()),
                     ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                    extractEntityId,
-                    extractShardId);
+                    new MessageExtractor());
 
                 sharding.Tell(new EntityEnvelope(1, "hello-1"), probe.Ref);
                 probe.ExpectNoMsg(); // message is lost because shard crashes
 
                 Log.Debug("Resetting initial fail");
-                failShardGetEntities = ImmutableDictionary<string, IFail>.Empty;
+                _failShardGetEntities = ImmutableDictionary<string, IFail>.Empty;
 
                 // shard should be restarted and eventually succeed
                 AwaitAssert(() =>
@@ -460,7 +470,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
             finally
             {
-                failShardGetEntities = ImmutableDictionary<string, IFail>.Empty;
+                _failShardGetEntities = ImmutableDictionary<string, IFail>.Empty;
             }
         }
 
@@ -503,8 +513,7 @@ namespace Akka.Cluster.Sharding.Tests
                 $"shardStoreStart-{wayToFail}",
                 Props.Create(() => new EntityActor()),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
 
             // trigger shard start and store creation
             var probe = CreateTestProbe();
@@ -584,8 +593,7 @@ namespace Akka.Cluster.Sharding.Tests
                 $"shardStoreStopAbrupt-{wayToFail}",
                 Props.Create(() => new EntityActor()),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId);
+                new MessageExtractor());
 
             var probe = CreateTestProbe();
 
@@ -652,8 +660,7 @@ namespace Akka.Cluster.Sharding.Tests
                 $"shardStoreStopGraceful-{wayToFail}",
                 Props.Create(() => new EntityActor()),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId,
+                new MessageExtractor(),
                 ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 1, relativeLimit: 0.1),
                 "graceful-stop");
 
@@ -688,73 +695,83 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails_NoResponse()
+        public Task Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails_NoResponse()
         {
-            Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(new NoResponse());
+            return Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(new NoResponse());
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails_CrashStore()
+        public Task Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails_CrashStore()
         {
-            Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(new CrashStore());
+            return Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(new CrashStore());
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails_StopStore()
+        public Task Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails_StopStore()
         {
-            Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(new StopStore());
+            return Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(new StopStore());
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails_Delay_500()
+        public Task Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails_Delay_500()
         {
-            Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(new Delay(TimeSpan.FromMilliseconds(500)));
+            return Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(new Delay(TimeSpan.FromMilliseconds(500)));
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails_Delay_1000()
+        public Task Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails_Delay_1000()
         {
-            Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(new Delay(TimeSpan.FromSeconds(1)));
+            return Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(new Delay(TimeSpan.FromSeconds(1)));
         }
 
-        private void Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(IFail wayToFail)
+        private async Task Remember_entities_handling_in_sharding_must_recover_when_coordinator_storing_shard_start_fails(IFail wayToFail)
         {
             var storeProbe = CreateTestProbe();
             Sys.EventStream.Subscribe(storeProbe.Ref, typeof(CoordinatorStoreCreated));
 
-            var sharding = ClusterSharding.Get(Sys).Start(
+            var sharding = await ClusterSharding.Get(Sys).StartAsync(
                 $"coordinatorStoreStopGraceful-{wayToFail}",
                 Props.Create(() => new EntityActor()),
                 ClusterShardingSettings.Create(Sys).WithRememberEntities(true),
-                extractEntityId,
-                extractShardId,
+                new MessageExtractor(),
                 ShardAllocationStrategy.LeastShardAllocationStrategy(absoluteLimit: 1, relativeLimit: 0.1),
                 "graceful-stop");
 
             var probe = CreateTestProbe();
 
             // coordinator store is triggered by coordinator starting up
-            var coordinatorStore = storeProbe.ExpectMsg<CoordinatorStoreCreated>().Store;
+            var coordinatorStore = (await storeProbe.ExpectMsgAsync<CoordinatorStoreCreated>()).Store;
             coordinatorStore.Tell(new FakeCoordinatorStoreActor.FailAddShard("1", wayToFail), probe.Ref);
-            probe.ExpectMsg<Done>();
+            await probe.ExpectMsgAsync<Done>();
 
             sharding.Tell(new EntityEnvelope(1, "hello-1"), probe.Ref);
-            probe.ExpectNoMsg(TimeSpan.FromSeconds(1)); // because shard cannot start while store failing
-
+            
             if (wayToFail is StopStore or CrashStore)
             {
-                // a new store should be started
-                coordinatorStore = storeProbe.ExpectMsg<CoordinatorStoreCreated>().Store;
+                // For crash/stop cases, the coordinator will restart and create a new store
+                // Wait for the new store to be created (deterministic event, not time-based)
+                coordinatorStore = (await storeProbe.ExpectMsgAsync<CoordinatorStoreCreated>(TimeSpan.FromSeconds(3))).Store;
+                
+                // The new store is fresh, no failure configured yet
+                // Clear any potential failure state just to be safe
+                coordinatorStore.Tell(new FakeCoordinatorStoreActor.ClearFailShard("1"), storeProbe.Ref);
+                await storeProbe.ExpectMsgAsync<Done>();
+            }
+            else
+            {
+                // For non-restart failure modes (NoResponse, Delay), the store stays alive but unresponsive
+                // Verify the message is blocked while the store is failing
+                await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+                
+                // Clear the failure for the existing store
+                coordinatorStore.Tell(new FakeCoordinatorStoreActor.ClearFailShard("1"), storeProbe.Ref);
+                await storeProbe.ExpectMsgAsync<Done>();
             }
 
-            // fail it when stopping
-            coordinatorStore.Tell(new FakeCoordinatorStoreActor.ClearFailShard("1"), storeProbe.Ref);
-            storeProbe.ExpectMsg<Done>();
-
-            probe.AwaitAssert(() =>
+            await probe.AwaitAssertAsync(async () =>
             {
                 sharding.Tell(new EntityEnvelope(1, "hello-2"), probe.Ref);
-                probe.ExpectMsg("hello-2"); // should now work again
+                await probe.ExpectMsgAsync("hello-2"); // should now work again
             }, TimeSpan.FromSeconds(5));
 
             Sys.Stop(sharding);

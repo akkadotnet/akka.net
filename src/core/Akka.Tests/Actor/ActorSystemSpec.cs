@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystemSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -117,13 +117,24 @@ namespace Akka.Tests.Actor
 
             try
             {
+                var testKit = new TestKit.Xunit2.TestKit(sys);
+                var probe = testKit.CreateTestProbe();
                 var a = sys.ActorOf(Props.Create<Terminater>());
 
-                var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(sys));
-                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, () => {
+                // Watch for actor termination to ensure proper synchronization
+                await probe.WatchAsync(a);
+
+                var eventFilter = new EventFilterFactory(testKit);
+                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, async () => {
+                    // Tell the actor to stop
                     a.Tell("run");
+
+                    // Wait for the actor to fully terminate - this ensures the mailbox
+                    // is swapped to DeadLetterMailbox before we send the next message
+                    await probe.ExpectTerminatedAsync(a);
+
+                    // Now send the message that should become a dead letter
                     a.Tell("boom");
-                    return Task.CompletedTask;
                 });
             }
             finally { Shutdown(sys); }
@@ -223,7 +234,7 @@ namespace Akka.Tests.Actor
 
             await waves.AwaitWithTimeout(timeout.Duration() + TimeSpan.FromSeconds(5));
 
-            Assert.Equal(new[] { "done", "done", "done" }, waves.Result);
+            Assert.Equal(new[] { "done", "done", "done" }, await waves);
         }
 
         [Fact]
@@ -468,9 +479,12 @@ namespace Akka.Tests.Actor
             {
                 _master = Sender;
 
-                for (int i = 0; i < n; i++)
+                for (var i = 0; i < n; i++)
                 {
+                    // we are intentionally creating top-level actors here
+#pragma warning disable AK1008
                     var man = Context.Watch(Context.System.ActorOf(Props.Create<Terminater>()));
+#pragma warning restore AK1008
                     man.Tell("run");
                     _terminaters.Add(man);
                 }

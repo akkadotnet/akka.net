@@ -1,15 +1,15 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRefBenchmarks.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Benchmarks.Configurations;
 using BenchmarkDotNet.Attributes;
+using static Akka.Benchmarks.Configurations.BenchmarkCategories;
 
 namespace Akka.Benchmarks.Actor
 {
@@ -33,18 +33,21 @@ namespace Akka.Benchmarks.Actor
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public int ActorRefGetHashCode()
         {
             return _echo.GetHashCode();
         }
 
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public bool ActorRefEqualsSelf()
         {
             return _echo.Equals(_echo);
         }
         
         [Benchmark]
+        [BenchmarkCategory(MicroBenchmark, AkkaActorBenchmark)]
         public bool ActorRefEqualsSomeoneElse()
         {
             return _echo.Equals(_echo2);

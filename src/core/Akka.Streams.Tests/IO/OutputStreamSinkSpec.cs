@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="OutputStreamSinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -222,7 +222,7 @@ namespace Akka.Streams.Tests.IO
                 await p.ExpectMsgAsync(datas[0].ToString());
                 await p.ExpectMsgAsync(datas[1].ToString());
                 await p.ExpectMsgAsync(datas[2].ToString());
-                await completion.ShouldCompleteWithin(3.Seconds());
+                await completion.WaitAsync(3.Seconds());
             }, _materializer);
         }
 
@@ -236,7 +236,8 @@ namespace Akka.Streams.Tests.IO
                     .RunWith(StreamConverters.FromOutputStream(() => new CloseOutputStream(p)), _materializer);
 
                 await p.ExpectMsgAsync("closed");
-                await completion.ShouldThrowWithin<AbruptIOTerminationException>(3.Seconds());
+
+                await AssertThrowsAsync<AbruptIOTerminationException>(() => completion).WaitAsync(3.Seconds());
             }, _materializer);
         }
 
@@ -249,7 +250,7 @@ namespace Akka.Streams.Tests.IO
                 {
                     await Source.Failed<ByteString>(new Exception("Boom!"))
                         .RunWith(StreamConverters.FromOutputStream(() => new OutputStream()), _materializer)
-                        .ShouldCompleteWithin(3.Seconds());
+                        .WaitAsync(3.Seconds());
                 }).Should().ThrowAsync<AbruptIOTerminationException>();
             }, _materializer);
         }
@@ -264,7 +265,7 @@ namespace Akka.Streams.Tests.IO
                     .RunWith(StreamConverters.FromOutputStream(() => new CompletionOutputStream(p)), _materializer);
 
                 await p.ExpectMsgAsync("closed");
-                await completion.ShouldCompleteWithin(3.Seconds());
+                await completion.WaitAsync(3.Seconds());
             }, _materializer);
         }
     }

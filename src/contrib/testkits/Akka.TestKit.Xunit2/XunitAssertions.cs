@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="XunitAssertions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.TestKit.Xunit2.Internals;
 using Xunit;
 
@@ -23,7 +24,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         public void Fail(string format = "", params object[] args)
         {
-            Assert.True(false, string.Format(format, args));
+            Assert.Fail(AkkaEqualException.BuildAssertionMessage(format, args));
         }
 
         /// <summary>
@@ -34,7 +35,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         public void AssertTrue(bool condition, string format = "", params object[] args)
         {
-            Assert.True(condition, string.Format(format, args));
+            Assert.True(condition, AkkaEqualException.BuildAssertionMessage(format, args));
         }
 
         /// <summary>
@@ -45,7 +46,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         public void AssertFalse(bool condition, string format = "", params object[] args)
         {
-            Assert.False(condition, string.Format(format, args));
+            Assert.False(condition, AkkaEqualException.BuildAssertionMessage(format, args));
         }
 
         /// <summary>
@@ -84,6 +85,26 @@ namespace Akka.TestKit.Xunit2
         {
             if(!comparer(expected, actual))
                 throw AkkaEqualException.ForMismatchedValues(expected, actual, format, args);
+        }
+
+        public Exception AssertThrows(Action action)
+        {
+            return Assert.ThrowsAny<Exception>(action);
+        }
+    
+        public TException AssertThrows<TException>(Action action) where TException : Exception
+        {
+            return Assert.ThrowsAny<TException>(action);
+        }
+
+        public async Task<Exception> AssertThrowsAsync(Func<Task> action)
+        {
+            return await Assert.ThrowsAnyAsync<Exception>(action);
+        }
+    
+        public Task<TException> AssertThrowsAsync<TException>(Func<Task> action) where TException : Exception
+        {
+            return Assert.ThrowsAnyAsync<TException>(action);
         }
     }
 }

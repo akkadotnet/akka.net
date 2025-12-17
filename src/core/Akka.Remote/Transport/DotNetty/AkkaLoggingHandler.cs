@@ -1,19 +1,17 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaLoggingHandler.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Net;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;
-using DotNetty.Common.Concurrency;
 using DotNetty.Transport.Channels;
 using ILoggingAdapter = Akka.Event.ILoggingAdapter;
 
@@ -25,7 +23,7 @@ namespace Akka.Remote.Transport.DotNetty
     /// 
     /// Used for adding additional debug logging to the DotNetty transport
     /// </summary>
-    internal class AkkaLoggingHandler : ChannelHandlerAdapter
+    internal sealed class AkkaLoggingHandler : ChannelHandlerAdapter
     {
         private readonly ILoggingAdapter _log;
         
@@ -127,7 +125,7 @@ namespace Akka.Remote.Transport.DotNetty
             ctx.Flush();
         }
         
-        protected string Format(IChannelHandlerContext ctx, string eventName)
+        private string Format(IChannelHandlerContext ctx, string eventName)
         {
             string chStr = ctx.Channel.ToString();
             return new StringBuilder(chStr.Length + 1 + eventName.Length)
@@ -137,7 +135,7 @@ namespace Akka.Remote.Transport.DotNetty
                 .ToString();
         }
         
-        protected string Format(IChannelHandlerContext ctx, string eventName, object arg)
+        private string Format(IChannelHandlerContext ctx, string eventName, object arg)
         {
             if (arg is IByteBuffer buffer)
             {
@@ -153,7 +151,7 @@ namespace Akka.Remote.Transport.DotNetty
             }
         }
         
-        protected string Format(IChannelHandlerContext ctx, string eventName, object firstArg, object secondArg)
+        private string Format(IChannelHandlerContext ctx, string eventName, object firstArg, object secondArg)
         {
             if (secondArg == null)
             {

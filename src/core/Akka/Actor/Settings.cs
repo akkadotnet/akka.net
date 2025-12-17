@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Settings.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.Routing;
+using Akka.Util;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Actor
@@ -27,7 +28,7 @@ namespace Akka.Actor
     {
         private readonly Config _userConfig;
         //internal static readonly Config AkkaDllConfig = ConfigurationFactory.FromResource<Settings>("Akka.Configuration.Pigeon.conf");
-        private Config _fallbackConfig;
+        private readonly AtomicReference<Config> _fallbackConfig;
 
         private void RebuildConfig()
         {
@@ -42,13 +43,20 @@ namespace Akka.Actor
         /// <summary>
         /// Injects a system config at the top of the fallback chain
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The latest config to be added to the front of the <see cref="Settings.Config"/> fallback chain</param>
         public void InjectTopLevelFallback(Config config)
         {
             if (Config.Contains(config)) 
                 return;
 
-            _fallbackConfig = config.SafeWithFallback(_fallbackConfig);
+            while(true)
+            {
+                var oldConfig = _fallbackConfig.Value;
+                var newConfig = config.SafeWithFallback(oldConfig);
+                if (_fallbackConfig.CompareAndSet(oldConfig, newConfig))
+                    break;
+            }
+    
             RebuildConfig();
         }
 
@@ -77,7 +85,7 @@ namespace Akka.Actor
         {
             Setup = setup;
             _userConfig = config;
-            _fallbackConfig = ConfigurationFactory.Default();
+            _fallbackConfig = new AtomicReference<Config>(ConfigurationFactory.Default());
             RebuildConfig();
 
             System = system;
@@ -111,6 +119,18 @@ namespace Akka.Actor
 
             LogLevel = Config.GetString("akka.loglevel", null);
             StdoutLogLevel = Config.GetString("akka.stdout-loglevel", null);
+            
+            // FILTER MUST ALWAYS BE LOADED BEFORE STANDARD OUT LOGGER
+            // check to see if we have a LogFilterSetup in the ActorSystemSetup
+            var logFilterSetup = Setup.Get<LogFilterSetup>();
+            if (logFilterSetup.HasValue)
+            {
+                LogFilter = logFilterSetup.Value.CreateEvaluator();
+            }
+            else
+            {
+                LogFilter = LogFilterEvaluator.NoFilters;
+            }
 
             var stdoutClassName = Config.GetString("akka.stdout-logger-class", null);
             if (string.IsNullOrWhiteSpace(stdoutClassName))
@@ -136,6 +156,9 @@ namespace Akka.Actor
                 }
             }
             
+            // set the filter
+            StdoutLogger!.Filter = LogFilter;
+            
             Loggers = Config.GetStringList("akka.loggers", new string[] { });
             LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
@@ -158,6 +181,11 @@ namespace Akka.Actor
                 if (logFormatType == typeof(DefaultLogMessageFormatter))
                 {
                     LogFormatter = DefaultLogMessageFormatter.Instance;
+                }
+                // SPECIAL CASE - check for the semantic log message formatter, which does not have an empty constructor (it's private)
+                else if (logFormatType == typeof(SemanticLogMessageFormatter))
+                {
+                    LogFormatter = SemanticLogMessageFormatter.Instance;
                 }
                 else
                 {
@@ -205,6 +233,7 @@ namespace Akka.Actor
             DebugEventStream = Config.GetBoolean("akka.actor.debug.event-stream", false);
             DebugUnhandledMessage = Config.GetBoolean("akka.actor.debug.unhandled", false);
             DebugRouterMisconfiguration = Config.GetBoolean("akka.actor.debug.router-misconfiguration", false);
+            DebugTimerScheduler = Config.GetBoolean("akka.actor.debug.log-timers");
             Home = Config.GetString("akka.home", "");
             DefaultVirtualNodesFactor = Config.GetInt("akka.actor.deployment.default.virtual-nodes-factor", 0);
 
@@ -360,6 +389,14 @@ namespace Akka.Actor
         /// Can be overridden on individual `Context.GetLogger()` calls.
         /// </remarks>
         public ILogMessageFormatter LogFormatter { get; }
+        
+        /// <summary>
+        /// Used to filter log messages based on the log source and message content.
+        /// </summary>
+        /// <remarks>
+        /// Not enabled by default and may not be supported in all third party logging implementations.
+        /// </remarks>
+        public LogFilterEvaluator LogFilter { get; }
 
         /// <summary>
         ///     Gets a value indicating whether [log serializer override on start].
@@ -425,6 +462,11 @@ namespace Akka.Actor
         /// </summary>
         /// <value><c>true</c> if [debug lifecycle]; otherwise, <c>false</c>.</value>
         public bool DebugLifecycle { get; private set; }
+        
+        /// <summary>
+        ///     Should TimerScheduler emit debug logs
+        /// </summary>
+        public bool DebugTimerScheduler { get; private set; }
 
         /// <summary>
         /// TBD

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorGraphInterpreter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
@@ -281,7 +282,7 @@ namespace Akka.Streams.Implementation.Fusing
                     return eventLimit;
 
                 case ActorGraphInterpreter.AsyncInput asyncInput:
-                    Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Handler);
+                    Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Promise, asyncInput.Handler);
                     if (eventLimit == 1 && _interpreter.IsSuspended)
                     {
                         SendResume(true);
@@ -409,12 +410,12 @@ namespace Akka.Streams.Implementation.Fusing
         private GraphInterpreter GetInterpreter()
         {
             return new GraphInterpreter(_assembly, Materializer, Log, _logics, _connections,
-                (logic, @event, handler) =>
+                (logic, @event, promise, handler) =>
                 {
-                    var asyncInput = new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler);
+                    var asyncInput = new ActorGraphInterpreter.AsyncInput(this, logic, @event, promise, handler);
                     var currentInterpreter = CurrentInterpreterOrNull;
                     if (currentInterpreter == null || !Equals(currentInterpreter.Context, Self))
-                        Self.Tell(new ActorGraphInterpreter.AsyncInput(this, logic, @event, handler));
+                        Self.Tell(asyncInput);
                     else
                         _enqueueToShortCircuit(asyncInput);
                 }, _settings.IsFuzzingMode, Self);
@@ -454,7 +455,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnError : IBoundaryEvent
+        public readonly struct OnError : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -486,7 +487,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnComplete : IBoundaryEvent
+        public readonly struct OnComplete : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -512,7 +513,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnNext : IBoundaryEvent
+        public readonly struct OnNext : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -544,7 +545,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct OnSubscribe : IBoundaryEvent
+        public readonly struct OnSubscribe : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -576,7 +577,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct RequestMore : IBoundaryEvent
+        public readonly struct RequestMore : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -608,7 +609,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct Cancel : IBoundaryEvent
+        public readonly struct Cancel : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -639,7 +640,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct SubscribePending : IBoundaryEvent
+        public readonly struct SubscribePending : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -665,7 +666,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct ExposedPublisher : IBoundaryEvent
+        public readonly struct ExposedPublisher : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -694,36 +695,18 @@ namespace Akka.Streams.Implementation.Fusing
             public GraphInterpreterShell Shell { get; }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public struct AsyncInput : IBoundaryEvent
+        public readonly struct AsyncInput : IBoundaryEvent
         {
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly GraphStageLogic Logic;
-            /// <summary>
-            /// TBD
-            /// </summary>
             public readonly object Event;
-            /// <summary>
-            /// TBD
-            /// </summary>
+            public readonly TaskCompletionSource<Done> Promise;
             public readonly Action<object> Handler;
-            /// <summary>
-            /// TBD
-            /// </summary>
-            /// <param name="shell">TBD</param>
-            /// <param name="logic">TBD</param>
-            /// <param name="event">TBD</param>
-            /// <param name="handler">TBD</param>
-            /// <returns>TBD</returns>
-            public AsyncInput(GraphInterpreterShell shell, GraphStageLogic logic, object @event, Action<object> handler)
+            public AsyncInput(GraphInterpreterShell shell, GraphStageLogic logic, object @event, TaskCompletionSource<Done> promise, Action<object> handler)
             {
                 Shell = shell;
                 Logic = logic;
                 Event = @event;
+                Promise = promise;
                 Handler = handler;
             }
 
@@ -736,7 +719,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct Resume : IBoundaryEvent
+        public readonly struct Resume : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -753,7 +736,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public struct Abort : IBoundaryEvent
+        public readonly struct Abort : IBoundaryEvent
         {
             /// <summary>
             /// TBD
@@ -767,7 +750,9 @@ namespace Akka.Streams.Implementation.Fusing
             public GraphInterpreterShell Shell { get; }
         }
 
-        private class ShellRegistered
+        // This is the Resume internal API message in JVM, it is used to prevent/short circuit recursive calls
+        // inside a stream. Harmless when dead-lettered.
+        private class ShellRegistered: IDeadLetterSuppression
         {
             public static readonly ShellRegistered Instance = new();
             private ShellRegistered()

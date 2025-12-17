@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="EchoServer.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,18 +22,57 @@ namespace DocsExamples.Networking.IO
 
         protected override void OnReceive(object message)
         {
-            if (message is Tcp.Bound bound)
+            switch (message)
             {
-                Console.WriteLine("Listening on {0}", bound.LocalAddress);
+                case Tcp.Bound bound:
+                    Console.WriteLine("Listening on {0}", bound.LocalAddress);
+                    break;
+                case Tcp.Connected:
+                {
+                    var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender)));
+                    Sender.Tell(new Tcp.Register(connection));
+                    break;
+                }
+                default:
+                    Unhandled(message);
+                    break;
             }
-            else if (message is Tcp.Connected)
-            {
-                var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender)));
-                Sender.Tell(new Tcp.Register(connection));
-            }
-            else Unhandled(message);
         }
     }
 
     // </echoServer>
+    
+    // <echoServerWithStats>
+    public class EchoServerWithStats : UntypedActor
+    {
+        public EchoServerWithStats(int port)
+        {
+            Context.System.Tcp().Tell(new Tcp.Bind(Self, new IPEndPoint(IPAddress.Any, port)));
+        }
+
+        protected override void OnReceive(object message)
+        {
+            switch (message)
+            {
+                case Tcp.Bound bound:
+                    Sender.Tell(new Tcp.SubscribeToTcpListenerStats(Self));
+                    Console.WriteLine("Listening on {0}", bound.LocalAddress);
+                    break;
+                case Tcp.TcpListenerStatistics stats:
+                    Console.WriteLine("Received TCP stats: {0}", stats);
+                    break;
+                case Tcp.Connected:
+                {
+                    var connection = Context.ActorOf(Props.Create(() => new EchoConnection(Sender)));
+                    Sender.Tell(new Tcp.Register(connection));
+                    break;
+                }
+                default:
+                    Unhandled(message);
+                    break;
+            }
+        }
+    }
+
+    // </echoServerWithStats>
 }

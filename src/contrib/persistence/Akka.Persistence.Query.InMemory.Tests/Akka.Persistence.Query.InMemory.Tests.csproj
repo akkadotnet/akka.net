@@ -2,7 +2,6 @@
     <Import Project="..\..\..\xunitSettings.props" />
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Persistence.Query.InMemory.Tests</AssemblyTitle>
         <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
         <IsPackable>false</IsPackable>
     </PropertyGroup>

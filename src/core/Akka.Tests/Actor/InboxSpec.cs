@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InboxSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -157,9 +157,7 @@ namespace Akka.Tests.Actor
         public async Task Inbox_Receive_will_timeout_gracefully_if_timeout_is_already_expired()
         {
             var task = _inbox.ReceiveAsync(TimeSpan.FromSeconds(-1));
-            Assert.True(await task.AwaitWithTimeout(TimeSpan.FromMilliseconds(1000)), "Receive did not complete in time.");
-            Assert.IsType<Status.Failure>(task.Result);
+            await Assert.ThrowsAnyAsync<Exception>(() => task.AwaitWithTimeout(TimeSpan.FromMilliseconds(1000)));
         }
     }
 }
-

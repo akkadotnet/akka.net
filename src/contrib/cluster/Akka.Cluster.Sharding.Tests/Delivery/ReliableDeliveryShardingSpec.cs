@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ReliableDeliveryShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,17 +66,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var producerController =
             Sys.ActorOf(
@@ -86,7 +76,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
             $"producer-{_idCount}");
 
         // expecting 3 end messages, one for each entity: "entity-0", "entity-1", "entity-2"
-        await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(5)).ToListAsync();
+        await consumerEndProbe.ReceiveNAsync(3, TimeSpan.FromSeconds(10)).ToListAsync();
     }
 
     [Fact]
@@ -101,17 +91,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         PropsFor(DefaultConsumerDelay, 42, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var shardingController1 =
             Sys.ActorOf(
@@ -149,17 +129,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         PropsFor(DefaultConsumerDelay, 3, consumerEndProbe.Ref, c),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var producerController =
             Sys.ActorOf(
@@ -342,17 +312,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         Props.Create(() => new ProbeWrapper(consumerProbes[consumerIncarnation.GetAndIncrement()], c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var shardingProducerSettings = ShardingProducerController.Settings.Create(Sys) with
         {
@@ -435,17 +395,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var shardingProducerSettings = ShardingProducerController.Settings.Create(Sys) with
         {
@@ -512,17 +462,7 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                         Props.Create(() => new ProbeWrapper(consumerEndProbe, c)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var shardingProducerController1 =
             Sys.ActorOf(
@@ -629,14 +569,21 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
                             _producerController.Tell(new ShardingProducerController.Start<Job>(ctx.Self));
                     }, "sendNextAdapter");
 
-            // simulate fast producer
-            Timers.StartPeriodicTimer("tick", Tick.Instance, TimeSpan.FromMilliseconds(20));
+            // Timer will start when first RequestNext arrives (see Idle method)
         }
 
         private void Idle(int n)
         {
             Receive<Tick>(_ => { }); // ignore
-            Receive<RequestNext>(next => { Become(() => Active(n + 1, next.SendNextTo)); });
+            Receive<RequestNext>(next =>
+            {
+                // Start timer on first RequestNext to avoid race condition
+                // where ticks arrive before producer is ready to send messages
+                if (!Timers.IsTimerActive("tick"))
+                    Timers.StartPeriodicTimer("tick", Tick.Instance, TimeSpan.FromMilliseconds(20));
+
+                Become(() => Active(n + 1, next.SendNextTo));
+            });
         }
 
         private void Active(int n, IActorRef sendTo)

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterShardingLeaseSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -22,24 +22,28 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class ClusterShardingLeaseSpec : AkkaSpec
     {
-        private static readonly ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            if (message is int i)
-                return (i.ToString(), i);
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    int i => i.ToString(),
+                    _ => null
+                };
 
-        private static readonly ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case int i:
-                    return (i % 10).ToString();
-                    //case StartEntity se:
-                    //    return (int.Parse(se.EntityId) % 10).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message;
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    int i => (i % 10).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId;
+        }
 
         public class LeaseFailed : Exception
         {
@@ -49,11 +53,6 @@ namespace Akka.Cluster.Sharding.Tests
 
             public LeaseFailed(string message, Exception innerEx)
                 : base(message, innerEx)
-            {
-            }
-
-            protected LeaseFailed(SerializationInfo info, StreamingContext context)
-                : base(info, context)
             {
             }
         }
@@ -75,7 +74,7 @@ namespace Akka.Cluster.Sharding.Tests
                 }
                 ")
                 .WithFallback(ClusterSharding.DefaultConfig())
-                .WithFallback(ClusterSingletonManager.DefaultConfig())
+                .WithFallback(ClusterSingleton.DefaultConfig())
                 .WithFallback(TestLease.Configuration);
 
         TimeSpan shortDuration = TimeSpan.FromMilliseconds(200);
@@ -106,8 +105,7 @@ namespace Akka.Cluster.Sharding.Tests
               typeName: typeName,
               entityProps: SimpleEchoActor.Props(),
               settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(rememberEntities),
-              extractEntityId: extractEntityId,
-              extractShardId: extractShardId);
+              messageExtractor: new MessageExtractor());
 
             region = ClusterSharding.Get(Sys).ShardRegion(typeName);
         }

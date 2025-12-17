@@ -54,3 +54,11 @@ The following code example shows a simple server that echo's data received from 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoServer.cs?name=echoServer)]
 
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoConnection.cs?name=echoConnection)]
+
+### TCP Listener Statistics
+
+If you're building a long-running TCP server you can subscribe to the `TcpListener` actor's statistics via the `Tcp.SubscribeToTcpListenerStats` message:
+
+[!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Networking/IO/EchoServer.cs?name=echoServerWithStats)]
+
+This will result in a `Tcp.TcpListenerStatistics` message being delivered with updated, rolling statistics once every 10 seconds or so roughly. Each independent `TcpListener` maintains its own statistics and they can support an arbitrary number of subscribers.

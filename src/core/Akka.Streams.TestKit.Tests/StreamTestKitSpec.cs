@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamTestKitSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
@@ -60,7 +61,7 @@ namespace Akka.Streams.TestKit.Tests
 
             var error = err.Subject.First();
             var aggregateException = error.InnerException;
-            aggregateException.InnerException.Message.Should().Contain("Boom!");
+            aggregateException!.InnerException!.Message.Should().Contain("Boom!");
             error.Message.Should().Contain("1, 2");
         }
 
@@ -127,7 +128,7 @@ namespace Akka.Streams.TestKit.Tests
                     .AsyncBuilder()
                     .Request(1)
                     .ExpectErrorAsync();
-            }).Should().ThrowAsync<TrueException>().WithMessage("*OnNext(1)*");
+            }).Should().ThrowAsync<FailException>().WithMessage("*OnNext(1)*");
         }
 
         [Fact]
@@ -140,7 +141,7 @@ namespace Akka.Streams.TestKit.Tests
                     .Request(1)
                     .ExpectComplete()
                     .ExecuteAsync();
-            }).Should().ThrowAsync<TrueException>().WithMessage("*OnError(Boom!)*");
+            }).Should().ThrowAsync<FailException>().WithMessage("*OnError(Boom!)*");
         }
 
         [Fact]
@@ -153,7 +154,7 @@ namespace Akka.Streams.TestKit.Tests
                     .Request(1)
                     .ExpectComplete()
                     .ExecuteAsync();
-            }).Should().ThrowAsync<TrueException>().WithMessage("*OnNext(1)*");
+            }).Should().ThrowAsync<FailException>().WithMessage("*OnNext(1)*");
         }
 
         [Fact]

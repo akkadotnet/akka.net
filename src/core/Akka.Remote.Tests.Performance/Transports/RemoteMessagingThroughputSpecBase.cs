@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteMessagingThroughputSpecBase.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -28,9 +28,6 @@ namespace Akka.Remote.Tests.Performance.Transports
         private Counter _remoteMessageThroughput;
         private List<Task> _tasks = new();
         private readonly List<IActorRef> _receivers = new();
-        private IActorRef _echo;
-        private IActorRef _remoteEcho;
-        private IActorRef _remoteReceiver;
 
         private static readonly AtomicCounter ActorSystemNameCounter = new(0);
         protected ActorSystem System1;

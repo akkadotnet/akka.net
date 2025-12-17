@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentStartEntitySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
-using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -21,7 +22,17 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class PersistentStartEntitySpec : AkkaSpec
     {
-        private static readonly Config SpecConfig;
+        private static Config SpecConfig =>
+            ConfigurationFactory.ParseString(@"
+                akka.loglevel = DEBUG
+                akka.actor.provider = cluster
+                akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
+                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
+                akka.remote.dot-netty.tcp.port = 0
+                akka.cluster.sharding.verbose-debug-logging = on
+                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
+                .WithFallback(ClusterSingleton.DefaultConfig())
+                .WithFallback(ClusterSharding.DefaultConfig());
 
         internal class EntityActor : ActorBase
         {
@@ -39,7 +50,7 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
 
-        internal class EntityEnvelope
+        private class EntityEnvelope
         {
             public EntityEnvelope(int entityId, object msg)
             {
@@ -51,37 +62,31 @@ namespace Akka.Cluster.Sharding.Tests
             public object Msg { get; }
         }
 
-        private ExtractEntityId extractEntityId = message =>
+        private sealed class MessageExtractor: IMessageExtractor
         {
-            if (message is EntityEnvelope e)
-                return (e.EntityId.ToString(), e.Msg);
-            return Option<(string, object)>.None;
-        };
+            public string EntityId(object message)
+                => message switch
+                {
+                    EntityEnvelope e => e.EntityId.ToString(),
+                    _ => null
+                };
 
-        private ExtractShardId extractShardId = message =>
-        {
-            switch (message)
-            {
-                case EntityEnvelope e:
-                    return (e.EntityId % 10).ToString();
-                case ShardRegion.StartEntity se:
-                    return (int.Parse(se.EntityId) % 10).ToString();
-            }
-            return null;
-        };
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    EntityEnvelope e => e.Msg,
+                    _ => message
+                };
 
-        static PersistentStartEntitySpec()
-        {
-            SpecConfig = ConfigurationFactory.ParseString(@"
-                akka.loglevel = DEBUG
-                akka.actor.provider = cluster
-                akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
-                akka.persistence.snapshot-store.plugin = ""akka.persistence.snapshot-store.inmem""
-                akka.remote.dot-netty.tcp.port = 0
-                akka.cluster.sharding.verbose-debug-logging = on
-                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
-                .WithFallback(ClusterSingletonManager.DefaultConfig()
-                .WithFallback(ClusterSharding.DefaultConfig()));
+            public string ShardId(object message)
+                => message switch
+                {
+                    EntityEnvelope e => (e.EntityId % 10).ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => (int.Parse(entityId) % 10).ToString();
         }
 
         public PersistentStartEntitySpec(ITestOutputHelper helper) : base(SpecConfig, helper)
@@ -96,11 +101,11 @@ namespace Akka.Cluster.Sharding.Tests
             AwaitAssert(() =>
             {
                 cluster.ReadView.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(1);
-            });
+            }, TimeSpan.FromSeconds(10)); // Increased timeout to allow for cluster singleton + persistent coordinator initialization
         }
 
         [Fact]
-        public void Persistent_Shard_must_remember_entities_started_with_StartEntity()
+        public async Task Persistent_Shard_must_remember_entities_started_with_StartEntity()
         {
             var sharding = ClusterSharding.Get(Sys).Start(
               "startEntity",
@@ -108,28 +113,30 @@ namespace Akka.Cluster.Sharding.Tests
               ClusterShardingSettings.Create(Sys)
                 .WithRememberEntities(true)
                 .WithStateStoreMode(StateStoreMode.Persistence),
-              extractEntityId,
-              extractShardId);
+              new MessageExtractor());
 
             sharding.Tell(new ShardRegion.StartEntity("1"));
-            ExpectMsg(new ShardRegion.StartEntityAck("1", "1"));
+            await ExpectMsgAsync(new ShardRegion.StartEntityAck("1", "1"));
             var shard = LastSender;
 
-            Watch(shard);
+            await WatchAsync(shard);
             shard.Tell(PoisonPill.Instance);
-            ExpectTerminated(shard);
+            await ExpectTerminatedAsync(shard);
 
             // trigger shard start by messaging other actor in it
-            Thread.Sleep(200);
             Sys.Log.Info("Starting shard again");
-            sharding.Tell(new EntityEnvelope(11, "give-me-shard"));
-            var secondShardIncarnation = ExpectMsg<IActorRef>();
+            IActorRef secondShardIncarnation = null;
+            await AwaitAssertAsync(async () =>
+            {
+                sharding.Tell(new EntityEnvelope(11, "give-me-shard"));
+                secondShardIncarnation = await ExpectMsgAsync<IActorRef>(TimeSpan.FromSeconds(1));
+            }, TimeSpan.FromSeconds(5));
 
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async () =>
             {
                 secondShardIncarnation.Tell(Shard.GetShardStats.Instance);
                 // the remembered 1 and 11 which we just triggered start of
-                ExpectMsg(new Shard.ShardStats("1", 2));
+                await ExpectMsgAsync(new Shard.ShardStats("1", 2));
             });
         }
     }

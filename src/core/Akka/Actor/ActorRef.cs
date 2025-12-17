@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorRef.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -66,6 +66,35 @@ namespace Akka.Actor
     }
 
     /// <summary>
+    /// INTERNAL API - didn't want static helper methods declared inside generic class
+    /// </summary>
+    internal static class FutureActorRefDeathWatchSupport
+    {
+        internal static async Task ScheduleDeathWatch(IInternalActorRef notifier, IActorRef self, Task completionTask)
+        {
+            try
+            {
+                await completionTask;
+            }
+            catch
+            {
+                // we don't do error handling for this - we do not care
+            }
+            finally
+            {
+                // regardless of whether we succeeded or failed, we notify watchers
+                notifier.SendSystemMessage(TerminatedFor(self));
+            }
+            
+        }
+
+        internal static DeathWatchNotification TerminatedFor(IActorRef self)
+        {
+            return new DeathWatchNotification(self, true, false);
+        }
+    }
+
+    /// <summary>
     /// INTERNAL API.
     ///
     /// ActorRef implementation used for one-off tasks.
@@ -113,22 +142,22 @@ namespace Akka.Actor
                 case ISystemMessage msg:
                     handled = _result.TrySetException(new InvalidOperationException($"system message of type '{msg.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}"));
                     break;
+                case Status.Failure f when !typeof(Status).IsAssignableFrom(typeof(T)):
+                    handled = _result.TrySetException(f.Cause
+                        ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+                    break;
+#pragma warning disable CS0618
+                // for backwards compatibility, remove in v1.6
+                case Failure f when !typeof(Failure).IsAssignableFrom(typeof(T)):
+                    handled = _result.TrySetException(f.Exception
+                                                      ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
+#pragma warning restore CS0618
+                    break;
                 case T t:
                     handled = _result.TrySetResult(t);
                     break;
                 case null:
                     handled = _result.TrySetResult(default);
-                    break;
-                case Status.Failure f:
-                    handled = _result.TrySetException(f.Cause
-                        ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
-                    break;
-#pragma warning disable CS0618
-                // for backwards compatibility
-                case Failure f:
-                    handled = _result.TrySetException(f.Exception
-                                                      ?? new TaskCanceledException("Task cancelled by actor via Failure message."));
-#pragma warning restore CS0618
                     break;
                 default:
                     _ = _result.TrySetException(new ArgumentException(
@@ -141,6 +170,34 @@ namespace Akka.Actor
                 _provider.DeadLetters.Tell(message ?? default(T), this);            
         }
         
+        public override void SendSystemMessage(ISystemMessage message)
+        {
+            if (message is Watch watch)
+            {
+                if (_result.Task.IsCompleted)
+                {
+                    watch.Watcher.SendSystemMessage(FutureActorRefDeathWatchSupport.TerminatedFor(this));
+                }
+                else
+                {
+                    _ = FutureActorRefDeathWatchSupport.ScheduleDeathWatch(watch.Watcher, watch.Watchee, _result.Task);
+                }
+                    
+            }
+            else if (message is Unwatch unwatch)
+            {
+                // we're not going to support Unwatch - watchers
+                // already have to handle scenarios where the Unwatch arrives too late
+                // anyway, so we're just going to treat this like that in order to keep
+                // state management as simple as possible
+            }
+            else
+            {
+                // TODO: blow up the caller here by just throwing the exception at the callsite?
+                _result.TrySetException(new InvalidOperationException($"system message of type '{message.GetType().Name}' is invalid for {nameof(FutureActorRef<T>)}"));
+            }
+        }
+
         public virtual void DeliverAsk(object message, ICanTell destination){
             destination.Tell(message, this);
         }
@@ -226,7 +283,9 @@ namespace Akka.Actor
         /// Use this value as an argument to <see cref="ICanTell.Tell"/> if there is not actor to
         /// reply to (e.g. when sending from non-actor code).
         /// </summary>
-        public static readonly IActorRef NoSender = null;
+        #nullable enable
+        public static readonly IActorRef? NoSender = null;
+        #nullable restore
     }
 
     /// <summary>
@@ -955,7 +1014,10 @@ override def getChild(name: Iterator[String]): InternalActorRef = {
 
         public override ActorPath Path { get; }
         public override IActorRefProvider Provider { get; }
+        [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
+#pragma warning disable CS0809 
         public override bool IsTerminated => Volatile.Read(ref _watchedBy) == null;
+#pragma warning restore CS0809 
 
         /// <summary>
         /// Have this FunctionRef watch the given Actor. This method must not be

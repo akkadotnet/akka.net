@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemotingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -43,102 +43,105 @@ namespace Akka.Remote.Tests
 
             _remote = _remoteSystem.ActorOf(Props.Create<Echo2>(), "echo");
             _here = Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/echo");
-
             AtStartup();
         }
 
         private static string GetConfig()
         {
-            return @"
-            common-helios-settings {
-              port = 0
-              hostname = ""localhost""
-              #enforce-ip-family = true
-            }
-
-            akka {
-              actor.provider = remote
-
-              remote {
-                transport = ""Akka.Remote.Remoting,Akka.Remote""
-                actor.serialize-messages = off
-
-                retry-gate-closed-for = 1 s
-                log-remote-lifecycle-events = on
-
-                enabled-transports = [
-                  ""akka.remote.test"",
-                  ""akka.remote.dot-netty.tcp"",
-                 # ""akka.remote.dot-netty.udp""
-                ]
-
-                dot-netty.tcp = ${common-helios-settings}
-                helios.udp = ${common-helios-settings}
-
-                test {
-                  transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
-                  applied-adapters = []
-                  registry-key = aX33k0jWKg
-                  local-address = ""test://RemotingSpec@localhost:12345""
-                  maximum-payload-bytes = 32000b
-                  scheme-identifier = test
-                }
-              }
-
-              actor.deployment {
-                /blub.remote = ""akka.test://remote-sys@localhost:12346""
-                /echo.remote = ""akka.test://remote-sys@localhost:12346""
-                /looker/child.remote = ""akka.test://remote-sys@localhost:12346""
-                /looker/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
-              }
-
-              test.timefactor = 2.5
-            }";
+            return """
+                   
+                               common-helios-settings {
+                                 port = 0
+                                 hostname = "localhost"
+                                 #enforce-ip-family = true
+                               }
+                   
+                               akka {
+                                 actor.provider = remote
+                   
+                                 remote {
+                                   transport = "Akka.Remote.Remoting,Akka.Remote"
+                                   actor.serialize-messages = off
+                   
+                                   retry-gate-closed-for = 1 s
+                                   log-remote-lifecycle-events = on
+                   
+                                   enabled-transports = [
+                                     "akka.remote.test",
+                                     "akka.remote.dot-netty.tcp",
+                                    # "akka.remote.dot-netty.udp"
+                                   ]
+                   
+                                   dot-netty.tcp = ${common-helios-settings}
+                                   helios.udp = ${common-helios-settings}
+                   
+                                   test {
+                                     transport-class = "Akka.Remote.Transport.TestTransport,Akka.Remote"
+                                     applied-adapters = []
+                                     registry-key = aX33k0jWKg
+                                     local-address = "test://RemotingSpec@localhost:12345"
+                                     maximum-payload-bytes = 32000b
+                                     scheme-identifier = test
+                                   }
+                                 }
+                   
+                                 actor.deployment {
+                                   /blub.remote = "akka.test://remote-sys@localhost:12346"
+                                   /echo.remote = "akka.test://remote-sys@localhost:12346"
+                                   /looker/child.remote = "akka.test://remote-sys@localhost:12346"
+                                   /looker/child/grandchild.remote = "akka.test://RemotingSpec@localhost:12345"
+                                 }
+                   
+                                 test.timefactor = 2.5
+                               }
+                   """;
         }
 
-        private string GetOtherRemoteSysConfig()
+        private static string GetOtherRemoteSysConfig()
         {
-            return @"
-            common-helios-settings {
-              port = 0
-              hostname = ""localhost""
-              #enforce-ip-family = true
-            }
-
-            akka {
-              actor.provider = remote
-
-              remote {
-                transport = ""Akka.Remote.Remoting,Akka.Remote""
-
-                retry-gate-closed-for = 1 s
-                log-remote-lifecycle-events = on
-
-                enabled-transports = [
-                  ""akka.remote.test"",
-                  ""akka.remote.dot-netty.tcp"",
-#""akka.remote.helios.udp""
-                ]
-
-                dot-netty.tcp = ${common-helios-settings}
-                helios.udp = ${common-helios-settings}
-
-                test {
-                  transport-class = ""Akka.Remote.Transport.TestTransport,Akka.Remote""
-                  applied-adapters = []
-                  registry-key = aX33k0jWKg
-                  local-address = ""test://remote-sys@localhost:12346""
-                  maximum-payload-bytes = 128000b
-                  scheme-identifier = test
-                }
-              }
-
-              actor.deployment {
-                /blub.remote = ""akka.test://remote-sys@localhost:12346""
-                /looker/child.remote = ""akka.test://remote-sys@localhost:12346""
-                /looker/child/grandchild.remote = ""akka.test://RemotingSpec@localhost:12345""
-              }
-            }";
+            return """
+                   
+                               common-helios-settings {
+                                 port = 0
+                                 hostname = "localhost"
+                                 #enforce-ip-family = true
+                               }
+                   
+                               akka {
+                                 actor.provider = remote
+                   
+                                 remote {
+                                   transport = "Akka.Remote.Remoting,Akka.Remote"
+                   
+                                   retry-gate-closed-for = 1 s
+                                   log-remote-lifecycle-events = on
+                   
+                                   enabled-transports = [
+                                     "akka.remote.test",
+                                     "akka.remote.dot-netty.tcp",
+                   #"akka.remote.helios.udp"
+                                   ]
+                   
+                                   dot-netty.tcp = ${common-helios-settings}
+                                   helios.udp = ${common-helios-settings}
+                   
+                                   test {
+                                     transport-class = "Akka.Remote.Transport.TestTransport,Akka.Remote"
+                                     applied-adapters = []
+                                     registry-key = aX33k0jWKg
+                                     local-address = "test://remote-sys@localhost:12346"
+                                     maximum-payload-bytes = 128000b
+                                     scheme-identifier = test
+                                   }
+                                 }
+                   
+                                 actor.deployment {
+                                   /blub.remote = "akka.test://remote-sys@localhost:12346"
+                                   /looker/child.remote = "akka.test://remote-sys@localhost:12346"
+                                   /looker/child/grandchild.remote = "akka.test://RemotingSpec@localhost:12345"
+                                 }
+                               }
+                   """;
         }
 
         private ActorSystem _remoteSystem;
@@ -682,6 +685,12 @@ namespace Akka.Remote.Tests
         {
             _here.Tell(ActorRefs.Nobody, TestActor);
             await ExpectMsgAsync(ActorRefs.Nobody, TimeSpan.FromSeconds(1.5));
+        }
+
+        [Fact]
+        public void Should_reply_back_on_original_Transport()
+        {
+            
         }
 
         #endregion

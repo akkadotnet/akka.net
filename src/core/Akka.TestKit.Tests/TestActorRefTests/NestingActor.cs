@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="NestingActor.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,7 +15,10 @@ namespace Akka.TestKit.Tests.TestActorRefTests
 
         public NestingActor(bool createTestActorRef)
         {
+            // this is supposed to create a top-level actor, so the test is written correctly
+#pragma warning disable AK1008
             _nested = createTestActorRef ? Context.System.ActorOf<NestedActor>() : new TestActorRef<NestedActor>(Context.System, Props.Create<NestedActor>(), null, null);
+#pragma warning restore AK1008
         }
 
         protected override bool Receive(object message)

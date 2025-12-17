@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardEntityFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.actor.provider = cluster
                 akka.persistence.journal.plugin = ""akka.persistence.journal.inmem""
                 akka.remote.dot-netty.tcp.port = 0")
-            .WithFallback(ClusterSingletonManager.DefaultConfig())
+            .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSharding.DefaultConfig());
         
         private sealed class EntityEnvelope
@@ -93,30 +93,37 @@ namespace Akka.Cluster.Sharding.Tests
             }
         }
         
+        private sealed class TestMessageExtractor: IMessageExtractor
+        {
+            public string EntityId(object message)
+                => message switch
+                {
+                    EntityEnvelope env => env.Id.ToString(),
+                    _ => null
+                };
+
+            public object EntityMessage(object message)
+                => message switch
+                {
+                    EntityEnvelope env => env.Payload,
+                    _ => message
+                };
+
+            public string ShardId(object message)
+                => message switch
+                {
+                    EntityEnvelope msg => msg.Id.ToString(),
+                    _ => null
+                };
+
+            public string ShardId(string entityId, object messageHint = null)
+                => entityId;
+        }
+        
         [Theory(DisplayName = "Persistent shard must recover from transient failures inside sharding entity constructor and PreStart method")]
         [MemberData(nameof(PropsFactory))]
         public async Task Persistent_Shard_must_recover_from_failing_entity(Props entityProp)
         {
-            ExtractEntityId extractEntityId = message =>
-            {
-                switch (message)
-                {
-                    case EntityEnvelope env:
-                        return (env.Id.ToString(), env.Payload);
-                }
-                return Option<(string, object)>.None;
-            };
-
-            ExtractShardId extractShardId = message =>
-            {
-                switch (message)
-                {
-                    case EntityEnvelope msg:
-                        return msg.Id.ToString();
-                }
-                return null;
-            };            
-
             var settings = ClusterShardingSettings.Create(Sys);
             settings = settings.WithTuningParameters(settings.TuningParameters.WithEntityRestartBackoff(1.Seconds()));
             var provider = new EventSourcedRememberEntitiesProvider("cats", settings);
@@ -126,20 +133,21 @@ namespace Akka.Cluster.Sharding.Tests
                 "shard-1",
                 _ => entityProp,
                 settings,
-                extractEntityId,
-                extractShardId,
+                new TestMessageExtractor(),
                 PoisonPill.Instance,
-                provider
+                provider,
+                null
             ));
 
-            Sys.EventStream.Subscribe<Error>(TestActor);
+            var errorProbe = CreateTestProbe();
+            Sys.EventStream.Subscribe<Error>(errorProbe);
 
             var persistentShard = Sys.ActorOf(props);
 
             persistentShard.Tell(new EntityEnvelope(1, "Start"));
 
             // entity died here
-            var err = ExpectMsg<Error>();
+            var err = errorProbe.ExpectMsg<Error>();
             err.Cause.Should().BeOfType<ActorInitializationException>();
 
             // Need to wait for the internal state to reset, else everything we sent will go to dead letter

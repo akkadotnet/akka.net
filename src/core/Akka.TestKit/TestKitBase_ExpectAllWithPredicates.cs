@@ -1,3 +1,10 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="TestKitBase_ExpectAllWithPredicates.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +28,7 @@ public abstract partial class TestKitBase
     {
         return ExpectMsgAllOfMatchingPredicatesAsync(predicates, cancellationToken)
             .ToListAsync(cancellationToken)
-            .ConfigureAwait(false).GetAwaiter().GetResult();
+            .GetAwaiter().GetResult();
     }
 
     public async IAsyncEnumerable<object> ExpectMsgAllOfMatchingPredicatesAsync(
@@ -30,7 +37,7 @@ public abstract partial class TestKitBase
     {
         var enumerable = InternalExpectMsgAllOfMatchingPredicatesAsync(new TimeSpan(0, 0, 60), predicates,
                 cancellationToken: cancellationToken)
-            .ConfigureAwait(false).WithCancellation(cancellationToken);
+            .WithCancellation(cancellationToken);
         await foreach (var item in enumerable)
         {
             yield return item;
@@ -48,7 +55,7 @@ public abstract partial class TestKitBase
     {
         return ExpectMsgAllOfMatchingPredicatesAsync(max, predicates, cancellationToken)
             .ToListAsync(cancellationToken)
-            .ConfigureAwait(false).GetAwaiter().GetResult();
+            .GetAwaiter().GetResult();
     }
 
     public async IAsyncEnumerable<object> ExpectMsgAllOfMatchingPredicatesAsync(
@@ -57,8 +64,7 @@ public abstract partial class TestKitBase
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         max.EnsureIsPositiveFinite("max");
-        var enumerable = InternalExpectMsgAllOfAsync(Dilated(max), predicates, cancellationToken: cancellationToken)
-            .ConfigureAwait(false).WithCancellation(cancellationToken);
+        var enumerable = InternalExpectMsgAllOfAsync(Dilated(max), predicates, cancellationToken: cancellationToken);
         await foreach (var item in enumerable)
         {
             yield return item;
@@ -77,8 +83,7 @@ public abstract partial class TestKitBase
         var start = Now;
 
         var unexpectedMessages = new List<object>();
-        var receivedMessages = InternalReceiveNAsync(predicateInfos.Count, max, shouldLog, cancellationToken)
-            .ConfigureAwait(false).WithCancellation(cancellationToken);
+        var receivedMessages = InternalReceiveNAsync(predicateInfos.Count, max, shouldLog, cancellationToken);
         await foreach (var msg in receivedMessages)
         {
             var foundPredicateInfo = predicateInfoList.FirstOrDefault(p =>

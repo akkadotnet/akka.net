@@ -4,7 +4,11 @@ title: Akka.Cluster.Sharding - Reliable, Automatic State Distribution with Akka.
 ---
 # Akka.Cluster.Sharding
 
-Cluster sharding is useful in cases when you want to contact with cluster actors using their logical id's, but don't want to care about their physical location inside the cluster or manage their creation. Moreover it's able to re-balance them, as nodes join/leave the cluster. It's often used to represent i.e. Aggregate Roots in Domain Driven Design terminology.
+Cluster sharding is useful in cases when you want to contact with cluster actors using their logical id's, but don't want to care about their physical location inside the cluster or manage their creation. Moreover it's able to re-balance them, as nodes join/leave the cluster.
+
+<!-- markdownlint-disable MD033 -->
+<iframe width="560" height="315" src="https://www.youtube.com/embed/2apFt9v0Vjw?si=1CEHMstm6GSXizSu" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+ <!-- markdownlint-enable MD033 -->
 
 > [!IMPORTANT]
 > Interested in upgrading an Akka.NET v1.4 Cluster.Sharding application to v1.5? [Please read our Akka.Cluster.Sharding v1.5 migration guide](xref:akkadotnet-v15-upgrade-advisories#akkaclustersharding-state-storage).
@@ -83,6 +87,35 @@ As you may have seen in the examples above shard resolution algorithm is one of 
 
 By default re-balancing process always happens from nodes with the highest number of shards, to the ones with the smallest one. This can be configured into by specifying custom implementation of the `IShardAllocationStrategy` interface in `ClusterSharding.Start` parameters.
 
+## Shard Re-Balancing
+
+In the shard re-balance process, the coordinator first notifies all `ShardRegion` actors that a handoff for a shard has started.
+That means they will start buffering incoming messages for that shard, in the same way as if the shard location is unknown.
+During the re-balance process, the coordinator will not answer any requests for the location of shards that are being rebalanced, i.e. local buffering will continue until the handoff is completed.
+The `ShardRegion` responsible for the rebalanced shard will stop all entities in that shard by sending the specified `handoffStopMessage` (default `PoisonPill`) to them.
+When all entities have been terminated the `ShardRegion` owning the entities will acknowledge the handoff as completed to the coordinator.
+Thereafter the coordinator will reply to requests for the location of the shard, thereby allocating a new home for the shard, and then buffered messages in the `ShardRegion` actors are delivered to the new location; this means that the state of the entities are not transferred or migrated.
+If the state of the entities are of importance it should be persistent (durable) with Persistence, so that it can be recovered at the new location.
+
+The logic that decides which shards to re-balance is defined in a pluggable shard allocation strategy. The default implementation `LeastShardAllocationStrategy` allocates new shards to the `ShardRegion` (node) with least number of previously allocated shards.
+
+## Intercepting Actor Shutdown During Shard Re-Balancing Handoff Using Custom Stop Message
+
+The default `PoisonPill` handoff message is perfectly fine for most shard implementation where shard entity actor does not need to do additional processing before being stopped.
+The default `PoisonPill` message, however, are handled automatically by the `ActorCell`, making it hard for the shard entity actor to intercept handoff stop events. For an actor to intercept such events, we will need to provide a custom type for cluster sharding to use.
+
+To illustrate this, let us assume that we have an actor that needs to perform an asynchronous operation before it can safely shut itself down. We will use a custom handoff message called `Stop` that are declared as such:
+
+[!code-csharp[Stop Message](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests.MultiNode/ClusterShardingGracefulShutdownOldestSpec.cs?name=StopMessage)]
+
+We then tell the sharding system that we would like to use a custom handoff stop message by passing an instance of it into the cluster sharding `Start()` method:
+
+[!code-csharp[Cluster Start](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests.MultiNode/ClusterShardingGracefulShutdownOldestSpec.cs?name=ClusterStart)]
+
+We can then intercept this custom message type inside the entity actor message handler and perform our operation before the actor stops:
+
+[!code-csharp[Delayed Stop](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests.MultiNode/ClusterShardingGracefulShutdownOldestSpec.cs?name=DelayedStop)]
+
 ## Reliable Delivery of Messages to Sharded Entity Actors
 
 If you are interested in ensuring that all messages are guaranteed to be delivered to your entity actors even across restarts, re-balancing operations, or crashes then please see "[Reliable Delivery over Akka.Cluster.Sharding](xref:cluster-sharding-delivery)."
@@ -123,6 +156,9 @@ public sealed class MessageExtractor : HashCodeMessageExtractor
     public object EntityMessage(object message) => (message as ShardEnvelope)?.Message ?? message;
 }
 ```
+
+> ![IMPORTANT]
+> Since [Akka.NET v1.5.15](https://github.com/akkadotnet/akka.net/releases/tag/1.5.15) Akka.Cluster.Sharding will now automatically handle `ShardRegion.StartEntity` messages for you and will raise an analyzer warning [`AK2001`](xref:AK2001) if you attempt to handle them in your message extractors.
 
 Using `ShardRegion.StartEntity` implies, that you're able to infer a shard id given an entity id alone. For this reason, in example above we modified a cluster sharding routing logic to make use of `HashCodeMessageExtractor` - in this variant, shard id doesn't have to be provided explicitly, as it will be computed from the hash of entity id itself. Notice a `maxNumberOfShards`, which is the maximum available number of shards allowed for this type of an actor - this value must never change during a single lifetime of a cluster.
 
@@ -288,14 +324,9 @@ You can inspect current sharding stats by using following messages:
 
 It's possible to query a `ShardRegion` or a `ShardRegionProxy` using a `GetEntityLocation` query:
 
-[!code-csharp[ShardedDaemonProcessSpec.cs](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/ShardRegionQueriesSpecs.cs?name=GetEntityLocationQuery)]
+[!code-csharp[ShardRegionQueriesSpecs.cs](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/ShardRegionQueriesSpecs.cs?name=GetEntityLocationQuery)]
 
 A `GetEntityLocation` query will always return an `EntityLocation` response - even if the query could not be executed.
-
-> [!IMPORTANT]
-> One major caveat is that in order for the `GetEntityLocation` to execute your `IMessageExtractor` or `ShardExtractor` delegate will need to support the `ShardRegion.StartEntity` message - just like you'd have to use in order to support `remember-entities=on`:
-
-[!code-csharp[ShardedDaemonProcessSpec.cs](../../../src/contrib/cluster/Akka.Cluster.Sharding.Tests/ShardRegionQueriesSpecs.cs?name=GetEntityLocationExtractor)]
 
 ## Integrating Cluster Sharding with Persistent Actors
 

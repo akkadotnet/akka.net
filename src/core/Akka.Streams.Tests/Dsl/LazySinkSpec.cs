@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LazySinkSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             return () =>
             {
-                Assert.True(false, "Must not call fallback function");
+                Assert.Fail("Must not call fallback function");
                 return default(TMat);
             };
         }
@@ -50,7 +50,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
                 var taskProbe = Source.From(Enumerable.Range(0, 11)).RunWith(lazySink, Materializer);
-                var probe = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var probe = await taskProbe.WaitAsync(RemainingOrDefault);
                 probe.Value.Request(100);
                 foreach (var i in Enumerable.Range(0, 11)) 
                 {
@@ -77,7 +77,7 @@ namespace Akka.Streams.Tests.Dsl
                 taskProbe.Wait(TimeSpan.FromMilliseconds(200)).ShouldBeFalse();
 
                 p.SetResult(this.SinkProbe<int>());
-                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var complete = await taskProbe.WaitAsync(RemainingOrDefault);
                 var probe = complete.Value;
                 probe.Request(100);
                 await probe.ExpectNextAsync(0);
@@ -98,7 +98,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(Sink.Aggregate(0, (int i, int i2) => i + i2)));
                 var taskProbe = Source.Empty<int>().RunWith(lazySink, Materializer);
-                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var complete = await taskProbe.WaitAsync(RemainingOrDefault);
                 complete.ShouldBe(Option<Task<int>>.None);
             }, Materializer);
         }
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var lazySink = Sink.LazyInitAsync(() => Task.FromResult(this.SinkProbe<int>()));
                 var taskProbe = Source.Single(1).RunWith(lazySink, Materializer);
-                var taskResult = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var taskResult = await taskProbe.WaitAsync(RemainingOrDefault);
                 await taskResult.Value.Request(1).ExpectNext(1).ExpectCompleteAsync();
             }, Materializer);
         }
@@ -141,7 +141,7 @@ namespace Akka.Streams.Tests.Dsl
                 var sourceSub = await sourceProbe.ExpectSubscriptionAsync();
                 await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
-                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var complete = await taskProbe.WaitAsync(RemainingOrDefault);
                 var probe = complete.Value;
                 await probe.Request(1).ExpectNextAsync(0);
                 sourceSub.SendError(Ex);
@@ -182,7 +182,7 @@ namespace Akka.Streams.Tests.Dsl
                 await sourceSub.ExpectRequestAsync(1);
                 sourceSub.SendNext(0);
                 await sourceSub.ExpectRequestAsync(1);
-                var complete = await taskProbe.ShouldCompleteWithin(RemainingOrDefault);
+                var complete = await taskProbe.WaitAsync(RemainingOrDefault);
                 var probe = complete.Value;
                 await probe.Request(1).ExpectNextAsync(0);
                 probe.Cancel();

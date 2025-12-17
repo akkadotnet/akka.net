@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncAwaitSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -235,8 +235,9 @@ namespace Akka.Tests.Dispatch
                 //this is also safe, all tasks complete in the actor context
                 RunTask(async () =>
                 {
+                    var sender = Sender;
                     await Task.Delay(TimeSpan.FromSeconds(1))
-                        .ContinueWith(_ => { Sender.Tell("done"); });
+                        .ContinueWith(_ => { sender.Tell("done"); });
                 });
             });
         }
@@ -429,11 +430,13 @@ namespace Akka.Tests.Dispatch
             public AsyncFailingActor()
             {
 #pragma warning disable CS1998
+#pragma warning disable AK1003
                 ReceiveAsync<string>(async _ =>
-#pragma warning restore CS1998
                 {
                     ThrowException();
                 });
+#pragma warning restore AK1003
+#pragma warning restore CS1998
             }
 
             protected override void PreRestart(Exception reason, object message)
@@ -465,8 +468,9 @@ namespace Akka.Tests.Dispatch
             {
                 ReceiveAsync<string>(async msg =>
                 {
+                    var sender = Sender;
 #pragma warning disable CS4014
-                    Delayed(msg).PipeTo(Sender, Self);
+                    Delayed(msg).PipeTo(sender);
 #pragma warning restore CS4014
 
                     await Task.Delay(3000);

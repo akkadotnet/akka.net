@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtomicReference.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,14 +16,14 @@ namespace Akka.Util
     /// without any explicit locking. .NET's strong memory on write guarantees might already enforce
     /// this ordering, but the addition of the Volatile guarantees it.
     /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
+    /// <typeparam name="T">The type of object referenced by this instance.</typeparam>
     public class AtomicReference<T>
         where T : class
     {
         /// <summary>
         /// Sets the initial value of this <see cref="AtomicReference{T}"/> to <paramref name="originalValue"/>.
         /// </summary>
-        /// <param name="originalValue">TBD</param>
+        /// <param name="originalValue">The initial value to be referenced.</param>
         public AtomicReference(T originalValue)
         {
             atomicValue = originalValue;
@@ -39,7 +39,7 @@ namespace Akka.Util
 
         // ReSharper disable once InconsistentNaming
         /// <summary>
-        /// TBD
+        /// The internal field that holds the referenced value.
         /// </summary>
         protected T atomicValue;
 
@@ -56,13 +56,28 @@ namespace Akka.Util
         /// If <see cref="Value"/> equals <paramref name="expected"/>, then set the Value to
         /// <paramref name="newValue"/>.
         /// </summary>
-        /// <param name="expected">TBD</param>
-        /// <param name="newValue">TBD</param>
+        /// <param name="expected">The value expected to be referenced currently.</param>
+        /// <param name="newValue">The new value to reference if the current matches the expected value.</param>
         /// <returns><c>true</c> if <paramref name="newValue"/> was set</returns>
+        /// <remarks>
+        /// WARNING: if you need to know the previous value, use <see cref="CompareExchange(T,T)"/> instead.
+        /// </remarks>
         public bool CompareAndSet(T expected, T newValue)
         {
-            var previous = Interlocked.CompareExchange(ref atomicValue, newValue, expected);
+            var previous = CompareExchange(expected, newValue);
             return ReferenceEquals(previous, expected);
+        }
+
+        /// <summary>
+        /// Atomically compares the current value with <paramref name="expected"/> and, if they are equal, 
+        /// replaces the current value with <paramref name="newValue"/>.
+        /// </summary>
+        /// <param name="expected">The value expected to be referenced currently.</param>
+        /// <param name="newValue">The new value to reference if the current matches the expected value.</param>
+        /// <returns>The original value that was in the atomic reference before the operation.</returns>
+        public T CompareExchange(T expected, T newValue)
+        {
+            return Interlocked.CompareExchange(ref atomicValue, newValue, expected);
         }
 
         /// <summary>

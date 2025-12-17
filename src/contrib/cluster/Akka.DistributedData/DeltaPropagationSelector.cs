@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeltaPropagationSelector.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -78,13 +78,13 @@ namespace Akka.DistributedData
 
                 _deltaNodeRoundRobinCounter += sliceSize;
 
-                var result = ImmutableDictionary<Address, DeltaPropagation>.Empty.ToBuilder();
+                var result = ImmutableDictionary.CreateBuilder<Address, DeltaPropagation>();
                 var cache = new Dictionary<(string, long, long), IReplicatedData>();
                 foreach (var node in slice)
                 {
                     // collect the deltas that have not already been sent to the node and merge
                     // them into a delta group
-                    var deltas = ImmutableDictionary<string, (IReplicatedData, long, long)>.Empty.ToBuilder();
+                    var deltas = ImmutableDictionary.CreateBuilder<string, (IReplicatedData, long, long)>();
                     foreach (var entry in _deltaEntries)
                     {
                         var key = entry.Key;

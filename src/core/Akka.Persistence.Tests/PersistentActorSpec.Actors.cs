@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistentActorSpec.Actors.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -480,13 +480,15 @@ namespace Akka.Persistence.Tests
                     if (cmd != null)
                     {
                         Sender.Tell(cmd.Data);
+                        var events = new List<Evt>();
                         for (int i = 1; i <= 3; i++)
                         {
-                            PersistAsync(new Evt(cmd.Data.ToString() + "-" + (++_counter)), evt =>
-                            {
-                                Sender.Tell("a" + evt.Data.ToString().Substring(1));
-                            });
+                            events.Add(new Evt(cmd.Data.ToString() + "-" + (++_counter)));
                         }
+                        PersistAllAsync(events, evt =>
+                        {
+                            Sender.Tell("a" + evt.Data.ToString().Substring(1));
+                        });
 
                         return true;
                     }
@@ -629,7 +631,6 @@ namespace Akka.Persistence.Tests
 
         internal class AsyncPersistHandlerCorrelationCheck : ExamplePersistentActor
         {
-            private int _counter = 0;
             public AsyncPersistHandlerCorrelationCheck(string name)
                 : base(name)
             {
@@ -639,8 +640,7 @@ namespace Akka.Persistence.Tests
             {
                 if (!CommonBehavior(message))
                 {
-                    var cmd = message as Cmd;
-                    if (cmd != null)
+                    if (message is Cmd cmd)
                     {
                         PersistAsync(new Evt(cmd.Data), evt =>
                         {
@@ -665,8 +665,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                var cmd = message as Cmd;
-                if (cmd != null && cmd.Data.ToString() == "a")
+                if (message is Cmd cmd && cmd.Data.ToString() == "a")
                 {
                     Persist(5L, i =>
                     {
@@ -725,8 +724,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                var cmd = message as Cmd;
-                if (cmd != null)
+                if (message is Cmd cmd)
                 {
                     DeferAsync("d-1", Sender.Tell);
                     Persist(cmd.Data + "-2", Sender.Tell);
@@ -771,8 +769,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                var cmd = message as Cmd;
-                if (cmd != null)
+                if (message is Cmd cmd)
                 {
                     Persist("p-" + cmd.Data + "-1", Sender.Tell);
                     PersistAsync("pa-" + cmd.Data + "-2", Sender.Tell);
@@ -796,8 +793,7 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveCommand(object message)
             {
-                var cmd = message as Cmd;
-                if (cmd != null)
+                if (message is Cmd cmd)
                 {
                     DeferAsync("d-1", Sender.Tell);
                     DeferAsync("d-2", Sender.Tell);

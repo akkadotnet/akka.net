@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TransportAdapters.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
+    internal sealed class TransportAdaptersExtension : ExtensionIdProvider<TransportAdapters>
     {
         /// <inheritdoc cref="ExtensionIdProvider{T}"/>
         public override TransportAdapters CreateExtension(ExtendedActorSystem system)
@@ -61,7 +61,7 @@ namespace Akka.Remote.Transport
     /// 
     /// Extension that allows us to look up transport adapters based upon the settings provided inside <see cref="RemoteSettings"/>
     /// </summary>
-    internal class TransportAdapters : IExtension
+    internal sealed class TransportAdapters : IExtension
     {
         /// <summary>
         /// TBD
@@ -81,7 +81,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// The Akka.Remote settings
         /// </summary>
-        protected RemoteSettings Settings;
+        private readonly RemoteSettings Settings;
 
         private Dictionary<string, ITransportAdapterProvider> _adaptersTable;
 

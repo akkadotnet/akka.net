@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SimpleDnsManager.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ using Akka.Event;
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// Actor that manages DNS resolution requests and the DNS cache.
     /// </summary>
     public class SimpleDnsManager : ActorBase, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
@@ -23,9 +23,9 @@ namespace Akka.IO
         private ICancelable _cleanupTimer;
 
         /// <summary>
-        /// TBD
+        /// Creates a new instance of the SimpleDnsManager.
         /// </summary>
-        /// <param name="ext">TBD</param>
+        /// <param name="ext">The DNS extension that owns this manager.</param>
         public SimpleDnsManager(DnsExt ext)
         {
             _ext = ext;
@@ -43,10 +43,10 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Handles DNS resolution requests and cache cleanup messages.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message to process.</param>
+        /// <returns>True if the message was handled, false otherwise.</returns>
         protected override bool Receive(object message)
         {
             var r = message as Dns.Resolve;
@@ -66,7 +66,7 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Cancels the cleanup timer when the actor is stopped.
         /// </summary>
         protected override void PostStop()
         {
@@ -75,12 +75,12 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Message sent to trigger DNS cache cleanup.
         /// </summary>
         internal class CacheCleanup
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance of the cache cleanup message.
             /// </summary>
             public static readonly CacheCleanup Instance = new();
         }

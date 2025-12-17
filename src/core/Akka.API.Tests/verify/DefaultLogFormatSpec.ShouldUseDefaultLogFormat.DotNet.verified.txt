@@ -1,0 +1,4 @@
+﻿[DEBUG][DateTime][Thread 0001][ActorSystem(test)] This is a test 1 cheese
+[INFO][DateTime][Thread 0001][ActorSystem(test)] This is a test 1
+[WARNING][DateTime][Thread 0001][ActorSystem(test)] This is a test 1
+[ERROR][DateTime][Thread 0001][ActorSystem(test)] This is a test 1

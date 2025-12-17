@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MemoryEventAdapterSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -29,8 +29,8 @@ namespace Akka.Persistence.Tests
         [Serializable]
         public sealed class Tagged : IJournalModel, IEquatable<IJournalModel>
         {
-            public object Payload { get; private set; }
-            public ISet<string> Tags { get; private set; }
+            public object Payload { get; }
+            public ISet<string> Tags { get; }
 
             public Tagged(object payload, ISet<string> tags)
             {
@@ -47,10 +47,20 @@ namespace Akka.Persistence.Tests
             {
                 return Equals(obj as IJournalModel);
             }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hashCode = Payload.GetHashCode();
+                    hashCode = (hashCode * 397) ^ Tags.GetHashCode();
+                    return hashCode;
+                }
+            }
         }
 
         [Serializable]
-        public sealed class NotTagged : IJournalModel, IEquatable<IJournalModel>
+        public sealed class NotTagged : IJournalModel, IEquatable<IJournalModel>, IEquatable<NotTagged>
         {
             public object Payload { get; private set; }
             public ISet<string> Tags { get { return new HashSet<string>(); } }
@@ -68,6 +78,18 @@ namespace Akka.Persistence.Tests
             public override bool Equals(object obj)
             {
                 return Equals(obj as IJournalModel);
+            }
+
+            public bool Equals(NotTagged other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Equals(Payload, other.Payload);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Payload != null ? Payload.GetHashCode() : 0);
             }
         }
 
@@ -94,6 +116,14 @@ namespace Akka.Persistence.Tests
             {
                 return Equals(obj as TaggedDataChanged);
             }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((Tags != null ? Tags.GetHashCode() : 0) * 397) ^ Value;
+                }
+            }
         }
 
         [Serializable]
@@ -116,6 +146,14 @@ namespace Akka.Persistence.Tests
             public override bool Equals(object obj)
             {
                 return Equals(obj as UserDataChanged);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return ((CountryCode != null ? CountryCode.GetHashCode() : 0) * 397) ^ Age;
+                }
             }
         }
 
@@ -208,7 +246,10 @@ namespace Akka.Persistence.Tests
 
             protected override bool ReceiveRecover(object message)
             {
-                if (message is RecoveryCompleted) ;
+                if (message is RecoveryCompleted)
+                {
+                    // skip
+                }
                 else
                 {
                     State.AddLast(message);
@@ -228,56 +269,58 @@ namespace Akka.Persistence.Tests
         private static readonly string JournalModelTypeName = typeof(IJournalModel).FullName + ", Akka.Persistence.Tests";
         private static readonly string DomainEventTypeName = typeof(IDomainEvent).FullName + ", Akka.Persistence.Tests";
 
-        private static readonly string _configFormat = @"
-            akka.persistence.journal {{
-                common-event-adapters {{
-                    age = ""{0}""
-                    replay-pass-through = ""{1}""
-                }}
-                inmem {{
-                    # change to path reference $akka.persistence.journal.common-event-adapters
-                    event-adapters {{
-                        age = ""{0}""
-                        replay-pass-through = ""{1}""
-                    }}
-                    event-adapter-bindings {{
-                        ""{2}"" = age
-                        ""{3}"" = age
-                    }}
-                }}
-                with-actor-system {{
-                    class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
-                    dispatcher = default-dispatcher
-                    dir = ""journal-1""
-
-                    event-adapters {{
-                        logging = ""{4}""
-                    }}
-                    event-adapters-bindings {{
-                        ""System.Object"" = logging
-                    }}
-                }}
-                replay-pass-through-adapter-journal {{
-                    class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
-                    dispatcher = default-dispatcher
-                    dir = ""journal-2""
-
-                    # change to path reference $akka.persistence.journal.common-event-adapters
-                    event-adapters {{
-                        age = ""{0}""
-                        replay-pass-through = ""{1}""
-                    }}
-                    event-adapter-bindings {{
-                        ""{2}"" = replay-pass-through
-                        ""{3}"" = replay-pass-through
-                    }}
-                }}
-                no-adapter {{
-                    class = ""Akka.Persistence.Journal.MemoryJournal, Akka.Persistence""
-                    dispatcher = default-dispatcher
-                    dir = ""journal-3""                    
-                }}
-            }}";
+        private static readonly string _configFormat = """
+                                                       
+                                                                   akka.persistence.journal {{
+                                                                       common-event-adapters {{
+                                                                           age = "{0}"
+                                                                           replay-pass-through = "{1}"
+                                                                       }}
+                                                                       inmem {{
+                                                                           # change to path reference $akka.persistence.journal.common-event-adapters
+                                                                           event-adapters {{
+                                                                               age = "{0}"
+                                                                               replay-pass-through = "{1}"
+                                                                           }}
+                                                                           event-adapter-bindings {{
+                                                                               "{2}" = age
+                                                                               "{3}" = age
+                                                                           }}
+                                                                       }}
+                                                                       with-actor-system {{
+                                                                           class = "Akka.Persistence.Journal.MemoryJournal, Akka.Persistence"
+                                                                           dispatcher = default-dispatcher
+                                                                           dir = "journal-1"
+                                                       
+                                                                           event-adapters {{
+                                                                               logging = "{4}"
+                                                                           }}
+                                                                           event-adapters-bindings {{
+                                                                               "System.Object" = logging
+                                                                           }}
+                                                                       }}
+                                                                       replay-pass-through-adapter-journal {{
+                                                                           class = "Akka.Persistence.Journal.MemoryJournal, Akka.Persistence"
+                                                                           dispatcher = default-dispatcher
+                                                                           dir = "journal-2"
+                                                       
+                                                                           # change to path reference $akka.persistence.journal.common-event-adapters
+                                                                           event-adapters {{
+                                                                               age = "{0}"
+                                                                               replay-pass-through = "{1}"
+                                                                           }}
+                                                                           event-adapter-bindings {{
+                                                                               "{2}" = replay-pass-through
+                                                                               "{3}" = replay-pass-through
+                                                                           }}
+                                                                       }}
+                                                                       no-adapter {{
+                                                                           class = "Akka.Persistence.Journal.MemoryJournal, Akka.Persistence"
+                                                                           dispatcher = default-dispatcher
+                                                                           dir = "journal-3"
+                                                                       }}
+                                                                   }}
+                                                       """;
 
         public static readonly string AdapterSpecConfig = string.Format(_configFormat,
             typeof(UserAgeTaggingAdapter).FullName + ", Akka.Persistence.Tests",

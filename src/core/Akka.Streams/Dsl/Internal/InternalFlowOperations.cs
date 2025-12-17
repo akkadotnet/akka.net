@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="InternalFlowOperations.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -163,7 +163,7 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels 
         /// </summary>
-        /// <param name="flow">TBD</param>
+        /// <param name="flow">The upstream stage</param>
         /// <param name="selector">Receives the failure cause and returns the new cause, return the original exception if no other should be applied</param>
         public static IFlow<TOut, TMat> SelectError<TOut, TMat>(this IFlow<TOut, TMat> flow, Func<Exception, Exception> selector)
         {
@@ -184,12 +184,6 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapper">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> Select<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> mapper)
         {
             return flow.Via(new Fusing.Select<TIn, TOut>(mapper));
@@ -206,7 +200,7 @@ namespace Akka.Streams.Dsl.Internal
         /// operations (such as `Log`, or emitting metrics), for each element without having to modify it.
         /// </para>
         /// <para>
-        /// For logging signals (elements, completion, error) consider using the <see cref="Log"/> stage instead,
+        /// For logging signals (elements, completion, error) consider using the <see cref="Log{T,TMat}"/> stage instead,
         /// along with appropriate <see cref="Attributes.LogLevels"/>.
         /// </para>
         /// <para>
@@ -217,11 +211,6 @@ namespace Akka.Streams.Dsl.Internal
         /// <para>Completes when upstream completes</para>
         /// <para>Cancels when downstream cancels</para>
         /// </summary>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> WireTap<TOut, TMat>(this IFlow<TOut, TMat> flow, Action<TOut> action) =>
             //flow.WireTap(Sink.ForEach(action)); // should be this, but can't be due to type constraints
             flow.WireTapMaterialized(Sink.ForEach(action), Keep.Left);
@@ -247,12 +236,6 @@ namespace Akka.Streams.Dsl.Internal
         /// Cancels when downstream cancels
         /// </para>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapConcater">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> SelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<TIn, IEnumerable<TOut>> mapConcater)
         {
@@ -285,12 +268,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// See also <see cref="SelectMany{TIn,TOut,TMat}"/>
         /// </summary>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="mapConcaterFactory">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> StatefulSelectMany<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
             Func<Func<TIn, IEnumerable<TOut>>> mapConcaterFactory)
         {
@@ -327,13 +304,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsyncUnordered{TIn,TOut,TMat}"/>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="asyncMapper">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> SelectAsync<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
             Func<TIn, Task<TOut>> asyncMapper)
         {
@@ -369,13 +339,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// </summary>
         /// <seealso cref="SelectAsync{TIn,TOut,TMat}"/>
-        /// <typeparam name="TIn">TBD</typeparam>
-        /// <typeparam name="TOut">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="parallelism">TBD</param>
-        /// <param name="asyncMapper">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> SelectAsyncUnordered<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, int parallelism,
             Func<TIn, Task<TOut>> asyncMapper)
         {
@@ -395,11 +358,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<T, TMat> Where<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
             return flow.Via(new Fusing.Where<T>(predicate));
@@ -418,11 +376,6 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<T, TMat> WhereNot<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate)
         {
             return flow.Via(new Fusing.Where<T>(e => !predicate(e)));
@@ -451,12 +404,6 @@ namespace Akka.Streams.Dsl.Internal
         /// <seealso cref="Limit{T, TMat}(IFlow{T, TMat}, long)"/>
         /// <seealso cref="LimitWeighted{T, TMat}(IFlow{T, TMat}, long, Func{T, long})"/>
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="predicate">TBD</param>
-        /// <param name="inclusive">TBD</param>
-        /// <returns>TBD</returns>
         public static IFlow<T, TMat> TakeWhile<T, TMat>(this IFlow<T, TMat> flow, Predicate<T> predicate, bool inclusive)
         {
             return flow.Via(new Fusing.TakeWhile<T>(predicate, inclusive));
@@ -503,7 +450,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="flow">TBD</param>
         /// <param name="collector">TBD</param>
         /// <returns>TBD</returns>
-        [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead")]
+        [Obsolete("Deprecated. Please use Collect(isDefined, collector) instead. Since v1.4.51")]
         public static IFlow<TOut, TMat> Collect<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow, Func<TIn, TOut> collector)
         {
             return flow.Via(new Fusing.Collect<TIn, TOut>(collector));
@@ -1284,7 +1231,9 @@ namespace Akka.Streams.Dsl.Internal
         /// <param name="stageFactory">TBD</param>
         /// <returns>TBD</returns>
         public static IFlow<TOut, TMat> Transform<TIn, TOut, TMat>(this IFlow<TIn, TMat> flow,
+#pragma warning disable CS0618 // Type or member is obsolete
             Func<IStage<TIn, TOut>> stageFactory)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             return flow.Via(new PushPullGraphStage<TIn, TOut>(_ => stageFactory(), Attributes.None));
         }
@@ -1365,7 +1314,7 @@ namespace Akka.Streams.Dsl.Internal
         /// <typeparam name="TKey">TBD</typeparam>
         /// <typeparam name="TClosed">TBD</typeparam>
         /// <param name="flow">TBD</param>
-        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails</param>
+        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
         /// <param name="groupingFunc">Computes the key for each element</param>
         /// <param name="toFunc">TBD</param>
         /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
@@ -1379,14 +1328,14 @@ namespace Akka.Streams.Dsl.Internal
         {
             var merge = new GroupByMergeBack<T, TMat, TKey>(flow, maxSubstreams, groupingFunc, allowClosedSubstreamRecreation);
 
-            TClosed finish(Sink<T, TMat> s)
+            return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, Finish);
+
+            TClosed Finish(Sink<T, TMat> s)
             {
                 return toFunc(
                     flow.Via(new Fusing.GroupBy<T, TKey>(maxSubstreams, groupingFunc, allowClosedSubstreamRecreation)),
                     Sink.ForEach<Source<T, NotUsed>>(e => e.RunWith(s, Fusing.GraphInterpreter.Current.Materializer)));
             }
-
-            return new SubFlowImpl<T, T, TMat, TClosed>(Flow.Create<T, TMat>(), merge, finish);
         }
 
         /// <summary>
@@ -1405,8 +1354,8 @@ namespace Akka.Streams.Dsl.Internal
         /// <typeparam name="TKey"></typeparam>
         /// <typeparam name="TClosed"></typeparam>
         /// <param name="flow"></param>
-        /// <param name="maxSubstreams"></param>
-        /// <param name="groupingFunc"></param>
+        /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
+        /// <param name="groupingFunc">Computes the key for each element</param>
         /// <param name="toFunc"></param>
         /// <returns></returns>
         public static SubFlow<T, TMat, TClosed> GroupBy<T, TMat, TKey, TClosed>(
@@ -1432,9 +1381,9 @@ namespace Akka.Streams.Dsl.Internal
             /// TBD
             /// </summary>
             /// <param name="self">TBD</param>
-            /// <param name="maxSubstreams">TBD</param>
-            /// <param name="groupingFunc">TBD</param>
-            /// <param name="allowClosedSubstreamRecreation">TBD</param>
+            /// <param name="maxSubstreams">Configures the maximum number of substreams (keys) that are supported; if more distinct keys are encountered then the stream fails. Set to -1 for infinite substreams.</param>
+            /// <param name="groupingFunc">Computes the key for each element</param>
+            /// <param name="allowClosedSubstreamRecreation">Enables recreation of already closed substreams if elements with their corresponding keys arrive after completion</param>
             public GroupByMergeBack(IFlow<TOut, TMat> self, int maxSubstreams, Func<TOut, TKey> groupingFunc, bool allowClosedSubstreamRecreation = false)
             {
                 _self = self;
@@ -2015,17 +1964,17 @@ namespace Akka.Streams.Dsl.Internal
         /// </para>
         /// Cancels when downstream cancels
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <typeparam name="TMat">TBD</typeparam>
-        /// <param name="flow">TBD</param>
-        /// <param name="name">TBD</param>
-        /// <param name="extract">TBD</param>
-        /// <param name="log">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The output type</typeparam>
+        /// <typeparam name="TMat">The materialized type</typeparam>
+        /// <param name="flow">The underlying graph</param>
+        /// <param name="name">The name of the <see cref="LogSource"/></param>
+        /// <param name="extract">Optional. Extract the content that will be captured by the logger</param>
+        /// <param name="log">Optional. Use an external logging adapter</param>
+        /// <param name="logLevel">Optional. The log level being logged. Defaults to <see cref="LogLevel.DebugLevel"/></param>
         public static IFlow<T, TMat> Log<T, TMat>(this IFlow<T, TMat> flow, string name, Func<T, object> extract = null,
-            ILoggingAdapter log = null)
+            ILoggingAdapter log = null, LogLevel logLevel = LogLevel.DebugLevel)
         {
-            return flow.Via(new Fusing.Log<T>(name, extract ?? Identity<T>(), log));
+            return flow.Via(new Fusing.Log<T>(name, extract ?? Identity<T>(), log, logLevel));
         }
 
         /// <summary>
@@ -2517,16 +2466,16 @@ namespace Akka.Streams.Dsl.Internal
         /// Attaches the given <seealso cref="Sink{TIn,TMat}"/> to this <see cref="IFlow{TOut,TMat}"/>, meaning that elements that passes
         /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
         /// 
-        /// @see <seealso cref="AlsoTo{TOut,TMat}"/>
+        /// @see <seealso cref="InternalFlowOperations.AlsoTo{TOut,TMat}(IFlow{TOut, TMat}, IGraph{SinkShape{TOut}, TMat}, bool)"/>
         /// 
         /// It is recommended to use the internally optimized <seealso cref="Keep.Left{TLeft,TRight}"/> and <seealso cref="Keep.Right{TLeft,TRight}"/> combiners
         /// where appropriate instead of manually writing functions that pass through one of the values.
         /// </summary>
         public static IFlow<TOut, TMat3> AlsoToMaterialized<TOut, TMat, TMat2, TMat3>(
             this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat2> that,
-            Func<TMat, TMat2, TMat3> materializerFunction)
+            Func<TMat, TMat2, TMat3> materializerFunction, bool propagateFailure)
         {
-            return flow.ViaMaterialized(AlsoToGraph(that), materializerFunction);
+            return flow.ViaMaterialized(AlsoToGraph(that, propagateFailure), materializerFunction);
         }
 
         /// <summary>
@@ -2534,28 +2483,29 @@ namespace Akka.Streams.Dsl.Internal
         /// through will also be sent to the <seealso cref="Sink{TIn,TMat}"/>.
         /// 
         /// Emits when element is available and demand exists both from the Sink and the downstream.
-        ///
+        /// 
         /// Backpressures when downstream or Sink backpressures
-        ///
+        /// 
         /// Completes when upstream completes
-        ///
+        /// 
         /// Cancels when downstream cancels
         /// </summary>
         /// <typeparam name="TOut">TBD</typeparam>
         /// <typeparam name="TMat">TBD</typeparam>
         /// <param name="flow">TBD</param>
         /// <param name="that">TBD</param>
+        /// <param name="propagateFailure">Propagate downstream failures and cancels parent stream</param>
         /// <returns>TBD</returns>
-        public static IFlow<TOut, TMat> AlsoTo<TOut, TMat>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that)
+        public static IFlow<TOut, TMat> AlsoTo<TOut, TMat>(this IFlow<TOut, TMat> flow, IGraph<SinkShape<TOut>, TMat> that, bool propagateFailure)
         {
-            return flow.Via(AlsoToGraph(that));
+            return flow.Via(AlsoToGraph(that, propagateFailure));
         }
 
-        private static IGraph<FlowShape<TOut, TOut>, TMat> AlsoToGraph<TOut, TMat>(IGraph<SinkShape<TOut>, TMat> that)
+        private static IGraph<FlowShape<TOut, TOut>, TMat> AlsoToGraph<TOut, TMat>(IGraph<SinkShape<TOut>, TMat> that, bool propagateFailure)
         {
             return GraphDsl.Create(that, (b, r) =>
             {
-                var broadcast = b.Add(new Broadcast<TOut>(2));
+                var broadcast = b.Add(new Broadcast<TOut>(2, propagateFailure));
                 b.From(broadcast.Out(1)).To(r);
                 return new FlowShape<TOut, TOut>(broadcast.In, broadcast.Out(0));
             });

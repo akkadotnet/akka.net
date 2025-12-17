@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AkkaProtocolSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -111,19 +111,17 @@ namespace Akka.Remote.Tests.Transport
 
         private class TestFailureDetector : FailureDetector
         {
-#pragma warning disable CS0420
             private volatile bool _isAvailable = true;
-            public override bool IsAvailable => Volatile.Read(ref _isAvailable);
-            public void SetAvailable(bool available) => Volatile.Write(ref _isAvailable, available);
+            public override bool IsAvailable => _isAvailable;
+            public void SetAvailable(bool available) => _isAvailable = available;
             
             private volatile bool _called;
-            public override bool IsMonitoring => Volatile.Read(ref _called);
+            public override bool IsMonitoring => _called;
 
             public override void HeartBeat()
             {
-                Volatile.Write(ref _called, true);
+                _called = true;
             }
-#pragma warning restore CS0420
         }
 
         private readonly Config _config;
@@ -275,7 +273,7 @@ namespace Akka.Remote.Tests.Transport
             reader.Tell(TestAssociate(33), TestActor);
 
             await statusPromise.Task.WithTimeout(3.Seconds());
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task;
             switch (result)
             {
                 case AkkaProtocolHandle h:
@@ -323,7 +321,7 @@ namespace Akka.Remote.Tests.Transport
             reader.Tell(TestAssociate(33), TestActor);
 
             await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task;
             switch (result)
             {
                 case AkkaProtocolHandle h:
@@ -371,7 +369,7 @@ namespace Akka.Remote.Tests.Transport
             stateActor.Tell(TestAssociate(33), TestActor);
 
             await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task;
             switch (result)
             {
                 case AkkaProtocolHandle h:
@@ -422,7 +420,7 @@ namespace Akka.Remote.Tests.Transport
             stateActor.Tell(TestAssociate(33), TestActor);
 
             await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
-            var result = statusPromise.Task.Result;
+            var result = await statusPromise.Task;
             switch (result)
             {
                 case AkkaProtocolHandle h:

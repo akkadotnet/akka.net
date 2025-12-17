@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DistributedPubSubRestartSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,26 +10,28 @@ using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
+using System.Threading.Tasks;
 
-namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
+namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe;
+
+public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
 {
-    public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
+    public RoleName First { get; }
+    public RoleName Second { get; }
+    public RoleName Third { get; }
+
+    public DistributedPubSubRestartSpecConfig()
     {
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        public RoleName Third { get; }
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
 
-        public DistributedPubSubRestartSpecConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-
-            CommonConfig = ConfigurationFactory.ParseString(@"
+        CommonConfig = ConfigurationFactory.ParseString(@"
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.cluster.pub-sub.gossip-interval = 500ms
@@ -37,174 +39,175 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe
                 akka.cluster.auto-down-unreachable-after = off
             ").WithFallback(DistributedPubSub.DefaultConfig());
 
-            TestTransport = true;
-        }
-
-        internal class Shutdown : ReceiveActor
-        {
-            public Shutdown()
-            {
-                Receive<string>(str => str.Equals("shutdown"), _ =>
-                {
-                    Context.System.Terminate();
-                });
-            }
-        }
+        TestTransport = true;
     }
 
-    public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
+    internal class Shutdown : ReceiveActor
     {
-        private readonly DistributedPubSubRestartSpecConfig _config;
-
-        public DistributedPubSubRestartSpec() : this(new DistributedPubSubRestartSpecConfig())
+        public Shutdown()
         {
-        }
-
-        protected DistributedPubSubRestartSpec(DistributedPubSubRestartSpecConfig config) : base(config, typeof(DistributedPubSubRestartSpec))
-        {
-            _config = config;
-        }
-
-        [MultiNodeFact]
-        public void DistributedPubSubRestartSpecs()
-        {
-            A_Cluster_with_DistributedPubSub_must_startup_3_node_cluster();
-            A_Cluster_with_DistributedPubSub_must_handle_restart_of_nodes_with_same_address();
-        }
-
-        public void A_Cluster_with_DistributedPubSub_must_startup_3_node_cluster()
-        {
-            Within(15.Seconds(), () =>
+            Context.GetLogger().Info("Shutdown actor started on {0}", Context.System.Name);
+            Receive<string>(str => str.Equals("shutdown"), _ =>
             {
-                Join(_config.First, _config.First);
-                Join(_config.Second, _config.First);
-                Join(_config.Third, _config.First);
-                EnterBarrier("after-1");
+                Context.System.Terminate();
             });
         }
+    }
+}
 
-        public void A_Cluster_with_DistributedPubSub_must_handle_restart_of_nodes_with_same_address()
+public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
+{
+    private readonly DistributedPubSubRestartSpecConfig _config;
+
+    public DistributedPubSubRestartSpec() : this(new DistributedPubSubRestartSpecConfig())
+    {
+    }
+
+    protected DistributedPubSubRestartSpec(DistributedPubSubRestartSpecConfig config) : base(config, typeof(DistributedPubSubRestartSpec))
+    {
+        _config = config;
+    }
+
+    [MultiNodeFact]
+    public async Task DistributedPubSubRestartSpecs()
+    {
+        await A_Cluster_with_DistributedPubSub_must_startup_3_node_cluster();
+        await A_Cluster_with_DistributedPubSub_must_handle_restart_of_nodes_with_same_address();
+    }
+
+    public async Task A_Cluster_with_DistributedPubSub_must_startup_3_node_cluster()
+    {
+        await WithinAsync(15.Seconds(), async () =>
         {
-            Within(30.Seconds(), () =>
+            await JoinAsync(_config.First, _config.First);
+            await JoinAsync(_config.Second, _config.First);
+            await JoinAsync(_config.Third, _config.First);
+            await EnterBarrierAsync("after-1");
+        });
+    }
+
+    public async Task A_Cluster_with_DistributedPubSub_must_handle_restart_of_nodes_with_same_address()
+    {
+        await WithinAsync(30.Seconds(), async () =>
+        {
+            Mediator.Tell(new Subscribe("topic1", TestActor));
+            ExpectMsg<SubscribeAck>();
+            await CountAsync(3);
+
+            RunOn(() =>
             {
-                Mediator.Tell(new Subscribe("topic1", TestActor));
-                ExpectMsg<SubscribeAck>();
-                AwaitCount(3);
+                Mediator.Tell(new Publish("topic1", "msg1"));
+            }, _config.First);
+            await EnterBarrierAsync("pub-msg1");
 
-                RunOn(() =>
+            await ExpectMsgAsync("msg1");
+            await EnterBarrierAsync("got-msg1");
+
+            // All nodes capture baseline DeltaCount before node-specific logic
+            Mediator.Tell(DeltaCount.Instance);
+            var oldDeltaCount = await ExpectMsgAsync<long>();
+            await EnterBarrierAsync("old-delta-count");
+
+            await RunOnAsync(async () =>
+            {
+                await EnterBarrierAsync("end");
+
+                Mediator.Tell(DeltaCount.Instance);
+                var deltaCount = await ExpectMsgAsync<long>();
+                deltaCount.Should().Be(oldDeltaCount);
+            }, _config.Second);
+
+            await RunOnAsync(async () =>
+            {
+                var thirdAddress = (await NodeAsync(_config.Third)).Address;
+                await TestConductor.Shutdown(_config.Third).WaitAsync(30.Seconds());
+
+                await WithinAsync(20.Seconds(), async () =>
                 {
-                    Mediator.Tell(new Publish("topic1", "msg1"));
-                }, _config.First);
-                EnterBarrier("pub-msg1");
-
-                ExpectMsg("msg1");
-                EnterBarrier("got-msg1");
-
-                RunOn(() =>
-                {
-                    Mediator.Tell(DeltaCount.Instance);
-                    var oldDeltaCount = ExpectMsg<long>();
-
-                    EnterBarrier("end");
-
-                    Mediator.Tell(DeltaCount.Instance);
-                    var deltaCount = ExpectMsg<long>();
-                    deltaCount.Should().Be(oldDeltaCount);
-                }, _config.Second);
-
-                RunOn(() =>
-                {
-                    Mediator.Tell(DeltaCount.Instance);
-                    var oldDeltaCount = ExpectMsg<long>();
-
-                    var thirdAddress = Node(_config.Third).Address;
-                    TestConductor.Shutdown(_config.Third).Wait();
-
-                    Within(20.Seconds(), () =>
+                    await AwaitAssertAsync(async () =>
                     {
-                        AwaitAssert(() =>
-                        {
-                            Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null));
-                            ExpectMsg<ActorIdentity>(1.Seconds()).Subject.Should().NotBeNull();
-                        });
+                        Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null));
+                        (await ExpectMsgAsync<ActorIdentity>(1.Seconds())).Subject.Should().NotBeNull();
                     });
+                });
 
-                    Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell("shutdown");
+                Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell("shutdown");
 
-                    EnterBarrier("end");
+                await EnterBarrierAsync("end");
 
-                    Mediator.Tell(DeltaCount.Instance);
-                    var deltaCount = ExpectMsg<long>();
-                    deltaCount.Should().Be(oldDeltaCount);
-                }, _config.First);
+                Mediator.Tell(DeltaCount.Instance);
+                var deltaCount = await ExpectMsgAsync<long>();
+                deltaCount.Should().Be(oldDeltaCount);
+            }, _config.First);
 
-                RunOn(() =>
+            await RunOnAsync(async () =>
+            {
+                var node3Address = Cluster.Get(Sys).SelfAddress;
+                await Sys.WhenTerminated.WaitAsync(30.Seconds());
+                var newSystem = ActorSystem.Create(
+                    Sys.Name,
+                    ConfigurationFactory
+                        .ParseString($"akka.remote.dot-netty.tcp.port={node3Address.Port}")
+                        .WithFallback(Sys.Settings.Config));
+
+                try
                 {
-                    Sys.WhenTerminated.Wait(10.Seconds());
-                    var newSystem = ActorSystem.Create(
-                        Sys.Name,
-                        ConfigurationFactory
-                            .ParseString($"akka.remote.dot-netty.tcp.port={Cluster.Get(Sys).SelfAddress.Port}")
-                            .WithFallback(Sys.Settings.Config));
+                    // don't join the old cluster
+                    await Cluster.Get(newSystem).JoinAsync(Cluster.Get(newSystem).SelfAddress);
+                    var newMediator = DistributedPubSub.Get(newSystem).Mediator;
+                    var probe = CreateTestProbe(newSystem);
+                    newMediator.Tell(new Subscribe("topic2", probe.Ref), probe.Ref);
+                    await probe.ExpectMsgAsync<SubscribeAck>();
 
-                    try
-                    {
-                        // don't join the old cluster
-                        Cluster.Get(newSystem).Join(Cluster.Get(newSystem).SelfAddress);
-                        var newMediator = DistributedPubSub.Get(newSystem).Mediator;
-                        var probe = CreateTestProbe(newSystem);
-                        newMediator.Tell(new Subscribe("topic2", probe.Ref), probe.Ref);
-                        probe.ExpectMsg<SubscribeAck>();
+                    // let them gossip, but Delta should not be exchanged
+                    await probe.ExpectNoMsgAsync(5.Seconds());
+                    newMediator.Tell(DeltaCount.Instance, probe.Ref);
+                    await probe.ExpectMsgAsync(0L);
 
-                        // let them gossip, but Delta should not be exchanged
-                        probe.ExpectNoMsg(5.Seconds());
-                        newMediator.Tell(DeltaCount.Instance, probe.Ref);
-                        probe.ExpectMsg(0L);
+                    newSystem.Log.Info("Shutdown actor started on {0}",node3Address);
+                    newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
+                    await newSystem.WhenTerminated.WaitAsync(30.Seconds());
+                }
+                finally
+                {
+                    await newSystem.Terminate().WaitAsync(30.Seconds());
+                }
+            }, _config.Third);
+        });
+    }
 
-                        newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
-                        newSystem.WhenTerminated.Wait(10.Seconds());
-                    }
-                    finally
-                    {
-                        newSystem.Terminate();
-                    }
-                }, _config.Third);
-            });
-        }
+    protected override int InitialParticipantsValueFactory => Roles.Count;
 
-        protected override int InitialParticipantsValueFactory => Roles.Count;
+    private IActorRef CreateMediator()
+    {
+        return DistributedPubSub.Get(Sys).Mediator;
+    }
 
-        private IActorRef CreateMediator()
+    private IActorRef Mediator
+    {
+        get
         {
             return DistributedPubSub.Get(Sys).Mediator;
         }
+    }
 
-        private IActorRef Mediator
+    private async Task JoinAsync(RoleName from, RoleName to)
+    {
+        RunOn(() =>
         {
-            get
-            {
-                return DistributedPubSub.Get(Sys).Mediator;
-            }
-        }
+            Cluster.Get(Sys).Join(Node(to).Address);
+            CreateMediator();
+        }, from);
+        await EnterBarrierAsync(from.Name + "-joined");
+    }
 
-        private void Join(RoleName from, RoleName to)
+    private async Task CountAsync(int expected)
+    {
+        var probe = CreateTestProbe();
+        await AwaitAssertAsync(async () =>
         {
-            RunOn(() =>
-            {
-                Cluster.Get(Sys).Join(Node(to).Address);
-                CreateMediator();
-            }, from);
-            EnterBarrier(from.Name + "-joined");
-        }
-
-        private void AwaitCount(int expected)
-        {
-            var probe = CreateTestProbe();
-            AwaitAssert(() =>
-            {
-                Mediator.Tell(Count.Instance, probe.Ref);
-                probe.ExpectMsg<int>().Should().Be(expected);
-            });
-        }
+            Mediator.Tell(Count.Instance, probe.Ref);
+            (await probe.ExpectMsgAsync<int>()).Should().Be(expected);
+        });
     }
 }

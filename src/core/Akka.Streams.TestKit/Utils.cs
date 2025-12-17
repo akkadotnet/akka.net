@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Utils.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,8 +16,6 @@ using Akka.Streams.Implementation;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 
 namespace Akka.Streams.TestKit
 {
@@ -37,7 +35,7 @@ namespace Akka.Streams.TestKit
                     block();
                     return Task.FromResult(NotUsed.Instance);
                 }, materializer, timeout, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
 
         public static T AssertAllStagesStopped<T>(
             this TestKitBase spec,
@@ -46,7 +44,7 @@ namespace Akka.Streams.TestKit
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
             => AssertAllStagesStoppedAsync(spec, () => Task.FromResult(block()), materializer, timeout, cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
 
         public static async Task AssertAllStagesStoppedAsync(
             this TestKitBase spec,
@@ -58,8 +56,7 @@ namespace Akka.Streams.TestKit
                 {
                     await block();
                     return NotUsed.Instance;
-                }, materializer, timeout, cancellationToken)
-                .ConfigureAwait(false);
+                }, materializer, timeout, cancellationToken);
         
         public static async Task<T> AssertAllStagesStoppedAsync<T>(
             this TestKitBase spec,
@@ -68,15 +65,12 @@ namespace Akka.Streams.TestKit
             TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
         {
-            timeout ??= 20.Seconds();
-            var result = await block().ShouldCompleteWithin(timeout.Value);
-            if (!(materializer is ActorMaterializerImpl impl))
+            timeout ??= TimeSpan.FromSeconds(20);
+            var result = await block().WaitAsync(timeout.Value, cancellationToken);
+            if (materializer is not ActorMaterializerImpl impl)
                 return result;
 
             var probe = spec.CreateTestProbe(impl.System);
-            probe.Send(impl.Supervisor, StreamSupervisor.StopChildren.Instance);
-            await probe.ExpectMsgAsync<StreamSupervisor.StoppedChildren>(cancellationToken: cancellationToken);
-
             await probe.WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
                 IImmutableSet<IActorRef> children = ImmutableHashSet<IActorRef>.Empty;
@@ -84,6 +78,9 @@ namespace Akka.Streams.TestKit
                 {
                     await probe.AwaitAssertAsync(async () =>
                     {
+                        impl.Supervisor.Tell(StreamSupervisor.StopChildren.Instance, probe.Ref);
+                        await probe.ExpectMsgAsync<StreamSupervisor.StoppedChildren>(cancellationToken: cancellationToken);
+                        
                         impl.Supervisor.Tell(StreamSupervisor.GetChildren.Instance, probe.Ref);
                         children = (await probe.ExpectMsgAsync<StreamSupervisor.Children>(cancellationToken: cancellationToken)).Refs;
                         if (children.Count != 0)
@@ -113,13 +110,6 @@ namespace Akka.Streams.TestKit
 
             if (r.Underlying.Props.Dispatcher != dispatcher)
                 throw new Exception($"Expected {@ref} to use dispatcher [{dispatcher}], yet used : [{r.Underlying.Props.Dispatcher}]");
-        }
-
-        [Obsolete("Use ShouldCompleteWithin instead")]
-        public static T AwaitResult<T>(this Task<T> task, TimeSpan? timeout = null)
-        {
-            task.Wait(timeout??TimeSpan.FromSeconds(3)).Should().BeTrue();
-            return task.Result;
         }
     }
 }

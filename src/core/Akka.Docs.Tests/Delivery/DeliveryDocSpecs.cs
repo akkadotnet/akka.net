@@ -1,7 +1,7 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="DeliveryDocSpecs.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -113,7 +113,6 @@ public class DeliveryDocSpecs : TestKit
         producerController.Tell(new ProducerController.Start<ICustomerProtocol>(producerProbe.Ref));
         // </DurableQueueProducer>
 
-
         TestProbe endProbe = CreateTestProbe();
 
         // stop after 3 messages
@@ -128,7 +127,7 @@ public class DeliveryDocSpecs : TestKit
             new ConsumerController.RegisterToProducerController<ICustomerProtocol>(producerController));
         
         // <ConfirmableMessages>
-        ProducerController.RequestNext<ICustomerProtocol> request1 = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>());
+        ProducerController.RequestNext<ICustomerProtocol> request1 = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>(TimeSpan.FromSeconds(10)));
         
         // confirm that message was stored in durable queue (so we know it will be redelivered if needed)
         long seqNo1 = await request1.AskNextTo(new PurchaseItem("Burger"));
@@ -142,7 +141,7 @@ public class DeliveryDocSpecs : TestKit
         ProducerController.RequestNext<ICustomerProtocol> request3 = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<ICustomerProtocol>>());
         
         // confirm that message was stored in durable queue (so we know it will be redelivered if needed)
-        long seqNo3 = await request1.AskNextTo(new PurchaseItem("Burger"));
+        long seqNo3 = await request3.AskNextTo(new PurchaseItem("Burger"));
 
         await endProbe.ExpectMsgAsync<List<string>>(TimeSpan.FromSeconds(10));
     }

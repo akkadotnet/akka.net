@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LastElementSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -36,7 +36,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ExpectNext( 1, 2, 3)
                 .ExpectComplete();
 
-            var complete = await lastElement.ShouldCompleteWithin(TimeSpan.FromSeconds(1));
+            var complete = await lastElement.WaitAsync(TimeSpan.FromSeconds(1));
             complete.Should().Be(Option<int>.Create(3));
         }
 
@@ -54,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
             probe.Request(3)
                 .ExpectComplete();
 
-            var complete = await lastElement.ShouldCompleteWithin(1.Seconds());
+            var complete = await lastElement.WaitAsync(1.Seconds());
             complete.Should().Be(Option<int>.None);
         }
 

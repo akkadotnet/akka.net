@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DurableShardingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -68,15 +68,12 @@ public class DurableShardingSpec : AkkaSpec
             HashCodeMessageExtractor.Create(10,
                 o =>
                 {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
+                    // ShardingEnvelope is what is used by Akka.Cluster.Sharding.Delivery, and that msg is
+                    // automatically handled by the ShardRegion, so we don't need to explicitly handle it here
+                    if(o is string str)
+                        return str;
                     return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                }, o => o));
         // </SpawnDurableConsumer>
 
         // <SpawnDurableProducer>
@@ -174,17 +171,7 @@ public class DurableShardingSpec : AkkaSpec
                         Props.Create(() => new Consumer(c, consumerProbe)),
                     ShardingConsumerController.Settings.Create(Sys)), ClusterShardingSettings.Create(Sys),
             HashCodeMessageExtractor.Create(10,
-                o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.EntityId;
-                    return string.Empty;
-                }, o =>
-                {
-                    if (o is ShardingEnvelope se)
-                        return se.Message;
-                    return o;
-                }));
+                o => string.Empty, o => o));
 
         var durableQueueProps = EventSourcedProducerQueue.Create<Job>(ProducerId, Sys);
         var shardingProducerController =

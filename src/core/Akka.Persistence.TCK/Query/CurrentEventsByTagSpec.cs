@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="CurrentEventsByTagSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -212,7 +212,7 @@ namespace Akka.Persistence.TCK.Query
         }
         
         [Fact]
-        public void ReadJournal_query_CurrentEventsByTag_should_include_timestamp_in_EventEnvelope()
+        public virtual void ReadJournal_query_CurrentEventsByTag_should_include_timestamp_in_EventEnvelope()
         {
             if (ReadJournal is not ICurrentEventsByTagQuery queries)
                 throw IsTypeException.ForMismatchedType(nameof(ICurrentEventsByTagQuery), ReadJournal?.GetType().Name ?? "null");
@@ -226,7 +226,7 @@ namespace Akka.Persistence.TCK.Query
             a.Tell("a green banana");
             ExpectMsg("a green banana-done");
 
-            var greenSrc = queries.CurrentEventsByTag("green", offset: Sequence(0L));
+            var greenSrc = queries.CurrentEventsByTag("green", offset: NoOffset());
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe.Request(2);
             probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Messages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -61,6 +61,7 @@ namespace Akka.DistributedData.Durable
         private LoadAll() { }
         public bool Equals(LoadAll other) => true;
         public override bool Equals(object obj) => obj is LoadAll;
+        public override int GetHashCode() => 761;
     }
 
     public sealed class LoadData
@@ -79,6 +80,7 @@ namespace Akka.DistributedData.Durable
         private LoadAllCompleted() { }
         public bool Equals(LoadAllCompleted other) => true;
         public override bool Equals(object obj) => obj is LoadAllCompleted;
+        public override int GetHashCode() => 769;
     }
 
     public sealed class LoadFailedException : AkkaException

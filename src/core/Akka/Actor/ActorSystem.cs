@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorSystem.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -113,10 +113,13 @@ namespace Akka.Actor
             ActorRefProvider = actorRefProvider;
         }
 
+#pragma warning disable CS1574, CS1584, CS1581, CS1580
         /// <summary>
         /// Configuration to use for the <see cref="ActorSystem"/>. If no <see cref="Config"/> is given, the default reference
-        /// configuration will be loaded via <see cref="ConfigurationFactory.Load"/>.
+        /// configuration will be loaded via <see cref="ConfigurationFactory.Default()"/> in .NET Core or
+        /// <see cref="ConfigurationFactory.Load()"/> in .NET Standard.
         /// </summary>
+#pragma warning restore CS1574, CS1584, CS1581, CS1580
         public Option<Config> Config { get; }
 
         /// <summary>
@@ -259,8 +262,11 @@ namespace Akka.Actor
         public static ActorSystem Create(string name, ActorSystemSetup setup)
         {
             var bootstrapSetup = setup.Get<BootstrapSetup>();
-            var appConfig = bootstrapSetup.FlatSelect(_ => _.Config).GetOrElse(ConfigurationFactory.Load());
-
+            #if NETSTANDARD
+            var appConfig = bootstrapSetup.FlatSelect(s => s.Config).GetOrElse(ConfigurationFactory.Load());
+            #else
+            var appConfig = bootstrapSetup.FlatSelect(s => s.Config).GetOrElse(ConfigurationFactory.Default());
+            #endif
             return CreateAndStartSystem(name, appConfig, setup);
         }
 

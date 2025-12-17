@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestTransportSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ namespace Akka.Remote.Tests.Transport
             Assert.NotNull(result.Item2);
 
             var snapshot = registry.LogSnapshot();
-            Assert.Equal(1, snapshot.Count);
+            Assert.Single(snapshot);
             Assert.IsType<ListenAttempt>(snapshot[0]);
             Assert.Equal(_addressA, ((ListenAttempt)snapshot[0]).BoundAddress);
         }
@@ -130,7 +130,7 @@ namespace Akka.Remote.Tests.Transport
             handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
             await associate.WithTimeout(DefaultTimeout);
-            var handleA = associate.Result;
+            var handleA = await associate;
 
             //Initialize handles
             handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
@@ -185,7 +185,7 @@ namespace Akka.Remote.Tests.Transport
             handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
             await associate.WithTimeout(DefaultTimeout);
-            var handleA = associate.Result;
+            var handleA = await associate;
 
             //Initialize handles
             handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
@@ -201,7 +201,7 @@ namespace Akka.Remote.Tests.Transport
             Assert.NotNull(msg);
 
             exists = registry.ExistsAssociation(_addressA, _addressB);
-            Assert.True(!exists, "Association should no longer exist");
+            Assert.False(exists);
 
             var disassociateAttempt = registry.LogSnapshot().Single(x => x is DisassociateAttempt).AsInstanceOf<DisassociateAttempt>();
             Assert.True(disassociateAttempt.Requestor.Equals(_addressA) && disassociateAttempt.Remote.Equals(_addressB));

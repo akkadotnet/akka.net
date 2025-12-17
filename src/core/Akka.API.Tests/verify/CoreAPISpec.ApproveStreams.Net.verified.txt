@@ -145,6 +145,7 @@ namespace Akka.Streams
         public ActorMaterializerSettings(int initialInputBufferSize, int maxInputBufferSize, string dispatcher, Akka.Streams.Supervision.Decider supervisionDecider, Akka.Streams.StreamSubscriptionTimeoutSettings subscriptionTimeoutSettings, Akka.Streams.Dsl.StreamRefSettings streamRefSettings, bool isDebugLogging, int outputBurstLimit, bool isFuzzingMode, bool isAutoFusing, int maxFixedBufferSize, int syncProcessingLimit = 1000) { }
         public static Akka.Streams.ActorMaterializerSettings Create(Akka.Actor.ActorSystem system) { }
         public override bool Equals(object obj) { }
+        public override int GetHashCode() { }
         public Akka.Streams.ActorMaterializerSettings WithAutoFusing(bool isAutoFusing) { }
         public Akka.Streams.ActorMaterializerSettings WithDebugLogging(bool isEnabled) { }
         public Akka.Streams.ActorMaterializerSettings WithDispatcher(string dispatcher) { }
@@ -172,14 +173,18 @@ namespace Akka.Streams
         public System.Collections.Generic.IEnumerable<Akka.Streams.Attributes.IAttribute> AttributeList { get; }
         public Akka.Streams.Attributes And(Akka.Streams.Attributes other) { }
         public Akka.Streams.Attributes And(Akka.Streams.Attributes.IAttribute other) { }
+        [System.ObsoleteAttribute("Use Contains<TAttr>() instead")]
         public bool Contains<TAttr>(TAttr attribute)
+            where TAttr : Akka.Streams.Attributes.IAttribute { }
+        public bool Contains<TAttr>()
             where TAttr : Akka.Streams.Attributes.IAttribute { }
         public static Akka.Streams.Attributes CreateAsyncBoundary() { }
         public static Akka.Streams.Attributes CreateInputBuffer(int initial, int max) { }
         public static Akka.Streams.Attributes CreateLogLevels(Akka.Event.LogLevel onElement = 0, Akka.Event.LogLevel onFinish = 0, Akka.Event.LogLevel onError = 3) { }
         public static Akka.Streams.Attributes CreateName(string name) { }
         public static string ExtractName(Akka.Streams.Implementation.IModule module, string defaultIfNotFound) { }
-        public TAttr GetAttribute<TAttr>(TAttr defaultIfNotFound)
+        [return: System.Runtime.CompilerServices.NullableAttribute(2)]
+        public TAttr GetAttribute<TAttr>([System.Runtime.CompilerServices.NullableAttribute(2)] TAttr defaultIfNotFound)
             where TAttr :  class, Akka.Streams.Attributes.IAttribute { }
         public TAttr GetAttribute<TAttr>()
             where TAttr :  class, Akka.Streams.Attributes.IAttribute { }
@@ -201,6 +206,7 @@ namespace Akka.Streams
             public static readonly Akka.Streams.Attributes.AsyncBoundary Instance;
             public bool Equals(Akka.Streams.Attributes.AsyncBoundary other) { }
             public override bool Equals(object obj) { }
+            public override int GetHashCode() { }
             public override string ToString() { }
         }
         public sealed class CancellationStrategy : Akka.Streams.Attributes.IAttribute, Akka.Streams.Attributes.IMandatoryAttribute
@@ -1360,7 +1366,9 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Aggregate<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> fold) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> AggregateAsync<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, System.Threading.Tasks.Task<TOut2>> fold) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> AlsoTo<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat> that) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> AlsoTo<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat> that, bool propagateFailure) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat3> AlsoToMaterialized<TIn, TOut, TMat, TMat2, TMat3>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> that, System.Func<TMat, TMat2, TMat3> materializerFunction) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat3> AlsoToMaterialized<TIn, TOut, TMat, TMat2, TMat3>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> that, System.Func<TMat, TMat2, TMat3> materializerFunction, bool propagateFailure) { }
         public static Akka.Streams.Dsl.FlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat> AsFlowWithContext<TIn, TCtxIn, TOut, TCtxOut, TMat, TIn2>(this Akka.Streams.Dsl.Flow<TIn2, TOut, TMat> flow, System.Func<TIn, TCtxIn, TIn2> collapseContext, System.Func<TOut, TCtxOut> extractContext) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> BackpressureTimeout<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Batch<TIn, TOut, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long max, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
@@ -1380,7 +1388,9 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat3> DivertToMaterialized<TIn, TOut, TMat, TMat2, TMat3>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> that, System.Func<TOut, bool> when, System.Func<TMat, TMat2, TMat3> materializerFunction) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Expand<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, System.Func<TOut1, System.Collections.Generic.IEnumerator<TOut2>> extrapolate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int maxSubstreams, System.Func<TOut, TKey> groupingFunc, bool allowClosedSubstreamRecreation) { }
+        public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Func<TOut, TKey> groupingFunc, bool allowClosedSubstreamRecreation) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int maxSubstreams, System.Func<TOut, TKey> groupingFunc) { }
+        public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.Sink<TIn, TMat>> GroupBy<TIn, TOut, TMat, TKey>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, System.Func<TOut, TKey> groupingFunc) { }
         public static Akka.Streams.Dsl.Flow<TIn, System.Collections.Generic.IEnumerable<TOut>, TMat> Grouped<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int n) { }
         public static Akka.Streams.Dsl.Flow<TIn, System.Collections.Generic.IEnumerable<TOut>, TMat> GroupedWeightedWithin<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long maxWeight, int maxNumber, System.TimeSpan interval, System.Func<TOut, long> costFn) { }
         public static Akka.Streams.Dsl.Flow<TIn, System.Collections.Generic.IEnumerable<TOut>, TMat> GroupedWithin<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, int n, System.TimeSpan timeout) { }
@@ -1397,7 +1407,7 @@ namespace Akka.Streams.Dsl
             where TOut : TInjected { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Limit<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long max) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> LimitWeighted<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, long max, System.Func<TOut, long> costFunc) { }
-        public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Log<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, string name, System.Func<TOut, object> extract = null, Akka.Event.ILoggingAdapter log = null) { }
+        public static Akka.Streams.Dsl.Flow<TIn, TOut, TMat> Log<TIn, TOut, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut, TMat> flow, string name, System.Func<TOut, object> extract = null, Akka.Event.ILoggingAdapter log = null, Akka.Event.LogLevel logLevel = 0) { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> Merge<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> other, bool eagerComplete = False)
             where TOut1 : TOut2 { }
         public static Akka.Streams.Dsl.Flow<TIn, TOut2, TMat> MergeMany<TIn, TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Flow<TIn, TOut1, TMat> flow, int breadth, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
@@ -1461,7 +1471,15 @@ namespace Akka.Streams.Dsl
     }
     public class static FlowWithContextOperations
     {
+        [System.ObsoleteAttribute("Deprecated. Please use Collect(FlowWithContext, Func, Func) instead. Since v1.5.4" +
+            "4, will be removed in v1.6")]
         public static Akka.Streams.Dsl.FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> Collect<TIn, TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TIn flow, System.Func<TOut, TOut2> fn)
+            where TOut2 :  class { }
+        public static Akka.Streams.Dsl.FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> Collect<TIn, TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TIn flow, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0,
+                0,
+                0})] System.Func<System.ValueTuple<TOut, TCtx>, bool> isDefined, System.Func<TOut, TOut2> fn)
             where TOut2 :  class { }
         public static Akka.Streams.Dsl.FlowWithContext<TIn, TCtx, System.Collections.Generic.IReadOnlyList<TOut>, System.Collections.Generic.IReadOnlyList<TCtx>, TMat> Grouped<TIn, TCtx, TOut, TMat>(this Akka.Streams.Dsl.FlowWithContext<TIn flow, int n) { }
         public static Akka.Streams.Dsl.FlowWithContext<TIn, TCtx, TOut2, TCtx, TMat> Select<TIn, TCtx, TOut, TOut2, TMat>(this Akka.Streams.Dsl.FlowWithContext<TIn flow, System.Func<TOut, TOut2> fn) { }
@@ -2058,7 +2076,9 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Aggregate<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> fold) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> AggregateAsync<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, TOut2 zero, System.Func<TOut2, TOut1, System.Threading.Tasks.Task<TOut2>> fold) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> AlsoTo<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat> that) { }
+        public static Akka.Streams.Dsl.Source<TOut, TMat> AlsoTo<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat> that, bool propagateFailure) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat3> AlsoToMaterialized<TOut, TMat, TMat2, TMat3>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> that, System.Func<TMat, TMat2, TMat3> materializerFunction) { }
+        public static Akka.Streams.Dsl.Source<TOut, TMat3> AlsoToMaterialized<TOut, TMat, TMat2, TMat3>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> that, System.Func<TMat, TMat2, TMat3> materializerFunction, bool propagateFailure) { }
         public static Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> AsSourceWithContext<TOut, TCtx, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, TCtx> fn) { }
         public static Akka.Streams.Dsl.Source<TOut, TMat> BackpressureTimeout<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Batch<TOut, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long max, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
@@ -2079,6 +2099,7 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.Source<TOut, TMat3> DivertToMaterialized<TOut, TMat, TMat2, TMat3>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> that, System.Func<TOut, bool> when, System.Func<TMat, TMat2, TMat3> materializerFunction) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Expand<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, System.Func<TOut1, System.Collections.Generic.IEnumerator<TOut2>> extrapolate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int maxSubstreams, System.Func<TOut, TKey> groupingFunc) { }
+        public static Akka.Streams.Dsl.SubFlow<TOut, TMat, Akka.Streams.Dsl.IRunnableGraph<TMat>> GroupBy<TOut, TMat, TKey>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, System.Func<TOut, TKey> groupingFunc) { }
         public static Akka.Streams.Dsl.Source<System.Collections.Generic.IEnumerable<TOut>, TMat> Grouped<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, int n) { }
         public static Akka.Streams.Dsl.Source<System.Collections.Generic.IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long maxWeight, System.TimeSpan interval, System.Func<TOut, long> costFn) { }
         public static Akka.Streams.Dsl.Source<System.Collections.Generic.IEnumerable<TOut>, TMat> GroupedWeightedWithin<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, long maxWeight, int maxNumber, System.TimeSpan interval, System.Func<TOut, long> costFn) { }
@@ -2096,7 +2117,7 @@ namespace Akka.Streams.Dsl
             where TOut : TInjected { }
         public static Akka.Streams.Dsl.Source<T, TMat> Limit<T, TMat>(this Akka.Streams.Dsl.Source<T, TMat> flow, long max) { }
         public static Akka.Streams.Dsl.Source<T, TMat> LimitWeighted<T, TMat>(this Akka.Streams.Dsl.Source<T, TMat> flow, long max, System.Func<T, long> costFunc) { }
-        public static Akka.Streams.Dsl.Source<TOut, TMat> Log<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, string name, System.Func<TOut, object> extract = null, Akka.Event.ILoggingAdapter log = null) { }
+        public static Akka.Streams.Dsl.Source<TOut, TMat> Log<TOut, TMat>(this Akka.Streams.Dsl.Source<TOut, TMat> flow, string name, System.Func<TOut, object> extract = null, Akka.Event.ILoggingAdapter log = null, Akka.Event.LogLevel logLevel = 0) { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> Merge<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat> other, bool eagerComplete = False)
             where TOut1 : TOut2 { }
         public static Akka.Streams.Dsl.Source<TOut2, TMat> MergeMany<TOut1, TOut2, TMat>(this Akka.Streams.Dsl.Source<TOut1, TMat> flow, int breadth, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
@@ -2159,7 +2180,15 @@ namespace Akka.Streams.Dsl
     }
     public class static SourceWithContextOperations
     {
+        [System.ObsoleteAttribute("Deprecated. Please use Collect(SourceWithContext, Func, Func) instead. Since v1.5" +
+            ".44, will be removed in v1.6")]
         public static Akka.Streams.Dsl.SourceWithContext<TOut2, TCtx, TMat> Collect<TOut, TCtx, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> flow, System.Func<TOut, TOut2> fn)
+            where TOut2 :  class { }
+        public static Akka.Streams.Dsl.SourceWithContext<TOut2, TCtx, TMat> Collect<TOut, TCtx, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> flow, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0,
+                0,
+                0})] System.Func<System.ValueTuple<TOut, TCtx>, bool> isDefined, System.Func<TOut, TOut2> fn)
             where TOut2 :  class { }
         public static Akka.Streams.Dsl.SourceWithContext<System.Collections.Generic.IReadOnlyList<TOut>, System.Collections.Generic.IReadOnlyList<TCtx>, TMat> Grouped<TOut, TCtx, TMat>(this Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> flow, int n) { }
         public static Akka.Streams.Dsl.SourceWithContext<TOut2, TCtx, TMat> Select<TOut, TCtx, TOut2, TMat>(this Akka.Streams.Dsl.SourceWithContext<TOut, TCtx, TMat> flow, System.Func<TOut, TOut2> fn) { }
@@ -2261,12 +2290,19 @@ namespace Akka.Streams.Dsl
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Aggregate<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, TOut2 zero, System.Func<TOut2, TOut1, TOut2> fold) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> AggregateAsync<TIn, TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TIn, TMat, TClosed> flow, TOut zero, System.Func<TOut, TIn, System.Threading.Tasks.Task<TOut>> fold) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> AlsoTo<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat> that) { }
+        public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> AlsoTo<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat> that, bool propagateFailure) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat3, TClosed> AlsoToMaterialized<TOut, TMat, TMat2, TMat3, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> that, System.Func<TMat, TMat2, TMat3> materializerFunction) { }
+        public static Akka.Streams.Dsl.SubFlow<TOut, TMat3, TClosed> AlsoToMaterialized<TOut, TMat, TMat2, TMat3, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SinkShape<TOut>, TMat2> that, System.Func<TMat, TMat2, TMat3> materializerFunction, bool propagateFailure) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> BackpressureTimeout<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Batch<TOut, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, long max, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> BatchWeighted<TOut, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, long max, System.Func<TOut, long> costFunction, System.Func<TOut, TOut2> seed, System.Func<TOut2, TOut, TOut2> aggregate) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Buffer<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, int size, Akka.Streams.OverflowStrategy strategy) { }
+        [System.ObsoleteAttribute("Deprecated. Please use Collect(SubFlow, Func, Func) instead. Since v1.5.44, will " +
+            "be removed in v1.6")]
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, System.Func<TOut1, TOut2> collector) { }
+        public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> Collect<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                2,
+                0})] System.Func<TOut1, bool> isDefined, System.Func<TOut1, TOut2> collector) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> CompletionTimeout<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, System.TimeSpan timeout) { }
         public static Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> Concat<TOut, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut, TMat, TClosed> flow, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut>, TMat> other) { }
         public static Akka.Streams.Dsl.SubFlow<TOut2, TMat, TClosed> ConcatMany<TOut1, TOut2, TMat, TClosed>(this Akka.Streams.Dsl.SubFlow<TOut1, TMat, TClosed> flow, System.Func<TOut1, Akka.Streams.IGraph<Akka.Streams.SourceShape<TOut2>, TMat>> flatten) { }
@@ -3481,7 +3517,13 @@ namespace Akka.Streams.Implementation
         public override Akka.Streams.Implementation.IModule WithAttributes(Akka.Streams.Attributes attributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class QueueSink<T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SinkShape<T>, Akka.Streams.ISinkQueue<T>>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1,
+            1,
+            1,
+            1})]
+    public sealed class QueueSink<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SinkShape<T>, Akka.Streams.ISinkQueue<T>>
     {
         public readonly Akka.Streams.Inlet<T> In;
         public QueueSink() { }
@@ -3491,16 +3533,26 @@ namespace Akka.Streams.Implementation
         public override string ToString() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class QueueSource<TOut> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SourceShape<TOut>, Akka.Streams.ISourceQueueWithComplete<TOut>>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1,
+            1,
+            1,
+            1})]
+    public sealed class QueueSource<[System.Runtime.CompilerServices.NullableAttribute(2)]  TOut> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SourceShape<TOut>, Akka.Streams.ISourceQueueWithComplete<TOut>>
     {
         public QueueSource(int maxBuffer, Akka.Streams.OverflowStrategy overflowStrategy) { }
         public Akka.Streams.Outlet<TOut> Out { get; }
         public override Akka.Streams.SourceShape<TOut> Shape { get; }
         public override Akka.Streams.Stage.ILogicAndMaterializedValue<Akka.Streams.ISourceQueueWithComplete<TOut>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
-        public interface IInput<TOut> { }
-        public sealed class Materialized<TOut> : Akka.Streams.ISourceQueueWithComplete<TOut>, Akka.Streams.ISourceQueue<TOut>
+        public interface IInput<[System.Runtime.CompilerServices.NullableAttribute(2)]  TOut> { }
+        [System.Runtime.CompilerServices.NullableAttribute(0)]
+        public sealed class Materialized<[System.Runtime.CompilerServices.NullableAttribute(2)]  TOut> : Akka.Streams.ISourceQueueWithComplete<TOut>, Akka.Streams.ISourceQueue<TOut>
         {
-            public Materialized(System.Action<Akka.Streams.Implementation.QueueSource<TOut>.IInput> invokeLogic, System.Threading.Tasks.TaskCompletionSource<object> completion) { }
+            public Materialized([System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+                    1,
+                    1,
+                    0})] System.Action<Akka.Streams.Implementation.QueueSource<TOut>.IInput> invokeLogic, System.Threading.Tasks.TaskCompletionSource<object> completion) { }
             public void Complete() { }
             public void Fail(System.Exception ex) { }
             public System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(TOut element) { }
@@ -3920,7 +3972,8 @@ namespace Akka.Streams.Implementation.Fusing
             public readonly object Event;
             public readonly System.Action<object> Handler;
             public readonly Akka.Streams.Stage.GraphStageLogic Logic;
-            public AsyncInput(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, Akka.Streams.Stage.GraphStageLogic logic, object @event, System.Action<object> handler) { }
+            public readonly System.Threading.Tasks.TaskCompletionSource<Akka.Done> Promise;
+            public AsyncInput(Akka.Streams.Implementation.Fusing.GraphInterpreterShell shell, Akka.Streams.Stage.GraphStageLogic logic, object @event, System.Threading.Tasks.TaskCompletionSource<Akka.Done> promise, System.Action<object> handler) { }
             public Akka.Streams.Implementation.Fusing.GraphInterpreterShell Shell { get; }
         }
         public class BatchingActorInputBoundary : Akka.Streams.Implementation.Fusing.GraphInterpreter.UpstreamBoundaryStageLogic
@@ -4059,7 +4112,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class Buffer<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1})]
+    public sealed class Buffer<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
         public Buffer(int count, Akka.Streams.OverflowStrategy overflowStrategy) { }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
@@ -4078,7 +4134,10 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class Delay<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1})]
+    public sealed class Delay<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
         public Delay(System.TimeSpan delay, Akka.Streams.DelayOverflowStrategy strategy) { }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
@@ -4092,6 +4151,10 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
+    }
+    public class DownstreamCompletedWithNoCauseException : System.Exception
+    {
+        public DownstreamCompletedWithNoCauseException() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class Expand<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
@@ -4136,7 +4199,7 @@ namespace Akka.Streams.Implementation.Fusing
         public readonly Akka.Streams.Stage.GraphStageLogic[] Logics;
         public readonly Akka.Streams.IMaterializer Materializer;
         public const Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection NoEvent = null;
-        public readonly System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Action<object>> OnAsyncInput;
+        public readonly System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Threading.Tasks.TaskCompletionSource<Akka.Done>, System.Action<object>> OnAsyncInput;
         public const int OutClosed = 32;
         public const int OutReady = 8;
         public const int PullEndFlip = 10;
@@ -4147,7 +4210,7 @@ namespace Akka.Streams.Implementation.Fusing
         public const int Pushing = 4;
         public int RunningStagesCount;
         public static readonly Akka.Streams.Attributes[] SingleNoAttribute;
-        public GraphInterpreter(Akka.Streams.Implementation.Fusing.GraphAssembly assembly, Akka.Streams.IMaterializer materializer, Akka.Event.ILoggingAdapter log, Akka.Streams.Stage.GraphStageLogic[] logics, Connection[] connections, System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Action<object>> onAsyncInput, bool fuzzingMode, Akka.Actor.IActorRef context) { }
+        public GraphInterpreter(Akka.Streams.Implementation.Fusing.GraphAssembly assembly, Akka.Streams.IMaterializer materializer, Akka.Event.ILoggingAdapter log, Akka.Streams.Stage.GraphStageLogic[] logics, Connection[] connections, System.Action<Akka.Streams.Stage.GraphStageLogic, object, System.Threading.Tasks.TaskCompletionSource<Akka.Done>, System.Action<object>> onAsyncInput, bool fuzzingMode, Akka.Actor.IActorRef context) { }
         public Akka.Actor.IActorRef Context { get; }
         public static Akka.Streams.Implementation.Fusing.GraphInterpreter Current { get; }
         public static Akka.Streams.Implementation.Fusing.GraphInterpreter CurrentInterpreterOrNull { get; }
@@ -4162,7 +4225,7 @@ namespace Akka.Streams.Implementation.Fusing
         public int Execute(int eventLimit) { }
         public void Finish() { }
         public void Init(Akka.Streams.IMaterializer subMaterializer) { }
-        public void RunAsyncInput(Akka.Streams.Stage.GraphStageLogic logic, object evt, System.Action<object> handler) { }
+        public void RunAsyncInput(Akka.Streams.Stage.GraphStageLogic logic, object evt, System.Threading.Tasks.TaskCompletionSource<Akka.Done> promise, System.Action<object> handler) { }
         public void SetHandler(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection, Akka.Streams.Stage.IInHandler handler) { }
         public void SetHandler(Akka.Streams.Implementation.Fusing.GraphInterpreter.Connection connection, Akka.Streams.Stage.IOutHandler handler) { }
         public override string ToString() { }
@@ -4325,7 +4388,7 @@ namespace Akka.Streams.Implementation.Fusing
     [Akka.Annotations.InternalApiAttribute()]
     public sealed class Log<T> : Akka.Streams.Implementation.Fusing.SimpleLinearGraphStage<T>
     {
-        public Log(string name, System.Func<T, object> extract, Akka.Event.ILoggingAdapter adapter) { }
+        public Log(string name, System.Func<T, object> extract, Akka.Event.ILoggingAdapter adapter, Akka.Event.LogLevel defaultLogLevel) { }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
@@ -4391,7 +4454,12 @@ namespace Akka.Streams.Implementation.Fusing
         public override string ToString() { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class SelectAsyncUnordered<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1,
+            1,
+            1})]
+    public sealed class SelectAsyncUnordered<[System.Runtime.CompilerServices.NullableAttribute(2)]  TIn, [System.Runtime.CompilerServices.NullableAttribute(2)]  TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {
         public readonly Akka.Streams.Inlet<TIn> In;
         public readonly Akka.Streams.Outlet<TOut> Out;
@@ -4401,7 +4469,12 @@ namespace Akka.Streams.Implementation.Fusing
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
     }
     [Akka.Annotations.InternalApiAttribute()]
-    public sealed class SelectAsync<TIn, TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
+    [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
+            0,
+            1,
+            1,
+            1})]
+    public sealed class SelectAsync<[System.Runtime.CompilerServices.NullableAttribute(2)]  TIn, [System.Runtime.CompilerServices.NullableAttribute(2)]  TOut> : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<TIn, TOut>>
     {
         public readonly Akka.Streams.Inlet<TIn> In;
         public readonly Akka.Streams.Outlet<TOut> Out;
@@ -4721,6 +4794,7 @@ namespace Akka.Streams.Implementation.Stages
 }
 namespace Akka.Streams.Serialization
 {
+    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class StreamRefSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public StreamRefSerializer(Akka.Actor.ExtendedActorSystem system) { }
@@ -4801,12 +4875,13 @@ namespace Akka.Streams.Stage
     }
     public abstract class GraphStageLogic : Akka.Streams.Stage.IStageLogging
     {
-        public static System.Action DoNothing;
+        public static readonly System.Action DoNothing;
         public static readonly Akka.Streams.Stage.InHandler EagerTerminateInput;
         public static readonly Akka.Streams.Stage.OutHandler EagerTerminateOutput;
         public static readonly Akka.Streams.Stage.InHandler IgnoreTerminateInput;
         public static readonly Akka.Streams.Stage.OutHandler IgnoreTerminateOutput;
         public readonly int InCount;
+        public static readonly System.Threading.Tasks.TaskCompletionSource<Akka.Done> NoPromise;
         public readonly int OutCount;
         public static readonly Akka.Streams.Stage.InHandler TotallyIgnorantInput;
         protected GraphStageLogic(int inCount, int outCount) { }
@@ -4845,6 +4920,7 @@ namespace Akka.Streams.Stage
         protected Akka.Streams.Stage.IOutHandler GetHandler<T>(Akka.Streams.Outlet<T> outlet) { }
         [Akka.Annotations.ApiMayChangeAttribute()]
         protected Akka.Streams.Stage.StageActor GetStageActor(Akka.Streams.Stage.StageActorRef.Receive receive) { }
+        protected Akka.Streams.Stage.IAsyncCallback<T> GetTypedAsyncCallback<T>(System.Action<T> handler) { }
         protected T Grab<T>(Akka.Streams.Inlet<T> inlet) { }
         protected bool HasBeenPulled<T>(Akka.Streams.Inlet<T> inlet) { }
         [Akka.Annotations.InternalApiAttribute()]
@@ -4932,6 +5008,11 @@ namespace Akka.Streams.Stage
         protected GraphStage() { }
         protected abstract Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes);
         public virtual Akka.Streams.Stage.ILogicAndMaterializedValue<Akka.NotUsed> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
+    }
+    public interface IAsyncCallback<in T>
+    {
+        void Invoke(T input);
+        System.Threading.Tasks.Task<Akka.Done> InvokeWithFeedback(T input);
     }
     public interface IAsyncContext : Akka.Streams.Stage.IContext, Akka.Streams.Stage.IDetachedContext, Akka.Streams.Stage.ILifecycleContext
     {

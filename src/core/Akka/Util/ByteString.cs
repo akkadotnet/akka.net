@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ByteString.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -17,8 +17,6 @@ using System.Threading.Tasks;
 namespace Akka.IO
 {
     // TODO: Move to Akka.Util namespace - this will require changes as name clashes with ProtoBuf class
-    using ByteBuffer = ArraySegment<byte>;
-
     /// <summary>
     /// A rope-like immutable data structure containing bytes.
     /// The goal of this structure is to reduce copying of arrays
@@ -173,7 +171,7 @@ namespace Akka.IO
         /// </summary>
         /// <param name="buffer">TBD</param>
         /// <returns>TBD</returns>
-        public static ByteString FromBytes(ArraySegment<byte> buffer) =>
+        public static ByteString FromBytes(ByteBuffer buffer) =>
             FromBytes(buffer.Array, buffer.Offset, buffer.Count);
 
         /// <summary>
@@ -506,6 +504,27 @@ namespace Akka.IO
             var copy = new byte[_count];
             CopyTo(copy, 0, _count);
             return copy;
+        }
+        
+        /// <summary>
+        /// Returns a ReadOnlySpan<byte/> over the contents of this ByteString.
+        /// This is a non-copying operation, when the ByteString is compact.
+        /// When it is not compact, the contents are copied into a new array.
+        /// </summary>
+        /// <returns>A ReadOnlySpan<byte/> over the byte data.</returns>
+        public ReadOnlySpan<byte> ToReadOnlySpan()
+        {
+            if (_count == 0)
+                return ReadOnlySpan<byte>.Empty;
+        
+            if (IsCompact)
+            {
+                // If compact, data is in a single buffer.
+                var compactBuffer = _buffers[0];
+                return new ReadOnlySpan<byte>(compactBuffer.Array, compactBuffer.Offset, compactBuffer.Count);
+            }
+           
+            return new ReadOnlySpan<byte>(ToArray());
         }
 
         /// <summary>

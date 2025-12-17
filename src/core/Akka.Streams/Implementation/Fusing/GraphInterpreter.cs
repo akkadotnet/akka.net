@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="GraphInterpreter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
@@ -409,7 +410,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <summary>
         /// TBD
         /// </summary>
-        public readonly Action<GraphStageLogic, object, Action<object>> OnAsyncInput;
+        public readonly Action<GraphStageLogic, object, TaskCompletionSource<Done>, Action<object>> OnAsyncInput;
         /// <summary>
         /// TBD
         /// </summary>
@@ -457,7 +458,7 @@ namespace Akka.Streams.Implementation.Fusing
                     ILoggingAdapter log,
                     GraphStageLogic[] logics,
                     Connection[] connections,
-                    Action<GraphStageLogic, object, Action<object>> onAsyncInput,
+                    Action<GraphStageLogic, object, TaskCompletionSource<Done>, Action<object>> onAsyncInput,
                     bool fuzzingMode,
                     IActorRef context)
         {
@@ -799,13 +800,7 @@ namespace Akka.Streams.Implementation.Fusing
 
 
 #pragma warning disable CS0162 // Disabled since the flag can be set while debugging
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="logic">TBD</param>
-        /// <param name="evt">TBD</param>
-        /// <param name="handler">TBD</param>
-        public void RunAsyncInput(GraphStageLogic logic, object evt, Action<object> handler)
+        public void RunAsyncInput(GraphStageLogic logic, object evt, TaskCompletionSource<Done> promise, Action<object> handler)
         {
             if (!IsStageCompleted(logic))
             {
@@ -819,9 +814,19 @@ namespace Akka.Streams.Implementation.Fusing
                     try
                     {
                         handler(evt);
+                        if (!ReferenceEquals(promise, GraphStageLogic.NoPromise))
+                        {
+                            promise.TrySetResult(Done.Instance);
+                            logic.OnFeedbackDispatched();
+                        }
                     }
                     catch (Exception e)
                     {
+                        if (!ReferenceEquals(promise, GraphStageLogic.NoPromise))
+                        {
+                            promise.TrySetException(e);
+                            logic.OnFeedbackDispatched();
+                        }
                         logic.FailStage(e);
                     }
                     AfterStageHasRun(logic);
@@ -915,9 +920,7 @@ namespace Akka.Streams.Implementation.Fusing
             if (FuzzingMode)
             {
                 var swapWith = (ThreadLocalRandom.Current.Next(_queueTail - _queueHead) + _queueHead) & _mask;
-                var ev = _eventQueue[swapWith];
-                _eventQueue[swapWith] = _eventQueue[idx];
-                _eventQueue[idx] = ev;
+                (_eventQueue[swapWith], _eventQueue[idx]) = (_eventQueue[idx], _eventQueue[swapWith]);
             }
             var element = _eventQueue[idx];
             _eventQueue[idx] = NoEvent;
@@ -933,7 +936,9 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>TBD</returns>
         public void Enqueue(Connection connection)
         {
+#pragma warning disable CS0162 // Unreachable code can be reached if IsDebug is set to true.
             if (IsDebug && _queueTail - _queueHead > _mask) throw new Exception($"{Name} internal queue full ({QueueStatus()}) + {connection}");
+#pragma warning restore CS0162
             _eventQueue[_queueTail & _mask] = connection;
             _queueTail++;
         }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="StreamLayout.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -228,10 +228,10 @@ namespace Akka.Streams.Implementation
             if (!downs.SetEquals(ups2))
                 problems.Add($"inconsistent maps: ups {pairs(ups2.Except(inter))} downs {pairs(downs.Except(inter))}");
 
-            var allInBuilder = ImmutableHashSet<InPort>.Empty.ToBuilder();
-            var duplicateInBuilder = ImmutableHashSet<InPort>.Empty.ToBuilder();
-            var allOutBuilder = ImmutableHashSet<OutPort>.Empty.ToBuilder();
-            var duplicateOutBuilder = ImmutableHashSet<OutPort>.Empty.ToBuilder();
+            var allInBuilder = ImmutableHashSet.CreateBuilder<InPort>();
+            var duplicateInBuilder = ImmutableHashSet.CreateBuilder<InPort>();
+            var allOutBuilder = ImmutableHashSet.CreateBuilder<OutPort>();
+            var duplicateOutBuilder = ImmutableHashSet.CreateBuilder<OutPort>();
 
             foreach (var subModule in module.SubModules)
             {

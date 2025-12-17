@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotProtocol.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Newtonsoft.Json;
 
 namespace Akka.Persistence
@@ -25,6 +26,39 @@ namespace Akka.Persistence
     /// Internal snapshot acknowledgement
     /// </summary>
     public interface ISnapshotResponse : ISnapshotMessage { }
+
+    public sealed class CheckSnapshotStoreHealth : ISnapshotRequest
+    {
+        public CheckSnapshotStoreHealth(CancellationToken cancellationToken)
+        {
+            CancellationToken = cancellationToken;
+        }
+
+        public CancellationToken CancellationToken { get; }
+
+        public override string ToString()
+        {
+            return "CheckSnapshotStoreHealth";
+        }
+    }
+    
+    /// <summary>
+    /// Health check response from the SnapshotStore.
+    /// </summary>
+    public sealed class SnapshotStoreHealthCheckResponse : ISnapshotResponse
+    {
+        public SnapshotStoreHealthCheckResponse(PersistenceHealthCheckResult result)
+        {
+            Result = result;
+        }
+
+        public PersistenceHealthCheckResult Result { get; }
+        
+        public override string ToString()
+        {
+            return $"SnapshotStoreHealthCheckResponse<{Result}>";
+        }
+    }
 
     /// <summary>
     /// Metadata for all persisted snapshot records.
@@ -52,32 +86,28 @@ namespace Akka.Persistence
         }
 
         /// <summary>
-        /// TBD
+        /// The singleton comparer instance.
         /// </summary>
         public static IComparer<SnapshotMetadata> Comparer { get; } = new SnapshotMetadataComparer();
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public static DateTime TimestampNotSpecified = DateTime.MinValue;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotMetadata"/> class.
         /// </summary>
         /// <param name="persistenceId">The id of the persistent actor fro which the snapshot was taken.</param>
         /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
+        [Obsolete("This constructor is deprecated and will be removed in v1.6. Use the constructor with the timestamp parameter instead. Since v1.5.28", true)]
         public SnapshotMetadata(string persistenceId, long sequenceNr)
-            : this(persistenceId, sequenceNr, TimestampNotSpecified)
+            : this(persistenceId, sequenceNr, DateTime.UtcNow)
         {
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotMetadata"/> class.
         /// </summary>
-        /// <param name="persistenceId">The id of the persistent actor fro mwhich the snapshot was taken.</param>
+        /// <param name="persistenceId">The id of the persistent actor from which the snapshot was taken.</param>
         /// <param name="sequenceNr">The sequence number at which the snapshot was taken.</param>
         /// <param name="timestamp">The time at which the snapshot was saved.</param>
-        [JsonConstructor]
+        [JsonConstructor] // TODO: remove this
         public SnapshotMetadata(string persistenceId, long sequenceNr, DateTime timestamp)
         {
             PersistenceId = persistenceId;
@@ -100,7 +130,13 @@ namespace Akka.Persistence
         /// </summary>
         public DateTime Timestamp { get; }
 
-        
+        /// <summary>
+        /// We will probably use nullable in the future, but for the time being
+        /// we use <see cref="DateTime.MinValue"/> to represent "no timestamp"
+        /// </summary>
+        internal static DateTime TimestampNotSpecified => DateTime.MinValue;
+
+
         public override bool Equals(object obj) => Equals(obj as SnapshotMetadata);
 
         
@@ -791,10 +827,7 @@ namespace Akka.Persistence
         /// </exception>
         public SaveSnapshot(SnapshotMetadata metadata, object snapshot)
         {
-            if (metadata == null)
-                throw new ArgumentNullException(nameof(metadata), "SaveSnapshot requires SnapshotMetadata to be provided");
-
-            Metadata = metadata;
+            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata), "SaveSnapshot requires SnapshotMetadata to be provided");
             Snapshot = snapshot;
         }
 
@@ -846,13 +879,8 @@ namespace Akka.Persistence
         /// <exception cref="ArgumentNullException">
         /// This exception is thrown when the specified <paramref name="metadata"/> is undefined.
         /// </exception>
-        public DeleteSnapshot(SnapshotMetadata metadata)
-        {
-            if (metadata == null)
-                throw new ArgumentNullException(nameof(metadata), "DeleteSnapshot requires SnapshotMetadata to be provided");
-
-            Metadata = metadata;
-        }
+        public DeleteSnapshot(SnapshotMetadata metadata) =>
+            Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata), "DeleteSnapshot requires SnapshotMetadata to be provided");
 
         /// <summary>
         /// Snapshot metadata.

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ReceiveTimeoutSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -77,6 +77,8 @@ namespace Akka.Tests.Actor
                 
                 Context.SetReceiveTimeout(timeout.GetValueOrDefault());
 
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+#pragma warning disable AK1003
                 ReceiveAsync<ReceiveTimeout>(async _ =>
                 {
                     log.Info($"Received {nameof(ReceiveTimeout)}");
@@ -92,6 +94,8 @@ namespace Akka.Tests.Actor
                 {
                     log.Info($"Received {nameof(Tick)}");
                 });
+#pragma warning restore AK1003
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
             }
 
         }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Reachability.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -363,8 +363,7 @@ namespace Akka.Cluster
         /// <inheritdoc />
         public override bool Equals(object obj)
         {
-            var other = obj as Reachability;
-            if (other == null) return false;
+            if (obj is not Reachability other) return false;
             return Records.Count == other.Records.Count &&
                    Versions.Equals(other.Versions) &&
                    _cache.Value.ObserverRowMap.Equals(other._cache.Value.ObserverRowMap);

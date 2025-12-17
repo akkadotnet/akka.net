@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingInfrastructure.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,14 +34,14 @@ namespace Akka.Cluster.Benchmarks.Sharding
             public Address Addr { get; }
         }
         
-        public ShardedEntityActor()
+        public ShardedEntityActor(string entityId)
         {
-            Receive<ShardingEnvelope>(e =>
+            Receive<Resolve>(_ =>
             {
-                Sender.Tell(new ResolveResp(e.EntityId, Cluster.Get(Context.System).SelfAddress));
+                Sender.Tell(new ResolveResp(entityId, Cluster.Get(Context.System).SelfAddress));
             });
             
-            ReceiveAny(_ => Sender.Tell(_));
+            ReceiveAny(o => Sender.Tell(o));
         }
     }
 
@@ -51,10 +51,6 @@ namespace Akka.Cluster.Benchmarks.Sharding
     {
         private IActorRef _shardRegion;
         private IActorRef _sender;
-
-        
-
-      
 
         public ShardedProxyEntityActor(IActorRef shardRegion)
         {
@@ -200,11 +196,6 @@ namespace Akka.Cluster.Benchmarks.Sharding
                 return sharded.EntityId;
             }
 
-            if (message is ShardingEnvelope e)
-            {
-                return e.EntityId;
-            }
-
             return null;
         }
     }
@@ -258,10 +249,12 @@ namespace Akka.Cluster.Benchmarks.Sharding
 
         public static IActorRef StartShardRegion(ActorSystem system, string entityName = "entities")
         {
-            var props = Props.Create(() => new ShardedEntityActor());
             var sharding = ClusterSharding.Get(system);
-            return sharding.Start(entityName, _ => props, ClusterShardingSettings.Create(system),
-                new ShardMessageExtractor());
+            return sharding.Start(
+                typeName: entityName, 
+                entityPropsFactory: id => Props.Create(() => new ShardedEntityActor(id)), 
+                settings: ClusterShardingSettings.Create(system),
+                messageExtractor: new ShardMessageExtractor());
         }
     }
 }

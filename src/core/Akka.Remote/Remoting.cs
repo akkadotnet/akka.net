@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Remoting.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -125,7 +125,7 @@ namespace Akka.Remote
         // a lazy val
         private volatile Address _defaultAddress;
 
-        private IActorRef _transportSupervisor;
+        private readonly IActorRef _transportSupervisor;
         private readonly EventPublisher _eventPublisher;
 
         /// <summary>
@@ -435,7 +435,7 @@ namespace Akka.Remote
     /// <summary>
     /// Actor responsible for supervising the creation of all transport actors
     /// </summary>
-    internal class TransportSupervisor : ReceiveActor
+    internal sealed class TransportSupervisor : ReceiveActor
     {
         private readonly SupervisorStrategy _strategy = new OneForOneStrategy(_ => Directive.Restart);
         /// <summary>

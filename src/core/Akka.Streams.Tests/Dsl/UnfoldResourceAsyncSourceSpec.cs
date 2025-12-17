@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="UnfoldResourceAsyncSourceSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -103,18 +103,18 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 await probe.RequestAsync(1);
-                await resource.Created.ShouldCompleteWithin(3.Seconds());
+                await resource.Created.WaitAsync(3.Seconds());
                 await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
                 createPromise.SetResult(Done.Instance);
 
                 foreach (var i in values)
                 {
-                    await resource.FirstElementRead.ShouldCompleteWithin(3.Seconds());
+                    await resource.FirstElementRead.WaitAsync(3.Seconds());
                     (await probe.ExpectNextAsync()).ShouldBe(i);
                     await probe.RequestAsync(1);
                 }
 
-                await resource.Closed.ShouldCompleteWithin(3.Seconds());
+                await resource.Closed.WaitAsync(3.Seconds());
                 closePromise.SetResult(Done.Instance);
 
                 await probe.ExpectCompleteAsync();
@@ -137,13 +137,13 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(probe), Materializer);
 
                 await probe.RequestAsync(1L);
-                await resource.FirstElementRead.ShouldCompleteWithin(3.Seconds());
+                await resource.FirstElementRead.WaitAsync(3.Seconds());
                 // we cancel before we complete first read (racy)
                 await probe.CancelAsync();
                 await Task.Delay(100);
                 firtRead.SetResult(Done.Instance);
 
-                await resource.Closed.ShouldCompleteWithin(3.Seconds());
+                await resource.Closed.WaitAsync(3.Seconds());
             }, Materializer);
         }
 
@@ -254,7 +254,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-                var r = await result.ShouldCompleteWithin(3.Seconds());
+                var r = await result.WaitAsync(3.Seconds());
                 r.ShouldBe(new[] { 1, 2, 3 });
             }, Materializer);
         }
@@ -288,7 +288,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-                var r = await result.ShouldCompleteWithin(3.Seconds());
+                var r = await result.WaitAsync(3.Seconds());
                 r.ShouldBe(new[] { 1, 2, 3 });
             }, Materializer);
         }
@@ -323,7 +323,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-                var r = await result.ShouldCompleteWithin(3.Seconds());
+                var r = await result.WaitAsync(3.Seconds());
                 r.ShouldBe(new[] { 1, 2, 3 });
                 startCount.Current.ShouldBe(2);
             }, Materializer);
@@ -359,7 +359,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider))
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-                var r = await result.ShouldCompleteWithin(3.Seconds());
+                var r = await result.WaitAsync(3.Seconds());
                 r.ShouldBe(new[] { 1, 2, 3 });
                 startCount.Current.ShouldBe(2);
             }, Materializer);
@@ -506,7 +506,7 @@ namespace Akka.Streams.Tests.Dsl
             materializer.Shutdown();
             materializer.IsShutdown.Should().BeTrue();
             
-            var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
+            var r = await closePromise.Task.WaitAsync(3.Seconds());
             r.Should().Be("Closed");
         }
 
@@ -528,7 +528,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 await probe.CancelAsync();
                 
-                var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
+                var r = await closePromise.Task.WaitAsync(3.Seconds());
                 r.Should().Be("Closed");
             }, Materializer);
         }
@@ -554,7 +554,7 @@ namespace Akka.Streams.Tests.Dsl
                     })
                     .RunWith(Sink.Cancelled<string>(), Materializer);
 
-                var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
+                var r = await closePromise.Task.WaitAsync(3.Seconds());
                 r.Should().Be("Closed");
             }, Materializer);
         }
@@ -581,7 +581,7 @@ namespace Akka.Streams.Tests.Dsl
                 await probe.RequestAsync(1L);
                 await probe.ExpectErrorAsync();
 
-                var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
+                var r = await closePromise.Task.WaitAsync(3.Seconds());
                 r.Should().Be("Closed");
             }, Materializer);
         }
@@ -610,7 +610,7 @@ namespace Akka.Streams.Tests.Dsl
                 await probe.RequestAsync(1L);
                 await probe.ExpectErrorAsync();
 
-                var r = await closePromise.Task.ShouldCompleteWithin(3.Seconds());
+                var r = await closePromise.Task.WaitAsync(3.Seconds());
                 r.Should().Be("Closed");
             }, Materializer);
         }

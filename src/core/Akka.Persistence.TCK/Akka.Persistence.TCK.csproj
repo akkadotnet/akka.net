@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <AssemblyTitle>Akka.Persistence.TCK</AssemblyTitle>
         <Description>Testkit for Persistence actor support for Akka.NET</Description>
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);persistence;eventsource;tck</PackageTags>
@@ -17,6 +16,7 @@
 
     <ItemGroup>
         <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)"/>
+        <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     </ItemGroup>
 
 </Project>

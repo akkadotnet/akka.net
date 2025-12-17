@@ -8,3 +8,5 @@
   href: scheduler.md
 - name: Circuit Breaker
   href: circuit-breaker.md
+- name: Lease
+  href: lease.md

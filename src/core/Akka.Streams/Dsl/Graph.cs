@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Graph.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -144,7 +144,7 @@ namespace Akka.Streams.Dsl
             _inputPorts = inputPorts;
             _eagerComplete = eagerComplete;
 
-            var ins = ImmutableArray<Inlet<TIn>>.Empty.ToBuilder();
+            var ins = ImmutableArray.CreateBuilder<Inlet<TIn>>();
             for (var i = 0; i < inputPorts; i++)
                 ins.Add(new Inlet<TIn>("Merge.in" + i));
 
@@ -468,7 +468,7 @@ namespace Akka.Streams.Dsl
 
                     SetHandler(inlet, onPush: () =>
                     {
-                        if (IsAvailable(_stage.Out) && !HasPending)
+                        if (IsAvailable(_stage.Out) && !HasOtherInletAvailable(inlet))
                         {
                             Push(_stage.Out, Grab(inlet));
                             TryPull(inlet);
@@ -503,6 +503,9 @@ namespace Akka.Streams.Dsl
             }
 
             public bool HasPending => _allBuffers.Any(c => c.NonEmpty);
+
+            private bool HasOtherInletAvailable(Inlet<T> excludeInlet) =>
+                _stage.In.Any(i => i != excludeInlet && IsAvailable(i));
 
             public bool UpstreamsClosed => _runningUpstreams == 0;
 

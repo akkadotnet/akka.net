@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TestKitBase_Within.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Internal;
-using FluentAssertions.Extensions;
 using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit
@@ -47,7 +46,7 @@ namespace Akka.TestKit
                     hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         }
         
         /// <summary>
@@ -65,13 +64,13 @@ namespace Akka.TestKit
                 max: max,
                 function: async () =>
                 {
-                    await actionAsync().ConfigureAwait(false);
+                    await actionAsync();
                     return NotUsed.Instance;
                 },
                 hint: null,
                 epsilonValue: epsilonValue,
                 cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -106,7 +105,7 @@ namespace Akka.TestKit
                     hint: hint, 
                     epsilonValue: epsilonValue, 
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         }
         
         /// <summary>
@@ -126,13 +125,13 @@ namespace Akka.TestKit
                 max: max,
                 function: async () =>
                 {
-                    await actionAsync().ConfigureAwait(false);
+                    await actionAsync();
                     return (object)null;
                 }, 
                 hint: hint,
                 epsilonValue: epsilonValue, 
                 cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+                ;
         }
 
         /// <summary>
@@ -161,7 +160,7 @@ namespace Akka.TestKit
                     hint: null,
                     epsilonValue: epsilonValue,
                     cancellationToken: cancellationToken)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+                .GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -260,6 +259,32 @@ namespace Akka.TestKit
             min.EnsureIsPositiveFinite("min");
             max.EnsureIsPositiveFinite("max");
             max = Dilated(max);
+            
+            /*
+             * Need to compute a reasonable epsilon value if one wasn't provided.
+             * Clock resolution is never going to be more precise than ~20ms, and it can be much worse.
+             *
+             * So we should compute a reasonable epsilon value based on the max duration. This is especially important
+             * for scenarios such as:
+             *
+             * ```
+             * Within(TimeSpan.FromSeconds(10), () =>
+             *   {
+             *       // Expect 0 means we have to wait for the full duration
+             *       EventFilter.Exception<Exception>().Expect(0, () =>
+             *       {
+             *          DoStuff();
+             *       });
+             *   });
+             * ```
+             *
+             * This test is designed just fine, but the EventFilter has to wait the full 10 seconds before it can
+             * complete. We don't want to fail the test because the Within block took 10.1 seconds to complete.
+             */
+            const double epsilonPercentage = 0.15; // 15% fudge factor
+            const double minimumEpsilonValueMs = 50.0d; // 50ms minimum epsilon value
+            epsilonValue ??= TimeSpan.FromMilliseconds(Math.Max(max.TotalMilliseconds * epsilonPercentage, minimumEpsilonValueMs));
+            
             var start = Now;
             var rem = _testState.End.HasValue ? _testState.End.Value - start : Timeout.InfiniteTimeSpan;
             _assertions.AssertTrue(rem.IsInfiniteTimeout() || rem >= min, "Required min time {0} not possible, only {1} left. {2}", min, rem, hint ?? "");
@@ -278,11 +303,11 @@ namespace Akka.TestKit
                     var executionTask = function();
                     // Limit the execution time block to the maximum allowed execution time.
                     // 200 milliseconds is added because Task.Delay() timer is not precise and can return prematurely.
-                    var resultTask = await Task.WhenAny(executionTask, Task.Delay(max + 200.Milliseconds(), cts.Token));
+                    var resultTask = await Task.WhenAny(executionTask, Task.Delay(max + TimeSpan.FromMilliseconds(200), cts.Token));
 
                     if (resultTask == executionTask)
                     {
-                        ret = executionTask.Result;
+                        ret = executionTask.Result; // Task has already completed at this point; this does not block
                     }
                     else
                     {
@@ -309,7 +334,6 @@ namespace Akka.TestKit
             
             if (!_testState.LastWasNoMsg)
             {
-                epsilonValue ??= TimeSpan.Zero;
                 var tookTooLong = elapsed > maxDiff + epsilonValue;
                 if(tookTooLong)
                 {

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DefaultLogger.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -19,10 +19,10 @@ namespace Akka.Event
         private MinimalLogger _stdoutLogger;
         
         /// <summary>
-        /// TBD
+        /// Handles incoming logger messages and events.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message to be processed.</param>
+        /// <returns>True if the message was handled, false otherwise.</returns>
         protected override bool Receive(object message)
         {
             switch (message)
@@ -46,7 +46,11 @@ namespace Akka.Event
         protected virtual void Print(LogEvent logEvent)
         {
             if (_stdoutLogger == null)
-                throw new Exception("Logger has not been initialized yet.");
+            {
+                // Include context about the failed log event to help with debugging
+                var logDetails = $"[{logEvent.LogLevel()}] {logEvent.LogSource}: {logEvent.Message}";
+                throw new Exception($"Logger has not been initialized yet. Failed to log: {logDetails}");
+            }
             
             _stdoutLogger.Tell(logEvent);
         }

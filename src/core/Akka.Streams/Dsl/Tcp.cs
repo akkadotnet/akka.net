@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Tcp.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Represents a successful TCP server binding.
         /// </summary>
-        public struct ServerBinding
+        public readonly struct ServerBinding
         {
             private readonly Func<Task> _unbindAction;
 
@@ -63,7 +63,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Represents an accepted incoming TCP connection.
         /// </summary>
-        public struct IncomingConnection
+        public readonly struct IncomingConnection
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="IncomingConnection"/> class.
@@ -110,7 +110,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Represents a prospective outgoing TCP connection.
         /// </summary>
-        public struct OutgoingConnection
+        public readonly struct OutgoingConnection
         {
             /// <summary>
             /// Initializes a new instance of the <see cref="OutgoingConnection"/> class.
@@ -180,13 +180,14 @@ namespace Akka.Streams.Dsl
         /// <param name="idleTimeout">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
+        // TODO: this really needs to be an async method
         public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
             // DnsEndpoint isn't allowed
             var ipAddresses = System.Net.Dns.GetHostAddressesAsync(host).Result;
             if (ipAddresses.Length == 0)
-                throw new ArgumentException($"Couldn't resolve IpAdress for host {host}", nameof(host));
+                throw new ArgumentException($"Couldn't resolve IpAddress for host {host}", nameof(host));
 
             return Source.FromGraph(new ConnectionSourceStage(_system.Tcp(), new IPEndPoint(ipAddresses[0], port), backlog,
                 options, halfClose, idleTimeout, BindShutdownTimeout));

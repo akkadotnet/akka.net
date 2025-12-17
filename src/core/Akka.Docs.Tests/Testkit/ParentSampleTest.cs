@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ParentSampleTest.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,6 +11,7 @@ using Akka.Actor.Dsl;
 using Akka.TestKit.Xunit2;
 using Xunit;
 
+#pragma warning disable CS0414 // Field is assigned but its value is never used. This is for documentation purposes, its fine. 
 namespace DocsExamples.Testkit
 {
     public class ParentSampleTest : TestKit

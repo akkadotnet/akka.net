@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="MultiNodeClusterShardingConfig.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -38,7 +38,7 @@ namespace Akka.Cluster.Sharding.Tests
         /// </summary>
         /// <param name="mode">mode the state store mode</param>
         /// <param name="rememberEntities">rememberEntities defaults to off</param>
-        /// <param name="additionalConfig">additionalConfig additional config</param>
+        /// <param name="additionalConfig">additionalConfig additional _config</param>
         /// <param name="loglevel">loglevel defaults to INFO</param>
         protected MultiNodeClusterShardingConfig(
             StateStoreMode mode = StateStoreMode.DData,
@@ -81,7 +81,7 @@ namespace Akka.Cluster.Sharding.Tests
                     ")
                     .WithFallback(Sharding.ClusterSharding.DefaultConfig())
                     .WithFallback(DistributedData.DistributedData.DefaultConfig())
-                    .WithFallback(Tools.Singleton.ClusterSingletonManager.DefaultConfig())
+                    .WithFallback(Tools.Singleton.ClusterSingleton.DefaultConfig())
                     .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
             CommonConfig = (ConfigurationFactory.ParseString(additionalConfig).WithFallback(persistenceConfig).WithFallback(Common));

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RestartFlow.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -310,6 +310,7 @@ namespace Akka.Streams.Dsl
                         Complete(Out);
                     else
                     {
+                        Log.Info("Restarting graph due to completion.");
                         ScheduleRestartTimer();
                     }
                 },
@@ -401,6 +402,7 @@ namespace Akka.Streams.Dsl
         {
             var restartDelay = BackoffSupervisor.CalculateDelay(_restartCount, _settings.MinBackoff, _settings.MaxBackoff, _settings.RandomFactor);
             Log.Debug("Restarting graph in {0}", restartDelay);
+            _resetDeadline = _settings.MaxRestartsWithin.FromNow();
             ScheduleOnce("RestartTimer", restartDelay);
             _restartCount += 1;
             // And while we wait, we go into backoff mode
@@ -412,8 +414,8 @@ namespace Akka.Streams.Dsl
         /// </summary>
         protected internal override void OnTimer(object timerKey)
         {
-            StartGraph();
             _resetDeadline = _settings.MaxRestartsWithin.FromNow();
+            StartGraph();
         }
 
         /// <summary>

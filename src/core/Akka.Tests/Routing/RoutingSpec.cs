@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RoutingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -21,12 +21,13 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using System.Threading.Tasks;
+using Xunit.Abstractions;
 
 namespace Akka.Tests.Routing
 {
     public class RoutingSpec : AkkaSpec
     {
-        public RoutingSpec() : base(GetConfig())
+        public RoutingSpec(ITestOutputHelper output) : base(GetConfig(), output:output)
         {
         }
 
@@ -130,7 +131,8 @@ namespace Akka.Tests.Routing
                 ReceiveAsync<string>(s => s == "start", async _ =>
                 {
                     var actor = Context.ActorOf(new RoundRobinPool(2).Props(Props.Create<InlineReceiverActor>()));
-                    await actor.Ask("hello").PipeTo(Sender);
+                    var sender = Sender;
+                    await actor.Ask("hello").PipeTo(sender);
                 });
             }
         }

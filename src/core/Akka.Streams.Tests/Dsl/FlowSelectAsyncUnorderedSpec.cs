@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowSelectAsyncUnorderedSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams.Dsl;
@@ -133,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
                     .To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().InnerException.Message.Should().Be("err1");
+                (await c.ExpectErrorAsync()).Message.Should().Be("err1");
                 latch.CountDown();
             }, Materializer);
         }
@@ -192,7 +193,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(Sink.FromSubscriber(c), Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
                 sub.Request(10);
-                c.ExpectError().Message.Should().Be("err2");
+                (await c.ExpectErrorAsync()).Message.Should().Be("err2");
                 latch.CountDown();
             }, Materializer);
         }
@@ -239,7 +240,7 @@ namespace Akka.Streams.Tests.Dsl
                     .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                     .RunWith(Sink.First<string>(), Materializer);
 
-                var complete = await t.ShouldCompleteWithin(3.Seconds());
+                var complete = await t.WaitAsync(3.Seconds());
                 complete.Should().Be("happy");
             }, Materializer);
         }
@@ -335,10 +336,10 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(() => {
                 const int parallelism = 8;
                 var counter = new AtomicCounter();
-                var queue = new BlockingQueue<(TaskCompletionSource<int>, long)>();
+                var queue = Channel.CreateUnbounded<(TaskCompletionSource<int>, long)>();
                 var cancellation = new CancellationTokenSource();
 
-                Task.Run(() =>
+                Task.Run(async () =>
                 {
                     var delay = 500; // 50000 nanoseconds
                     var count = 0;
@@ -347,7 +348,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         try
                         {
-                            var t = queue.Take(cancellation.Token);
+                            var t = await queue.Reader.ReadAsync(cancellation.Token);
                             var promise = t.Item1;
                             var enqueued = t.Item2;
                             var wakeup = enqueued + delay;
@@ -363,21 +364,26 @@ namespace Akka.Streams.Tests.Dsl
                     }
                 }, cancellation.Token);
 
-                Func<Task<int>> deferred = () =>
+                Task<int> Deferred()
                 {
                     var promise = new TaskCompletionSource<int>();
                     if (counter.IncrementAndGet() > parallelism)
                         promise.SetException(new Exception("parallelism exceeded"));
                     else
-                        queue.Enqueue((promise, DateTime.Now.Ticks));
+                    {
+                        var write = queue.Writer.TryWrite((promise, DateTime.Now.Ticks));
+                        if (!write)
+                            promise.SetException(new Exception("Failed to write to queue"));
+                    }
+                       
                     return promise.Task;
-                };
+                }
 
                 try
                 {
                     const int n = 10000;
                     var task = Source.From(Enumerable.Range(1, n))
-                        .SelectAsyncUnordered(parallelism, _ => deferred())
+                        .SelectAsyncUnordered(parallelism, _ => Deferred())
                         .RunAggregate(0, (c, _) => c + 1, Materializer);
 
                     task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();

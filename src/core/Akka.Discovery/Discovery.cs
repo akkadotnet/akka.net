@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Discovery.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.Util;
+using BindingFlags = System.Reflection.BindingFlags;
 
 namespace Akka.Discovery
 {
@@ -71,27 +71,64 @@ namespace Akka.Discovery
             if(!config.HasPath("class"))
                 throw new ArgumentException($"akka.discovery.{method} must contain field `class` that is a FQN of an `Akka.Discovery.ServiceDiscovery` implementation");
 
-            Try<ServiceDiscovery> Create(string typeName)
-            {
-                var dynamic = DynamicAccess.CreateInstanceFor<ServiceDiscovery>(typeName, _system);
-                return dynamic.RecoverWith(ex => ex is TypeLoadException or MissingMethodException 
-                    ? DynamicAccess.CreateInstanceFor<ServiceDiscovery>(typeName) 
-                    : dynamic);
-            }
-
             var className = config.GetString("class");
             _log.Info($"Starting Discovery service using [{method}] method, class: [{className}]");
-            var instanceTry = Create(className);
 
-            return instanceTry.IsSuccess switch
+            try
             {
-                true => instanceTry.Get(),
-                false when instanceTry.Failure.Value is TypeLoadException or MissingMethodException =>
-                    throw new ArgumentException(nameof(method), $"Illegal akka.discovery.{method}.class value or incompatible class! \n" +
-                        "The implementation class MUST extend Akka.Discovery.ServiceDiscovery and take an \n" +
-                        "ExtendedActorSystem as constructor argument."),
-                _ => throw instanceTry.Failure.Value
-            };
+                return Create(className);
+            }
+            catch (Exception ex)
+                when (ex is TypeLoadException or MissingMethodException)
+            {
+                throw new ArgumentException(
+                    message: $"Illegal akka.discovery.{method}.class value or incompatible class!\n" +
+                             "The implementation class MUST extend Akka.Discovery.ServiceDiscovery with:\n" +
+                             "  * parameterless constructor, " +
+                             $"  * constructor with a single {nameof(ExtendedActorSystem)} parameter, or\n" +
+                             $"  * constructor with {nameof(ExtendedActorSystem)} and {nameof(Configuration.Config)} parameters.",
+                    paramName: nameof(method),
+                    innerException: ex);
+            }
+
+            ServiceDiscovery Create(string typeName)
+            {
+                var type = Type.GetType(typeName: typeName);
+                if (type is null || !typeof(ServiceDiscovery).IsAssignableFrom(type))
+                    throw new TypeLoadException();
+
+                var bindFlags = BindingFlags.Instance | BindingFlags.Public;
+                
+                var ctor = type.GetConstructor(
+                    bindingAttr: bindFlags,
+                    binder: null,
+                    types: new[]
+                    {
+                        typeof(ExtendedActorSystem), 
+                        typeof(Configuration.Config)
+                    }, 
+                    modifiers: null);
+                if (ctor is not null)
+                    return (ServiceDiscovery) Activator.CreateInstance(type, _system, config);
+                
+                ctor = type.GetConstructor(
+                    bindingAttr: bindFlags, 
+                    binder: null,
+                    types: new[] { typeof(ExtendedActorSystem) }, 
+                    modifiers: null);
+                if (ctor is not null)
+                    return (ServiceDiscovery) Activator.CreateInstance(type, _system);
+                
+                ctor = type.GetConstructor(
+                    bindingAttr: bindFlags, 
+                    binder: null,
+                    types: Array.Empty<Type>(), 
+                    modifiers: null);
+                if (ctor is null)
+                    throw new MissingMethodException();
+                
+                return (ServiceDiscovery) Activator.CreateInstance(type);
+            }
         }
 
         public static Discovery Get(ActorSystem system) => system.WithExtension<Discovery, DiscoveryProvider>();

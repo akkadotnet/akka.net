@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RemoteAskFailureSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -33,11 +33,11 @@ akka.remote.dot-netty.tcp.port = {port}";
 
         private ActorSystem _sys1;
         private ActorSystem _sys2;
-        
-        public RemoteAskFailureSpec(ITestOutputHelper output) : base(Config(12552), nameof(RemoteAskFailureSpec), output)
+
+        public RemoteAskFailureSpec(ITestOutputHelper output) : base(Config(0), nameof(RemoteAskFailureSpec), output)
         {
             _sys1 = Sys;
-            _sys2 = ActorSystem.Create(Sys.Name, Config(19999));
+            _sys2 = ActorSystem.Create(Sys.Name, Config(0));
             InitializeLogger(_sys2);
         }
 
@@ -51,7 +51,8 @@ akka.remote.dot-netty.tcp.port = {port}";
         public async Task RemoteSelectorFailureMessageTest()
         {
             _sys2.ActorOf(Props.Create(() => new FailActor()), "fail");
-            var selector = _sys1.ActorSelection($"akka.tcp://{_sys2.Name}@localhost:19999/user/fail");
+            var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
+            var selector = _sys1.ActorSelection($"akka.tcp://{_sys2.Name}@{sys2Address.Host}:{sys2Address.Port}/user/fail");
 
             var fail = await selector.Ask<Status.Failure>("doesn't matter");
             fail.Cause.Should().NotBeNull();
@@ -63,7 +64,8 @@ akka.remote.dot-netty.tcp.port = {port}";
         public async Task RemoteSelectorFailureExceptionTest()
         {
             _sys2.ActorOf(Props.Create(() => new FailActor()), "fail");
-            var selector = _sys1.ActorSelection($"akka.tcp://{_sys2.Name}@localhost:19999/user/fail");
+            var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
+            var selector = _sys1.ActorSelection($"akka.tcp://{_sys2.Name}@{sys2Address.Host}:{sys2Address.Port}/user/fail");
 
             (await Awaiting(async () =>
             {
@@ -128,9 +130,11 @@ akka.remote.dot-netty.tcp.port = {port}";
             {
             }
 
+#pragma warning disable SYSLIB0051 // Exception serialization needs to be enabled for this test
             protected TestException(SerializationInfo info, StreamingContext context) : base(info, context)
             {
             }
+#pragma warning restore SYSLIB0051
 
             public TestException(string message) : base(message)
             {

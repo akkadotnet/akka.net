@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="FlowBatchSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -88,7 +88,7 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(10);
                 return i;
             }).RunAggregate(0, (i, i1) => i + i1, Materializer);
-            var result = await task.ShouldCompleteWithin(10.Seconds());
+            var result = await task.WaitAsync(10.Seconds());
             result.Should().Be(500500);
         }
 

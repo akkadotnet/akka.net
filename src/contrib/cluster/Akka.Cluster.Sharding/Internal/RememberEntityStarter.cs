@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RememberEntityStarter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -93,7 +93,7 @@ namespace Akka.Cluster.Sharding.Internal
             Timers.StartPeriodicTimer("retry", ResendUnAcked.Instance, settings.TuningParameters.RetryInterval);
         }
 
-        public ITimerScheduler Timers { get; set; }
+        public ITimerScheduler Timers { get; set; } = null!;
 
         public ILoggingAdapter Log { get; } = Context.GetLogger();
 
@@ -144,7 +144,7 @@ namespace Akka.Cluster.Sharding.Internal
         private void OnStartBatch(IImmutableSet<EntityId> entityIds)
         {
             // these go through the region rather the directly to the shard
-            // so that shard id extractor changes make them start on the right shard
+            // so that shard id messageExtractor changes make them start on the right shard
             _waitingForAck = _waitingForAck.Union(entityIds);
             foreach (var entityId in entityIds)
                 _region.Tell(new ShardRegion.StartEntity(entityId));

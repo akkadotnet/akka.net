@@ -1,11 +1,12 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ITestKitAssertions.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 
 namespace Akka.TestKit
 {
@@ -54,5 +55,13 @@ namespace Akka.TestKit
         /// <param name="format">A template string to display if the assertion fails.</param>
         /// <param name="args">An optional object array that contains zero or more objects to format.</param>
         void AssertEqual<T>(T expected, T actual, Func<T,T,bool> comparer, string format = "", params object[] args);
+
+        Exception AssertThrows(Action action);
+        
+        TException AssertThrows<TException>(Action action) where TException : Exception;
+        
+        Task<Exception> AssertThrowsAsync(Func<Task> action);
+        
+        Task<TException> AssertThrowsAsync<TException>(Func<Task> action) where TException : Exception;
     }
 }

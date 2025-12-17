@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="PersistencePluginProxy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -18,8 +18,10 @@ namespace Akka.Persistence.Journal
     /// <summary>
     /// TBD
     /// </summary>
-    public class PersistencePluginProxy : ActorBase, IWithUnboundedStash
+    public class PersistencePluginProxy : ActorBase, IWithUnboundedStash, IWithTimers
     {
+        private const string InitTimeoutTimerKey = nameof(InitTimeoutTimerKey);
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -125,7 +127,9 @@ namespace Akka.Persistence.Journal
         /// <summary>
         /// TBD
         /// </summary>
-        public IStash Stash { get; set; }
+        public IStash Stash { get; set; } = null!;
+
+        public ITimerScheduler Timers { get; set; } = null!;
 
         /// <summary>
         /// TBD
@@ -168,7 +172,7 @@ namespace Akka.Persistence.Journal
                                 targetAddress);
                     }
                 }
-                Context.System.Scheduler.ScheduleTellOnce(_initTimeout, Self, InitTimeout.Instance, Self);
+                Timers.StartSingleTimer(InitTimeoutTimerKey, InitTimeout.Instance, _initTimeout, Self);
             }
             base.PreStart();
         }

@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -15,8 +15,9 @@ using Akka.Cluster;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
-using Akka.Persistence.Sqlite;
+using Akka.Persistence.Sql;
 using Akka.Util;
+using LinqToDB;
 
 namespace ClusterSharding.Node
 {
@@ -43,8 +44,8 @@ namespace ClusterSharding.Node
             
             var config = ConfigurationFactory.ParseString(await File.ReadAllTextAsync("app.conf"))
                 .BootstrapFromDocker()
-                .WithFallback(ClusterSingletonManager.DefaultConfig())
-                .WithFallback(SqlitePersistence.DefaultConfiguration());
+                .WithFallback(ClusterSingleton.DefaultConfig())
+                .WithFallback(SqlPersistence.DefaultConfiguration);
 
             var system = ActorSystem.Create("sharded-cluster-system", config);
             

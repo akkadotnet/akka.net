@@ -1,9 +1,10 @@
-// -----------------------------------------------------------------------
-//  <copyright file="ConsumerController.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-//  </copyright>
-// -----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ConsumerController.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using Akka.Actor;
@@ -42,7 +43,13 @@ public static class ConsumerController
         return p;
     }
     
-    internal static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory, Option<IActorRef> producerControllerReference, Func<object, double> fuzzing, Settings? settings = null)
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// This method should only be used for testing purposes
+    /// </summary>
+    [InternalApi]
+    public static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory, Option<IActorRef> producerControllerReference, Func<object, double> fuzzing, Settings? settings = null)
     {
         Props p;
         switch (actorRefFactory)

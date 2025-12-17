@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="Source.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -649,7 +649,7 @@ namespace Akka.Streams.Dsl
         /// beginning) regardless of when they subscribed.
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
-        /// <param name=" asyncEnumerable">TBD</param>
+        /// <param name="asyncEnumerable">TBD</param>
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> From<T>(Func<IAsyncEnumerable<T>> asyncEnumerable)
             => FromGraph(new AsyncEnumerable<T>(asyncEnumerable)).WithAttributes(DefaultAttributes.EnumerableSource);
@@ -844,10 +844,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Source<T, NotUsed> Failed<T>(Exception cause)
         {
-            return new Source<T, NotUsed>(new PublisherSource<T>(
-                new ErrorPublisher<T>(cause, "FailedSource"),
-                DefaultAttributes.FailedSource,
-                Shape<T>("FailedSource")));
+            return Source.FromGraph(new Implementation.FailedSource<T>(cause, "FailedSource"));
         }
 
         /// <summary>

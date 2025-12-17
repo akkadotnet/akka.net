@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ClusterActorRefProvider.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -130,7 +130,7 @@ namespace Akka.Cluster
     /// 
     /// Deployer of cluster-aware routers
     /// </summary>
-    internal class ClusterDeployer : RemoteDeployer
+    internal sealed class ClusterDeployer : RemoteDeployer
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterDeployer"/> class.

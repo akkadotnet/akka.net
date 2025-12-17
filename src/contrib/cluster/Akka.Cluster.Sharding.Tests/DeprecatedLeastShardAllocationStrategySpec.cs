@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="DeprecatedLeastShardAllocationStrategySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -20,7 +20,9 @@ namespace Akka.Cluster.Sharding.Tests
 {
     public class DeprecatedLeastShardAllocationStrategySpec : AkkaSpec
     {
+#pragma warning disable CS0618 // Type or member is obsolete. This is fine, we're actually testing backward compatibility with the deprecated class
         internal class TestLeastShardAllocationStrategy : LeastShardAllocationStrategy
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             private readonly Func<CurrentClusterState> clusterState;
             private readonly Func<Member> selfMember;

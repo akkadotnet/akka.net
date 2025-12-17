@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="SnapshotStoreSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -14,6 +14,8 @@ using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
+using FluentAssertions;
+using FluentAssertions.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -100,28 +102,28 @@ namespace Akka.Persistence.TCK.Snapshot
         {
             for (int i = 1; i <= 5; i++)
             {
-                var metadata = new SnapshotMetadata(Pid, i + 10);
+                var metadata = new SnapshotMetadata(Pid, i + 10, Sys.Scheduler.Now.UtcDateTime);
                 SnapshotStore.Tell(new SaveSnapshot(metadata, $"s-{i}"), _senderProbe.Ref);
                 yield return _senderProbe.ExpectMsg<SaveSnapshotSuccess>().Metadata;
             }
         }
 
         [Fact]
-        public void SnapshotStore_should_not_load_a_snapshot_given_an_invalid_persistence_id()
+        public virtual void SnapshotStore_should_not_load_a_snapshot_given_an_invalid_persistence_id()
         {
             SnapshotStore.Tell(new LoadSnapshot("invalid", SnapshotSelectionCriteria.Latest, long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == long.MaxValue);
         }
 
         [Fact]
-        public void SnapshotStore_should_not_load_a_snapshot_given_non_matching_timestamp_criteria()
+        public virtual void SnapshotStore_should_not_load_a_snapshot_given_non_matching_timestamp_criteria()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(long.MaxValue, new DateTime(100000)), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == long.MaxValue);
         }
 
         [Fact]
-        public void SnapshotStore_should_not_load_a_snapshot_given_non_matching_sequence_number_criteria()
+        public virtual void SnapshotStore_should_not_load_a_snapshot_given_non_matching_sequence_number_criteria()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(7), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => result.Snapshot == null && result.ToSequenceNr == long.MaxValue);
@@ -131,7 +133,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_load_the_most_recent_snapshot()
+        public virtual void SnapshotStore_should_load_the_most_recent_snapshot()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, SnapshotSelectionCriteria.Latest, long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result => 
@@ -142,7 +144,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_bound()
+        public virtual void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_bound()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(13), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
@@ -160,7 +162,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_and_timestamp_bound()
+        public virtual void SnapshotStore_should_load_the_most_recent_snapshot_matching_an_upper_sequence_number_and_timestamp_bound()
         {
             SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(13, Metadata[2].Timestamp), long.MaxValue), _senderProbe.Ref);
             _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
@@ -177,11 +179,37 @@ namespace Akka.Persistence.TCK.Snapshot
                 && result.Snapshot.Snapshot.ToString() == "s-3");
         }
 
+        // Issue #7312
+        // Backward compatibility check, SnapshotMetadata .ctor should work if we pass in UtcNow
         [Fact]
-        public void SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata()
+        public virtual void SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata()
         {
             var md = Metadata[2];
-            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr); // don't care about timestamp for delete of a single snap
+            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr,  md.Timestamp);
+            var command = new DeleteSnapshot(md);
+            var sub = CreateTestProbe();
+
+            Subscribe<DeleteSnapshot>(sub.Ref);
+            SnapshotStore.Tell(command, _senderProbe.Ref);
+            sub.ExpectMsg(command);
+            _senderProbe.ExpectMsg<DeleteSnapshotSuccess>();
+
+            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(md.SequenceNr), long.MaxValue), _senderProbe.Ref);
+            _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
+                              result.ToSequenceNr == long.MaxValue
+                              && result.Snapshot != null
+                              && result.Snapshot.Metadata.Equals(Metadata[1])
+                              && result.Snapshot.Snapshot.ToString() == "s-2");
+        }
+
+        // Issue #7312
+        // Backward compatibility check, old SnapshotMetadata .ctor default value should work as expected
+        [Fact]
+        public virtual void SnapshotStore_should_delete_a_single_snapshot_identified_by_SequenceNr_in_snapshot_metadata_if_timestamp_is_MinValue()
+        {
+            var md = Metadata[2];
+            // In previous incarnation, timestamp argument defaults to DateTime.MinValue
+            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc));
             var command = new DeleteSnapshot(md);
             var sub = CreateTestProbe();
 
@@ -197,9 +225,33 @@ namespace Akka.Persistence.TCK.Snapshot
                 && result.Snapshot.Metadata.Equals(Metadata[1])
                 && result.Snapshot.Snapshot.ToString() == "s-2");
         }
-
+        
+        // Issue #7312, this is a side effect of the ctor signature changes
+        // DeleteSnapshot should not delete snapshot if timestamp value does not meet deletion criteria
         [Fact]
-        public void SnapshotStore_should_delete_all_snapshots_matching_upper_sequence_number_and_timestamp_bounds()
+        public virtual void SnapshotStore_should_not_delete_snapshot_identified_by_SequenceNr_if_metadata_timestamp_is_less_than_stored_timestamp()
+        {
+            var md = Metadata[2];
+            // timestamp argument is less than the actual metadata data stored in the database, no deletion occured
+            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, md.Timestamp - 2.Seconds());
+            var command = new DeleteSnapshot(md);
+            var sub = CreateTestProbe();
+
+            Subscribe<DeleteSnapshot>(sub.Ref);
+            SnapshotStore.Tell(command, _senderProbe.Ref);
+            sub.ExpectMsg(command);
+            _senderProbe.ExpectMsg<DeleteSnapshotSuccess>();
+
+            SnapshotStore.Tell(new LoadSnapshot(Pid, new SnapshotSelectionCriteria(md.SequenceNr), long.MaxValue), _senderProbe.Ref);
+            _senderProbe.ExpectMsg<LoadSnapshotResult>(result =>
+                result.ToSequenceNr == long.MaxValue
+                && result.Snapshot != null
+                && result.Snapshot.Metadata.Equals(Metadata[2])
+                && result.Snapshot.Snapshot.ToString() == "s-3");
+        }
+        
+        [Fact]
+        public virtual void SnapshotStore_should_delete_all_snapshots_matching_upper_sequence_number_and_timestamp_bounds()
         {
             var md = Metadata[2];
             var command = new DeleteSnapshots(Pid, new SnapshotSelectionCriteria(md.SequenceNr, md.Timestamp));
@@ -223,7 +275,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_not_delete_snapshots_with_non_matching_upper_timestamp_bounds()
+        public virtual void SnapshotStore_should_not_delete_snapshots_with_non_matching_upper_timestamp_bounds()
         {
             var md = Metadata[3];
             var criteria = new SnapshotSelectionCriteria(md.SequenceNr, md.Timestamp.Subtract(TimeSpan.FromTicks(1)));
@@ -244,7 +296,7 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_save_and_overwrite_snapshot_with_same_sequence_number()
+        public virtual void SnapshotStore_should_save_and_overwrite_snapshot_with_same_sequence_number()
         {
             var md = Metadata[4];
             SnapshotStore.Tell(new SaveSnapshot(md, "s-5-modified"), _senderProbe.Ref);
@@ -258,9 +310,9 @@ namespace Akka.Persistence.TCK.Snapshot
         }
 
         [Fact]
-        public void SnapshotStore_should_save_bigger_size_snapshot()
+        public virtual void SnapshotStore_should_save_bigger_size_snapshot()
         {
-            var metadata = new SnapshotMetadata(Pid, 100);
+            var metadata = new SnapshotMetadata(Pid, 100, Sys.Scheduler.Now.UtcDateTime);
             var bigSnapshot = new byte[SnapshotByteSizeLimit];
             new Random().NextBytes(bigSnapshot);
             SnapshotStore.Tell(new SaveSnapshot(metadata, bigSnapshot), _senderProbe.Ref);
@@ -269,12 +321,12 @@ namespace Akka.Persistence.TCK.Snapshot
 
 
         [Fact]
-        public void ShouldSerializeSnapshots()
+        public virtual void ShouldSerializeSnapshots()
         {
             if (!SupportsSerialization) return;
 
             var probe = CreateTestProbe();
-            var metadata = new SnapshotMetadata(Pid, 100L);
+            var metadata = new SnapshotMetadata(Pid, 100L, Sys.Scheduler.Now.UtcDateTime);
             var snap = new TestPayload(probe.Ref);
 
             SnapshotStore.Tell(new SaveSnapshot(metadata, snap), _senderProbe.Ref);

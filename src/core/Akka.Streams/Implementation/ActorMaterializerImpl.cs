@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ActorMaterializerImpl.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -184,7 +184,7 @@ namespace Akka.Streams.Implementation
                 var logics = t.Item2;
 
                 var shell = new GraphInterpreterShell(graph.Assembly, connections, logics, graph.Shape, calculatedSettings, _materializer);
-                var impl = _subflowFuser != null && !effectiveAttributes.Contains(Attributes.AsyncBoundary.Instance)
+                var impl = _subflowFuser != null && !effectiveAttributes.Contains<Attributes.AsyncBoundary>()
                     ? _subflowFuser(shell)
                     : _materializer.ActorOf(ActorGraphInterpreter.Props(shell), StageName(effectiveAttributes), calculatedSettings.Dispatcher);
 
@@ -384,7 +384,21 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <param name="logSource">The source that produces the log events.</param>
         /// <returns>The newly created logging adapter.</returns>
-        public override ILoggingAdapter MakeLogger(object logSource) => Logging.GetLogger(System, logSource);
+        public override ILoggingAdapter MakeLogger(object logSource)
+        {
+            string actorPath;
+            LogSource newSource;
+            if (logSource is not LogSource s)
+            {
+                actorPath = $"{logSource}({LogSource.FromActorRef(_supervisor, System)})";
+                newSource = LogSource.Create(actorPath, logSource.GetType());
+                return Logging.GetLogger(System, newSource);
+            }
+            
+            actorPath = $"{s.Source}({LogSource.FromActorRef(_supervisor, System)})";
+            newSource = LogSource.Create(actorPath, s.Type);
+            return Logging.GetLogger(System, newSource);
+        }
 
         /// <summary>
         /// TBD
@@ -402,7 +416,7 @@ namespace Akka.Streams.Implementation
                 Supervisor.Tell(PoisonPill.Instance);
         }
 
-        private ILoggingAdapter GetLogger() => _system.Log;
+        private ILoggingAdapter GetLogger() => MakeLogger(_supervisor);
     }
 
     /// <summary>

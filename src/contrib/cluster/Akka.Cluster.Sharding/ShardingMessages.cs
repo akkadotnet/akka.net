@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ShardingMessages.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -61,6 +61,8 @@ namespace Akka.Cluster.Sharding
         public object StopMessage { get; }
     }
 
+    internal sealed record SupervisorStopDirectivePassivation(IActorRef Child, string Reason, Exception LastCause) : IShardRegionCommand;
+    
     /// <summary>
     /// Send this message to the <see cref="ShardRegion"/> actor to handoff all shards that are hosted by
     /// the <see cref="ShardRegion"/> and then the <see cref="ShardRegion"/> actor will be stopped. You can <see cref="ICanWatch.Watch"/>

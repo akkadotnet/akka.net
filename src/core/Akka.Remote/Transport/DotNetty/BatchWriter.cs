@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="BatchWriter.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ namespace Akka.Remote.Transport.DotNetty
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal class FlushConsolidationHandler : ChannelDuplexHandler
+    internal sealed class FlushConsolidationHandler : ChannelDuplexHandler
     {
         /// <summary>
         /// The default number of flushes after which a flush will be forwarded to downstream handlers (whether while in a
@@ -206,10 +206,8 @@ namespace Akka.Remote.Transport.DotNetty
 
     /// <summary>
     /// INTERNAL API.
-    ///
-    /// Configuration object for <see cref="BatchWriter"/>
     /// </summary>
-    internal class BatchWriterSettings
+    internal sealed class BatchWriterSettings
     {
         public const int DefaultMaxPendingWrites = 30;
         public const long DefaultMaxPendingBytes = 16 * 1024L;

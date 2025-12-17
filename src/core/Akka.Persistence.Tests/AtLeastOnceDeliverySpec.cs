@@ -1,13 +1,14 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AtLeastOnceDeliverySpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
@@ -216,25 +217,17 @@ namespace Akka.Persistence.Tests
         }
         
         [Serializable]
-        sealed class ReqAck
+        sealed record ReqAck
         {
             public static readonly ReqAck Instance = new();
             private ReqAck() { }
-            public override bool Equals(object obj)
-            {
-                return obj is ReqAck;
-            }
         }
 
         [Serializable]
-        sealed class InvalidReq
+        sealed record InvalidReq
         {
             public static readonly InvalidReq Instance = new();
             private InvalidReq() { }
-            public override bool Equals(object obj)
-            {
-                return obj is InvalidReq;
-            }
         }
 
         interface IEvt { }
@@ -270,19 +263,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Serializable]
-        sealed class ReqDone : IEvt, IEquatable<ReqDone>
-        {
-            public ReqDone(long id)
-            {
-                Id = id;
-            }
-
-            public long Id { get; private set; }
-            public bool Equals(ReqDone other)
-            {
-                return other != null && other.Id == Id;
-            }
-        }
+        sealed record ReqDone(long Id) : IEvt;
 
         [Serializable]
         sealed class Action : IEquatable<Action>
@@ -317,19 +298,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Serializable]
-        sealed class ActionAck : IEquatable<ActionAck>
-        {
-            public ActionAck(long id)
-            {
-                Id = id;
-            }
-
-            public long Id { get; private set; }
-            public bool Equals(ActionAck other)
-            {
-                return other != null && other.Id == Id;
-            }
-        }
+        sealed record ActionAck(long Id);
 
         [Serializable]
         sealed class Boom { public static readonly Boom Instance = new(); }
@@ -558,7 +527,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void AtLeastOnceDelivery_must_warn_about_unconfirmed_messages()
+        public async Task AtLeastOnceDelivery_must_warn_about_unconfirmed_messages()
         {
             var probeA = CreateTestProbe();
             var probeB = CreateTestProbe();
@@ -569,17 +538,35 @@ namespace Akka.Persistence.Tests
             sender.Tell(new Req("a-1"));
             sender.Tell(new Req("b-1"));
             sender.Tell(new Req("b-2"));
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
 
-            var unconfirmed = ReceiveWhile(TimeSpan.FromSeconds(3), x =>
-                x is UnconfirmedWarning warning ? warning.UnconfirmedDeliveries : Enumerable.Empty<UnconfirmedDelivery>())
-                .SelectMany(e => e).ToArray();
+            // Wait for initial deliveries to ensure messages are timestamped and the redelivery timer has started
+            await probeA.ExpectMsgAsync<Action>(a => a.Id == 1 && a.Payload == "a-1");
+            await probeB.ExpectMsgAsync<Action>(a => a.Id == 2 && a.Payload == "b-1");
+            await probeB.ExpectMsgAsync<Action>(a => a.Id == 3 && a.Payload == "b-2");
 
-            var resultDestinations = unconfirmed.Select(x => x.Destination).Distinct().ToArray();
+            // Collect warnings until we have all expected unconfirmed deliveries
+            // Using count-based collection instead of timeout-based to avoid race conditions in CI
+            var unconfirmed = new List<UnconfirmedDelivery>();
+            var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+
+            while (unconfirmed.Count < 3 && DateTime.UtcNow < deadline)
+            {
+                var remainingTime = deadline - DateTime.UtcNow;
+                if (remainingTime <= TimeSpan.Zero) break;
+
+                var msg = await ReceiveOneAsync(remainingTime);
+                if (msg is UnconfirmedWarning warning)
+                    unconfirmed.AddRange(warning.UnconfirmedDeliveries);
+            }
+
+            var unconfirmedArray = unconfirmed.ToArray();
+
+            var resultDestinations = unconfirmedArray.Select(x => x.Destination).Distinct().ToArray();
             resultDestinations.Should().BeEquivalentTo(probeA.Ref.Path, probeB.Ref.Path);
-            var resultMessages = unconfirmed.Select(x => x.Message).Distinct().ToArray();
+            var resultMessages = unconfirmedArray.Select(x => x.Message).Distinct().ToArray();
             resultMessages.Should().BeEquivalentTo(new Action(1, "a-1"), new Action(2, "b-1"), new Action(3, "b-2"));
 
             Sys.Stop(sender);

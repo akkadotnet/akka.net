@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="ListPriorityQueue.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -50,7 +50,7 @@ namespace Akka.Util
             {
                 var pi = (ci - 1) / 2; // parent index
                 if (_priorityCalculator(_data[ci].Message).CompareTo(_priorityCalculator(_data[pi].Message)) >= 0) break; // child item is larger than (or equal) parent so we're done
-                var tmp = _data[ci]; _data[ci] = _data[pi]; _data[pi] = tmp;
+                (_data[ci], _data[pi]) = (_data[pi], _data[ci]);
                 ci = pi;
             }
         }
@@ -77,7 +77,7 @@ namespace Akka.Util
                 if (rc <= li && _priorityCalculator(_data[rc].Message).CompareTo(_priorityCalculator(_data[ci].Message)) < 0) // if there is a rc (ci + 1), and it is smaller than left child, use the rc instead
                     ci = rc;
                 if (_priorityCalculator(_data[pi].Message).CompareTo(_priorityCalculator(_data[ci].Message)) <= 0) break; // parent is smaller than (or equal to) smallest child so done
-                var tmp = _data[pi]; _data[pi] = _data[ci]; _data[ci] = tmp; // swap parent and child
+                (_data[pi], _data[ci]) = (_data[ci], _data[pi]); // swap parent and child
                 pi = ci;
             }
             return frontItem;
@@ -116,9 +116,9 @@ namespace Akka.Util
         }
 
         /// <summary>
-        /// TBD
+        /// Checks if the internal priority queue is in a consistent state.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>True if the queue is in a consistent state, false otherwise.</returns>
         public bool IsConsistent()
         {
             // is the heap property true for all data?

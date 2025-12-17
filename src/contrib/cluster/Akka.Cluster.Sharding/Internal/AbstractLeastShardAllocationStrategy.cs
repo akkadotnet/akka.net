@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AbstractLeastShardAllocationStrategy.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -126,7 +126,13 @@ namespace Akka.Cluster.Sharding.Internal
 
         protected ImmutableList<RegionEntry> RegionEntriesFor(IImmutableDictionary<IActorRef, IImmutableList<string>> currentShardAllocations)
         {
-            var addressToMember = ClusterState.Members.ToImmutableDictionary(m => m.Address, m => m);
+            // switched to using `GroupBy` instead just ToImmutableDictionary due to https://github.com/akkadotnet/akka.net/issues/7365
+            // it's very rare, but possible, that there can be two members with the same address in the ClusterState. This can happen
+            // when a node quickly reboots and re-uses its old address, but the old incarnation hasn't been downed yet.
+            var addressToMember = ClusterState.Members
+                .GroupBy(m => m.Address)
+                // using Last or First here is non-deterministic since the UID that appears in the UniqueAddress sort order is random
+                .ToImmutableDictionary(g => g.Key, g => g.First());
 
             return currentShardAllocations.Select(i =>
             {

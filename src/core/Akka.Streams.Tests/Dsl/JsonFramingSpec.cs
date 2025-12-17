@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="JsonFramingSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            var complete = await result.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new []
             {
                 @"{ ""name"" : ""john"" }",
@@ -80,7 +80,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            var complete = await result.WaitAsync(3.Seconds());
             complete.Should().HaveCount(1).And.Subject.Should().Contain(@"{ ""name"" : ""john"" }");
         }
 
@@ -101,7 +101,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            var complete = await result.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
@@ -124,7 +124,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            var complete = await result.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
@@ -150,7 +150,7 @@ namespace Akka.Streams.Tests.Dsl
                     list.Add(s.ToString());
                     return list;
                 }, Materializer)
-                .ShouldCompleteWithin(3.Seconds()); ;
+                .WaitAsync(3.Seconds()); ;
 
 
             result.Should().BeEquivalentTo(new[]

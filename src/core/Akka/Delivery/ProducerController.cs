@@ -1,14 +1,16 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="ProducerController.cs" company="Akka.NET Project">
-//      Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//      Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
-//  </copyright>
-// -----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
+// <copyright file="ProducerController.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
 #nullable enable
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Delivery.Internal;
 using Akka.Event;
@@ -46,7 +48,13 @@ public static class ProducerController
         return p;
     }
 
-    internal static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory, string producerId,
+    /// <summary>
+    /// INTERNAL API
+    ///
+    /// This method should only be used for testing purposes
+    /// </summary>
+    [InternalApi]
+    public static Props CreateWithFuzzing<T>(IActorRefFactory actorRefFactory, string producerId,
         Func<object, double> fuzzing,
         Option<Props> durableProducerQueue, Settings? settings = null,
         Action<ConsumerController.SequencedMessage<T>>? sendAdapter = null)
@@ -82,9 +90,9 @@ public static class ProducerController
     {
         if (sendAdapter == null)
             return Props.Create(() => new ProducerController<T>(producerId, durableProducerQueue, settings,
-                DateTimeOffsetNowTimeProvider.Instance, fuzzing));
+                actorSystem.Scheduler, fuzzing));
         return Props.Create(() => new ProducerController<T>(producerId, durableProducerQueue, sendAdapter, settings,
-            DateTimeOffsetNowTimeProvider.Instance, fuzzing));
+            actorSystem.Scheduler, fuzzing));
     }
 
     public sealed record Settings

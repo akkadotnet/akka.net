@@ -2,7 +2,7 @@
 
 ![Akka.NET logo](https://raw.githubusercontent.com/akkadotnet/akka.net/dev/docs/shfb/icons/AkkaNetLogo.Normal.png)
 
-[![Akka.NET Discord server](https://img.shields.io/discord/974500337396375553?label=Discord)](https://discord.gg/GSCfPwhbWP)
+[![Discord](https://img.shields.io/discord/974500337396375553?style=flat&logo=discord&label=Join%20Akka.NET%20Discord)](https://discord.com/invite/GSCfPwhbWP)
 [![NuGet](https://img.shields.io/nuget/v/Akka.svg?style=flat-square)](https://www.nuget.org/packages/Akka)
 [![Nuget](https://img.shields.io/nuget/dt/Akka)](https://www.nuget.org/packages/Akka)
 
@@ -46,13 +46,12 @@ You can start by taking the [Akka.NET Bootcamp](https://learnakka.net/), but the
 
 | Stage                                | Status                                                                                                                                                                                                                                                             |
 |------------------------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Build                                | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=Windows%20Build)](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                                    |
 | NuGet Pack                           | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=NuGet%20Pack)](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                                       |
 | .NET Framework Unit Tests            | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Framework%20Unit%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)        |
-| .NET 7 Unit Tests (Windows)          | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%207%20Unit%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                |
-| .NET 7 Unit Tests (Linux)            | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%207%20Unit%20Tests%20(Linux))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                  |
-| .NET 7 MultiNode Tests (Windows)     | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%207%20Multi-Node%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)          |
-| .NET 7 MultiNode Tests (Linux)       | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%207%20Multi-Node%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)          |                                                                                                                                                                                                                                                                   |
+| .NET Unit Tests (Windows)          | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Unit%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                |
+| .NET Unit Tests (Linux)            | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Unit%20Tests%20(Linux))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)                  |
+| .NET MultiNode Tests (Windows)     | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Multi-Node%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)          |
+| .NET MultiNode Tests (Linux)       | [![Build Status](https://dev.azure.com/dotnet/Akka.NET/_apis/build/status/akka.net/PR%20Validation?branchName=dev&jobName=.NET%20Multi-Node%20Tests%20(Windows))](https://dev.azure.com/dotnet/Akka.NET/_build/latest?definitionId=84&branchName=dev)          |                                                                                                                                                                                                                                                                   |
 | Docs                                 | [![Build Status](https://dev.azure.com/petabridge/akkadotnet-tools/_apis/build/status/Akka.NET%20Docs?branchName=dev)](https://dev.azure.com/petabridge/akkadotnet-tools/_build/latest?definitionId=82&branchName=dev)                                             |
 
 
@@ -85,7 +84,7 @@ dotnet new install "Akka.Templates::*"
 This will make our templates available via `dotnet new` on the CLI _and_ as new project templates inside any .NET IDE such as Visual Studio or JetBrains Rider. You can view the full list of templates included in our package here: https://github.com/akkadotnet/akkadotnet-templates#available-templates
 
 ## Builds
-Please see [Building Akka.NET](http://getakka.net/community/building-akka-net.html).
+Please see [Building Akka.NET](https://getakka.net/community/contributing/build-process.html).
 
 To access nightly Akka.NET builds, please [see the instructions here](http://getakka.net/community/getting-access-to-nightly-builds.html).
 

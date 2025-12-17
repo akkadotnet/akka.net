@@ -1,12 +1,13 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AttributesSpec.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System;
 using System.Threading.Tasks;
+using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
@@ -40,8 +41,16 @@ namespace Akka.Streams.Tests.Dsl
                         Keep.Right);
             var task = runnable.Run(Materializer);
 
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.GetAttribute<Attributes.Name>().Value.Should().Contain("new-name");
+        }
+
+        [Fact]
+        public void Attributes_Contains_should_not_return_true_if_doesnt_exist()
+        {
+            var attributes = Attributes.CreateName("new-name");
+            attributes.Contains<Attributes.LogLevels>().Should().BeFalse();
+            attributes.Contains<Attributes.Name>().Should().BeTrue();
         }
 
         [Fact]
@@ -51,7 +60,7 @@ namespace Akka.Streams.Tests.Dsl
                 .ToMaterialized(AttributesSink.Create(), Keep.Right)
                 .WithAttributes(Attributes.CreateName("new-name"))
                 .Run(Materializer);
-            var complete = await task.ShouldCompleteWithin(3.Seconds());
+            var complete = await task.WaitAsync(3.Seconds());
             complete.GetAttribute<Attributes.Name>().Value.Should().Contain("attributesSink");
         }
 

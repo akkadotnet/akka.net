@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="LocalFactAttribute.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -26,12 +26,12 @@ namespace Akka.TestKit.Xunit2.Attributes
     {
         private const string EnvironmentVariableName = "XUNIT_SKIP_LOCAL_FACT";
 
-        private string _skip;
+        private string? _skip;
 
         /// <summary>
         /// Marks the test so that it will not be run, and gets or sets the skip reason
         /// </summary>
-        public override string Skip
+        public override string? Skip
         {
             get
             {
@@ -49,7 +49,7 @@ namespace Akka.TestKit.Xunit2.Attributes
         /// The reason why this unit test is being skipped by the <see cref="LocalFactAttribute"/>.
         /// Note that the original <see cref="FactAttribute.Skip"/> property takes precedence over this message. 
         /// </summary>
-        public string SkipLocal { get; set; }
+        public string? SkipLocal { get; set; }
     }
 }
 

@@ -11,6 +11,102 @@ This document contains specific upgrade suggestions, warnings, and notices that 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/-UPestlIw4k" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 <!-- markdownlint-enable MD033 -->
 
+## Upgrading to Akka.NET v1.5.40
+
+### Akka.Persistence.Sql.Common and Akka.Persistence.Query.Sql Deprecation
+
+we're deprecating `Akka.Persistence.Sql.Common` and `Akka.Persistence.Query.Sql` packages and all `Akka.Persistence` plugins based on them. For continual support, we strongly recommend that you migrate to the new [`Akka.Persistence.Sql` or the `Akka.Persistence.Sql.Hosting`](https://github.com/akkadotnet/Akka.Persistence.Sql) package.
+
+#### Migration Resources
+
+To assist with the migration, please refer to the following resources:
+
+* **Migration Guide:**  
+  Learn the necessary steps to upgrade by following the [Migration Guide](https://github.com/akkadotnet/Akka.Persistence.Sql/blob/dev/docs/articles/migration.md).
+
+* **Migration Walkthrough:**  
+  For a step-by-step walkthrough, check out our [Migration Walkthrough](https://github.com/akkadotnet/Akka.Persistence.Sql/blob/dev/docs/articles/migration-walkthrough.md).
+
+* **Migration Guide Video:**  
+  Watch the [Migration Guide Video](https://www.youtube.com/watch?v=gSmqUrVHPq8) on YouTube for a detailed explanation of the migration process.
+
+## Upgrading to Akka.NET v1.5.32
+
+### Future Breaking Change in `Akka.Cluster.Tools`
+
+The method `ClusterSingleton.Init()` will be removed in future v1.6, if you're using this method, you need to convert it to use `ClusterSingletonManager.Props` and `ClusterSingletonProxy.Props` instead.
+
+In order to preserve backward compatibility within your cluster, if you're using this convention:
+
+```csharp
+var settings = ClusterSingletonSettings.Create(system);
+var singletonActor = SingletonActor.Create(Counter.Props, "GlobalCounter")
+    .WithStopMessage(MyStopMessage.Instance)
+    .WithSettings(settings);
+var proxy = singleton.Init(singletonActor);
+```
+
+You will need to convert it to:
+
+```csharp
+var managerSettings = ClusterSingletonManagerSettings.Create(system)
+    .WithSingletonName("GlobalCounter");
+system.ActorOf(
+    props: ClusterSingletonManager.Props(
+        singletonProps: Counter.Props,
+        terminationMessage: MyStopMessage.Instance,
+        settings: managerSettings),
+    name: "singletonManagerGlobalCounter");
+
+var proxySettings = ClusterSingletonProxySettings.Create(system)
+    .WithSingletonName("GlobalCounter");
+var proxy = system.ActorOf(
+    props: ClusterSingletonProxy.Props(
+        singletonManagerPath: "/user/singletonManagerGlobalCounter",
+        settings: proxySettings),
+    name: "singletonProxyGlobalCounter");
+```
+
+Note that to preserve backward compatibility between cluster nodes, the singleton manager actor name **MUST** be in the `$"singletonManager{singletonName}"` format.
+
+## Upgrading to Akka.NET v1.5.31
+
+Akka.NET v1.5.31 introduces a breaking behavior change to actor `Stash`. In previous behavior, `Stash` will filter out any messages that are identical (see explanation below) when it is prepended with another. It will not do so now, which is the actual intended behavior.
+
+This change will affect `Akka.Persistence` users or users who use the `Stash.Prepend()` method in their code. You will need to add a de-duplication code if your code depends on sending identical messages multiple times to a persistence actor while it is recovering.
+
+Messages are considered as identical if they are sent from the same sender actor and have a payload message that `Equals()` to true against another message. Example payload types would be an object pointing to the same memory address (`ReferenceEquals()` returns true), value types (enum, primitives, structs), and classes that implements the `IEquatable` interface.
+
+## Upgrading to Akka.NET v1.5.15
+
+Akka.NET v1.5.15 introduces several major changes:
+
+* [Introducing `Akka.Analyzers` - Roslyn Analysis for Akka.NET](xref:akka-analyzers)
+* [Akka.Cluster.Sharding: perf optimize message extraction, automate `StartEntity` and `ShardEnvelope` handling](https://github.com/akkadotnet/akka.net/pull/6863)
+* [Akka.Cluster.Tools: Make `ClusterClient` messages be serialized using `ClusterClientMessageSerializer`](https://github.com/akkadotnet/akka.net/pull/7032)
+
+### Akka.Analyzers
+
+The core Akka NuGet package now references [Akka.Analyzers](https://github.com/akkadotnet/akka.analyzers), a new set of Roslyn Code Analysis and Code Fix Providers that we distribute via NuGet. You can [see the full set of supported Akka.Analyzers rules here](xref:akka-analyzers).
+
+### Akka.Cluster.Sharding Changes
+
+In [#6863](https://github.com/akkadotnet/akka.net/pull/6863) we made some major changes to the Akka.Cluster.Sharding API aimed at helping improve Cluster.Sharding's performance _and_ ease of use. However, these changes _may require some effort on the part of the end user_ in order to take full advantage:
+
+* [`ExtractEntityId`](xref:Akka.Cluster.Sharding.ExtractEntityId) and [`ExtractShardId`](xref:Akka.Cluster.Sharding.ExtractShardId) have been deprecated as they _fundamentally can't be extended and can't benefit from the performance improvements introduced into Akka.NET v1.5.15_. It is **imperative** that you migrate to using the [`HashCodeMessageExtractor`](xref:Akka.Cluster.Sharding.HashCodeMessageExtractor) instead.
+* You no longer need to handle [`ShardRegion.StartEntity`](xref:Akka.Cluster.Sharding.ShardRegion.StartEntity) or [`ShardingEnvelope`](xref:Akka.Cluster.Sharding.ShardingEnvelope) inside your `IMessageExtractor` implementations, and in fact [`AK2001`](xref:AK2001) (part of Akka.Analyzers) will automatically detect this and remove those handlers for you. Akka.NET automatically handles these two message types internally now.
+
+### ClusterClient Serialization Changes
+
+In [#7032](https://github.com/akkadotnet/akka.net/pull/7032) we solved a long-standing serialization problem with the [`ClusterClient`](xref:Akka.Cluster.Tools.Client.ClusterClient) where  `Send`, `SendToAll`, and `Publish` were not handled by the correct internal serializer. This has been fixed by default in Akka.NET v1.5.15, but this can potentially cause wire compatibility problems during upgrades - therefore we have introduced a configuration setting to toggle this:
+
+```hocon
+# re-enable legacy serialization
+akka.cluster.client.use-legacy-serialization = on
+```
+
+That setting is currently set to `on` by default, so v1.5.15 will still behave like previous versions of Akka.NET. However, if you have been affected by serialization issues with the `ClusterClient` (such as [#6803](https://github.com/akkadotnet/akka.net/issues/6803)) you should toggle this setting to `off`.
+
 ## Upgrading to Akka.NET v1.5.2
 
 Akka.NET v1.5.2 introduces two important behavioral changes:

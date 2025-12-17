@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AsyncEnumerable.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
@@ -16,7 +16,6 @@ namespace Akka.Streams.Dsl
     /// Used to treat an <see cref="IRunnableGraph{TMat}"/> of <see cref="ISinkQueue{T}"/>
     /// as an <see cref="IAsyncEnumerable{T}"/>
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     public sealed class StreamsAsyncEnumerableRerunnable<T,TMat> : IAsyncEnumerable<T>
     {
         private static readonly Sink<T, ISinkQueue<T>> defaultSinkqueue =

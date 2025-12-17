@@ -1,47 +1,47 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="RegexMatcher.cs" company="Akka.NET Project">
-//     Copyright (C) 2009-2023 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2023 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 using System.Text.RegularExpressions;
 
-namespace Akka.TestKit.Internal.StringMatcher
+#nullable enable
+namespace Akka.TestKit.Internal.StringMatcher;
+
+/// <summary>
+/// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+/// </summary>
+public class RegexMatcher : IStringMatcher
 {
+    private readonly Regex _regex;
+
     /// <summary>
-    /// <remarks>Note! Part of internal API. Breaking changes may occur without notice. Use at own risk.</remarks>
+    /// TBD
     /// </summary>
-    public class RegexMatcher : IStringMatcher
+    /// <param name="regex">TBD</param>
+    public RegexMatcher(Regex regex)
     {
-        private readonly Regex _regex;
+        _regex = regex;
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="regex">TBD</param>
-        public RegexMatcher(Regex regex)
-        {
-            _regex = regex;
-        }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <param name="s">TBD</param>
+    /// <returns>TBD</returns>
+    public bool IsMatch(string s)
+    {
+        return _regex.IsMatch(s);
+    }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="s">TBD</param>
-        /// <returns>TBD</returns>
-        public bool IsMatch(string s)
-        {
-            return _regex.IsMatch(s);
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <returns>TBD</returns>
-        public override string ToString()
-        {
-            return "matches regex \"" + _regex + "\"";
-        }
+    /// <summary>
+    /// TBD
+    /// </summary>
+    /// <returns>TBD</returns>
+    public override string ToString()
+    {
+        return "matches regex \"" + _regex + "\"";
     }
 }
