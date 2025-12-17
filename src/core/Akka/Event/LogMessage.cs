@@ -79,15 +79,7 @@ namespace Akka.Event
                 // Optimize: avoid ToArray() if Parameters() already returns IReadOnlyList
                 if (parameters is IReadOnlyList<object> readOnlyList)
                 {
-                    if (readOnlyList.Count == 0)
-                    {
-                        // Optimize: Skips parsing PropertyNames when empty Parameters()
-                        _properties = EmptyDictionary;
-                    }
-                    else
-                    {
-                        _properties = CreatePropertyDictionary(PropertyNames, readOnlyList);
-                    }
+                    _properties = CreatePropertyDictionary(PropertyNames, readOnlyList);
                 }
                 else
                 {
