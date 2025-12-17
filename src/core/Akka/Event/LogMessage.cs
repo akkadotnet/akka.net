@@ -75,22 +75,16 @@ namespace Akka.Event
         {
             if (_properties == null)
             {
-                var names = PropertyNames;
                 var parameters = Parameters();
-
                 // Optimize: avoid ToArray() if Parameters() already returns IReadOnlyList
                 if (parameters is IReadOnlyList<object> readOnlyList)
                 {
-                    _properties = CreatePropertyDictionary(names, readOnlyList);
-                }
-                else if (parameters is object[] array)
-                {
-                    _properties = CreatePropertyDictionary(names, array);
+                    _properties = CreatePropertyDictionary(PropertyNames, readOnlyList);
                 }
                 else
                 {
                     // Fallback: convert to array
-                    _properties = CreatePropertyDictionary(names, parameters.ToArray());
+                    _properties = CreatePropertyDictionary(PropertyNames, parameters.ToArray());
                 }
             }
             return _properties;
@@ -106,33 +100,6 @@ namespace Akka.Event
 
             // Handle mismatched counts (more values than names, or vice versa)
             var count = Math.Min(names.Count, values.Count);
-            if (count == 0)
-                return EmptyDictionary;
-
-            var dict = new Dictionary<string, object>(count);
-            for (int i = 0; i < count; i++)
-            {
-                dict[names[i]] = values[i];
-            }
-
-#if NET8_0_OR_GREATER
-            // Use FrozenDictionary for optimal read performance on .NET 8+
-            return System.Collections.Frozen.FrozenDictionary.ToFrozenDictionary(dict);
-#else
-            return dict;
-#endif
-        }
-
-        private static IReadOnlyDictionary<string, object> CreatePropertyDictionary(
-            IReadOnlyList<string> names,
-            object[] values)
-        {
-            // Handle empty case
-            if (names.Count == 0)
-                return EmptyDictionary;
-
-            // Handle mismatched counts (more values than names, or vice versa)
-            var count = Math.Min(names.Count, values.Length);
             if (count == 0)
                 return EmptyDictionary;
 
