@@ -79,7 +79,15 @@ namespace Akka.Event
                 // Optimize: avoid ToArray() if Parameters() already returns IReadOnlyList
                 if (parameters is IReadOnlyList<object> readOnlyList)
                 {
-                    _properties = CreatePropertyDictionary(PropertyNames, readOnlyList);
+                    if (readOnlyList.Count == 0)
+                    {
+                        // Optimize: Skips parsing PropertyNames when empty Parameters()
+                        _properties = EmptyDictionary;
+                    }
+                    else
+                    {
+                        _properties = CreatePropertyDictionary(PropertyNames, readOnlyList);
+                    }
                 }
                 else
                 {
@@ -109,12 +117,7 @@ namespace Akka.Event
                 dict[names[i]] = values[i];
             }
 
-#if NET8_0_OR_GREATER
-            // Use FrozenDictionary for optimal read performance on .NET 8+
-            return System.Collections.Frozen.FrozenDictionary.ToFrozenDictionary(dict);
-#else
             return dict;
-#endif
         }
 
         private static readonly IReadOnlyDictionary<string, object> EmptyDictionary =
