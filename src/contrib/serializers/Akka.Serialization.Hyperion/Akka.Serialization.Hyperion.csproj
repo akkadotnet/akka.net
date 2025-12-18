@@ -10,9 +10,5 @@
         <PackageReference Include="Hyperion" Version="$(HyperionVersion)"/>
         <ProjectReference Include="..\..\..\core\Akka\Akka.csproj"/>
     </ItemGroup>
-    <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-        <PackageReference Include="System.Reflection" Version="4.3.0"/>
-        <PackageReference Include="System.Runtime" Version="4.3.1"/>
-    </ItemGroup>
 
 </Project>

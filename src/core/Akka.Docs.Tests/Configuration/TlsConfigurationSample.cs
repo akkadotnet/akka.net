@@ -92,7 +92,11 @@ namespace Akka.Docs.Tests.Configuration
         public static void ProgrammaticMutualTlsSetup()
         {
             // Load or obtain your certificate
+#if NET10_0_OR_GREATER
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile("path/to/certificate.pfx", "password");
+#else
             var certificate = new X509Certificate2("path/to/certificate.pfx", "password");
+#endif
 
             // Create custom validator combining multiple validation strategies
             var customValidator = CertificateValidation.Combine(
@@ -119,7 +123,11 @@ namespace Akka.Docs.Tests.Configuration
         /// </summary>
         public static void CertificatePinningSetup()
         {
+#if NET10_0_OR_GREATER
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile("path/to/certificate.pfx", "password");
+#else
             var certificate = new X509Certificate2("path/to/certificate.pfx", "password");
+#endif
 
             // Allow only specific certificates by thumbprint
             var validator = CertificateValidation.PinnedCertificate(
@@ -143,7 +151,11 @@ namespace Akka.Docs.Tests.Configuration
         /// </summary>
         public static void CustomValidationLogicSetup()
         {
+#if NET10_0_OR_GREATER
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile("path/to/certificate.pfx", "password");
+#else
             var certificate = new X509Certificate2("path/to/certificate.pfx", "password");
+#endif
 
             // Start with standard chain validation, then add custom logic
             var validator = CertificateValidation.ChainPlusThen(
@@ -175,7 +187,11 @@ namespace Akka.Docs.Tests.Configuration
         /// </summary>
         public static void HostnameValidationSetup()
         {
+#if NET10_0_OR_GREATER
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile("path/to/certificate.pfx", "password");
+#else
             var certificate = new X509Certificate2("path/to/certificate.pfx", "password");
+#endif
 
             // Enable both chain validation and hostname validation
             var sslSetup = new DotNettySslSetup(
@@ -195,7 +211,11 @@ namespace Akka.Docs.Tests.Configuration
         /// </summary>
         public static void SubjectValidationSetup()
         {
+#if NET10_0_OR_GREATER
+            var certificate = X509CertificateLoader.LoadPkcs12FromFile("path/to/certificate.pfx", "password");
+#else
             var certificate = new X509Certificate2("path/to/certificate.pfx", "password");
+#endif
 
             // Accept certificates matching the subject pattern
             // Wildcards are supported: CN=Akka-Node-* matches CN=Akka-Node-001

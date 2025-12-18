@@ -3,7 +3,7 @@
   <Description>Akka.Remote x-plat performance benchmark</Description>
   <Copyright>Copyright (c) Akka.NET Team</Copyright>
   <Authors>Akka.NET Team</Authors>
-  <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net6.0</TargetFrameworks>
+  <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net8.0</TargetFrameworks>
   <OutputType>Exe</OutputType>
   <IsPackable>false</IsPackable>
 </PropertyGroup>
