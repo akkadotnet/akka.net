@@ -27,7 +27,7 @@ jobs:
         inputs:
           packageType: 'sdk'
           useGlobalJson: true
-
+      
       # Set the Incrementalist base branch based on PR target branch
       - pwsh: |
           if ('$(Build.Reason)' -eq 'PullRequest') {
