@@ -51,7 +51,7 @@ namespace Akka.Actor
                 PosixSignal.SIGTERM, OnSignalReceived);
 
             _sighupRegistration = PosixSignalRegistration.Create(
-                PosixSignal.SIGHUP, OnSignalReceived);
+                PosixSignal.SIGINT, OnSignalReceived);
 
             // Keep ProcessExit as fallback for non-signal termination scenarios
             _processExitHandler = (_, _) => InvokeCallback();
