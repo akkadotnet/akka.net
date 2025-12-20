@@ -706,56 +706,65 @@ namespace Akka.Actor
             }
         }
 
-        // TODO: do we need to check for null or empty config here?
         /// <summary>
-        /// Initializes the CLR hook
+        /// Initializes the CLR hook for handling process termination signals.
         /// </summary>
         /// <param name="system">The actor system for this extension.</param>
         /// <param name="conf">The HOCON configuration.</param>
         /// <param name="coord">The <see cref="CoordinatedShutdown"/> plugin instance.</param>
-        internal static void InitClrHook(ActorSystem system, Config conf, CoordinatedShutdown coord)
+        /// <param name="signalHandler">Optional signal handler for testing. If null, creates platform-appropriate handler.</param>
+        internal static void InitClrHook(ActorSystem system, Config conf, CoordinatedShutdown coord, ITerminationSignalHandler signalHandler = null)
         {
             var runByClrShutdownHook = conf.GetBoolean("run-by-clr-shutdown-hook", false);
-            if (runByClrShutdownHook)
-            {
-                var exitTask = TerminateOnClrExit(coord);
-                // run all hooks during termination sequence
-                AppDomain.CurrentDomain.ProcessExit += exitTask;
-                system.WhenTerminated.ContinueWith(_ =>
-                {
-                    AppDomain.CurrentDomain.ProcessExit -= exitTask;
-                });
+            if (!runByClrShutdownHook)
+                return;
 
-                coord.AddClrShutdownHook(() =>
+            // Use injected handler or create platform-appropriate one
+            signalHandler ??= CreateDefaultTerminationHandler();
+
+            // Register the signal handler to run CLR hooks when termination signal is received
+            signalHandler.Register(() =>
+            {
+                // Must block - if this returns, process exits
+                coord.RunClrHooks().Wait(coord.TotalTimeout);
+            });
+
+            // Add the actual shutdown hook that performs coordinated shutdown
+            coord.AddClrShutdownHook(() =>
+            {
+                coord._runningClrHook = true;
+                return Task.Run(() =>
                 {
-                    coord._runningClrHook = true;
-                    return Task.Run(() =>
+                    if (!system.WhenTerminated.IsCompleted)
                     {
-                        if (!system.WhenTerminated.IsCompleted)
+                        coord.Log.Info("Starting coordinated shutdown from CLR termination hook.");
+                        try
                         {
-                            coord.Log.Info("Starting coordinated shutdown from CLR termination hook.");
-                            try
-                            {
-                                coord.Run(ClrExitReason.Instance).Wait(coord.TotalTimeout);
-                            }
-                            catch (Exception ex)
-                            {
-                                coord.Log.Warning("CoordinatedShutdown from CLR shutdown failed: {0}", ex.Message);
-                            }
+                            coord.Run(ClrExitReason.Instance).Wait(coord.TotalTimeout);
                         }
-                        return Done.Instance;
-                    });
+                        catch (Exception ex)
+                        {
+                            coord.Log.Warning("CoordinatedShutdown from CLR shutdown failed: {0}", ex.Message);
+                        }
+                    }
+                    return Done.Instance;
                 });
-            }
+            });
+
+            // Cleanup handler when system terminates normally
+            system.WhenTerminated.ContinueWith(_ => signalHandler.Dispose());
         }
 
-        private static EventHandler TerminateOnClrExit(CoordinatedShutdown coord)
+        /// <summary>
+        /// Creates the appropriate termination signal handler for the current platform.
+        /// </summary>
+        private static ITerminationSignalHandler CreateDefaultTerminationHandler()
         {
-            return (_, _) =>
-            {
-                // have to block, because if this method exits the process exits.
-                coord.RunClrHooks().Wait(coord.TotalTimeout);
-            };
+#if NET6_0_OR_GREATER
+            return new PosixTerminationSignalHandler();
+#else
+            return new LegacyTerminationSignalHandler();
+#endif
         }
     }
 }
