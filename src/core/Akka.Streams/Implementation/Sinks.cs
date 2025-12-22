@@ -743,8 +743,16 @@ namespace Akka.Streams.Implementation
                 Pull(_stage.In);
             }
 
-            public override void PostStop() => 
+            public override void PostStop()
+            {
+                // Complete any pending request before shutting down to prevent orphaned Tasks
+                if (_currentRequest.HasValue)
+                {
+                    _currentRequest.Value.SetException(new StreamDetachedException());
+                    _currentRequest = Option<TaskCompletionSource<Option<T>>>.None;
+                }
                 StopCallback(promise => promise.SetException(new StreamDetachedException()));
+            }
 
             private Action<TaskCompletionSource<Option<T>>> Callback()
             {
