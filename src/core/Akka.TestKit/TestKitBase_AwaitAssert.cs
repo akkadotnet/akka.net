@@ -62,16 +62,19 @@ namespace Akka.TestKit
                 }
                 catch(Exception)
                 {
-                    var stopped = Now + t;
-                    if (stopped >= stop)
-                    {
-                        Sys.Log.Warning("AwaitAssert failed, timeout [{0}] is over after [{1}] attempts and [{2}] elapsed time", max, attempts, stopped - start);
-                        throw;
-                    }
-                        
+                    // Check timeout after delay to avoid check-then-act race condition
                 }
                 attempts++;
                 await Task.Delay(t, cancellationToken);
+
+                // Check if we've exceeded the timeout AFTER sleeping
+                if (Now > stop)
+                {
+                    Sys.Log.Warning("AwaitAssert failed, timeout [{0}] is over after [{1}] attempts and [{2}] elapsed time", max, attempts, Now - start);
+                    // Re-run the assertion one final time to get the actual exception
+                    assertion();
+                }
+
                 t = (stop - Now).Min(intervalValue);
             }
         }
@@ -96,9 +99,11 @@ namespace Akka.TestKit
             var intervalValue = interval.GetValueOrDefault(TimeSpan.FromMilliseconds(100));
             if(intervalValue == Timeout.InfiniteTimeSpan) intervalValue = TimeSpan.MaxValue;
             intervalValue.EnsureIsPositiveFinite("interval");
+            var start = Now;
             var max = RemainingOrDilated(duration);
             var stop = Now + max;
             var t = max.Min(intervalValue);
+            var attempts = 0;
             while(true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -109,10 +114,19 @@ namespace Akka.TestKit
                 }
                 catch(Exception)
                 {
-                    if(Now + t >= stop)
-                        throw;
+                    // Check timeout after delay to avoid check-then-act race condition
                 }
+                attempts++;
                 await Task.Delay(t, cancellationToken);
+
+                // Check if we've exceeded the timeout AFTER sleeping
+                if (Now > stop)
+                {
+                    Sys.Log.Warning("AwaitAssert failed, timeout [{0}] is over after [{1}] attempts and [{2}] elapsed time", max, attempts, Now - start);
+                    // Re-run the assertion one final time to get the actual exception
+                    await assertion();
+                }
+
                 t = (stop - Now).Min(intervalValue);
             }
         }
