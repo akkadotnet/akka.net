@@ -282,6 +282,12 @@ namespace Akka.IO
                 case SocketError.TryAgain:
                 case SocketError.TimedOut:
                 case SocketError.WouldBlock:
+                case SocketError.Interrupted:
+                case SocketError.TooManyOpenSockets:
+                case SocketError.NetworkUnreachable:
+                case SocketError.HostDown:
+                case SocketError.HostUnreachable:
+                case SocketError.ConnectionRefused:
                     _retryCount++;
                     _log.Warning("Retriable socket error in TcpListener: {0} - retrying accept operation in 10ms",
                         saea.SocketError);
@@ -290,9 +296,24 @@ namespace Akka.IO
                     Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(10), Self,
                         new RetryAccept(saea), ActorRefs.NoSender);
                     break;
-                default:
+
+                // Fatal errors - the listener socket itself is broken
+                case SocketError.OperationAborted:
+                case SocketError.NotSocket:
+                case SocketError.Shutdown:
+                case SocketError.NetworkDown:
+                case SocketError.AccessDenied:
+                case SocketError.AddressNotAvailable:
+                case SocketError.InvalidArgument:
                     _failedCount++;
-                    _log.Error("Fatal socket error in TcpListener: {0}", saea.SocketError);
+                    _log.Error("Fatal socket error in TcpListener: {0} - stopping listener", saea.SocketError);
+                    Context.Stop(Self);
+                    break;
+
+                default:
+                    // Unknown error - treat it as a fatal error and stop listener
+                    _failedCount++;
+                    _log.Error("Unexpected socket error in TcpListener: {0} - stopping listener", saea.SocketError);
                     Context.Stop(Self);
                     break;
             }
