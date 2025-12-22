@@ -142,7 +142,7 @@ namespace Akka.IO
                         {
                             subscriber.Tell(stats);
                         }
-                    }   
+                    }
                     return true;
 
                 case Tcp.SubscribeToTcpListenerStats subscribe:
@@ -277,6 +277,7 @@ namespace Akka.IO
                     break;
 
                 case SocketError.ConnectionReset:
+                case SocketError.ConnectionAborted:
                 case SocketError.NoBufferSpaceAvailable:
                 case SocketError.TryAgain:
                 case SocketError.TimedOut:
