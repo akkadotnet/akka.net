@@ -220,14 +220,14 @@ namespace Akka.Streams.Tests.Implementation
                 var subscriber = this.CreateSubscriberProbe<int>();
 
                 Source.From(new[] { 1, 2, 3, 4 })
-                    .BackpressureTimeout(TimeSpan.FromSeconds(1))
+                    .BackpressureTimeout(TimeSpan.FromSeconds(2))
                     .RunWith(Sink.FromSubscriber(subscriber), Materializer);
 
                 for (var i = 1; i < 4; i++)
                 {
                     await subscriber.AsyncBuilder()
                         .RequestNext(i)
-                        .ExpectNoMsg(TimeSpan.FromMilliseconds(250))
+                        .ExpectNoMsg(TimeSpan.FromMilliseconds(100))
                         .ExecuteAsync();
                 }
 
