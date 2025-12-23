@@ -298,22 +298,9 @@ namespace Akka.IO
                     break;
 
                 // Fatal errors - the listener socket itself is broken
-                case SocketError.OperationAborted:
-                case SocketError.NotSocket:
-                case SocketError.Shutdown:
-                case SocketError.NetworkDown:
-                case SocketError.AccessDenied:
-                case SocketError.AddressNotAvailable:
-                case SocketError.InvalidArgument:
+                default:
                     _failedCount++;
                     _log.Error("Fatal socket error in TcpListener: {0} - stopping listener", saea.SocketError);
-                    Context.Stop(Self);
-                    break;
-
-                default:
-                    // Unknown error - treat it as a fatal error and stop listener
-                    _failedCount++;
-                    _log.Error("Unexpected socket error in TcpListener: {0} - stopping listener", saea.SocketError);
                     Context.Stop(Self);
                     break;
             }
