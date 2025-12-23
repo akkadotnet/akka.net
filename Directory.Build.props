@@ -14,7 +14,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <!-- Suppress .NET 10 test project warnings until proper fixes are implemented -->
-  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <!-- SYSLIB0057: X509Certificate2 constructor obsolete - many test files -->
     <!-- CA2022: Stream.Read inexact read - Akka.Streams.Tests -->
     <NoWarn>$(NoWarn);SYSLIB0057;CA2022</NoWarn>
