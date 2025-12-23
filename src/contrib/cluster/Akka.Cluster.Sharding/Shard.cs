@@ -1856,21 +1856,31 @@ namespace Akka.Cluster.Sharding
             // We only have to do this if we have R-E enabled
             if (!_rememberEntities)
                 return;
-            
+
             var id = _entities.EntityId(msg.Child);
             // Just return if the child actor is not a recorded shard entity
-            if (id is null) 
+            if (id is null)
                 return;
-            
-            // Remove the child actor from the entity list
-            _entities.RemoveEntity(id);
-                
+
+            // Only transition to Passivating if entity is Active.
+            // If already Passivating (entity requested passivation then threw), the normal flow handles it.
+            //
+            // Using Passivating state (instead of RemoveEntity which sets NoState):
+            // 1. Buffers messages arriving during termination (fixes race condition crash)
+            // 2. Persists removal from store when EntityTerminated arrives
+            // 3. Restarts entity if messages arrive (transient failure, try again)
+            // 4. Stays forgotten if no messages arrive
+            if (_entities.EntityState(id) is Active)
+            {
+                _entities.EntityPassivating(id);
+            }
+
             // Force stop the child actor, it might have been restarted
             Context.Stop(msg.Child);
-            
+
             Log.Error(
-                msg.LastCause, 
-                "{0}: Remembered entity {1} was stopped: {2}", 
+                msg.LastCause,
+                "{0}: Remembered entity {1} was stopped: {2}",
                 _typeName, id, msg.Reason);
         }
 
