@@ -1,5 +1,5 @@
-﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
 namespace Akka.Coordination
 {
     public abstract class Lease
@@ -14,15 +14,15 @@ namespace Akka.Coordination
     public class LeaseException : System.Exception
     {
         public LeaseException(string message) { }
-        public LeaseException(string message, System.Exception innerEx) { }
         protected LeaseException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public LeaseException(string message, System.Exception innerEx) { }
     }
     public class LeaseProvider : Akka.Actor.IExtension
     {
         public LeaseProvider(Akka.Actor.ExtendedActorSystem system) { }
+        public Akka.Coordination.Lease GetLease(string leaseName, string configPath, string ownerName) { }
         public static Akka.Configuration.Config DefaultConfig() { }
         public static Akka.Coordination.LeaseProvider Get(Akka.Actor.ActorSystem system) { }
-        public Akka.Coordination.Lease GetLease(string leaseName, string configPath, string ownerName) { }
     }
     public class LeaseProviderExtensionProvider : Akka.Actor.ExtensionIdProvider<Akka.Coordination.LeaseProvider>
     {
@@ -36,9 +36,9 @@ namespace Akka.Coordination
         public string LeaseName { get; }
         public string OwnerName { get; }
         public Akka.Coordination.TimeoutSettings TimeoutSettings { get; }
-        public static Akka.Coordination.LeaseSettings Create(Akka.Configuration.Config config, string leaseName, string ownerName) { }
         public override string ToString() { }
         public Akka.Coordination.LeaseSettings WithTimeoutSettings(Akka.Coordination.TimeoutSettings timeoutSettings) { }
+        public static Akka.Coordination.LeaseSettings Create(Akka.Configuration.Config config, string leaseName, string ownerName) { }
     }
     public sealed class LeaseTimeoutException : Akka.Coordination.LeaseException
     {
@@ -58,10 +58,10 @@ namespace Akka.Coordination
         public System.TimeSpan HeartbeatInterval { get; }
         public System.TimeSpan HeartbeatTimeout { get; }
         public System.TimeSpan OperationTimeout { get; }
-        public static Akka.Coordination.TimeoutSettings Create(Akka.Configuration.Config config) { }
         public override string ToString() { }
         public Akka.Coordination.TimeoutSettings WithHeartbeatInterval(System.TimeSpan heartbeatInterval) { }
         public Akka.Coordination.TimeoutSettings WithHeartbeatTimeout(System.TimeSpan heartbeatTimeout) { }
         public Akka.Coordination.TimeoutSettings withOperationTimeout(System.TimeSpan operationTimeout) { }
+        public static Akka.Coordination.TimeoutSettings Create(Akka.Configuration.Config config) { }
     }
 }
