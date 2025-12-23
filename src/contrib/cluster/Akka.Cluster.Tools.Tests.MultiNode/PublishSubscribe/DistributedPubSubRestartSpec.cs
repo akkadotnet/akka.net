@@ -113,8 +113,10 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
             {
                 await EnterBarrierAsync("end");
 
-                Mediator.Tell(DeltaCount.Instance);
-                var deltaCount = await ExpectMsgAsync<long>();
+                // Use a probe to isolate DeltaCount query from any stray messages in TestActor mailbox
+                var probe = CreateTestProbe();
+                Mediator.Tell(DeltaCount.Instance, probe.Ref);
+                var deltaCount = await probe.ExpectMsgAsync<long>(5.Seconds());
                 deltaCount.Should().Be(oldDeltaCount);
             }, _config.Second);
 
@@ -123,12 +125,14 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                 var thirdAddress = (await NodeAsync(_config.Third)).Address;
                 await TestConductor.Shutdown(_config.Third).WaitAsync(30.Seconds());
 
+                // Use a probe for Identify to avoid polluting TestActor mailbox with stray responses
+                var identifyProbe = CreateTestProbe();
                 await WithinAsync(25.Seconds(), async () =>
                 {
                     await AwaitAssertAsync(async () =>
                     {
-                        Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null));
-                        (await ExpectMsgAsync<ActorIdentity>(2.Seconds())).Subject.Should().NotBeNull();
+                        Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null), identifyProbe.Ref);
+                        (await identifyProbe.ExpectMsgAsync<ActorIdentity>(2.Seconds())).Subject.Should().NotBeNull();
                     });
                 });
 
@@ -136,8 +140,11 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
                 await EnterBarrierAsync("end");
 
-                Mediator.Tell(DeltaCount.Instance);
-                var deltaCount = await ExpectMsgAsync<long>();
+                // Use a probe to isolate DeltaCount query from stray ActorIdentity messages
+                // that may still be arriving from AwaitAssertAsync Identify retries
+                var deltaProbe = CreateTestProbe();
+                Mediator.Tell(DeltaCount.Instance, deltaProbe.Ref);
+                var deltaCount = await deltaProbe.ExpectMsgAsync<long>(5.Seconds());
                 deltaCount.Should().Be(oldDeltaCount);
             }, _config.First);
 
