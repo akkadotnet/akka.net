@@ -14,9 +14,6 @@ using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit
 {
-    /// <summary>
-    /// TBD
-    /// </summary>
     public abstract partial class TestKitBase
     {
         /// <summary>
@@ -37,7 +34,7 @@ namespace Akka.TestKit
         public void AwaitAssert(Action assertion, TimeSpan? duration=null, TimeSpan? interval=null, CancellationToken cancellationToken = default)
         {
             AwaitAssertAsync(assertion, duration, interval, cancellationToken)
-                .WaitAndUnwrapException();
+                .WaitAndUnwrapException(cancellationToken);
         }
         
         /// <inheritdoc cref="AwaitAssert(Action, TimeSpan?, TimeSpan?, CancellationToken)"/>
@@ -122,9 +119,16 @@ namespace Akka.TestKit
                 // Check if we've exceeded the timeout AFTER sleeping
                 if (Now > stop)
                 {
-                    Sys.Log.Warning("AwaitAssert failed, timeout [{0}] is over after [{1}] attempts and [{2}] elapsed time", max, attempts, Now - start);
-                    // Re-run the assertion one final time to get the actual exception
-                    await assertion();
+                    try
+                    {
+                        await assertion();
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        Sys.Log.Warning(ex, "AwaitAssert failed, timeout [{0}] is over after [{1}] attempts and [{2}] elapsed time", max, attempts, Now - start);
+                        throw;
+                    }
                 }
 
                 t = (stop - Now).Min(intervalValue);
