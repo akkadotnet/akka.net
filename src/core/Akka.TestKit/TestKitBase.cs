@@ -28,6 +28,10 @@ namespace Akka.TestKit
     /// </summary>
     public abstract partial class TestKitBase : IActorRefFactory
     {
+        // AsyncLocal for proper timeout propagation across async boundaries.
+        // This ensures WithinAsync timeout flows correctly to EventFilter and other async operations.
+        private readonly AsyncLocal<TimeSpan?> _asyncLocalEnd = new();
+
         private class TestState
         {
             public TestState()
@@ -430,9 +434,21 @@ namespace Akka.TestKit
         {
             get
             {
+                // Check AsyncLocal first (async context takes precedence)
+                var asyncEnd = _asyncLocalEnd.Value;
+                if (asyncEnd.HasValue)
+                {
+                    if (asyncEnd < TimeSpan.Zero)
+                        throw new InvalidOperationException($"End can not be negative, was: {asyncEnd}");
+
+                    var asyncRemaining = asyncEnd.Value - Now;
+                    return asyncRemaining < TimeSpan.Zero ? TimeSpan.Zero : asyncRemaining;
+                }
+
+                // Fallback to instance field
                 if(_testState.End is null)
                     throw new InvalidOperationException(@"Remaining may not be called outside of ""within""");
-                
+
                 if (_testState.End < TimeSpan.Zero)
                     throw new InvalidOperationException($"End can not be negative, was: {_testState.End}");
 
@@ -451,6 +467,18 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         protected TimeSpan RemainingOr(TimeSpan duration)
         {
+            // Check AsyncLocal first (async context takes precedence for proper timeout propagation)
+            var asyncEnd = _asyncLocalEnd.Value;
+            if (asyncEnd.HasValue)
+            {
+                if (asyncEnd < TimeSpan.Zero)
+                    throw new InvalidOperationException($"End can not be negative, was: {asyncEnd}");
+
+                var asyncRemaining = asyncEnd.Value - Now;
+                return asyncRemaining < TimeSpan.Zero ? TimeSpan.Zero : asyncRemaining;
+            }
+
+            // Fallback to instance field for backward compatibility with sync code paths
             if (!_testState.End.HasValue) return duration;
             if (_testState.End < TimeSpan.Zero)
                 throw new InvalidOperationException($"End can not be negative, was: {_testState.End}");
