@@ -30,7 +30,7 @@ namespace Akka.TestKit
     {
         // AsyncLocal for proper timeout propagation across async boundaries.
         // This ensures WithinAsync timeout flows correctly to EventFilter and other async operations.
-        private static readonly AsyncLocal<TimeSpan?> _asyncLocalEnd = new();
+        private readonly AsyncLocal<TimeSpan?> _asyncLocalEnd = new();
 
         private class TestState
         {
