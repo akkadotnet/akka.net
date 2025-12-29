@@ -91,12 +91,13 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
         await WithinAsync(30.Seconds(), async () =>
         {
             Mediator.Tell(new Subscribe("topic1", TestActor));
-            ExpectMsg<SubscribeAck>();
+            await ExpectMsgAsync<SubscribeAck>();
             await CountAsync(3);
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 Mediator.Tell(new Publish("topic1", "msg1"));
+                return Task.CompletedTask;
             }, _config.First);
             await EnterBarrierAsync("pub-msg1");
 
@@ -112,8 +113,10 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
             {
                 await EnterBarrierAsync("end");
 
-                Mediator.Tell(DeltaCount.Instance);
-                var deltaCount = await ExpectMsgAsync<long>();
+                // Use a probe to isolate DeltaCount query from any stray messages in TestActor mailbox
+                var probe = CreateTestProbe();
+                Mediator.Tell(DeltaCount.Instance, probe.Ref);
+                var deltaCount = await probe.ExpectMsgAsync<long>(5.Seconds());
                 deltaCount.Should().Be(oldDeltaCount);
             }, _config.Second);
 
@@ -122,12 +125,14 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                 var thirdAddress = (await NodeAsync(_config.Third)).Address;
                 await TestConductor.Shutdown(_config.Third).WaitAsync(30.Seconds());
 
-                await WithinAsync(20.Seconds(), async () =>
+                // Use a probe for Identify to avoid polluting TestActor mailbox with stray responses
+                var identifyProbe = CreateTestProbe();
+                await WithinAsync(25.Seconds(), async () =>
                 {
                     await AwaitAssertAsync(async () =>
                     {
-                        Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null));
-                        (await ExpectMsgAsync<ActorIdentity>(1.Seconds())).Subject.Should().NotBeNull();
+                        Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null), identifyProbe.Ref);
+                        (await identifyProbe.ExpectMsgAsync<ActorIdentity>(2.Seconds())).Subject.Should().NotBeNull();
                     });
                 });
 
@@ -135,8 +140,11 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
                 await EnterBarrierAsync("end");
 
-                Mediator.Tell(DeltaCount.Instance);
-                var deltaCount = await ExpectMsgAsync<long>();
+                // Use a probe to isolate DeltaCount query from stray ActorIdentity messages
+                // that may still be arriving from AwaitAssertAsync Identify retries
+                var deltaProbe = CreateTestProbe();
+                Mediator.Tell(DeltaCount.Instance, deltaProbe.Ref);
+                var deltaCount = await deltaProbe.ExpectMsgAsync<long>(5.Seconds());
                 deltaCount.Should().Be(oldDeltaCount);
             }, _config.First);
 
@@ -156,6 +164,12 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                     await Cluster.Get(newSystem).JoinAsync(Cluster.Get(newSystem).SelfAddress);
                     var newMediator = DistributedPubSub.Get(newSystem).Mediator;
                     var probe = CreateTestProbe(newSystem);
+
+                    // Create shutdown actor FIRST so First node can find it while we verify gossip isolation
+                    // This fixes the race condition where First node times out waiting for this actor
+                    newSystem.Log.Info("Creating shutdown actor on {0}", node3Address);
+                    newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
+
                     newMediator.Tell(new Subscribe("topic2", probe.Ref), probe.Ref);
                     await probe.ExpectMsgAsync<SubscribeAck>();
 
@@ -164,8 +178,6 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                     newMediator.Tell(DeltaCount.Instance, probe.Ref);
                     await probe.ExpectMsgAsync(0L);
 
-                    newSystem.Log.Info("Shutdown actor started on {0}",node3Address);
-                    newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
                     await newSystem.WhenTerminated.WaitAsync(30.Seconds());
                 }
                 finally
@@ -193,10 +205,11 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
     private async Task JoinAsync(RoleName from, RoleName to)
     {
-        RunOn(() =>
+        await RunOnAsync(() =>
         {
             Cluster.Get(Sys).Join(Node(to).Address);
             CreateMediator();
+            return Task.CompletedTask;
         }, from);
         await EnterBarrierAsync(from.Name + "-joined");
     }
