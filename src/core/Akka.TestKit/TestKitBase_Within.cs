@@ -293,7 +293,10 @@ namespace Akka.TestKit
 
             var maxDiff = max.Min(rem);
             var prevEnd = _testState.End;
+            var prevAsyncEnd = _asyncLocalEnd.Value; // Save previous AsyncLocal value for nesting support
+
             _testState.End = start + maxDiff;
+            _asyncLocalEnd.Value = start + maxDiff; // Set AsyncLocal for proper async propagation
 
             T ret = default;
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
@@ -320,6 +323,7 @@ namespace Akka.TestKit
                     // Make sure we stop the delay task
                     cts.Cancel();
                     _testState.End = prevEnd;
+                    _asyncLocalEnd.Value = prevAsyncEnd; // Restore previous AsyncLocal value
                 }
             }
 
