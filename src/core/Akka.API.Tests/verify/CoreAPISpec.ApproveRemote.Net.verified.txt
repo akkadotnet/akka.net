@@ -1,21 +1,21 @@
-﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Metrics")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Persistence.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.TestKit")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.TestKit.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.MultiNode")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Remote.Tests.Performance")]
-[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
-[assembly: System.Runtime.InteropServices.GuidAttribute("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
+﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Benchmarks")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Metrics")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.TestKit")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tools")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.TestKit")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.TestKit.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests.Performance")]
+[assembly: System.Runtime.InteropServices.ComVisible(false)]
+[assembly: System.Runtime.InteropServices.Guid("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Remote
 {
     public class AddressUid : Akka.Actor.IExtension
@@ -40,18 +40,18 @@ namespace Akka.Remote
     public sealed class AssociatedEvent : Akka.Remote.AssociationEvent
     {
         public AssociatedEvent(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress, bool inbound) { }
-        public override bool IsInbound { get; set; }
-        public override Akka.Actor.Address LocalAddress { get; set; }
-        public override Akka.Actor.Address RemoteAddress { get; set; }
+        public override bool IsInbound { get; protected set; }
+        public override Akka.Actor.Address LocalAddress { get; protected set; }
+        public override Akka.Actor.Address RemoteAddress { get; protected set; }
         public override Akka.Event.LogLevel LogLevel() { }
     }
     public sealed class AssociationErrorEvent : Akka.Remote.AssociationEvent
     {
         public AssociationErrorEvent(System.Exception cause, Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress, bool inbound, Akka.Event.LogLevel level) { }
         public System.Exception Cause { get; }
-        public override bool IsInbound { get; set; }
-        public override Akka.Actor.Address LocalAddress { get; set; }
-        public override Akka.Actor.Address RemoteAddress { get; set; }
+        public override bool IsInbound { get; protected set; }
+        public override Akka.Actor.Address LocalAddress { get; protected set; }
+        public override Akka.Actor.Address RemoteAddress { get; protected set; }
         public override Akka.Event.LogLevel LogLevel() { }
         public override string ToString() { }
     }
@@ -59,9 +59,9 @@ namespace Akka.Remote
     {
         protected string EventName;
         protected AssociationEvent() { }
-        public abstract bool IsInbound { get; set; }
-        public abstract Akka.Actor.Address LocalAddress { get; set; }
-        public abstract Akka.Actor.Address RemoteAddress { get; set; }
+        public abstract bool IsInbound { get; protected set; }
+        public abstract Akka.Actor.Address LocalAddress { get; protected set; }
+        public abstract Akka.Actor.Address RemoteAddress { get; protected set; }
         public override string ToString() { }
     }
     public delegate long Clock();
@@ -70,21 +70,21 @@ namespace Akka.Remote
         public Deadline(System.DateTime when) { }
         public bool HasTimeLeft { get; }
         public bool IsOverdue { get; }
-        public static Akka.Remote.Deadline Now { get; }
         public System.TimeSpan TimeLeft { get; }
         public System.DateTime When { get; }
+        public static Akka.Remote.Deadline Now { get; }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
-        public static Akka.Remote.Deadline +(Akka.Remote.Deadline deadline, System.TimeSpan duration) { }
-        public static Akka.Remote.Deadline +(Akka.Remote.Deadline deadline, System.Nullable<System.TimeSpan> duration) { }
+        public static Akka.Remote.Deadline operator +(Akka.Remote.Deadline deadline, System.TimeSpan duration) { }
+        public static Akka.Remote.Deadline operator +(Akka.Remote.Deadline deadline, System.TimeSpan? duration) { }
     }
     public class DeadlineFailureDetector : Akka.Remote.FailureDetector
     {
-        [System.ObsoleteAttribute("Use DeadlineFailureDetector(acceptableHeartbeatPause, heartbeatInterval, clock) i" +
+        public DeadlineFailureDetector(Akka.Configuration.Config config, Akka.Event.EventStream eventStream) { }
+        [System.Obsolete("Use DeadlineFailureDetector(acceptableHeartbeatPause, heartbeatInterval, clock) i" +
             "nstead. [1.1.2]")]
         public DeadlineFailureDetector(System.TimeSpan acceptableHeartbeatPause, Akka.Remote.Clock clock = null) { }
         public DeadlineFailureDetector(System.TimeSpan acceptableHeartbeatPause, System.TimeSpan heartbeatInterval, Akka.Remote.Clock clock = null) { }
-        public DeadlineFailureDetector(Akka.Configuration.Config config, Akka.Event.EventStream eventStream) { }
         public override bool IsAvailable { get; }
         public override bool IsMonitoring { get; }
         public override void HeartBeat() { }
@@ -101,9 +101,9 @@ namespace Akka.Remote
     public sealed class DisassociatedEvent : Akka.Remote.AssociationEvent
     {
         public DisassociatedEvent(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress, bool inbound) { }
-        public override bool IsInbound { get; set; }
-        public override Akka.Actor.Address LocalAddress { get; set; }
-        public override Akka.Actor.Address RemoteAddress { get; set; }
+        public override bool IsInbound { get; protected set; }
+        public override Akka.Actor.Address LocalAddress { get; protected set; }
+        public override Akka.Actor.Address RemoteAddress { get; protected set; }
         public override Akka.Event.LogLevel LogLevel() { }
     }
     public abstract class FailureDetector
@@ -114,8 +114,8 @@ namespace Akka.Remote
         public abstract bool IsMonitoring { get; }
         public abstract void HeartBeat();
     }
-    [Akka.Annotations.InternalApiAttribute()]
-    public class static FailureDetectorLoader
+    [Akka.Annotations.InternalApi]
+    public static class FailureDetectorLoader
     {
         public static Akka.Remote.FailureDetector Load(string fqcn, Akka.Configuration.Config config, Akka.Actor.ActorSystem system) { }
         public static Akka.Remote.FailureDetector LoadFailureDetector(this Akka.Actor.IActorContext context, string fqcn, Akka.Configuration.Config config) { }
@@ -128,9 +128,9 @@ namespace Akka.Remote
         void Remove(T resource);
         void Reset();
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public interface IInternalRemotingMessage { }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public interface IRemoteActorRefProvider : Akka.Actor.IActorRefProvider
     {
         Akka.Actor.IInternalActorRef RemoteDaemon { get; }
@@ -140,17 +140,17 @@ namespace Akka.Remote
         bool HasAddress(Akka.Actor.Address address);
         Akka.Actor.IActorRef InternalResolveActorRef(string path);
         Akka.Actor.Deploy LookUpRemotes(System.Collections.Generic.IEnumerable<string> p);
-        void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid);
+        void Quarantine(Akka.Actor.Address address, int? uid);
         Akka.Actor.IInternalActorRef ResolveActorRefWithLocalAddress(string path, Akka.Actor.Address localAddress);
         void UseActorOnNode(Akka.Remote.RemoteActorRef actor, Akka.Actor.Props props, Akka.Actor.Deploy deploy, Akka.Actor.IInternalActorRef supervisor);
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public interface IRemoteRef : Akka.Actor.IActorRefScope { }
     public class PhiAccrualFailureDetector : Akka.Remote.FailureDetector
     {
-        public PhiAccrualFailureDetector(double threshold, int maxSampleSize, System.TimeSpan minStdDeviation, System.TimeSpan acceptableHeartbeatPause, System.TimeSpan firstHeartbeatEstimate, Akka.Remote.Clock clock = null) { }
-        public PhiAccrualFailureDetector(Akka.Configuration.Config config, Akka.Event.EventStream ev) { }
         protected PhiAccrualFailureDetector(Akka.Remote.Clock clock) { }
+        public PhiAccrualFailureDetector(Akka.Configuration.Config config, Akka.Event.EventStream ev) { }
+        public PhiAccrualFailureDetector(double threshold, int maxSampleSize, System.TimeSpan minStdDeviation, System.TimeSpan acceptableHeartbeatPause, System.TimeSpan firstHeartbeatEstimate, Akka.Remote.Clock clock = null) { }
         public string Address { get; set; }
         public override bool IsAvailable { get; }
         public override bool IsMonitoring { get; }
@@ -168,7 +168,7 @@ namespace Akka.Remote
     {
         public RemoteActorRef(Akka.Remote.RemoteTransport remote, Akka.Actor.Address localAddressToUse, Akka.Actor.ActorPath path, Akka.Actor.IInternalActorRef parent, Akka.Actor.Props props, Akka.Actor.Deploy deploy) { }
         public override bool IsLocal { get; }
-        [System.ObsoleteAttribute("Use Context.Watch and Receive<Terminated> [1.1.0]")]
+        [System.Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
         public override bool IsTerminated { get; }
         public Akka.Actor.Address LocalAddressToUse { get; }
         public override Akka.Actor.IInternalActorRef Parent { get; }
@@ -184,13 +184,13 @@ namespace Akka.Remote
         public override void Suspend() { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public class RemoteActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Remote.IRemoteActorRefProvider
     {
         public RemoteActorRefProvider(string systemName, Akka.Actor.Settings settings, Akka.Event.EventStream eventStream) { }
         public Akka.Actor.IActorRef DeadLetters { get; }
         public Akka.Actor.Address DefaultAddress { get; }
-        public Akka.Actor.Deployer Deployer { get; set; }
+        public Akka.Actor.Deployer Deployer { get; protected set; }
         public Akka.Actor.LocalActorRef Guardian { get; }
         public Akka.Actor.IActorRef IgnoreRef { get; }
         public Akka.Actor.IInternalActorRef RemoteDaemon { get; }
@@ -216,10 +216,10 @@ namespace Akka.Remote
         public virtual void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
         public Akka.Actor.IActorRef InternalResolveActorRef(string path) { }
         public Akka.Actor.Deploy LookUpRemotes(System.Collections.Generic.IEnumerable<string> p) { }
-        public void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid) { }
+        public void Quarantine(Akka.Actor.Address address, int? uid) { }
         public void RegisterTempActor(Akka.Actor.IInternalActorRef actorRef, Akka.Actor.ActorPath path) { }
-        public Akka.Actor.IActorRef ResolveActorRef(string path) { }
         public Akka.Actor.IActorRef ResolveActorRef(Akka.Actor.ActorPath actorPath) { }
+        public Akka.Actor.IActorRef ResolveActorRef(string path) { }
         public Akka.Actor.IInternalActorRef ResolveActorRefWithLocalAddress(string path, Akka.Actor.Address localAddress) { }
         public Akka.Actor.IActorRef RootGuardianAt(Akka.Actor.Address address) { }
         public Akka.Actor.ActorPath TempPath() { }
@@ -240,7 +240,7 @@ namespace Akka.Remote
         public int LogBufferSizeExceeding { get; set; }
         public bool LogReceive { get; set; }
         public bool LogSend { get; set; }
-        public System.Nullable<System.TimeSpan> QuarantineDuration { get; set; }
+        public System.TimeSpan? QuarantineDuration { get; set; }
         public System.TimeSpan QuarantineSilentSystemTimeout { get; set; }
         public string RemoteLifecycleEventsLogLevel { get; set; }
         public System.TimeSpan RetryGateClosedFor { get; set; }
@@ -251,7 +251,7 @@ namespace Akka.Remote
         public int SysResendLimit { get; set; }
         public System.TimeSpan SysResendTimeout { get; set; }
         public System.Collections.Generic.IList<string> TransportNames { get; set; }
-        public TransportSettings[] Transports { get; set; }
+        public Akka.Remote.RemoteSettings.TransportSettings[] Transports { get; set; }
         public System.Collections.Generic.HashSet<string> TrustedSelectionPaths { get; set; }
         public bool UntrustedMode { get; set; }
         public bool UsePassiveConnections { get; set; }
@@ -269,29 +269,29 @@ namespace Akka.Remote
             public string TransportClass { get; set; }
         }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public abstract class RemoteTransport
     {
         protected RemoteTransport(Akka.Actor.ExtendedActorSystem system, Akka.Remote.RemoteActorRefProvider provider) { }
         public abstract System.Collections.Generic.ISet<Akka.Actor.Address> Addresses { get; }
         public abstract Akka.Actor.Address DefaultAddress { get; }
-        public Akka.Event.ILoggingAdapter Log { get; set; }
+        public Akka.Event.ILoggingAdapter Log { get; protected set; }
         public Akka.Remote.RemoteActorRefProvider Provider { get; }
         public Akka.Actor.ExtendedActorSystem System { get; }
         protected bool UseUntrustedMode { get; set; }
-        public bool logRemoteLifeCycleEvents { get; set; }
+        public bool logRemoteLifeCycleEvents { get; protected set; }
         public abstract Akka.Actor.Address LocalAddressForRemote(Akka.Actor.Address remote);
         public abstract System.Threading.Tasks.Task<bool> ManagementCommand(object cmd);
         public abstract System.Threading.Tasks.Task<bool> ManagementCommand(object cmd, System.Threading.CancellationToken cancellationToken);
-        public abstract void Quarantine(Akka.Actor.Address address, System.Nullable<int> uid);
+        public abstract void Quarantine(Akka.Actor.Address address, int? uid);
         public abstract void Send(object message, Akka.Actor.IActorRef sender, Akka.Remote.RemoteActorRef recipient);
         public abstract System.Threading.Tasks.Task Shutdown();
         public abstract void Start();
     }
     public class RemoteTransportException : Akka.Actor.AkkaException
     {
-        public RemoteTransportException(string message, System.Exception cause = null) { }
         protected RemoteTransportException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public RemoteTransportException(string message, System.Exception cause = null) { }
     }
     public class RemoteWatcher : Akka.Actor.UntypedActor, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedMessageQueueSemantics>
     {
@@ -304,13 +304,13 @@ namespace Akka.Remote
         protected void AddWatching(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
         protected override void OnReceive(object message) { }
         protected override void PostStop() { }
-        public static Akka.Actor.Props Props(Akka.Remote.IFailureDetectorRegistry<Akka.Actor.Address> failureDetector, System.TimeSpan heartbeatInterval, System.TimeSpan unreachableReaperInterval, System.TimeSpan heartbeatExpectedResponseAfter) { }
         protected virtual void PublishAddressTerminated(Akka.Actor.Address address) { }
-        protected virtual void Quarantine(Akka.Actor.Address address, System.Nullable<int> addressUid) { }
+        protected virtual void Quarantine(Akka.Actor.Address address, int? addressUid) { }
         protected void RemoveWatch(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
         protected void RemoveWatchee(Akka.Actor.IInternalActorRef watchee) { }
         protected void UnwatchNode(Akka.Actor.Address watcheeAddress) { }
         protected virtual void WatchNode(Akka.Actor.IInternalActorRef watchee) { }
+        public static Akka.Actor.Props Props(Akka.Remote.IFailureDetectorRegistry<Akka.Actor.Address> failureDetector, System.TimeSpan heartbeatInterval, System.TimeSpan unreachableReaperInterval, System.TimeSpan heartbeatExpectedResponseAfter) { }
         public sealed class ExpectedFirstHeartbeat
         {
             public ExpectedFirstHeartbeat(Akka.Actor.Address from) { }
@@ -343,10 +343,10 @@ namespace Akka.Remote
             public int WatchingNodes { get; }
             public System.Collections.Immutable.ImmutableHashSet<System.ValueTuple<Akka.Actor.IActorRef, Akka.Actor.IActorRef>> WatchingRefs { get; }
             public Akka.Remote.RemoteWatcher.Stats Copy(int watching, int watchingNodes, System.Collections.Immutable.ImmutableHashSet<System.ValueTuple<Akka.Actor.IActorRef, Akka.Actor.IActorRef>> watchingRefs = null, System.Collections.Immutable.ImmutableHashSet<Akka.Actor.Address> watchingAddresses = null) { }
-            public static Akka.Remote.RemoteWatcher.Stats Counts(int watching, int watchingNodes) { }
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }
             public override string ToString() { }
+            public static Akka.Remote.RemoteWatcher.Stats Counts(int watching, int watchingNodes) { }
         }
         public sealed class UnwatchRemote : Akka.Remote.RemoteWatcher.WatchCommand
         {
@@ -511,8 +511,8 @@ namespace Akka.Remote.Transport
     }
     public abstract class ActorTransportAdapter : Akka.Remote.Transport.AbstractTransportAdapter
     {
+        protected volatile Akka.Actor.IActorRef manager;
         public static readonly System.TimeSpan AskTimeout;
-        protected Akka.Actor.IActorRef modreq(System.Runtime.CompilerServices.IsVolatile) manager;
         protected ActorTransportAdapter(Akka.Remote.Transport.Transport wrappedTransport, Akka.Actor.ActorSystem system) { }
         protected abstract string ManagerName { get; }
         protected abstract Akka.Actor.Props ManagerProps { get; }
@@ -533,8 +533,8 @@ namespace Akka.Remote.Transport
     }
     public class AkkaProtocolException : Akka.Actor.AkkaException
     {
-        public AkkaProtocolException(string message, System.Exception cause = null) { }
         protected AkkaProtocolException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public AkkaProtocolException(string message, System.Exception cause = null) { }
     }
     public sealed class AssociateAttempt : Akka.Remote.Transport.Activity
     {
@@ -551,26 +551,24 @@ namespace Akka.Remote.Transport
     public abstract class AssociationHandle
     {
         protected AssociationHandle(Akka.Actor.Address localAddress, Akka.Actor.Address remoteAddress) { }
-        public Akka.Actor.Address LocalAddress { get; set; }
-        public System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IHandleEventListener> ReadHandlerSource { get; set; }
-        public Akka.Actor.Address RemoteAddress { get; set; }
-        [System.ObsoleteAttribute("Use the method that states reasons to make sure disassociation reasons are logged" +
+        public Akka.Actor.Address LocalAddress { get; protected set; }
+        public System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IHandleEventListener> ReadHandlerSource { get; protected set; }
+        public Akka.Actor.Address RemoteAddress { get; protected set; }
+        [System.Obsolete("Use the method that states reasons to make sure disassociation reasons are logged" +
             ".")]
         public abstract void Disassociate();
         public void Disassociate(string reason, Akka.Event.ILoggingAdapter log) { }
-        public override bool Equals(object obj) { }
         protected bool Equals(Akka.Remote.Transport.AssociationHandle other) { }
+        public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public abstract bool Write(Google.Protobuf.ByteString payload);
     }
     public class AssociationRegistry
     {
         public AssociationRegistry() { }
-        public static void Clear() { }
         public void ClearLog() { }
         public Akka.Util.Option<System.ValueTuple<Akka.Remote.Transport.IHandleEventListener, Akka.Remote.Transport.IHandleEventListener>> DeregisterAssociation(System.ValueTuple<Akka.Actor.Address, Akka.Actor.Address> key) { }
         public bool ExistsAssociation(Akka.Actor.Address initiatorAddress, Akka.Actor.Address remoteAddress) { }
-        public static Akka.Remote.Transport.AssociationRegistry Get(string key) { }
         public Akka.Remote.Transport.IHandleEventListener GetRemoteReadHandlerFor(Akka.Remote.Transport.TestAssociationHandle localHandle) { }
         public void LogActivity(Akka.Remote.Transport.Activity activity) { }
         public System.Collections.Generic.IList<Akka.Remote.Transport.Activity> LogSnapshot() { }
@@ -580,6 +578,8 @@ namespace Akka.Remote.Transport
         public void Reset() { }
         public Akka.Util.Option<System.ValueTuple<Akka.Remote.Transport.TestTransport, System.Threading.Tasks.Task<Akka.Remote.Transport.IAssociationEventListener>>> TransportFor(Akka.Actor.Address address) { }
         public bool TransportsReady(params Akka.Actor.Address[] addresses) { }
+        public static void Clear() { }
+        public static Akka.Remote.Transport.AssociationRegistry Get(string key) { }
     }
     public class Blackhole : Akka.Remote.Transport.ThrottleMode
     {
@@ -697,8 +697,8 @@ namespace Akka.Remote.Transport
     }
     public class InvalidAssociationException : Akka.Actor.AkkaException
     {
-        public InvalidAssociationException(string message, System.Exception cause = null) { }
         protected InvalidAssociationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public InvalidAssociationException(string message, System.Exception cause = null) { }
     }
     public sealed class ListenAttempt : Akka.Remote.Transport.Activity
     {
@@ -720,10 +720,10 @@ namespace Akka.Remote.Transport
     {
         public readonly string AddedSchemeIdentifier;
         public SchemeAugmenter(string addedSchemeIdentifier) { }
-        public string AugmentScheme(string originalScheme) { }
         public Akka.Actor.Address AugmentScheme(Akka.Actor.Address address) { }
-        public string RemoveScheme(string scheme) { }
+        public string AugmentScheme(string originalScheme) { }
         public Akka.Actor.Address RemoveScheme(Akka.Actor.Address address) { }
+        public string RemoveScheme(string scheme) { }
     }
     public sealed class SetThrottle
     {
@@ -733,8 +733,8 @@ namespace Akka.Remote.Transport
         public Akka.Remote.Transport.ThrottleMode Mode { get; }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
-        public static bool ==(Akka.Remote.Transport.SetThrottle left, Akka.Remote.Transport.SetThrottle right) { }
-        public static bool !=(Akka.Remote.Transport.SetThrottle left, Akka.Remote.Transport.SetThrottle right) { }
+        public static bool operator !=(Akka.Remote.Transport.SetThrottle left, Akka.Remote.Transport.SetThrottle right) { }
+        public static bool operator ==(Akka.Remote.Transport.SetThrottle left, Akka.Remote.Transport.SetThrottle right) { }
     }
     public sealed class SetThrottleAck
     {
@@ -819,16 +819,16 @@ namespace Akka.Remote.Transport
         public override int GetHashCode() { }
         public override System.TimeSpan TimeToAvailable(long currentNanoTime, int tokens) { }
         public override System.ValueTuple<Akka.Remote.Transport.ThrottleMode, bool> TryConsumeTokens(long nanoTimeOfSend, int tokens) { }
-        public static bool ==(Akka.Remote.Transport.TokenBucket left, Akka.Remote.Transport.TokenBucket right) { }
-        public static bool !=(Akka.Remote.Transport.TokenBucket left, Akka.Remote.Transport.TokenBucket right) { }
+        public static bool operator !=(Akka.Remote.Transport.TokenBucket left, Akka.Remote.Transport.TokenBucket right) { }
+        public static bool operator ==(Akka.Remote.Transport.TokenBucket left, Akka.Remote.Transport.TokenBucket right) { }
     }
     public abstract class Transport
     {
         protected Transport() { }
-        public Akka.Configuration.Config Config { get; set; }
-        public virtual long MaximumPayloadBytes { get; set; }
-        public virtual string SchemeIdentifier { get; set; }
-        public Akka.Actor.ActorSystem System { get; set; }
+        public Akka.Configuration.Config Config { get; protected set; }
+        public virtual long MaximumPayloadBytes { get; protected set; }
+        public virtual string SchemeIdentifier { get; protected set; }
+        public Akka.Actor.ActorSystem System { get; protected set; }
         public abstract System.Threading.Tasks.Task<Akka.Remote.Transport.AssociationHandle> Associate(Akka.Actor.Address remoteAddress);
         public abstract bool IsResponsibleFor(Akka.Actor.Address remote);
         public abstract System.Threading.Tasks.Task<System.ValueTuple<Akka.Actor.Address, System.Threading.Tasks.TaskCompletionSource<Akka.Remote.Transport.IAssociationEventListener>>> Listen();
@@ -860,34 +860,26 @@ namespace Akka.Remote.Transport
 }
 namespace Akka.Remote.Transport.DotNetty
 {
-    [System.Runtime.CompilerServices.NullableAttribute(0)]
-    public class static CertificateValidation
+    public static class CertificateValidation
     {
-        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ChainPlusThen([System.Runtime.CompilerServices.NullableAttribute(new byte[] {
-                1,
-                2,
-                2,
-                1})] System.Func<System.Security.Cryptography.X509Certificates.X509Certificate2, System.Security.Cryptography.X509Certificates.X509Chain, string, bool> customCheck, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Event.ILoggingAdapter log = null) { }
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ChainPlusThen(System.Func<System.Security.Cryptography.X509Certificates.X509Certificate2?, System.Security.Cryptography.X509Certificates.X509Chain?, string, bool> customCheck, Akka.Event.ILoggingAdapter? log = null) { }
         public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback Combine(params Akka.Remote.Transport.DotNetty.CertificateValidationCallback[] validators) { }
         public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback PinnedCertificate(params string[] allowedThumbprints) { }
-        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateChain([System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Event.ILoggingAdapter log = null) { }
-        [return: System.Runtime.CompilerServices.NullableAttribute(1)]
-        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateHostname(string expectedHostname = null, Akka.Event.ILoggingAdapter log = null) { }
-        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateIssuer(string expectedIssuerPattern, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Event.ILoggingAdapter log = null) { }
-        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateSubject(string expectedSubjectPattern, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Event.ILoggingAdapter log = null) { }
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateChain(Akka.Event.ILoggingAdapter? log = null) { }
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateHostname(string? expectedHostname = null, Akka.Event.ILoggingAdapter? log = null) { }
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateIssuer(string expectedIssuerPattern, Akka.Event.ILoggingAdapter? log = null) { }
+        public static Akka.Remote.Transport.DotNetty.CertificateValidationCallback ValidateSubject(string expectedSubjectPattern, Akka.Event.ILoggingAdapter? log = null) { }
     }
-    public delegate bool CertificateValidationCallback([System.Runtime.CompilerServices.NullableAttribute(2)] System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, [System.Runtime.CompilerServices.NullableAttribute(2)] System.Security.Cryptography.X509Certificates.X509Chain chain, string remotePeer, System.Net.Security.SslPolicyErrors errors, Akka.Event.ILoggingAdapter log);
-    [System.Runtime.CompilerServices.NullableAttribute(0)]
+    public delegate bool CertificateValidationCallback(System.Security.Cryptography.X509Certificates.X509Certificate2? certificate, System.Security.Cryptography.X509Certificates.X509Chain? chain, string remotePeer, System.Net.Security.SslPolicyErrors errors, Akka.Event.ILoggingAdapter log);
     public sealed class DotNettySslSetup : Akka.Actor.Setup.Setup
     {
         public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation) { }
         public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication) { }
+        public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, Akka.Remote.Transport.DotNetty.CertificateValidationCallback? customValidator) { }
         public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname) { }
-        public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Remote.Transport.DotNetty.CertificateValidationCallback customValidator) { }
-        public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, [System.Runtime.CompilerServices.NullableAttribute(2)] Akka.Remote.Transport.DotNetty.CertificateValidationCallback customValidator) { }
+        public DotNettySslSetup(System.Security.Cryptography.X509Certificates.X509Certificate2 certificate, bool suppressValidation, bool requireMutualAuthentication, bool validateCertificateHostname, Akka.Remote.Transport.DotNetty.CertificateValidationCallback? customValidator) { }
         public System.Security.Cryptography.X509Certificates.X509Certificate2 Certificate { get; }
-        [System.Runtime.CompilerServices.NullableAttribute(2)]
-        public Akka.Remote.Transport.DotNetty.CertificateValidationCallback CustomValidator { get; }
+        public Akka.Remote.Transport.DotNetty.CertificateValidationCallback? CustomValidator { get; }
         public bool RequireMutualAuthentication { get; }
         public bool SuppressValidation { get; }
         public bool ValidateCertificateHostname { get; }

@@ -36,16 +36,19 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
     private ImmutableHashSet<(string, long)> _processed = ImmutableHashSet<(string, long)>.Empty;
     private readonly bool _supportRestarts = false;
     private int _messageCount = 0;
+    private readonly int _expectedProducerCount;
+    private ImmutableHashSet<string> _completedProducers = ImmutableHashSet<string>.Empty;
 
     public TestConsumer(TimeSpan delay, Func<SomeAsyncJob, bool> endCondition, IActorRef endReplyTo,
-        IActorRef consumerController, bool supportRestarts = false)
+        IActorRef consumerController, int expectedProducerCount = 1, bool supportRestarts = false)
     {
         Delay = delay;
         EndCondition = endCondition;
         EndReplyTo = endReplyTo;
         ConsumerController = consumerController;
+        _expectedProducerCount = expectedProducerCount;
         _supportRestarts = supportRestarts;
-        
+
         Active();
     }
 
@@ -77,9 +80,27 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
 
             if (EndCondition(job) && (_messageCount > 0 || _supportRestarts))
             {
-                _log.Debug("End at [{0}]", job.SeqNr);
-                EndReplyTo.Tell(new Collected(_processed.Select(c => c.Item1).ToImmutableHashSet(), _messageCount + 1));
-                Context.Stop(Self);
+                // Track that this producer has completed
+                if (!_completedProducers.Contains(job.ProducerId))
+                {
+                    _completedProducers = _completedProducers.Add(job.ProducerId);
+                    _log.Debug("Producer [{0}] completed at seqNr [{1}]. {2}/{3} producers completed.",
+                        job.ProducerId, job.SeqNr, _completedProducers.Count, _expectedProducerCount);
+                }
+
+                // Only stop when all expected producers have completed
+                if (_completedProducers.Count >= _expectedProducerCount)
+                {
+                    _log.Debug("All {0} producers completed. Stopping consumer.", _expectedProducerCount);
+                    EndReplyTo.Tell(new Collected(_processed.Select(c => c.Item1).ToImmutableHashSet(), _messageCount + 1));
+                    Context.Stop(Self);
+                }
+                else
+                {
+                    // Continue processing messages from other producers
+                    _processed = cleanProcessed.Add(nextMsg);
+                    _messageCount++;
+                }
             }
             else if (!_supportRestarts && EndCondition(job))
             {
@@ -188,12 +209,12 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
 
     private static Func<SomeAsyncJob, bool> ConsumerEndCondition(long seqNr) => msg => msg.SeqNr >= seqNr;
 
-    public static Props PropsFor(TimeSpan delay, long seqNr, IActorRef endReplyTo, IActorRef consumerController, bool supportsRestarts = false) =>
-        Props.Create(() => new TestConsumer(delay, ConsumerEndCondition(seqNr), endReplyTo, consumerController, supportsRestarts));
+    public static Props PropsFor(TimeSpan delay, long seqNr, IActorRef endReplyTo, IActorRef consumerController, int expectedProducerCount = 1, bool supportsRestarts = false) =>
+        Props.Create(() => new TestConsumer(delay, ConsumerEndCondition(seqNr), endReplyTo, consumerController, expectedProducerCount, supportsRestarts));
 
     public static Props PropsFor(TimeSpan delay, Func<SomeAsyncJob, bool> endCondition, IActorRef endReplyTo,
-        IActorRef consumerController, bool supportsRestarts = false) =>
-        Props.Create(() => new TestConsumer(delay, endCondition, endReplyTo, consumerController, supportsRestarts));
+        IActorRef consumerController, int expectedProducerCount = 1, bool supportsRestarts = false) =>
+        Props.Create(() => new TestConsumer(delay, endCondition, endReplyTo, consumerController, expectedProducerCount, supportsRestarts));
 
     public ITimerScheduler Timers { get; set; } = null!;
 }

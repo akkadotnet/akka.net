@@ -1,12 +1,12 @@
-﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Metrics.Tests")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Metrics.Tests")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
 namespace Akka.Cluster.Metrics
 {
     public sealed class AdaptiveLoadBalancingGroup : Akka.Routing.Group
     {
-        public AdaptiveLoadBalancingGroup(Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null, System.Collections.Generic.IEnumerable<string> paths = null, string routerDispatcher = null) { }
         public AdaptiveLoadBalancingGroup(Akka.Configuration.Config config) { }
+        public AdaptiveLoadBalancingGroup(Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null, System.Collections.Generic.IEnumerable<string> paths = null, string routerDispatcher = null) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
@@ -21,7 +21,7 @@ namespace Akka.Cluster.Metrics
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public class AdaptiveLoadBalancingMetricsListener : Akka.Actor.ActorBase
     {
         public AdaptiveLoadBalancingMetricsListener(Akka.Cluster.Metrics.IClusterMetricsRoutingLogic routingLogic) { }
@@ -31,8 +31,8 @@ namespace Akka.Cluster.Metrics
     }
     public sealed class AdaptiveLoadBalancingPool : Akka.Routing.Pool
     {
-        public AdaptiveLoadBalancingPool(Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null, int nrOfInstances = 0, Akka.Actor.SupervisorStrategy supervisorStrategy = null, string routerDispatcher = null, bool usePoolDispatcher = False) { }
         public AdaptiveLoadBalancingPool(Akka.Configuration.Config config) { }
+        public AdaptiveLoadBalancingPool(Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null, int nrOfInstances = 0, Akka.Actor.SupervisorStrategy supervisorStrategy = null, string routerDispatcher = null, bool usePoolDispatcher = false) { }
         public Akka.Cluster.Metrics.IMetricsSelector MetricsSelector { get; }
         public override Akka.Routing.Resizer Resizer { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
@@ -69,15 +69,15 @@ namespace Akka.Cluster.Metrics
     public class ClusterMetrics : Akka.Actor.IExtension
     {
         public Akka.Cluster.Metrics.Configuration.ClusterMetricsSettings Settings { get; }
-        [Akka.Annotations.InternalApiAttribute()]
+        [Akka.Annotations.InternalApi]
         public Akka.Cluster.Metrics.ClusterMetricsStrategy Strategy { get; }
         public Akka.Actor.IActorRef Supervisor { get; }
-        public static Akka.Configuration.Config DefaultConfig() { }
-        public static Akka.Cluster.Metrics.ClusterMetrics Get(Akka.Actor.ActorSystem system) { }
         public void Subscribe(Akka.Actor.IActorRef metricsListener) { }
         public void Unsubscribe(Akka.Actor.IActorRef metricsListener) { }
+        public static Akka.Configuration.Config DefaultConfig() { }
+        public static Akka.Cluster.Metrics.ClusterMetrics Get(Akka.Actor.ActorSystem system) { }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public class ClusterMetricsCollector : Akka.Actor.ActorBase
     {
         public ClusterMetricsCollector() { }
@@ -94,7 +94,7 @@ namespace Akka.Cluster.Metrics
     {
         public ClusterMetricsStrategy(Akka.Configuration.Config config) { }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public class ClusterMetricsSupervisor : Akka.Actor.ActorBase
     {
         public ClusterMetricsSupervisor() { }
@@ -102,8 +102,8 @@ namespace Akka.Cluster.Metrics
         protected override bool Receive(object message) { }
         protected override Akka.Actor.SupervisorStrategy SupervisorStrategy() { }
     }
-    [Akka.Annotations.InternalApiAttribute()]
-    public class static ClusterMetricsSupervisorMetadata
+    [Akka.Annotations.InternalApi]
+    public static class ClusterMetricsSupervisorMetadata
     {
         public sealed class CollectionStartMessage : Akka.Cluster.Metrics.ClusterMetricsSupervisorMetadata.ICollectionControlMessage
         {
@@ -144,7 +144,7 @@ namespace Akka.Cluster.Metrics
         public MetricsCollectorBuilder() { }
         public Akka.Cluster.Metrics.IMetricsCollector Build(Akka.Actor.ActorSystem system) { }
     }
-    public class static MetricsSelectorBuilder
+    public static class MetricsSelectorBuilder
     {
         public static Akka.Cluster.Metrics.IMetricsSelector BuildFromConfig(Akka.Configuration.Config config) { }
     }
@@ -159,7 +159,7 @@ namespace Akka.Cluster.Metrics
         public System.Collections.Immutable.ImmutableArray<Akka.Cluster.Metrics.CapacityMetricsSelector> Selectors { get; }
         public override System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, double> Capacity(System.Collections.Immutable.IImmutableSet<Akka.Cluster.Metrics.Serialization.NodeMetrics> nodeMetrics) { }
     }
-    public class static StandardMetrics
+    public static class StandardMetrics
     {
         public const string CpuProcessUsage = "CpuProcessUsage";
         public const string CpuTotalUsage = "CpuTotalUsage";
@@ -177,7 +177,7 @@ namespace Akka.Cluster.Metrics
             public int ProcessorsNumber { get; }
             public long Timestamp { get; }
             public double TotalUsage { get; }
-            [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
+            [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
                     "Address",
                     "Timestamp",
                     "CpuProcessUsage",
@@ -193,7 +193,7 @@ namespace Akka.Cluster.Metrics
             public Akka.Util.Option<double> MaxRecommended { get; }
             public long Timestamp { get; }
             public double Used { get; }
-            [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
+            [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
                     "Address",
                     "Timestamp",
                     "UsedSmoothValue",
@@ -202,7 +202,7 @@ namespace Akka.Cluster.Metrics
             public static Akka.Util.Option<System.ValueTuple<Akka.Actor.Address, long, double, double, Akka.Util.Option<double>>> Decompose(Akka.Cluster.Metrics.Serialization.NodeMetrics nodeMetrics) { }
         }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public class WeightedRoutees
     {
         public WeightedRoutees(System.Collections.Immutable.ImmutableArray<Akka.Routing.Routee> routees, Akka.Actor.Address selfAddress, System.Collections.Immutable.IImmutableDictionary<Akka.Actor.Address, int> weights) { }
@@ -215,8 +215,8 @@ namespace Akka.Cluster.Metrics.Collectors
 {
     public class DefaultCollector : Akka.Cluster.Metrics.IMetricsCollector, System.IDisposable
     {
-        public DefaultCollector(Akka.Actor.Address address) { }
         public DefaultCollector(Akka.Actor.ActorSystem system) { }
+        public DefaultCollector(Akka.Actor.Address address) { }
         public void Dispose() { }
         public Akka.Cluster.Metrics.Serialization.NodeMetrics Sample() { }
     }
@@ -251,22 +251,21 @@ namespace Akka.Cluster.Metrics.Events
 }
 namespace Akka.Cluster.Metrics.Helpers
 {
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public struct AnyNumber
     {
+        public AnyNumber(double n) { }
+        public AnyNumber(float n) { }
         public AnyNumber(int n) { }
         public AnyNumber(long n) { }
-        public AnyNumber(float n) { }
-        public AnyNumber(double n) { }
         public double DoubleValue { get; }
         public long LongValue { get; }
-        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public Akka.Cluster.Metrics.Helpers.AnyNumber.NumberType Type { get; }
         public override string ToString() { }
+        public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(double n) { }
+        public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(float n) { }
         public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(int n) { }
         public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(long n) { }
-        public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(float n) { }
-        public static Akka.Cluster.Metrics.Helpers.AnyNumber op_Implicit(double n) { }
         public enum NumberType
         {
             Int = 0,
@@ -285,9 +284,9 @@ namespace Akka.Cluster.Metrics.Serialization
         public override string Manifest(object o) { }
         public override byte[] ToBinary(object obj) { }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public interface IClusterMetricMessage { }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public sealed class MetricsGossip
     {
         public static readonly Akka.Cluster.Metrics.Serialization.MetricsGossip Empty;
@@ -297,9 +296,9 @@ namespace Akka.Cluster.Metrics.Serialization
         public Akka.Cluster.Metrics.Serialization.MetricsGossip Merge(Akka.Cluster.Metrics.Serialization.MetricsGossip otherGossip) { }
         public Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics> NodeMetricsFor(Akka.Actor.Address address) { }
         public Akka.Cluster.Metrics.Serialization.MetricsGossip Remove(Akka.Actor.Address node) { }
-        public static Akka.Cluster.Metrics.Serialization.MetricsGossip +(Akka.Cluster.Metrics.Serialization.MetricsGossip gossip, Akka.Cluster.Metrics.Serialization.NodeMetrics newNodeMetrics) { }
+        public static Akka.Cluster.Metrics.Serialization.MetricsGossip operator +(Akka.Cluster.Metrics.Serialization.MetricsGossip gossip, Akka.Cluster.Metrics.Serialization.NodeMetrics newNodeMetrics) { }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public sealed class MetricsGossipEnvelope : Akka.Cluster.Metrics.Serialization.IClusterMetricMessage, Akka.Event.IDeadLetterSuppression
     {
         public MetricsGossipEnvelope(Akka.Actor.Address fromAddress, Akka.Cluster.Metrics.Serialization.MetricsGossip gossip, bool reply) { }
@@ -307,23 +306,19 @@ namespace Akka.Cluster.Metrics.Serialization
         public Akka.Cluster.Metrics.Serialization.MetricsGossip Gossip { get; }
         public bool Reply { get; }
     }
-    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class NodeMetrics : System.IEquatable<Akka.Cluster.Metrics.Serialization.NodeMetrics>
     {
         public NodeMetrics(Akka.Actor.Address address, long timestamp, System.Collections.Generic.IEnumerable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> metrics) { }
         public Akka.Actor.Address Address { get; }
         public System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Metrics { get; }
         public long Timestamp { get; }
-        public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics other) { }
+        public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics? other) { }
         public override int GetHashCode() { }
         public Akka.Cluster.Metrics.Serialization.NodeMetrics Merge(Akka.Cluster.Metrics.Serialization.NodeMetrics that) { }
-        [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
-                0,
-                1})]
         public Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Metric(string name) { }
         public bool SameAs(Akka.Cluster.Metrics.Serialization.NodeMetrics that) { }
         public Akka.Cluster.Metrics.Serialization.NodeMetrics Update(Akka.Cluster.Metrics.Serialization.NodeMetrics that) { }
-        public class static Types
+        public static class Types
         {
             public sealed class EWMA : System.IEquatable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA>
             {
@@ -332,50 +327,32 @@ namespace Akka.Cluster.Metrics.Serialization
                 public double Value { get; }
                 public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA other) { }
                 public override bool Equals(object obj) { }
-                public static double GetAlpha(System.TimeSpan halfLife, System.TimeSpan collectInterval) { }
                 public override int GetHashCode() { }
-                public static Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA +(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA current, double xn) { }
+                public static double GetAlpha(System.TimeSpan halfLife, System.TimeSpan collectInterval) { }
+                public static Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA operator +(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA current, double xn) { }
             }
-            [System.Runtime.CompilerServices.NullableAttribute(0)]
             public sealed class Metric : System.IEquatable<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric>
             {
-                public Metric(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value, [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
-                        0,
-                        1})] Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> average) { }
-                [System.Runtime.CompilerServices.NullableAttribute(new byte[] {
-                        0,
-                        1})]
+                public Metric(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> average) { }
                 public Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> Average { get; }
                 public bool IsSmooth { get; }
                 public string Name { get; }
                 public double SmoothValue { get; }
                 public Akka.Cluster.Metrics.Helpers.AnyNumber Value { get; }
                 public Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric Add(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric latest) { }
-                [Akka.Annotations.InternalApiAttribute()]
-                public static Akka.Util.Either<long, double> ConvertNumber(Akka.Cluster.Metrics.Helpers.AnyNumber number) { }
-                [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
-                        0,
-                        1})]
-                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value) { }
-                [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
-                        0,
-                        1})]
-                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create([System.Runtime.CompilerServices.NullableAttribute(1)] string name, Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<double> decayFactor) { }
-                [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
-                        0,
-                        1})]
-                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Util.Try<Akka.Cluster.Metrics.Helpers.AnyNumber> value, [System.Runtime.CompilerServices.NullableAttribute(0)] Akka.Util.Option<double> decayFactor) { }
-                [return: System.Runtime.CompilerServices.NullableAttribute(new byte[] {
-                        0,
-                        1})]
-                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> CreateEWMA(Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<double> decayFactor) { }
-                [Akka.Annotations.InternalApiAttribute()]
-                public static bool Defined(Akka.Cluster.Metrics.Helpers.AnyNumber value) { }
-                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric other) { }
-                public override bool Equals(object obj) { }
+                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric? other) { }
+                public override bool Equals(object? obj) { }
                 public override int GetHashCode() { }
                 public bool SameAs(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric that) { }
-                public static Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric +(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric m1, Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric m2) { }
+                [Akka.Annotations.InternalApi]
+                public static Akka.Util.Either<long, double> ConvertNumber(Akka.Cluster.Metrics.Helpers.AnyNumber number) { }
+                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value) { }
+                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<double> decayFactor) { }
+                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric> Create(string name, Akka.Util.Try<Akka.Cluster.Metrics.Helpers.AnyNumber> value, Akka.Util.Option<double> decayFactor) { }
+                public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> CreateEWMA(Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<double> decayFactor) { }
+                [Akka.Annotations.InternalApi]
+                public static bool Defined(Akka.Cluster.Metrics.Helpers.AnyNumber value) { }
+                public static Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric operator +(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric m1, Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric m2) { }
             }
         }
     }
