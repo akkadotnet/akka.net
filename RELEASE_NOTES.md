@@ -1,3 +1,41 @@
+#### 1.5.58 January 8th, 2026 ####
+
+Akka.NET v1.5.58 is a maintenance release with important bug fixes and performance improvements.
+
+**.NET 10 Compatibility Fix**
+
+* [Fix .NET 10 CLR shutdown hook breaking change](https://github.com/akkadotnet/akka.net/pull/7964) - Resolves an issue where the CLR shutdown hook behavior changed in .NET 10, ensuring graceful actor system termination works correctly.
+
+**Bug Fixes**
+
+* [Fix TcpListener to not stop accepting connections on transient accept errors](https://github.com/akkadotnet/akka.net/pull/7970) - The `TcpListener` now properly handles transient socket accept errors without stopping to accept further connections.
+* [Fix race condition in cluster sharding when entity constructor fails](https://github.com/akkadotnet/akka.net/pull/7981) - Resolves a race condition that could occur when an entity actor's constructor throws an exception.
+* [Fix race condition in QueueSink causing async enumerable timeout](https://github.com/akkadotnet/akka.net/pull/7973) - Fixes a race condition in `QueueSink` that could cause timeouts when using async enumerables.
+* [Make RemotingTerminator non-FSM to avoid racy FSM log init](https://github.com/akkadotnet/akka.net/pull/7967) - Fixes potential race conditions during actor system shutdown logging.
+
+**Performance Improvements**
+
+* [LogMessage GetProperties without FrozenDictionary](https://github.com/akkadotnet/akka.net/pull/7968) - Improves semantic logging performance by avoiding FrozenDictionary allocations in hot paths.
+* [Skip parsing PropertyNames when empty Parameters](https://github.com/akkadotnet/akka.net/pull/7960) - Additional logging optimization that skips unnecessary parsing when log messages have no parameters.
+
+**New Features**
+
+* [Akka.TestKit: configurable expect-no-message-default value](https://github.com/akkadotnet/akka.net/pull/7006) - Fixes [issue #6675](https://github.com/akkadotnet/akka.net/issues/6675). You can now configure the default timeout for `ExpectNoMsg()` via HOCON:
+  ```hocon
+  akka.test.expect-no-message-default = 100ms
+  ```
+
+6 contributors since release 1.5.57
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 7       | 158  | 36   | Aaron Stannard      |
+| 2       | 483  | 55   | Gregorius Soedharmo |
+| 2       | 11   | 41   | Rolf Kristensen     |
+| 1       | 100  | 22   | Yaroslav Paslavskiy |
+| 1       | 37   | 53   | Jarkko Pöyry        |
+| 1       | 11   | 2    | Petri Kero          |
+
 #### 1.5.57 December 11th, 2025 ####
 
 Akka.NET v1.5.57 is a minor release containing significant new features for Akka.Persistence and structured/semantic logging.
