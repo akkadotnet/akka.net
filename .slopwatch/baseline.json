@@ -1,0 +1,890 @@
+{
+  "version": 1,
+  "createdAt": "2026-01-12T16:54:30.6403421+00:00",
+  "updatedAt": "2026-01-12T16:54:30.6457196+00:00",
+  "description": "Initial baseline created by \u0027slopwatch init\u0027 on 2026-01-12 16:54:30 UTC",
+  "entries": [
+    {
+      "hash": "573cc6dd28e7382e",
+      "ruleId": "SW002",
+      "filePath": "src/benchmark/PingPong/ClientAsyncActor.cs",
+      "lineNumber": 12,
+      "codeSnippet": "#pragma warning disable 1998 //async method lacks an await",
+      "message": "#pragma warning disable for warnings 1998 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6452904+00:00"
+    },
+    {
+      "hash": "5c346f8d07ea6c1d",
+      "ruleId": "SW002",
+      "filePath": "src/benchmark/PingPong/ClientAsyncActor.cs",
+      "lineNumber": 13,
+      "codeSnippet": "#pragma warning disable AK1003 // ReceiveAsync lacks an await",
+      "message": "#pragma warning disable for warnings AK1003 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.645387+00:00"
+    },
+    {
+      "hash": "1ea9daaa12cb519b",
+      "ruleId": "SW003",
+      "filePath": "src/contrib/cluster/Akka.Cluster.Sharding.Tests.MultiNode/MultiNodeClusterShardingSpec.cs",
+      "lineNumber": 198,
+      "codeSnippet": "catch (Exception)\n            {\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.645397+00:00"
+    },
+    {
+      "hash": "dfaea02bf2c86baf",
+      "ruleId": "SW003",
+      "filePath": "src/contrib/cluster/Akka.Cluster.Sharding/Shard.cs",
+      "lineNumber": 1072,
+      "codeSnippet": "catch\n            {\n                // no-op, we\u0027re shutting down anyway.\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.645403+00:00"
+    },
+    {
+      "hash": "5185322cf99b11a4",
+      "ruleId": "SW003",
+      "filePath": "src/contrib/cluster/Akka.Cluster.Sharding/Shard.cs",
+      "lineNumber": 1094,
+      "codeSnippet": "catch (Exception ex)\n                {\n                    Log.Error(ex,\n                        \u0022{0}: Failed to release lease of shardId [{1}]. Shard may not be able to run on another node until lease timeout occurs.\u0022,\n                        _typeName, _shardId);\n    // ...",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454117+00:00"
+    },
+    {
+      "hash": "c277e2108b358daa",
+      "ruleId": "SW003",
+      "filePath": "src/contrib/cluster/Akka.Cluster.Tools/Singleton/ClusterSingleton.cs",
+      "lineNumber": 74,
+      "codeSnippet": "catch (InvalidActorNameException ex) when (ex.Message.EndsWith(\u0022is not unique!\u0022))\n                {\n                    // This is fine. We just wanted to make sure it is running and it already is\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454178+00:00"
+    },
+    {
+      "hash": "f61b8f3283ee0922",
+      "ruleId": "SW003",
+      "filePath": "src/contrib/cluster/Akka.Cluster.Metrics/Collectors/DefaultCollector.cs",
+      "lineNumber": 82,
+      "codeSnippet": "catch (Exception)\n                {\n                    // MaxWorkingSet may throw on some platforms (e.g., Linux/Mono)\n                    // Ignore and continue without this metric\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454223+00:00"
+    },
+    {
+      "hash": "df4abfe2372f14fd",
+      "ruleId": "SW003",
+      "filePath": "src/contrib/cluster/Akka.DistributedData/Replicator.cs",
+      "lineNumber": 1082,
+      "codeSnippet": "catch (Exception e)\n            {\n                // catching in case we need to support rolling upgrades that are\n                // mixing nodes with incompatible delta-CRDT types\n                _log.Warning(\u0022Couldn\u0027t process DeltaPropagation from [{0}] due to {1}\u0022, from, e);\n    // ...",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454345+00:00"
+    },
+    {
+      "hash": "71d2d18e3663b53e",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Cluster/ClusterDaemon.cs",
+      "lineNumber": 3053,
+      "codeSnippet": "catch (Exception ex)\n            {\n                _log.Error(ex, \u0022[{0}] callback failed with [{1}]\u0022, To.Name, ex.Message);\n            }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.645438+00:00"
+    },
+    {
+      "hash": "dc73244806271cf5",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Remote.Tests/Transport/DotNettyTlsHandshakeFailureSpec.cs",
+      "lineNumber": 104,
+      "codeSnippet": "catch { /* ignore */ }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454413+00:00"
+    },
+    {
+      "hash": "28b142cc54b1eaf9",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Remote.Tests/Transport/DotNettyTlsHandshakeFailureSpec.cs",
+      "lineNumber": 188,
+      "codeSnippet": "catch\n                {\n                    // Connection might be closed by server, that\u0027s expected\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454437+00:00"
+    },
+    {
+      "hash": "6d6dfc7c835742e6",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Remote.Tests/Transport/DotNettyCertificateValidationSpec.cs",
+      "lineNumber": 102,
+      "codeSnippet": "catch { /* ignore */ }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.645447+00:00"
+    },
+    {
+      "hash": "68261c2dc0a451fa",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/ConnectionInterceptors.cs",
+      "lineNumber": 97,
+      "codeSnippet": "catch (OperationCanceledException)\n            {\n                // no-op\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454496+00:00"
+    },
+    {
+      "hash": "0a2630229d63ab46",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/ConnectionInterceptors.cs",
+      "lineNumber": 101,
+      "codeSnippet": "catch (TimeoutException)\n            {\n                // no-op\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.645452+00:00"
+    },
+    {
+      "hash": "13dbfd621fcd7591",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/Journal/JournalInterceptors.cs",
+      "lineNumber": 127,
+      "codeSnippet": "catch (OperationCanceledException)\n                {\n                    // no-op\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454552+00:00"
+    },
+    {
+      "hash": "61fd6e63e6d74c52",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/Journal/JournalInterceptors.cs",
+      "lineNumber": 131,
+      "codeSnippet": "catch (TimeoutException)\n                {\n                    // no-op\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454576+00:00"
+    },
+    {
+      "hash": "3ebe4f00788a15eb",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/SnapshotStore/SnapshotStoreInterceptors.cs",
+      "lineNumber": 98,
+      "codeSnippet": "catch (OperationCanceledException)\n                {\n                    // no-op\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454601+00:00"
+    },
+    {
+      "hash": "0dc21eb186747457",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.TestKit/SnapshotStore/SnapshotStoreInterceptors.cs",
+      "lineNumber": 102,
+      "codeSnippet": "catch (TimeoutException)\n                {\n                    // no-op\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454629+00:00"
+    },
+    {
+      "hash": "7ddd220c868e2611",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Streams/StreamRefs.cs",
+      "lineNumber": 16,
+      "codeSnippet": "#pragma warning disable 628",
+      "message": "#pragma warning disable for warnings 628 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6454663+00:00"
+    },
+    {
+      "hash": "2b5b2f6cdd1a6ff8",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/ActorPublisher.cs",
+      "lineNumber": 269,
+      "codeSnippet": "catch (Exception exception)\n                when (exception is ISpecViolation)\n            {\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454692+00:00"
+    },
+    {
+      "hash": "5ad3e20bef0c50f0",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/CompletedPublishers.cs",
+      "lineNumber": 40,
+      "codeSnippet": "catch (Exception e)\n                when (e is ISpecViolation)\n            {\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454721+00:00"
+    },
+    {
+      "hash": "c94c0f36e7b14586",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Streams/Implementation/Fusing/GraphStages.cs",
+      "lineNumber": 532,
+      "codeSnippet": "SuppressMessage(\u0022ReSharper\u0022, \u0022MethodSupportsCancellation\u0022)",
+      "message": "SuppressMessage attribute suppressing ReSharper:MethodSupportsCancellation",
+      "baselinedAt": "2026-01-12T16:54:30.6454855+00:00"
+    },
+    {
+      "hash": "aaedc79fedc1b9bd",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/Fusing/Ops.cs",
+      "lineNumber": 3935,
+      "codeSnippet": "catch(Exception ex)\n                {\n                    // This should never happen\n                    Log.Debug(ex, \u0022AsyncEnumerable threw while cancelling CancellationTokenSource\u0022);\n                }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454891+00:00"
+    },
+    {
+      "hash": "64f4b29cabc1c712",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/Fusing/Ops.cs",
+      "lineNumber": 3948,
+      "codeSnippet": "catch(Exception ex)\n                {\n                    Log.Debug(ex, \u0022Underlying async enumerator threw an exception while being disposed.\u0022);\n                }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454914+00:00"
+    },
+    {
+      "hash": "39fdc125cd93efad",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/Fusing/Ops.cs",
+      "lineNumber": 3961,
+      "codeSnippet": "catch (Exception ex)\n                    {\n                        // This is best effort exception logging, this log will never appear if the ActorSystem\n                        // was shut down before we reach this code (BusEvent was not emitting new logs anymore)\n                        Log.Debug(ex, \u0022Underlying async enumerator threw an exception while being disposed.\u0022);\n    // ...",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.645496+00:00"
+    },
+    {
+      "hash": "055953950152623a",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/Fusing/ActorGraphInterpreter.cs",
+      "lineNumber": 357,
+      "codeSnippet": "catch (Exception) { /* swallow? */ }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6454988+00:00"
+    },
+    {
+      "hash": "12b73179e73bd70d",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Implementation/Fusing/GraphInterpreter.cs",
+      "lineNumber": 999,
+      "codeSnippet": "catch (Exception err)\n            {\n                if (Log.IsErrorEnabled)\n                    Log.Error(err, \u0022Error during PostStop in [{0}]\u0022, Assembly.Stages[logic.StageId]);\n            }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455031+00:00"
+    },
+    {
+      "hash": "6c216acbb6961bb6",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Streams/Implementation/IO/FilePublisher.cs",
+      "lineNumber": 19,
+      "codeSnippet": "#pragma warning disable 1587",
+      "message": "#pragma warning disable for warnings 1587 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6455098+00:00"
+    },
+    {
+      "hash": "26b2f4088086abac",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams/Dsl/Hub.cs",
+      "lineNumber": 690,
+      "codeSnippet": "catch\n                                    {\n                                        // no-op\n                                    }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455128+00:00"
+    },
+    {
+      "hash": "7400d07d2a8a42a0",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams.Tests/Implementation/Fusing/KeepGoingStageSpec.cs",
+      "lineNumber": 305,
+      "codeSnippet": "catch { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455159+00:00"
+    },
+    {
+      "hash": "af2a82b4dcd11067",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/LazySourceSpec.cs",
+      "lineNumber": 208,
+      "codeSnippet": "catch (AggregateException) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455184+00:00"
+    },
+    {
+      "hash": "150b8b26fb03a8b3",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowSelectAsyncSpec.cs",
+      "lineNumber": 35,
+      "codeSnippet": "#pragma warning disable 162",
+      "message": "#pragma warning disable for warnings 162 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.645521+00:00"
+    },
+    {
+      "hash": "59f8995ddd6c2ef9",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/StreamRefsSpec.cs",
+      "lineNumber": 550,
+      "codeSnippet": "catch\n            {\n                // Expected: at least one should fail\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455237+00:00"
+    },
+    {
+      "hash": "2367574532adc0be",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowRecoverWithSpec.cs",
+      "lineNumber": 292,
+      "codeSnippet": "catch (AggregateException) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455263+00:00"
+    },
+    {
+      "hash": "3624807874bb4d89",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/LazySinkSpec.cs",
+      "lineNumber": 206,
+      "codeSnippet": "catch (AggregateException) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455286+00:00"
+    },
+    {
+      "hash": "fcb317c47a611f54",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Streams.Tests/Dsl/FlowSelectAsyncUnorderedSpec.cs",
+      "lineNumber": 30,
+      "codeSnippet": "#pragma warning disable 162",
+      "message": "#pragma warning disable for warnings 162 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6455314+00:00"
+    },
+    {
+      "hash": "e885a85cca301717",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Discovery/Aggregate/AggregateServiceDiscovery.cs",
+      "lineNumber": 87,
+      "codeSnippet": "catch (Exception ex)\n                {\n                    _log.Error(ex, \u0022Method[{0}] Service discovery failed.{1}\u0022, method, i == lastIndex ? \u0022\u0022 : \u0022 Trying next discovery method\u0022);\n                }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455343+00:00"
+    },
+    {
+      "hash": "e4d3cb59f96ed106",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Remote.TestKit/Controller.cs",
+      "lineNumber": 390,
+      "codeSnippet": "catch (Exception ex)\n            {\n                _log.Error(ex, \u0022Error while terminating RemoteConnection.\u0022);\n            }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.645539+00:00"
+    },
+    {
+      "hash": "a9d628c17aff3ff6",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitAsyncCancellationSpec.cs",
+      "lineNumber": 64,
+      "codeSnippet": "Task.Delay(100)",
+      "message": "Test uses Task.Delay(100) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6455425+00:00"
+    },
+    {
+      "hash": "54434ed7e0a9b021",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitAsyncCancellationSpec.cs",
+      "lineNumber": 131,
+      "codeSnippet": "Task.Delay(TimeSpan.FromSeconds(1))",
+      "message": "Test uses Task.Delay(TimeSpan.FromSeconds(1)) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6455444+00:00"
+    },
+    {
+      "hash": "2965783b3d651c63",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.TestKit.Tests/TestEventListenerTests/AllTestForEventFilterBase.cs",
+      "lineNumber": 236,
+      "codeSnippet": "#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed",
+      "message": "#pragma warning disable for warnings CS4014 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.645547+00:00"
+    },
+    {
+      "hash": "c92171bee5deb8c7",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/WithinTests.cs",
+      "lineNumber": 96,
+      "codeSnippet": "catch (System.Threading.Tasks.TaskCanceledException)\n                {\n                    // This is expected if the test completes in time\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455501+00:00"
+    },
+    {
+      "hash": "adf89ad86f045ca3",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/WithinTests.cs",
+      "lineNumber": 92,
+      "codeSnippet": "Task.Delay(shortTimeout.Add(300.Milliseconds()), timerCts.Token)",
+      "message": "Test uses Task.Delay(shortTimeout.Add(300.Milliseconds())) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6455519+00:00"
+    },
+    {
+      "hash": "4322712ce7ce9c41",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/ReceiveTests.cs",
+      "lineNumber": 154,
+      "codeSnippet": "Task.Delay(halfMax)",
+      "message": "Test uses Task.Delay(halfMax) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6455543+00:00"
+    },
+    {
+      "hash": "c419aab74e2bc6b8",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit.Tests/TestKitBaseTests/ReceiveTests.cs",
+      "lineNumber": 158,
+      "codeSnippet": "Task.Delay(doubleMax)",
+      "message": "Test uses Task.Delay(doubleMax) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6455582+00:00"
+    },
+    {
+      "hash": "642c86e03d34588a",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Tests/Util/ResultSpec.cs",
+      "lineNumber": 167,
+      "codeSnippet": "catch\n        {\n            // no-op\n        }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.645561+00:00"
+    },
+    {
+      "hash": "50cf9910b71e3945",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Tests/Util/TokenBucketSpec.cs",
+      "lineNumber": 222,
+      "codeSnippet": "SuppressMessage(\u0022ReSharper\u0022, \u0022ConditionIsAlwaysTrueOrFalse\u0022)",
+      "message": "SuppressMessage attribute suppressing ReSharper:ConditionIsAlwaysTrueOrFalse",
+      "baselinedAt": "2026-01-12T16:54:30.6455653+00:00"
+    },
+    {
+      "hash": "f4cc61a6d1e94d1f",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Tests/Util/StableListPriorityQueueSpec.cs",
+      "lineNumber": 15,
+      "codeSnippet": "#pragma warning disable xUnit1028",
+      "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6455682+00:00"
+    },
+    {
+      "hash": "83f4deffa6900e17",
+      "ruleId": "SW001",
+      "filePath": "src/core/Akka.Tests/Configuration/HoconTests.cs",
+      "lineNumber": 748,
+      "codeSnippet": "Fact(Skip = \u0022we currently do not make any distinction between quoted and unquoted strings once parsed\u0022)",
+      "message": "Test method \u0027Can_assign_quoted_null_string_to_field\u0027 is disabled: we currently do not make any distinction between quoted and unquoted strings once parsed",
+      "baselinedAt": "2026-01-12T16:54:30.6455731+00:00"
+    },
+    {
+      "hash": "c14f9352e155f981",
+      "ruleId": "SW001",
+      "filePath": "src/core/Akka.Tests/Configuration/HoconTests.cs",
+      "lineNumber": 836,
+      "codeSnippet": "Fact(Skip = \u0022Not allowed according to current HOCON spec\u0022)",
+      "message": "Test method \u0027Can_parse_unquoted_ipv6\u0027 is disabled: Not allowed according to current HOCON spec",
+      "baselinedAt": "2026-01-12T16:54:30.6455749+00:00"
+    },
+    {
+      "hash": "87a59931dbccfe59",
+      "ruleId": "SW001",
+      "filePath": "src/core/Akka.Tests/Configuration/HoconTests.cs",
+      "lineNumber": 883,
+      "codeSnippet": "Fact(Skip = \u0022not working yet\u0022)",
+      "message": "Test method \u0027Can_substitute_with_concated_string\u0027 is disabled: not working yet",
+      "baselinedAt": "2026-01-12T16:54:30.6455767+00:00"
+    },
+    {
+      "hash": "50fb53e8b912daf7",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Tests/Dispatch/AsyncAwaitSpec.cs",
+      "lineNumber": 407,
+      "codeSnippet": "catch (Exception)\n                    {\n                    }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455793+00:00"
+    },
+    {
+      "hash": "1a628586626eddde",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Tests/Actor/RemotePathParsingSpec.cs",
+      "lineNumber": 17,
+      "codeSnippet": "#pragma warning disable xUnit1028",
+      "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6455816+00:00"
+    },
+    {
+      "hash": "0b85d5bcb03a7024",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.Tests/Actor/Scheduler/TaskBasedScheduler_ActionScheduler_Schedule_Tests.cs",
+      "lineNumber": 290,
+      "codeSnippet": "Task.Delay(200)",
+      "message": "Test uses Task.Delay(200) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6455843+00:00"
+    },
+    {
+      "hash": "30b2a94386c0da0f",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Cluster.Tests/MemberOrderingModelBasedTests.cs",
+      "lineNumber": 20,
+      "codeSnippet": "#pragma warning disable xUnit1028",
+      "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6455865+00:00"
+    },
+    {
+      "hash": "1bf7bf24c01f18dc",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.Tests/SnapshotDirectoryFailureSpec.cs",
+      "lineNumber": 66,
+      "codeSnippet": "catch { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455891+00:00"
+    },
+    {
+      "hash": "daf1343e8543ba73",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.Tests/ReceivePersistentActorAsyncAwaitSpec.cs",
+      "lineNumber": 507,
+      "codeSnippet": "catch (Exception)\n                    {\n                    }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6455918+00:00"
+    },
+    {
+      "hash": "13f21bca41231e30",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence.Tests/PersistenceSpec.cs",
+      "lineNumber": 121,
+      "codeSnippet": "catch (IOException) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.645594+00:00"
+    },
+    {
+      "hash": "ae5dd7910c8b08e8",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/UdpSender.cs",
+      "lineNumber": 81,
+      "codeSnippet": "catch (Exception e)\n            {\n                _log.Debug(\u0022Error closing Socket: {0}\u0022, e);\n            }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.645597+00:00"
+    },
+    {
+      "hash": "117b7c704097b05e",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/UdpConnection.cs",
+      "lineNumber": 219,
+      "codeSnippet": "catch (Exception ex)\n            {\n                Log.Debug(\u0022Error closing DatagramChannel: {0}\u0022, ex);\n            }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456011+00:00"
+    },
+    {
+      "hash": "971d934a38693356",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/UdpListener.cs",
+      "lineNumber": 144,
+      "codeSnippet": "catch (Exception e)\n                {\n                    Log.Debug(\u0022Error closing DatagramChannel: {0}\u0022, e);\n                }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456053+00:00"
+    },
+    {
+      "hash": "3d71a47cce083562",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/TcpListener.cs",
+      "lineNumber": 412,
+      "codeSnippet": "catch (Exception e)\n            {\n                _log.Debug(\u0022Error closing ServerSocketChannel: {0}\u0022, e);\n            }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456079+00:00"
+    },
+    {
+      "hash": "136828c217cc3915",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/Tcp.cs",
+      "lineNumber": 898,
+      "codeSnippet": "catch (Exception) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456099+00:00"
+    },
+    {
+      "hash": "5d2e119e270ab4cb",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/TcpConnection.cs",
+      "lineNumber": 250,
+      "codeSnippet": "catch (SocketException e)\n            {\n                Log.Debug(\u0022Could not enable TcpNoDelay: {0}\u0022, e.Message);\n            }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456128+00:00"
+    },
+    {
+      "hash": "62113f83a2ef3e5f",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/TcpConnection.cs",
+      "lineNumber": 682,
+      "codeSnippet": "catch (SocketException e)\n                    {\n                        Log.Error(e, \u0022Graceful socket shutdown failed\u0022);\n                    }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456151+00:00"
+    },
+    {
+      "hash": "412124630e61d3c7",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/TcpConnection.cs",
+      "lineNumber": 741,
+      "codeSnippet": "catch\n            {\n                /* ignore */\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456179+00:00"
+    },
+    {
+      "hash": "a67f4f61bab7fe03",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/TcpConnection.cs",
+      "lineNumber": 764,
+      "codeSnippet": "catch (Exception e)\n            {\n                if (_traceLogging) Log.Debug(\u0022setSoLinger(true, 0) failed with [{0}]\u0022, e);\n            }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456225+00:00"
+    },
+    {
+      "hash": "0c7c28bc324a7a7b",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/IO/TcpOutgoingConnection.cs",
+      "lineNumber": 68,
+      "codeSnippet": "catch (InvalidOperationException)\n                {\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456252+00:00"
+    },
+    {
+      "hash": "63ddf742f71dea2d",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Dispatch/ChannelSchedulerExtension.cs",
+      "lineNumber": 324,
+      "codeSnippet": "catch\n            {\n                //ignore error\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.645628+00:00"
+    },
+    {
+      "hash": "8f246a0e213ae0d5",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Dispatch/Dispatchers.cs",
+      "lineNumber": 167,
+      "codeSnippet": "catch\n            {\n                // suppress exceptions\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456347+00:00"
+    },
+    {
+      "hash": "c5f9337f769c1e9d",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/SupervisorStrategy.cs",
+      "lineNumber": 179,
+      "codeSnippet": "catch (Exception)\n            {\n                // swallow any exceptions\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456373+00:00"
+    },
+    {
+      "hash": "aac2258601a15b23",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/CoordinatedShutdown.cs",
+      "lineNumber": 745,
+      "codeSnippet": "catch (Exception ex)\n                        {\n                            coord.Log.Warning(\u0022CoordinatedShutdown from CLR shutdown failed: {0}\u0022, ex.Message);\n                        }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456402+00:00"
+    },
+    {
+      "hash": "845a9df7b790d887",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/ActorCell.DefaultMessages.cs",
+      "lineNumber": 390,
+      "codeSnippet": "catch\n            {\n                //TODO: Hmmm?\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456432+00:00"
+    },
+    {
+      "hash": "4178214ea8948200",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/ActorCell.FaultHandling.cs",
+      "lineNumber": 475,
+      "codeSnippet": "catch\n            {\n                //TODO: Hmmm?\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456455+00:00"
+    },
+    {
+      "hash": "ce7efe5072243fc9",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/ActorRef.cs",
+      "lineNumber": 79,
+      "codeSnippet": "catch\n            {\n                // we don\u0027t do error handling for this - we do not care\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456486+00:00"
+    },
+    {
+      "hash": "bd149108a88e3e51",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/ActorRef.cs",
+      "lineNumber": 1182,
+      "codeSnippet": "catch (Exception) { }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456503+00:00"
+    },
+    {
+      "hash": "e19886191172e32e",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/Internal/ActorSystemImpl.cs",
+      "lineNumber": 239,
+      "codeSnippet": "catch\n                    {\n                        // ignored\n                    }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.645653+00:00"
+    },
+    {
+      "hash": "74964d3ec468525d",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/Internal/ActorSystemImpl.cs",
+      "lineNumber": 312,
+      "codeSnippet": "catch(Exception ex)\n                {\n                    _log.Error(ex, \u0022While trying to load extension [{0}], skipping...\u0022, extensionFqn);\n                }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456554+00:00"
+    },
+    {
+      "hash": "d6fa4922660bdbd4",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/Scheduler/HashedWheelTimerScheduler.cs",
+      "lineNumber": 522,
+      "codeSnippet": "catch (SchedulerException)\n                    {\n                        // ignore, this is from terminated actors\n                    }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456613+00:00"
+    },
+    {
+      "hash": "1dbfd8b092928780",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/Scheduler/HashedWheelTimerScheduler.cs",
+      "lineNumber": 526,
+      "codeSnippet": "catch (Exception ex)\n                    {\n                        Log.Error(ex, \u0022Exception while executing timer task.\u0022);\n                    }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456635+00:00"
+    },
+    {
+      "hash": "2b40fd0cc3ebd4a3",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/Scheduler/HashedWheelTimerScheduler.cs",
+      "lineNumber": 772,
+      "codeSnippet": "catch (Exception ex)\n                            {\n                                try\n                                {\n                                    _log.Error(ex, \u0022Error while executing scheduled task {0}\u0022, current);\n    // ...",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.645671+00:00"
+    },
+    {
+      "hash": "0b95a01799e7e19c",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka/Actor/Scheduler/HashedWheelTimerScheduler.cs",
+      "lineNumber": 782,
+      "codeSnippet": "catch\n                                {\n                                    // suppress any errors thrown during logging\n                                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456738+00:00"
+    },
+    {
+      "hash": "e17f013523d0b47f",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.Tests.Performance/Actor/Scheduler/DefaultSchedulerPerformanceTests.cs",
+      "lineNumber": 61,
+      "codeSnippet": "Thread.Sleep(40)",
+      "message": "Test uses Thread.Sleep(40) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6456766+00:00"
+    },
+    {
+      "hash": "069247e6789d6acc",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.Tests.Performance/Actor/Scheduler/DefaultSchedulerPerformanceTests.cs",
+      "lineNumber": 77,
+      "codeSnippet": "Task.Delay(RunTime).Wait()",
+      "message": "Test uses Task.Delay(?) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6456785+00:00"
+    },
+    {
+      "hash": "ca00c698db9401b2",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.Tests.Performance/Actor/Scheduler/DefaultSchedulerPerformanceTests.cs",
+      "lineNumber": 77,
+      "codeSnippet": "Task.Delay(RunTime)",
+      "message": "Test uses Task.Delay(RunTime) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6456804+00:00"
+    },
+    {
+      "hash": "5a60d012890f5d94",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Docs.Tests/Testkit/ParentSampleTest.cs",
+      "lineNumber": 14,
+      "codeSnippet": "#pragma warning disable CS0414 // Field is assigned but its value is never used. This is for documentation purposes, its fine. ",
+      "message": "#pragma warning disable for warnings CS0414 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6456832+00:00"
+    },
+    {
+      "hash": "032823f713deea61",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Remote/EndpointManager.cs",
+      "lineNumber": 7,
+      "codeSnippet": "#pragma warning disable AK1004",
+      "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6456856+00:00"
+    },
+    {
+      "hash": "3a24c8bc72c2bdfe",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Remote/Endpoint.cs",
+      "lineNumber": 7,
+      "codeSnippet": "#pragma warning disable AK1004",
+      "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6456878+00:00"
+    },
+    {
+      "hash": "e5bd5f32065a325d",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Remote/Endpoint.cs",
+      "lineNumber": 999,
+      "codeSnippet": "catch (Exception ex)\n            {\n                _log.Error(ex, \u0022Unable to publish error event to EventStream\u0022);\n            }",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6456908+00:00"
+    },
+    {
+      "hash": "8e6754b39cbbbef5",
+      "ruleId": "SW002",
+      "filePath": "src/core/Akka.Remote/RemoteWatcher.cs",
+      "lineNumber": 7,
+      "codeSnippet": "#pragma warning disable AK1004",
+      "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
+      "baselinedAt": "2026-01-12T16:54:30.6456938+00:00"
+    },
+    {
+      "hash": "3f30d9efd91f5ae6",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Remote/Transport/DotNetty/DotNettyTransport.cs",
+      "lineNumber": 234,
+      "codeSnippet": "catch\n                {\n                    // ignore errors occurring during shutdown\n                }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.645698+00:00"
+    },
+    {
+      "hash": "a609db5f57106cbd",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit/TestKitBase_AwaitAssert.cs",
+      "lineNumber": 75,
+      "codeSnippet": "Task.Delay(t, cancellationToken)",
+      "message": "Test uses Task.Delay(t) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6457002+00:00"
+    },
+    {
+      "hash": "84080843d9d3bd4e",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit/TestKitBase_Receive.cs",
+      "lineNumber": 426,
+      "codeSnippet": "Task.Delay(maxDuration, cancellationToken)",
+      "message": "Test uses Task.Delay(maxDuration) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6457046+00:00"
+    },
+    {
+      "hash": "d5c9710b9beb8ed9",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit/TestKitBase_AwaitConditions.cs",
+      "lineNumber": 314,
+      "codeSnippet": "Task.Delay(sleepDuration, cancellationToken)",
+      "message": "Test uses Task.Delay(sleepDuration) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6457072+00:00"
+    },
+    {
+      "hash": "5923f4149699d248",
+      "ruleId": "SW004",
+      "filePath": "src/core/Akka.TestKit/TestKitBase_Within.cs",
+      "lineNumber": 309,
+      "codeSnippet": "Task.Delay(max \u002B TimeSpan.FromMilliseconds(200), cts.Token)",
+      "message": "Test uses Task.Delay(max \u002B TimeSpan.FromMilliseconds(200)) which may indicate a timing-dependent test",
+      "baselinedAt": "2026-01-12T16:54:30.6457095+00:00"
+    },
+    {
+      "hash": "96165420d78e265f",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.TestKit/Internal/InternalTestActor.cs",
+      "lineNumber": 48,
+      "codeSnippet": "catch (FormatException)\n            when (message is LogEvent { Message: LogMessage msg })\n        {\n            System.Diagnostics.Debug.WriteLine(\n                $\u0022TestActor received a malformed formatted message. Template:[{msg.Format}], args:[{string.Join(\u0022,\u0022, msg.Unformatted())}]\u0022);\n    // ...",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6457137+00:00"
+    },
+    {
+      "hash": "ec95e3aaf5589b04",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.TestKit/EventFilter/TestEventListener.cs",
+      "lineNumber": 128,
+      "codeSnippet": "catch\n            {\n            }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-01-12T16:54:30.6457164+00:00"
+    },
+    {
+      "hash": "f695bba431fec6a6",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.Persistence/Journal/PersistencePluginProxy.cs",
+      "lineNumber": 168,
+      "codeSnippet": "catch (UriFormatException)\n                    {\n                        if (_log.IsWarningEnabled)\n                            _log.Warning(\u0022Invalid URL provided for target {0} address: {1}\u0022, _pluginType.Qualifier,\n                                targetAddress);\n    // ...",
+      "message": "Catch block only logs exception without rethrowing or handling",
+      "baselinedAt": "2026-01-12T16:54:30.6457195+00:00"
+    }
+  ]
+}

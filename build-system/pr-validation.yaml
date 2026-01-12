@@ -54,6 +54,24 @@ jobs:
         inputs:
           script: 'markdownlint "docs/**/*.md" --rules "markdownlint-rule-titlecase"'
 
+  - job: SlopwatchAnalysis
+    displayName: "Slopwatch: LLM Code Quality Check"
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - checkout: self
+        clean: false
+        submodules: recursive
+      - task: UseDotNet@2
+        displayName: 'Install .NET 9 SDK (required for Slopwatch)'
+        inputs:
+          packageType: 'sdk'
+          version: '9.x'
+      - script: dotnet tool install --global Slopwatch.Cmd
+        displayName: 'Install Slopwatch'
+      - script: slopwatch analyze -d . --fail-on error --stats
+        displayName: 'Run Slopwatch Analysis'
+
   - template: azure-pipeline.template.yaml
     parameters:
       name: "netfx_tests_windows"
