@@ -160,15 +160,15 @@ namespace Akka.Actor
         public ActorInitializationException(string message) { }
         protected ActorInitializationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public ActorInitializationException(string message, System.Exception cause) { }
-        public ActorInitializationException(Akka.Actor.IActorRef actor, string message, System.Exception cause = null) { }
-        public Akka.Actor.IActorRef Actor { get; set; }
+        public ActorInitializationException(Akka.Actor.IActorRef actor, string message, System.Exception? cause = null) { }
+        public Akka.Actor.IActorRef? Actor { get; set; }
         public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public override string ToString() { }
     }
     public class ActorInterruptedException : Akka.Actor.AkkaException
     {
         protected ActorInterruptedException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        public ActorInterruptedException(string message = null, System.Exception cause = null) { }
+        public ActorInterruptedException(string? message = null, System.Exception? cause = null) { }
     }
     public class ActorKilledException : Akka.Actor.AkkaException
     {
@@ -180,7 +180,7 @@ namespace Akka.Actor
     {
         public ActorNotFoundException() { }
         protected ActorNotFoundException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        public ActorNotFoundException(string message, System.Exception innerException = null) { }
+        public ActorNotFoundException(string message, System.Exception? innerException = null) { }
     }
     public abstract class ActorPath : Akka.Util.ISurrogated, System.IComparable<Akka.Actor.ActorPath>, System.IEquatable<Akka.Actor.ActorPath>
     {
@@ -468,8 +468,8 @@ namespace Akka.Actor
     {
         protected AkkaException() { }
         protected AkkaException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        protected AkkaException(string message, System.Exception cause = null) { }
-        protected System.Exception Cause { get; }
+        protected AkkaException(string? message, System.Exception? cause = null) { }
+        protected System.Exception? Cause { get; }
     }
     public class AllForOneStrategy : Akka.Actor.SupervisorStrategy, System.IEquatable<Akka.Actor.AllForOneStrategy>
     {
@@ -629,7 +629,7 @@ namespace Akka.Actor
     {
         public DeathPactException(Akka.Actor.IActorRef deadActor) { }
         protected DeathPactException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        public Akka.Actor.IActorRef DeadActor { get; }
+        public Akka.Actor.IActorRef? DeadActor { get; }
         public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public static class Decider
@@ -1381,7 +1381,7 @@ namespace Akka.Actor
         public LoggerInitializationException() { }
         public LoggerInitializationException(string message) { }
         protected LoggerInitializationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        public LoggerInitializationException(string message, System.Exception cause = null) { }
+        public LoggerInitializationException(string message, System.Exception? cause = null) { }
     }
     [Akka.Annotations.InternalApi]
     public abstract class MinimalActorRef : Akka.Actor.InternalActorRefBase, Akka.Actor.IActorRefScope
@@ -1462,16 +1462,16 @@ namespace Akka.Actor
     public class PostRestartException : Akka.Actor.ActorInitializationException
     {
         protected PostRestartException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        public PostRestartException(Akka.Actor.IActorRef actor, System.Exception cause, System.Exception originalCause) { }
-        public System.Exception OriginalCause { get; }
+        public PostRestartException(Akka.Actor.IActorRef actor, System.Exception? cause, System.Exception? originalCause) { }
+        public System.Exception? OriginalCause { get; }
         public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class PreRestartException : Akka.Actor.ActorInitializationException
     {
         protected PreRestartException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
-        public PreRestartException(Akka.Actor.IActorRef actor, System.Exception restartException, System.Exception cause, object optionalMessage) { }
-        public object OptionalMessage { get; }
-        public System.Exception RestartException { get; }
+        public PreRestartException(Akka.Actor.IActorRef actor, System.Exception? restartException, System.Exception? cause, object? optionalMessage) { }
+        public object? OptionalMessage { get; }
+        public System.Exception? RestartException { get; }
         public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
     }
     public class Props : Akka.Util.ISurrogated, System.IEquatable<Akka.Actor.Props>
