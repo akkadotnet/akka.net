@@ -67,9 +67,9 @@ jobs:
         inputs:
           packageType: 'sdk'
           version: '9.x'
-      - script: dotnet tool install --global Slopwatch.Cmd
-        displayName: 'Install Slopwatch'
-      - script: slopwatch analyze -d . --fail-on error --stats
+      - script: dotnet tool restore
+        displayName: 'Restore .NET Tools'
+      - script: dotnet slopwatch analyze -d . --fail-on error --stats
         displayName: 'Run Slopwatch Analysis'
 
   - template: azure-pipeline.template.yaml
