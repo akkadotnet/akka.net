@@ -3201,9 +3201,9 @@ namespace Akka
     public sealed class NotUsed : System.IComparable<Akka.NotUsed>, System.IEquatable<Akka.NotUsed>
     {
         public static readonly Akka.NotUsed Instance;
-        public int CompareTo(Akka.NotUsed other) { }
-        public bool Equals(Akka.NotUsed other) { }
-        public override bool Equals(object obj) { }
+        public int CompareTo(Akka.NotUsed? other) { }
+        public bool Equals(Akka.NotUsed? other) { }
+        public override bool Equals(object? obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
