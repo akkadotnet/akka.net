@@ -427,37 +427,37 @@ namespace Akka.Actor
     public sealed class Address : Akka.Util.ISurrogated, System.ICloneable, System.IComparable, System.IComparable<Akka.Actor.Address>, System.IEquatable<Akka.Actor.Address>
     {
         public static readonly Akka.Actor.Address AllSystems;
-        public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> Comparer;
-        public Address(string protocol, string system, string host = null, int? port = default) { }
+        public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address?> Comparer;
+        public Address(string protocol, string system, string? host = null, int? port = default) { }
         public bool HasGlobalScope { get; }
         public bool HasLocalScope { get; }
-        public string Host { get; }
+        public string? Host { get; }
         public int? Port { get; }
         public string Protocol { get; }
         public string System { get; }
         public object Clone() { }
-        public int CompareTo(Akka.Actor.Address other) { }
-        public bool Equals(Akka.Actor.Address other) { }
-        public override bool Equals(object obj) { }
+        public int CompareTo(Akka.Actor.Address? other) { }
+        public bool Equals(Akka.Actor.Address? other) { }
+        public override bool Equals(object? obj) { }
         public override int GetHashCode() { }
         public string HostPort() { }
         public override string ToString() { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public Akka.Actor.Address WithHost(string host = null) { }
+        public Akka.Actor.Address WithHost(string? host = null) { }
         public Akka.Actor.Address WithPort(int? port = default) { }
         public Akka.Actor.Address WithProtocol(string protocol) { }
         public Akka.Actor.Address WithSystem(string system) { }
         public static Akka.Actor.Address Parse(string address) { }
-        public static bool TryParse(System.ReadOnlySpan<char> span, out Akka.Actor.Address address) { }
-        public static bool TryParse(string path, out Akka.Actor.Address address) { }
-        public static bool TryParse(System.ReadOnlySpan<char> span, out Akka.Actor.Address address, out System.ReadOnlySpan<char> absolutUri) { }
-        public static bool TryParse(string path, out Akka.Actor.Address address, out string absolutUri) { }
-        public static bool operator !=(Akka.Actor.Address left, Akka.Actor.Address right) { }
-        public static bool operator ==(Akka.Actor.Address left, Akka.Actor.Address right) { }
+        public static bool TryParse(System.ReadOnlySpan<char> span, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Akka.Actor.Address? address) { }
+        public static bool TryParse(string path, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Akka.Actor.Address? address) { }
+        public static bool TryParse(System.ReadOnlySpan<char> span, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Akka.Actor.Address? address, out System.ReadOnlySpan<char> absolutUri) { }
+        public static bool TryParse(string path, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Akka.Actor.Address? address, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? absolutUri) { }
+        public static bool operator !=(Akka.Actor.Address? left, Akka.Actor.Address? right) { }
+        public static bool operator ==(Akka.Actor.Address? left, Akka.Actor.Address? right) { }
         public sealed class AddressSurrogate : Akka.Util.ISurrogate
         {
             public AddressSurrogate() { }
-            public string Host { get; set; }
+            public string? Host { get; set; }
             public int? Port { get; set; }
             public string Protocol { get; set; }
             public string System { get; set; }
@@ -1576,7 +1576,7 @@ namespace Akka.Actor
     }
     public static class RelativeActorPath
     {
-        public static System.Collections.Generic.IEnumerable<string> Unapply(string addr) { }
+        public static System.Collections.Generic.IEnumerable<string>? Unapply(string addr) { }
     }
     public class RemoteScope : Akka.Actor.Scope, System.IEquatable<Akka.Actor.RemoteScope>
     {
