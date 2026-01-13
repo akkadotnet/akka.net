@@ -62,6 +62,11 @@ jobs:
       - checkout: self
         clean: false
         submodules: recursive
+      - task: UseDotNet@2
+        displayName: 'Use .NET'
+        inputs:
+          packageType: 'sdk'
+          useGlobalJson: true
       - script: dotnet tool restore
         displayName: 'Restore .NET Tools'
       - script: dotnet slopwatch analyze -d . --fail-on error --stats
