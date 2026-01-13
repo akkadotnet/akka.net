@@ -230,10 +230,8 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
             var p = this;
             for (var i = 0; i < _depth; i++)
             {
-                b[_depth - i - 1] = p.Name;
+                b[_depth - i - 1] = p!.Name;
                 p = p.Parent;
-                if (p is null)
-                    break;
             }
             return b.MoveToImmutable();
         }
@@ -259,10 +257,8 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
             var p = this;
             for (var i = 0; i < _depth; i++)
             {
-                b[_depth - i - 1] = i > 0 ? p.Name : AppendUidFragment(p.Name);
+                b[_depth - i - 1] = i > 0 ? p!.Name : AppendUidFragment(p!.Name);
                 p = p.Parent;
-                if (p is null)
-                    break;
             }
             return b.MoveToImmutable();
         }
@@ -392,23 +388,19 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
         var current = this;
         if (depth >= 0)
         {
-            while (current._depth > depth)
+            while (current!._depth > depth)
             {
-                if (current.Parent is null)
-                    break;
                 current = current.Parent;
             }
         }
         else
         {
-            for (var i = depth; i < 0 && current._depth > 0; i++)
+            for (var i = depth; i < 0 && current!._depth > 0; i++)
             {
-                if (current.Parent is null)
-                    break;
                 current = current.Parent;
             }
         }
-        return current;
+        return current!;
     }
 
     /// <summary>
@@ -605,12 +597,10 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
             // Resolve length of final string
             var totalLength = prefix.Length;
             var p = this;
-            while (p._depth > 0)
+            while (p!._depth > 0)
             {
                 totalLength += p.Name.Length + 1;
                 p = p.Parent;
-                if (p is null)
-                    break;
             }
 
             // UID calculation
@@ -631,15 +621,13 @@ public abstract class ActorPath : IEquatable<ActorPath>, IComparable<ActorPath>,
             AppendUidSpan(ref buffer, offset, uidSizeHint-1); // -1 for the '#'
 
             p = this;
-            while (p._depth > 0)
+            while (p!._depth > 0)
             {
                 var name = p.Name.AsSpan();
                 offset -= name.Length + 1;
                 buffer[offset] = '/';
                 name.CopyTo(buffer.Slice(offset + 1, name.Length));
                 p = p.Parent;
-                if (p is null)
-                    break;
             }
             return buffer.ToString(); //todo use string.Create() when available
         }
