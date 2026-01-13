@@ -54,6 +54,24 @@ jobs:
         inputs:
           script: 'markdownlint "docs/**/*.md" --rules "markdownlint-rule-titlecase"'
 
+  - job: SlopwatchAnalysis
+    displayName: "Slopwatch: LLM Code Quality Check"
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - checkout: self
+        clean: false
+        submodules: recursive
+      - task: UseDotNet@2
+        displayName: 'Use .NET'
+        inputs:
+          packageType: 'sdk'
+          useGlobalJson: true
+      - script: dotnet tool restore
+        displayName: 'Restore .NET Tools'
+      - script: dotnet slopwatch analyze -d . --fail-on error --stats
+        displayName: 'Run Slopwatch Analysis'
+
   - template: azure-pipeline.template.yaml
     parameters:
       name: "netfx_tests_windows"
