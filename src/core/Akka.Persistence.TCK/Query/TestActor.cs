@@ -27,15 +27,19 @@ namespace Akka.Persistence.TCK.Query
             public long ToSequenceNr { get; }
         }
 
+        private ILoggingAdapter _log;
+        
         public TestActor(string persistenceId)
         {
             PersistenceId = persistenceId;
+            _log = Context.GetLogger();
         }
 
         public override string PersistenceId { get; }
 
         protected override void OnRecover(object message)
         {
+            _log.Debug("OnRecover received {0} [{1}]", message, message.GetType());
         }
 
         protected override void OnCommand(object message)
@@ -48,7 +52,11 @@ namespace Akka.Persistence.TCK.Query
                     break;
                 case string cmd:
                     var sender = Sender;
-                    Persist(cmd, e => sender.Tell($"{e}-done"));
+                    Persist(cmd, e =>
+                    {
+                        _log.Debug("Message {0} persisted", e);
+                        sender.Tell($"{e}-done");
+                    });
                     break;
             }
         }

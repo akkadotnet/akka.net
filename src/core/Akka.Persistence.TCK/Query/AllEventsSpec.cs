@@ -75,9 +75,9 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = ReadJournal as IAllEventsQuery;
 
-            var a = Sys.ActorOf(Query.TestActor.Props("a"));
-            var b = Sys.ActorOf(Query.TestActor.Props("b"));
-            var c = Sys.ActorOf(Query.TestActor.Props("c"));
+            var a = Sys.ActorOf(Query.TestActor.Props("a"), "a");
+            var b = Sys.ActorOf(Query.TestActor.Props("b"), "b");
+            var c = Sys.ActorOf(Query.TestActor.Props("c"), "c");
 
             a.Tell("keep");
             await ExpectMsgAsync("keep-done");
