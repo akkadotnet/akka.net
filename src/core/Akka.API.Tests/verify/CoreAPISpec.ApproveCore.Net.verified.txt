@@ -3362,6 +3362,7 @@ namespace Akka.Event
     public abstract class LogEvent : Akka.Actor.INoSerializationVerificationNeeded
     {
         protected LogEvent() { }
+        public System.Diagnostics.ActivityContext? ActivityContext { get; }
         public System.Exception Cause { get; protected set; }
         public System.Type LogClass { get; protected set; }
         public string LogSource { get; protected set; }
