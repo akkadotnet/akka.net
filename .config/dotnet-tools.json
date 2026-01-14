@@ -15,6 +15,13 @@
         "incrementalist"
       ],
       "rollForward": true
+    },
+    "slopwatch.cmd": {
+      "version": "0.3.0",
+      "commands": [
+        "slopwatch"
+      ],
+      "rollForward": false
     }
   }
 }

@@ -429,6 +429,8 @@ namespace Akka.Actor
         {
             if (_runStarted.CompareAndSet(null, reason))
             {
+                Log.Info("CoordinatedShutdown invoked due to [Reason:{Reason}]. Exiting with [ExitCode:{ExitCode}].", reason.GetType(), reason.ExitCode);
+                
                 var debugEnabled = Log.IsDebugEnabled;
 
                 Task<Done> Loop(List<string> remainingPhases)
