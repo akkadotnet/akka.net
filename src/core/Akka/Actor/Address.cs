@@ -444,24 +444,24 @@ public sealed class Address : IEquatable<Address>, IComparable<Address>, ICompar
     /// This class represents a surrogate of an <see cref="Address"/>.
     /// Its main use is to help during the serialization process.
     /// </summary>
-    public sealed record AddressSurrogate : ISurrogate
+    public sealed class AddressSurrogate : ISurrogate
     {
         /// <summary>
         /// TBD
         /// </summary>
-        public string Protocol { get; init; } = string.Empty;
+        public string Protocol { get; set; } = string.Empty;
         /// <summary>
         /// TBD
         /// </summary>
-        public string System { get; init; } = string.Empty;
+        public string System { get; set; } = string.Empty;
         /// <summary>
         /// TBD
         /// </summary>
-        public string? Host { get; init; }
+        public string? Host { get; set; }
         /// <summary>
         /// TBD
         /// </summary>
-        public int? Port { get; init; }
+        public int? Port { get; set; }
         /// <summary>
         /// Creates a <see cref="Address"/> encapsulated by this surrogate.
         /// </summary>
