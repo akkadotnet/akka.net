@@ -14,7 +14,7 @@ namespace Akka.Persistence.Query.InMemory.Tests
     public class InMemoryCurrentEventsByTagSpec : CurrentEventsByTagSpec
     {
         private static Config Config() => ConfigurationFactory.ParseString(@"
-            akka.loglevel = INFO
+            akka.loglevel = DEBUG
             akka.persistence.journal.inmem {
                 event-adapters {
                   color-tagger  = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""

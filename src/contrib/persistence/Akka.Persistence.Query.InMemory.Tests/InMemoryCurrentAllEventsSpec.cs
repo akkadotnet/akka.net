@@ -13,7 +13,7 @@ namespace Akka.Persistence.Query.InMemory.Tests
 {
     public class InMemoryCurrentAllEventsSpec : CurrentAllEventsSpec
     {
-        private static Config Config() => ConfigurationFactory.ParseString("akka.loglevel = INFO")
+        private static Config Config() => ConfigurationFactory.ParseString("akka.loglevel = DEBUG")
             .WithFallback(InMemoryPersistenceSpecConfig.Config);
 
         public InMemoryCurrentAllEventsSpec(ITestOutputHelper output) : base(Config(), nameof(InMemoryCurrentAllEventsSpec), output)

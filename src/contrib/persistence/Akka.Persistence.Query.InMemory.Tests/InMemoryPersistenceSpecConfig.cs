@@ -14,11 +14,12 @@ public static class InMemoryPersistenceSpecConfig
     /// <summary>
     /// Sets the refresh interval to 1s and uses the in-memory journal and snapshot store.
     /// </summary>
-    public static readonly Config Config = ConfigurationFactory.ParseString("""
-                                                                            
-                                                                                        akka.persistence.query.journal.inmem.refresh-interval = 1s
-                                                                                        akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
-                                                                                        akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.inmem"
-                                                                            """)
+    public static readonly Config Config = ConfigurationFactory.ParseString(
+            """
+            akka.loglevel = DEBUG
+            akka.persistence.query.journal.inmem.refresh-interval = 1s
+            akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
+            akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.inmem"
+            """)
         .WithFallback(InMemoryReadJournal.DefaultConfiguration());
 }

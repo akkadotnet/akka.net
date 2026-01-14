@@ -14,8 +14,7 @@ namespace Akka.Persistence.Query.InMemory.Tests
 {
     public class InMemoryPersistenceIdsSpec : PersistenceIdsSpec
     {
-        private static Config Config() => ConfigurationFactory.ParseString(@"
-            akka.loglevel = INFO")
+        private static Config Config() => ConfigurationFactory.ParseString("akka.loglevel = DEBUG")
             .WithFallback(InMemoryPersistenceSpecConfig.Config);
 
 
