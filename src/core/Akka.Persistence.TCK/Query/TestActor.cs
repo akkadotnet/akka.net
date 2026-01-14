@@ -15,7 +15,7 @@ namespace Akka.Persistence.TCK.Query
 {
     internal class TestActor : UntypedPersistentActor, IWithUnboundedStash
     {
-        public static Props Props(string persistenceId) => Actor.Props.Create(() => new TestActor(persistenceId));
+        public static Props Props(string persistenceId, IActorRef? probe = null) => Actor.Props.Create(() => new TestActor(persistenceId, probe));
 
         public sealed class DeleteCommand
         {
@@ -27,11 +27,13 @@ namespace Akka.Persistence.TCK.Query
             public long ToSequenceNr { get; }
         }
 
-        private ILoggingAdapter _log;
+        private readonly IActorRef? _probe;
+        private readonly ILoggingAdapter _log;
         
-        public TestActor(string persistenceId)
+        public TestActor(string persistenceId, IActorRef? probe)
         {
             PersistenceId = persistenceId;
+            _probe = probe;
             _log = Context.GetLogger();
         }
 
@@ -40,6 +42,8 @@ namespace Akka.Persistence.TCK.Query
         protected override void OnRecover(object message)
         {
             _log.Debug("OnRecover received {0} [{1}]", message, message.GetType());
+            if(message is RecoveryCompleted && _probe is not null)
+                _probe.Tell(Done.Instance);
         }
 
         protected override void OnCommand(object message)
