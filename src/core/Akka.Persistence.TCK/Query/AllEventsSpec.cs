@@ -121,4 +121,3 @@ namespace Akka.Persistence.TCK.Query
         }
     }
 }
-
