@@ -43,6 +43,8 @@ namespace Akka.Persistence
             if (PersistenceId == null)
                 throw new ArgumentNullException($"PersistenceId is [null] for PersistentActor [{Self.Path}]");
                 
+            Log.Debug("AroundPreStart entered");
+            
             // Fail fast on missing plugins.
             var j = Journal;
             var s = SnapshotStore;
