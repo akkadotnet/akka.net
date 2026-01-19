@@ -10,8 +10,12 @@
       xUnit1031 is a temporary fix, we will need to pay this technical debt 
       and make everything fully async in the future 
     -->
-    <!-- SYSLIB0057: X509Certificate2 constructor obsolete - many test files -->
-    <!-- CA2022: Stream.Read inexact read - Akka.Streams.Tests -->
+    <!-- SYSLIB0057: X509Certificate2 constructor obsolete - many test files
+         Will need a lot of compiler directives to fix this now, need to be fixed when we drop netstandard support. 
+    -->
+    <!-- CA2022: Stream.Read inexact read - Akka.Streams.Tests 
+         Will need compiler directive to fix this now, need to be fixed when we drop netstandard support. 
+    -->
     <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;SYSLIB0057;CA2022</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
