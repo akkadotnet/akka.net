@@ -23,12 +23,15 @@ namespace Akka.Persistence.Tests
         public static Config Configuration(string test, string serialization = null,
             string extraConfig = null)
         {
-            var configString = string.Format(@"
+            var configString = string.Format(
+                """
+                akka.loglevel = DEBUG
                 akka.actor.serialize-creators = {0}
                 akka.actor.serialize-messages = {0}
                 akka.persistence.publish-plugin-commands = on
-                akka.persistence.snapshot-store.local.dir = ""target/snapshots-{1}/""
-                akka.test.single-expect-default = 10s", serialization ?? "on", test);
+                akka.persistence.snapshot-store.local.dir = "target/snapshots-{1}/"
+                akka.test.single-expect-default = 10s
+                """, serialization ?? "on", test);
 
             if(extraConfig == null)
                 return ConfigurationFactory.ParseString(configString);
