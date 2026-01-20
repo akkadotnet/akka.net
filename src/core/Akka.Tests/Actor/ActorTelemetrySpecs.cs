@@ -33,19 +33,7 @@ namespace Akka.Tests.Actor
             private int _actorRestarted;
 
             // create a message type that will send the current values of all counters
-            public sealed class GetTelemetry
-            {
-                public int ActorCreated { get; }
-                public int ActorStopped { get; }
-                public int ActorRestarted { get; }
-
-                public GetTelemetry(int actorCreated, int actorStopped, int actorRestarted)
-                {
-                    ActorCreated = actorCreated;
-                    ActorStopped = actorStopped;
-                    ActorRestarted = actorRestarted;
-                }
-            }
+            public sealed record GetTelemetry(int ActorCreated, int ActorStopped, int ActorRestarted);
             
             public class GetTelemetryRequest
             {
@@ -143,14 +131,45 @@ namespace Akka.Tests.Actor
             }
         }
 
+        private static async Task WaitUntilStableAsync(IActorRef subscriber, TimeSpan timeout)
+        {
+            var start = DateTime.Now;
+            var end = start + timeout;
+
+            var last = new TelemetrySubscriber.GetTelemetry(0, 0, 0);
+            
+            var count = 0;
+            while (DateTime.Now < end)
+            {
+                var reply = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
+                if (reply == last)
+                {
+                    count++;
+                    if (count >= 3)
+                        return;
+                }
+                else
+                {
+                    count = 0;
+                }
+                last = reply;
+                await Task.Delay(200);
+            }
+            
+            throw new Exception($"Failed to wait for a stable actor telemetry count after {DateTime.Now - start}. Timeout: {timeout}");
+        }
+        
         [Fact]
         public async Task ActorTelemetry_must_be_accurate()
         {
             // create a TelemetrySubscriber actor
             var subscriber = Sys.ActorOf(Props.Create<TelemetrySubscriber>(), "subscriber");
             
+            // wait until telemetry value is stable
+            await WaitUntilStableAsync(subscriber, TimeSpan.FromSeconds(5));
+            
             // request current telemetry values (ensure that the actor has started, so counter values will be accurate)
-            await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
+            var baseline = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
             
             // create a parent actor
             var parent = Sys.ActorOf(Props.Create<ParentActor>(), "parent");
@@ -161,15 +180,15 @@ namespace Akka.Tests.Actor
             // wait for the parent to reply back
             ExpectMsg("done");
             
-            // awaitassert collecting data from the telemetry subscriber until we can see that 102 actors have been created
-            // 100 children + parent + subscriber itself
+            // awaitassert collecting data from the telemetry subscriber until we can see that 101 actors have been created
+            // 100 children + parent
             await AwaitAssertAsync(async () =>
             {
                 var telemetry = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
-                Assert.Equal(102, telemetry.ActorCreated);
+                Assert.Equal(101, telemetry.ActorCreated - baseline.ActorCreated);
                 // assert no restarts or stops recorded
-                Assert.Equal(0, telemetry.ActorRestarted);
-                Assert.Equal(0, telemetry.ActorStopped);
+                Assert.Equal(0, telemetry.ActorRestarted - baseline.ActorRestarted);
+                Assert.Equal(0, telemetry.ActorStopped - baseline.ActorStopped);
             }, RemainingOrDefault);
             
             // send a message to the parent to restart all children
@@ -183,10 +202,10 @@ namespace Akka.Tests.Actor
             {
                 var telemetry = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
                 // assert that actor start count is still 102
-                Assert.Equal(102, telemetry.ActorCreated);
-                Assert.Equal(100, telemetry.ActorRestarted);
+                Assert.Equal(101, telemetry.ActorCreated - baseline.ActorCreated);
+                Assert.Equal(100, telemetry.ActorRestarted - baseline.ActorRestarted);
                 // assert no stops recorded
-                Assert.Equal(0, telemetry.ActorStopped);
+                Assert.Equal(0, telemetry.ActorStopped - baseline.ActorStopped);
             }, RemainingOrDefault);
             
             // GracefulStop parent actor and assert that 101 actors have been stopped
@@ -195,9 +214,9 @@ namespace Akka.Tests.Actor
             {
                 var telemetry = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
                 // assert that actor start count is still 102
-                Assert.Equal(102, telemetry.ActorCreated);
-                Assert.Equal(100, telemetry.ActorRestarted);
-                Assert.Equal(101, telemetry.ActorStopped);
+                Assert.Equal(101, telemetry.ActorCreated - baseline.ActorCreated);
+                Assert.Equal(100, telemetry.ActorRestarted - baseline.ActorRestarted);
+                Assert.Equal(101, telemetry.ActorStopped - baseline.ActorStopped);
             }, RemainingOrDefault);
         }
         
@@ -208,8 +227,10 @@ namespace Akka.Tests.Actor
             // create a TelemetrySubscriber actor
             var subscriber = Sys.ActorOf(Props.Create<TelemetrySubscriber>(), "subscriber");
             
+            await WaitUntilStableAsync(subscriber, TimeSpan.FromSeconds(5));
+            
             // request current telemetry values (ensure that the actor has started, so counter values will be accurate)
-            await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
+            var baseline = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
             
             // create a parent actor
             var parent = Sys.ActorOf(Props.Create<ParentActor>(), "parent");
@@ -221,14 +242,14 @@ namespace Akka.Tests.Actor
             ExpectMsg("done");
             
             // awaitassert collecting data from the telemetry subscriber until we can see that 102 actors have been created
-            // 100 children + parent + subscriber itself
+            // 100 children + parent
             await AwaitAssertAsync(async () =>
             {
                 var telemetry = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
-                Assert.Equal(102, telemetry.ActorCreated);
+                Assert.Equal(101, telemetry.ActorCreated - baseline.ActorCreated);
                 // assert no restarts or stops recorded
-                Assert.Equal(0, telemetry.ActorRestarted);
-                Assert.Equal(0, telemetry.ActorStopped);
+                Assert.Equal(0, telemetry.ActorRestarted - baseline.ActorRestarted);
+                Assert.Equal(0, telemetry.ActorStopped - baseline.ActorStopped);
             }, RemainingOrDefault);
             
             // send a message to the parent to restart
@@ -238,13 +259,13 @@ namespace Akka.Tests.Actor
             await AwaitAssertAsync(async () =>
             {
                 var telemetry = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
-                // assert that actor start count is still 102
-                Assert.Equal(102, telemetry.ActorCreated);
+                // assert that actor start count is still 101
+                Assert.Equal(101, telemetry.ActorCreated - baseline.ActorCreated);
                 
                 // only 1 parent restart recorded
-                Assert.Equal(1, telemetry.ActorRestarted);
+                Assert.Equal(1, telemetry.ActorRestarted - baseline.ActorRestarted);
                 // assert 100 stops recorded (only the child actors)
-                Assert.Equal(100, telemetry.ActorStopped);
+                Assert.Equal(100, telemetry.ActorStopped - baseline.ActorStopped);
             }, RemainingOrDefault);
         }
         
@@ -257,8 +278,10 @@ namespace Akka.Tests.Actor
             // create a TelemetrySubscriber actor
             var subscriber = Sys.ActorOf(Props.Create<TelemetrySubscriber>(), "subscriber");
             
+            await WaitUntilStableAsync(subscriber, TimeSpan.FromSeconds(5));
+            
             // request current telemetry values (ensure that the actor has started, so counter values will be accurate)
-            await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
+            var baseline = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
             
             // create a pool router
             var router = Sys.ActorOf(Props.Create<ChildActor>().WithRouter(new RoundRobinPool(10)), "router");
@@ -267,10 +290,10 @@ namespace Akka.Tests.Actor
             await AwaitAssertAsync(async () =>
             {
                 var telemetry = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
-                Assert.Equal(12, telemetry.ActorCreated);
+                Assert.Equal(11, telemetry.ActorCreated - baseline.ActorCreated);
                 // assert no restarts or stops recorded
-                Assert.Equal(0, telemetry.ActorRestarted);
-                Assert.Equal(0, telemetry.ActorStopped);
+                Assert.Equal(0, telemetry.ActorRestarted - baseline.ActorRestarted);
+                Assert.Equal(0, telemetry.ActorStopped - baseline.ActorStopped);
             }, RemainingOrDefault);
             
             // send a message to the router to restart all children
@@ -281,11 +304,11 @@ namespace Akka.Tests.Actor
             {
                 var telemetry = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
                 // assert that actor start count is still 10
-                Assert.Equal(12, telemetry.ActorCreated);
+                Assert.Equal(11, telemetry.ActorCreated - baseline.ActorCreated);
                 
-                Assert.Equal(10, telemetry.ActorRestarted);
+                Assert.Equal(10, telemetry.ActorRestarted - baseline.ActorRestarted);
                 // assert no stops recorded
-                Assert.Equal(0, telemetry.ActorStopped);
+                Assert.Equal(0, telemetry.ActorStopped - baseline.ActorStopped);
             }, RemainingOrDefault);
             
             // GracefulStop router actor and assert that 10 actors have been stopped
@@ -294,10 +317,11 @@ namespace Akka.Tests.Actor
             {
                 var telemetry = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
                 // assert that actor start count is still 10
-                Assert.Equal(12, telemetry.ActorCreated);
-                Assert.Equal(10, telemetry.ActorRestarted);
-                Assert.Equal(11, telemetry.ActorStopped);
+                Assert.Equal(11, telemetry.ActorCreated - baseline.ActorCreated);
+                Assert.Equal(10, telemetry.ActorRestarted - baseline.ActorRestarted);
+                Assert.Equal(11, telemetry.ActorStopped - baseline.ActorStopped);
             }, RemainingOrDefault);
         }
     }
 }
+
