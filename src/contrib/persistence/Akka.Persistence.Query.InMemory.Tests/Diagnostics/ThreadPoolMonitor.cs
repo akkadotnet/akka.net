@@ -76,14 +76,7 @@ public sealed class ThreadPoolMonitor : IDisposable
     public void Dispose()
     {
         _cts.Cancel();
-        try
-        {
-            _monitorTask.Wait(TimeSpan.FromSeconds(1));
-        }
-        catch
-        {
-            // Ignore exceptions during shutdown
-        }
+        _monitorTask.Wait(TimeSpan.FromSeconds(1));
         _cts.Dispose();
     }
 }
