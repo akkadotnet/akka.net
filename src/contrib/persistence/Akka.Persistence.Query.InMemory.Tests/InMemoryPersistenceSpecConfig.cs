@@ -19,7 +19,9 @@ public static class InMemoryPersistenceSpecConfig
             akka.loglevel = DEBUG
             akka.persistence.query.journal.inmem.refresh-interval = 1s
             akka.persistence.journal.plugin = "akka.persistence.journal.inmem"
+            akka.persistence.journal.auto-start-journals = ["akka.persistence.journal.inmem"]
             akka.persistence.snapshot-store.plugin = "akka.persistence.snapshot-store.inmem"
+            akka.persistence.snapshot-store.auto-start-snapshot-stores = ["akka.persistence.snapshot-store.inmem"]
             """)
         .WithFallback(InMemoryReadJournal.DefaultConfiguration());
 }
