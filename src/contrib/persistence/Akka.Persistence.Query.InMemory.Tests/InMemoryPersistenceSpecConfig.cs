@@ -5,12 +5,26 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
+using System.Threading;
 using Akka.Configuration;
 
 namespace Akka.Persistence.Query.InMemory.Tests;
 
 public static class InMemoryPersistenceSpecConfig
 {
+    static InMemoryPersistenceSpecConfig()
+    {
+        // Pre-warm the thread pool to avoid cold-start delays in CI environments.
+        // Thread pool growth is throttled (~500ms-1s per new thread), which can cause
+        // actor recovery to timeout when many actors are created simultaneously.
+        // This is especially important for persistence tests that create multiple
+        // persistent actors that all need RecoveryPermitter grants.
+        ThreadPool.GetMinThreads(out var minWorker, out var minIo);
+        var targetMin = Math.Max(minWorker, Environment.ProcessorCount * 2);
+        ThreadPool.SetMinThreads(targetMin, minIo);
+    }
+
     /// <summary>
     /// Sets the refresh interval to 1s and uses the in-memory journal and snapshot store.
     /// </summary>
