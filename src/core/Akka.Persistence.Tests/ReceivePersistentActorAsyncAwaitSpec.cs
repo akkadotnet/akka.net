@@ -639,16 +639,22 @@ namespace Akka.Persistence.Tests
         [Fact]
         public Task Actor_receiveasync_overloads_should_work()
         {
-            var actor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor("pid")));
+            // Use unique persistence ID to avoid any potential interference from
+            // previous test runs or parallel tests sharing static journal state
+            var persistenceId = $"async-overloads-{Guid.NewGuid():N}";
+            var actor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor(persistenceId)));
 
             actor.Tell(11);
-            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000));
+            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000),
+                "Expected 'handled' for int > 10 via CommandAsync<int>");
 
             actor.Tell(9);
-            ExpectMsg<string>(m => "receiveany".Equals(m), TimeSpan.FromMilliseconds(1000));
+            ExpectMsg<string>(m => "receiveany".Equals(m), TimeSpan.FromMilliseconds(1000),
+                "Expected 'receiveany' for int <= 10 via CommandAnyAsync");
 
             actor.Tell(1.0);
-            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000));
+            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000),
+                "Expected 'handled' for double via CommandAsync(typeof(double))");
             return Task.CompletedTask;
         }
     }
