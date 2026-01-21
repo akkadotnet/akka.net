@@ -191,7 +191,10 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         var seq1 = (ConsumerController.SequencedMessage<Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
             .Message;
         seq1.Message.Message.Should().BeEquivalentTo(new Job("msg-1"));
-        seq1.ProducerController.Tell(new ProducerController.Request(0L, 5L, true,
+        // Confirm seqNr 1 (not 0) to cancel the ResendFirst timer in ProducerController.
+        // Using confirmedSeqNr=0 leaves the timer running because the cancel condition
+        // (confirmedSeqNr == FirstSeqNr, i.e., 0 == 1) is false.
+        seq1.ProducerController.Tell(new ProducerController.Request(1L, 5L, true,
             false));
 
         var next2 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
@@ -220,12 +223,22 @@ public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
         // but we can send more, which will be buffered
         next5.SendNextTo.Tell(new ShardingEnvelope("entity-1", new Job("msg-6")));
 
+        // Verify all received messages to diagnose ordering issues if test fails
         var m1 = await shardingProbe.ExpectMsgAsync<ShardingEnvelope>();
+        var seq2 = (ConsumerController.SequencedMessage<Job>)m1.Message;
+        seq2.Message.Message.Should().BeEquivalentTo(new Job("msg-2"), "m1 should be msg-2");
+
         var m2 = await shardingProbe.ExpectMsgAsync<ShardingEnvelope>();
+        var seq3 = (ConsumerController.SequencedMessage<Job>)m2.Message;
+        seq3.Message.Message.Should().BeEquivalentTo(new Job("msg-3"), "m2 should be msg-3");
+
         var m3 = await shardingProbe.ExpectMsgAsync<ShardingEnvelope>();
-        var seq5 = (ConsumerController.SequencedMessage<Job>)(await shardingProbe.ExpectMsgAsync<ShardingEnvelope>())
-            .Message;
-        seq5.Message.Message.Should().BeEquivalentTo(new Job("msg-5"));
+        var seq4 = (ConsumerController.SequencedMessage<Job>)m3.Message;
+        seq4.Message.Message.Should().BeEquivalentTo(new Job("msg-4"), "m3 should be msg-4");
+
+        var m4 = await shardingProbe.ExpectMsgAsync<ShardingEnvelope>();
+        var seq5 = (ConsumerController.SequencedMessage<Job>)m4.Message;
+        seq5.Message.Message.Should().BeEquivalentTo(new Job("msg-5"), "m4 should be msg-5");
 
         var next6 = await producerProbe.ExpectMsgAsync<ShardingProducerController.RequestNext<Job>>();
         next6.EntitiesWithDemand.IsEmpty.Should().BeTrue();
