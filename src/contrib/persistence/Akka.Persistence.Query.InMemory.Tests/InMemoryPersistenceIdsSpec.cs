@@ -21,6 +21,7 @@ namespace Akka.Persistence.Query.InMemory.Tests
 
         public InMemoryPersistenceIdsSpec(ITestOutputHelper output) : base(Config(), nameof(InMemoryPersistenceIdsSpec), output)
         {
+            Persistence.Instance.Get(Sys); // Initialize persistence immediately
             ReadJournal = Sys.ReadJournalFor<InMemoryReadJournal>(InMemoryReadJournal.Identifier);
         }
     }
