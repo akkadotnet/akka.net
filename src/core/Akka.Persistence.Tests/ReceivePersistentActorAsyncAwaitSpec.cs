@@ -93,6 +93,16 @@ namespace Akka.Persistence.Tests
 
     public class AsyncAwaitActor : ReceivePersistentActor
     {
+        /// <summary>
+        /// Marker class for testing - sending this will get a synchronous "pong" reply.
+        /// Use this to verify the actor has completed recovery before testing async handlers.
+        /// </summary>
+        public sealed class Ping
+        {
+            public static readonly Ping Instance = new();
+            private Ping() { }
+        }
+
         public override string PersistenceId { get; }
 
         public AsyncAwaitActor(string persistenceId)
@@ -100,6 +110,9 @@ namespace Akka.Persistence.Tests
             PersistenceId = persistenceId;
 
             RecoverAny(_ => { });
+
+            // Synchronous handler for verifying actor is ready
+            Command<Ping>(_ => Sender.Tell("pong"));
 
             CommandAsync<string>(async _ =>
             {
@@ -639,16 +652,29 @@ namespace Akka.Persistence.Tests
         [Fact]
         public Task Actor_receiveasync_overloads_should_work()
         {
-            var actor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor("pid")));
+            // Use unique persistence ID to avoid any potential interference from
+            // previous test runs or parallel tests sharing static journal state
+            var persistenceId = $"async-overloads-{Guid.NewGuid():N}";
+            var actor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor(persistenceId)));
+
+            // Wait for recovery to complete before testing async handlers.
+            // Under CI load, recovery can take time and messages sent before recovery
+            // completes are stashed, adding variable delay to the first response.
+            actor.Tell(AsyncAwaitActor.Ping.Instance);
+            ExpectMsg<string>(m => "pong".Equals(m), TimeSpan.FromSeconds(10),
+                "Actor should respond to Ping after recovery completes");
 
             actor.Tell(11);
-            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000));
+            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000),
+                "Expected 'handled' for int > 10 via CommandAsync<int>");
 
             actor.Tell(9);
-            ExpectMsg<string>(m => "receiveany".Equals(m), TimeSpan.FromMilliseconds(1000));
+            ExpectMsg<string>(m => "receiveany".Equals(m), TimeSpan.FromMilliseconds(1000),
+                "Expected 'receiveany' for int <= 10 via CommandAnyAsync");
 
             actor.Tell(1.0);
-            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000));
+            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000),
+                "Expected 'handled' for double via CommandAsync(typeof(double))");
             return Task.CompletedTask;
         }
     }
