@@ -25,3 +25,4 @@ namespace Akka.Persistence.Query.InMemory.Tests
         }
     }
 }
+
