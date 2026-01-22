@@ -218,6 +218,15 @@ namespace Akka.Event
                         return;
                     }
 
+                    // Ask operation failed with an exception
+                    if (t.IsFaulted)
+                    {
+                        Publish(new Error(t.Exception, loggingBusName, GetType(),
+                            $"Logger {fullLoggerName} failed to respond to initialization request. Stopping logger."));
+                        RemoveLogger(logger);
+                        return;
+                    }
+
                     // Task ran to completion successfully
                     var response = t.Result;
                     if (response is not LoggerInitialized)
