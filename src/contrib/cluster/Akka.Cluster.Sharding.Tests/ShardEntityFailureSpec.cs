@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
@@ -50,14 +51,16 @@ namespace Akka.Cluster.Sharding.Tests
 
         private class ConstructorFailActor : ActorBase
         {
-            private static bool _thrown;
+            private static int _thrown;
             private readonly ILoggingAdapter _log = Context.GetLogger();
+
+            public static void Reset() => Interlocked.Exchange(ref _thrown, 0);
 
             public ConstructorFailActor()
             {
-                if (!_thrown)
+                // Use Interlocked to avoid TOCTOU race and ensure memory visibility
+                if (Interlocked.CompareExchange(ref _thrown, 1, 0) == 0)
                 {
-                    _thrown = true;
                     throw new Exception("EXPLODING CONSTRUCTOR!");
                 }
             }
@@ -72,15 +75,17 @@ namespace Akka.Cluster.Sharding.Tests
 
         private class PreStartFailActor : ActorBase
         {
-            private static bool _thrown;
+            private static int _thrown;
             private readonly ILoggingAdapter _log = Context.GetLogger();
+
+            public static void Reset() => Interlocked.Exchange(ref _thrown, 0);
 
             protected override void PreStart()
             {
                 base.PreStart();
-                if (!_thrown)
+                // Use Interlocked to avoid TOCTOU race and ensure memory visibility
+                if (Interlocked.CompareExchange(ref _thrown, 1, 0) == 0)
                 {
-                    _thrown = true;
                     throw new Exception("EXPLODING PRE-START!");
                 }
             }
@@ -124,6 +129,10 @@ namespace Akka.Cluster.Sharding.Tests
         [MemberData(nameof(PropsFactory))]
         public async Task Persistent_Shard_must_recover_from_failing_entity(Props entityProp)
         {
+            // Reset static state to ensure test isolation between theory iterations and retries
+            ConstructorFailActor.Reset();
+            PreStartFailActor.Reset();
+
             var settings = ClusterShardingSettings.Create(Sys);
             settings = settings.WithTuningParameters(settings.TuningParameters.WithEntityRestartBackoff(1.Seconds()));
             var provider = new EventSourcedRememberEntitiesProvider("cats", settings);
