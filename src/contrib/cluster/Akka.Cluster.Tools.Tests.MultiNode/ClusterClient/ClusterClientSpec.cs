@@ -83,22 +83,6 @@ public class ClusterClientSpecConfig : MultiNodeConfig
     {
         public TestService(IActorRef testActorRef)
         {
-            // Two-phase shutdown: client sends "shutdown", we reply "shutting-down",
-            // client confirms with "shutdown-confirmed", then we actually terminate.
-            // This ensures the "shutting-down" message is delivered before termination begins.
-            Receive<string>(cmd => cmd.Equals("shutdown"), _ =>
-            {
-                Sender.Tell("shutting-down");
-                // Don't terminate yet - wait for client to confirm receipt
-            });
-
-            Receive<string>(cmd => cmd.Equals("shutdown-confirmed"), _ =>
-            {
-                // Client confirmed they received our "shutting-down" message
-                // Now it's safe to terminate
-                Context.System.Terminate();
-            });
-
             ReceiveAny(msg =>
             {
                 testActorRef.Forward(msg);
@@ -688,18 +672,9 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                     reply2.Msg.Should().Be("bonjour5-ack");
                 }, 15.Seconds());
 
-                // Two-phase shutdown: send "shutdown", wait for "shutting-down" confirmation,
-                // then send "shutdown-confirmed" to trigger actual termination.
-                // This eliminates the race between confirmation delivery and system termination.
-                await AwaitAssertAsync(async () =>
-                {
-                    var probe = CreateTestProbe();
-                    c.Tell(new ClusterClient.Send("/user/service2", "shutdown", localAffinity: true), probe.Ref);
-                    await probe.ExpectMsgAsync<string>(s => s == "shutting-down", 3.Seconds());
-                }, 15.Seconds());
-
-                // Now that we've confirmed receipt of "shutting-down", tell the server to actually terminate
-                c.Tell(new ClusterClient.Send("/user/service2", "shutdown-confirmed", localAffinity: true));
+                // Verify reconnection works by confirming service2 is responsive
+                // The test goal (reconnection after restart) is now proven
+                await EnterBarrierAsync("reconnection-verified");
             }, _config.Client);
 
             await RunOnAsync(async () =>
@@ -713,7 +688,12 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                 Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
                 var service2 = sys2.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "service2");
                 ClusterClientReceptionist.Get(sys2).RegisterService(service2);
-                await sys2.WhenTerminated.WaitAsync(40.Seconds());
+
+                // Wait for client to confirm reconnection test passed
+                await EnterBarrierAsync("reconnection-verified");
+
+                // Terminate sys2 directly - don't rely on ClusterClient message delivery
+                await sys2.Terminate();
             }, _remainingServerRoleNames.ToArray());
         });
     }
