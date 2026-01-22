@@ -642,7 +642,7 @@ public class ClusterClientSpec : MultiNodeClusterSpec
 
     public async Task ClusterClient_must_reestablish_connection_to_receptionist_after_server_restart()
     {
-        await WithinAsync(30.Seconds(), async () =>
+        await WithinAsync(60.Seconds(), async () =>
         {
             await RunOnAsync(async () =>
             {
@@ -666,6 +666,17 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                     });
                 });
 
+                // After reconnection, verify we can communicate with the restarted server
+                // by sending a test message and expecting a reply. This ensures service2
+                // is fully registered on sys2 before we send the shutdown command.
+                await AwaitAssertAsync(async () =>
+                {
+                    var probe = CreateTestProbe();
+                    c.Tell(new ClusterClient.Send("/user/service2", "bonjour5", localAffinity: true), probe.Ref);
+                    var reply2 = await probe.ExpectMsgAsync<ClusterClientSpecConfig.Reply>(3.Seconds());
+                    reply2.Msg.Should().Be("bonjour5-ack");
+                }, 15.Seconds());
+
                 c.Tell(new ClusterClient.Send("/user/service2", "shutdown", localAffinity: true));
                 await Task.Delay(2000); // to ensure that it is sent out before shutting down system
             }, _config.Client);
@@ -681,7 +692,7 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                 Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
                 var service2 = sys2.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "service2");
                 ClusterClientReceptionist.Get(sys2).RegisterService(service2);
-                await sys2.WhenTerminated.WaitAsync(20.Seconds());
+                await sys2.WhenTerminated.WaitAsync(40.Seconds());
             }, _remainingServerRoleNames.ToArray());
         });
     }
