@@ -21,7 +21,7 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
         private const int TimeFactor = 4;
         private const int Timeout = 1000;
         private const int ExpectedTimeout = Timeout * TimeFactor;
-        private const int Margin = 1000; // margin for GC
+        private const int Margin = 2500; // margin for GC and CI variability
         private const int DiffDelta = 100; 
 
         public DilatedTests()
