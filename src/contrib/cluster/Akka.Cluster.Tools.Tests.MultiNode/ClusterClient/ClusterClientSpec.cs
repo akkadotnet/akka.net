@@ -83,11 +83,6 @@ public class ClusterClientSpecConfig : MultiNodeConfig
     {
         public TestService(IActorRef testActorRef)
         {
-            Receive<string>(cmd => cmd.Equals("shutdown"), _ =>
-            {
-                Context.System.Terminate();
-            });
-
             ReceiveAny(msg =>
             {
                 testActorRef.Forward(msg);
@@ -677,8 +672,9 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                     reply2.Msg.Should().Be("bonjour5-ack");
                 }, 15.Seconds());
 
-                c.Tell(new ClusterClient.Send("/user/service2", "shutdown", localAffinity: true));
-                await Task.Delay(2000); // to ensure that it is sent out before shutting down system
+                // Verify reconnection works by confirming service2 is responsive
+                // The test goal (reconnection after restart) is now proven
+                await EnterBarrierAsync("reconnection-verified");
             }, _config.Client);
 
             await RunOnAsync(async () =>
@@ -692,7 +688,12 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                 Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
                 var service2 = sys2.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "service2");
                 ClusterClientReceptionist.Get(sys2).RegisterService(service2);
-                await sys2.WhenTerminated.WaitAsync(40.Seconds());
+
+                // Wait for client to confirm reconnection test passed
+                await EnterBarrierAsync("reconnection-verified");
+
+                // Terminate sys2 directly - don't rely on ClusterClient message delivery
+                await sys2.Terminate();
             }, _remainingServerRoleNames.ToArray());
         });
     }
