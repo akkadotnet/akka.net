@@ -21,13 +21,16 @@ public static class InMemoryPersistenceSpecConfig
     /// persistent actors that all need RecoveryPermitter grants.
     /// </summary>
     /// <remarks>
-    /// This method is safe to call multiple times - ThreadPool.SetMinThreads is
-    /// thread-safe and only updates the value if the new minimum is higher.
+    /// This method is safe to call multiple times - it uses <see cref="Math.Max(int, int)"/> to ensure
+    /// the thread pool minimum is never decreased from a previously set value.
     /// </remarks>
-    public static void EnsureThreadPoolWarmed()
+    public static void EnsureThreadPoolWarmed(int minimumThreadCount = -1)
     {
+        if(minimumThreadCount < 0)
+            minimumThreadCount = Environment.ProcessorCount * 2;
+        
         ThreadPool.GetMinThreads(out var minWorker, out var minIo);
-        var targetMin = Math.Max(minWorker, Environment.ProcessorCount * 2);
+        var targetMin = Math.Max(minWorker, minimumThreadCount);
         ThreadPool.SetMinThreads(targetMin, minIo);
     }
 
