@@ -83,10 +83,19 @@ public class ClusterClientSpecConfig : MultiNodeConfig
     {
         public TestService(IActorRef testActorRef)
         {
+            // Two-phase shutdown: client sends "shutdown", we reply "shutting-down",
+            // client confirms with "shutdown-confirmed", then we actually terminate.
+            // This ensures the "shutting-down" message is delivered before termination begins.
             Receive<string>(cmd => cmd.Equals("shutdown"), _ =>
             {
-                // Send confirmation before terminating so the sender knows the message was received
                 Sender.Tell("shutting-down");
+                // Don't terminate yet - wait for client to confirm receipt
+            });
+
+            Receive<string>(cmd => cmd.Equals("shutdown-confirmed"), _ =>
+            {
+                // Client confirmed they received our "shutting-down" message
+                // Now it's safe to terminate
                 Context.System.Terminate();
             });
 
@@ -679,13 +688,18 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                     reply2.Msg.Should().Be("bonjour5-ack");
                 }, 15.Seconds());
 
-                // Use AwaitAssertAsync to retry until we get confirmation the shutdown was received
+                // Two-phase shutdown: send "shutdown", wait for "shutting-down" confirmation,
+                // then send "shutdown-confirmed" to trigger actual termination.
+                // This eliminates the race between confirmation delivery and system termination.
                 await AwaitAssertAsync(async () =>
                 {
                     var probe = CreateTestProbe();
                     c.Tell(new ClusterClient.Send("/user/service2", "shutdown", localAffinity: true), probe.Ref);
                     await probe.ExpectMsgAsync<string>(s => s == "shutting-down", 3.Seconds());
                 }, 15.Seconds());
+
+                // Now that we've confirmed receipt of "shutting-down", tell the server to actually terminate
+                c.Tell(new ClusterClient.Send("/user/service2", "shutdown-confirmed", localAffinity: true));
             }, _config.Client);
 
             await RunOnAsync(async () =>
