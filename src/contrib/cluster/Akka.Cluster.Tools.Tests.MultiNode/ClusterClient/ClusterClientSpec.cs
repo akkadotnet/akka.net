@@ -85,6 +85,8 @@ public class ClusterClientSpecConfig : MultiNodeConfig
         {
             Receive<string>(cmd => cmd.Equals("shutdown"), _ =>
             {
+                // Send confirmation before terminating so the sender knows the message was received
+                Sender.Tell("shutting-down");
                 Context.System.Terminate();
             });
 
@@ -677,8 +679,13 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                     reply2.Msg.Should().Be("bonjour5-ack");
                 }, 15.Seconds());
 
-                c.Tell(new ClusterClient.Send("/user/service2", "shutdown", localAffinity: true));
-                await Task.Delay(2000); // to ensure that it is sent out before shutting down system
+                // Use AwaitAssertAsync to retry until we get confirmation the shutdown was received
+                await AwaitAssertAsync(async () =>
+                {
+                    var probe = CreateTestProbe();
+                    c.Tell(new ClusterClient.Send("/user/service2", "shutdown", localAffinity: true), probe.Ref);
+                    await probe.ExpectMsgAsync<string>(s => s == "shutting-down", 3.Seconds());
+                }, 15.Seconds());
             }, _config.Client);
 
             await RunOnAsync(async () =>
