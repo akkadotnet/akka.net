@@ -176,7 +176,7 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                     // let them gossip, but Delta should not be exchanged
                     await probe.ExpectNoMsgAsync(5.Seconds());
                     newMediator.Tell(DeltaCount.Instance, probe.Ref);
-                    await probe.ExpectMsgAsync(0L);
+                    await probe.ExpectMsgAsync(0L, 10.Seconds());
 
                     await newSystem.WhenTerminated.WaitAsync(30.Seconds());
                 }
