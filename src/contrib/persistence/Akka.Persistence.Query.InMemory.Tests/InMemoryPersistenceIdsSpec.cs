@@ -20,6 +20,8 @@ namespace Akka.Persistence.Query.InMemory.Tests
 
         public InMemoryPersistenceIdsSpec(ITestOutputHelper output) : base(Config(), nameof(InMemoryPersistenceIdsSpec), output)
         {
+            InMemoryPersistenceSpecConfig.EnsureThreadPoolWarmed();
+
             // Force-load Persistence extension to trigger auto-start-journals/snapshot-stores
             // This ensures RecoveryPermitter is initialized before any persistent actors are created
             Persistence.Instance.Apply(Sys);

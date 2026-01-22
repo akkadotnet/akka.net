@@ -50,6 +50,9 @@ public class DiagnosticEventsByTagSpecNoFix : Akka.TestKit.Xunit2.TestKit, IDisp
     {
         _output = output;
 
+        // Pre-warm thread pool to avoid cold-start delays in CI
+        InMemoryPersistenceSpecConfig.EnsureThreadPoolWarmed();
+
         // Start diagnostic timeline
         DiagnosticTimeline.Start();
         DiagnosticTimeline.Record("Test", "Constructor started (NO FIX VERSION)");

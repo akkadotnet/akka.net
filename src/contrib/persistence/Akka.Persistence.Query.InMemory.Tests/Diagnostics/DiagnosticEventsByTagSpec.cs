@@ -51,6 +51,9 @@ public class DiagnosticEventsByTagSpec : Akka.TestKit.Xunit2.TestKit, IDisposabl
     {
         _output = output;
 
+        // Pre-warm thread pool to avoid cold-start delays in CI
+        InMemoryPersistenceSpecConfig.EnsureThreadPoolWarmed();
+
         // Start diagnostic timeline
         DiagnosticTimeline.Start();
         DiagnosticTimeline.Record("Test", "Constructor started");
