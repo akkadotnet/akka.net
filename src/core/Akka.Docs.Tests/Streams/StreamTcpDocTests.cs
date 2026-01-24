@@ -91,51 +91,54 @@ namespace DocsExamples.Streams
         }
 
         [Fact]
-        public void Simple_server_must_initial_server_banner_echo_server()
+        public async Task Simple_server_must_initial_server_banner_echo_server()
         {
-            var connections = Sys.TcpStream().Bind("127.0.0.1", 8888);
             var serverProbe = CreateTestProbe();
 
             #region welcome-banner-chat-server
-            connections.RunForeach(connection =>
-            {
-                // server logic, parses incoming commands
-                var commandParser = Flow.Create<string>().TakeWhile(c => c != "BYE").Select(c => c + "!");
+            // Use ToMaterialized to capture the binding task so we can await it
+            var (bindingTask, _) = Sys.TcpStream().Bind("127.0.0.1", 0) // Use port 0 for dynamic port assignment
+                .ToMaterialized(Sink.ForEach<Tcp.IncomingConnection>(connection =>
+                {
+                    // server logic, parses incoming commands
+                    var commandParser = Flow.Create<string>().TakeWhile(c => c != "BYE").Select(c => c + "!");
 
-                var welcomeMessage = $"Welcome to: {connection.LocalAddress}, you are: {connection.RemoteAddress}!";
-                var welcome = Source.Single(welcomeMessage);
+                    var welcomeMessage = $"Welcome to: {connection.LocalAddress}, you are: {connection.RemoteAddress}!";
+                    var welcome = Source.Single(welcomeMessage);
 
-                var serverLogic = Flow.Create<ByteString>()
-                    .Via(Framing.Delimiter(
-                        ByteString.FromString("\n"),
-                        maximumFrameLength: 256,
-                        allowTruncation: true))
-                    .Select(c => c.ToString())
-                    .Select(command =>
-                    {
-                        serverProbe.Tell(command);
-                        return command;
-                    })
-                    .Via(commandParser)
-                    .Merge(welcome)
-                    .Select(c => c + "\n")
-                    .Select(ByteString.FromString);
+                    var serverLogic = Flow.Create<ByteString>()
+                        .Via(Framing.Delimiter(
+                            ByteString.FromString("\n"),
+                            maximumFrameLength: 256,
+                            allowTruncation: true))
+                        .Select(c => c.ToString())
+                        .Select(command =>
+                        {
+                            serverProbe.Tell(command);
+                            return command;
+                        })
+                        .Via(commandParser)
+                        .Merge(welcome)
+                        .Select(c => c + "\n")
+                        .Select(ByteString.FromString);
 
-                connection.HandleWith(serverLogic, Materializer);
-            }, Materializer);
+                    connection.HandleWith(serverLogic, Materializer);
+                }), Keep.Both)
+                .Run(Materializer);
             #endregion
+
+            // Wait for server to bind before connecting client - fixes race condition
+            var binding = await bindingTask;
+            var serverPort = ((System.Net.IPEndPoint)binding.LocalAddress).Port;
 
             var input = new ConcurrentQueue<string>(new[] { "Hello world", "What a lovely day" });
 
             string ReadLine(string prompt) => input.TryDequeue(out var cmd) ? cmd : "q";
 
-            {
-                var connection = Sys.TcpStream().OutgoingConnection("127.0.0.1", 8888);
-            }
-
+            try
             {
                 #region repl-client
-                var connection = Sys.TcpStream().OutgoingConnection("127.0.0.1", 8888);
+                var connection = Sys.TcpStream().OutgoingConnection("127.0.0.1", serverPort);
 
                 var replParser = Flow.Create<string>().TakeWhile(c => c != "q")
                     .Concat(Source.Single("BYE"))
@@ -155,13 +158,19 @@ namespace DocsExamples.Streams
                     .Select(_ => ReadLine("> "))
                     .Via(replParser);
 
-                connection.Join(repl).Run(Materializer);
+                // Client stream runs in background - completion is not awaited
+                // since we verify behavior via serverProbe
+                _ = connection.Join(repl).Run(Materializer);
                 #endregion
-            }
 
-            serverProbe.ExpectMsg("Hello world", TimeSpan.FromSeconds(20));
-            serverProbe.ExpectMsg("What a lovely day");
-            serverProbe.ExpectMsg("BYE");
+                await serverProbe.ExpectMsgAsync<string>(s => s == "Hello world", TimeSpan.FromSeconds(20));
+                await serverProbe.ExpectMsgAsync<string>(s => s == "What a lovely day");
+                await serverProbe.ExpectMsgAsync<string>(s => s == "BYE");
+            }
+            finally
+            {
+                await binding.Unbind();
+            }
         }
     }
 }
