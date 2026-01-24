@@ -634,11 +634,6 @@ namespace Akka.Streams.Tests.Dsl
                 hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
                 hubSource.RunWith(Sink.FromSubscriber(downstream), Materializer);
 
-                // Allow cancelled sink to complete its unregistration with the hub
-                // before proceeding - fixes race condition where UnRegister event
-                // processing can interfere with element delivery
-                await Task.Delay(100);
-
                 await downstream.EnsureSubscriptionAsync();
                 
                 await downstream.RequestAsync(10);
