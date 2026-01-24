@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -91,13 +92,18 @@ public class ShardedDaemonProcessProxySpec : AkkaSpec
         // <PushDaemonProxy>
         // start the proxy on the proxy system, which runs on a different role not capable of hosting workers
         IActorRef proxy = ShardedDaemonProcess.Get(_proxySystem).InitProxy(name, numWorkers, targetRole);
-        
-        // ping some of the workers via the proxy
-        for(var i = 0; i < numWorkers; i++)
+
+        // Use AwaitAssertAsync to handle proxy registration timing - the ShardRegion proxy
+        // must register with the coordinator before it can route messages to shards
+        await AwaitAssertAsync(async () =>
         {
-            var result = await proxy.Ask<int>(i);
-            result.Should().Be(i);
-        }
+            // ping some of the workers via the proxy
+            for(var i = 0; i < numWorkers; i++)
+            {
+                var result = await proxy.Ask<int>(i, TimeSpan.FromSeconds(3));
+                result.Should().Be(i);
+            }
+        });
         // </PushDaemonProxy>
     }
 
