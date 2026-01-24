@@ -633,7 +633,7 @@ namespace Akka.Streams.Tests.Dsl
                 
                 hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
                 hubSource.RunWith(Sink.FromSubscriber(downstream), Materializer);
-                
+
                 await downstream.EnsureSubscriptionAsync();
                 
                 await downstream.RequestAsync(10);
