@@ -37,13 +37,9 @@ namespace Akka.Cluster.Metrics.Collectors
         {
             _address = address;
             _cpuWatch = new Stopwatch();
-
-#if NET6_0_OR_GREATER
-            // Initialize GC memory info by forcing a quick generation 0 collection.
-            // This ensures GetGCMemoryInfo() returns valid data on first Sample() call.
-            // Without this, TotalAvailableMemoryBytes may return 0 or negative on first access.
-            GC.Collect(0, GCCollectionMode.Optimized, blocking: false);
-#endif
+            // Note: We no longer force a GC here because GC.Collect() can be slow in
+            // containerized environments. Instead, GetAvailableMemoryBytes() checks
+            // GCMemoryInfo.Index and falls back to process.WorkingSet64 if no GC has occurred.
         }
         
         public DefaultCollector(ActorSystem system) 
@@ -65,9 +61,9 @@ namespace Akka.Cluster.Metrics.Collectors
                 process.Refresh();
                 var metrics = new List<NodeMetrics.Types.Metric>();
 
-                // GC.GetTotalMemory(true) forces a blocking GC, which also ensures
-                // GetGCMemoryInfo() returns valid data for subsequent calls
-                var totalMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(true));
+                // Get memory used - managed heap size with fallbacks for known .NET runtime bugs
+                var memoryUsedValue = GetMemoryUsedBytes(process);
+                var totalMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, memoryUsedValue);
                 if (totalMemory.HasValue)
                     metrics.Add(totalMemory.Value);
 
@@ -183,6 +179,61 @@ namespace Akka.Cluster.Metrics.Collectors
         }
 
         /// <summary>
+        /// Gets the memory used (managed heap size) for the current process.
+        /// Handles a known .NET runtime bug where GC.GetTotalMemory() can occasionally
+        /// return negative values due to gen0 fragmentation calculations.
+        /// Falls back to GCMemoryInfo.HeapSizeBytes or process private memory if needed.
+        /// </summary>
+        /// <remarks>
+        /// See: https://github.com/dotnet/runtime/issues/106712
+        /// The bug was introduced in .NET 7 with the regions GC feature and causes
+        /// gen0 fragmentation to sometimes be calculated as larger than gen0 size,
+        /// resulting in a negative total memory value. As of .NET 9, this is unfixed.
+        /// </remarks>
+        private static long GetMemoryUsedBytes(Process process)
+        {
+#if NET6_0_OR_GREATER
+            // Use GC.GetTotalMemory(false) to avoid forcing a blocking GC.
+            // GC.GetTotalMemory(true) can be extremely slow in containerized environments.
+            var memoryUsed = GC.GetTotalMemory(false);
+
+            // Known .NET runtime bug: GC.GetTotalMemory() can return negative values
+            // when gen0 fragmentation exceeds gen0 size. Calling GC.GetTotalMemory(true)
+            // fixes it, but we avoid that for performance. Instead, we fall back to
+            // GCMemoryInfo.HeapSizeBytes when the value is invalid.
+            // See: https://github.com/dotnet/runtime/issues/106712
+            if (memoryUsed <= 0)
+            {
+                // Fall back to GCMemoryInfo.HeapSizeBytes which is the total heap size
+                var gcMemoryInfo = GC.GetGCMemoryInfo();
+                if (gcMemoryInfo.Index > 0 && gcMemoryInfo.HeapSizeBytes > 0)
+                {
+                    memoryUsed = gcMemoryInfo.HeapSizeBytes;
+                }
+                else
+                {
+                    // Final fallback: use private memory size (includes managed + some unmanaged)
+                    memoryUsed = process.PrivateMemorySize64;
+                }
+            }
+
+            return memoryUsed;
+#else
+            // For .NET Framework / netstandard2.0, GC.GetTotalMemory should work reliably.
+            // The bug is specific to .NET 7+ regions GC feature.
+            var memoryUsed = GC.GetTotalMemory(false);
+
+            // Still add a fallback for safety
+            if (memoryUsed <= 0)
+            {
+                memoryUsed = process.PrivateMemorySize64;
+            }
+
+            return memoryUsed;
+#endif
+        }
+
+        /// <summary>
         /// Gets the available memory bytes for the current process/runtime.
         /// Uses GCMemoryInfo on .NET 6+ for accurate container-aware values,
         /// falls back to process working set on older frameworks.
@@ -190,29 +241,46 @@ namespace Akka.Cluster.Metrics.Collectors
         private static long GetAvailableMemoryBytes(Process process)
         {
 #if NET6_0_OR_GREATER
-            // Use GCMemoryInfo for accurate, container-aware memory information.
-            // TotalAvailableMemoryBytes represents the total memory available to the GC,
-            // respecting container cgroup limits. This is the correct semantic for
-            // "available memory" in the context of cluster load balancing.
-            var gcMemoryInfo = GC.GetGCMemoryInfo();
-            var availableBytes = gcMemoryInfo.TotalAvailableMemoryBytes;
-
-            // TotalAvailableMemoryBytes can return 0 or negative before GC properly initializes,
-            // even after our constructor warm-up. Fall back to HighMemoryLoadThresholdBytes
-            // which represents the threshold before the GC considers memory pressure.
-            // This is still a valid proxy for "available memory capacity".
-            if (availableBytes <= 0)
+            try
             {
-                availableBytes = gcMemoryInfo.HighMemoryLoadThresholdBytes;
-            }
+                // Use GCMemoryInfo for accurate, container-aware memory information.
+                // TotalAvailableMemoryBytes represents the total memory available to the GC,
+                // respecting container cgroup limits. This is the correct semantic for
+                // "available memory" in the context of cluster load balancing.
+                var gcMemoryInfo = GC.GetGCMemoryInfo();
 
-            // If still invalid (very rare edge case), fall back to process working set
-            if (availableBytes <= 0)
+                // If Index is 0, no GC has occurred yet and all values will be 0.
+                // Fall back to process working set in this case.
+                // See: https://learn.microsoft.com/en-us/dotnet/api/system.gc.getgcmemoryinfo
+                if (gcMemoryInfo.Index == 0)
+                {
+                    return process.WorkingSet64;
+                }
+
+                var availableBytes = gcMemoryInfo.TotalAvailableMemoryBytes;
+
+                // TotalAvailableMemoryBytes can return 0 or negative on some platforms
+                // (e.g., ARM32, certain container configurations).
+                // Fall back to HighMemoryLoadThresholdBytes which represents the threshold
+                // before the GC considers memory pressure.
+                if (availableBytes <= 0)
+                {
+                    availableBytes = gcMemoryInfo.HighMemoryLoadThresholdBytes;
+                }
+
+                // If still invalid, fall back to process working set
+                if (availableBytes <= 0)
+                {
+                    availableBytes = process.WorkingSet64;
+                }
+
+                return availableBytes;
+            }
+            catch
             {
-                availableBytes = process.WorkingSet64;
+                // If GC memory info throws for any reason, fall back to working set
+                return process.WorkingSet64;
             }
-
-            return availableBytes;
 #else
             // For .NET Framework / netstandard2.0, GCMemoryInfo is not available.
             // Use process working set as the best available approximation.
