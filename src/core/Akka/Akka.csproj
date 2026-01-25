@@ -22,6 +22,7 @@
   <!-- Packages only for NetStandard -->
   <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
     <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="$(MicrosoftLibVersion)" />
     <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
     <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
   </ItemGroup>
