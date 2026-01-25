@@ -27,7 +27,7 @@ namespace Akka.Cluster.Metrics.Collectors
     public class DefaultCollector : IMetricsCollector
     {
         private readonly Address _address;
-        
+
         private readonly Stopwatch _cpuWatch;
         private TimeSpan _lastCpuMeasure;
         private bool _firstSample = true;
@@ -37,6 +37,13 @@ namespace Akka.Cluster.Metrics.Collectors
         {
             _address = address;
             _cpuWatch = new Stopwatch();
+
+#if NET6_0_OR_GREATER
+            // Initialize GC memory info by forcing a quick generation 0 collection.
+            // This ensures GetGCMemoryInfo() returns valid data on first Sample() call.
+            // Without this, TotalAvailableMemoryBytes may return 0 or negative on first access.
+            GC.Collect(0, GCCollectionMode.Optimized, blocking: false);
+#endif
         }
         
         public DefaultCollector(ActorSystem system) 
@@ -57,13 +64,17 @@ namespace Akka.Cluster.Metrics.Collectors
             {
                 process.Refresh();
                 var metrics = new List<NodeMetrics.Types.Metric>();
-                
+
+                // GC.GetTotalMemory(true) forces a blocking GC, which also ensures
+                // GetGCMemoryInfo() returns valid data for subsequent calls
                 var totalMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(true));
-                if(totalMemory.HasValue)
+                if (totalMemory.HasValue)
                     metrics.Add(totalMemory.Value);
-                    
-                var availableMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, process.WorkingSet64 + process.PagedMemorySize64);
-                if(availableMemory.HasValue)
+
+                // Get available memory - the amount of memory available for the process/runtime
+                var availableMemoryValue = GetAvailableMemoryBytes(process);
+                var availableMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, availableMemoryValue);
+                if (availableMemory.HasValue)
                     metrics.Add(availableMemory.Value);
 
                 var processorCount = NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount);
@@ -169,6 +180,45 @@ namespace Akka.Cluster.Metrics.Collectors
                 .Select(proc => Try<(int Id, TimeSpan Time)>.From(() => (proc.Id, proc.TotalProcessorTime)))
                 .Where(result => result.IsSuccess)
                 .ToImmutableDictionary(result => result.Get().Id, p => p.Get().Time);
+        }
+
+        /// <summary>
+        /// Gets the available memory bytes for the current process/runtime.
+        /// Uses GCMemoryInfo on .NET 6+ for accurate container-aware values,
+        /// falls back to process working set on older frameworks.
+        /// </summary>
+        private static long GetAvailableMemoryBytes(Process process)
+        {
+#if NET6_0_OR_GREATER
+            // Use GCMemoryInfo for accurate, container-aware memory information.
+            // TotalAvailableMemoryBytes represents the total memory available to the GC,
+            // respecting container cgroup limits. This is the correct semantic for
+            // "available memory" in the context of cluster load balancing.
+            var gcMemoryInfo = GC.GetGCMemoryInfo();
+            var availableBytes = gcMemoryInfo.TotalAvailableMemoryBytes;
+
+            // TotalAvailableMemoryBytes can return 0 or negative before GC properly initializes,
+            // even after our constructor warm-up. Fall back to HighMemoryLoadThresholdBytes
+            // which represents the threshold before the GC considers memory pressure.
+            // This is still a valid proxy for "available memory capacity".
+            if (availableBytes <= 0)
+            {
+                availableBytes = gcMemoryInfo.HighMemoryLoadThresholdBytes;
+            }
+
+            // If still invalid (very rare edge case), fall back to process working set
+            if (availableBytes <= 0)
+            {
+                availableBytes = process.WorkingSet64;
+            }
+
+            return availableBytes;
+#else
+            // For .NET Framework / netstandard2.0, GCMemoryInfo is not available.
+            // Use process working set as the best available approximation.
+            // This represents the physical memory currently in use by the process.
+            return process.WorkingSet64;
+#endif
         }
     }
 }
