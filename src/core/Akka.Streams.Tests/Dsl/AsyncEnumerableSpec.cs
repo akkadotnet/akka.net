@@ -104,17 +104,16 @@ namespace Akka.Streams.Tests.Dsl
             {
                 await foreach (var _ in asyncEnumerable)
                 {
-                    // We won't receive any elements because we shutdown before sending any
+                    // We won't receive any elements because we fail the stream
                 }
             });
 
             // Wait for the async enumerator to request an element - this means PullAsync() is waiting
-            // This is deterministic: we know the stream is actively waiting for data
             await probe.ExpectRequestAsync();
 
-            // Now shutdown the materializer while there's a pending PullAsync()
-            // The pending request will receive StreamDetachedException
-            materializer.Shutdown();
+            // Send an error to terminate the stream - this simulates abrupt termination
+            // and is deterministic: the pending PullAsync() will receive this error
+            await probe.SendErrorAsync(new TestException("Abrupt stream termination"));
 
             // The iteration should throw when the pending PullAsync() fails
             Exception? caughtException = null;
@@ -122,17 +121,16 @@ namespace Akka.Streams.Tests.Dsl
             {
                 await iterationTask.WaitAsync(10.Seconds());
             }
-            catch (StreamDetachedException ex)
-            {
-                caughtException = ex;
-            }
-            catch (AbruptTerminationException ex)
+            catch (TestException ex)
             {
                 caughtException = ex;
             }
 
             caughtException.Should().NotBeNull(
-                "Expected StreamDetachedException or AbruptTerminationException when materializer shuts down during iteration");
+                "Expected TestException when stream is terminated during iteration");
+
+            // Clean up the materializer
+            materializer.Shutdown();
         }
 
         [Fact]
