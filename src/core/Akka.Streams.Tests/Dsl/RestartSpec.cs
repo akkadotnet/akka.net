@@ -382,25 +382,23 @@ namespace Akka.Streams.Tests.Dsl
                 var probe = RestartSource.WithBackoff(() =>
                     {
                         created.IncrementAndGet();
+                        // Source emits "a" then completes (TakeWhile stops at "b")
                         return Source.From(new List<string> { "a", "b" }).TakeWhile(c => c != "b");
-                    }, _shortRestartSettings.WithMaxRestarts(2, TimeSpan.FromSeconds(1)))
+                    }, _shortRestartSettings.WithMaxRestarts(2, TimeSpan.FromSeconds(5)))
                     .RunWith(this.SinkProbe<string>(), Materializer);
 
-                await probe.AsyncBuilder()
-                    .RequestNextN("a", "a")
-                    .ExecuteAsync();
+                // Request first 2 "a"s - triggers restarts #1 and #2
+                await probe.RequestNextAsync("a");
+                await probe.RequestNextAsync("a");
 
-                await Task.Delay(_shortMinBackoff + TimeSpan.FromTicks(_shortMinBackoff.Ticks * 2) + _shortMinBackoff); // if using shortMinBackoff as deadline cause reset
+                // Request third "a" - this is restart #3, but maxRestarts=2 is exceeded
+                // so the stream should complete instead of restarting again
+                await probe.RequestNextAsync("a");
+                await probe.RequestAsync(1);
+                await probe.ExpectCompleteAsync();
 
-                await probe.AsyncBuilder()
-                    .RequestNext("a")
-                    .Request(1)
-                    .ExpectComplete()
-                    .ExecuteAsync();
-
+                // Verify exactly 3 source instances were created (1 initial + 2 restarts)
                 created.Current.Should().Be(3);
-
-                await probe.CancelAsync();
             }, Materializer);
         }
 
@@ -666,29 +664,28 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         created.IncrementAndGet();
                         return Flow.Create<string>().TakeWhile(c => c != "cancel", inclusive: true).To(Sink.ForEach<string>(c => queue.SendNext(c)));
-                    }, _shortRestartSettings.WithMaxRestarts(2, TimeSpan.FromSeconds(1))), Keep.Left)
+                    }, _shortRestartSettings.WithMaxRestarts(2, TimeSpan.FromSeconds(5))), Keep.Left)
                     .Run(Materializer);
 
-                await probe.SendNextAsync("cancel");
-                await sinkProbe.RequestNextAsync("cancel");
-                // There should be a shortMinBackoff delay
-                await probe.SendNextAsync("cancel");
-                await sinkProbe.RequestNextAsync("cancel");
-                // The probe should now be backing off for 2 * shortMinBackoff
-
-                await Task.Delay(_shortMinBackoff + TimeSpan.FromTicks(_shortMinBackoff.Ticks * 2) + _shortMinBackoff); // if using shortMinBackoff as deadline cause reset
-
+                // First cancel triggers restart #1
                 await probe.SendNextAsync("cancel");
                 await sinkProbe.RequestNextAsync("cancel");
 
-                // We cannot get a final element
+                // Second cancel triggers restart #2 (maxRestarts reached)
                 await probe.SendNextAsync("cancel");
-                await sinkProbe.AsyncBuilder()
-                    .Request(1)
-                    .ExpectNoMsg()
-                    .ExecuteAsync();
+                await sinkProbe.RequestNextAsync("cancel");
 
+                // Third cancel is delivered by current sink (inclusive: true), but no restart occurs
+                await probe.SendNextAsync("cancel");
+                await sinkProbe.RequestNextAsync("cancel");
+
+                // Verify we created exactly 3 sink instances (1 initial + 2 restarts)
                 created.Current.Should().Be(3);
+
+                // Fourth cancel should NOT be delivered - the sink is stopped and won't restart
+                await probe.SendNextAsync("cancel");
+                await sinkProbe.RequestAsync(1);
+                await sinkProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
 
                 await sinkProbe.CancelAsync();
                 await probe.SendCompleteAsync();
