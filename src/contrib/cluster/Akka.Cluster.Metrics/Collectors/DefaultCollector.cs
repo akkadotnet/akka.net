@@ -61,11 +61,8 @@ namespace Akka.Cluster.Metrics.Collectors
                 process.Refresh();
                 var metrics = new List<NodeMetrics.Types.Metric>();
 
-                // Use GC.GetTotalMemory(false) to avoid forcing a blocking GC.
-                // GC.GetTotalMemory(true) can be extremely slow (seconds to minutes) in containerized
-                // or memory-pressured environments like CI/CD, potentially causing test timeouts.
-                // The non-forcing version returns a reasonably accurate approximation.
-                var memoryUsedValue = GC.GetTotalMemory(false);
+                // Get memory used - managed heap size with fallbacks for known .NET runtime bugs
+                var memoryUsedValue = GetMemoryUsedBytes(process);
                 var totalMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, memoryUsedValue);
                 if (totalMemory.HasValue)
                     metrics.Add(totalMemory.Value);
@@ -75,29 +72,6 @@ namespace Akka.Cluster.Metrics.Collectors
                 var availableMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, availableMemoryValue);
                 if (availableMemory.HasValue)
                     metrics.Add(availableMemory.Value);
-
-                // Diagnostic: If either critical metric is missing, throw with details
-                // This helps diagnose CI failures where metrics silently fail to be created
-                if (!totalMemory.HasValue || !availableMemory.HasValue)
-                {
-                    var workingSet = process.WorkingSet64;
-#if NET6_0_OR_GREATER
-                    var gcInfo = GC.GetGCMemoryInfo();
-                    throw new InvalidOperationException(
-                        $"Failed to create memory metrics. " +
-                        $"MemoryUsed: value={memoryUsedValue}, created={totalMemory.HasValue}. " +
-                        $"MemoryAvailable: value={availableMemoryValue}, created={availableMemory.HasValue}. " +
-                        $"Diagnostics: WorkingSet64={workingSet}, GCMemoryInfo.Index={gcInfo.Index}, " +
-                        $"TotalAvailableMemoryBytes={gcInfo.TotalAvailableMemoryBytes}, " +
-                        $"HighMemoryLoadThresholdBytes={gcInfo.HighMemoryLoadThresholdBytes}");
-#else
-                    throw new InvalidOperationException(
-                        $"Failed to create memory metrics. " +
-                        $"MemoryUsed: value={memoryUsedValue}, created={totalMemory.HasValue}. " +
-                        $"MemoryAvailable: value={availableMemoryValue}, created={availableMemory.HasValue}. " +
-                        $"Diagnostics: WorkingSet64={workingSet}");
-#endif
-                }
 
                 var processorCount = NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount);
                 if(processorCount.HasValue)
@@ -202,6 +176,61 @@ namespace Akka.Cluster.Metrics.Collectors
                 .Select(proc => Try<(int Id, TimeSpan Time)>.From(() => (proc.Id, proc.TotalProcessorTime)))
                 .Where(result => result.IsSuccess)
                 .ToImmutableDictionary(result => result.Get().Id, p => p.Get().Time);
+        }
+
+        /// <summary>
+        /// Gets the memory used (managed heap size) for the current process.
+        /// Handles a known .NET runtime bug where GC.GetTotalMemory() can occasionally
+        /// return negative values due to gen0 fragmentation calculations.
+        /// Falls back to GCMemoryInfo.HeapSizeBytes or process private memory if needed.
+        /// </summary>
+        /// <remarks>
+        /// See: https://github.com/dotnet/runtime/issues/106712
+        /// The bug was introduced in .NET 7 with the regions GC feature and causes
+        /// gen0 fragmentation to sometimes be calculated as larger than gen0 size,
+        /// resulting in a negative total memory value. As of .NET 9, this is unfixed.
+        /// </remarks>
+        private static long GetMemoryUsedBytes(Process process)
+        {
+#if NET6_0_OR_GREATER
+            // Use GC.GetTotalMemory(false) to avoid forcing a blocking GC.
+            // GC.GetTotalMemory(true) can be extremely slow in containerized environments.
+            var memoryUsed = GC.GetTotalMemory(false);
+
+            // Known .NET runtime bug: GC.GetTotalMemory() can return negative values
+            // when gen0 fragmentation exceeds gen0 size. Calling GC.GetTotalMemory(true)
+            // fixes it, but we avoid that for performance. Instead, we fall back to
+            // GCMemoryInfo.HeapSizeBytes when the value is invalid.
+            // See: https://github.com/dotnet/runtime/issues/106712
+            if (memoryUsed <= 0)
+            {
+                // Fall back to GCMemoryInfo.HeapSizeBytes which is the total heap size
+                var gcMemoryInfo = GC.GetGCMemoryInfo();
+                if (gcMemoryInfo.Index > 0 && gcMemoryInfo.HeapSizeBytes > 0)
+                {
+                    memoryUsed = gcMemoryInfo.HeapSizeBytes;
+                }
+                else
+                {
+                    // Final fallback: use private memory size (includes managed + some unmanaged)
+                    memoryUsed = process.PrivateMemorySize64;
+                }
+            }
+
+            return memoryUsed;
+#else
+            // For .NET Framework / netstandard2.0, GC.GetTotalMemory should work reliably.
+            // The bug is specific to .NET 7+ regions GC feature.
+            var memoryUsed = GC.GetTotalMemory(false);
+
+            // Still add a fallback for safety
+            if (memoryUsed <= 0)
+            {
+                memoryUsed = process.PrivateMemorySize64;
+            }
+
+            return memoryUsed;
+#endif
         }
 
         /// <summary>
