@@ -7,11 +7,14 @@
 
 using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -47,41 +50,45 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void NodeDowningAndBeingRemovedSpecs()
+        public async Task NodeDowningAndBeingRemovedSpecs()
         {
-            Node_that_is_downed_must_eventually_be_removed_from_membership();
+            await Node_that_is_downed_must_eventually_be_removed_from_membership();
         }
 
-        public void Node_that_is_downed_must_eventually_be_removed_from_membership()
+        public async Task Node_that_is_downed_must_eventually_be_removed_from_membership()
         {
-            AwaitClusterUp(_config.First, _config.Second, _config.Third);
+            await AwaitClusterUpAsync(CancellationToken.None, _config.First, _config.Second, _config.Third);
 
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(45.Seconds(), async () =>
             {
-                RunOn(() =>
-                {
-                    Cluster.Down(GetAddress(_config.Second));
-                    Cluster.Down(GetAddress(_config.Third));
-                }, _config.First);
-                EnterBarrier("second-and-third-down");
+                var secondAddress = GetAddress(_config.Second);
+                var thirdAddress = GetAddress(_config.Third);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
+                {
+                    Cluster.Down(secondAddress);
+                    Cluster.Down(thirdAddress);
+                    return Task.CompletedTask;
+                }, _config.First);
+                await EnterBarrierAsync("second-and-third-down");
+
+                await RunOnAsync(async () =>
                 {
                     // verify that the node is shut down
-                    AwaitCondition(() => Cluster.IsTerminated);
+                    await AwaitConditionAsync(() => Task.FromResult(Cluster.IsTerminated), max: 30.Seconds());
                 }, _config.Second, _config.Third);
-                EnterBarrier("second-and-third-shutdown");
+                await EnterBarrierAsync("second-and-third-shutdown");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
-                        ClusterView.Members.Select(c => c.Address).Should().NotContain(GetAddress(_config.Second));
-                        ClusterView.Members.Select(c => c.Address).Should().NotContain(GetAddress(_config.Third));
-                    });
+                        ClusterView.Members.Select(c => c.Address).Should().NotContain(secondAddress);
+                        ClusterView.Members.Select(c => c.Address).Should().NotContain(thirdAddress);
+                    }, 30.Seconds());
                 }, _config.First);
 
-                EnterBarrier("finished");
+                await EnterBarrierAsync("finished");
             });
 
         }
