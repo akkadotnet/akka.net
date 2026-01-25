@@ -198,7 +198,7 @@ namespace Akka.Cluster.Sharding.Tests
                 settings: Settings.Value.WithRole("R2"),
                 messageExtractor: new E2.MessageExtractor());
 
-            await AwaitClusterUpAsync(default, Config.First, Config.Second, Config.Third, Config.Fourth, Config.Fifth);
+            await AwaitClusterUpAsync(Config.First, Config.Second, Config.Third, Config.Fourth, Config.Fifth);
 
             await RunOnAsync(async () =>
             {
