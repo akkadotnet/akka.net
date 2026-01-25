@@ -97,36 +97,42 @@ namespace Akka.Streams.Tests.Dsl
         {
             var materializer = ActorMaterializer.Create(Sys);
             var probe = this.CreatePublisherProbe<int>();
-            var task = Source.FromPublisher(probe).RunAsAsyncEnumerable(materializer);
+            var asyncEnumerable = Source.FromPublisher(probe).RunAsAsyncEnumerable(materializer);
 
-            var a = Task.Run(async () =>
+            // Start iterating - this will call PullAsync() which sends a Request to the publisher
+            var iterationTask = Task.Run(async () =>
             {
-                await foreach (var _ in task)
+                await foreach (var _ in asyncEnumerable)
                 {
-                    if(!materializer.IsShutdown)
-                        materializer.Shutdown();
+                    // We won't receive any elements because we shutdown before sending any
                 }
             });
-            
-            //since we are collapsing the stream inside the read
-            //we want to send messages so we aren't just waiting forever.
-            await probe.SendNextAsync(1);
-            await probe.SendNextAsync(2);
-            var thrown = false;
+
+            // Wait for the async enumerator to request an element - this means PullAsync() is waiting
+            // This is deterministic: we know the stream is actively waiting for data
+            await probe.ExpectRequestAsync();
+
+            // Now shutdown the materializer while there's a pending PullAsync()
+            // The pending request will receive StreamDetachedException
+            materializer.Shutdown();
+
+            // The iteration should throw when the pending PullAsync() fails
+            Exception? caughtException = null;
             try
             {
-                await a.WaitAsync(10.Seconds());
+                await iterationTask.WaitAsync(10.Seconds());
             }
-            catch (StreamDetachedException)
+            catch (StreamDetachedException ex)
             {
-                thrown = true;
+                caughtException = ex;
             }
-            catch (AbruptTerminationException)
+            catch (AbruptTerminationException ex)
             {
-                thrown = true;
+                caughtException = ex;
             }
 
-            thrown.Should().BeTrue();
+            caughtException.Should().NotBeNull(
+                "Expected StreamDetachedException or AbruptTerminationException when materializer shuts down during iteration");
         }
 
         [Fact]
