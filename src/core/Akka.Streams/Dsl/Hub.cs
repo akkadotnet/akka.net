@@ -505,6 +505,35 @@ namespace Akka.Streams.Dsl
         public static Sink<T, Source<T, NotUsed>> Sink<T>(int bufferSize)
             => Dsl.Sink.FromGraph(new BroadcastHub<T>(bufferSize));
 
+        /// <summary>
+        /// Creates a <see cref="Sink{TIn,TMat}"/> that receives elements from its upstream producer and broadcasts them to a dynamic set
+        /// of consumers. After the <see cref="Sink{TIn,TMat}"/> returned by this method is materialized, it returns a <see cref="Source{TOut,TMat}"/> as materialized
+        /// value. This <see cref="Source{TOut,TMat}"/> can be materialized arbitrary many times and each materialization will receive the
+        /// broadcast elements from the original <see cref="Sink{TIn,TMat}"/>.
+        ///
+        /// Every new materialization of the <see cref="Sink{TIn,TMat}"/> results in a new, independent hub, which materializes to its own
+        /// <see cref="Source{TOut,TMat}"/> for consuming the <see cref="Sink{TIn,TMat}"/> of that materialization.
+        ///
+        /// If the original <see cref="Sink{TIn,TMat}"/> is failed, then the failure is immediately propagated to all of its materialized
+        /// <see cref="Source{TOut,TMat}"/>s (possibly jumping over already buffered elements). If the original <see cref="Sink{TIn,TMat}"/> is completed, then
+        /// all corresponding <see cref="Source{TOut,TMat}"/>s are completed. Both failure and normal completion is "remembered" and later
+        /// materializations of the <see cref="Source{TOut,TMat}"/> will see the same (failure or completion) state. <see cref="Source{TOut,TMat}"/>s that are
+        /// cancelled are simply removed from the dynamic set of consumers.
+        /// </summary>
+        /// <typeparam name="T">The type of elements that flow through the hub</typeparam>
+        /// <param name="startAfterNrOfConsumers">
+        /// Elements are buffered until this number of consumers have been connected.
+        /// This is only used initially when the operator is starting up, i.e. it is not honored when consumers have
+        /// been removed (canceled).
+        /// </param>
+        /// <param name="bufferSize">
+        /// Buffer size used by the producer. Gives an upper bound on how "far" from each other two
+        /// concurrent consumers can be in terms of element. If this buffer is full, the producer
+        /// is backpressured. Must be a power of two and less than 4096.
+        /// </param>
+        /// <returns>A sink that can be used to broadcast elements to multiple consumers</returns>
+        public static Sink<T, Source<T, NotUsed>> Sink<T>(int startAfterNrOfConsumers, int bufferSize)
+            => Dsl.Sink.FromGraph(new BroadcastHub<T>(startAfterNrOfConsumers, bufferSize));
 
         /// <summary>
         /// Creates a <see cref="Sink{TIn,TMat}"/> that receives elements from its upstream producer and broadcasts them to a dynamic set
@@ -621,6 +650,7 @@ namespace Akka.Streams.Dsl
             private readonly ImmutableList<Consumer>[] _consumerWheel;
 
             private int _activeConsumer;
+            private bool _initialized;
 
             public HubLogic(BroadcastHub<T> stage) : base(stage.Shape)
             {
@@ -639,7 +669,19 @@ namespace Akka.Streams.Dsl
             {
                 SetKeepGoing(true);
                 _callbackCompletion.SetResult(GetAsyncCallback<IHubEvent>(OnEvent));
-                Pull(_stage.In);
+
+                // Only start pulling immediately if we don't need to wait for consumers
+                if (_stage._startAfterNrOfConsumers == 0)
+                {
+                    _initialized = true;
+                    Pull(_stage.In);
+                }
+            }
+
+            private void TryPull()
+            {
+                if (_initialized && !IsClosed(_stage.In) && !HasBeenPulled(_stage.In) && !IsFull)
+                    Pull(_stage.In);
             }
 
             public override void OnUpstreamFinish()
@@ -652,8 +694,7 @@ namespace Akka.Streams.Dsl
             public override void OnPush()
             {
                 Publish(Grab(_stage.In));
-                if (!IsFull)
-                    Pull(_stage.In);
+                TryPull();
             }
 
             private void OnEvent(IHubEvent hubEvent)
@@ -695,6 +736,11 @@ namespace Akka.Streams.Dsl
                             }
                         }
 
+                        // Check if we've reached the consumer threshold to start pulling
+                        if (_activeConsumer >= _stage._startAfterNrOfConsumers)
+                            _initialized = true;
+
+                        TryPull();
                         return;
                     }
                     case UnRegister unregister:
@@ -718,8 +764,7 @@ namespace Akka.Streams.Dsl
                                 }
 
                                 _head = unregister.FinalOffset;
-                                if (!HasBeenPulled(_stage.In))
-                                    Pull(_stage.In);
+                                TryPull();
                             }
                         }
                         else
@@ -806,8 +851,8 @@ namespace Akka.Streams.Dsl
                 {
                     if (IsClosed(_stage.In))
                         Complete();
-                    else if (!HasBeenPulled(_stage.In))
-                        Pull(_stage.In);
+                    else
+                        TryPull();
                 }
             }
 
@@ -1012,7 +1057,15 @@ namespace Akka.Streams.Dsl
                 }
 
                 public override void PostStop()
-                    => _hubCallback?.Invoke(new UnRegister(_id, _previousPublishedOffset, _offset));
+                {
+                    // If `PostStop` is called before the consumer has processed the `RegistrationPending`'s `Initialize` event,
+                    // then the `Initialize` message will fail with a `StreamDetachedException`,
+                    // upon which the `RegistrationPending` logic itself unregisters this consumer.
+                    // In particular, this client must not send the `UnRegister` event itself because the values in
+                    // `_previousPublishedOffset` and `_offset` are wrong.
+                    if (_hubCallback != null && _offsetInitialized)
+                        _hubCallback.Invoke(new UnRegister(_id, _previousPublishedOffset, _offset));
+                }
 
                 private void OnCommand(IConsumerEvent e)
                 {
@@ -1058,21 +1111,40 @@ namespace Akka.Streams.Dsl
 
         #endregion
 
+        private readonly int _startAfterNrOfConsumers;
         private readonly int _bufferSize;
         private readonly int _mask;
         private readonly int _wheelMask;
         private readonly int _demandThreshold;
 
         /// <summary>
-        /// TBD
+        /// Creates a new BroadcastHub with the specified buffer size and no consumer threshold.
         /// </summary>
-        /// <param name="bufferSize">TBD</param>
+        /// <param name="bufferSize">Buffer size used by the producer. Must be a power of two and less than 4096.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when either the specified <paramref name="bufferSize"/>
         /// is less than or equal to zero, is greater than 4095, or is not a power of two.
         /// </exception>
-        public BroadcastHub(int bufferSize)
+        public BroadcastHub(int bufferSize) : this(0, bufferSize)
         {
+        }
+
+        /// <summary>
+        /// Creates a new BroadcastHub with the specified consumer threshold and buffer size.
+        /// </summary>
+        /// <param name="startAfterNrOfConsumers">
+        /// Elements are buffered until this number of consumers have been connected.
+        /// This is only used initially when the operator is starting up, i.e. it is not honored when consumers have
+        /// been removed (canceled).
+        /// </param>
+        /// <param name="bufferSize">Buffer size used by the producer. Must be a power of two and less than 4096.</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified parameters are invalid.
+        /// </exception>
+        public BroadcastHub(int startAfterNrOfConsumers, int bufferSize)
+        {
+            if (startAfterNrOfConsumers < 0)
+                throw new ArgumentException("startAfterNrOfConsumers must be >= 0", nameof(startAfterNrOfConsumers));
             if (bufferSize <= 0)
                 throw new ArgumentException("Buffer must be positive", nameof(bufferSize));
             if (bufferSize > 4095)
@@ -1080,6 +1152,7 @@ namespace Akka.Streams.Dsl
             if ((bufferSize & bufferSize - 1) != 0)
                 throw new ArgumentException("Buffer size must be a power of two", nameof(bufferSize));
 
+            _startAfterNrOfConsumers = startAfterNrOfConsumers;
             _bufferSize = bufferSize;
             _mask = _bufferSize - 1;
             _wheelMask = bufferSize * 2 - 1;
