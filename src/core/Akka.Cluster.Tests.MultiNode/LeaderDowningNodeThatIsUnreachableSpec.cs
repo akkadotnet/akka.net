@@ -136,11 +136,12 @@ public abstract class LeaderDowningNodeThatIsUnreachableSpec : MultiNodeClusterS
             await EnterBarrierAsync("down-second-node");
         }, _config.Second);
 
+        // Note: Only run on Third since Second has already been exited
         await RunOnAsync(async () =>
         {
             await EnterBarrierAsync("down-second-node");
             await AwaitMembersUpAsync(2, ImmutableHashSet.Create(secondAddress), 30.Seconds());
-        }, _config.Second, _config.Third);
+        }, _config.Third);
 
         await EnterBarrierAsync("await-completion-2");
 
