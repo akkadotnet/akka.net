@@ -3465,10 +3465,11 @@ namespace Akka.Event
     public abstract class LogEvent : Akka.Actor.INoSerializationVerificationNeeded
     {
         protected LogEvent() { }
-        public System.Exception Cause { get; set; }
-        public System.Type LogClass { get; set; }
-        public string LogSource { get; set; }
-        public object Message { get; set; }
+        public System.Diagnostics.ActivityContext? ActivityContext { get; }
+        public System.Exception Cause { get; protected set; }
+        public System.Type LogClass { get; protected set; }
+        public string LogSource { get; protected set; }
+        public object Message { get; protected set; }
         public System.Threading.Thread Thread { get; }
         public System.DateTime Timestamp { get; }
         public abstract Akka.Event.LogLevel LogLevel();
