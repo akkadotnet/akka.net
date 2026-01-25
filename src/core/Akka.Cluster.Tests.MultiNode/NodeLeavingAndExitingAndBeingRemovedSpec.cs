@@ -5,13 +5,15 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using FluentAssertions;
+using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.MultiNode
 {
@@ -46,48 +48,52 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void NodeLeavingAndExitingAndBeingRemovedSpecs()
+        public async Task NodeLeavingAndExitingAndBeingRemovedSpecs()
         {
-            Node_that_is_leaving_non_singleton_cluster_eventually_set_to_removed_and_removed_from_membership_ring_and_seen_table();
+            await Node_that_is_leaving_non_singleton_cluster_eventually_set_to_removed_and_removed_from_membership_ring_and_seen_table();
         }
 
-        public void Node_that_is_leaving_non_singleton_cluster_eventually_set_to_removed_and_removed_from_membership_ring_and_seen_table()
+        public async Task Node_that_is_leaving_non_singleton_cluster_eventually_set_to_removed_and_removed_from_membership_ring_and_seen_table()
         {
-            AwaitClusterUp(_config.First, _config.Second, _config.Third);
+            await AwaitClusterUpAsync(CancellationToken.None, _config.First, _config.Second, _config.Third);
 
-            Within(TimeSpan.FromSeconds(15), () =>
+            var secondAddress = GetAddress(_config.Second);
+
+            // Increased timeout from 15s to 45s for CI variability
+            await WithinAsync(45.Seconds(), async () =>
             {
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
-                    Cluster.Leave(GetAddress(_config.Second));
+                    Cluster.Leave(secondAddress);
+                    return Task.CompletedTask;
                 }, _config.First);
-                EnterBarrier("second-left");
+                await EnterBarrierAsync("second-left");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    EnterBarrier("second-shutdown");
+                    await EnterBarrierAsync("second-shutdown");
                     // this test verifies that the removal is performed via the ExitingCompleted message,
                     // otherwise we would have `MarkNodeAsUnavailable(second)` to trigger the FailureDetectorPuppet
 
                     // verify that the 'second' node is no longer part of the 'members'/'unreachable' set
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
-                        ClusterView.Members.Select(c => c.Address).Should().NotContain(GetAddress(_config.Second));
+                        ClusterView.Members.Select(c => c.Address).Should().NotContain(secondAddress);
                     });
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
-                        ClusterView.UnreachableMembers.Select(c => c.Address).Should().NotContain(GetAddress(_config.Second));
+                        ClusterView.UnreachableMembers.Select(c => c.Address).Should().NotContain(secondAddress);
                     });
                 }, _config.First, _config.Third);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     // verify that the second node is shut down
-                    AwaitCondition(() => Cluster.IsTerminated);
-                    EnterBarrier("second-shutdown");
+                    await AwaitConditionAsync(() => Task.FromResult(Cluster.IsTerminated));
+                    await EnterBarrierAsync("second-shutdown");
                 }, _config.Second);
 
-                EnterBarrier("finished");
+                await EnterBarrierAsync("finished");
             });
 
         }

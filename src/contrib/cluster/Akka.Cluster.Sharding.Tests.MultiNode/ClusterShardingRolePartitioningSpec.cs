@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -171,13 +172,13 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         [MultiNodeFact]
-        public void Cluster_Sharding_with_roles_specs()
+        public async Task Cluster_Sharding_with_roles_specs()
         {
-            Cluster_Sharding_with_roles_must_start_the_cluster_await_convergence_init_sharding_on_every_node_2_data_types__akka_cluster_min_nr_of_members_2_partition_shard_location_by_2_roles();
-            Cluster_Sharding_with_roles_must_access_role_R2_nodes_4_5_from_one_of_the_proxy_nodes_1_2_3();
+            await Cluster_Sharding_with_roles_must_start_the_cluster_await_convergence_init_sharding_on_every_node_2_data_types__akka_cluster_min_nr_of_members_2_partition_shard_location_by_2_roles();
+            await Cluster_Sharding_with_roles_must_access_role_R2_nodes_4_5_from_one_of_the_proxy_nodes_1_2_3();
         }
 
-        private void Cluster_Sharding_with_roles_must_start_the_cluster_await_convergence_init_sharding_on_every_node_2_data_types__akka_cluster_min_nr_of_members_2_partition_shard_location_by_2_roles()
+        private async Task Cluster_Sharding_with_roles_must_start_the_cluster_await_convergence_init_sharding_on_every_node_2_data_types__akka_cluster_min_nr_of_members_2_partition_shard_location_by_2_roles()
         {
             // start sharding early
             StartSharding(
@@ -197,49 +198,66 @@ namespace Akka.Cluster.Sharding.Tests
                 settings: Settings.Value.WithRole("R2"),
                 messageExtractor: new E2.MessageExtractor());
 
-            AwaitClusterUp(Config.First, Config.Second, Config.Third, Config.Fourth, Config.Fifth);
+            await AwaitClusterUpAsync(default, Config.First, Config.Second, Config.Third, Config.Fourth, Config.Fifth);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // wait for all regions registered
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     var region = ClusterSharding.Get(Sys).ShardRegion(E1.TypeKey);
                     region.Tell(GetCurrentRegions.Instance);
-                    ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(3);
+                    (await ExpectMsgAsync<CurrentRegions>()).Regions.Count.Should().Be(3);
                 });
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     var region = ClusterSharding.Get(Sys).ShardRegion(E2.TypeKey);
                     region.Tell(GetCurrentRegions.Instance);
-                    ExpectMsg<CurrentRegions>().Regions.Count.Should().Be(2);
+                    (await ExpectMsgAsync<CurrentRegions>()).Regions.Count.Should().Be(2);
                 });
             }, Config.Fourth);
 
-            EnterBarrier($"{Roles.Count}-up");
+            await EnterBarrierAsync($"{Roles.Count}-up");
         }
 
-        private void Cluster_Sharding_with_roles_must_access_role_R2_nodes_4_5_from_one_of_the_proxy_nodes_1_2_3()
+        private async Task Cluster_Sharding_with_roles_must_access_role_R2_nodes_4_5_from_one_of_the_proxy_nodes_1_2_3()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // have first message reach the entity from a proxy with 2 nodes of role R2 and 'min-nr-of-members' set globally versus per role (nodes 4,5, with 1,2,3 proxying)
                 // RegisterProxy messages from nodes 1,2,3 are deadlettered
                 // Register messages sent are eventually successful on the fifth node, once coordinator moves to active state
                 var region = ClusterSharding.Get(Sys).ShardRegion(E2.TypeKey);
-                foreach (var n in Enumerable.Range(1, 20))
+
+                // Use AwaitAssert for the first message to handle coordinator readiness.
+                // The coordinator may not respond to GetShardHome requests until HasAllRegionsRegistered()
+                // returns true. This happens when _aliveRegions.Count >= _minMembers. Even though we verified
+                // regions are registered above, the coordinator's internal state (specifically _allRegionsRegistered)
+                // may not be set yet, causing GetShardHome requests to be silently ignored and messages to be
+                // buffered. The ShardRegion only retries GetShardHome on its retry interval (default 2-10s),
+                // which can exceed our ExpectMsg timeout.
+                // By wrapping the first message in AwaitAssert, we retry until the coordinator is fully ready.
+                await AwaitAssertAsync(async () =>
+                {
+                    region.Tell(1);
+                    await ExpectMsgAsync(1, TimeSpan.FromSeconds(3));
+                });
+
+                // After the first message succeeds, the shard is allocated and subsequent messages
+                // to the same or new shards should succeed without delay (coordinator is ready)
+                foreach (var n in Enumerable.Range(2, 19))
                 {
                     region.Tell(n);
-                    ExpectMsg(n); // R2 entity received, does not timeout
+                    await ExpectMsgAsync(n); // R2 entity received, does not timeout
                 }
 
                 region.Tell(new GetClusterShardingStats(TimeSpan.FromSeconds(10)));
-                var stats = ExpectMsg<ClusterShardingStats>();
+                var stats = await ExpectMsgAsync<ClusterShardingStats>();
 
                 stats.Regions.Keys.Should().BeEquivalentTo(fourthAddress, fifthAddress);
                 stats.Regions.Values.SelectMany(i => i.Stats.Values).Count().Should().Be(20);
             }, Config.First);
-            EnterBarrier("proxy-node-other-role-to-shard");
+            await EnterBarrierAsync("proxy-node-other-role-to-shard");
         }
     }
 }
