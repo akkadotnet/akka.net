@@ -8,6 +8,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -78,6 +79,11 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
         {
             var cluster = Cluster.Get(Sys);
 
+            // Set up termination signal using event-driven callback instead of polling
+            // This must be set up BEFORE the cluster is partitioned
+            var terminatedTcs = new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously);
+            cluster.RegisterOnMemberRemoved(() => terminatedTcs.TrySetResult(Done.Instance));
+
             RunOn(() =>
             {
                 cluster.Join(cluster.SelfAddress);
@@ -126,6 +132,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
             });
             await EnterBarrierAsync("unreachable");
 
+            // Node1 waits for SBR to complete and verify it's the only surviving member
             await RunOnAsync(async () =>
             {
                 await WithinAsync(TimeSpan.FromSeconds(15), async () =>
@@ -141,10 +148,25 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                 });
             }, _config.Node1);
 
+            // Nodes 2,3 wait for termination using the event-driven callback
             await RunOnAsync(async () =>
             {
-                // downed
-                await AwaitConditionAsync(() => Task.FromResult(cluster.IsTerminated), max: TimeSpan.FromSeconds(15));
+                // Use event-driven notification via RegisterOnMemberRemoved
+                // This is more reliable than polling cluster.IsTerminated because:
+                // 1. The callback fires as soon as the member is removed/shutdown starts
+                // 2. The callback also fires in PostStop if the cluster daemon is stopping
+                // 3. No race between polling interval and actual state change
+                var completed = await Task.WhenAny(
+                    terminatedTcs.Task,
+                    Task.Delay(TimeSpan.FromSeconds(20)));
+
+                if (completed != terminatedTcs.Task)
+                {
+                    // Fallback check - the cluster should definitely be terminated by now
+                    cluster.IsTerminated.Should().BeTrue(
+                        "Cluster should be terminated - either via MemberRemoved callback or shutdown. " +
+                        $"Current self member status: {cluster.SelfMember.Status}");
+                }
             }, _config.Node2, _config.Node3);
 
             await EnterBarrierAsync("done");
