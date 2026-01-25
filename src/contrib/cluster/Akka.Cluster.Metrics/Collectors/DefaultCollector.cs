@@ -37,13 +37,9 @@ namespace Akka.Cluster.Metrics.Collectors
         {
             _address = address;
             _cpuWatch = new Stopwatch();
-
-#if NET6_0_OR_GREATER
-            // Initialize GC memory info by forcing a quick generation 0 collection.
-            // This ensures GetGCMemoryInfo() returns valid data on first Sample() call.
-            // Without this, TotalAvailableMemoryBytes may return 0 or negative on first access.
-            GC.Collect(0, GCCollectionMode.Optimized, blocking: false);
-#endif
+            // Note: We no longer force a GC here because GC.Collect() can be slow in
+            // containerized environments. Instead, GetAvailableMemoryBytes() checks
+            // GCMemoryInfo.Index and falls back to process.WorkingSet64 if no GC has occurred.
         }
         
         public DefaultCollector(ActorSystem system) 
@@ -65,9 +61,12 @@ namespace Akka.Cluster.Metrics.Collectors
                 process.Refresh();
                 var metrics = new List<NodeMetrics.Types.Metric>();
 
-                // GC.GetTotalMemory(true) forces a blocking GC, which also ensures
-                // GetGCMemoryInfo() returns valid data for subsequent calls
-                var totalMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, GC.GetTotalMemory(true));
+                // Use GC.GetTotalMemory(false) to avoid forcing a blocking GC.
+                // GC.GetTotalMemory(true) can be extremely slow (seconds to minutes) in containerized
+                // or memory-pressured environments like CI/CD, potentially causing test timeouts.
+                // The non-forcing version returns a reasonably accurate approximation.
+                var memoryUsedValue = GC.GetTotalMemory(false);
+                var totalMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryUsed, memoryUsedValue);
                 if (totalMemory.HasValue)
                     metrics.Add(totalMemory.Value);
 
@@ -76,6 +75,29 @@ namespace Akka.Cluster.Metrics.Collectors
                 var availableMemory = NodeMetrics.Types.Metric.Create(StandardMetrics.MemoryAvailable, availableMemoryValue);
                 if (availableMemory.HasValue)
                     metrics.Add(availableMemory.Value);
+
+                // Diagnostic: If either critical metric is missing, throw with details
+                // This helps diagnose CI failures where metrics silently fail to be created
+                if (!totalMemory.HasValue || !availableMemory.HasValue)
+                {
+                    var workingSet = process.WorkingSet64;
+#if NET6_0_OR_GREATER
+                    var gcInfo = GC.GetGCMemoryInfo();
+                    throw new InvalidOperationException(
+                        $"Failed to create memory metrics. " +
+                        $"MemoryUsed: value={memoryUsedValue}, created={totalMemory.HasValue}. " +
+                        $"MemoryAvailable: value={availableMemoryValue}, created={availableMemory.HasValue}. " +
+                        $"Diagnostics: WorkingSet64={workingSet}, GCMemoryInfo.Index={gcInfo.Index}, " +
+                        $"TotalAvailableMemoryBytes={gcInfo.TotalAvailableMemoryBytes}, " +
+                        $"HighMemoryLoadThresholdBytes={gcInfo.HighMemoryLoadThresholdBytes}");
+#else
+                    throw new InvalidOperationException(
+                        $"Failed to create memory metrics. " +
+                        $"MemoryUsed: value={memoryUsedValue}, created={totalMemory.HasValue}. " +
+                        $"MemoryAvailable: value={availableMemoryValue}, created={availableMemory.HasValue}. " +
+                        $"Diagnostics: WorkingSet64={workingSet}");
+#endif
+                }
 
                 var processorCount = NodeMetrics.Types.Metric.Create(StandardMetrics.Processors, Environment.ProcessorCount);
                 if(processorCount.HasValue)
@@ -190,29 +212,46 @@ namespace Akka.Cluster.Metrics.Collectors
         private static long GetAvailableMemoryBytes(Process process)
         {
 #if NET6_0_OR_GREATER
-            // Use GCMemoryInfo for accurate, container-aware memory information.
-            // TotalAvailableMemoryBytes represents the total memory available to the GC,
-            // respecting container cgroup limits. This is the correct semantic for
-            // "available memory" in the context of cluster load balancing.
-            var gcMemoryInfo = GC.GetGCMemoryInfo();
-            var availableBytes = gcMemoryInfo.TotalAvailableMemoryBytes;
-
-            // TotalAvailableMemoryBytes can return 0 or negative before GC properly initializes,
-            // even after our constructor warm-up. Fall back to HighMemoryLoadThresholdBytes
-            // which represents the threshold before the GC considers memory pressure.
-            // This is still a valid proxy for "available memory capacity".
-            if (availableBytes <= 0)
+            try
             {
-                availableBytes = gcMemoryInfo.HighMemoryLoadThresholdBytes;
-            }
+                // Use GCMemoryInfo for accurate, container-aware memory information.
+                // TotalAvailableMemoryBytes represents the total memory available to the GC,
+                // respecting container cgroup limits. This is the correct semantic for
+                // "available memory" in the context of cluster load balancing.
+                var gcMemoryInfo = GC.GetGCMemoryInfo();
 
-            // If still invalid (very rare edge case), fall back to process working set
-            if (availableBytes <= 0)
+                // If Index is 0, no GC has occurred yet and all values will be 0.
+                // Fall back to process working set in this case.
+                // See: https://learn.microsoft.com/en-us/dotnet/api/system.gc.getgcmemoryinfo
+                if (gcMemoryInfo.Index == 0)
+                {
+                    return process.WorkingSet64;
+                }
+
+                var availableBytes = gcMemoryInfo.TotalAvailableMemoryBytes;
+
+                // TotalAvailableMemoryBytes can return 0 or negative on some platforms
+                // (e.g., ARM32, certain container configurations).
+                // Fall back to HighMemoryLoadThresholdBytes which represents the threshold
+                // before the GC considers memory pressure.
+                if (availableBytes <= 0)
+                {
+                    availableBytes = gcMemoryInfo.HighMemoryLoadThresholdBytes;
+                }
+
+                // If still invalid, fall back to process working set
+                if (availableBytes <= 0)
+                {
+                    availableBytes = process.WorkingSet64;
+                }
+
+                return availableBytes;
+            }
+            catch
             {
-                availableBytes = process.WorkingSet64;
+                // If GC memory info throws for any reason, fall back to working set
+                return process.WorkingSet64;
             }
-
-            return availableBytes;
 #else
             // For .NET Framework / netstandard2.0, GCMemoryInfo is not available.
             // Use process working set as the best available approximation.
