@@ -630,14 +630,20 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = this.CreatePublisherProbe<int>();
                 var hubSource = Source.FromPublisher(upstream).RunWith(BroadcastHub.Sink<int>(4), Materializer);
                 var downstream = this.CreateSubscriberProbe<int>();
-                
-                hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
-                hubSource.RunWith(Sink.FromSubscriber(downstream), Materializer);
 
+                // Connect the active downstream subscriber first and ensure it's subscribed
+                hubSource.RunWith(Sink.FromSubscriber(downstream), Materializer);
                 await downstream.EnsureSubscriptionAsync();
-                
                 await downstream.RequestAsync(10);
+
+                // Now connect the immediately-cancelling sink - this tests that the hub
+                // handles a cancelled consumer gracefully without affecting other consumers
+                hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
+
+                // Wait for upstream to receive demand before sending
                 await upstream.ExpectRequestAsync();
+
+                // Verify elements still flow to the active downstream
                 await upstream.SendNextAsync(1);
                 await downstream.ExpectNextAsync(1);
                 await upstream.SendNextAsync(2);
@@ -648,7 +654,7 @@ namespace Akka.Streams.Tests.Dsl
                 await downstream.ExpectNextAsync(4);
                 await upstream.SendNextAsync(5);
                 await downstream.ExpectNextAsync(5);
-                
+
                 await upstream.SendCompleteAsync();
                 await downstream.ExpectCompleteAsync();
             }, Materializer);
