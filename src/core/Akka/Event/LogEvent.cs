@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Akka.Actor;
 
@@ -45,10 +46,18 @@ namespace Akka.Event
         /// <summary>
         /// Initializes a new instance of the <see cref="LogEvent" /> class.
         /// </summary>
+        /// <remarks>
+        /// Captures <see cref="Activity.Current"/> trace context at creation time.
+        /// This enables log correlation with distributed traces even after the log event
+        /// crosses actor mailbox boundaries (where <see cref="Activity.Current"/> would be lost).
+        /// </remarks>
         protected LogEvent()
         {
             Timestamp = DateTime.UtcNow;
             Thread = Thread.CurrentThread;
+
+            // Capture Activity.Current context NOW (before mailbox crossing)
+            ActivityContext = Activity.Current?.Context;
         }
 
         /// <summary>
@@ -65,6 +74,16 @@ namespace Akka.Event
         /// The thread where this event occurred.
         /// </summary>
         public Thread Thread { get; private set; }
+
+        /// <summary>
+        /// The trace context from <see cref="Activity.Current"/> captured at log event creation time.
+        /// </summary>
+        /// <remarks>
+        /// This value is captured before the log event crosses actor mailbox boundaries,
+        /// enabling trace correlation with OpenTelemetry and other distributed tracing systems.
+        /// Will be <c>null</c> if no <see cref="Activity"/> was active when the log event was created.
+        /// </remarks>
+        public ActivityContext? ActivityContext { get; private set; }
 
         /// <summary>
         /// The source that generated this event.
