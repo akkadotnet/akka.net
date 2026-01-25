@@ -227,7 +227,24 @@ namespace Akka.Cluster.Sharding.Tests
                 // RegisterProxy messages from nodes 1,2,3 are deadlettered
                 // Register messages sent are eventually successful on the fifth node, once coordinator moves to active state
                 var region = ClusterSharding.Get(Sys).ShardRegion(E2.TypeKey);
-                foreach (var n in Enumerable.Range(1, 20))
+
+                // Use AwaitAssert for the first message to handle coordinator readiness.
+                // The coordinator may not respond to GetShardHome requests until HasAllRegionsRegistered()
+                // returns true. This happens when _aliveRegions.Count >= _minMembers. Even though we verified
+                // regions are registered above, the coordinator's internal state (specifically _allRegionsRegistered)
+                // may not be set yet, causing GetShardHome requests to be silently ignored and messages to be
+                // buffered. The ShardRegion only retries GetShardHome on its retry interval (default 2-10s),
+                // which can exceed our ExpectMsg timeout.
+                // By wrapping the first message in AwaitAssert, we retry until the coordinator is fully ready.
+                AwaitAssert(() =>
+                {
+                    region.Tell(1);
+                    ExpectMsg(1, TimeSpan.FromSeconds(3));
+                });
+
+                // After the first message succeeds, the shard is allocated and subsequent messages
+                // to the same or new shards should succeed without delay (coordinator is ready)
+                foreach (var n in Enumerable.Range(2, 19))
                 {
                     region.Tell(n);
                     ExpectMsg(n); // R2 entity received, does not timeout
