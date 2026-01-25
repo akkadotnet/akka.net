@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -80,17 +79,17 @@ namespace Akka.Cluster.Tests.MultiNode
                     await AwaitAssertAsync(() =>
                     {
                         ClusterView.Members.Select(c => c.Address).Should().NotContain(secondAddress);
-                    }, 30.Seconds());
+                    });
                     await AwaitAssertAsync(() =>
                     {
                         ClusterView.UnreachableMembers.Select(c => c.Address).Should().NotContain(secondAddress);
-                    }, 30.Seconds());
+                    });
                 }, _config.First, _config.Third);
 
                 await RunOnAsync(async () =>
                 {
                     // verify that the second node is shut down
-                    await AwaitConditionAsync(() => Task.FromResult(Cluster.IsTerminated), max: 30.Seconds());
+                    await AwaitConditionAsync(() => Task.FromResult(Cluster.IsTerminated));
                     await EnterBarrierAsync("second-shutdown");
                 }, _config.Second);
 
