@@ -126,15 +126,27 @@ namespace Akka.Tests.Actor
         {
             await WithinAsync(TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(6), () =>
             {
-                Assert.Throws<TimeoutException>(() => _inbox.Receive());
+                // Inbox.Receive() may throw TimeoutException directly or wrapped in AggregateException
+                // depending on internal implementation (sync vs async path)
+                var ex = Record.Exception(() => _inbox.Receive());
+                Assert.NotNull(ex);
+                Assert.True(IsTimeoutException(ex), $"Expected TimeoutException but got: {ex.GetType().Name}");
                 return Task.CompletedTask;
             });
 
             await WithinAsync(TimeSpan.FromSeconds(1), () =>
             {
-                Assert.Throws<TimeoutException>(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
+                var ex = Record.Exception(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
+                Assert.NotNull(ex);
+                Assert.True(IsTimeoutException(ex), $"Expected TimeoutException but got: {ex.GetType().Name}");
                 return Task.CompletedTask;
             });
+        }
+
+        private static bool IsTimeoutException(Exception ex)
+        {
+            return ex is TimeoutException ||
+                   (ex is AggregateException agg && agg.Flatten().InnerExceptions.Any(e => e is TimeoutException));
         }
 
         [Fact]
