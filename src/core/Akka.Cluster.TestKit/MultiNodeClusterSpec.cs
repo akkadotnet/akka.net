@@ -307,7 +307,7 @@ namespace Akka.Cluster.TestKit
             await RunOnAsync(async () => await StartClusterNodeAsync(cancellationToken), roles.First());
 
             await EnterBarrierAsync(cancellationToken, roles.First().Name + "-started");
-            if (roles.Skip(1).Contains(Myself)) 
+            if (roles.Skip(1).Contains(Myself))
                 await Cluster.JoinAsync(GetAddress(roles.First()), cancellationToken);
 
             if (roles.Contains(Myself))
@@ -316,6 +316,18 @@ namespace Akka.Cluster.TestKit
             }
             await EnterBarrierAsync(cancellationToken, roles.Select(r => r.Name).Aggregate((a, b) => a + "-" + b) + "-joined");
         }
+
+        /// <summary>
+        /// Initialize the cluster of the specified member nodes (<paramref name="roles"/>)
+        /// and wait until all joined and <see cref="MemberStatus.Up"/>.
+        ///
+        /// First node will be started first and others will join the first.
+        /// </summary>
+        /// <remarks>
+        /// Convenience overload that passes <see cref="CancellationToken.None"/>.
+        /// </remarks>
+        public Task AwaitClusterUpAsync(params RoleName[] roles)
+            => AwaitClusterUpAsync(CancellationToken.None, roles);
 
         public void JoinWithin(RoleName joinNode, TimeSpan? max = null, TimeSpan? interval = null)
         {

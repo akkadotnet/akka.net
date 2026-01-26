@@ -8,6 +8,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
@@ -131,83 +132,94 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void Sharding_with_remember_entities_enabled_should_allow_a_change_to_the_shard_id_extractor()
+        public async Task Sharding_with_remember_entities_enabled_should_allow_a_change_to_the_shard_id_extractor()
         {
-            WithSystem("FirstShardIdExtractor", new FirstExtractor(), (system, region) =>
+            await WithSystemAsync("FirstShardIdExtractor", new FirstExtractor(), async (system, region) =>
             {
-                AssertRegionRegistrationComplete(region);
+                await AssertRegionRegistrationCompleteAsync(region);
                 region.Tell(new Message(1));
-                ExpectMsg("ack");
+                await ExpectMsgAsync<string>("ack");
                 region.Tell(new Message(11));
-                ExpectMsg("ack");
+                await ExpectMsgAsync<string>("ack");
                 region.Tell(new Message(21));
-                ExpectMsg("ack");
+                await ExpectMsgAsync<string>("ack");
 
                 var probe = CreateTestProbe(system);
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     region.Tell(GetShardRegionState.Instance, probe.Ref);
-                    var state = probe.ExpectMsg<CurrentShardRegionState>();
+                    var state = await probe.ExpectMsgAsync<CurrentShardRegionState>();
                     // shards should have been remembered but migrated over to shard 2
                     state.Shards.Where(s => s.ShardId == "1").SelectMany(i => i.EntityIds).Should().BeEquivalentTo("1", "11", "21");
                     state.Shards.Where(s => s.ShardId == "2").SelectMany(i => i.EntityIds).Should().BeEmpty();
                 });
             });
 
-            WithSystem("SecondShardIdExtractor", new SecondExtractor(), (system, region) =>
+            await WithSystemAsync("SecondShardIdExtractor", new SecondExtractor(), async (system, region) =>
             {
                 var probe = CreateTestProbe(system);
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     region.Tell(GetShardRegionState.Instance, probe.Ref);
-                    var state = probe.ExpectMsg<CurrentShardRegionState>();
+                    var state = await probe.ExpectMsgAsync<CurrentShardRegionState>();
                     // shards should have been remembered but migrated over to shard 2
                     state.Shards.Where(s => s.ShardId == "1").SelectMany(i => i.EntityIds).Should().BeEmpty();
                     state.Shards.Where(s => s.ShardId == "2").SelectMany(i => i.EntityIds).Should().BeEquivalentTo("1", "11", "21");
                 });
             });
 
-            WithSystem("ThirdIncarnation", new SecondExtractor(), (system, region) =>
+            await WithSystemAsync("ThirdIncarnation", new SecondExtractor(), async (system, region) =>
             {
                 var probe = CreateTestProbe(system);
                 // Only way to verify that they were "normal"-remember-started here is to look at debug logs, will show
                 // [akka://ThirdIncarnation@127.0.0.1:51533/system/sharding/ShardIdExtractorChange/1/RememberEntitiesStore] Recovery completed for shard [1] with [0] entities
                 // [akka://ThirdIncarnation@127.0.0.1:51533/system/sharding/ShardIdExtractorChange/2/RememberEntitiesStore] Recovery completed for shard [2] with [3] entities
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
                     region.Tell(GetShardRegionState.Instance, probe.Ref);
-                    var state = probe.ExpectMsg<CurrentShardRegionState>();
+                    var state = await probe.ExpectMsgAsync<CurrentShardRegionState>();
                     state.Shards.Where(s => s.ShardId == "1").SelectMany(i => i.EntityIds).Should().BeEmpty();
                     state.Shards.Where(s => s.ShardId == "2").SelectMany(i => i.EntityIds).Should().BeEquivalentTo("1", "11", "21");
                 });
             });
         }
 
-        private void WithSystem(string systemName, IMessageExtractor extractor, Action<ActorSystem, IActorRef> f)
+        private async Task WithSystemAsync(string systemName, IMessageExtractor extractor, Func<ActorSystem, IActorRef, Task> f)
         {
             var system = ActorSystem.Create(systemName, Sys.Settings.Config);
             InitializeLogger(system, $"[{systemName}]");
             this.SetStore(system, Sys);
-            Cluster.Get(system).Join(Cluster.Get(system).SelfAddress);
+
+            var cluster = Cluster.Get(system);
+            cluster.Join(cluster.SelfAddress);
+
+            // Wait for cluster to form before starting sharding - fixes race condition
+            // where sharding coordinator singleton may not be elected in time
+            await AwaitAssertAsync(() =>
+            {
+                cluster.ReadView.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(1);
+            });
+
             try
             {
                 var region = ClusterSharding.Get(system).Start(TypeName, Props.Create(() => new PA()), ClusterShardingSettings.Create(system), extractor);
-                f(system, region);
+                await f(system, region);
             }
             finally
             {
-                system.Terminate().Wait(TimeSpan.FromSeconds(20));
+                await system.Terminate().WaitAsync(TimeSpan.FromSeconds(20));
             }
         }
 
-        private void AssertRegionRegistrationComplete(IActorRef region)
+        private async Task AssertRegionRegistrationCompleteAsync(IActorRef region)
         {
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async () =>
             {
                 region.Tell(GetCurrentRegions.Instance);
-                ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(1);
+                var response = await ExpectMsgAsync<CurrentRegions>();
+                response.Regions.Should().HaveCount(1);
             });
         }
     }
