@@ -163,13 +163,31 @@ namespace Akka.Streams.Tests.Dsl
                 var tickSource = Source.Tick(TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500), "tick");
                 var cancelable = tickSource.To(Sink.FromSubscriber(c)).Run(Materializer);
                 var sub = await c.ExpectSubscriptionAsync();
-                
+
+                // Request 2 ticks, receive 1, then cancel
                 sub.Request(2);
                 await c.ExpectNextAsync("tick");
                 cancelable.IsCancellationRequested.Should().BeFalse();
                 cancelable.Cancel();
                 cancelable.IsCancellationRequested.Should().BeTrue();
-                await c.ExpectCompleteAsync();
+
+                // After cancel, collect events until OnComplete.
+                // Due to async cancellation, 0 or 1 ticks might be "in-flight" before
+                // the cancel message reaches the source stage - that's acceptable.
+                // But we must eventually get OnComplete, and should not get 2+ ticks
+                // (which would indicate cancellation isn't working).
+                var ticksAfterCancel = 0;
+                while (true)
+                {
+                    var ev = await c.ExpectEventAsync();
+                    if (ev is TestSubscriber.OnComplete)
+                        break;
+                    if (ev is TestSubscriber.OnNext<string>)
+                        ticksAfterCancel++;
+                }
+
+                ticksAfterCancel.Should().BeLessOrEqualTo(1,
+                    "at most 1 in-flight tick is acceptable after cancel, not a continuous stream");
             }, Materializer);
         }
 
