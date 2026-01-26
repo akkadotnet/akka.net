@@ -30,12 +30,23 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         [Fact]
         public async Task Unhandled_message_should_produce_info_message()
         {
-            await EventFilter
-                .Info()
-                .ExpectOneAsync(() => {
-                    _unhandledMessageActor.Tell("whatever");
-                    return Task.CompletedTask;
-                });
+            // Subscribe to UnhandledMessage events to know when our message has been processed
+            Sys.EventStream.Subscribe(TestActor, typeof(UnhandledMessage));
+            try
+            {
+                await EventFilter
+                    .Info()
+                    .ExpectOneAsync(async () => {
+                        _unhandledMessageActor.Tell("whatever");
+                        // Wait for UnhandledMessage event - guarantees message was processed
+                        // and Info log has been published
+                        await ExpectMsgAsync<UnhandledMessage>();
+                    });
+            }
+            finally
+            {
+                Sys.EventStream.Unsubscribe(TestActor, typeof(UnhandledMessage));
+            }
         }
         
         [Fact]
