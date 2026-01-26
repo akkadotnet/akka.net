@@ -1928,12 +1928,12 @@ namespace Akka.Actor.Dsl
     {
         public Act(System.Action<Akka.Actor.Dsl.IActorDsl> config) { }
         public Act(System.Action<Akka.Actor.Dsl.IActorDsl, Akka.Actor.IActorContext> config) { }
-        public System.Action<System.Exception, Akka.Actor.IActorContext> OnPostRestart { get; set; }
-        public System.Action<Akka.Actor.IActorContext> OnPostStop { get; set; }
-        public System.Action<System.Exception, object, Akka.Actor.IActorContext> OnPreRestart { get; set; }
-        public System.Action<Akka.Actor.IActorContext> OnPreStart { get; set; }
-        public Akka.Actor.SupervisorStrategy Strategy { get; set; }
-        public Akka.Actor.IActorRef ActorOf(System.Action<Akka.Actor.Dsl.IActorDsl> config, string name = null) { }
+        public System.Action<System.Exception, Akka.Actor.IActorContext>? OnPostRestart { get; set; }
+        public System.Action<Akka.Actor.IActorContext>? OnPostStop { get; set; }
+        public System.Action<System.Exception, object, Akka.Actor.IActorContext>? OnPreRestart { get; set; }
+        public System.Action<Akka.Actor.IActorContext>? OnPreStart { get; set; }
+        public Akka.Actor.SupervisorStrategy? Strategy { get; set; }
+        public Akka.Actor.IActorRef ActorOf(System.Action<Akka.Actor.Dsl.IActorDsl> config, string? name = null) { }
         public void Become(System.Action<object, Akka.Actor.IActorContext> handler) { }
         public void BecomeStacked(System.Action<object, Akka.Actor.IActorContext> handler) { }
         public void DefaultPostRestart(System.Exception reason) { }
@@ -1949,23 +1949,23 @@ namespace Akka.Actor.Dsl
         public void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T, Akka.Actor.IActorContext> handler) { }
         public void ReceiveAny(System.Action<object, Akka.Actor.IActorContext> handler) { }
         public void ReceiveAnyAsync(System.Func<object, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler) { }
-        public void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
+        public void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T>? shouldHandle = null) { }
         public void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler) { }
         protected override Akka.Actor.SupervisorStrategy SupervisorStrategy() { }
     }
     public static class ActExtensions
     {
-        public static Akka.Actor.IActorRef ActorOf(this Akka.Actor.IActorRefFactory factory, System.Action<Akka.Actor.Dsl.IActorDsl> config, string name = null) { }
-        public static Akka.Actor.IActorRef ActorOf(this Akka.Actor.IActorRefFactory factory, System.Action<Akka.Actor.Dsl.IActorDsl, Akka.Actor.IActorContext> config, string name = null) { }
+        public static Akka.Actor.IActorRef ActorOf(this Akka.Actor.IActorRefFactory factory, System.Action<Akka.Actor.Dsl.IActorDsl> config, string? name = null) { }
+        public static Akka.Actor.IActorRef ActorOf(this Akka.Actor.IActorRefFactory factory, System.Action<Akka.Actor.Dsl.IActorDsl, Akka.Actor.IActorContext> config, string? name = null) { }
     }
     public interface IActorDsl
     {
-        System.Action<System.Exception, Akka.Actor.IActorContext> OnPostRestart { get; set; }
-        System.Action<Akka.Actor.IActorContext> OnPostStop { get; set; }
-        System.Action<System.Exception, object, Akka.Actor.IActorContext> OnPreRestart { get; set; }
-        System.Action<Akka.Actor.IActorContext> OnPreStart { get; set; }
-        Akka.Actor.SupervisorStrategy Strategy { get; set; }
-        Akka.Actor.IActorRef ActorOf(System.Action<Akka.Actor.Dsl.IActorDsl> config, string name = null);
+        System.Action<System.Exception, Akka.Actor.IActorContext>? OnPostRestart { get; set; }
+        System.Action<Akka.Actor.IActorContext>? OnPostStop { get; set; }
+        System.Action<System.Exception, object, Akka.Actor.IActorContext>? OnPreRestart { get; set; }
+        System.Action<Akka.Actor.IActorContext>? OnPreStart { get; set; }
+        Akka.Actor.SupervisorStrategy? Strategy { get; set; }
+        Akka.Actor.IActorRef ActorOf(System.Action<Akka.Actor.Dsl.IActorDsl> config, string? name = null);
         void Become(System.Action<object, Akka.Actor.IActorContext> handler);
         void BecomeStacked(System.Action<object, Akka.Actor.IActorContext> handler);
         void DefaultPostRestart(System.Exception reason);
@@ -1977,7 +1977,7 @@ namespace Akka.Actor.Dsl
         void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T, Akka.Actor.IActorContext> handler);
         void ReceiveAny(System.Action<object, Akka.Actor.IActorContext> handler);
         void ReceiveAnyAsync(System.Func<object, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler);
-        void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null);
+        void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T>? shouldHandle = null);
         void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler);
         void UnbecomeStacked();
     }
