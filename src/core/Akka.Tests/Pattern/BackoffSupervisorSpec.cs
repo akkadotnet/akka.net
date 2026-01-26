@@ -499,12 +499,31 @@ namespace Akka.Tests.Pattern
             await WatchAsync(c1);
             await supervisorWatcher.WatchAsync(supervisor);
 
+            // Kill child without sending final stop message first
             c1.Tell(PoisonPill.Instance);
             await ExpectTerminatedAsync(c1);
-            supervisor.Tell("ping");
-            await supervisorWatcher.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(20)); // supervisor must not terminate
 
+            // Wait for the supervisor to restart the child (backoff delay is 100ms minimum)
+            // This verifies that supervisor didn't stop - it restarted the child instead
+            IActorRef c2 = null;
+            await AwaitAssertAsync(async () =>
+            {
+                supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
+                c2 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
+                c2.Should().NotBeSameAs(c1);
+                c2.IsNobody().Should().BeFalse();
+            });
+
+            // Supervisor should still be alive (no final stop message received yet)
+            await supervisorWatcher.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+
+            // Now send the final stop message and kill the new child
+            // The supervisor should terminate because it received the final stop message
+            await WatchAsync(c2);
             supervisor.Tell(stopMessage);
+            await ExpectMsgAsync(stopMessage); // Child echoes the message
+            c2.Tell(PoisonPill.Instance);
+            await ExpectTerminatedAsync(c2);
             await supervisorWatcher.ExpectTerminatedAsync(supervisor);
         }
     }
