@@ -173,7 +173,7 @@ namespace Akka.DistributedData.Tests
             await ReplicatorDuplicatePublish();
         }
 
-        private Task ReplicatorDuplicatePublish()
+        private async Task ReplicatorDuplicatePublish()
         {
             var p1 = CreateTestProbe(_sys1);
             var p2 = CreateTestProbe(_sys2);
@@ -192,11 +192,9 @@ namespace Akka.DistributedData.Tests
             Sys.Log.Info("Pushed change from sys2 for I");
 
             // wait for write to replicate to all 3 nodes
-            Within(TimeSpan.FromSeconds(5), () =>
-            {
-                foreach (var p in probes)
-                    p.ExpectMsg<Changed>(c => c.Get(_keyI).Elements.ShouldBe(ImmutableHashSet.Create("a")));
-            });
+            // Use explicit timeout per probe since cluster gossip can be slow on CI
+            foreach (var p in probes)
+                await p.ExpectMsgAsync<Changed>(c => c.Get(_keyI).Elements.ShouldBe(ImmutableHashSet.Create("a")), TimeSpan.FromSeconds(5));
 
             // create duplicate write on node 1
             Sys.Log.Info("Pushing change from sys1 for I");
@@ -204,8 +202,7 @@ namespace Akka.DistributedData.Tests
 
 
             // no probe should receive an update
-            p2.ExpectNoMsg(TimeSpan.FromSeconds(1));
-            return Task.CompletedTask;
+            await p2.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         /// <summary>
