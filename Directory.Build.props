@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.57-beta2</VersionPrefix>
+    <VersionPrefix>1.5.59</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -50,62 +50,33 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.57-beta2 is a beta release containing significant new APIs for Akka.Persistence that add completion callbacks and async handler support.
+    <PackageReleaseNotes>Akka.NET v1.5.59 is a maintenance release with critical bug fixes and new features for observability.
 
-**New Features:**
+**Critical Bug Fixes**
 
-* [Persistence completion callbacks via Defer - simplified alternative](https://github.com/akkadotnet/akka.net/pull/7957) - This release adds completion callback and async handler support to `Persist`, `PersistAsync`, `PersistAll`, and `PersistAllAsync` methods in Akka.Persistence. Key improvements include:
-  - **Async Handler Support**: All persist methods now support `Func&lt;TEvent, Task&gt;` handlers for async event processing
-  - **Completion Callbacks**: `PersistAll` and `PersistAllAsync` now accept optional completion callbacks (both sync `Action` and async `Func&lt;Task&gt;`) that execute after all events are persisted and handled
-  - **Ordering Guarantees**: Completion callbacks use `Defer`/`DeferAsync` internally to maintain strict ordering guarantees
-  - **Zero Breaking Changes**: All new APIs are additive overloads
+* [Fix MergeSeen to filter Seen against current Members](https://github.com/akkadotnet/akka.net/pull/8011) - Fixes [issue #8009](https://github.com/akkadotnet/akka.net/issues/8009). Resolves a cluster gossip serialization failure that could occur with the error "Unknown address in cluster message" when the `Seen` table contained addresses of members that had already left the cluster.
 
-**Code Examples:**
+**Bug Fixes**
 
-```csharp
-// Async handler support - process events asynchronously
-Persist(new OrderPlaced(orderId), async evt =&gt;
-{
-    await _orderService.ProcessOrderAsync(evt);
-});
+* [Fix logger initialization continuation race in LoggingBus](https://github.com/akkadotnet/akka.net/pull/8006) - Fixes a race condition during logger initialization that could cause logging failures during actor system startup.
+* [Fix Inbox.AwaitResult throwing AggregateException instead of TimeoutException](https://github.com/akkadotnet/akka.net/pull/8005) - `Inbox.AwaitResult` now correctly throws `TimeoutException` when a timeout occurs, rather than wrapping it in an `AggregateException`.
+* [Fix DeferAsync async handler nesting bug in CommandAsync](https://github.com/akkadotnet/akka.net/pull/7999) - Fixes [issue #7998](https://github.com/akkadotnet/akka.net/issues/7998). Resolves an issue where `DeferAsync` with an async handler would throw "RunTask calls cannot be nested" when called from `CommandAsync`.
+* [Fix AwaitAssertAsync logic causing premature timeout](https://github.com/akkadotnet/akka.net/pull/7986) - Fixes `AwaitAssertAsync` in Akka.TestKit to correctly wait for the full timeout duration before failing assertions.
 
-// PersistAll with completion callback - know when all events are done
-PersistAll(orderEvents, evt =&gt;
-{
-    _state.Apply(evt);
-}, onComplete: () =&gt;
-{
-    // All events persisted and handlers executed
-    _logger.Info("Order batch completed");
-    Sender.Tell(new BatchComplete());
-});
+**New Features**
 
-// PersistAll with async handler AND async completion callback
-PersistAll(events,
-    handler: async evt =&gt; await ProcessEventAsync(evt),
-    onCompleteAsync: async () =&gt;
-    {
-        await NotifyCompletionAsync();
-        Sender.Tell(Done.Instance);
-    });
+* [Add ActivityContext capture to LogEvent for trace correlation](https://github.com/akkadotnet/akka.net/pull/7995) - Log events now automatically capture the current `System.Diagnostics.ActivityContext` when created, enabling correlation between Akka.NET logs and distributed traces in observability platforms like OpenTelemetry, Application Insights, and Jaeger.
+* [Add BroadcastHub startAfterNrOfConsumers parameter](https://github.com/akkadotnet/akka.net/pull/8018) - Fixes [issue #8017](https://github.com/akkadotnet/akka.net/issues/8017). Port from Apache Pekko - adds a `startAfterNrOfConsumers` parameter to `BroadcastHub.Sink&lt;T&gt;()` that delays broadcasting until the specified number of consumers have subscribed:
+  ```csharp
+  // Wait for 3 consumers before starting to broadcast
+  var sink = BroadcastHub.Sink&lt;int&gt;(startAfterNrOfConsumers: 3, bufferSize: 256);
+  ```
 
-// PersistAllAsync with completion - allows commands between handlers
-PersistAllAsync(largeEventBatch,
-    handler: evt =&gt; _state.Apply(evt),
-    onComplete: () =&gt; Sender.Tell(new BatchProcessed()));
-```
+**Improvements**
 
-**Technical Details:**
+* [CoordinatedShutdown: clearly log the reason why we're exiting](https://github.com/akkadotnet/akka.net/pull/7988) - `CoordinatedShutdown` now logs the specific reason for shutdown at INFO level, making it easier to diagnose why an actor system terminated.
 
-The implementation maintains Akka.Persistence's strict ordering guarantees by using `Defer`/`DeferAsync` for completion callbacks, ensuring they execute in order even when called with empty event collections. The new async handler invocations (`IAsyncHandlerInvocation`) are processed via `RunTask` to preserve the actor's single-threaded execution model.
-
-1 contributor since release 1.5.57-beta1
-
-| COMMITS | LOC+ | LOC- | AUTHOR |
-| --- | --- | --- | --- |
-| 1 | 1386 | 67 | Aaron Stannard |
-
-To [see the full set of changes in Akka.NET v1.5.57-beta2, click here](https://github.com/akkadotnet/akka.net/milestone/141?closed=1)</PackageReleaseNotes>
+To see the full set of changes in Akka.NET v1.5.59, [click here](https://github.com/akkadotnet/akka.net/milestone/142?closed=1).</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
