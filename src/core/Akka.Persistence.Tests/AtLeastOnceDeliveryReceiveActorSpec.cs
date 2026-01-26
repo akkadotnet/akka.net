@@ -594,8 +594,10 @@ namespace Akka.Persistence.Tests
             await probeB.ExpectMsgAsync<Action>(a => a.Id == 2 && a.Payload == "b-1");
             await probeB.ExpectMsgAsync<Action>(a => a.Id == 3 && a.Payload == "b-2");
 
+            // Wait for UnconfirmedWarning messages. The warning is sent after 3 redelivery attempts
+            // at 500ms intervals (1.5s minimum), but CI environments may have scheduling delays.
             var unconfirmedList = new List<IEnumerable<UnconfirmedDelivery>>();
-            await foreach (var item in ReceiveWhileAsync(TimeSpan.FromSeconds(3), x =>
+            await foreach (var item in ReceiveWhileAsync(TimeSpan.FromSeconds(5), x =>
                 x is UnconfirmedWarning warning
                     ? warning.UnconfirmedDeliveries
                     : Enumerable.Empty<UnconfirmedDelivery>()))
