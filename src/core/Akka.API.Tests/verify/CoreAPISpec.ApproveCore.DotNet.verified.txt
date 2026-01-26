@@ -538,7 +538,7 @@ namespace Akka.Actor
     }
     public static class CancelableExtensions
     {
-        public static void CancelIfNotNull(this Akka.Actor.ICancelable cancelable) { }
+        public static void CancelIfNotNull(this Akka.Actor.ICancelable? cancelable) { }
     }
     public sealed class ChildActorPath : Akka.Actor.ActorPath
     {

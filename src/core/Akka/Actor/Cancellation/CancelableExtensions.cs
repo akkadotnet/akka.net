@@ -5,21 +5,20 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-namespace Akka.Actor
+#nullable enable
+namespace Akka.Actor;
+
+/// <summary>
+/// Provides extensions methods for <see cref="ICancelable"/>.
+/// </summary>
+public static class CancelableExtensions
 {
     /// <summary>
-    /// Provides extensions methods for <see cref="ICancelable"/>.
+    /// If <paramref name="cancelable"/> is not <c>null</c> it's canceled.
     /// </summary>
-    public static class CancelableExtensions
+    /// <param name="cancelable">The cancelable. Will be canceled if it's not <c>null</c></param>
+    public static void CancelIfNotNull(this ICancelable? cancelable)
     {
-        /// <summary>
-        /// If <paramref name="cancelable"/> is not <c>null</c> it's canceled.
-        /// </summary>
-        /// <param name="cancelable">The cancelable. Will be canceled if it's not <c>null</c></param>
-        public static void CancelIfNotNull(this ICancelable cancelable)
-        {
-            cancelable?.Cancel();
-        }
+        cancelable?.Cancel();
     }
 }
-
