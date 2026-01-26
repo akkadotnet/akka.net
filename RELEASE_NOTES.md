@@ -1,3 +1,33 @@
+#### 1.5.59 January 27th, 2026 ####
+
+Akka.NET v1.5.59 is a maintenance release with critical bug fixes and new features for observability.
+
+**Critical Bug Fixes**
+
+* [Fix MergeSeen to filter Seen against current Members](https://github.com/akkadotnet/akka.net/pull/8011) - Fixes [issue #8009](https://github.com/akkadotnet/akka.net/issues/8009). Resolves a cluster gossip serialization failure that could occur with the error "Unknown address in cluster message" when the `Seen` table contained addresses of members that had already left the cluster.
+
+**Bug Fixes**
+
+* [Fix logger initialization continuation race in LoggingBus](https://github.com/akkadotnet/akka.net/pull/8006) - Fixes a race condition during logger initialization that could cause logging failures during actor system startup.
+* [Fix Inbox.AwaitResult throwing AggregateException instead of TimeoutException](https://github.com/akkadotnet/akka.net/pull/8005) - `Inbox.AwaitResult` now correctly throws `TimeoutException` when a timeout occurs, rather than wrapping it in an `AggregateException`.
+* [Fix DeferAsync async handler nesting bug in CommandAsync](https://github.com/akkadotnet/akka.net/pull/7999) - Fixes [issue #7998](https://github.com/akkadotnet/akka.net/issues/7998). Resolves an issue where `DeferAsync` with an async handler would throw "RunTask calls cannot be nested" when called from `CommandAsync`.
+* [Fix AwaitAssertAsync logic causing premature timeout](https://github.com/akkadotnet/akka.net/pull/7986) - Fixes `AwaitAssertAsync` in Akka.TestKit to correctly wait for the full timeout duration before failing assertions.
+
+**New Features**
+
+* [Add ActivityContext capture to LogEvent for trace correlation](https://github.com/akkadotnet/akka.net/pull/7995) - Log events now automatically capture the current `System.Diagnostics.ActivityContext` when created, enabling correlation between Akka.NET logs and distributed traces in observability platforms like OpenTelemetry, Application Insights, and Jaeger.
+* [Add BroadcastHub startAfterNrOfConsumers parameter](https://github.com/akkadotnet/akka.net/pull/8018) - Fixes [issue #8017](https://github.com/akkadotnet/akka.net/issues/8017). Port from Apache Pekko - adds a `startAfterNrOfConsumers` parameter to `BroadcastHub.Sink<T>()` that delays broadcasting until the specified number of consumers have subscribed:
+  ```csharp
+  // Wait for 3 consumers before starting to broadcast
+  var sink = BroadcastHub.Sink<int>(startAfterNrOfConsumers: 3, bufferSize: 256);
+  ```
+
+**Improvements**
+
+* [CoordinatedShutdown: clearly log the reason why we're exiting](https://github.com/akkadotnet/akka.net/pull/7988) - `CoordinatedShutdown` now logs the specific reason for shutdown at INFO level, making it easier to diagnose why an actor system terminated.
+
+To see the full set of changes in Akka.NET v1.5.59, [click here](https://github.com/akkadotnet/akka.net/milestone/142?closed=1).
+
 #### 1.5.58 January 8th, 2026 ####
 
 Akka.NET v1.5.58 is a maintenance release with important bug fixes and performance improvements.
