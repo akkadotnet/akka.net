@@ -33,7 +33,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
 [assembly: System.Runtime.InteropServices.GuidAttribute("1a5cab08-b032-49ca-8db3-9428c5a9db14")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
+[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
 namespace Akka.Actor
 {
     public abstract class ActorBase : Akka.Actor.IInternalActor
@@ -144,7 +144,7 @@ namespace Akka.Actor
                 0,
                 1})] Akka.Util.Option<object> customMessage) { }
         public bool TryGetChildStatsByName(string name, out Akka.Actor.Internal.IChildStats child) { }
-        protected bool TryGetChildStatsByRef(Akka.Actor.IActorRef actor, [System.Runtime.CompilerServices.NullableAttribute(2)] out Akka.Actor.Internal.ChildRestartStats child) { }
+        protected bool TryGetChildStatsByRef(Akka.Actor.IActorRef actor, [System.Diagnostics.CodeAnalysis.NotNullWhenAttribute(true)] [System.Runtime.CompilerServices.NullableAttribute(2)] out Akka.Actor.Internal.ChildRestartStats child) { }
         public void UnbecomeStacked() { }
         protected void UnreserveChild(string name) { }
         public Akka.Actor.IActorRef Unwatch(Akka.Actor.IActorRef subject) { }
@@ -744,6 +744,7 @@ namespace Akka.Actor
         protected virtual bool SpecialHandle(object message, Akka.Actor.IActorRef sender) { }
         protected override void TellInternal(object message, Akka.Actor.IActorRef sender) { }
     }
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
     public struct Envelope
     {
         public Envelope(object message, Akka.Actor.IActorRef sender, Akka.Actor.ActorSystem system) { }
@@ -794,6 +795,7 @@ namespace Akka.Actor
             public override int GetHashCode() { }
             public override string ToString() { }
         }
+        [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public struct Event<TD> : Akka.Actor.INoSerializationVerificationNeeded
         {
             public Event(object fsmEvent, TD stateData) { }
@@ -2090,7 +2092,7 @@ namespace Akka.Actor.Internal
         public abstract Akka.Actor.Internal.IChildrenContainer Reserve(string name);
         public abstract Akka.Actor.Internal.IChildrenContainer ShallDie(Akka.Actor.IActorRef actor);
         public bool TryGetByName(string name, out Akka.Actor.Internal.IChildStats stats) { }
-        public bool TryGetByRef(Akka.Actor.IActorRef actor, [System.Runtime.CompilerServices.NullableAttribute(2)] out Akka.Actor.Internal.ChildRestartStats childRestartStats) { }
+        public bool TryGetByRef(Akka.Actor.IActorRef actor, [System.Diagnostics.CodeAnalysis.NotNullWhenAttribute(true)] [System.Runtime.CompilerServices.NullableAttribute(2)] out Akka.Actor.Internal.ChildRestartStats childRestartStats) { }
         public abstract Akka.Actor.Internal.IChildrenContainer Unreserve(string name);
     }
     public class EmptyChildrenContainer : Akka.Actor.Internal.IChildrenContainer
@@ -2124,7 +2126,7 @@ namespace Akka.Actor.Internal
         Akka.Actor.Internal.IChildrenContainer Reserve(string name);
         Akka.Actor.Internal.IChildrenContainer ShallDie(Akka.Actor.IActorRef actor);
         bool TryGetByName(string name, out Akka.Actor.Internal.IChildStats stats);
-        bool TryGetByRef(Akka.Actor.IActorRef actor, [System.Runtime.CompilerServices.NullableAttribute(2)] out Akka.Actor.Internal.ChildRestartStats stats);
+        bool TryGetByRef(Akka.Actor.IActorRef actor, [System.Diagnostics.CodeAnalysis.NotNullWhenAttribute(true)] [System.Runtime.CompilerServices.NullableAttribute(2)] out Akka.Actor.Internal.ChildRestartStats stats);
         Akka.Actor.Internal.IChildrenContainer Unreserve(string name);
     }
     public interface IInitializableActor
@@ -2276,6 +2278,7 @@ namespace Akka.Configuration
         public virtual System.Collections.Generic.IList<bool> GetBooleanList(string path) { }
         public virtual System.Collections.Generic.IList<byte> GetByteList(string path) { }
         public virtual System.Nullable<long> GetByteSize(string path) { }
+        [return: System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute("def")]
         public virtual System.Nullable<long> GetByteSize(string path, System.Nullable<long> def = null) { }
         public virtual Akka.Configuration.Config GetConfig(string path) { }
         public virtual decimal GetDecimal(string path, [System.Runtime.CompilerServices.DecimalConstantAttribute(0, 0, 0u, 0u, 0u)] decimal @default) { }
@@ -2659,6 +2662,7 @@ namespace Akka.Delivery
             public Akka.Delivery.DurableProducerQueue.MessageSent<T> WithQualifier(string qualifier) { }
             public Akka.Delivery.DurableProducerQueue.MessageSent<T> WithTimestamp(long timestamp) { }
         }
+        [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         [System.Runtime.CompilerServices.NullableAttribute(0)]
         public struct State<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : Akka.Delivery.Internal.IDeliverySerializable, System.IEquatable<Akka.Delivery.DurableProducerQueue.State<T>>
         {
@@ -2784,6 +2788,7 @@ namespace Akka.Delivery
 namespace Akka.Delivery.Internal
 {
     [Akka.Annotations.InternalApiAttribute()]
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public struct ChunkedMessage
     {
@@ -2798,6 +2803,7 @@ namespace Akka.Delivery.Internal
     [Akka.Annotations.InternalApiAttribute()]
     public interface IDeliverySerializable { }
     [Akka.Annotations.InternalApiAttribute()]
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
     [System.Runtime.CompilerServices.NullableAttribute(0)]
     public struct MessageOrChunk<T> : System.IEquatable<Akka.Delivery.Internal.MessageOrChunk<T>>
     {
@@ -2830,14 +2836,16 @@ namespace Akka.Delivery.Internal
 }
 namespace Akka.Dispatch
 {
-    public sealed class ActionRunnable : Akka.Dispatch.IRunnable
+    public sealed class ActionRunnable : Akka.Dispatch.IRunnable, System.Threading.IThreadPoolWorkItem
     {
         public ActionRunnable(System.Action action) { }
+        public void Execute() { }
         public void Run() { }
     }
-    public sealed class ActionWithStateRunnable : Akka.Dispatch.IRunnable
+    public sealed class ActionWithStateRunnable : Akka.Dispatch.IRunnable, System.Threading.IThreadPoolWorkItem
     {
         public ActionWithStateRunnable(System.Action<object> actionWithState, object state) { }
+        public void Execute() { }
         public void Run() { }
     }
     public class ActorTaskScheduler : System.Threading.Tasks.TaskScheduler
@@ -2976,14 +2984,14 @@ namespace Akka.Dispatch
     }
     public interface IRequiresMessageQueue<T>
         where T : Akka.Dispatch.ISemantics { }
-    public interface IRunnable
+    public interface IRunnable : System.Threading.IThreadPoolWorkItem
     {
         void Run();
     }
     public interface ISemantics { }
     public interface IUnboundedDequeBasedMessageQueueSemantics : Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics { }
     public interface IUnboundedMessageQueueSemantics : Akka.Dispatch.ISemantics { }
-    public class Mailbox : Akka.Dispatch.IRunnable
+    public class Mailbox : Akka.Dispatch.IRunnable, System.Threading.IThreadPoolWorkItem
     {
         public Mailbox(Akka.Dispatch.MessageQueues.IMessageQueue messageQueue) { }
         public Akka.Dispatch.MessageDispatcher Dispatcher { get; }
@@ -2991,6 +2999,7 @@ namespace Akka.Dispatch
         public virtual void CleanUp() { }
         [System.Diagnostics.ConditionalAttribute("MAILBOXDEBUG")]
         public static void DebugPrint(string message, params object[] args) { }
+        public void Execute() { }
         public void Run() { }
         public virtual void SetActor(Akka.Actor.ActorCell actorCell) { }
     }
@@ -3465,11 +3474,11 @@ namespace Akka.Event
     public abstract class LogEvent : Akka.Actor.INoSerializationVerificationNeeded
     {
         protected LogEvent() { }
-        public System.Diagnostics.ActivityContext? ActivityContext { get; }
-        public System.Exception Cause { get; protected set; }
-        public System.Type LogClass { get; protected set; }
-        public string LogSource { get; protected set; }
-        public object Message { get; protected set; }
+        public System.Nullable<System.Diagnostics.ActivityContext> ActivityContext { get; }
+        public System.Exception Cause { get; set; }
+        public System.Type LogClass { get; set; }
+        public string LogSource { get; set; }
+        public object Message { get; set; }
         public System.Threading.Thread Thread { get; }
         public System.DateTime Timestamp { get; }
         public abstract Akka.Event.LogLevel LogLevel();
@@ -3555,7 +3564,9 @@ namespace Akka.Event
     public class static LogMessageExtensions { }
     public struct LogSource
     {
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public string Source { get; }
+        [get: System.Runtime.CompilerServices.IsReadOnlyAttribute()]
         public System.Type Type { get; }
         public static Akka.Event.LogSource Create(object o) { }
         public static Akka.Event.LogSource Create(object o, Akka.Actor.ActorSystem system) { }
@@ -5551,6 +5562,7 @@ namespace Akka.Util
         public static int SymmetricHash<T>(System.Collections.Generic.IEnumerable<T> xs, uint seed) { }
     }
     [Akka.Annotations.InternalStableApiAttribute()]
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
     public struct Option<T>
     {
         public static readonly Akka.Util.Option<T> None;
@@ -5592,6 +5604,7 @@ namespace Akka.Util
                 1})]
         public static Akka.Util.Result<T> Success<[System.Runtime.CompilerServices.NullableAttribute(2)]  T>(T value) { }
     }
+    [System.Runtime.CompilerServices.IsReadOnlyAttribute()]
     public struct Result<[System.Runtime.CompilerServices.NullableAttribute(2)]  T> : System.IEquatable<Akka.Util.Result<T>>
     {
         [System.Runtime.CompilerServices.NullableAttribute(2)]

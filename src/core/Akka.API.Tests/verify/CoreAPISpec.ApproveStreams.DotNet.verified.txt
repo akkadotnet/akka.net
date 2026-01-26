@@ -1296,8 +1296,8 @@ namespace Akka.Streams.Dsl
     {
         public BroadcastHub() { }
         public static Akka.Streams.Dsl.Sink<T, Akka.Streams.Dsl.Source<T, Akka.NotUsed>> Sink<T>(int bufferSize) { }
-        public static Akka.Streams.Dsl.Sink<T, Akka.Streams.Dsl.Source<T, Akka.NotUsed>> Sink<T>() { }
         public static Akka.Streams.Dsl.Sink<T, Akka.Streams.Dsl.Source<T, Akka.NotUsed>> Sink<T>(int startAfterNrOfConsumers, int bufferSize) { }
+        public static Akka.Streams.Dsl.Sink<T, Akka.Streams.Dsl.Source<T, Akka.NotUsed>> Sink<T>() { }
     }
     public sealed class Broadcast<T> : Akka.Streams.Stage.GraphStage<Akka.Streams.UniformFanOutShape<T, T>>
     {
