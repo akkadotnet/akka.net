@@ -13,19 +13,10 @@ using Akka.Event;
 #nullable enable
 namespace Akka.Actor;
 
-/// <summary>
-/// TBD
-/// </summary>
 public class EmptyLocalActorRef : MinimalActorRef
 {
     private readonly EventStream _eventStream;
 
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <param name="provider">TBD</param>
-    /// <param name="path">TBD</param>
-    /// <param name="eventStream">TBD</param>
     public EmptyLocalActorRef(IActorRefProvider provider, ActorPath path, EventStream eventStream)
     {
         Provider = provider;
@@ -33,30 +24,15 @@ public class EmptyLocalActorRef : MinimalActorRef
         _eventStream = eventStream;
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     public override ActorPath Path { get; }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     public override IActorRefProvider Provider { get; }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
     [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
 #pragma warning disable CS0809
     public override bool IsTerminated => true;
 #pragma warning restore CS0809
 
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <param name="message">TBD</param>
-    /// <param name="sender">TBD</param>
-    /// <exception cref="InvalidMessageException">This exception is thrown if the given <paramref name="message"/> is undefined.</exception>
     protected override void TellInternal(object message, IActorRef sender)
     {
         if (message is null) throw new InvalidMessageException("Message is null");
@@ -67,22 +43,12 @@ public class EmptyLocalActorRef : MinimalActorRef
         }
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <param name="message">TBD</param>
     public override void SendSystemMessage(ISystemMessage message)
     {
         Mailbox.DebugPrint("EmptyLocalActorRef {0} having enqueued {1}", Path, message);
         SpecialHandle(message, Provider.DeadLetters);
     }
 
-    /// <summary>
-    /// TBD
-    /// </summary>
-    /// <param name="message">TBD</param>
-    /// <param name="sender">TBD</param>
-    /// <returns>TBD</returns>
     protected virtual bool SpecialHandle(object message, IActorRef sender)
     {
         switch (message)
