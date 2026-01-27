@@ -721,17 +721,27 @@ namespace Akka.TestKit
             // Fix both serialization and deadlock issues:
             // 1. Use isSystemService=true to skip serialization checks
             // 2. Use isAsync=false to create LocalActorRef synchronously (avoids RepointableActorRef deadlock)
-            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
+            // 3. Use ManualResetEventSlim to ensure PreStart completes before returning (fixes parallel init race)
+            using var initComplete = new ManualResetEventSlim(false);
+
+            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue, initComplete))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
-            
+
             var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
             // Use the new AttachChildWithAsync method to create TestActor synchronously
             var testActor = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
-                testActorProps, 
+                testActorProps,
                 isSystemService: true,  // Skip serialization checks
                 isAsync: false,         // Create synchronously to avoid deadlock
                 name: name);
-            
+
+            // Wait for TestActor.PreStart() to complete before returning
+            // This ensures the actor is fully initialized and ready to receive messages
+            if (!initComplete.Wait(TimeSpan.FromSeconds(10)))
+            {
+                throw new TimeoutException($"TestActor '{name}' failed to initialize within 10 seconds");
+            }
+
             return testActor;
         }
         
