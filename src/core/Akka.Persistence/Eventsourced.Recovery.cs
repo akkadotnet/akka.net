@@ -43,6 +43,7 @@ namespace Akka.Persistence
         /// </summary>
         private EventsourcedState WaitingRecoveryPermit(Recovery recovery)
         {
+            Log.Debug("Waiting for recovery permit");
             return new EventsourcedState("waiting for recovery permit", () => true, (_, message) =>
             {
                 if (message is RecoveryPermitGranted)
@@ -84,6 +85,7 @@ namespace Akka.Persistence
                 }
             }
 
+            Log.Debug("Recovery started");
             return new EventsourcedState("recovery started - replay max: " + maxReplays, () => true, (_, message) =>
             {
                 try
@@ -193,6 +195,7 @@ namespace Akka.Persistence
             var eventSeenInInterval = false;
             var recoveryRunning = true;
 
+            Log.Debug("Recovering");
             return new EventsourcedState("replay started", () => recoveryRunning, (_, message) =>
             {
                 try
@@ -317,6 +320,7 @@ namespace Akka.Persistence
         /// </summary>
         private EventsourcedState ProcessingCommands()
         {
+            Log.Debug("Processing commands");
             return new EventsourcedState("processing commands", () => false, (receive, message) =>
             {
                 var handled = CommonProcessingStateBehavior(message, err =>
@@ -374,6 +378,7 @@ namespace Akka.Persistence
         /// </summary>
         private EventsourcedState PersistingEvents()
         {
+            Log.Debug("Persisting events");
             return new EventsourcedState("persisting events", () => false, (_, message) =>
             {
                 var handled = CommonProcessingStateBehavior(message, err =>

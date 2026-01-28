@@ -59,6 +59,11 @@ namespace Akka.Persistence
             MaxPermits = maxPermits;
         }
 
+        protected override void PreStart()
+        {
+            Log.Debug("RecoveryPermitter started with max-concurrent-recoveries = {0}", MaxPermits);
+        }
+
         protected override void OnReceive(object message)
         {
             switch (message)
@@ -117,6 +122,7 @@ namespace Akka.Persistence
 
         private void RecoveryPermitGranted(IActorRef actorRef)
         {
+            Log.Debug("Recovery permit granted for {0}", actorRef);
             _usedPermits++;
             actorRef.Tell(Akka.Persistence.RecoveryPermitGranted.Instance);
         }

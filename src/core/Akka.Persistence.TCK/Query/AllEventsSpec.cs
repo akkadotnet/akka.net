@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
+using Akka.Event;
 using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.TestKit;
@@ -75,9 +76,17 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = ReadJournal as IAllEventsQuery;
 
-            var a = Sys.ActorOf(Query.TestActor.Props("a"));
-            var b = Sys.ActorOf(Query.TestActor.Props("b"));
-            var c = Sys.ActorOf(Query.TestActor.Props("c"));
+            Log.Debug("Creating actor a");
+            var a = Sys.ActorOf(Query.TestActor.Props("a"), "a");
+            Log.Debug("After ActorOf a");
+            
+            Log.Debug("Creating actor b");
+            var b = Sys.ActorOf(Query.TestActor.Props("b"), "b");
+            Log.Debug("After ActorOf b");
+            
+            Log.Debug("Creating actor c");
+            var c = Sys.ActorOf(Query.TestActor.Props("c"), "c");
+            Log.Debug("After ActorOf c");
 
             a.Tell("keep");
             await ExpectMsgAsync("keep-done");
@@ -117,3 +126,4 @@ namespace Akka.Persistence.TCK.Query
         }
     }
 }
+

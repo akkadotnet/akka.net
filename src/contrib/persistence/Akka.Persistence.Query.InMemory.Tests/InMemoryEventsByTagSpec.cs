@@ -14,7 +14,7 @@ namespace Akka.Persistence.Query.InMemory.Tests
     public class InMemoryEventsByTagSpec : EventsByTagSpec
     {
         private static Config Config() => ConfigurationFactory.ParseString(@"
-            akka.loglevel = INFO
+            akka.loglevel = DEBUG
             akka.persistence.journal.inmem {
                 event-adapters {
                   color-tagger  = ""Akka.Persistence.TCK.Query.ColorFruitTagger, Akka.Persistence.TCK""
@@ -25,10 +25,14 @@ namespace Akka.Persistence.Query.InMemory.Tests
             }")
             .WithFallback(InMemoryPersistenceSpecConfig.Config);
 
-        public InMemoryEventsByTagSpec(ITestOutputHelper output) : 
-            base(Config(), nameof(InMemoryCurrentPersistenceIdsSpec), output)
+        public InMemoryEventsByTagSpec(ITestOutputHelper output) :
+            base(Config(), nameof(InMemoryEventsByTagSpec), output)
         {
-            Persistence.Instance.Get(Sys); // Initialize persistence immediately
+            InMemoryPersistenceSpecConfig.EnsureThreadPoolWarmed();
+
+            // Force-load Persistence extension to trigger auto-start-journals/snapshot-stores
+            // This ensures RecoveryPermitter is initialized before any persistent actors are created
+            Persistence.Instance.Apply(Sys);
             ReadJournal = Sys.ReadJournalFor<InMemoryReadJournal>(InMemoryReadJournal.Identifier);
         }
 

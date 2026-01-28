@@ -13,13 +13,17 @@ namespace Akka.Persistence.Query.InMemory.Tests
 {
     public class InMemoryCurrentEventsByPersistenceIdSpec : CurrentEventsByPersistenceIdSpec
     {
-        private static Config Config() => ConfigurationFactory.ParseString("akka.loglevel = INFO")
+        private static Config Config() => ConfigurationFactory.ParseString("akka.loglevel = DEBUG")
             .WithFallback(InMemoryPersistenceSpecConfig.Config);
 
-        public InMemoryCurrentEventsByPersistenceIdSpec(ITestOutputHelper output) : 
-            base(Config(), nameof(InMemoryCurrentPersistenceIdsSpec), output)
+        public InMemoryCurrentEventsByPersistenceIdSpec(ITestOutputHelper output) :
+            base(Config(), nameof(InMemoryCurrentEventsByPersistenceIdSpec), output)
         {
-            Persistence.Instance.Get(Sys); // Initialize persistence immediately
+            InMemoryPersistenceSpecConfig.EnsureThreadPoolWarmed();
+
+            // Force-load Persistence extension to trigger auto-start-journals/snapshot-stores
+            // This ensures RecoveryPermitter is initialized before any persistent actors are created
+            Persistence.Instance.Apply(Sys);
             ReadJournal = Sys.ReadJournalFor<InMemoryReadJournal>(InMemoryReadJournal.Identifier);
         }
     }

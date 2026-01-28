@@ -14,6 +14,7 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Xunit2.Attributes;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
@@ -360,8 +361,8 @@ namespace Akka.Persistence.Tests
 
         #endregion
 
-        public AtLeastOnceDeliveryReceiveActorSpec()
-            : base(Configuration("AtLeastOnceDeliveryReceiveActorSpec"))
+        public AtLeastOnceDeliveryReceiveActorSpec(ITestOutputHelper output)
+            : base(Configuration("AtLeastOnceDeliveryReceiveActorSpec"), output)
         {
         }
 
