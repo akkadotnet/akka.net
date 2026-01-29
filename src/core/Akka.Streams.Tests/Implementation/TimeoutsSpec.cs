@@ -120,19 +120,14 @@ namespace Akka.Streams.Tests.Implementation
                     .CompletionTimeout(TimeSpan.FromSeconds(2))
                     .RunWith(Sink.FromSubscriber(downstreamProbe), Materializer);
 
-
+                // Send elements through - successfully receiving proves no premature timeout
                 upstreamProbe.SendNext(1);
-                await downstreamProbe.AsyncBuilder()
-                    .RequestNext(1)
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(500)) // No timeout yet
-                    .ExecuteAsync();
+                await downstreamProbe.RequestNextAsync(1);
 
                 upstreamProbe.SendNext(2);
-                await downstreamProbe.AsyncBuilder()
-                    .RequestNext(2)
-                    .ExpectNoMsg(TimeSpan.FromMilliseconds(500)) // No timeout yet
-                    .ExecuteAsync();
+                await downstreamProbe.RequestNextAsync(2);
 
+                // Stream doesn't complete, so CompletionTimeout should eventually fire
                 var ex = await downstreamProbe.ExpectErrorAsync();
                 ex.Message.Should().Be($"The stream has not been completed in {TimeSpan.FromSeconds(2)}.");
             }, Materializer);

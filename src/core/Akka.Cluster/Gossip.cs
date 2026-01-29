@@ -240,13 +240,17 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Merges the seen table from two <see cref="Gossip"/> instances.
+        /// The resulting seen set is filtered to only include addresses that are current members,
+        /// ensuring the invariant that Seen ⊆ Members is always maintained.
         /// </summary>
-        /// <param name="that">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="that">The other gossip instance to merge seen state from.</param>
+        /// <returns>A new gossip instance with merged and filtered seen state.</returns>
         public Gossip MergeSeen(Gossip that)
         {
-            return Copy(overview: _overview.Copy(seen: _overview.Seen.Union(that._overview.Seen)));
+            var memberAddresses = _members.Select(m => m.UniqueAddress).ToImmutableHashSet();
+            var mergedSeen = _overview.Seen.Union(that._overview.Seen).Intersect(memberAddresses);
+            return Copy(overview: _overview.Copy(seen: mergedSeen));
         }
 
         /// <summary>

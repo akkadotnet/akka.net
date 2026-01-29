@@ -17,8 +17,9 @@ namespace Akka.Persistence.Query.InMemory.Tests
             .WithFallback(InMemoryPersistenceSpecConfig.Config);
 
         public InMemoryCurrentEventsByPersistenceIdSpec(ITestOutputHelper output) : 
-            base(Config(), nameof(InMemoryCurrentPersistenceIdsSpec), output)
+            base(Config(), nameof(InMemoryCurrentEventsByPersistenceIdSpec), output)
         {
+            InMemoryPersistenceSpecConfig.EnsureThreadPoolWarmed();
             Persistence.Instance.Get(Sys); // Initialize persistence immediately
             ReadJournal = Sys.ReadJournalFor<InMemoryReadJournal>(InMemoryReadJournal.Identifier);
         }
