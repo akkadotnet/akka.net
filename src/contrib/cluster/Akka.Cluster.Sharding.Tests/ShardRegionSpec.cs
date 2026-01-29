@@ -148,10 +148,10 @@ namespace Akka.Cluster.Sharding.Tests
         }
         
         [Fact]
-        public void ClusterSharding_must()
+        public async Task ClusterSharding_must()
         {
             ClusterSharding_must_initialize_cluster_and_allocate_sharded_actors();
-            ClusterSharding_must_only_deliver_buffered_RestartShard_to_the_local_region();
+            await ClusterSharding_must_only_deliver_buffered_RestartShard_to_the_local_region();
         }
 
         public void ClusterSharding_must_initialize_cluster_and_allocate_sharded_actors()
@@ -186,7 +186,7 @@ namespace Akka.Cluster.Sharding.Tests
             p2.ExpectMsg(3);
         }
 
-        public void ClusterSharding_must_only_deliver_buffered_RestartShard_to_the_local_region()
+        public async Task ClusterSharding_must_only_deliver_buffered_RestartShard_to_the_local_region()
         {
             ImmutableHashSet<string> StatesFor(IActorRef region, TestProbe probe, int expect)
             {
@@ -203,14 +203,14 @@ namespace Akka.Cluster.Sharding.Tests
                   }, msgs: expect).SelectMany(i => i).ToImmutableHashSet();
             }
 
-            bool AwaitRebalance(IActorRef region, int msg, TestProbe probe)
+            async Task<bool> AwaitRebalanceAsync(IActorRef region, int msg, TestProbe probe)
             {
                 region.Tell(msg, probe.Ref);
-                var m = probe.ExpectMsg<int>(TimeSpan.FromSeconds(2));
+                var m = await probe.ExpectMsgAsync<int>(TimeSpan.FromSeconds(2));
                 if (m == msg)
                     return true;
                 else
-                    return AwaitRebalance(region, msg, probe);
+                    return await AwaitRebalanceAsync(region, msg, probe);
             }
 
             void Swap<T>(ref T v1, ref T v2)
@@ -244,9 +244,9 @@ namespace Akka.Cluster.Sharding.Tests
             });
 
             // Difficult to raise the RestartShard in conjunction with the rebalance for mode=ddata
-            AwaitAssert(() =>
+            await AwaitAssertAsync(async () =>
             {
-                AwaitRebalance(region1, shardIdToMove, p1).Should().BeTrue();
+                (await AwaitRebalanceAsync(region1, shardIdToMove, p1)).Should().BeTrue();
             });
 
             var rebalancedOnRegion1 = StatesFor(region1, p1, expect: numberOfShards);

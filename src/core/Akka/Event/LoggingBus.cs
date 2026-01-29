@@ -204,8 +204,10 @@ namespace Akka.Event
             var fullLoggerName = $"{loggerName} [{loggerType.FullName}]";
             var logger = system.SystemActorOf(Props.Create(loggerType).WithDispatcher(system.Settings.LoggersDispatcher), loggerName);
             var askTask = logger.Ask(new InitializeLogger(this), Timeout.InfiniteTimeSpan, _shutdownCts.Token);
-            
-            askTask.ContinueWith(t =>
+
+            // Return the continuation task, not the ask task, so callers wait for
+            // the full initialization sequence including the "Logger started" message
+            var continuationTask = askTask.ContinueWith(t =>
                 {
                     // _shutdownCts was cancelled while this logger is still loading
                     if (t.IsCanceled)
@@ -215,7 +217,16 @@ namespace Akka.Event
                         RemoveLogger(logger);
                         return;
                     }
-                    
+
+                    // Ask operation failed with an exception
+                    if (t.IsFaulted)
+                    {
+                        Publish(new Error(t.Exception, loggingBusName, GetType(),
+                            $"Logger {fullLoggerName} failed to respond to initialization request. Stopping logger."));
+                        RemoveLogger(logger);
+                        return;
+                    }
+
                     // Task ran to completion successfully
                     var response = t.Result;
                     if (response is not LoggerInitialized)
@@ -231,8 +242,8 @@ namespace Akka.Event
                     _loggers.Add(logger);
                     SubscribeLogLevelAndAbove(LogLevel, logger);
                     Publish(new Debug(loggingBusName, GetType(), $"Logger {fullLoggerName} started"));
-                });
-            return (askTask, fullLoggerName);
+                }, TaskContinuationOptions.ExecuteSynchronously);
+            return (continuationTask, fullLoggerName);
         }
 
         private string CreateLoggerName(Type actorClass)
