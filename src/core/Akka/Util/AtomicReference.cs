@@ -7,6 +7,7 @@
 
 using System.Threading;
 
+#nullable enable
 namespace Akka.Util
 {
     /// <summary>
@@ -34,19 +35,19 @@ namespace Akka.Util
         /// </summary>
         public AtomicReference()
         {
-            atomicValue = default(T);
+            atomicValue = null;
         }
 
         // ReSharper disable once InconsistentNaming
         /// <summary>
         /// The internal field that holds the referenced value.
         /// </summary>
-        protected T atomicValue;
+        protected T? atomicValue;
 
         /// <summary>
         /// The current value of this <see cref="AtomicReference{T}"/>
         /// </summary>
-        public T Value
+        public T? Value
         {
             get { return Volatile.Read(ref atomicValue); }
             set { Volatile.Write(ref atomicValue, value); }
@@ -62,7 +63,7 @@ namespace Akka.Util
         /// <remarks>
         /// WARNING: if you need to know the previous value, use <see cref="CompareExchange(T,T)"/> instead.
         /// </remarks>
-        public bool CompareAndSet(T expected, T newValue)
+        public bool CompareAndSet(T? expected, T? newValue)
         {
             var previous = CompareExchange(expected, newValue);
             return ReferenceEquals(previous, expected);
@@ -75,7 +76,7 @@ namespace Akka.Util
         /// <param name="expected">The value expected to be referenced currently.</param>
         /// <param name="newValue">The new value to reference if the current matches the expected value.</param>
         /// <returns>The original value that was in the atomic reference before the operation.</returns>
-        public T CompareExchange(T expected, T newValue)
+        public T? CompareExchange(T? expected, T? newValue)
         {
             return Interlocked.CompareExchange(ref atomicValue, newValue, expected);
         }
@@ -85,7 +86,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="newValue">The new value</param>
         /// <returns>The old value</returns>
-        public T GetAndSet(T newValue)
+        public T? GetAndSet(T? newValue)
         {
             return Interlocked.Exchange(ref atomicValue, newValue);
         }
@@ -96,7 +97,7 @@ namespace Akka.Util
         /// </summary>
         /// <param name="atomicReference">The reference to convert</param>
         /// <returns>The result of the conversion.</returns>
-        public static implicit operator T(AtomicReference<T> atomicReference)
+        public static implicit operator T?(AtomicReference<T> atomicReference)
         {
             return atomicReference.Value;
         }

@@ -8,6 +8,7 @@
 using System;
 using System.Text;
 
+#nullable enable
 namespace Akka.Util
 {
     /// <summary>
@@ -27,16 +28,18 @@ namespace Akka.Util
             return Base64Encode(value, "");
         }
 
-        internal static string Base64Encode(this long value, string prefix)
+        internal static string Base64Encode(this long value, string? prefix)
         {
+            var length = prefix?.Length ?? 0;
+            
             // 11 is the number of characters it takes to represent long.MaxValue
             // so we will never need a larger size for encoding longs
-            Span<char> sb = stackalloc char[11 + (prefix?.Length ?? 0)];
+            Span<char> sb = stackalloc char[11 + length];
             var spanIndex = 0;
-            if (!string.IsNullOrWhiteSpace(prefix) && prefix.Length > 0)
+            if (!string.IsNullOrWhiteSpace(prefix) && length > 0)
             {
                 prefix.AsSpan().CopyTo(sb);
-                spanIndex = prefix.Length;
+                spanIndex = length;
             }
 
             var next = value;
