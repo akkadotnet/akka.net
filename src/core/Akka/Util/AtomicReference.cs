@@ -7,6 +7,7 @@
 
 using System.Threading;
 
+#nullable enable
 namespace Akka.Util
 {
     /// <summary>
@@ -27,14 +28,6 @@ namespace Akka.Util
         public AtomicReference(T originalValue)
         {
             atomicValue = originalValue;
-        }
-
-        /// <summary>
-        /// Default constructor
-        /// </summary>
-        public AtomicReference()
-        {
-            atomicValue = default(T);
         }
 
         // ReSharper disable once InconsistentNaming

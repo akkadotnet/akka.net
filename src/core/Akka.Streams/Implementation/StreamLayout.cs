@@ -9,8 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading;
 using Akka.Annotations;
 using Akka.Event;
 using Akka.Pattern;
@@ -1565,6 +1567,14 @@ namespace Akka.Streams.Implementation
     [InternalApi]
     public sealed class VirtualProcessor<T> : AtomicReference<object>, IProcessor<T, T>
     {
+        private class EmptyObject
+        {
+            public static readonly EmptyObject Instance = new();
+            private EmptyObject()
+            {
+            }
+        }
+        
         public const bool IsDebug = true;
         private const string NoDemand = "spec violation: OnNext was signaled from upstream without demand";
         private readonly string _hashCode;
@@ -1623,7 +1633,7 @@ namespace Akka.Streams.Implementation
         
         #endregion
 
-        public VirtualProcessor()
+        public VirtualProcessor(): base(EmptyObject.Instance)
         {
             _hashCode = GetHashCode().ToString();
             PrintDebug($"Created: {this}");
@@ -1645,41 +1655,7 @@ namespace Akka.Streams.Implementation
         /// <exception cref="Exception">TBD</exception>
         public void Subscribe(ISubscriber<T> subscriber)
         {
-            void Rec(ISubscriber<T> sub)
-            {
-                switch (Value)
-                {
-                    case null:
-                        PrintDebug($"VirtualProcessor#{_hashCode}(null).Subscribe.Rec({subscriber}) -> sub");
-                        if (!CompareAndSet(null, subscriber))
-                            Rec(sub);
-                        return;
-                
-                    case ISubscription subscription:
-                        PrintDebug($"VirtualProcessor#{_hashCode}({subscription}).Subscribe.Rec({subscriber}) -> Establishing(sub)");
-                        var establishing = new Establishing(sub);
-                        if(CompareAndSet(subscription, establishing))
-                            EstablishSubscription(establishing, subscription);
-                        else
-                            Rec(sub);
-                        return;
-                
-                    case IPublisher<T> publisher:
-                        PrintDebug($"VirtualProcessor#{_hashCode}({publisher}).Subscribe.Rec({subscriber}) -> Inert");
-                        if (CompareAndSet(publisher, Inert.Instance))
-                            publisher.Subscribe(sub);
-                        else
-                            Rec(sub);
-                        return;
-                
-                    case var other:
-                        PrintDebug($"VirtualProcessor#{_hashCode}({other}).Subscribe.Rec({subscriber}): RejectAdditionalSubscriber");
-                        ReactiveStreamsCompliance.RejectAdditionalSubscriber(sub, "VirtualProcessor");
-                        break;
-                }
-            }
-
-            if (subscriber == null)
+            if (subscriber is null)
             {
                 try
                 {
@@ -1693,6 +1669,41 @@ namespace Akka.Streams.Implementation
             }
 
             Rec(subscriber);
+            return;
+            
+            void Rec(ISubscriber<T> sub)
+            {
+                switch (Value)
+                {
+                    case EmptyObject empty:
+                        PrintDebug($"VirtualProcessor#{_hashCode}(null).Subscribe.Rec({sub}) -> sub");
+                        if (!CompareAndSet(empty, sub))
+                            Rec(sub);
+                        return;
+                
+                    case ISubscription subscription:
+                        PrintDebug($"VirtualProcessor#{_hashCode}({subscription}).Subscribe.Rec({sub}) -> Establishing(sub)");
+                        var establishing = new Establishing(sub);
+                        if(CompareAndSet(subscription, establishing))
+                            EstablishSubscription(establishing, subscription);
+                        else
+                            Rec(sub);
+                        return;
+                
+                    case IPublisher<T> publisher:
+                        PrintDebug($"VirtualProcessor#{_hashCode}({publisher}).Subscribe.Rec({sub}) -> Inert");
+                        if (CompareAndSet(publisher, Inert.Instance))
+                            publisher.Subscribe(sub);
+                        else
+                            Rec(sub);
+                        return;
+                
+                    case var other:
+                        PrintDebug($"VirtualProcessor#{_hashCode}({other}).Subscribe.Rec({sub}): RejectAdditionalSubscriber");
+                        ReactiveStreamsCompliance.RejectAdditionalSubscriber(sub, "VirtualProcessor");
+                        break;
+                }
+            }
         }
 
         /// <summary>
@@ -1702,15 +1713,32 @@ namespace Akka.Streams.Implementation
         /// <exception cref="Exception">TBD</exception>
         public void OnSubscribe(ISubscription subscription)
         {
+            if (subscription is null)
+            {
+                var ex = ReactiveStreamsCompliance.SubscriptionMustNotBeNullException;
+                try
+                {
+                    Rec(new ErrorPublisher<T>(ex, "failed-VirtualProcessor"));
+                }
+                finally
+                {
+                    // must throw ArgumentNullEx, rule 2:13
+                    throw ex;
+                }
+            }
+            
+            Rec(subscription);
+            return;
+            
             void Rec(object obj)
             {
                 while (true)
                 {
                     switch (Value)
                     {
-                        case null:
+                        case EmptyObject empty:
                             PrintDebug($"VirtualProcessor#{_hashCode}({null}).OnSubscribe.Rec({obj}) -> {obj.GetType()}");
-                            if (!CompareAndSet(null, obj)) 
+                            if (!CompareAndSet(empty, obj)) 
                                 continue;
                             return;
                         case ISubscriber<T> subscriber:
@@ -1743,22 +1771,6 @@ namespace Akka.Streams.Implementation
                     }
                 }
             }
-            
-            if (subscription == null)
-            {
-                var ex = ReactiveStreamsCompliance.SubscriptionMustNotBeNullException;
-                try
-                {
-                    Rec(new ErrorPublisher<T>(ex, "failed-VirtualProcessor"));
-                }
-                finally
-                {
-                    // must throw ArgumentNullEx, rule 2:13
-                    throw ex;
-                }
-            }
-            
-            Rec(subscription);
         }
 
         private void EstablishSubscription(Establishing establishing, ISubscription subscription)
@@ -1823,6 +1835,20 @@ namespace Akka.Streams.Implementation
         /// <exception cref="Exception">TBD</exception>
         public void OnError(Exception cause)
         {
+            var ex = cause ?? ReactiveStreamsCompliance.ExceptionMustNotBeNullException;
+            try
+            {
+                Rec(ex);
+            }
+            finally
+            {
+                // must throw NPE, rule 2.13
+                if (cause == null)
+                    throw ex;
+            }
+
+            return;
+            
             /*
             * `ex` is always a reasonable Throwable that we should communicate downstream,
             * but if `t` was `null` then the spec requires us to throw an NPE (which `ex`
@@ -1834,9 +1860,9 @@ namespace Akka.Streams.Implementation
                 {
                     switch (Value)
                     {
-                        case null:
+                        case EmptyObject empty:
                             PrintDebug($"VirtualProcessor#{_hashCode}(null).OnError({ex.Message}) -> ErrorPublisher");
-                            if (!CompareAndSet(null, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) 
+                            if (!CompareAndSet(empty, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) 
                                 continue;
                             return;
 
@@ -1872,18 +1898,6 @@ namespace Akka.Streams.Implementation
                     }
                 }
             }
-
-            var ex = cause ?? ReactiveStreamsCompliance.ExceptionMustNotBeNullException;
-            try
-            {
-                Rec(ex);
-            }
-            finally
-            {
-                // must throw NPE, rule 2.13
-                if (cause == null)
-                    throw ex;
-            }
         }
 
         /// <summary>
@@ -1895,9 +1909,9 @@ namespace Akka.Streams.Implementation
             {
                 switch (Value)
                 {
-                    case null: 
+                    case EmptyObject empty: 
                         PrintDebug($"VirtualProcessor#{_hashCode}(null).OnComplete() -> EmptyPublisher");
-                        if(!CompareAndSet(null, EmptyPublisher<T>.Instance))
+                        if(!CompareAndSet(empty, EmptyPublisher<T>.Instance))
                             continue;
                         return;
                     case ISubscription subscription:
@@ -1948,9 +1962,14 @@ namespace Akka.Streams.Implementation
                     {
                         switch (Value)
                         {
-                            case null:
-                            case ISubscription _:
-                                if (!CompareAndSet(Value, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) continue;
+                            case EmptyObject empty:
+                                if (!CompareAndSet(empty, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) 
+                                    continue;
+                                return;
+                            
+                            case ISubscription sub:
+                                if (!CompareAndSet(sub, new ErrorPublisher<T>(ex, "failed-VirtualProcessor"))) 
+                                    continue;
                                 return;
 
                             case ISubscriber<T> subscriber:
@@ -2172,6 +2191,15 @@ namespace Akka.Streams.Implementation
     {
         #region internal classes
 
+        private class EmptyObject
+        {
+            public static readonly EmptyObject Instance = new ();
+
+            private EmptyObject()
+            {
+            }
+        }
+    
         private sealed class Inert
         {
             public static readonly ISubscriber<T> Subscriber = new CancellingSubscriber<T>();
@@ -2185,6 +2213,10 @@ namespace Akka.Streams.Implementation
 
         #endregion
 
+        public VirtualPublisher(): base(EmptyObject.Instance)
+        {
+        }
+        
         /// <summary>
         /// TBD
         /// </summary>
@@ -2197,15 +2229,17 @@ namespace Akka.Streams.Implementation
             {
                 switch (Value)
                 {
-                    case null when !CompareAndSet(null, subscriber):
-                        continue;
-                    case null:
+                    case EmptyObject:
+                        if (!CompareAndSet(EmptyObject.Instance, subscriber))
+                            continue;
                         return;
-                    case IPublisher<T> publisher when CompareAndSet(publisher, Inert.Subscriber):
+                    
+                    case IPublisher<T> publisher:
+                        if(!CompareAndSet(publisher, Inert.Subscriber))
+                            continue;
                         publisher.Subscribe(subscriber);
                         return;
-                    case IPublisher<T> publisher:
-                        continue;
+                    
                     default:
                         ReactiveStreamsCompliance.RejectAdditionalSubscriber(subscriber, "Sink.AsPublisher(fanout = false)");
                         return;
@@ -2236,14 +2270,17 @@ namespace Akka.Streams.Implementation
             {
                 switch (Value)
                 {
-                    case null when !CompareAndSet(null, publisher):
-                        continue;
-                    case null:
+                    case EmptyObject:
+                        if(!CompareAndSet(EmptyObject.Instance, publisher))
+                            continue;
                         return;
+                    
                     case ISubscriber<T> subscriber:
-                        Value = Inert.Instance;
+                        if(!CompareAndSet(subscriber, Inert.Instance))
+                            continue;
                         publisher.Subscribe(subscriber);
                         return;
+                    
                     default:
                         throw new IllegalStateException("internal error");
                 }

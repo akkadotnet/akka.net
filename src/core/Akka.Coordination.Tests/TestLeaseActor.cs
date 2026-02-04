@@ -201,7 +201,7 @@ namespace Akka.Coordination.Tests
         }
 
         private readonly ExtendedActorSystem _system;
-        private AtomicReference<IActorRef> leaseActor = new();
+        private AtomicReference<IActorRef> leaseActor = new(ActorRefs.Nobody);
 
         public TestLeaseActorClientExt(ExtendedActorSystem system)
         {
@@ -211,7 +211,7 @@ namespace Akka.Coordination.Tests
         public IActorRef GetLeaseActor()
         {
             var lease = leaseActor.Value;
-            if (lease == null)
+            if (ReferenceEquals(lease, ActorRefs.Nobody))
                 throw new InvalidOperationException("LeaseActorRef must be set first");
             return lease;
         }
