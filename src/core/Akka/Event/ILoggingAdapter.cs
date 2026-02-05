@@ -12,6 +12,39 @@ namespace Akka.Event
 {
     public static class LoggingExtensions
     {
+        public static ILoggingAdapter WithContext(this ILoggingAdapter log, string name, object value)
+        {
+            if (log == null)
+                throw new ArgumentNullException(nameof(log));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Context name must be non-empty.", nameof(name));
+
+            return log is ContextLoggingAdapter contextLogger
+                ? contextLogger.WithContext(name, value)
+                : new ContextLoggingAdapter(log).WithContext(name, value);
+        }
+
+        public static ILoggingAdapter WithPrefix(this ILoggingAdapter log, string prefix)
+        {
+            if (log == null)
+                throw new ArgumentNullException(nameof(log));
+            if (string.IsNullOrWhiteSpace(prefix))
+                throw new ArgumentException("Prefix must be non-empty.", nameof(prefix));
+
+            return log is ContextLoggingAdapter contextLogger
+                ? contextLogger.WithPrefix(prefix)
+                : new ContextLoggingAdapter(log).WithPrefix(prefix);
+        }
+
+        public static ILoggingAdapterScope BeginScope(this ILoggingAdapter log, string name, object value)
+        {
+            if (log == null)
+                throw new ArgumentNullException(nameof(log));
+
+            var scopedLogger = log.WithContext(name, value);
+            return new LoggingAdapterScope(scopedLogger);
+        }
+
         public static void Log(this ILoggingAdapter log, LogLevel level, string format)
         {
             log.Log(level, null, format);

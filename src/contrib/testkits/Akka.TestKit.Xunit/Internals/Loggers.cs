@@ -45,7 +45,7 @@ public class TestOutputLogger : ReceiveActor
     {
         try
         {
-            _output.WriteLine(e.ToString());
+            _output.WriteLine(e.ToDisplayString());
         }
         catch (FormatException ex)
             when (e.Message is LogMessage msg)
