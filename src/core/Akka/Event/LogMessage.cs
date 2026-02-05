@@ -55,16 +55,6 @@ namespace Akka.Event
         }
 
         /// <summary>
-        /// INTERNAL API - allows derived types to set property names directly.
-        /// </summary>
-        /// <param name="propertyNames">The property names to cache.</param>
-        protected void SetPropertyNames(IReadOnlyList<string> propertyNames)
-        {
-            _propertyNames = propertyNames ?? throw new ArgumentNullException(nameof(propertyNames));
-            _properties = null;
-        }
-
-        /// <summary>
         /// Initializes an instance of the LogMessage with the specified formatter, format and args.
         /// </summary>
         /// <param name="formatter">The formatter for the LogMessage.</param>
@@ -85,15 +75,24 @@ namespace Akka.Event
         {
             if (_properties == null)
             {
-                var propertyValues = GetPropertyValues();
-                if (propertyValues.Count == 0)
+                var parameters = Parameters();
+                // Optimize: avoid ToArray() if Parameters() already returns IReadOnlyList
+                if (parameters is IReadOnlyList<object> readOnlyList)
                 {
-                    // Optimize: Skips parsing PropertyNames when empty Parameters()
-                    _properties = EmptyDictionary;
+                    if (readOnlyList.Count == 0)
+                    {
+                        // Optimize: Skips parsing PropertyNames when empty Parameters()
+                        _properties = EmptyDictionary;
+                    }
+                    else
+                    {
+                        _properties = CreatePropertyDictionary(PropertyNames, readOnlyList);
+                    }
                 }
                 else
                 {
-                    _properties = CreatePropertyDictionary(PropertyNames, propertyValues);
+                    // Fallback: convert to array
+                    _properties = CreatePropertyDictionary(PropertyNames, parameters.ToArray());
                 }
             }
             return _properties;
@@ -127,18 +126,6 @@ namespace Akka.Event
 #else
             new Dictionary<string, object>();
 #endif
-
-        /// <summary>
-        /// INTERNAL API - allows derived types to control which values are used for property extraction.
-        /// </summary>
-        protected virtual IReadOnlyList<object> GetPropertyValues()
-        {
-            var parameters = Parameters();
-            if (parameters is IReadOnlyList<object> readOnlyList)
-                return readOnlyList;
-
-            return parameters.ToArray();
-        }
 
         /// <summary>
         /// INTERNAL API

@@ -112,9 +112,13 @@ namespace Akka.Event
         /// <returns>A <see cref="string" /> that represents this LogEvent.</returns>
         public override string ToString()
         {
+            var contextSegments = Message is IContextLogMessage contextMessage
+                ? LoggingContextFormatting.FormatContextSegments(contextMessage.ContextProperties)
+                : string.Empty;
+
             return Cause == null
-                ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}"
-                : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}] {Message}{Environment.NewLine}Cause: {Cause}";
+                ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}]{contextSegments} {Message}"
+                : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}]{contextSegments} {Message}{Environment.NewLine}Cause: {Cause}";
         }
     }
 }

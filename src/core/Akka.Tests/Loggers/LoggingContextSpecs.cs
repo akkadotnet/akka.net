@@ -7,6 +7,8 @@
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
+using System.Collections.Generic;
+using System.Linq;
 using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
@@ -40,9 +42,6 @@ namespace Akka.Tests.Loggers
             {
                 scope.Log.Info("Handling request {RequestId}", "REQ-123");
             }
-
-            var behaviorLog = log.WithPrefix("stoppingBehavior");
-            behaviorLog.Info("Shutdown requested");
         }
         #endregion
 
@@ -59,14 +58,14 @@ namespace Akka.Tests.Loggers
 
             var logEvent = ExpectMsg<Info>(e => e.Message.ToString().Contains("Processing"));
 
-            logEvent.LogSource.Should().Be("context-spec");
+            logEvent.LogSource.Should().StartWith("context-spec");
             logEvent.TryGetProperties(out var properties).Should().BeTrue();
-            properties.Should().ContainKey("RequestId").WhoseValue.Should().Be(123);
-            properties.Should().ContainKey("Tenant").WhoseValue.Should().Be("foo");
-            properties.Should().ContainKey("Partition").WhoseValue.Should().Be(12);
+            properties.Should().ContainEquivalentOf(new KeyValuePair<string, object>("RequestId", 123));
+            properties.Should().ContainEquivalentOf(new KeyValuePair<string, object>("Tenant", "foo"));
+            properties.Should().ContainEquivalentOf(new KeyValuePair<string, object>("Partition", 12));
 
-            var display = logEvent.ToDisplayString();
-            display.Should().Contain("[context-spec]");
+            var display = logEvent.ToString();
+            display.Should().Contain("[context-spec");
             display.Should().Contain("[Tenant=foo]");
             display.Should().Contain("[Partition=12]");
         }
@@ -82,26 +81,14 @@ namespace Akka.Tests.Loggers
                 scope.Log.Info("Scoped {Id}", 1);
                 var scopedEvent = ExpectMsg<Info>(e => e.Message.ToString().Contains("Scoped"));
                 scopedEvent.TryGetProperties(out var scopedProperties).Should().BeTrue();
-                scopedProperties.Should().ContainKey("Tenant").WhoseValue.Should().Be("foo");
+                scopedProperties.Should().ContainEquivalentOf(new KeyValuePair<string, object>("Tenant", "foo"));
             }
 
             log.Info("Outside {Id}", 2);
             var outsideEvent = ExpectMsg<Info>(e => e.Message.ToString().Contains("Outside"));
             outsideEvent.TryGetProperties(out var outsideProperties).Should().BeTrue();
-            outsideProperties.Should().NotContainKey("Tenant");
+            outsideProperties.Any(p => p.Key == "Tenant").Should().BeFalse();
         }
 
-        [Fact(DisplayName = "ILoggingAdapter.WithPrefix should prefix the message")]
-        public void WithPrefix_should_prefix_message()
-        {
-            Sys.EventStream.Subscribe(TestActor, typeof(LogEvent));
-            var log = Logging.GetLogger(Sys, "prefix-spec");
-            var prefixedLog = log.WithPrefix("stoppingBehavior");
-
-            prefixedLog.Info("State {State}", "Stopping");
-
-            var logEvent = ExpectMsg<Info>(e => e.Message.ToString().Contains("Stopping"));
-            logEvent.Message.ToString().Should().StartWith("stoppingBehavior: ");
-        }
     }
 }

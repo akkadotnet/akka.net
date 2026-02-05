@@ -5,20 +5,22 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 
 namespace Akka.Event
 {
+    /// <summary>
+    /// Internal wrapper used to enrich log messages with structured context properties.
+    /// </summary>
     internal sealed class ContextLoggingAdapter : ILoggingAdapter
     {
         private readonly ILoggingAdapter _inner;
-        private readonly LogContextProperty[] _context;
-        private readonly string _prefix;
+        private readonly IReadOnlyList<KeyValuePair<string, object>> _context;
 
-        public ContextLoggingAdapter(ILoggingAdapter inner, string prefix = null, LogContextProperty[] context = null)
+        public ContextLoggingAdapter(ILoggingAdapter inner, IReadOnlyList<KeyValuePair<string, object>> context = null)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-            _prefix = prefix;
-            _context = context ?? Array.Empty<LogContextProperty>();
+            _context = context ?? Array.Empty<KeyValuePair<string, object>>();
         }
 
         public ILogMessageFormatter Formatter => _inner.Formatter;
@@ -35,46 +37,34 @@ namespace Akka.Event
 
         public ILoggingAdapter WithContext(string name, object value)
         {
-            var nextContext = new LogContextProperty[_context.Length + 1];
-            Array.Copy(_context, nextContext, _context.Length);
-            nextContext[^1] = new LogContextProperty(name, value);
-            return new ContextLoggingAdapter(_inner, _prefix, nextContext);
-        }
-
-        public ILoggingAdapter WithPrefix(string prefix)
-        {
-            var combinedPrefix = LoggingContextFormatting.CombinePrefix(_prefix, prefix);
-            return new ContextLoggingAdapter(_inner, combinedPrefix, _context);
+            var nextContext = new KeyValuePair<string, object>[_context.Count + 1];
+            for (var i = 0; i < _context.Count; i++)
+                nextContext[i] = _context[i];
+            nextContext[^1] = new KeyValuePair<string, object>(name, value);
+            return new ContextLoggingAdapter(_inner, nextContext);
         }
 
         public void Log(LogLevel logLevel, Exception cause, string format)
         {
-            if (_context.Length == 0 && string.IsNullOrEmpty(_prefix))
+            if (_context.Count == 0)
             {
                 _inner.Log(logLevel, cause, format);
                 return;
             }
 
-            if (_context.Length == 0)
-            {
-                var prefixedFormat = LoggingContextFormatting.ApplyPrefix(_prefix, format);
-                _inner.Log(logLevel, cause, prefixedFormat);
-                return;
-            }
-
-            var contextMessage = ContextLogMessage.Create(Formatter, format, _prefix, _context);
+            var contextMessage = ContextLogMessage.Create(Formatter, format, _context);
             _inner.Log(logLevel, cause, contextMessage);
         }
 
         public void Log(LogLevel logLevel, Exception cause, LogMessage message)
         {
-            if (_context.Length == 0 && string.IsNullOrEmpty(_prefix))
+            if (_context.Count == 0)
             {
                 _inner.Log(logLevel, cause, message);
                 return;
             }
 
-            var contextMessage = ContextLogMessage.Create(Formatter, message, _prefix, _context);
+            var contextMessage = ContextLogMessage.Create(Formatter, message, _context);
             _inner.Log(logLevel, cause, contextMessage);
         }
     }

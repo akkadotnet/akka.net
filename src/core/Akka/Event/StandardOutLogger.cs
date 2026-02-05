@@ -150,10 +150,7 @@ namespace Akka.Event
                     }
                 }
 
-                var formattedMessage = logEvent.Message is IContextLogMessage
-                    ? logEvent.ToDisplayString()
-                    : (string.IsNullOrEmpty(expandedLogMessage) ? logEvent.ToString() : expandedLogMessage);
-                StandardOutWriter.WriteLine(formattedMessage, color);
+                StandardOutWriter.WriteLine(expandedLogMessage, color);
             }
             catch (FormatException ex)
             {

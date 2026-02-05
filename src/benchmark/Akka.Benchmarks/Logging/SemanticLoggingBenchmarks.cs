@@ -329,7 +329,6 @@ namespace Akka.Benchmarks.Logging
         private BenchmarkLogAdapter _semanticLogger;
         private ILoggingAdapter _semanticLoggerWithContext1;
         private ILoggingAdapter _semanticLoggerWithContext3;
-        private ILoggingAdapter _semanticLoggerWithPrefix;
 
         [GlobalSetup(Target = nameof(EndToEnd_Default_NoParams) + "," +
                             nameof(EndToEnd_Default_1Param) + "," +
@@ -339,7 +338,6 @@ namespace Akka.Benchmarks.Logging
                             nameof(EndToEnd_Semantic_3Params) + "," +
                             nameof(EndToEnd_Semantic_WithContext_1Prop) + "," +
                             nameof(EndToEnd_Semantic_WithContext_3Props) + "," +
-                            nameof(EndToEnd_Semantic_WithPrefix) + "," +
                             nameof(EndToEnd_Semantic_WithScope) + "," +
                             nameof(EndToEnd_Semantic_WithContextProperties) + "," +
                             nameof(EndToEnd_Semantic_WithProperties))]
@@ -352,7 +350,6 @@ namespace Akka.Benchmarks.Logging
                 .WithContext("Tenant", "TENANT-123")
                 .WithContext("Partition", 12)
                 .WithContext("Region", "us-east-1");
-            _semanticLoggerWithPrefix = _semanticLogger.WithPrefix("stoppingBehavior");
         }
 
         [Benchmark(Description = "E2E - Default formatter, no params")]
@@ -418,14 +415,6 @@ namespace Akka.Benchmarks.Logging
         {
             _semanticLoggerWithContext3.Info("User {UserId} from {IpAddress} at {Timestamp}",
                 12345, "192.168.1.1", DateTime.UtcNow);
-            return _semanticLogger.LastLog;
-        }
-
-        [Benchmark(Description = "E2E - Semantic with prefix")]
-        [BenchmarkCategory(MicroBenchmark, AkkaEventBenchmark)]
-        public LogEvent EndToEnd_Semantic_WithPrefix()
-        {
-            _semanticLoggerWithPrefix.Info("User {UserId} logged in", 12345);
             return _semanticLogger.LastLog;
         }
 

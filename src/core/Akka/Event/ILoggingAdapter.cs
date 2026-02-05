@@ -24,18 +24,6 @@ namespace Akka.Event
                 : new ContextLoggingAdapter(log).WithContext(name, value);
         }
 
-        public static ILoggingAdapter WithPrefix(this ILoggingAdapter log, string prefix)
-        {
-            if (log == null)
-                throw new ArgumentNullException(nameof(log));
-            if (string.IsNullOrWhiteSpace(prefix))
-                throw new ArgumentException("Prefix must be non-empty.", nameof(prefix));
-
-            return log is ContextLoggingAdapter contextLogger
-                ? contextLogger.WithPrefix(prefix)
-                : new ContextLoggingAdapter(log).WithPrefix(prefix);
-        }
-
         public static ILoggingAdapterScope BeginScope(this ILoggingAdapter log, string name, object value)
         {
             if (log == null)

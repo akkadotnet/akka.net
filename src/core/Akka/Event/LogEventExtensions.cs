@@ -108,29 +108,5 @@ namespace Akka.Event
                 : Enumerable.Empty<object>();
         }
 
-        /// <summary>
-        /// Formats the log event into a display string that includes any explicit context segments.
-        /// </summary>
-        /// <param name="evt">The log event</param>
-        /// <returns>Formatted log output string</returns>
-        public static string ToDisplayString(this LogEvent evt)
-        {
-            if (evt == null)
-                throw new ArgumentNullException(nameof(evt));
-
-            var contextSegments = string.Empty;
-            if (evt.Message is IContextLogMessage contextMessage)
-                contextSegments = LoggingContextFormatting.FormatContextSegments(contextMessage.ContextProperties);
-
-            var logSourceSegment = string.Concat("[", evt.LogSource, "]", contextSegments);
-            var message = evt.Message?.ToString() ?? string.Empty;
-
-            if (evt.Cause == null)
-            {
-                return $"[{evt.LogLevel().PrettyNameFor()}][{evt.Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {evt.Thread.ManagedThreadId:0000}]{logSourceSegment} {message}";
-            }
-
-            return $"[{evt.LogLevel().PrettyNameFor()}][{evt.Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {evt.Thread.ManagedThreadId:0000}]{logSourceSegment} {message}{Environment.NewLine}Cause: {evt.Cause}";
-        }
     }
 }

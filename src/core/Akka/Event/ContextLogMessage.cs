@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -13,151 +12,110 @@ namespace Akka.Event
 {
     internal interface IContextLogMessage
     {
-        IReadOnlyList<LogContextProperty> ContextProperties { get; }
+        IReadOnlyList<KeyValuePair<string, object>> ContextProperties { get; }
     }
 
+    /// <summary>
+    /// Internal <see cref="LogMessage"/> wrapper that preserves original message formatting while
+    /// appending additional semantic properties used for context enrichment.
+    /// </summary>
     internal sealed class ContextLogMessage : LogMessage, IContextLogMessage
     {
+        private readonly string _baseFormat;
         private readonly IReadOnlyList<object> _baseParameters;
-        private readonly IReadOnlyList<LogContextProperty> _context;
-        private readonly ContextLogValues _propertyValues;
-        private readonly string _baseUnformatted;
+        private readonly IReadOnlyList<KeyValuePair<string, object>> _context;
+        private readonly IReadOnlyList<object> _allParameters;
 
-        public IReadOnlyList<LogContextProperty> ContextProperties => _context;
+        public IReadOnlyList<KeyValuePair<string, object>> ContextProperties => _context;
 
         private ContextLogMessage(
             ILogMessageFormatter formatter,
-            string format,
+            string baseFormat,
             IReadOnlyList<object> baseParameters,
-            IReadOnlyList<string> basePropertyNames,
-            IReadOnlyList<LogContextProperty> context,
-            string baseUnformatted)
-            : base(formatter, format)
+            IReadOnlyList<KeyValuePair<string, object>> context)
+            : base(formatter, BuildContextTemplate(baseFormat, context))
         {
+            _baseFormat = baseFormat;
             _baseParameters = baseParameters;
             _context = context;
-            _baseUnformatted = baseUnformatted;
-            _propertyValues = new ContextLogValues(baseParameters, context);
-
-            if (context.Count == 0)
-            {
-                SetPropertyNames(basePropertyNames);
-                return;
-            }
-
-            var baseNameCount = basePropertyNames.Count;
-            if (basePropertyNames.Count > baseParameters.Count)
-                baseNameCount = baseParameters.Count;
-
-            var combinedNames = new string[baseNameCount + context.Count];
-            for (var i = 0; i < baseNameCount; i++)
-                combinedNames[i] = basePropertyNames[i];
-
-            for (var i = 0; i < context.Count; i++)
-                combinedNames[baseNameCount + i] = context[i].Name;
-
-            SetPropertyNames(combinedNames);
+            _allParameters = BuildAllParameters(baseParameters, context);
         }
 
-        public static ContextLogMessage Create(ILogMessageFormatter formatter, LogMessage baseMessage, string prefix, IReadOnlyList<LogContextProperty> context)
+        public static ContextLogMessage Create(
+            ILogMessageFormatter formatter,
+            LogMessage baseMessage,
+            IReadOnlyList<KeyValuePair<string, object>> context)
         {
-            var baseParameters = NormalizeParameters(baseMessage.Parameters());
-            var basePropertyNames = baseMessage.PropertyNames;
-            var format = LoggingContextFormatting.ApplyPrefix(prefix, baseMessage.Format);
             return new ContextLogMessage(
                 formatter,
-                format,
-                baseParameters,
-                basePropertyNames,
-                context,
-                baseMessage.Unformatted());
+                baseMessage.Format,
+                NormalizeParameters(baseMessage.Parameters()),
+                context);
         }
 
-        public static ContextLogMessage Create(ILogMessageFormatter formatter, string format, string prefix, IReadOnlyList<LogContextProperty> context)
+        public static ContextLogMessage Create(
+            ILogMessageFormatter formatter,
+            string format,
+            IReadOnlyList<KeyValuePair<string, object>> context)
         {
-            var baseParameters = Array.Empty<object>();
-            var finalFormat = LoggingContextFormatting.ApplyPrefix(prefix, format);
-            var basePropertyNames = MessageTemplateParser.GetPropertyNames(finalFormat);
-            return new ContextLogMessage(
-                formatter,
-                finalFormat,
-                baseParameters,
-                basePropertyNames,
-                context,
-                format);
+            return new ContextLogMessage(formatter, format, Array.Empty<object>(), context);
         }
 
         private static IReadOnlyList<object> NormalizeParameters(IEnumerable<object> parameters)
         {
-            if (parameters is IReadOnlyList<object> readOnlyList)
-                return readOnlyList;
+            if (parameters is IReadOnlyList<object> list)
+                return list;
 
             return parameters.ToArray();
         }
 
+        private static IReadOnlyList<object> BuildAllParameters(
+            IReadOnlyList<object> baseParameters,
+            IReadOnlyList<KeyValuePair<string, object>> context)
+        {
+            if (context.Count == 0)
+                return baseParameters;
+
+            var allParameters = new object[baseParameters.Count + context.Count];
+            for (var i = 0; i < baseParameters.Count; i++)
+                allParameters[i] = baseParameters[i];
+
+            for (var i = 0; i < context.Count; i++)
+                allParameters[baseParameters.Count + i] = context[i].Value;
+
+            return allParameters;
+        }
+
+        private static string BuildContextTemplate(string baseFormat, IReadOnlyList<KeyValuePair<string, object>> context)
+        {
+            if (context.Count == 0)
+                return baseFormat;
+
+            var builder = new System.Text.StringBuilder(baseFormat.Length + context.Count * 12);
+            builder.Append(baseFormat);
+
+            foreach (var entry in context)
+                builder.Append(' ').Append('{').Append(entry.Key).Append('}');
+
+            return builder.ToString();
+        }
+
         public override string ToString()
         {
-            if (_baseParameters.Count == 0)
-                return Format;
-
-            return Formatter.Format(Format, _baseParameters);
+            return Formatter.Format(_baseFormat, _baseParameters);
         }
 
         public override string Unformatted()
         {
-            if (_context.Count == 0)
-                return _baseUnformatted;
+            if (_baseParameters.Count == 0)
+                return string.Empty;
 
-            return string.Concat(_baseUnformatted, " | context=", LoggingContextFormatting.FormatContextSegments(_context));
+            return string.Join(", ", _baseParameters.Select(arg => arg is null ? "null" : arg.ToString()));
         }
 
         public override IEnumerable<object> Parameters()
         {
-            return _baseParameters;
-        }
-
-        protected override IReadOnlyList<object> GetPropertyValues()
-        {
-            if (_context.Count == 0)
-                return _baseParameters;
-
-            return _propertyValues;
-        }
-
-        private readonly struct ContextLogValues : IReadOnlyList<object>
-        {
-            private readonly IReadOnlyList<object> _baseValues;
-            private readonly IReadOnlyList<LogContextProperty> _context;
-
-            public ContextLogValues(IReadOnlyList<object> baseValues, IReadOnlyList<LogContextProperty> context)
-            {
-                _baseValues = baseValues ?? Array.Empty<object>();
-                _context = context ?? Array.Empty<LogContextProperty>();
-            }
-
-            public int Count => _baseValues.Count + _context.Count;
-
-            public object this[int index]
-            {
-                get
-                {
-                    if (index < _baseValues.Count)
-                        return _baseValues[index];
-
-                    return _context[index - _baseValues.Count].Value;
-                }
-            }
-
-            public IEnumerator<object> GetEnumerator()
-            {
-                for (var i = 0; i < Count; i++)
-                    yield return this[i];
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
-            }
+            return _allParameters;
         }
     }
 }
