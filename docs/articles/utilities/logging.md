@@ -30,7 +30,7 @@ You can enrich a logger with additional structured context or create a temporary
 
 Example output:
 
-```
+```text
 [INFO][...][Thread 0007][akka://sys/user/a][Tenant=foo][Partition=12] Processing 42
 ```
 
