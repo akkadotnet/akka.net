@@ -100,6 +100,13 @@ namespace Akka.Event
         /// </summary>
         public object Message { get; protected set; }
 
+        internal LogContextProperties ContextProperties { get; private set; }
+
+        internal void SetContextProperties(LogContextProperties contextProperties)
+        {
+            ContextProperties = contextProperties;
+        }
+
         /// <summary>
         /// Retrieves the <see cref="Akka.Event.LogLevel" /> used to classify this event.
         /// </summary>
@@ -112,8 +119,8 @@ namespace Akka.Event
         /// <returns>A <see cref="string" /> that represents this LogEvent.</returns>
         public override string ToString()
         {
-            var contextSegments = Message is IContextLogMessage contextMessage
-                ? LoggingContextFormatting.FormatContextSegments(contextMessage.ContextProperties)
+            var contextSegments = !ContextProperties.IsEmpty
+                ? LoggingContextFormatting.FormatContextSegments(ContextProperties)
                 : string.Empty;
 
             return Cause == null

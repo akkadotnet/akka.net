@@ -15,9 +15,9 @@ namespace Akka.Event
     internal sealed class ContextLoggingAdapter : ILoggingAdapter
     {
         private readonly ILoggingAdapter _inner;
-        private readonly IReadOnlyList<KeyValuePair<string, object>> _context;
+        private readonly KeyValuePair<string, object>[] _context;
 
-        public ContextLoggingAdapter(ILoggingAdapter inner, IReadOnlyList<KeyValuePair<string, object>> context = null)
+        public ContextLoggingAdapter(ILoggingAdapter inner, KeyValuePair<string, object>[] context = null)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _context = context ?? Array.Empty<KeyValuePair<string, object>>();
@@ -37,8 +37,8 @@ namespace Akka.Event
 
         public ILoggingAdapter WithContext(string name, object value)
         {
-            var nextContext = new KeyValuePair<string, object>[_context.Count + 1];
-            for (var i = 0; i < _context.Count; i++)
+            var nextContext = new KeyValuePair<string, object>[_context.Length + 1];
+            for (var i = 0; i < _context.Length; i++)
                 nextContext[i] = _context[i];
             nextContext[^1] = new KeyValuePair<string, object>(name, value);
             return new ContextLoggingAdapter(_inner, nextContext);
@@ -46,26 +46,36 @@ namespace Akka.Event
 
         public void Log(LogLevel logLevel, Exception cause, string format)
         {
-            if (_context.Count == 0)
+            if (_context.Length == 0)
             {
                 _inner.Log(logLevel, cause, format);
                 return;
             }
 
-            var contextMessage = ContextLogMessage.Create(Formatter, format, _context);
-            _inner.Log(logLevel, cause, contextMessage);
+            if (_inner is BusLogging busLogging)
+            {
+                busLogging.LogWithContext(logLevel, cause, format, _context);
+                return;
+            }
+
+            _inner.Log(logLevel, cause, new ContextLogMessage(Formatter, format, _context));
         }
 
         public void Log(LogLevel logLevel, Exception cause, LogMessage message)
         {
-            if (_context.Count == 0)
+            if (_context.Length == 0)
             {
                 _inner.Log(logLevel, cause, message);
                 return;
             }
 
-            var contextMessage = ContextLogMessage.Create(Formatter, message, _context);
-            _inner.Log(logLevel, cause, contextMessage);
+            if (_inner is BusLogging busLogging)
+            {
+                busLogging.LogWithContext(logLevel, cause, message, _context);
+                return;
+            }
+
+            _inner.Log(logLevel, cause, new ContextLogMessage(Formatter, message, _context));
         }
     }
 }

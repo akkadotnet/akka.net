@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor;
 
 namespace Akka.Event
@@ -74,19 +75,38 @@ namespace Akka.Event
         
         private LogEvent CreateLogEvent(LogLevel logLevel, object message, Exception cause = null)
         {
-            return logLevel switch
+            var contextProperties = default(LogContextProperties);
+            if (message is ContextLogMessage contextMessage)
             {
-                LogLevel.DebugLevel => new Debug(cause, LogSource, LogClass, message),
+                message = contextMessage.Message;
+                contextProperties = new LogContextProperties(contextMessage.ContextProperties);
+            }
+
+            var logEvent = logLevel switch
+            {
+                LogLevel.DebugLevel => (LogEvent)new Debug(cause, LogSource, LogClass, message),
                 LogLevel.InfoLevel => new Info(cause, LogSource, LogClass, message),
                 LogLevel.WarningLevel => new Warning(cause, LogSource, LogClass, message),
                 LogLevel.ErrorLevel => new Error(cause, LogSource, LogClass, message),
                 _ => throw new ArgumentOutOfRangeException(nameof(logLevel), logLevel, null)
             };
+
+            if (!contextProperties.IsEmpty)
+                logEvent.SetContextProperties(contextProperties);
+
+            return logEvent;
         }
 
         protected override void NotifyLog(LogLevel logLevel, object message, Exception cause = null)
         {
             var logEvent = CreateLogEvent(logLevel, message, cause);
+            Bus.Publish(logEvent);
+        }
+
+        internal void LogWithContext(LogLevel logLevel, Exception cause, object message, KeyValuePair<string, object>[] contextProperties)
+        {
+            var wrappedMessage = new ContextLogMessage(Formatter, message, contextProperties);
+            var logEvent = CreateLogEvent(logLevel, wrappedMessage, cause);
             Bus.Publish(logEvent);
         }
     }

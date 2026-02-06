@@ -4,22 +4,21 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace Akka.Event
 {
     internal static class LoggingContextFormatting
     {
-        public static string FormatContextSegments(IReadOnlyList<KeyValuePair<string, object>> context)
+        public static string FormatContextSegments(LogContextProperties context)
         {
-            if (context == null || context.Count == 0)
+            if (context.IsEmpty)
                 return string.Empty;
 
             var sb = new StringBuilder(context.Count * 8);
-            foreach (var property in context)
+            for (var i = 0; i < context.Count; i++)
             {
+                var property = context[i];
                 sb.Append('[').Append(property.Key);
                 if (property.Value != null)
                 {
