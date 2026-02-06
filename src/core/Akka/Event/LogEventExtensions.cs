@@ -71,7 +71,8 @@ namespace Akka.Event
             LogContextProperties contextProperties)
         {
             var messageCount = messageProperties?.Count ?? 0;
-            var merged = new Dictionary<string, object>(messageCount + contextProperties.Count);
+            var contextCount = contextProperties.Count;
+            var merged = new Dictionary<string, object>(messageCount + contextCount);
 
             if (messageProperties != null)
             {
@@ -79,10 +80,39 @@ namespace Akka.Event
                     merged[kvp.Key] = kvp.Value;
             }
 
-            for (var i = 0; i < contextProperties.Count; i++)
+            switch (contextCount)
             {
-                var contextProperty = contextProperties[i];
-                merged[contextProperty.Key] = contextProperty.Value;
+                case 1:
+                {
+                    var item0 = contextProperties[0];
+                    merged[item0.Key] = item0.Value;
+                    break;
+                }
+                case 2:
+                {
+                    var item0 = contextProperties[0];
+                    merged[item0.Key] = item0.Value;
+                    var item1 = contextProperties[1];
+                    merged[item1.Key] = item1.Value;
+                    break;
+                }
+                case 3:
+                {
+                    var item0 = contextProperties[0];
+                    merged[item0.Key] = item0.Value;
+                    var item1 = contextProperties[1];
+                    merged[item1.Key] = item1.Value;
+                    var item2 = contextProperties[2];
+                    merged[item2.Key] = item2.Value;
+                    break;
+                }
+                default:
+                    for (var i = 0; i < contextCount; i++)
+                    {
+                        var contextProperty = contextProperties[i];
+                        merged[contextProperty.Key] = contextProperty.Value;
+                    }
+                    break;
             }
 
             return merged;
