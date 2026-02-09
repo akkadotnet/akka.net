@@ -75,14 +75,7 @@ namespace Akka.Event
         
         private LogEvent CreateLogEvent(LogLevel logLevel, object message, Exception cause = null)
         {
-            var contextProperties = default(LogContextProperties);
-            if (message is ContextLogMessage contextMessage)
-            {
-                message = contextMessage.Message;
-                contextProperties = new LogContextProperties(contextMessage.ContextProperties);
-            }
-
-            var logEvent = logLevel switch
+            return logLevel switch
             {
                 LogLevel.DebugLevel => (LogEvent)new Debug(cause, LogSource, LogClass, message),
                 LogLevel.InfoLevel => new Info(cause, LogSource, LogClass, message),
@@ -90,11 +83,6 @@ namespace Akka.Event
                 LogLevel.ErrorLevel => new Error(cause, LogSource, LogClass, message),
                 _ => throw new ArgumentOutOfRangeException(nameof(logLevel), logLevel, null)
             };
-
-            if (!contextProperties.IsEmpty)
-                logEvent.SetContextProperties(contextProperties);
-
-            return logEvent;
         }
 
         protected override void NotifyLog(LogLevel logLevel, object message, Exception cause = null)
@@ -105,8 +93,8 @@ namespace Akka.Event
 
         internal void LogWithContext(LogLevel logLevel, Exception cause, object message, KeyValuePair<string, object>[] contextProperties)
         {
-            var wrappedMessage = new ContextLogMessage(Formatter, message, contextProperties);
-            var logEvent = CreateLogEvent(logLevel, wrappedMessage, cause);
+            var logEvent = CreateLogEvent(logLevel, message, cause);
+            logEvent.SetContextProperties(new LogContextProperties(contextProperties));
             Bus.Publish(logEvent);
         }
     }

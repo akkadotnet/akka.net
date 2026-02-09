@@ -46,36 +46,24 @@ namespace Akka.Event
 
         public void Log(LogLevel logLevel, Exception cause, string format)
         {
-            if (_context.Length == 0)
+            if (_context.Length == 0 || _inner is not BusLogging busLogging)
             {
                 _inner.Log(logLevel, cause, format);
                 return;
             }
 
-            if (_inner is BusLogging busLogging)
-            {
-                busLogging.LogWithContext(logLevel, cause, format, _context);
-                return;
-            }
-
-            _inner.Log(logLevel, cause, new ContextLogMessage(Formatter, format, _context));
+            busLogging.LogWithContext(logLevel, cause, format, _context);
         }
 
         public void Log(LogLevel logLevel, Exception cause, LogMessage message)
         {
-            if (_context.Length == 0)
+            if (_context.Length == 0 || _inner is not BusLogging busLogging)
             {
                 _inner.Log(logLevel, cause, message);
                 return;
             }
 
-            if (_inner is BusLogging busLogging)
-            {
-                busLogging.LogWithContext(logLevel, cause, message, _context);
-                return;
-            }
-
-            _inner.Log(logLevel, cause, new ContextLogMessage(Formatter, message, _context));
+            busLogging.LogWithContext(logLevel, cause, message, _context);
         }
     }
 }

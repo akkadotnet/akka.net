@@ -321,17 +321,7 @@ namespace Akka.Benchmarks.Logging
 
             protected override void NotifyLog(LogLevel logLevel, object message, Exception cause = null)
             {
-                var contextProperties = default(LogContextProperties);
-                if (message is ContextLogMessage contextMessage)
-                {
-                    message = contextMessage.Message;
-                    contextProperties = new LogContextProperties(contextMessage.ContextProperties);
-                }
-
                 var logEvent = new Info(cause, _logSource, _logClass, message);
-                if (!contextProperties.IsEmpty)
-                    logEvent.SetContextProperties(contextProperties);
-
                 LastLog = logEvent;
             }
         }
