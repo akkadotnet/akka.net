@@ -3460,6 +3460,10 @@ namespace Akka.Event
         void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format);
         void Log(Akka.Event.LogLevel logLevel, System.Exception cause, Akka.Event.LogMessage message);
     }
+    public interface ILoggingAdapterScope : System.IDisposable
+    {
+        Akka.Event.ILoggingAdapter Log { get; }
+    }
     public class Info : Akka.Event.LogEvent
     {
         public Info(string logSource, System.Type logClass, object message) { }
@@ -3624,6 +3628,7 @@ namespace Akka.Event
     }
     public class static LoggingExtensions
     {
+        public static Akka.Event.ILoggingAdapterScope BeginScope(this Akka.Event.ILoggingAdapter log, string name, object value) { }
         public static void Debug(this Akka.Event.ILoggingAdapter log, string format) { }
         public static void Debug(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format) { }
         public static void Debug<T1>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1) { }
@@ -3697,6 +3702,7 @@ namespace Akka.Event
         public static void Warning<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
         public static void Warning(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, object[] args) { }
         public static void Warning(this Akka.Event.ILoggingAdapter log, string format, object[] args) { }
+        public static Akka.Event.ILoggingAdapter WithContext(this Akka.Event.ILoggingAdapter log, string name, object value) { }
     }
     public abstract class MinimalLogger : Akka.Actor.MinimalActorRef
     {
