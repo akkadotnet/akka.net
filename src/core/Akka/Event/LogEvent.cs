@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 using System.Threading;
 using Akka.Actor;
 
@@ -120,12 +121,34 @@ namespace Akka.Event
         public override string ToString()
         {
             var contextSegments = !ContextProperties.IsEmpty
-                ? LoggingContextFormatting.FormatContextSegments(ContextProperties)
+                ? FormatContextSegments(ContextProperties)
                 : string.Empty;
 
             return Cause == null
                 ? $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}]{contextSegments} {Message}"
                 : $"[{LogLevel().PrettyNameFor()}][{Timestamp:MM/dd/yyyy HH:mm:ss.fffK}][Thread {Thread.ManagedThreadId:0000}][{LogSource}]{contextSegments} {Message}{Environment.NewLine}Cause: {Cause}";
+        }
+
+        private static string FormatContextSegments(LogContextProperties context)
+        {
+            var sb = new StringBuilder(context.Count * 8);
+            for (var i = 0; i < context.Count; i++)
+            {
+                var property = context[i];
+                sb.Append('[').Append(property.Key);
+                if (property.Value != null)
+                {
+                    sb.Append('=').Append(property.Value);
+                }
+                else
+                {
+                    sb.Append("=null");
+                }
+
+                sb.Append(']');
+            }
+
+            return sb.ToString();
         }
     }
 }

@@ -21,7 +21,7 @@ namespace Akka.Event
 
             return log is ContextLoggingAdapter contextLogger
                 ? contextLogger.WithContext(name, value)
-                : new ContextLoggingAdapter(log).WithContext(name, value);
+                : new ContextLoggingAdapter(log, new[] { new KeyValuePair<string, object>(name, value) });
         }
 
         public static ILoggingAdapterScope BeginScope(this ILoggingAdapter log, string name, object value)
