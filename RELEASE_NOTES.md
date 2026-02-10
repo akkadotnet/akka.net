@@ -1,3 +1,39 @@
+#### 1.5.60 February 9th, 2026 ####
+
+Akka.NET v1.5.60 is a maintenance release with a bug fix and a new feature for structured logging.
+
+**Bug Fixes**
+
+* [Fix TestActor initialization race in parallel test startup](https://github.com/akkadotnet/akka.net/pull/8023) - Fixes a race condition where `TestActor` could receive messages before its initialization was complete when tests were run in parallel, causing intermittent test failures.
+
+**New Features**
+
+* [Add logging context enrichment and scopes](https://github.com/akkadotnet/akka.net/pull/8042) - Fixes [issue #7535](https://github.com/akkadotnet/akka.net/issues/7535). Adds `WithContext()` and `BeginScope()` extension methods to `ILoggingAdapter` for structured logging context enrichment. Context properties are automatically included in log output and forwarded to downstream logging providers like Serilog and NLog. [See documentation](https://getakka.net/articles/utilities/logging.html#context-enrichment-and-scopes).
+
+  ```csharp
+  var log = Logging.GetLogger(Sys, "example");
+
+  // Enrich a logger with additional structured context
+  var enrichedLog = log
+      .WithContext("Tenant", "foo")
+      .WithContext("Partition", 12);
+
+  enrichedLog.Info("Processing {Offset}", 42);
+  // Output: [INFO][...][akka://sys/user/a][Tenant=foo][Partition=12] Processing 42
+
+  // Create a temporary logging scope
+  using (var scope = log.BeginScope("RequestId", "REQ-123"))
+  {
+      scope.Log.Info("Handling request {RequestId}", "REQ-123");
+  }
+  ```
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 581 | 89 | Aaron Stannard |
+
+To see the full set of changes in Akka.NET v1.5.60, [click here](https://github.com/akkadotnet/akka.net/milestone/143?closed=1).
+
 #### 1.5.59 January 27th, 2026 ####
 
 Akka.NET v1.5.59 is a maintenance release with critical bug fixes and new features for observability.
