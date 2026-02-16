@@ -379,6 +379,64 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
             TestSuccessful = true;
         }
 
+        [Fact(DisplayName = "Decimal precision mismatch: actor produces 100.0m but test uses 100m in interpolation")]
+        public async Task Customer_scenario_interpolation_vs_semantic_decimal_mismatch()
+        {
+            // Reproduces exact customer issue: actor arithmetic produces 100.0m,
+            // but test constructs the EventFilter using string interpolation with 100m.
+            // $"Returns: {testValue}" → "Returns: 100" (interpolation uses 100m.ToString())
+            // But the semantic log formats 100.0m → "Returns: 100.0"
+            // These don't match, so the EventFilter never intercepts the message.
+            var loggedValue = 100.0m; // what the actor produces (e.g. from 50.0m * 2)
+            var testValue = 100m;     // what the test author writes
+
+            var logMessage = new DefaultLogMessage(
+                SemanticLogMessageFormatter.Instance,
+                "Returns: {Amount}", loggedValue);
+
+            // WRONG: using interpolation with a different decimal precision will not match
+            // EventFilter.Info(message: $"Returns: {testValue}") won't work because
+            // $"Returns: {100m}" → "Returns: 100" but the log produces "Returns: 100.0"
+
+            // FIX 1: use `contains:` instead of `message:` for a partial match
+            await EventFilter.Info(contains: "Returns:").ExpectOneAsync(() =>
+            {
+                PublishSemanticInfo(logMessage);
+                return Task.CompletedTask;
+            });
+
+            // FIX 2: match the exact decimal precision the actor produces
+            await EventFilter.Info(message: $"Returns: {loggedValue}").ExpectOneAsync(() =>
+            {
+                PublishSemanticInfo(logMessage);
+                return Task.CompletedTask;
+            });
+
+            // FIX 3a: use F2 format specifier to normalize both sides to 2 decimal places
+            var logMessageWithF2 = new DefaultLogMessage(
+                SemanticLogMessageFormatter.Instance,
+                "Returns: {Amount:F2}", loggedValue);
+            // {Amount:F2} formats both 100.0m and 100m as "100.00"
+            await EventFilter.Info(message: $"Returns: {testValue:F2}").ExpectOneAsync(() =>
+            {
+                PublishSemanticInfo(logMessageWithF2);
+                return Task.CompletedTask;
+            });
+
+            // FIX 3b: use F0 to strip all decimal places
+            var logMessageWithF0 = new DefaultLogMessage(
+                SemanticLogMessageFormatter.Instance,
+                "Returns: {Amount:F0}", loggedValue);
+            // {Amount:F0} formats 100.0m as "100" — now matches the test's "100"
+            await EventFilter.Info(message: $"Returns: {testValue:F0}").ExpectOneAsync(() =>
+            {
+                PublishSemanticInfo(logMessageWithF0);
+                return Task.CompletedTask;
+            });
+
+            TestSuccessful = true;
+        }
+
         #endregion
 
         #region WithContext Enrichment
