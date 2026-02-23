@@ -1792,7 +1792,7 @@ namespace Akka.Cluster.Sharding
 
                 case ResendShardHost m:
                     {
-                        if (State.Shards.TryGetValue(m.Shard, out var region) && region.Equals(region))
+                        if (State.Shards.TryGetValue(m.Shard, out var region) && region.Equals(m.Region))
                             SendHostShardMsg(m.Shard, region);
                         else
                         {
