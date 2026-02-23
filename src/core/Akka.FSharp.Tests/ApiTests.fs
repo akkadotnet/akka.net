@@ -96,19 +96,19 @@ type TestActorWithArgs(arg1, arg2, arg3) =
 
 [<Fact>]
 let ``can spawn simple actor from expression`` () =
-    let system = Configuration.load() |> System.create "test"
+    let system = Configuration.defaultConfig() |> System.create "test"
     let actor = spawnObj system "test-actor" <@ fun () -> TestActor() @>
     ()
 
 [<Fact>]
 let ``can spawn actor with constant args from expression`` () =
-    let system = Configuration.load() |> System.create "test"
+    let system = Configuration.defaultConfig() |> System.create "test"
     let actor = spawnObj system "test-actor" <@ fun () -> TestActorWithArgs(box 1, box true, box "yo") @>
     ()
 
 [<Fact>]
 let ``can spawn actor with captured args from expression`` () =
-    let system = Configuration.load() |> System.create "test"
+    let system = Configuration.defaultConfig() |> System.create "test"
     let arg1 = 1
     let arg2 = true
     let arg3 = "yo"
@@ -117,7 +117,7 @@ let ``can spawn actor with captured args from expression`` () =
 
 [<Fact>]
 let ``cannot spawn actor with simple expr args from expression`` () =
-    let system = Configuration.load() |> System.create "test"
+    let system = Configuration.defaultConfig() |> System.create "test"
     // this formulation is supported in FsApi's expression evaluator, however the checks in Props.Create
     // do not support this, so we test that we can evaluate this but not actually run it, as a proof of concept
     Assert.Throws<InvalidCastException>(fun () ->

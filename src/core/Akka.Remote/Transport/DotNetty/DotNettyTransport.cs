@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,7 +71,7 @@ namespace Akka.Remote.Transport.DotNetty
         protected abstract void RegisterListener(IChannel channel, IHandleEventListener listener, object msg, IPEndPoint remoteAddress);
 
         protected void Init(IChannel channel, IPEndPoint remoteSocketAddress, Address remoteAddress, object msg,
-            out AssociationHandle op)
+            out AssociationHandle? op)
         {
             var localAddress = DotNettyTransport.MapSocketToAddress((IPEndPoint)channel.LocalAddress, Transport.SchemeIdentifier, Transport.System.Name, Transport.Settings.Hostname);
 
@@ -100,7 +101,7 @@ namespace Akka.Remote.Transport.DotNetty
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
         /// <param name="cause">The exception that is the cause of the current exception.</param>
-        public DotNettyTransportException(string message, Exception cause = null) : base(message, cause)
+        public DotNettyTransportException(string message, Exception? cause = null) : base(message, cause)
         {
         }
 
@@ -120,8 +121,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         protected readonly TaskCompletionSource<IAssociationEventListener> AssociationListenerPromise;
         protected readonly ILoggingAdapter Log;
-        protected volatile Address LocalAddress;
-        protected internal volatile IChannel ServerChannel;
+        protected volatile Address? LocalAddress;
+        protected internal volatile IChannel? ServerChannel;
 
         private readonly IEventLoopGroup _serverEventLoopGroup;
         private readonly IEventLoopGroup _clientEventLoopGroup;
@@ -180,6 +181,13 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override async Task<(Address, TaskCompletionSource<IAssociationEventListener>)> Listen()
         {
+            // Validate SSL certificate before starting server
+            // This ensures fail-fast behavior if private key is inaccessible
+            if (Settings.EnableSsl)
+            {
+                Settings.Ssl.ValidateCertificate();
+            }
+
             EndPoint listenAddress;
             if (IPAddress.TryParse(Settings.Hostname, out var ip))
                 listenAddress = new IPEndPoint(ip, Settings.Port);
@@ -233,8 +241,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         public override Task<AssociationHandle> Associate(Address remoteAddress)
         {
-            if (!ServerChannel.Open)
-                throw new ChannelException("Transport is not open");
+            if (ServerChannel == null || !ServerChannel.Open)
+                throw new ChannelException("Transport is not bound or not open");
 
             return AssociateInternal(remoteAddress);
         }
@@ -345,11 +353,43 @@ namespace Akka.Remote.Transport.DotNetty
             if (Settings.EnableSsl)
             {
                 var certificate = Settings.Ssl.Certificate;
-                var host = certificate.GetNameInfo(X509NameType.DnsName, false);
+                // Use the remote address host for TLS validation, not the client's certificate name
+                var host = remoteAddress.Host;
 
-                var tlsHandler = Settings.Ssl.SuppressValidation
-                    ? new TlsHandler(stream => new SslStream(stream, true, (_, _, _, _) => true), new ClientTlsSettings(host))
-                    : TlsHandler.Client(host, certificate);
+                IChannelHandler tlsHandler;
+
+                // Compose validator: either use custom validator or build from config settings
+                // This ensures a single execution path through validation logic
+                var validator = Settings.Ssl.CustomValidator ?? ComposeValidatorFromSettings();
+
+                // Create adapter bridge from our CertificateValidationCallback to RemoteCertificateValidationCallback
+                // The adapter extracts remote peer information from the remote address
+                RemoteCertificateValidationCallback validationCallback = (sender, cert, chain, errors) =>
+                {
+                    // Convert X509Certificate to X509Certificate2 if needed
+                    var x509Cert = cert as X509Certificate2 ?? (cert != null ? new X509Certificate2(cert) : null);
+                    return validator(x509Cert, chain, remoteAddress.ToString(), errors, Log);
+                };
+
+                if (Settings.Ssl.RequireMutualAuthentication)
+                {
+                    // Mutual TLS requires a certificate to be configured
+                    if (certificate == null)
+                        throw new InvalidOperationException("Mutual TLS authentication is enabled but no certificate is configured. Please provide a certificate via DotNettySslSetup or HOCON configuration.");
+
+                    // Provide client cert for mutual TLS
+                    tlsHandler = new TlsHandler(
+                        stream => new SslStream(stream, true, validationCallback,
+                            (_, _, _, _, _) => certificate),
+                        new ClientTlsSettings(host));
+                }
+                else
+                {
+                    // Standard TLS: Only validate server certificate, no client cert
+                    tlsHandler = new TlsHandler(
+                        stream => new SslStream(stream, true, validationCallback),
+                        new ClientTlsSettings(host));
+                }
 
                 channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
             }
@@ -368,7 +408,48 @@ namespace Akka.Remote.Transport.DotNetty
         {
             if (Settings.EnableSsl)
             {
-                channel.Pipeline.AddFirst("TlsHandler", TlsHandler.Server(Settings.Ssl.Certificate));
+                IChannelHandler tlsHandler;
+
+                if (Settings.Ssl.RequireMutualAuthentication)
+                {
+                    // Mutual TLS: Require client certificate authentication
+                    // Compose validator: either use custom validator or build from config settings
+                    // This ensures a single execution path through validation logic
+                    var validator = Settings.Ssl.CustomValidator ?? ComposeValidatorFromSettings();
+
+                    // Create adapter bridge from our CertificateValidationCallback to RemoteCertificateValidationCallback
+                    // For server-side, extract the remote peer (client address) from the channel
+                    RemoteCertificateValidationCallback validationCallback = (sender, certificate, chain, errors) =>
+                    {
+                        // When mutual TLS is required, reject if no client certificate was provided
+                        if (certificate == null)
+                        {
+                            Log.Warning("Mutual TLS required but client did not provide a certificate from {0}",
+                                channel.RemoteAddress?.ToString() ?? "unknown");
+                            return false;
+                        }
+
+                        // Extract client address from channel
+                        var remoteAddress = channel.RemoteAddress?.ToString() ?? "unknown";
+                        // Convert X509Certificate to X509Certificate2 if needed
+                        var x509Cert = certificate as X509Certificate2 ?? new X509Certificate2(certificate);
+                        return validator(x509Cert, chain, remoteAddress, errors, Log);
+                    };
+
+                    tlsHandler = new TlsHandler(
+                        stream => new SslStream(
+                            stream,
+                            leaveInnerStreamOpen: true,
+                            userCertificateValidationCallback: validationCallback),
+                        new ServerTlsSettings(Settings.Ssl.Certificate, negotiateClientCertificate: true));
+                }
+                else
+                {
+                    // Standard TLS: Server authentication only (backward compatible)
+                    tlsHandler = TlsHandler.Server(Settings.Ssl.Certificate);
+                }
+
+                channel.Pipeline.AddFirst("TlsHandler", tlsHandler);
             }
 
             SetInitialChannelPipeline(channel);
@@ -379,6 +460,29 @@ namespace Akka.Remote.Transport.DotNetty
                 var handler = new TcpServerHandler(this, Logging.GetLogger(System, typeof(TcpServerHandler)), AssociationListenerPromise.Task);
                 pipeline.AddLast("ServerHandler", handler);
             }
+        }
+
+        /// <summary>
+        /// Composes a certificate validation callback from the current SSL settings.
+        /// This creates a validator that respects SuppressValidation
+        /// and ValidateCertificateHostname configuration options.
+        /// </summary>
+        /// <returns>A CertificateValidationCallback composed from configuration settings.</returns>
+        private CertificateValidationCallback ComposeValidatorFromSettings()
+        {
+            // Build validator from configuration settings
+            // Note: SuppressValidation and ValidateCertificateHostname are independent settings
+            var suppressChain = Settings.Ssl.SuppressValidation;
+            var validateHostname = Settings.Ssl.ValidateCertificateHostname;
+
+            return suppressChain switch
+            {
+                true when validateHostname => CertificateValidation.ValidateHostname(log: Log),
+                true => (cert, chain, peer, errors, log) => true,
+                false when validateHostname => CertificateValidation.Combine(
+                    CertificateValidation.ValidateChain(log: Log), CertificateValidation.ValidateHostname(log: Log)),
+                _ => CertificateValidation.ValidateChain(log: Log)
+            };
         }
 
         private ServerBootstrap ServerFactory()
@@ -433,14 +537,14 @@ namespace Akka.Remote.Transport.DotNetty
 
         #region static methods
 
-        public static Address MapSocketToAddress(IPEndPoint socketAddress, string schemeIdentifier, string systemName, string hostName = null, int? publicPort = null)
+        public static Address? MapSocketToAddress(IPEndPoint socketAddress, string schemeIdentifier, string systemName, string? hostName = null, int? publicPort = null)
         {
             return socketAddress == null
                 ? null
                 : new Address(schemeIdentifier, systemName, SafeMapHostName(hostName) ?? SafeMapIPv6(socketAddress.Address), publicPort ?? socketAddress.Port);
         }
 
-        private static string SafeMapHostName(string hostName)
+        private static string? SafeMapHostName(string? hostName)
         {
             return !string.IsNullOrEmpty(hostName) && IPAddress.TryParse(hostName, out var ip) ? SafeMapIPv6(ip) : hostName;
         }
@@ -449,7 +553,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         public static EndPoint ToEndpoint(Address address)
         {
-            if (!address.Port.HasValue) throw new ArgumentNullException(nameof(address), $"Address port must not be null: {address}");
+            if (string.IsNullOrWhiteSpace(address.Host)) throw new ArgumentNullException(nameof(address), $"Address host must not be null or empty: {address}");
+            if (address.Port is null) throw new ArgumentNullException(nameof(address), $"Address port must not be null: {address}");
 
             return IPAddress.TryParse(address.Host, out var ip)
                 ? (EndPoint)new IPEndPoint(ip, address.Port.Value)
@@ -464,7 +569,9 @@ namespace Akka.Remote.Transport.DotNetty
         /// <returns><see cref="IPEndPoint"/> for IP-based addresses, <see cref="DnsEndPoint"/> for named addresses.</returns>
         public static EndPoint AddressToSocketAddress(Address address)
         {
-            if (address.Port == null) throw new ArgumentException($"address port must not be null: {address}");
+            if (string.IsNullOrWhiteSpace(address.Host)) throw new ArgumentNullException(nameof(address), $"Address host must not be null or empty: {address}");
+            if (address.Port is null) throw new ArgumentException($"Address port must not be null: {address}");
+            
             EndPoint listenAddress;
             if (IPAddress.TryParse(address.Host, out var ip))
             {

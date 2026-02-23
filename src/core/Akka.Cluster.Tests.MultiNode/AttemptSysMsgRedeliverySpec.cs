@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.MultiNode.TestAdapter;
@@ -13,108 +15,107 @@ using Akka.Remote.Transport;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 
-namespace Akka.Cluster.Tests.MultiNode
+namespace Akka.Cluster.Tests.MultiNode;
+
+public class AttemptSysMsgRedeliverySpecConfig : MultiNodeConfig
 {
-    public class AttemptSysMsgRedeliverySpecConfig : MultiNodeConfig
+    internal class Echo : ReceiveActor
     {
-        internal class Echo : ReceiveActor
+        public Echo()
         {
-            public Echo()
-            {
-                ReceiveAny(m => Sender.Tell(m));
-            }
-        }
-
-        public RoleName First { get; }
-        public RoleName Second { get; }
-        public RoleName Third { get; }
-
-        public AttemptSysMsgRedeliverySpecConfig()
-        {
-            First = Role("first");
-            Second = Role("second");
-            Third = Role("third");
-
-            CommonConfig = DebugConfig(false)
-                .WithFallback(MultiNodeClusterSpec.ClusterConfig());
-
-            TestTransport = true;
+            ReceiveAny(m => Sender.Tell(m));
         }
     }
 
-    public class AttemptSysMsgRedeliverySpec : MultiNodeClusterSpec
+    public RoleName First { get; }
+    public RoleName Second { get; }
+    public RoleName Third { get; }
+
+    public AttemptSysMsgRedeliverySpecConfig()
     {
-        private readonly AttemptSysMsgRedeliverySpecConfig _config;
+        First = Role("first");
+        Second = Role("second");
+        Third = Role("third");
 
-        public AttemptSysMsgRedeliverySpec() : this(new AttemptSysMsgRedeliverySpecConfig())
+        CommonConfig = DebugConfig(false)
+            .WithFallback(MultiNodeClusterSpec.ClusterConfig());
+
+        TestTransport = true;
+    }
+}
+
+public class AttemptSysMsgRedeliverySpec : MultiNodeClusterSpec
+{
+    private readonly AttemptSysMsgRedeliverySpecConfig _config;
+
+    public AttemptSysMsgRedeliverySpec() : this(new AttemptSysMsgRedeliverySpecConfig())
+    {
+    }
+
+    protected AttemptSysMsgRedeliverySpec(AttemptSysMsgRedeliverySpecConfig config) : base(config, typeof(AttemptSysMsgRedeliverySpec))
+    {
+        _config = config;
+    }
+
+    [MultiNodeFact]
+    public async Task AttemptSysMsgRedeliverySpecs()
+    {
+        await AttemptSysMsgRedelivery_must_reach_initial_convergence();
+        await AttemptSysMsgRedelivery_must_redeliver_system_message_after_inactivity();
+    }
+
+    private async Task AttemptSysMsgRedelivery_must_reach_initial_convergence()
+    {
+        await AwaitClusterUpAsync(CancellationToken.None, _config.First, _config.Second, _config.Third);
+        await EnterBarrierAsync("after-1");
+    }
+
+    private async Task AttemptSysMsgRedelivery_must_redeliver_system_message_after_inactivity()
+    {
+        Sys.ActorOf(Props.Create<AttemptSysMsgRedeliverySpecConfig.Echo>(), "echo");
+        await EnterBarrierAsync("echo-started");
+
+        Sys.ActorSelection(await NodeAsync(_config.First) / "user" / "echo").Tell(new Identify(null));
+        var firstRef = (await ExpectMsgAsync<ActorIdentity>()).Subject;
+        Sys.ActorSelection(await NodeAsync(_config.First) / "user" / "echo").Tell(new Identify(null));
+        var secondRef = (await ExpectMsgAsync<ActorIdentity>()).Subject;
+        await EnterBarrierAsync("refs-retrieved");
+
+        await RunOnAsync(async () =>
         {
-        }
+            await TestConductor.BlackholeAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
+        }, _config.First);
+        await EnterBarrierAsync("blackhole");
 
-        protected AttemptSysMsgRedeliverySpec(AttemptSysMsgRedeliverySpecConfig config) : base(config, typeof(AttemptSysMsgRedeliverySpec))
+        RunOn(() =>
         {
-            _config = config;
-        }
+            Watch(secondRef);
+        }, _config.First, _config.Third);
 
-        [MultiNodeFact]
-        public void AttemptSysMsgRedeliverySpecs()
+        RunOn(() =>
         {
-            AttemptSysMsgRedelivery_must_reach_initial_convergence();
-            AttemptSysMsgRedelivery_must_redeliver_system_message_after_inactivity();
-        }
+            Watch(firstRef);
+        }, _config.Second);
+        await EnterBarrierAsync("watch-established");
 
-        private void AttemptSysMsgRedelivery_must_reach_initial_convergence()
+        await RunOnAsync(async () =>
         {
-            AwaitClusterUp(_config.First, _config.Second, _config.Third);
-            EnterBarrier("after-1");
-        }
+            await TestConductor.PassThroughAsync(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both);
+        }, _config.First);
+        await EnterBarrierAsync("pass-through");
 
-        private void AttemptSysMsgRedelivery_must_redeliver_system_message_after_inactivity()
+        Sys.ActorSelection("/user/echo").Tell(PoisonPill.Instance);
+
+        await RunOnAsync(async () =>
         {
-            Sys.ActorOf(Props.Create<AttemptSysMsgRedeliverySpecConfig.Echo>(), "echo");
-            EnterBarrier("echo-started");
+            await ExpectTerminatedAsync(secondRef, 10.Seconds());
+        }, _config.First, _config.Third);
 
-            Sys.ActorSelection(Node(_config.First) / "user" / "echo").Tell(new Identify(null));
-            var firstRef = ExpectMsg<ActorIdentity>().Subject;
-            Sys.ActorSelection(Node(_config.First) / "user" / "echo").Tell(new Identify(null));
-            var secondRef = ExpectMsg<ActorIdentity>().Subject;
-            EnterBarrier("refs-retrieved");
+        await RunOnAsync(async () =>
+        {
+            await ExpectTerminatedAsync(firstRef, 10.Seconds());
+        }, _config.Second);
 
-            RunOn(() =>
-            {
-                TestConductor.Blackhole(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
-            }, _config.First);
-            EnterBarrier("blackhole");
-
-            RunOn(() =>
-            {
-                Watch(secondRef);
-            }, _config.First, _config.Third);
-
-            RunOn(() =>
-            {
-                Watch(firstRef);
-            }, _config.Second);
-            EnterBarrier("watch-established");
-
-            RunOn(() =>
-            {
-                TestConductor.PassThrough(_config.First, _config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
-            }, _config.First);
-            EnterBarrier("pass-through");
-
-            Sys.ActorSelection("/user/echo").Tell(PoisonPill.Instance);
-
-            RunOn(() =>
-            {
-                ExpectTerminated(secondRef, 10.Seconds());
-            }, _config.First, _config.Third);
-
-            RunOn(() =>
-            {
-                ExpectTerminated(firstRef, 10.Seconds());
-            }, _config.Second);
-
-            EnterBarrier("done");
-        }
+        await EnterBarrierAsync("done");
     }
 }

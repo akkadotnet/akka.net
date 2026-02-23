@@ -9,6 +9,7 @@ using System.Configuration;
 
 namespace Akka.Configuration.Hocon
 {
+#if NETSTANDARD
     /// <summary>
     /// This class represents a custom akka node within a configuration file.
     /// <code>
@@ -65,4 +66,5 @@ namespace Akka.Configuration.Hocon
             set { base[ConfigurationPropertyName] = value; }
         }
     }
+#endif
 }

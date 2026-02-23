@@ -1,25 +1,25 @@
-﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Benchmarks")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Benchmarks")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Metrics")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Sharding.Tests.MultiNode")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.TestKit")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.MultiNode")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tests.Performance")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Cluster.Tools.Tests.MultiNode")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.DistributedData")]
-[assembly: System.Runtime.CompilerServices.InternalsVisibleToAttribute("Akka.Management.Cluster.Http")]
-[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
-[assembly: System.Runtime.InteropServices.GuidAttribute("0e3e691b-0c31-4718-9b1a-d749b93208c9")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Benchmarks")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Benchmarks")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Metrics")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.TestKit")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests.Performance")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tools")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tools.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tools.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DistributedData")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Management.Cluster.Http")]
+[assembly: System.Runtime.InteropServices.ComVisible(false)]
+[assembly: System.Runtime.InteropServices.Guid("0e3e691b-0c31-4718-9b1a-d749b93208c9")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
 namespace Akka.Cluster
 {
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public sealed class AutoDowning : Akka.Cluster.IDowningProvider
     {
         public AutoDowning(Akka.Actor.ActorSystem system, Akka.Cluster.Cluster cluster) { }
@@ -41,11 +41,10 @@ namespace Akka.Cluster
         public Akka.Cluster.ClusterEvent.CurrentClusterState State { get; }
         public Akka.Actor.ExtendedActorSystem System { get; }
         public void Down(Akka.Actor.Address address) { }
-        public static Akka.Cluster.Cluster Get(Akka.Actor.ActorSystem system) { }
         public void Join(Akka.Actor.Address address) { }
-        public System.Threading.Tasks.Task JoinAsync(Akka.Actor.Address address, System.Threading.CancellationToken token = null) { }
+        public System.Threading.Tasks.Task JoinAsync(Akka.Actor.Address address, System.Threading.CancellationToken token = default) { }
         public void JoinSeedNodes(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes) { }
-        public System.Threading.Tasks.Task JoinSeedNodesAsync(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes, System.Threading.CancellationToken token = null) { }
+        public System.Threading.Tasks.Task JoinSeedNodesAsync(System.Collections.Generic.IEnumerable<Akka.Actor.Address> seedNodes, System.Threading.CancellationToken token = default) { }
         public void Leave(Akka.Actor.Address address) { }
         public System.Threading.Tasks.Task LeaveAsync() { }
         public System.Threading.Tasks.Task LeaveAsync(System.Threading.CancellationToken cancellationToken) { }
@@ -57,8 +56,9 @@ namespace Akka.Cluster
         public void Subscribe(Akka.Actor.IActorRef subscriber, Akka.Cluster.ClusterEvent.SubscriptionInitialStateMode initialStateMode, params System.Type[] to) { }
         public void Unsubscribe(Akka.Actor.IActorRef subscriber) { }
         public void Unsubscribe(Akka.Actor.IActorRef subscriber, System.Type to) { }
+        public static Akka.Cluster.Cluster Get(Akka.Actor.ActorSystem system) { }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public class ClusterActorRefProvider : Akka.Remote.RemoteActorRefProvider, Akka.Actor.IActorRefProvider, Akka.Cluster.IClusterActorRefProvider, Akka.Remote.IRemoteActorRefProvider
     {
         public ClusterActorRefProvider(string systemName, Akka.Actor.Settings settings, Akka.Event.EventStream eventStream) { }
@@ -194,9 +194,9 @@ namespace Akka.Cluster
         public ClusterSettings(Akka.Configuration.Config config, string systemName) { }
         public bool AllowWeaklyUpMembers { get; }
         public Akka.Util.AppVersion AppVersion { get; }
-        [System.ObsoleteAttribute("Deprecated as of Akka.NET v1.5.2 - clustering defaults to using KeepMajority SBR " +
+        [System.Obsolete("Deprecated as of Akka.NET v1.5.2 - clustering defaults to using KeepMajority SBR " +
             "instead")]
-        public System.Nullable<System.TimeSpan> AutoDownUnreachableAfter { get; }
+        public System.TimeSpan? AutoDownUnreachableAfter { get; }
         public System.Type DowningProviderType { get; }
         public Akka.Configuration.Config FailureDetectorConfig { get; }
         public string FailureDetectorImplementationClass { get; }
@@ -212,16 +212,16 @@ namespace Akka.Cluster
         public System.Collections.Immutable.ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
         public int MonitoredByNrOfMembers { get; }
         public System.TimeSpan PeriodicTasksInitialDelay { get; }
-        public System.Nullable<System.TimeSpan> PublishStatsInterval { get; }
+        public System.TimeSpan? PublishStatsInterval { get; }
         public int ReduceGossipDifferentViewProbability { get; }
-        public System.Nullable<System.TimeSpan> RetryUnsuccessfulJoinAfter { get; }
+        public System.TimeSpan? RetryUnsuccessfulJoinAfter { get; }
         public System.Collections.Immutable.ImmutableHashSet<string> Roles { get; }
         public bool RunCoordinatedShutdownWhenDown { get; }
         public System.TimeSpan SchedulerTickDuration { get; }
         public int SchedulerTicksPerWheel { get; }
         public System.TimeSpan SeedNodeTimeout { get; }
         public System.Collections.Immutable.ImmutableList<Akka.Actor.Address> SeedNodes { get; }
-        public System.Nullable<System.TimeSpan> ShutdownAfterUnsuccessfulJoinSeedNodes { get; }
+        public System.TimeSpan? ShutdownAfterUnsuccessfulJoinSeedNodes { get; }
         public System.TimeSpan UnreachableNodesReaperInterval { get; }
         public string UseDispatcher { get; }
         public bool UseLegacyHeartbeatMessage { get; }
@@ -229,7 +229,7 @@ namespace Akka.Cluster
         public bool VerboseHeartbeatLogging { get; }
         public System.TimeSpan WeaklyUpAfter { get; }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public interface IClusterActorRefProvider : Akka.Actor.IActorRefProvider, Akka.Remote.IRemoteActorRefProvider { }
     public interface IClusterMessage { }
     public interface IDowningProvider
@@ -252,12 +252,12 @@ namespace Akka.Cluster
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public bool HasRole(string role) { }
-        public static Akka.Cluster.Member HighestPriorityOf(Akka.Cluster.Member m1, Akka.Cluster.Member m2) { }
         public bool IsOlderThan(Akka.Cluster.Member other) { }
-        public static System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> PickHighestPriority(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
-        public static System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> PickNextTransition(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
-        public static Akka.Cluster.Member PickNextTransition(Akka.Cluster.Member a, Akka.Cluster.Member b) { }
         public override string ToString() { }
+        public static Akka.Cluster.Member HighestPriorityOf(Akka.Cluster.Member m1, Akka.Cluster.Member m2) { }
+        public static System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> PickHighestPriority(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
+        public static Akka.Cluster.Member PickNextTransition(Akka.Cluster.Member a, Akka.Cluster.Member b) { }
+        public static System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> PickNextTransition(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
     }
     public enum MemberStatus
     {
@@ -292,15 +292,13 @@ namespace Akka.Cluster
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
-        public static bool ==(Akka.Cluster.UniqueAddress left, Akka.Cluster.UniqueAddress right) { }
-        public static bool !=(Akka.Cluster.UniqueAddress left, Akka.Cluster.UniqueAddress right) { }
+        public static bool operator !=(Akka.Cluster.UniqueAddress left, Akka.Cluster.UniqueAddress right) { }
+        public static bool operator ==(Akka.Cluster.UniqueAddress left, Akka.Cluster.UniqueAddress right) { }
     }
     public sealed class VectorClock
     {
         public System.Collections.Immutable.ImmutableSortedDictionary<Akka.Cluster.VectorClock.Node, long> Versions { get; }
         public Akka.Cluster.VectorClock.Ordering CompareTo(Akka.Cluster.VectorClock that) { }
-        public static Akka.Cluster.VectorClock Create() { }
-        public static Akka.Cluster.VectorClock Create(System.Collections.Immutable.ImmutableSortedDictionary<Akka.Cluster.VectorClock.Node, long> seedValues) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public Akka.Cluster.VectorClock Increment(Akka.Cluster.VectorClock.Node node) { }
@@ -311,19 +309,21 @@ namespace Akka.Cluster
         public Akka.Cluster.VectorClock Merge(Akka.Cluster.VectorClock that) { }
         public Akka.Cluster.VectorClock Prune(Akka.Cluster.VectorClock.Node removedNode) { }
         public override string ToString() { }
-        public static bool ==(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
-        public static bool >(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
-        public static bool !=(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
-        public static bool <(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
+        public static Akka.Cluster.VectorClock Create() { }
+        public static Akka.Cluster.VectorClock Create(System.Collections.Immutable.ImmutableSortedDictionary<Akka.Cluster.VectorClock.Node, long> seedValues) { }
+        public static bool operator !=(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
+        public static bool operator <(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
+        public static bool operator ==(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
+        public static bool operator >(Akka.Cluster.VectorClock left, Akka.Cluster.VectorClock right) { }
         public class Node : System.IComparable<Akka.Cluster.VectorClock.Node>
         {
             public Node(string value) { }
             public int CompareTo(Akka.Cluster.VectorClock.Node other) { }
-            public static Akka.Cluster.VectorClock.Node Create(string name) { }
             public override bool Equals(object obj) { }
-            public static Akka.Cluster.VectorClock.Node FromHash(string hash) { }
             public override int GetHashCode() { }
             public override string ToString() { }
+            public static Akka.Cluster.VectorClock.Node Create(string name) { }
+            public static Akka.Cluster.VectorClock.Node FromHash(string hash) { }
         }
         public enum Ordering
         {
@@ -379,8 +379,8 @@ namespace Akka.Cluster.Routing
         public ClusterRouterPoolSettings(int totalInstances, int maxInstancesPerNode, bool allowLocalRoutees, string useRole = null) { }
         public int MaxInstancesPerNode { get; }
         public override bool Equals(object obj) { }
-        public static Akka.Cluster.Routing.ClusterRouterPoolSettings FromConfig(Akka.Configuration.Config config) { }
         public override int GetHashCode() { }
+        public static Akka.Cluster.Routing.ClusterRouterPoolSettings FromConfig(Akka.Configuration.Config config) { }
     }
     public abstract class ClusterRouterSettingsBase
     {
@@ -416,12 +416,12 @@ namespace Akka.Cluster.SBR
     }
     public sealed class SplitBrainResolverSettings
     {
-        public static readonly System.Collections.Immutable.ImmutableHashSet<string> AllStrategyNames;
         public const string DownAllName = "down-all";
         public const string KeepMajorityName = "keep-majority";
         public const string KeepOldestName = "keep-oldest";
         public const string LeaseMajorityName = "lease-majority";
         public const string StaticQuorumName = "static-quorum";
+        public static readonly System.Collections.Immutable.ImmutableHashSet<string> AllStrategyNames;
         public SplitBrainResolverSettings(Akka.Configuration.Config config) { }
         public System.TimeSpan DownAllWhenUnstable { get; }
         public System.TimeSpan DowningStableAfter { get; }
@@ -440,7 +440,7 @@ namespace Akka.Cluster.SBR
 }
 namespace Akka.Cluster.Serialization
 {
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public class ClusterMessageSerializer : Akka.Serialization.SerializerWithStringManifest
     {
         public ClusterMessageSerializer(Akka.Actor.ExtendedActorSystem system) { }

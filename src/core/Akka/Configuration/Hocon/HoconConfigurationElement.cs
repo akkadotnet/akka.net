@@ -9,6 +9,7 @@ using System.Configuration;
 
 namespace Akka.Configuration.Hocon
 {
+#if NETSTANDARD
     /// <summary>
     /// This class represents a custom HOCON (Human-Optimized Config Object Notation)
     /// node within a configuration file.
@@ -40,4 +41,5 @@ namespace Akka.Configuration.Hocon
             set { base[ContentPropertyName] = value; }
         }
     }
+#endif
 }

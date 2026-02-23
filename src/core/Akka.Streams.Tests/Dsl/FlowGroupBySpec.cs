@@ -101,7 +101,7 @@ namespace Akka.Streams.Tests.Dsl
                     ((Source<IEnumerable<IEnumerable<string>>, NotUsed>)source).RunWith(
                         Sink.First<IEnumerable<IEnumerable<string>>>(), Materializer);
 
-                await task.ShouldCompleteWithin(3.Seconds());
+                await task.WaitAsync(3.Seconds());
                 task.Result.OrderBy(e => e.First())
                     .Should().BeEquivalentTo(new[] { "Aaa", "Abb" }, new[] { "Bcc" }, new[] { "Cdd", "Cee" });
             }, Materializer);
@@ -426,7 +426,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Select(t => t.Item2)
                     .ConcatSubstream();
                 var futureGroupSource = source.RunWith(Sink.First<Source<int, NotUsed>>(), Materializer);
-                await futureGroupSource.ShouldCompleteWithin(3.Seconds());
+                await futureGroupSource.WaitAsync(3.Seconds());
                 var publisher = futureGroupSource.Result.RunWith(Sink.AsPublisher<int>(false), Materializer);
                 
                 var probe = this.CreateSubscriberProbe<int>();
@@ -732,7 +732,7 @@ namespace Akka.Streams.Tests.Dsl
                     }
                     else
                     {
-                        var probe = await props.Probes[props.ProbesReaderTop].Task.ShouldCompleteWithin(3.Seconds());
+                        var probe = await props.Probes[props.ProbesReaderTop].Task.WaitAsync(3.Seconds());
                         props.ProbesReaderTop++;
                         map[index] = new SubFlowState(probe, false, byteString);
                         //stream automatically requests next element 

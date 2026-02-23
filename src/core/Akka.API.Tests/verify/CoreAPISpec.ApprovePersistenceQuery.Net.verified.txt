@@ -1,15 +1,14 @@
-﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
-[assembly: System.Runtime.InteropServices.ComVisibleAttribute(false)]
-[assembly: System.Runtime.InteropServices.GuidAttribute("92ab2788-e008-40d0-8b54-0c95b3cf3404")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
+﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.InteropServices.ComVisible(false)]
+[assembly: System.Runtime.InteropServices.Guid("92ab2788-e008-40d0-8b54-0c95b3cf3404")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Persistence.Query
 {
-    [System.Runtime.CompilerServices.NullableAttribute(0)]
     public sealed class EventEnvelope : System.IEquatable<Akka.Persistence.Query.EventEnvelope>
     {
-        [System.ObsoleteAttribute("For binary compatibility with previous releases. Since 1.4.14")]
+        [System.Obsolete("For binary compatibility with previous releases. Since 1.4.14")]
         public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event) { }
-        [System.ObsoleteAttribute("For binary compatibility with previous releases. Since 1.5.11")]
+        [System.Obsolete("For binary compatibility with previous releases. Since 1.5.11")]
         public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp) { }
         public EventEnvelope(Akka.Persistence.Query.Offset offset, string persistenceId, long sequenceNr, object @event, long timestamp, string[] tags) { }
         public object Event { get; }
@@ -18,8 +17,8 @@ namespace Akka.Persistence.Query
         public long SequenceNr { get; }
         public string[] Tags { get; }
         public long Timestamp { get; }
-        public bool Equals(Akka.Persistence.Query.EventEnvelope other) { }
-        public override bool Equals(object obj) { }
+        public bool Equals(Akka.Persistence.Query.EventEnvelope? other) { }
+        public override bool Equals(object? obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
@@ -70,23 +69,23 @@ namespace Akka.Persistence.Query
     {
         protected Offset() { }
         public abstract int CompareTo(Akka.Persistence.Query.Offset other);
+        public abstract override string ToString() { }
         public static Akka.Persistence.Query.Offset NoOffset() { }
         public static Akka.Persistence.Query.Offset Sequence(long value) { }
         public static Akka.Persistence.Query.Offset TimeBasedUuid(System.Guid value) { }
-        public virtual string ToString() { }
     }
     public sealed class PersistenceQuery : Akka.Actor.IExtension
     {
         public PersistenceQuery(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Event.ILoggingAdapter Log { get; }
-        public static Akka.Persistence.Query.PersistenceQuery Get(Akka.Actor.ActorSystem system) { }
-        public static Akka.Configuration.Config GetDefaultConfig<TJournal>() { }
-        public static Akka.Configuration.Config GetDefaultConfig(System.Type journalType) { }
+        public Akka.Persistence.Query.IReadJournal ReadJournalFor(System.Type readJournalType, string readJournalPluginId) { }
         public TJournal ReadJournalFor<TJournal>(string readJournalPluginId)
             where TJournal : Akka.Persistence.Query.IReadJournal { }
-        public Akka.Persistence.Query.IReadJournal ReadJournalFor(System.Type readJournalType, string readJournalPluginId) { }
+        public static Akka.Persistence.Query.PersistenceQuery Get(Akka.Actor.ActorSystem system) { }
+        public static Akka.Configuration.Config GetDefaultConfig(System.Type journalType) { }
+        public static Akka.Configuration.Config GetDefaultConfig<TJournal>() { }
     }
-    public class static PersistenceQueryExtensions
+    public static class PersistenceQueryExtensions
     {
         public static TJournal ReadJournalFor<TJournal>(this Akka.Actor.ActorSystem system, string readJournalPluginId)
             where TJournal : Akka.Persistence.Query.IReadJournal { }
@@ -100,8 +99,8 @@ namespace Akka.Persistence.Query
     {
         public Sequence(long value) { }
         public long Value { get; }
-        public int CompareTo(Akka.Persistence.Query.Sequence other) { }
         public override int CompareTo(Akka.Persistence.Query.Offset other) { }
+        public int CompareTo(Akka.Persistence.Query.Sequence other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
@@ -110,8 +109,8 @@ namespace Akka.Persistence.Query
     {
         public TimeBasedUuid(System.Guid value) { }
         public System.Guid Value { get; }
-        public int CompareTo(Akka.Persistence.Query.TimeBasedUuid other) { }
         public override int CompareTo(Akka.Persistence.Query.Offset other) { }
+        public int CompareTo(Akka.Persistence.Query.TimeBasedUuid other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }

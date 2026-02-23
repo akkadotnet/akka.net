@@ -16,7 +16,7 @@ namespace Akka.Cluster.Tests
     public class ProviderSelectionSpec
     {
         public ActorSystemSetup Setup { get; } = ActorSystemSetup.Create();
-        public Config LocalConfig { get; } = ConfigurationFactory.Load();
+        public Config LocalConfig { get; } = ConfigurationFactory.Default();
 
         public Settings SettingsWith(string key)
         {

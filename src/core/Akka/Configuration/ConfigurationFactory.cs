@@ -36,9 +36,9 @@ namespace Akka.Configuration
         /// <param name="hocon">A string that contains configuration options to use.</param>
         /// <param name="includeCallback">callback used to resolve includes</param>
         /// <returns>The configuration defined in the supplied HOCON string.</returns>
-        public static Config ParseString(string hocon, Func<string,HoconRoot> includeCallback)
+        public static Config ParseString(string hocon, Func<string, HoconRoot> includeCallback)
         {
-            HoconRoot res = Parser.Parse(hocon, includeCallback);
+            var res = Parser.Parse(hocon, includeCallback);
             return new Config(res);
         }
 
@@ -54,6 +54,7 @@ namespace Akka.Configuration
             return ParseString(hocon, null);
         }
 
+#if NETSTANDARD
         /// <summary>
         /// Loads a configuration defined in the current application's
         /// configuration file, e.g. app.config or web.config
@@ -61,9 +62,13 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the configuration file.</returns>
         public static Config Load()
         {
-            var section = (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka") ?? new AkkaConfigurationSection();
+
+            var section =
+ (AkkaConfigurationSection)System.Configuration.ConfigurationManager.GetSection("akka") ?? new AkkaConfigurationSection();
             return section.AkkaConfig;
+
         }
+#endif
 
         /// <summary>
         /// Retrieves the default configuration that Akka.NET uses
@@ -123,7 +128,7 @@ namespace Akka.Configuration
         /// <returns>The configuration defined in the assembly that contains the given resource.</returns>
         public static Config FromResource(string resourceName, Assembly assembly)
         {
-            using(Stream stream = assembly.GetManifestResourceStream(resourceName))
+            using (Stream stream = assembly.GetManifestResourceStream(resourceName))
             {
                 Debug.Assert(stream != null, "stream != null");
                 using (var reader = new StreamReader(stream))
@@ -148,4 +153,3 @@ namespace Akka.Configuration
         }
     }
 }
-

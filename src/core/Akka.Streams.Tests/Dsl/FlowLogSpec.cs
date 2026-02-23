@@ -6,7 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Event;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
@@ -26,94 +28,114 @@ namespace Akka.Streams.Tests.Dsl
         {
             var settings = ActorMaterializerSettings.Create(Sys).WithInputBuffer(2, 16);
             Materializer = ActorMaterializer.Create(Sys, settings);
-
-            var p = CreateTestProbe();
-            Sys.EventStream.Subscribe(p.Ref, typeof(object));
-            LogProbe = p;
         }
 
-        private TestProbe LogProbe { get; }
+        private TestProbe _logProbe;
 
-        private string[] LogMessages(int n)
-            => LogProbe.ReceiveN(n).Cast<Debug>().Select(x => x.Message.ToString()).ToArray();
+        protected override void AtStartup()
+        {
+            base.AtStartup();
+            
+            var p = CreateTestProbe();
+            Sys.EventStream.Subscribe(p.Ref, typeof(LogEvent));
+            _logProbe = p;
+        }
 
-        private Type LogType => typeof (IMaterializer);
+        private async Task<string[]> LogMessages(int n, string tag)
+        {
+            return (await LogEvents<Debug>(n, tag)).Select(m => m.Message.ToString()).ToArray();
+        }
+
+        private async Task<T[]> LogEvents<T>(int n, string tag) where T : LogEvent
+        {
+            var count = 0;
+            var messages = new List<T>();
+            while (count < n)
+            {
+                var msg = (T) await _logProbe.FishForMessageAsync(m => m is T d && d.Message.ToString().StartsWith(tag));
+                count++;
+                messages.Add(msg);
+            }
+            return messages.ToArray();
+        }
+
+        private static readonly Type LogType = typeof (IMaterializer);
 
         [Fact]
-        public void A_Log_on_Flow_must_debug_each_element()
+        public async Task A_Log_on_Flow_must_debug_each_element()
         {
             var debugging = Flow.Create<int>().Log("my-debug");
-            Source.From(new[] {1, 2}).Via(debugging).RunWith(Sink.Ignore<int>(), Materializer);
+            _ = Source.From([1, 2]).Via(debugging).RunWith(Sink.Ignore<int>(), Materializer);
 
-            var msgs = LogMessages(3);
+            var msgs = await LogMessages(3, "[my-debug]");
             msgs[0].Should().Be("[my-debug] Element: 1");
             msgs[1].Should().Be("[my-debug] Element: 2");
             msgs[2].Should().Be("[my-debug] Upstream finished.");
         }
 
         [Fact]
-        public void A_Log_on_Flow_must_allow_disabling_elements_logging()
+        public async Task A_Log_on_Flow_must_allow_disabling_elements_logging()
         {
             var disableElementLogging = Attributes.CreateLogLevels(Attributes.LogLevels.Off, LogLevel.DebugLevel,
                 LogLevel.DebugLevel);
             var debugging = Flow.Create<int>().Log("my-debug");
-            Source.From(new[] {1, 2})
+            _ = Source.From([1, 2])
                 .Via(debugging)
                 .WithAttributes(disableElementLogging)
                 .RunWith(Sink.Ignore<int>(), Materializer);
 
-            var msgs = LogMessages(1);
+            var msgs = await LogMessages(1, "[my-debug]");
             msgs[0].Should().Be("[my-debug] Upstream finished.");
         }
 
 
 
         [Fact]
-        public void A_Log_on_source_must_debug_each_element()
+        public async Task A_Log_on_source_must_debug_each_element()
         {
-            Source.From(new[] {1, 2}).Log("flow-s2").RunWith(Sink.Ignore<int>(), Materializer);
+            _ = Source.From([1, 2]).Log("flow-s2").RunWith(Sink.Ignore<int>(), Materializer);
 
-            var msgs = LogMessages(3);
+            var msgs = await LogMessages(3, "[flow-s2]");
             msgs[0].Should().Be("[flow-s2] Element: 1");
             msgs[1].Should().Be("[flow-s2] Element: 2");
             msgs[2].Should().Be("[flow-s2] Upstream finished.");
         }
 
         [Fact]
-        public void A_Log_on_source_must_allow_extracting_value_to_be_logged()
+        public async Task A_Log_on_source_must_allow_extracting_value_to_be_logged()
         {
-            Source.Single((1, "42"))
+            _ = Source.Single((1, "42"))
                 .Log("flow-s3", t => t.Item2)
                 .RunWith(Sink.Ignore<(int, string)>(), Materializer);
 
-            var msgs = LogMessages(2);
+            var msgs = await LogMessages(2, "[flow-s3]");
             msgs[0].Should().Be("[flow-s3] Element: 42");
             msgs[1].Should().Be("[flow-s3] Upstream finished.");
         }
 
         [Fact]
-        public void A_Log_on_source_must_log_upstream_failure()
+        public async Task A_Log_on_source_must_log_upstream_failure()
         {
             var cause = new TestException("test");
-            Source.Failed<int>(cause)
+            _ = Source.Failed<int>(cause)
                 .Log("flow-s4")
                 .RunWith(Sink.Ignore<int>(), Materializer);
 
-            var error = LogProbe.ExpectMsg<Error>();
+            var error = (Error) await _logProbe.FishForMessageAsync(o => o is Error e && e.Message.ToString().StartsWith("[flow-s4]"));
             error.Cause.Should().Be(cause);
             error.Message.ToString().Should().Be("[flow-s4] Upstream failed.");
         }
 
         [Fact]
-        public void A_Log_on_source_must_allow_passing_in_custom_LoggingAdapter()
+        public async Task A_Log_on_source_must_allow_passing_in_custom_LoggingAdapter()
         {
             var log = new BusLogging(Sys.EventStream, "com.example.ImportantLogger", LogType, DefaultLogMessageFormatter.Instance);
 
-            Source.Single(42)
+            _ = Source.Single(42)
                 .Log("flow-5", log: log)
                 .RunWith(Sink.Ignore<int>(), Materializer);
 
-            var msgs = LogProbe.ReceiveN(2).Cast<Debug>().ToArray();
+            var msgs = await LogEvents<Debug>(2, "[flow-5]");
             msgs.All(m => m.LogSource.Equals("com.example.ImportantLogger")).Should().BeTrue();
             msgs.All(m => m.LogClass == LogType).Should().BeTrue();
             msgs[0].Message.ToString().Should().Be("[flow-5] Element: 42");
@@ -121,50 +143,54 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void A_Log_on_source_must_allow_configuring_log_levels_via_Attributes()
+        public async Task A_Log_on_source_must_allow_configuring_log_levels_via_Attributes()
         {
             var logAttributes = Attributes.CreateLogLevels(LogLevel.WarningLevel, LogLevel.InfoLevel,
                 LogLevel.DebugLevel);
 
-            Source.Single(42)
+            _ = Source.Single(42)
                 .Log("flow-6")
                 .WithAttributes(Attributes.CreateLogLevels(LogLevel.WarningLevel, LogLevel.InfoLevel,
                     LogLevel.DebugLevel))
                 .RunWith(Sink.Ignore<int>(), Materializer);
 
-            LogProbe.ExpectMsg<Warning>().Message.ToString().Should().Be("[flow-6] Element: 42");
-            LogProbe.ExpectMsg<Info>().Message.ToString().Should().Be("[flow-6] Upstream finished.");
+            var warnings = await LogEvents<Warning>(1, "[flow-6]");
+            warnings[0].Message.ToString().Should().Be("[flow-6] Element: 42");
+            
+            var info = await LogEvents<Info>(1, "[flow-6]");
+            info[0].Message.ToString().Should().Be("[flow-6] Upstream finished.");
 
             var cause = new TestException("test");
-            Source.Failed<int>(cause)
+            _ = Source.Failed<int>(cause)
                 .Log("flow-6e")
                 .WithAttributes(logAttributes)
                 .RunWith(Sink.Ignore<int>(), Materializer);
 
-            var error = LogProbe.ExpectMsg<Debug>();
-            error.Message.ToString().Should().Be("[flow-6e] Upstream failed, cause: Akka.Streams.TestKit.TestException test");
+            var error = await LogEvents<Debug>(1, "[flow-6e]");
+            error[0].Message.ToString().Should().Be("[flow-6e] Upstream failed, cause: Akka.Streams.TestKit.TestException test");
         }
 
         [Fact]
-        public void A_Log_on_source_must_allow_configuring_log_levels_via_Method_argument()
+        public async Task A_Log_on_source_must_allow_configuring_log_levels_via_Method_argument()
         {
-            Source.Single(42)
+            _ = Source.Single(42)
                 .Log("flow-6", logLevel: LogLevel.WarningLevel)
                 .RunWith(Sink.Ignore<int>(), Materializer);
 
-            LogProbe.ExpectMsg<Warning>().Message.ToString().Should().Be("[flow-6] Element: 42");
+            var warnings = await LogEvents<Warning>(1, "[flow-6]");
+            warnings[0].Message.ToString().Should().Be("[flow-6] Element: 42");
         }
 
         [Fact]
-        public void A_Log_on_Source_must_follow_supervision_strategy_when_Exception_thrown()
+        public async Task A_Log_on_Source_must_follow_supervision_strategy_when_Exception_thrown()
         {
             var ex = new TestException("test");
             var future = Source.From(Enumerable.Range(1, 5))
-                .Log("hi", _ => { throw ex; })
+                .Log("hi", _ => throw ex)
                 .WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider))
                 .RunWith(Sink.Aggregate<int, int>(0, (i, i1) => i + i1), Materializer);
 
-            future.Wait(TimeSpan.FromMilliseconds(500)).Should().BeTrue();
+            await future.WaitAsync(TimeSpan.FromMilliseconds(500));
             future.Result.Should().Be(0);
         }
     }

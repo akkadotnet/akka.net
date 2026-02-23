@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
@@ -14,16 +16,16 @@ using Akka.Remote.Transport;
 using Akka.Util;
 using FluentAssertions;
 
-namespace Akka.Cluster.Sharding.Tests
-{
-    public class ClusterShardingFailureSpecConfig : MultiNodeClusterShardingConfig
-    {
-        public RoleName Controller { get; }
-        public RoleName First { get; }
-        public RoleName Second { get; }
+namespace Akka.Cluster.Sharding.Tests;
 
-        public ClusterShardingFailureSpecConfig(StateStoreMode mode)
-            : base(mode: mode, loglevel: "DEBUG", additionalConfig: @"
+public class ClusterShardingFailureSpecConfig : MultiNodeClusterShardingConfig
+{
+    public RoleName Controller { get; }
+    public RoleName First { get; }
+    public RoleName Second { get; }
+
+    public ClusterShardingFailureSpecConfig(StateStoreMode mode)
+        : base(mode: mode, loglevel: "DEBUG", additionalConfig: @"
             akka.cluster.roles = [""backend""]
             akka.cluster.sharding {
                 coordinator-failure-backoff = 3s
@@ -32,298 +34,272 @@ namespace Akka.Cluster.Sharding.Tests
             # don't leak ddata state across runs
             akka.cluster.sharding.distributed-data.durable.keys = []
             ")
-        {
-            Controller = Role("controller");
-            First = Role("first");
-            Second = Role("second");
-
-            TestTransport = true;
-        }
-    }
-
-    public class PersistentClusterShardingFailureSpecConfig : ClusterShardingFailureSpecConfig
     {
-        public PersistentClusterShardingFailureSpecConfig()
-            : base(StateStoreMode.Persistence)
-        {
-        }
+        Controller = Role("controller");
+        First = Role("first");
+        Second = Role("second");
+
+        TestTransport = true;
     }
+}
 
-    public class DDataClusterShardingFailureSpecConfig : ClusterShardingFailureSpecConfig
+public class PersistentClusterShardingFailureSpecConfig : ClusterShardingFailureSpecConfig
+{
+    public PersistentClusterShardingFailureSpecConfig()
+        : base(StateStoreMode.Persistence)
     {
-        public DDataClusterShardingFailureSpecConfig()
-            : base(StateStoreMode.DData)
-        {
-        }
     }
+}
 
-    public class PersistentClusterShardingFailureSpec : ClusterShardingFailureSpec
+public class DDataClusterShardingFailureSpecConfig : ClusterShardingFailureSpecConfig
+{
+    public DDataClusterShardingFailureSpecConfig()
+        : base(StateStoreMode.DData)
     {
-        public PersistentClusterShardingFailureSpec()
-            : base(new PersistentClusterShardingFailureSpecConfig(), typeof(PersistentClusterShardingFailureSpec))
-        {
-        }
     }
+}
 
-    public class DDataClusterShardingFailureSpec : ClusterShardingFailureSpec
+public class PersistentClusterShardingFailureSpec : ClusterShardingFailureSpec
+{
+    public PersistentClusterShardingFailureSpec()
+        : base(new PersistentClusterShardingFailureSpecConfig(), typeof(PersistentClusterShardingFailureSpec))
     {
-        public DDataClusterShardingFailureSpec()
-            : base(new DDataClusterShardingFailureSpecConfig(), typeof(DDataClusterShardingFailureSpec))
-        {
-        }
     }
+}
 
-    public abstract class ClusterShardingFailureSpec : MultiNodeClusterShardingSpec<ClusterShardingFailureSpecConfig>
+public class DDataClusterShardingFailureSpec : ClusterShardingFailureSpec
+{
+    public DDataClusterShardingFailureSpec()
+        : base(new DDataClusterShardingFailureSpecConfig(), typeof(DDataClusterShardingFailureSpec))
     {
-        #region setup
+    }
+}
 
-        [Serializable]
-        internal sealed class Get
+public abstract class ClusterShardingFailureSpec : MultiNodeClusterShardingSpec<ClusterShardingFailureSpecConfig>
+{
+    #region setup
+
+    [Serializable]
+    internal sealed record Get(string Id);
+
+    [Serializable]
+    internal sealed record Add(string Id, int I);
+
+    [Serializable]
+    internal sealed record Value(string Id, int N);
+
+    internal class Entity : ReceiveActor
+    {
+        private ILoggingAdapter log = Context.GetLogger();
+        private int _n = 0;
+
+        public Entity()
         {
-            public readonly string Id;
-            public Get(string id)
+            log.Debug("Starting");
+            Receive<Get>(get =>
             {
-                Id = id;
-            }
-        }
-
-        [Serializable]
-        internal sealed class Add
-        {
-            public readonly string Id;
-            public readonly int I;
-            public Add(string id, int i)
+                log.Debug("Got get request from {0}", Sender);
+                Sender.Tell(new Value(get.Id, _n));
+            });
+            Receive<Add>(add =>
             {
-                Id = id;
-                I = i;
-            }
-        }
-
-        [Serializable]
-        internal sealed class Value
-        {
-            public readonly string Id;
-            public readonly int N;
-            public Value(string id, int n)
-            {
-                Id = id;
-                N = n;
-            }
-        }
-
-        internal class Entity : ReceiveActor
-        {
-            private ILoggingAdapter log = Context.GetLogger();
-            private int _n = 0;
-
-            public Entity()
-            {
-                log.Debug("Starting");
-                Receive<Get>(get =>
-                {
-                    log.Debug("Got get request from {0}", Sender);
-                    Sender.Tell(new Value(get.Id, _n));
-                });
-                Receive<Add>(add =>
-                {
-                    _n += add.I;
-                    log.Debug("Got add request from {0}", Sender);
-                });
-            }
-
-            protected override void PostStop()
-            {
-                log.Debug("Stopping");
-                base.PostStop();
-            }
-        }
-
-        private sealed class MessageExtractor: IMessageExtractor
-        {
-            public string EntityId(object message)
-                => message switch
-                {
-                    Get msg => msg.Id,
-                    Add msg => msg.Id,
-                    _ => null
-                };
-
-            public object EntityMessage(object message)
-                => message;
-
-            public string ShardId(object message)
-                => message switch
-                {
-                    Get msg => msg.Id[0].ToString(),
-                    Add msg => msg.Id[0].ToString(),
-                    _ => null
-                };
-
-            public string ShardId(string entityId, object messageHint = null)
-                => entityId[0].ToString();
-        }
-
-        private readonly Lazy<IActorRef> _region;
-
-        protected ClusterShardingFailureSpec(ClusterShardingFailureSpecConfig config, Type type)
-            : base(config, type)
-        {
-            _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
-        }
-
-        private void Join(RoleName from, RoleName to)
-        {
-            Join(from, to, () =>
-                StartSharding(
-                    Sys,
-                    typeName: "Entity",
-                    entityProps: Props.Create(() => new Entity()),
-                    messageExtractor: new MessageExtractor())
-                );
-        }
-
-        #endregion
-
-        [MultiNodeFact]
-        public void ClusterSharding_with_flaky_journal_network_specs()
-        {
-            ClusterSharding_with_flaky_journal_network_must_join_cluster();
-            ClusterSharding_with_flaky_journal_network_must_recover_after_journal_network_failure();
-        }
-
-        private void ClusterSharding_with_flaky_journal_network_must_join_cluster()
-        {
-            Within(TimeSpan.FromSeconds(20), () =>
-            {
-                StartPersistenceIfNeeded(startOn: Config.Controller, Config.First, Config.Second);
-
-                Join(Config.First, Config.First);
-                Join(Config.Second, Config.First);
-
-                RunOn(() =>
-                {
-                    var region = _region.Value;
-                    region.Tell(new Add("10", 1));
-                    region.Tell(new Add("20", 2));
-                    region.Tell(new Add("21", 3));
-                    region.Tell(new Get("10"));
-                    ExpectMsg<Value>(v => v.Id == "10" && v.N == 1);
-                    region.Tell(new Get("20"));
-                    ExpectMsg<Value>(v => v.Id == "20" && v.N == 2);
-                    region.Tell(new Get("21"));
-                    ExpectMsg<Value>(v => v.Id == "21" && v.N == 3);
-                }, Config.First);
-                EnterBarrier("after-2");
+                _n += add.I;
+                log.Debug("Got add request from {0}", Sender);
             });
         }
 
-        private void ClusterSharding_with_flaky_journal_network_must_recover_after_journal_network_failure()
+        protected override void PostStop()
         {
-            Within(TimeSpan.FromSeconds(20), () =>
-            {
-                RunOn(() =>
-                {
-                    if (PersistenceIsNeeded)
-                    {
-                        TestConductor.Blackhole(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both).Wait();
-                        TestConductor.Blackhole(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
-                    }
-                    else
-                    {
-                        TestConductor.Blackhole(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
-                    }
-                }, Config.Controller);
-                EnterBarrier("journal-backholded");
-
-                RunOn(() =>
-                {
-                    // try with a new shard, will not reply until journal/network is available again
-                    var region = _region.Value;
-                    region.Tell(new Add("40", 4));
-                    var probe = CreateTestProbe();
-                    region.Tell(new Get("40"), probe.Ref);
-                    probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
-                }, Config.First);
-                EnterBarrier("first-delayed");
-
-                RunOn(() =>
-                {
-                    if (PersistenceIsNeeded)
-                    {
-                        TestConductor.PassThrough(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both).Wait();
-                        TestConductor.PassThrough(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
-                    }
-                    else
-                    {
-                        TestConductor.PassThrough(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both).Wait();
-                    }
-                }, Config.Controller);
-                EnterBarrier("journal-ok");
-
-                RunOn(() =>
-                {
-                    var region = _region.Value;
-                    region.Tell(new Get("21"));
-                    ExpectMsg<Value>(v => v.Id == "21" && v.N == 3);
-                    var entity21 = LastSender;
-                    var shard2 = Sys.ActorSelection(entity21.Path.Parent);
-
-
-                    //Test the ShardCoordinator allocating shards after a journal/network failure
-                    region.Tell(new Add("30", 3));
-
-                    //Test the Shard starting entities and persisting after a journal/network failure
-                    region.Tell(new Add("11", 1));
-
-                    //Test the Shard passivate works after a journal failure
-                    shard2.Tell(new Passivate(PoisonPill.Instance), entity21);
-
-                    AwaitAssert(() =>
-                    {
-                        // Note that the order between this Get message to 21 and the above Passivate to 21 is undefined.
-                        // If this Get arrives first the reply will be Value("21", 3) and then it is retried by the
-                        // awaitAssert.
-                        // Also note that there is no timeout parameter on below expectMsg because messages should not
-                        // be lost here. They should be buffered and delivered also after Passivate completed.
-                        region.Tell(new Get("21"));
-                        // counter reset to 0 when started again
-                        ExpectMsg<Value>(v => v.Id == "21" && v.N == 0, hint: "Passivating did not reset Value down to 0");
-                    });
-
-                    region.Tell(new Add("21", 1));
-
-                    region.Tell(new Get("21"));
-                    ExpectMsg<Value>(v => v.Id == "21" && v.N == 1);
-
-                    region.Tell(new Get("30"));
-                    ExpectMsg<Value>(v => v.Id == "30" && v.N == 3);
-
-                    region.Tell(new Get("11"));
-                    ExpectMsg<Value>(v => v.Id == "11" && v.N == 1);
-
-                    region.Tell(new Get("40"));
-                    ExpectMsg<Value>(v => v.Id == "40" && v.N == 4);
-                }, Config.First);
-                EnterBarrier("verified-first");
-
-                RunOn(() =>
-                {
-                    var region = _region.Value;
-                    region.Tell(new Add("10", 1));
-                    region.Tell(new Add("20", 2));
-                    region.Tell(new Add("30", 3));
-                    region.Tell(new Add("11", 4));
-                    region.Tell(new Get("10"));
-                    ExpectMsg<Value>(v => v.Id == "10" && v.N == 2);
-                    region.Tell(new Get("11"));
-                    ExpectMsg<Value>(v => v.Id == "11" && v.N == 5);
-                    region.Tell(new Get("20"));
-                    ExpectMsg<Value>(v => v.Id == "20" && v.N == 4);
-                    region.Tell(new Get("30"));
-                    ExpectMsg<Value>(v => v.Id == "30" && v.N == 6);
-                }, Config.Second);
-                EnterBarrier("after-3");
-            });
+            log.Debug("Stopping");
+            base.PostStop();
         }
+    }
+
+    private sealed class MessageExtractor: IMessageExtractor
+    {
+        public string EntityId(object message)
+            => message switch
+            {
+                Get msg => msg.Id,
+                Add msg => msg.Id,
+                _ => null
+            };
+
+        public object EntityMessage(object message)
+            => message;
+
+        public string ShardId(object message)
+            => message switch
+            {
+                Get msg => msg.Id[0].ToString(),
+                Add msg => msg.Id[0].ToString(),
+                _ => null
+            };
+
+        public string ShardId(string entityId, object messageHint = null)
+            => entityId[0].ToString();
+    }
+
+    private readonly Lazy<IActorRef> _region;
+
+    protected ClusterShardingFailureSpec(ClusterShardingFailureSpecConfig config, Type type)
+        : base(config, type)
+    {
+        _region = new Lazy<IActorRef>(() => ClusterSharding.Get(Sys).ShardRegion("Entity"));
+    }
+
+    private Task JoinAsync(RoleName from, RoleName to)
+    {
+        return JoinAsync(from, to, () =>
+            StartSharding(
+                Sys,
+                typeName: "Entity",
+                entityProps: Props.Create(() => new Entity()),
+                messageExtractor: new MessageExtractor())
+        );
+    }
+
+    #endregion
+
+    [MultiNodeFact]
+    public async Task ClusterSharding_with_flaky_journal_network_specs()
+    {
+        await ClusterSharding_with_flaky_journal_network_must_join_cluster();
+        await ClusterSharding_with_flaky_journal_network_must_recover_after_journal_network_failure();
+    }
+
+    private async Task ClusterSharding_with_flaky_journal_network_must_join_cluster()
+    {
+        await WithinAsync(TimeSpan.FromSeconds(20), async () =>
+        {
+            await StartPersistenceIfNeededAsync(Config.Controller, CancellationToken.None, Config.First, Config.Second);
+
+            await JoinAsync(Config.First, Config.First);
+            await JoinAsync(Config.Second, Config.First);
+
+            await RunOnAsync(async () =>
+            {
+                var region = _region.Value;
+                region.Tell(new Add("10", 1));
+                region.Tell(new Add("20", 2));
+                region.Tell(new Add("21", 3));
+                region.Tell(new Get("10"));
+                await ExpectMsgAsync<Value>(v => v.Id == "10" && v.N == 1);
+                region.Tell(new Get("20"));
+                await ExpectMsgAsync<Value>(v => v.Id == "20" && v.N == 2);
+                region.Tell(new Get("21"));
+                await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 3);
+            }, Config.First);
+            await EnterBarrierAsync("after-2");
+        });
+    }
+
+    private async Task ClusterSharding_with_flaky_journal_network_must_recover_after_journal_network_failure()
+    {
+        await WithinAsync(TimeSpan.FromSeconds(20), async () =>
+        {
+            await RunOnAsync(async () =>
+            {
+                if (PersistenceIsNeeded)
+                {
+                    await TestConductor.BlackholeAsync(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both);
+                    await TestConductor.BlackholeAsync(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both);
+                }
+                else
+                {
+                    await TestConductor.BlackholeAsync(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both);
+                }
+            }, Config.Controller);
+            await EnterBarrierAsync("journal-backholded");
+
+            await RunOnAsync(async () =>
+            {
+                // try with a new shard, will not reply until journal/network is available again
+                var region = _region.Value;
+                region.Tell(new Add("40", 4));
+                var probe = CreateTestProbe();
+                region.Tell(new Get("40"), probe.Ref);
+                await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            }, Config.First);
+            await EnterBarrierAsync("first-delayed");
+
+            await RunOnAsync(async () =>
+            {
+                if (PersistenceIsNeeded)
+                {
+                    await TestConductor.PassThroughAsync(Config.Controller, Config.First, ThrottleTransportAdapter.Direction.Both);
+                    await TestConductor.PassThroughAsync(Config.Controller, Config.Second, ThrottleTransportAdapter.Direction.Both);
+                }
+                else
+                {
+                    await TestConductor.PassThroughAsync(Config.First, Config.Second, ThrottleTransportAdapter.Direction.Both);
+                }
+            }, Config.Controller);
+            await EnterBarrierAsync("journal-ok");
+
+            await RunOnAsync(async () =>
+            {
+                var region = _region.Value;
+                region.Tell(new Get("21"));
+                await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 3);
+                var entity21 = LastSender;
+                var shard2 = Sys.ActorSelection(entity21.Path.Parent);
+
+
+                //Test the ShardCoordinator allocating shards after a journal/network failure
+                region.Tell(new Add("30", 3));
+
+                //Test the Shard starting entities and persisting after a journal/network failure
+                region.Tell(new Add("11", 1));
+
+                //Test the Shard passivate works after a journal failure
+                shard2.Tell(new Passivate(PoisonPill.Instance), entity21);
+
+                await AwaitAssertAsync(async () =>
+                {
+                    // Note that the order between this Get message to 21 and the above Passivate to 21 is undefined.
+                    // If this Get arrives first the reply will be Value("21", 3) and then it is retried by the
+                    // awaitAssert.
+                    // Also note that there is no timeout parameter on below expectMsg because messages should not
+                    // be lost here. They should be buffered and delivered also after Passivate completed.
+                    region.Tell(new Get("21"));
+                    // counter reset to 0 when started again
+                    await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 0, hint: "Passivating did not reset Value down to 0");
+                });
+
+                region.Tell(new Add("21", 1));
+
+                region.Tell(new Get("21"));
+                await ExpectMsgAsync<Value>(v => v.Id == "21" && v.N == 1);
+
+                region.Tell(new Get("30"));
+                await ExpectMsgAsync<Value>(v => v.Id == "30" && v.N == 3);
+
+                region.Tell(new Get("11"));
+                await ExpectMsgAsync<Value>(v => v.Id == "11" && v.N == 1);
+
+                region.Tell(new Get("40"));
+                await ExpectMsgAsync<Value>(v => v.Id == "40" && v.N == 4);
+            }, Config.First);
+            await EnterBarrierAsync("verified-first");
+
+            await RunOnAsync(async () =>
+            {
+                var region = _region.Value;
+                region.Tell(new Add("10", 1));
+                region.Tell(new Add("20", 2));
+                region.Tell(new Add("30", 3));
+                region.Tell(new Add("11", 4));
+                region.Tell(new Get("10"));
+                await ExpectMsgAsync<Value>(v => v.Id == "10" && v.N == 2);
+                region.Tell(new Get("11"));
+                await ExpectMsgAsync<Value>(v => v.Id == "11" && v.N == 5);
+                region.Tell(new Get("20"));
+                await ExpectMsgAsync<Value>(v => v.Id == "20" && v.N == 4);
+                region.Tell(new Get("30"));
+                await ExpectMsgAsync<Value>(v => v.Id == "30" && v.N == 6);
+            }, Config.Second);
+            await EnterBarrierAsync("after-3");
+        });
     }
 }

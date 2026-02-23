@@ -14,7 +14,6 @@ using Akka.Event;
 namespace Akka.IO
 {
     using static Udp;
-    using ByteBuffer = ArraySegment<byte>;
 
     abstract class WithUdpSend : ActorBase
     {

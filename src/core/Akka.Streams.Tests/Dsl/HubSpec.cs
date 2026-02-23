@@ -46,7 +46,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(11, 10)).RunWith(sink, Materializer);
 
-                var result = await task.ShouldCompleteWithin(3.Seconds());
+                var result = await task.WaitAsync(3.Seconds());
                 result.OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20));
             }, Materializer);
         }
@@ -79,7 +79,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectCancellation()
                     .ExecuteAsync();
                 
-                var result = await task.ShouldCompleteWithin(3.Seconds());
+                var result = await task.WaitAsync(3.Seconds());
                 result.Should().BeEquivalentTo(Enumerable.Range(1, 5));
             }, Materializer);
         }
@@ -99,7 +99,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectCancellation()
                     .ExecuteAsync();
 
-                var result = await task.ShouldCompleteWithin(3.Seconds());
+                var result = await task.WaitAsync(3.Seconds());
                 result.Should().BeEquivalentTo(Enumerable.Range(1, 5));
 
                 Source.FromPublisher(upstream2).RunWith(sink, Materializer);
@@ -176,7 +176,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 10000)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(10001, 10000)).RunWith(sink, Materializer);
 
-                var result = await task.ShouldCompleteWithin(3.Seconds());
+                var result = await task.WaitAsync(3.Seconds());
                 result.OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 20000));
             }, Materializer);
         }
@@ -213,7 +213,7 @@ namespace Akka.Streams.Tests.Dsl
                 Source.From(Enumerable.Range(1, 1000)).RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(1001, 1000)).RunWith(sink, Materializer);
 
-                var result = await task.ShouldCompleteWithin(3.Seconds());
+                var result = await task.WaitAsync(3.Seconds());
                 result.OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 2000));
 
             }, Materializer);
@@ -232,7 +232,7 @@ namespace Akka.Streams.Tests.Dsl
                     .RunWith(sink, Materializer);
                 Source.From(Enumerable.Range(1001, 1000)).RunWith(sink, Materializer);
 
-                var result = await task.ShouldCompleteWithin(3.Seconds());
+                var result = await task.WaitAsync(3.Seconds());
                 result.OrderBy(x => x).Should().BeEquivalentTo(Enumerable.Range(1, 2000));
             }, Materializer);
         }
@@ -270,8 +270,11 @@ namespace Akka.Streams.Tests.Dsl
                         .ExpectOneAsync(async () =>
                         {
                             Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
-                            Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
-                            var result = await task.ShouldCompleteWithin(3.Seconds());
+                            // Throttle the successful producer to ensure the failing producer has time to fail and log
+                            Source.From(Enumerable.Range(1, 10))
+                                .Throttle(5, TimeSpan.FromMilliseconds(150), 5, ThrottleMode.Shaping)
+                                .RunWith(sink, Materializer);
+                            var result = await task.WaitAsync(3.Seconds());
                             result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
                         });
                 });
@@ -301,7 +304,7 @@ namespace Akka.Streams.Tests.Dsl
                         {
                             Source.Failed<int>(ActorPublisher.NormalShutdownReason).RunWith(sink, Materializer);
                             Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
-                            var result = await task.ShouldCompleteWithin(3.Seconds());
+                            var result = await task.WaitAsync(3.Seconds());
                             result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
                         });
                 });
@@ -314,56 +317,54 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var source = Source.From(Enumerable.Range(1, 10)).RunWith(BroadcastHub.Sink<int>(8), Materializer);
-                var result = await source.RunWith(Sink.Seq<int>(), Materializer).ShouldCompleteWithin(3.Seconds());
+                var result = await source.RunWith(Sink.Seq<int>(), Materializer).WaitAsync(3.Seconds());
                 result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
-                    .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 8), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
-                (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_prefix_to_consumers_attaching_around_the_same_time_if_one_cancels_earlier()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 19))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
-                    .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 8), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.Take(10).RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
-                (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
-                (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
+                (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -373,73 +374,72 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var source = Source.From(Enumerable.Range(1, 20)).RunWith(BroadcastHub.Sink<int>(8), Materializer);
-                (await source.Take(10).RunWith(Sink.Seq<int>(), Materializer).ShouldCompleteWithin(3.Seconds()))
+                (await source.Take(10).RunWith(Sink.Seq<int>(), Materializer).WaitAsync(3.Seconds()))
                     .Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                (await source.Take(10).RunWith(Sink.Seq<int>(), Materializer).ShouldCompleteWithin(3.Seconds()))
+                (await source.Take(10).RunWith(Sink.Seq<int>(), Materializer).WaitAsync(3.Seconds()))
                     .Should().BeEquivalentTo(Enumerable.Range(11, 10));
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_elements_to_consumers_of_different_speed_attaching_around_the_same_time()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
-                    .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 8), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source.Throttle(1, TimeSpan.FromMilliseconds(10), 3, ThrottleMode.Shaping)
                     .RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
-                (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_elements_to_consumers_of_attaching_around_the_same_time_if_the_producer_is_slow()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
                     .Throttle(1, TimeSpan.FromMilliseconds(10), 3, ThrottleMode.Shaping)
-                    .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 8), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
-                (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_ensure_that_from_two_different_speed_consumers_the_slower_controls_the_rate()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 19))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
-                    .ToMaterialized(BroadcastHub.Sink<int>(1), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 1), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source
@@ -450,36 +450,33 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(10, TimeSpan.FromMilliseconds(10), 8, ThrottleMode.Shaping)
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
-                (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
-                (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
+                (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
+                (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time_with_a_buffer_size_of_one()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
-                    .ToMaterialized(BroadcastHub.Sink<int>(1), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 1), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
-                (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
+                (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
@@ -515,7 +512,7 @@ namespace Akka.Streams.Tests.Dsl
 
                 await downstream.CancelAsync();
                 killSwitch.Shutdown();
-                await ignoredTask.ShouldCompleteWithin(3.Seconds());
+                await ignoredTask.WaitAsync(3.Seconds());
             }, Materializer);
         }
 
@@ -563,6 +560,10 @@ namespace Akka.Streams.Tests.Dsl
                 await downstream1.RequestAsync(4);
                 await downstream2.RequestAsync(8);
 
+                // Sending the first element is in a race with downstream subscribing.
+                // Give a bit of time for the downstream to complete subscriptions.
+                await Task.Delay(100);
+
                 await upstream.AsyncBuilder()
                     .SendNext(Enumerable.Range(1, 8))
                     .ExecuteAsync();
@@ -592,7 +593,7 @@ namespace Akka.Streams.Tests.Dsl
                 // cases should work in the end
                 await Task.Delay(50);
 
-                (await source.RunWith(Sink.Seq<int>(), Materializer).ShouldCompleteWithin(3.Seconds()))
+                (await source.RunWith(Sink.Seq<int>(), Materializer).WaitAsync(3.Seconds()))
                     .Should().BeEmpty();
             }, Materializer);
         }
@@ -611,7 +612,7 @@ namespace Akka.Streams.Tests.Dsl
                 await Awaiting(async () =>
                 {
                     await source.RunWith(Sink.Seq<int>(), Materializer);
-                }).Should().ThrowAsync<TestException>().ShouldCompleteWithin(3.Seconds());
+                }).Should().ThrowAsync<TestException>().WaitAsync(3.Seconds());
             }, Materializer);
         }
 
@@ -623,14 +624,20 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = this.CreatePublisherProbe<int>();
                 var hubSource = Source.FromPublisher(upstream).RunWith(BroadcastHub.Sink<int>(4), Materializer);
                 var downstream = this.CreateSubscriberProbe<int>();
-                
-                hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
+
+                // Connect the active downstream subscriber first and ensure it's subscribed
                 hubSource.RunWith(Sink.FromSubscriber(downstream), Materializer);
-                
                 await downstream.EnsureSubscriptionAsync();
-                
                 await downstream.RequestAsync(10);
+
+                // Now connect the immediately-cancelling sink - this tests that the hub
+                // handles a cancelled consumer gracefully without affecting other consumers
+                hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
+
+                // Wait for upstream to receive demand before sending
                 await upstream.ExpectRequestAsync();
+
+                // Verify elements still flow to the active downstream
                 await upstream.SendNextAsync(1);
                 await downstream.ExpectNextAsync(1);
                 await upstream.SendNextAsync(2);
@@ -641,7 +648,7 @@ namespace Akka.Streams.Tests.Dsl
                 await downstream.ExpectNextAsync(4);
                 await upstream.SendNextAsync(5);
                 await downstream.ExpectNextAsync(5);
-                
+
                 await upstream.SendCompleteAsync();
                 await downstream.ExpectCompleteAsync();
             }, Materializer);
@@ -655,7 +662,7 @@ namespace Akka.Streams.Tests.Dsl
                 var items = Enumerable.Range(1, 10).ToList();
                 var source = Source.From(items)
                     .RunWith(PartitionHub.Sink<int>((_, _) => 0, 0, 8), Materializer);
-                var result = await source.RunWith(Sink.Seq<int>(), Materializer).ShouldCompleteWithin(3.Seconds());
+                var result = await source.RunWith(Sink.Seq<int>(), Materializer).WaitAsync(3.Seconds());
                 result.Should().BeEquivalentTo(items);
             }, Materializer);
         }
@@ -673,8 +680,8 @@ namespace Akka.Streams.Tests.Dsl
                 await Task.Delay(50);
                 var result2 = source.RunWith(Sink.Seq<int>(), Materializer);
                 
-                (await result1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(new[] { 0, 2, 4, 6, 8 });
-                (await result2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(new[] { 1, 3, 5, 7, 9 });
+                (await result1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] { 0, 2, 4, 6, 8 });
+                (await result2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] { 1, 3, 5, 7, 9 });
             }, Materializer);
         }
 
@@ -697,8 +704,8 @@ namespace Akka.Streams.Tests.Dsl
                 var result1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var result2 = source.RunWith(Sink.Seq<int>(), Materializer);
                 
-                (await result1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(new[] { 1, 3, 5, 7, 9 });
-                (await result2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(new[] { 0, 2, 4, 6, 8 });
+                (await result1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] { 1, 3, 5, 7, 9 });
+                (await result2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(new[] { 0, 2, 4, 6, 8 });
             }, Materializer);
         }
 
@@ -726,8 +733,8 @@ namespace Akka.Streams.Tests.Dsl
                 var result1 = source.RunWith(Sink.Seq<string>(), Materializer);
                 var result2 = source.RunWith(Sink.Seq<string>(), Materializer);
                 
-                (await result1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo("usr-2");
-                (await result2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo("usr-1", "usr-1", "usr-3");
+                (await result1.WaitAsync(3.Seconds())).Should().BeEquivalentTo("usr-2");
+                (await result2.WaitAsync(3.Seconds())).Should().BeEquivalentTo("usr-1", "usr-1", "usr-3");
             }, Materializer);
         }
 
@@ -745,8 +752,8 @@ namespace Akka.Streams.Tests.Dsl
                 var result2 = source.Throttle(10, TimeSpan.FromMilliseconds(100), 10, ThrottleMode.Shaping)
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-                var count1 = (await result1.ShouldCompleteWithin(3.Seconds())).Count;
-                var count2 = (await result2.ShouldCompleteWithin(3.Seconds())).Count;
+                var count1 = (await result1.WaitAsync(3.Seconds())).Count;
+                var count2 = (await result2.WaitAsync(3.Seconds())).Count;
                 count1.ShouldBeGreaterThan(count2);
             }, Materializer);
         }
@@ -894,8 +901,8 @@ namespace Akka.Streams.Tests.Dsl
                 var expectationF1 = Enumerable.Range(1, 18).Where(v => v % 2 == 0).ToList();
                 expectationF1.Insert(0, 50);
 
-                (await f1.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(expectationF1);
-                (await f2.ShouldCompleteWithin(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 19).Where(v => v % 2 != 0));
+                (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(expectationF1);
+                (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 19).Where(v => v % 2 != 0));
             }, Materializer);
         }
 
@@ -945,7 +952,7 @@ namespace Akka.Streams.Tests.Dsl
                 // cases should work in the end
                 await Task.Delay(50);
 
-                (await source.RunWith(Sink.Seq<int>(), Materializer).ShouldCompleteWithin(3.Seconds()))
+                (await source.RunWith(Sink.Seq<int>(), Materializer).WaitAsync(3.Seconds()))
                     .Should().BeEmpty();
             }, Materializer);
         }
@@ -991,7 +998,7 @@ namespace Akka.Streams.Tests.Dsl
                 await Awaiting(async () =>
                 {
                     await source.RunWith(Sink.Seq<int>(), Materializer);
-                }).Should().ThrowAsync<TestException>().WithMessage("Fail!").ShouldCompleteWithin(3.Seconds());
+                }).Should().ThrowAsync<TestException>().WithMessage("Fail!").WaitAsync(3.Seconds());
             }, Materializer);
         }
     }

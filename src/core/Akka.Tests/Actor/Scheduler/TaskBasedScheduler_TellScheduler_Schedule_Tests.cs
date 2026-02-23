@@ -20,10 +20,12 @@ namespace Akka.Tests.Actor.Scheduler
     // ReSharper disable once InconsistentNaming
     public class DefaultScheduler_TellScheduler_Schedule_Tests : AkkaSpec
     {
+#pragma warning disable xUnit1008
         [LocalTheory(SkipLocal = "Tests that messages are sent with the specified interval, however due to inaccuracy " +
                                  "of Task.Delay this often fails. Run this especially if you've made changes to DedicatedThreadScheduler")]
         [InlineData(10, 1000)]
         public async Task ScheduleTellRepeatedly_in_milliseconds_Tests(int initialDelay, int interval)
+#pragma warning restore xUnit1008
         {
             // Prepare, set up actions to be fired
             IScheduler scheduler = new HashedWheelTimerScheduler(Sys.Settings.Config, Log);

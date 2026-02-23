@@ -94,7 +94,7 @@ namespace Akka.Cluster.Sharding
         /// of previously allocated shards.They will then be allocated to the <see cref="ShardRegion"/> with least number of
         /// previously allocated shards, i.e. new members in the cluster.The amount of shards to rebalance in each
         /// round can be limited to make it progress slower since rebalancing too many shards at the same time could
-        /// result in additional load on the system.For example, causing many Event Sourced entites to be started
+        /// result in additional load on the system.For example, causing many Event Sourced entities to be started
         /// at the same time.
         ///
         /// It will not rebalance when there is already an ongoing rebalance in progress.

@@ -8,6 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
@@ -25,30 +26,30 @@ namespace Akka.TestKit.Xunit2
     {
         private class PrefixedOutput : ITestOutputHelper
         {
-            private readonly ITestOutputHelper output;
-            private readonly string prefix;
+            private readonly ITestOutputHelper _output;
+            private readonly string _prefix;
 
             public PrefixedOutput(ITestOutputHelper output, string prefix)
             {
-                this.output = output;
-                this.prefix = prefix;
+                _output = output;
+                _prefix = prefix;
             }
 
             public void WriteLine(string message)
             {
-                output.WriteLine(prefix + message);
+                _output.WriteLine(_prefix + message);
             }
 
             public void WriteLine(string format, params object[] args)
             {
-                output.WriteLine(prefix + format, args);
+                _output.WriteLine(_prefix + format, args);
             }
         }
 
         /// <summary>
         /// The provider used to write test output.
         /// </summary>
-        protected readonly ITestOutputHelper Output;
+        protected readonly ITestOutputHelper? Output;
 
         private bool _disposed;
         private bool _disposing;
@@ -64,7 +65,7 @@ namespace Akka.TestKit.Xunit2
         /// </summary>
         /// <param name="system">The actor system to use for testing. The default value is <see langword="null"/>.</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
-        public TestKit(ActorSystem system = null, ITestOutputHelper output = null)
+        public TestKit(ActorSystem? system = null, ITestOutputHelper? output = null)
             : base(Assertions, system)
         {
             Output = output;
@@ -77,7 +78,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="config">The <see cref="Setup"/> to use for configuring the ActorSystem.</param>
         /// <param name="actorSystemName">The name of the system. The default name is "test".</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
-        public TestKit(ActorSystemSetup config, string actorSystemName = null, ITestOutputHelper output = null)
+        public TestKit(ActorSystemSetup config, string? actorSystemName = null, ITestOutputHelper? output = null)
             : base(Assertions, config, actorSystemName)
         {
             Output = output;
@@ -90,7 +91,7 @@ namespace Akka.TestKit.Xunit2
         /// <param name="config">The configuration to use for the system.</param>
         /// <param name="actorSystemName">The name of the system. The default name is "test".</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
-        public TestKit(Config config, string actorSystemName = null, ITestOutputHelper output = null)
+        public TestKit(Config config, string? actorSystemName = null, ITestOutputHelper? output = null)
             : base(Assertions, config, actorSystemName)
         {
             Output = output;
@@ -102,7 +103,7 @@ namespace Akka.TestKit.Xunit2
         /// </summary>
         /// <param name="config">The configuration to use for the system.</param>
         /// <param name="output">The provider used to write test output. The default value is <see langword="null"/>.</param>
-        public TestKit(string config, ITestOutputHelper output = null)
+        public TestKit(string config, ITestOutputHelper? output = null)
             : base(Assertions, ConfigurationFactory.ParseString(config))
         {
             Output = output;
@@ -140,14 +141,19 @@ namespace Akka.TestKit.Xunit2
         {
             if (Output != null)
             {
-                var extSystem = (ExtendedActorSystem)system;
-                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(Output)), "log-test");
-                // Start the logger initialization task but don't wait for it yet
-                var loggerTask = logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TestKitSettings.TestKitStartupTimeout);
+                var systemImpl = system as ActorSystemImpl ?? throw new InvalidOperationException("Expected ActorSystemImpl");
                 
-                // By the time TestActor is ready (which happens in base constructor), 
-                // the logger is likely ready too. Now we can safely wait.
-                loggerTask.ConfigureAwait(false).GetAwaiter().GetResult();
+                // Create logger actor synchronously to avoid deadlock during parallel test execution
+                // Use AttachChildWithAsync with isAsync:false to create LocalActorRef instead of RepointableActorRef
+                var logger = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
+                    Props.Create(() => new TestOutputLogger(Output)),
+                    isSystemService: true,  // Mark as system service
+                    isAsync: false,         // Create synchronously to avoid deadlock
+                    name: "log-test");
+                
+                // Send the initialization message without waiting for response to avoid deadlock
+                // The logger will subscribe to the event stream when it processes this message
+                logger.Tell(new InitializeLogger(system.EventStream), ActorRefs.NoSender);
             }
         }
 
@@ -155,15 +161,19 @@ namespace Akka.TestKit.Xunit2
         {
             if (Output != null)
             {
-                var extSystem = (ExtendedActorSystem)system;
-                var logger = extSystem.SystemActorOf(Props.Create(() => new TestOutputLogger(
-                    string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))), "log-test");
-                // Start the logger initialization task but don't wait for it yet
-                var loggerTask = logger.Ask<LoggerInitialized>(new InitializeLogger(system.EventStream), TestKitSettings.TestKitStartupTimeout);
+                var systemImpl = system as ActorSystemImpl ?? throw new InvalidOperationException("Expected ActorSystemImpl");
                 
-                // By the time TestActor is ready (which happens in base constructor), 
-                // the logger is likely ready too. Now we can safely wait.
-                loggerTask.ConfigureAwait(false).GetAwaiter().GetResult();
+                // Create logger actor synchronously to avoid deadlock during parallel test execution
+                var logger = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
+                    Props.Create(() => new TestOutputLogger(
+                        string.IsNullOrEmpty(prefix) ? Output : new PrefixedOutput(Output, prefix))),
+                    isSystemService: true,  // Mark as system service
+                    isAsync: false,         // Create synchronously to avoid deadlock
+                    name: "log-test");
+                
+                // Send the initialization message without waiting for response to avoid deadlock
+                // The logger will subscribe to the event stream when it processes this message
+                logger.Tell(new InitializeLogger(system.EventStream), ActorRefs.NoSender);
             }
         }
 

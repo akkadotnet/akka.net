@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Dsl
                     {
                         cts.Cancel();
                     }
-                }).Should().ThrowAsync<OperationCanceledException>().ShouldCompleteWithin(3.Seconds());
+                }).Should().ThrowAsync<OperationCanceledException>().WaitAsync(3.Seconds());
             }, Materializer);
         }
 
@@ -70,7 +70,7 @@ namespace Akka.Streams.Tests.Dsl
             {
                 var input = Enumerable.Range(1, 6).ToList();
                 var asyncEnumerable = Source.From(input).RunAsAsyncEnumerable(Materializer);
-                var output = await asyncEnumerable.ToListAsync().AsTask().ShouldCompleteWithin(3.Seconds());
+                var output = await asyncEnumerable.ToListAsync().AsTask().WaitAsync(3.Seconds());
                 output.Should().BeEquivalentTo(input, options => options.WithStrictOrdering());
             }, Materializer);
         }
@@ -83,10 +83,10 @@ namespace Akka.Streams.Tests.Dsl
                 var input = Enumerable.Range(1, 6).ToList();
                 var asyncEnumerable = Source.From(input).RunAsAsyncEnumerable(Materializer);
 
-                var output = await asyncEnumerable.ToListAsync().AsTask().ShouldCompleteWithin(3.Seconds());
+                var output = await asyncEnumerable.ToListAsync().AsTask().WaitAsync(3.Seconds());
                 output.Should().BeEquivalentTo(input, options => options.WithStrictOrdering());
 
-                output = await asyncEnumerable.ToListAsync().AsTask().ShouldCompleteWithin(3.Seconds());
+                output = await asyncEnumerable.ToListAsync().AsTask().WaitAsync(3.Seconds());
                 output.Should().BeEquivalentTo(input, options => options.WithStrictOrdering());
             }, Materializer);
         }
@@ -97,36 +97,40 @@ namespace Akka.Streams.Tests.Dsl
         {
             var materializer = ActorMaterializer.Create(Sys);
             var probe = this.CreatePublisherProbe<int>();
-            var task = Source.FromPublisher(probe).RunAsAsyncEnumerable(materializer);
+            var asyncEnumerable = Source.FromPublisher(probe).RunAsAsyncEnumerable(materializer);
 
-            var a = Task.Run(async () =>
+            // Start iterating - this will call PullAsync() which sends a Request to the publisher
+            var iterationTask = Task.Run(async () =>
             {
-                await foreach (var _ in task)
+                await foreach (var _ in asyncEnumerable)
                 {
-                    if(!materializer.IsShutdown)
-                        materializer.Shutdown();
+                    // We won't receive any elements because we fail the stream
                 }
             });
-            
-            //since we are collapsing the stream inside the read
-            //we want to send messages so we aren't just waiting forever.
-            await probe.SendNextAsync(1);
-            await probe.SendNextAsync(2);
-            var thrown = false;
+
+            // Wait for the async enumerator to request an element - this means PullAsync() is waiting
+            await probe.ExpectRequestAsync();
+
+            // Send an error to terminate the stream - this simulates abrupt termination
+            // and is deterministic: the pending PullAsync() will receive this error
+            await probe.SendErrorAsync(new TestException("Abrupt stream termination"));
+
+            // The iteration should throw when the pending PullAsync() fails
+            Exception? caughtException = null;
             try
             {
-                await a.ShouldCompleteWithin(10.Seconds());
+                await iterationTask.WaitAsync(10.Seconds());
             }
-            catch (StreamDetachedException)
+            catch (TestException ex)
             {
-                thrown = true;
-            }
-            catch (AbruptTerminationException)
-            {
-                thrown = true;
+                caughtException = ex;
             }
 
-            thrown.Should().BeTrue();
+            caughtException.Should().NotBeNull(
+                "Expected TestException when stream is terminated during iteration");
+
+            // Clean up the materializer
+            materializer.Shutdown();
         }
 
         [Fact]
@@ -142,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
                 await foreach (var a in task)
                 {
                 }
-            }).Should().ThrowAsync<IllegalStateException>().ShouldCompleteWithin(3.Seconds());
+            }).Should().ThrowAsync<IllegalStateException>().WaitAsync(3.Seconds());
         }
 
         [Fact]

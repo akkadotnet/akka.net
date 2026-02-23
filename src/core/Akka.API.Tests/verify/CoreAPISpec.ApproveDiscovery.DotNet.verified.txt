@@ -1,14 +1,14 @@
-﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
-[assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
 namespace Akka.Discovery.Aggregate
 {
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public class AggregateServiceDiscovery : Akka.Discovery.ServiceDiscovery
     {
         public AggregateServiceDiscovery(Akka.Actor.ExtendedActorSystem system) { }
         public override System.Threading.Tasks.Task<Akka.Discovery.ServiceDiscovery.Resolved> Lookup(Akka.Discovery.Lookup query, System.TimeSpan resolveTimeout) { }
     }
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public sealed class AggregateServiceDiscoverySettings
     {
         public AggregateServiceDiscoverySettings(Akka.Configuration.Config config) { }
@@ -17,19 +17,19 @@ namespace Akka.Discovery.Aggregate
 }
 namespace Akka.Discovery.Config
 {
-    [Akka.Annotations.InternalApiAttribute()]
+    [Akka.Annotations.InternalApi]
     public class ConfigServiceDiscovery : Akka.Discovery.ServiceDiscovery
     {
         public ConfigServiceDiscovery(Akka.Actor.ExtendedActorSystem system) { }
         public ConfigServiceDiscovery(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
         public override System.Threading.Tasks.Task<Akka.Discovery.ServiceDiscovery.Resolved> Lookup(Akka.Discovery.Lookup lookup, System.TimeSpan resolveTimeout) { }
-        [Akka.Annotations.InternalStableApiAttribute()]
+        [Akka.Annotations.InternalStableApi]
         public bool TryAddEndpoint(string serviceName, Akka.Discovery.ServiceDiscovery.ResolvedTarget target) { }
-        [Akka.Annotations.InternalStableApiAttribute()]
+        [Akka.Annotations.InternalStableApi]
         public bool TryRemoveEndpoint(string serviceName, Akka.Discovery.ServiceDiscovery.ResolvedTarget target) { }
     }
-    [Akka.Annotations.InternalApiAttribute()]
-    public class static ConfigServicesParser
+    [Akka.Annotations.InternalApi]
+    public static class ConfigServicesParser
     {
         public static System.Collections.Generic.Dictionary<string, Akka.Discovery.ServiceDiscovery.Resolved> Parse(Akka.Configuration.Config config) { }
     }
@@ -40,8 +40,8 @@ namespace Akka.Discovery
     {
         public Discovery(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Discovery.ServiceDiscovery Default { get; }
-        public static Akka.Discovery.Discovery Get(Akka.Actor.ActorSystem system) { }
         public Akka.Discovery.ServiceDiscovery LoadServiceDiscovery(string method) { }
+        public static Akka.Discovery.Discovery Get(Akka.Actor.ActorSystem system) { }
     }
     public class DiscoveryProvider : Akka.Actor.ExtensionIdProvider<Akka.Discovery.Discovery>
     {
@@ -59,11 +59,11 @@ namespace Akka.Discovery
         public bool Equals(Akka.Discovery.Lookup other) { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
-        public static bool IsValid(string srv) { }
-        public static Akka.Discovery.Lookup ParseSrv(string srv) { }
         public override string ToString() { }
         public Akka.Discovery.Lookup WithPortName(string portName) { }
         public Akka.Discovery.Lookup WithProtocol(string protocol) { }
+        public static bool IsValid(string srv) { }
+        public static Akka.Discovery.Lookup ParseSrv(string srv) { }
     }
     public abstract class ServiceDiscovery
     {
@@ -83,10 +83,10 @@ namespace Akka.Discovery
         }
         public class ResolvedTarget : Akka.Actor.INoSerializationVerificationNeeded, System.IEquatable<Akka.Discovery.ServiceDiscovery.ResolvedTarget>
         {
-            public ResolvedTarget(string host, System.Nullable<int> port = null, System.Net.IPAddress address = null) { }
+            public ResolvedTarget(string host, int? port = default, System.Net.IPAddress address = null) { }
             public System.Net.IPAddress Address { get; }
             public string Host { get; }
-            public System.Nullable<int> Port { get; }
+            public int? Port { get; }
             public bool Equals(Akka.Discovery.ServiceDiscovery.ResolvedTarget other) { }
             public override bool Equals(object obj) { }
             public override int GetHashCode() { }

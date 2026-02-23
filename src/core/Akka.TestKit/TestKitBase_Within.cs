@@ -9,7 +9,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Internal;
-using FluentAssertions.Extensions;
 using Nito.AsyncEx.Synchronous;
 
 namespace Akka.TestKit
@@ -294,7 +293,10 @@ namespace Akka.TestKit
 
             var maxDiff = max.Min(rem);
             var prevEnd = _testState.End;
+            var prevAsyncEnd = _asyncLocalEnd.Value; // Save previous AsyncLocal value for nesting support
+
             _testState.End = start + maxDiff;
+            _asyncLocalEnd.Value = start + maxDiff; // Set AsyncLocal for proper async propagation
 
             T ret = default;
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
@@ -304,7 +306,7 @@ namespace Akka.TestKit
                     var executionTask = function();
                     // Limit the execution time block to the maximum allowed execution time.
                     // 200 milliseconds is added because Task.Delay() timer is not precise and can return prematurely.
-                    var resultTask = await Task.WhenAny(executionTask, Task.Delay(max + 200.Milliseconds(), cts.Token));
+                    var resultTask = await Task.WhenAny(executionTask, Task.Delay(max + TimeSpan.FromMilliseconds(200), cts.Token));
 
                     if (resultTask == executionTask)
                     {
@@ -321,6 +323,7 @@ namespace Akka.TestKit
                     // Make sure we stop the delay task
                     cts.Cancel();
                     _testState.End = prevEnd;
+                    _asyncLocalEnd.Value = prevAsyncEnd; // Restore previous AsyncLocal value
                 }
             }
 

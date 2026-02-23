@@ -227,4 +227,199 @@ public class LogFilterEvaluatorSpecs
             Assert.Equal(expected, keepMessage);
         }
     }
+
+    /// <summary>
+    /// Tests that log filtering works correctly with semantic logging templates
+    /// </summary>
+    public class SemanticLoggingFilterCases
+    {
+        private static ILoggingAdapter CreateAdapter()
+        {
+            var system = ActorSystem.Create("test-system");
+            return Logging.GetLogger(system, "TestLogger");
+        }
+
+        [Fact]
+        public void ShouldFilterSemanticLogByFormattedMessageContent()
+        {
+            // Arrange: filter should exclude messages containing "12345"
+            var ruleBuilder = new LogFilterBuilder().ExcludeMessageContaining("12345");
+            var evaluator = ruleBuilder.Build().CreateEvaluator();
+
+            var adapter = CreateAdapter();
+
+            // Act: log with semantic template - the formatted value contains "12345"
+            adapter.Info("User {UserId} logged in", 12345);
+
+            // Get the LogEvent that was created
+            var logEvent = new Info(
+                null,
+                "TestLogger",
+                typeof(SemanticLoggingFilterCases),
+                new DefaultLogMessage(
+                    SemanticLogMessageFormatter.Instance,
+                    "User {UserId} logged in",
+                    12345));
+
+            // Assert: should be filtered out because formatted message contains "12345"
+            var keepMessage = evaluator.ShouldTryKeepMessage(logEvent, out _);
+            Assert.False(keepMessage);
+        }
+
+        [Fact]
+        public void ShouldKeepSemanticLogWhenFormattedMessageDoesNotMatchFilter()
+        {
+            // Arrange: filter excludes messages containing "admin"
+            var ruleBuilder = new LogFilterBuilder().ExcludeMessageContaining("admin");
+            var evaluator = ruleBuilder.Build().CreateEvaluator();
+
+            // Act: log message where neither template nor formatted value contains "admin"
+            var logEvent = new Info(
+                null,
+                "TestLogger",
+                typeof(SemanticLoggingFilterCases),
+                new DefaultLogMessage(
+                    SemanticLogMessageFormatter.Instance,
+                    "User {UserId} logged in from {IpAddress}",
+                    123, "192.168.1.1"));
+
+            // Assert: should NOT be filtered (kept)
+            var keepMessage = evaluator.ShouldTryKeepMessage(logEvent, out _);
+            Assert.True(keepMessage);
+        }
+
+        [Fact]
+        public void ShouldFilterSemanticLogByPropertyValue()
+        {
+            // Arrange: filter excludes messages containing "CRITICAL"
+            var ruleBuilder = new LogFilterBuilder().ExcludeMessageContaining("CRITICAL");
+            var evaluator = ruleBuilder.Build().CreateEvaluator();
+
+            // Act: the property value contains "CRITICAL"
+            var logEvent = new Warning(
+                null,
+                "TestLogger",
+                typeof(SemanticLoggingFilterCases),
+                new DefaultLogMessage(
+                    SemanticLogMessageFormatter.Instance,
+                    "Alert level {AlertLevel} triggered",
+                    "CRITICAL"));
+
+            // Assert: should be filtered because formatted message is "Alert level CRITICAL triggered"
+            var keepMessage = evaluator.ShouldTryKeepMessage(logEvent, out _);
+            Assert.False(keepMessage);
+        }
+
+        [Fact]
+        public void ShouldFilterSemanticLogWithMultipleProperties()
+        {
+            // Arrange: filter excludes messages containing "ERROR"
+            var ruleBuilder = new LogFilterBuilder().ExcludeMessageContaining("ERROR");
+            var evaluator = ruleBuilder.Build().CreateEvaluator();
+
+            // Act: multiple properties, one contains "ERROR"
+            var logEvent = new Error(
+                null,
+                "TestLogger",
+                typeof(SemanticLoggingFilterCases),
+                new DefaultLogMessage(
+                    SemanticLogMessageFormatter.Instance,
+                    "Status: {Status}, Code: {ErrorCode}, User: {UserId}",
+                    "ERROR", 500, 789));
+
+            // Assert: should be filtered
+            var keepMessage = evaluator.ShouldTryKeepMessage(logEvent, out _);
+            Assert.False(keepMessage);
+        }
+
+        [Fact]
+        public void ShouldHandlePositionalTemplatesWithFiltering()
+        {
+            // Arrange: filter excludes "timeout"
+            var ruleBuilder = new LogFilterBuilder().ExcludeMessageContaining("timeout");
+            var evaluator = ruleBuilder.Build().CreateEvaluator();
+
+            // Act: positional template (backward compatibility)
+            var logEvent = new Warning(
+                null,
+                "TestLogger",
+                typeof(SemanticLoggingFilterCases),
+                new DefaultLogMessage(
+                    SemanticLogMessageFormatter.Instance,
+                    "Operation {0} failed with {1}",
+                    "database query", "timeout"));
+
+            // Assert: should be filtered because formatted contains "timeout"
+            var keepMessage = evaluator.ShouldTryKeepMessage(logEvent, out _);
+            Assert.False(keepMessage);
+        }
+
+        [Fact]
+        public void ShouldFilterBySourceWithSemanticLogging()
+        {
+            // Arrange: filter excludes source starting with "Akka.Tests"
+            var ruleBuilder = new LogFilterBuilder().ExcludeSourceStartingWith("Akka.Tests");
+            var evaluator = ruleBuilder.Build().CreateEvaluator();
+
+            // Act: semantic log from filtered source
+            var logEvent = new Info(
+                null,
+                "Akka.Tests.MyTest",
+                typeof(SemanticLoggingFilterCases),
+                new DefaultLogMessage(
+                    SemanticLogMessageFormatter.Instance,
+                    "Test user {UserId} created",
+                    999));
+
+            // Assert: should be filtered by source (message content irrelevant)
+            var keepMessage = evaluator.ShouldTryKeepMessage(logEvent, out _);
+            Assert.False(keepMessage);
+        }
+
+        [Fact]
+        public void ShouldKeepSemanticLogWhenSourceAndMessagePass()
+        {
+            // Arrange: filter excludes "ERROR" in message and "Akka.Tests" in source
+            var ruleBuilder = new LogFilterBuilder()
+                .ExcludeMessageContaining("ERROR")
+                .ExcludeSourceContaining("Akka.Tests");
+            var evaluator = ruleBuilder.Build().CreateEvaluator();
+
+            // Act: semantic log that doesn't match either filter
+            var logEvent = new Info(
+                null,
+                "Akka.Cluster.Gossip",
+                typeof(SemanticLoggingFilterCases),
+                new DefaultLogMessage(
+                    SemanticLogMessageFormatter.Instance,
+                    "Node {NodeAddress} joined cluster",
+                    "akka.tcp://system@localhost:8080"));
+
+            // Assert: should NOT be filtered (kept)
+            var keepMessage = evaluator.ShouldTryKeepMessage(logEvent, out _);
+            Assert.True(keepMessage);
+        }
+
+        [Fact]
+        public void ShouldFilterComplexSemanticLogWithFormatSpecifiers()
+        {
+            // Arrange: filter excludes messages containing "1,234.56" (formatted number)
+            var ruleBuilder = new LogFilterBuilder().ExcludeMessageContaining("1,234.56");
+            var evaluator = ruleBuilder.Build().CreateEvaluator();
+
+            // Act: semantic template with format specifier
+            var logEvent = new Info(
+                null,
+                "TestLogger",
+                typeof(SemanticLoggingFilterCases),
+                new DefaultLogMessage(
+                    SemanticLogMessageFormatter.Instance,
+                    "Amount {Amount:N2} processed",
+                    1234.56m));
+
+            // Assert: should be filtered because formatted output contains "1,234.56"
+            var keepMessage = evaluator.ShouldTryKeepMessage(logEvent, out _);
+            Assert.False(keepMessage);
+        }
+    }
 }

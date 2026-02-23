@@ -7,6 +7,8 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -68,27 +70,32 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
         }
 
         [MultiNodeFact]
-        public void IndirectlyConnected3NodeSpecTests()
+        public async Task IndirectlyConnected3NodeSpecTests()
         {
-            A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third();
+            await A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third();
         }
 
-        public void A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third()
+        public async Task A_3_node_cluster_should_avoid_a_split_brain_when_two_unreachable_but_can_talk_via_third()
         {
             var cluster = Cluster.Get(Sys);
+
+            // Set up termination signal using event-driven callback instead of polling
+            // This must be set up BEFORE the cluster is partitioned
+            var terminatedTcs = new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously);
+            cluster.RegisterOnMemberRemoved(() => terminatedTcs.TrySetResult(Done.Instance));
 
             RunOn(() =>
             {
                 cluster.Join(cluster.SelfAddress);
             }, _config.Node1);
-            EnterBarrier("node1 joined");
+            await EnterBarrierAsync("node1 joined");
             RunOn(() =>
             {
                 cluster.Join(Node(_config.Node1).Address);
             }, _config.Node2, _config.Node3);
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     cluster.State.Members.Count.Should().Be(3);
                     foreach (var m in cluster.State.Members)
@@ -97,17 +104,17 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                     }
                 });
             });
-            EnterBarrier("Cluster formed");
+            await EnterBarrierAsync("Cluster formed");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                TestConductor.Blackhole(_config.Node2, _config.Node3, ThrottleTransportAdapter.Direction.Both).Wait();
+                await TestConductor.BlackholeAsync(_config.Node2, _config.Node3, ThrottleTransportAdapter.Direction.Both);
             }, _config.Node1);
-            EnterBarrier("Blackholed");
+            await EnterBarrierAsync("Blackholed");
 
-            Within(TimeSpan.FromSeconds(10), () =>
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     RunOn(() =>
                     {
@@ -123,13 +130,14 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                     }, _config.Node1);
                 });
             });
-            EnterBarrier("unreachable");
+            await EnterBarrierAsync("unreachable");
 
-            RunOn(() =>
+            // Node1 waits for SBR to complete and verify it's the only surviving member
+            await RunOnAsync(async () =>
             {
-                Within(TimeSpan.FromSeconds(15), () =>
+                await WithinAsync(TimeSpan.FromSeconds(15), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         cluster.State.Members.Select(i => i.Address).Should().BeEquivalentTo(Node(_config.Node1).Address);
                         foreach (var m in cluster.State.Members)
@@ -140,13 +148,28 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                 });
             }, _config.Node1);
 
-            RunOn(() =>
+            // Nodes 2,3 wait for termination using the event-driven callback
+            await RunOnAsync(async () =>
             {
-                // downed
-                AwaitCondition(() => cluster.IsTerminated, max: TimeSpan.FromSeconds(15));
+                // Use event-driven notification via RegisterOnMemberRemoved
+                // This is more reliable than polling cluster.IsTerminated because:
+                // 1. The callback fires as soon as the member is removed/shutdown starts
+                // 2. The callback also fires in PostStop if the cluster daemon is stopping
+                // 3. No race between polling interval and actual state change
+                var completed = await Task.WhenAny(
+                    terminatedTcs.Task,
+                    Task.Delay(TimeSpan.FromSeconds(20)));
+
+                if (completed != terminatedTcs.Task)
+                {
+                    // Fallback check - the cluster should definitely be terminated by now
+                    cluster.IsTerminated.Should().BeTrue(
+                        "Cluster should be terminated - either via MemberRemoved callback or shutdown. " +
+                        $"Current self member status: {cluster.SelfMember.Status}");
+                }
             }, _config.Node2, _config.Node3);
 
-            EnterBarrier("done");
+            await EnterBarrierAsync("done");
         }
     }
 }

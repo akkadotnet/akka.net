@@ -142,7 +142,7 @@ namespace Akka.IO
                         {
                             subscriber.Tell(stats);
                         }
-                    }   
+                    }
                     return true;
 
                 case Tcp.SubscribeToTcpListenerStats subscribe:
@@ -277,10 +277,17 @@ namespace Akka.IO
                     break;
 
                 case SocketError.ConnectionReset:
+                case SocketError.ConnectionAborted:
                 case SocketError.NoBufferSpaceAvailable:
                 case SocketError.TryAgain:
                 case SocketError.TimedOut:
                 case SocketError.WouldBlock:
+                case SocketError.Interrupted:
+                case SocketError.TooManyOpenSockets:
+                case SocketError.NetworkUnreachable:
+                case SocketError.HostDown:
+                case SocketError.HostUnreachable:
+                case SocketError.ConnectionRefused:
                     _retryCount++;
                     _log.Warning("Retriable socket error in TcpListener: {0} - retrying accept operation in 10ms",
                         saea.SocketError);
@@ -289,9 +296,11 @@ namespace Akka.IO
                     Context.System.Scheduler.ScheduleTellOnce(TimeSpan.FromMilliseconds(10), Self,
                         new RetryAccept(saea), ActorRefs.NoSender);
                     break;
+
+                // Fatal errors - the listener socket itself is broken
                 default:
                     _failedCount++;
-                    _log.Error("Fatal socket error in TcpListener: {0}", saea.SocketError);
+                    _log.Error("Fatal socket error in TcpListener: {0} - stopping listener", saea.SocketError);
                     Context.Stop(Self);
                     break;
             }

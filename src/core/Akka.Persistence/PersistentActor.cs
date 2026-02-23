@@ -11,11 +11,11 @@ using System.Runtime.Serialization;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Configuration;
-using Akka.Tools.MatchHandler;
 using System.Threading.Tasks;
 
 namespace Akka.Persistence
 {
+    #nullable enable 
     /// <summary>
     /// Sent to a <see cref="PersistentActor"/> when the journal replay has been finished.
     /// </summary>
@@ -28,7 +28,7 @@ namespace Akka.Persistence
         public static readonly RecoveryCompleted Instance = new();
         private RecoveryCompleted(){}
 
-        public override bool Equals(object obj) => obj is RecoveryCompleted;
+        public override bool Equals(object? obj) => obj is RecoveryCompleted;
         public override int GetHashCode() => nameof(RecoveryCompleted).GetHashCode();
     }
 
@@ -92,7 +92,7 @@ namespace Akka.Persistence
         /// <param name="fromSnapshot">Criteria for selecting a saved snapshot from which recovery should start. Default is latest(= youngest) snapshot.</param>
         /// <param name="toSequenceNr">Upper, inclusive sequence number bound for recovery. Default is no upper bound.</param>
         /// <param name="replayMax">Maximum number of messages to replay. Default is no limit.</param>
-        public Recovery(SnapshotSelectionCriteria fromSnapshot = null, long toSequenceNr = long.MaxValue, long replayMax = long.MaxValue)
+        public Recovery(SnapshotSelectionCriteria? fromSnapshot = null, long toSequenceNr = long.MaxValue, long replayMax = long.MaxValue)
         {
             FromSnapshot = fromSnapshot ?? SnapshotSelectionCriteria.Latest;
             ToSequenceNr = toSequenceNr;
@@ -132,7 +132,7 @@ namespace Akka.Persistence
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
         /// <param name="cause">The exception that is the cause of the current exception.</param>
-        public RecoveryTimedOutException(string message, Exception cause = null) : base(message, cause)
+        public RecoveryTimedOutException(string message, Exception? cause = null) : base(message, cause)
         {
         }
 
@@ -209,11 +209,6 @@ namespace Akka.Persistence
     /// </summary>
     public interface IStashOverflowStrategyConfigurator
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="config">TBD</param>
-        /// <returns>TBD</returns>
         IStashOverflowStrategy Create(Config config);
     }
 
@@ -331,10 +326,10 @@ namespace Akka.Persistence
     public abstract class ReceivePersistentActor : UntypedPersistentActor, IInitializableActor
     {
         private bool _shouldUnhandle = true;
-        private readonly Stack<MatchBuilder> _matchCommandBuilders = new();
-        private readonly Stack<MatchBuilder> _matchRecoverBuilders = new();
-        private PartialAction<object> _partialReceiveCommand = _ => false;
-        private PartialAction<object> _partialReceiveRecover = _ => false;
+        private readonly Stack<ReceiveActorHandlers> _matchCommandBuilders = new();
+        private readonly Stack<ReceiveActorHandlers> _matchRecoverBuilders = new();
+        private ReceiveActorHandlers _partialReceiveCommand = null!;
+        private ReceiveActorHandlers _partialReceiveRecover = null!;
         private bool _hasBeenInitialized;
 
         /// <summary>
@@ -351,24 +346,19 @@ namespace Akka.Persistence
             //during recreate. Make sure what happens here is idempotent
             if (!_hasBeenInitialized)	//Do not perform this when "recreating" the same instance
             {
-                _partialReceiveCommand = BuildNewReceiveHandler(_matchCommandBuilders.Pop());
-                _partialReceiveRecover = BuildNewReceiveHandler(_matchRecoverBuilders.Pop());
+                _partialReceiveCommand = _matchCommandBuilders.Pop();
+                _partialReceiveRecover = _matchRecoverBuilders.Pop();
                 _hasBeenInitialized = true;
             }
         }
-
-        private PartialAction<object> BuildNewReceiveHandler(MatchBuilder matchBuilder)
-        {
-            return matchBuilder.Build();
-        }
-
+        
         /// <summary>
         /// Creates and pushes a new MatchBuilder
         /// </summary>
         private void PrepareConfigureMessageHandlers()
         {
-            _matchCommandBuilders.Push(new MatchBuilder(CachedMatchCompiler<object>.Instance));
-            _matchRecoverBuilders.Push(new MatchBuilder(CachedMatchCompiler<object>.Instance));
+            _matchCommandBuilders.Push(new ReceiveActorHandlers());
+            _matchRecoverBuilders.Push(new ReceiveActorHandlers());
         }
 
         /// <summary>
@@ -406,9 +396,9 @@ namespace Akka.Persistence
             ExecutePartialMessageHandler(message, _partialReceiveRecover);
         }
 
-        private void ExecutePartialMessageHandler(object message, PartialAction<object> partialAction)
+        private void ExecutePartialMessageHandler(object message, ReceiveActorHandlers partialAction)
         {
-            var wasHandled = partialAction(message);
+            var wasHandled = partialAction.TryHandle(message);
             if (!wasHandled && _shouldUnhandle)
                 Unhandled(message);
         }
@@ -417,8 +407,9 @@ namespace Akka.Persistence
         {
             return m =>
             {
-                Func<Task> wrap = () => asyncHandler(m);
-                RunTask(wrap);
+                RunTask(Wrap);
+                return;
+                Task Wrap() => asyncHandler(m);
             };
         }
 
@@ -436,10 +427,33 @@ namespace Akka.Persistence
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="handler">TBD</param>
         /// <param name="shouldHandle">TBD</param>
-        protected void Recover<T>(Action<T> handler, Predicate<T> shouldHandle = null)
+        protected void Recover<T>(Action<T> handler, Predicate<T>? shouldHandle = null)
+        {
+            AddGenericReceiveHandler(shouldHandle, msg =>
+            {
+                handler(msg);
+                return true;
+            }, isRecover: true);
+        }
+        
+        private void AddGenericReceiveHandler<T>(Predicate<T>? shouldHandle, Func<T, bool> handler, bool isRecover)
+        {
+            if(isRecover)
+                EnsureMayConfigureRecoverHandlers();
+            else
+                EnsureMayConfigureCommandHandlers();
+            
+            var handlerSet = isRecover ? _matchRecoverBuilders.Peek() : _matchCommandBuilders.Peek();
+
+            handlerSet.AddGenericReceiveHandler<T>(shouldHandle, handler);
+        }
+
+        private void AddTypedReceiveHandler(Type messageType, Predicate<object>? shouldHandle, Func<object, bool> handler, bool isRecover)
         {
             EnsureMayConfigureRecoverHandlers();
-            _matchRecoverBuilders.Peek().Match(handler, shouldHandle);
+            var handlerSet = isRecover ? _matchRecoverBuilders.Peek() : _matchCommandBuilders.Peek();
+
+            handlerSet.AddTypedReceiveHandler(messageType, shouldHandle, handler);
         }
 
         /// <summary>
@@ -459,10 +473,13 @@ namespace Akka.Persistence
         /// <param name="messageType">TBD</param>
         /// <param name="handler">TBD</param>
         /// <param name="shouldHandle">TBD</param>
-        protected void Recover(Type messageType, Action<object> handler, Predicate<object> shouldHandle = null)
+        protected void Recover(Type messageType, Action<object> handler, Predicate<object>? shouldHandle = null)
         {
-            EnsureMayConfigureRecoverHandlers();
-            _matchRecoverBuilders.Peek().Match(messageType, handler, shouldHandle);
+            AddTypedReceiveHandler(messageType, shouldHandle, msg =>
+            {
+                handler(msg);
+                return true;
+            }, isRecover: true);
         }
 
         /// <summary>
@@ -483,8 +500,7 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         protected void Recover<T>(Func<T, bool> handler)
         {
-            EnsureMayConfigureRecoverHandlers();
-            _matchRecoverBuilders.Peek().Match(handler);
+            AddGenericReceiveHandler(null, handler, isRecover:true);
         }
 
         /// <summary>
@@ -494,8 +510,7 @@ namespace Akka.Persistence
         /// <param name="handler">TBD</param>
         protected void Recover(Type messageType, Func<object, bool> handler)
         {
-            EnsureMayConfigureRecoverHandlers();
-            _matchRecoverBuilders.Peek().Match(messageType, handler);
+            AddTypedReceiveHandler(messageType, null, handler, isRecover:true);
         }
 
         /// <summary>
@@ -505,7 +520,8 @@ namespace Akka.Persistence
         protected void RecoverAny(Action<object> handler)
         {
             EnsureMayConfigureRecoverHandlers();
-            _matchRecoverBuilders.Peek().MatchAny(handler);
+            var handlerSet = _matchRecoverBuilders.Peek();
+            handlerSet.AddReceiveAnyHandler(handler);
         }
 
         #endregion
@@ -530,7 +546,7 @@ namespace Akka.Persistence
         /// <typeparam name="T">The type of the message</typeparam>
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <typeparamref name="T"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
-        protected void CommandAsync<T>(Func<T, Task> handler, Predicate<T> shouldHandle = null)
+        protected void CommandAsync<T>(Func<T, Task> handler, Predicate<T>? shouldHandle = null)
         {
             Command(WrapAsyncHandler(handler), shouldHandle);
         }
@@ -564,7 +580,7 @@ namespace Akka.Persistence
         /// <param name="messageType">The type of the message</param>
         /// <param name="handler">The message handler that is invoked for incoming messages of the specified type <paramref name="messageType"/></param>
         /// <param name="shouldHandle">When not <c>null</c> it is used to determine if the message matches.</param>
-        protected void CommandAsync(Type messageType, Func<object, Task> handler, Predicate<object> shouldHandle = null)
+        protected void CommandAsync(Type messageType, Func<object, Task> handler, Predicate<object>? shouldHandle = null)
         {
             Command(messageType, WrapAsyncHandler(handler), shouldHandle);
         }
@@ -606,10 +622,15 @@ namespace Akka.Persistence
         /// <typeparam name="T">TBD</typeparam>
         /// <param name="handler">TBD</param>
         /// <param name="shouldHandle">TBD</param>
-        protected void Command<T>(Action<T> handler, Predicate<T> shouldHandle = null)
+        protected void Command<T>(Action<T> handler, Predicate<T>? shouldHandle = null)
         {
             EnsureMayConfigureCommandHandlers();
-            _matchCommandBuilders.Peek().Match(handler, shouldHandle);
+            
+            AddGenericReceiveHandler(shouldHandle, msg =>
+            {
+                handler(msg);
+                return true;
+            }, isRecover: false);
         }
 
         /// <summary>
@@ -629,10 +650,15 @@ namespace Akka.Persistence
         /// <param name="messageType">TBD</param>
         /// <param name="handler">TBD</param>
         /// <param name="shouldHandle">TBD</param>
-        protected void Command(Type messageType, Action<object> handler, Predicate<object> shouldHandle = null)
+        protected void Command(Type messageType, Action<object> handler, Predicate<object>? shouldHandle = null)
         {
             EnsureMayConfigureCommandHandlers();
-            _matchCommandBuilders.Peek().Match(messageType, handler, shouldHandle);
+            
+            AddTypedReceiveHandler(messageType, shouldHandle, msg =>
+            {
+                handler(msg);
+                return true;
+            }, isRecover: false);
         }
 
         /// <summary>
@@ -654,7 +680,8 @@ namespace Akka.Persistence
         protected void Command<T>(Func<T, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
-            _matchCommandBuilders.Peek().Match(handler);
+            
+            AddGenericReceiveHandler(null, handler, isRecover: false);
         }
 
         /// <summary>
@@ -665,7 +692,7 @@ namespace Akka.Persistence
         protected void Command(Type messageType, Func<object, bool> handler)
         {
             EnsureMayConfigureCommandHandlers();
-            _matchCommandBuilders.Peek().Match(messageType, handler);
+            AddTypedReceiveHandler(messageType, null, handler, isRecover: false);
         }
 
         /// <summary>
@@ -675,7 +702,7 @@ namespace Akka.Persistence
         protected void Command(Action<object> handler)
         {
             EnsureMayConfigureCommandHandlers();
-            _matchCommandBuilders.Peek().MatchAny(handler);
+            _matchCommandBuilders.Peek().AddReceiveAnyHandler(handler);
         }
 
         /// <summary>
@@ -685,14 +712,14 @@ namespace Akka.Persistence
         protected void CommandAny(Action<object> handler)
         {
             EnsureMayConfigureCommandHandlers();
-            _matchCommandBuilders.Peek().MatchAny(handler);
+            _matchCommandBuilders.Peek().AddReceiveAnyHandler(handler);
         }
 
-        private PartialAction<object> CreateNewHandler(Action configure)
+        private ReceiveActorHandlers CreateNewHandler(Action configure)
         {
-            _matchCommandBuilders.Push(new MatchBuilder(CachedMatchCompiler<object>.Instance));
+            _matchCommandBuilders.Push(new ReceiveActorHandlers());
             configure();
-            var newHandler = BuildNewReceiveHandler(_matchCommandBuilders.Pop());
+            var newHandler = _matchCommandBuilders.Pop();
             return newHandler;
         }
 

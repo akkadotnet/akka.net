@@ -10,6 +10,7 @@ using System.Xml;
 
 namespace Akka.Configuration.Hocon
 {
+    #if NETSTANDARD
     /// <summary>
     /// This class represents the base implementation for retrieving text from
     /// an XML CDATA node within a configuration file.
@@ -62,4 +63,5 @@ namespace Akka.Configuration.Hocon
             reader.ReadEndElement();
         }
     }
+#endif
 }

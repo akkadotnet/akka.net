@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ReceiveActorTests.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -138,6 +139,35 @@ namespace Akka.Tests.Actor
             await ExpectMsgAsync(4711);
         }
 
+        [Fact]
+        public async Task Given_an_actor_which_adds_any_handler_twice_should_throw_exception()
+        {
+            // Handling the scenario where the actor adds an any handler twice. This should not be allowed.
+            // Given
+            var system = ActorSystem.Create("test");
+            var actor = system.ActorOf<AnyAddedTwiceActor>("addedtwice");
+            
+            // When
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            var terminated =  await actor.WatchAsync(cts.Token);
+
+            // Then
+            Assert.True(terminated);
+        }
+        
+        [Fact]
+        public async Task Actor_Can_Handle_Message_When_Base_Is_Defined_In_Receive()
+        {
+            //Given
+            var actor = Sys.ActorOf<ReceiveCanHandleBaseTypesActor>("ReceiveCanHandleBaseTypes");
+
+            //When
+            actor.Tell(new ReceiveCanHandleBaseMessage(), TestActor);
+
+            //Then
+            await ExpectMsgAsync("Handled");
+        }
+
         private class NoReceiveActor : ReceiveActor
         {
         }
@@ -149,7 +179,6 @@ namespace Akka.Tests.Actor
                 Receive<object>(msg => Sender.Tell(msg, Self));
             }
         }
-
 
         private class PreStartEchoReceiveActor : ReceiveActor
         {
@@ -225,7 +254,6 @@ namespace Akka.Tests.Actor
             }
         }
 
-
         private class ReceiveAnyActor : ReceiveActor
         {
             public ReceiveAnyActor()
@@ -238,6 +266,32 @@ namespace Akka.Tests.Actor
             }
         }
 
+        private class AnyAddedTwiceActor : ReceiveActor
+        {
+            public AnyAddedTwiceActor()
+            {
+                ReceiveAny(o =>
+                {
+                    Sender.Tell("any:" + o, Self);
+                });
+                ReceiveAny(o =>
+                {
+                    Sender.Tell("not allowed any:" + o, Self);
+                });
+            }
+        }
+
+        private class ReceiveCanHandleBaseTypesActor : ReceiveActor
+        {
+            public ReceiveCanHandleBaseTypesActor()
+            {
+                Receive<IReceiveCanHandleBaseMessage>(i => Sender.Tell("Handled", Self));
+            }
+        }
+
+        private record ReceiveCanHandleBaseMessage : IReceiveCanHandleBaseMessage { }
+
+        private interface IReceiveCanHandleBaseMessage { }
     }
 }
 

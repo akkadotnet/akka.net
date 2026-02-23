@@ -27,38 +27,42 @@ namespace DocsExamples.Actors
         public class ReceiveTimeoutActor : ReceiveActor
         {
             private readonly TimeSpan _inactivityTimeout;
+            private readonly IActorRef _receiver;
 
             public ReceiveTimeoutActor(TimeSpan inactivityTimeout, IActorRef receiver)
             {
                 _inactivityTimeout = inactivityTimeout;
+                _receiver = receiver;
                 
                 // if we don't 
                 Receive<ReceiveTimeout>(_ =>
                 {
-                    receiver.Tell("timeout");
+                    _receiver.Tell("timeout");
                 });
             }
 
             protected override void PreStart()
             {
                 Context.SetReceiveTimeout(_inactivityTimeout);
+                _receiver.Tell("started");
             }
         }
         // </ReceiveTimeoutActor>
 
         [Fact]
-        public Task ShouldReceiveTimeoutActors()
+        public async Task ShouldReceiveTimeoutActors()
         {
             var receiveTimeout = Sys.ActorOf(
                 Props.Create(() => new ReceiveTimeoutActor(TimeSpan.FromMilliseconds(100), TestActor)), 
                 "receive-timeout");
             
+            await ExpectMsgAsync("started", TimeSpan.FromSeconds(10));
+
             // should not receive timeout initially
-            ExpectNoMsg(TimeSpan.FromMilliseconds(50));
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(50));
             
             // then should receive timeout due to inactivity
-            ExpectMsg("timeout", TimeSpan.FromSeconds(30));
-            return Task.CompletedTask;
+            await ExpectMsgAsync("timeout", TimeSpan.FromSeconds(30));
         }
     }
 }

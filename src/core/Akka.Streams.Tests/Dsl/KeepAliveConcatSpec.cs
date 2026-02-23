@@ -40,7 +40,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<IEnumerable<int>>>(), Sys.Materializer());
 
-            var complete = await t.ShouldCompleteWithin(3.Seconds());
+            var complete = await t.WaitAsync(3.Seconds());
             complete
                 .SelectMany(x => x)
                 .Should().BeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
@@ -60,7 +60,7 @@ namespace Akka.Streams.Tests.Dsl
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<IEnumerable<int>>>(), Sys.Materializer());
 
-            var complete = await t.ShouldCompleteWithin(TimeSpan.FromSeconds(6));
+            var complete = await t.WaitAsync(TimeSpan.FromSeconds(6));
             complete
                 .SelectMany(x => x)
                 .Should().BeEquivalentTo(Enumerable.Range(1, 10), o => o.WithStrictOrdering());
@@ -134,7 +134,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
-        public void KeepAliveConcat_should_emit_buffered_elements_when_upstream_completed()
+        public async Task KeepAliveConcat_should_emit_buffered_elements_when_upstream_completed()
         {
             var upstream = this.CreatePublisherProbe<int>();
             var downstream = this.CreateSubscriberProbe<int>();
@@ -143,15 +143,19 @@ namespace Akka.Streams.Tests.Dsl
                 .Via(new KeepAliveConcat<int>(5, TimeSpan.FromSeconds(60), x => new[] { x }))
                 .RunWith(Sink.FromSubscriber(downstream), Sys.Materializer());
 
-            upstream.SendNext(1);
-            upstream.SendNext(2);            
-            upstream.SendComplete();
+            // Wait for KeepAliveConcat to pull from upstream (respecting reactive streams protocol)
+            await upstream.ExpectRequestAsync();
 
-            downstream.Request(2);
-            downstream.ExpectNextN(2).Should().BeEquivalentTo(new[] { 1, 2 }, o => o.WithStrictOrdering());
+            // Now send elements in response to the demand
+            await upstream.SendNextAsync(1);
+            await upstream.SendNextAsync(2);
+            await upstream.SendCompleteAsync();
 
-            downstream.Request(1);
-            downstream.ExpectComplete();
+            await downstream.RequestAsync(2);
+            await downstream.ExpectNextNAsync(new[] { 1, 2 });
+
+            await downstream.RequestAsync(1);
+            await downstream.ExpectCompleteAsync();
         }
     }
 

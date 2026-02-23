@@ -47,7 +47,7 @@ namespace Akka.Discovery.Tests
                         akka-mock-inside {{
                             class = ""{className}""
                         }}
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                    }}"));
 
             var discovery = Discovery.Get(sys).Default;
             discovery.Should().BeAssignableTo<FakeTestDiscovery>();
@@ -70,7 +70,7 @@ namespace Akka.Discovery.Tests
                         mock2 {{
                             class = ""{className2}""
                         }}
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                    }}"));
 
             Discovery.Get(sys).Default.Should().BeAssignableTo<FakeTestDiscovery>();
             Discovery.Get(sys).LoadServiceDiscovery("mock2").Should().BeAssignableTo<FakeTestDiscovery2>();
@@ -93,7 +93,7 @@ namespace Akka.Discovery.Tests
                         mock2 {{
                             class = ""{className2}""
                         }}
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                    }}"));
 
             Discovery.Get(sys).LoadServiceDiscovery("mock2").Should().BeSameAs(Discovery.Get(sys).LoadServiceDiscovery("mock2"));
             Discovery.Get(sys).Default.Should().BeSameAs(Discovery.Get(sys).LoadServiceDiscovery("mock1"));
@@ -112,7 +112,7 @@ namespace Akka.Discovery.Tests
                         mock1 {{
                             class = ""{className}""
                         }}
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                    }}"));
 
             Invoking(() => _ = Discovery.Get(sys).Default)
                 .Should().Throw<TargetInvocationException>()
@@ -130,7 +130,7 @@ namespace Akka.Discovery.Tests
                 ConfigurationFactory.ParseString($@"            
                     akka.discovery {{
                         method = ""{className}""
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                    }}"));
 
             Invoking(() => _ = Discovery.Get(sys).Default).Should()
                 .Throw<ArgumentException>()
@@ -148,7 +148,7 @@ namespace Akka.Discovery.Tests
                         akka-mock-inside {{
                             class = ""{typeof(TestDiscoveryWithOneParam).TypeQualifiedName()}""
                         }}
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                    }}"));
 
             var discovery = Discovery.Get(sys).Default;
             discovery.Should().BeAssignableTo<TestDiscoveryWithOneParam>();
@@ -165,7 +165,7 @@ namespace Akka.Discovery.Tests
                         akka-mock-inside {{
                             class = ""{typeof(TestDiscoveryWithTwoParam).TypeQualifiedName()}""
                         }}
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                    }}"));
 
             var discovery = Discovery.Get(sys).Default;
             discovery.Should().BeAssignableTo<TestDiscoveryWithTwoParam>();
@@ -182,7 +182,7 @@ namespace Akka.Discovery.Tests
                         akka-mock-inside {{
                             class = ""{typeof(TestDiscoveryWithIllegalParam).TypeQualifiedName()}""
                         }}
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                    }}"));
 
             Invoking(() => _ = Discovery.Get(sys).Default).Should()
                 .Throw<ArgumentException>()
@@ -200,7 +200,7 @@ namespace Akka.Discovery.Tests
                         akka-mock-inside {{
                             class = ""{typeof(TestDiscoveryWithIllegalCtor).TypeQualifiedName()}""
                         }}
-                    }}").WithFallback(ConfigurationFactory.Load()));
+                    }}"));
 
             Invoking(() => _ = Discovery.Get(sys).Default).Should()
                 .Throw<ArgumentException>()

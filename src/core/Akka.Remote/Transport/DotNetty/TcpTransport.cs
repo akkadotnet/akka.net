@@ -15,11 +15,26 @@ using Akka.Configuration;
 using Akka.Event;
 using DotNetty.Buffers;
 using DotNetty.Common.Utilities;
+using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Channels;
 using Google.Protobuf;
 
 namespace Akka.Remote.Transport.DotNetty
 {
+    internal sealed class TlsHandshakeFailureReason : CoordinatedShutdown.Reason
+    {
+        public TlsHandshakeFailureReason(string message)
+        {
+            Message = message;
+        }
+
+        public string Message { get; }
+
+        public override int ExitCode => 79;
+
+        public override string ToString() => Message;
+    }
+
     internal abstract class TcpHandlers : CommonHandlers
     {
         private IHandleEventListener _listener;
@@ -63,6 +78,42 @@ namespace Akka.Remote.Transport.DotNetty
             ReferenceCountUtil.SafeRelease(message);
         }
 
+        public override void UserEventTriggered(IChannelHandlerContext context, object evt)
+        {
+            if (evt is TlsHandshakeCompletionEvent { IsSuccessful: false } tlsEvent)
+            {
+                var ex = tlsEvent.Exception ?? new Exception("TLS handshake failed.");
+
+                // Determine if this is client or server side based on handler type
+                var isClient = this is TcpClientHandler;
+                var detailedError = TlsErrorMessageBuilder.BuildTlsHandshakeErrorMessage(ex, isClient);
+
+                Log.Error(ex, "TLS handshake failed on channel [{0}->{1}](Id={2})\n{3}",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress,
+                    context.Channel.Id, detailedError);
+
+                // Only shutdown the ActorSystem if this is a client-side failure
+                // Server-side failures (incoming connections) should just reject the connection
+                if (isClient)
+                {
+                    // Client-side: We initiated the connection and TLS failed - this is critical
+                    var cs = CoordinatedShutdown.Get(Transport.System);
+                    cs.Run(new TlsHandshakeFailureReason($"TLS handshake failed on outbound connection to [{context.Channel.RemoteAddress}]"));
+                }
+                else
+                {
+                    // Server-side: Someone connected to us with invalid TLS - just reject them
+                    Log.Warning("Rejected incoming connection from [{0}] due to TLS handshake failure. This is likely invalid or malicious traffic.",
+                        context.Channel.RemoteAddress);
+                }
+
+                context.CloseAsync();
+                return; // don't pass to next handlers
+            }
+
+            base.UserEventTriggered(context, evt);
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -85,6 +136,19 @@ namespace Akka.Remote.Transport.DotNetty
                     context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id);
 
                 NotifyListener(new Disassociated(DisassociateInfo.Shutdown));
+            }
+            // Enhanced TLS exception handling
+            else if (exception is System.Security.Authentication.AuthenticationException
+                     or System.Security.Cryptography.CryptographicException)
+            {
+                // Determine if this is client or server side based on handler type
+                var isClient = this is TcpClientHandler;
+                var detailedError = TlsErrorMessageBuilder.BuildTlsHandshakeErrorMessage(exception, isClient);
+
+                Log.Error(exception, "TLS exception on channel [{0}->{1}](Id={2})\n{3}",
+                    context.Channel.LocalAddress, context.Channel.RemoteAddress, context.Channel.Id, detailedError);
+
+                NotifyListener(new Disassociated(DisassociateInfo.Unknown));
             }
             else
             {
@@ -133,9 +197,11 @@ namespace Akka.Remote.Transport.DotNetty
     internal sealed class TcpClientHandler : TcpHandlers
     {
         private readonly TaskCompletionSource<AssociationHandle> _statusPromise = new();
+        private readonly TaskCompletionSource<bool> _tlsHandshakePromise = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly Address _remoteAddress;
 
         public Task<AssociationHandle> StatusFuture => _statusPromise.Task;
+        public Task TlsHandshakeTask => _tlsHandshakePromise.Task;
         
         public TcpClientHandler(DotNettyTransport transport, ILoggingAdapter log, Address remoteAddress) 
             : base(transport, log)
@@ -148,6 +214,24 @@ namespace Akka.Remote.Transport.DotNetty
             InitOutbound(context.Channel, (IPEndPoint)context.Channel.RemoteAddress, null);
             base.ChannelActive(context);
 
+        }
+
+        public override void UserEventTriggered(IChannelHandlerContext context, object evt)
+        {
+            if (evt is TlsHandshakeCompletionEvent tlsEvent)
+            {
+                if (tlsEvent.IsSuccessful)
+                {
+                    _tlsHandshakePromise.TrySetResult(true);
+                }
+                else
+                {
+                    var ex = tlsEvent.Exception ?? new Exception("TLS handshake failed.");
+                    _tlsHandshakePromise.TrySetException(ex);
+                }
+            }
+
+            base.UserEventTriggered(context, evt);
         }
 
         private void InitOutbound(IChannel channel, IPEndPoint socketAddress, object msg)
@@ -207,7 +291,23 @@ namespace Akka.Remote.Transport.DotNetty
                 socketAddress = await MapEndpointAsync(socketAddress).ConfigureAwait(false);
                 var associate = await clientBootstrap.ConnectAsync(socketAddress).ConfigureAwait(false);
                 var handler = (TcpClientHandler)associate.Pipeline.Last();
-                return await handler.StatusFuture.ConfigureAwait(false);
+                // Wait for channel activation (socket connect)
+                var handle = await handler.StatusFuture.ConfigureAwait(false);
+
+                if (!Settings.EnableSsl) 
+                    return handle;
+                
+                // If SSL is enabled, ensure the TLS handshake has completed successfully
+                try
+                {
+                    await handler.TlsHandshakeTask.ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidAssociationException($"TLS handshake failed for {remoteAddress}: {ex.Message}", ex);
+                }
+
+                return handle;
             }
             catch (ConnectException c)
             {

@@ -28,6 +28,10 @@ namespace Akka.TestKit
     /// </summary>
     public abstract partial class TestKitBase : IActorRefFactory
     {
+        // AsyncLocal for proper timeout propagation across async boundaries.
+        // This ensures WithinAsync timeout flows correctly to EventFilter and other async operations.
+        private readonly AsyncLocal<TimeSpan?> _asyncLocalEnd = new();
+
         private class TestState
         {
             public TestState()
@@ -116,6 +120,7 @@ namespace Akka.TestKit
         {
             _assertions = assertions ?? throw new ArgumentNullException(nameof(assertions), "The supplied assertions must not be null.");
             
+            // ReSharper disable once VirtualMemberCallInConstructor
             InitializeTest(system, config, actorSystemName, testActorName);
         }
 
@@ -170,10 +175,11 @@ namespace Akka.TestKit
             if (string.IsNullOrEmpty(testActorName))
                 testActorName = "testActor" + _testActorId.IncrementAndGet();
 
-            var testActor = CreateTestActor(system, testActorName);
+            var testActor = CreateInitialTestActor(system, testActorName);
 
-            // Wait for the testactor to start
-            WaitUntilTestActorIsReady(testActor, _testState.TestKitSettings);
+            // For async initialization, don't wait in constructor to avoid deadlock
+            // The TestActor property getter will ensure it's ready when first accessed
+            _testState.TestActor = testActor;
 
             if (this is not INoImplicitSender)
             {
@@ -187,45 +193,6 @@ namespace Akka.TestKit
             }
             SynchronizationContext.SetSynchronizationContext(
                 new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
-
-            _testState.TestActor = testActor;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        // Do not convert this method to async, it is being called inside the constructor.
-        private static void WaitUntilTestActorIsReady(IActorRef testActor, TestKitSettings settings)
-        {
-            var deadline = settings.TestKitStartupTimeout;
-            var stopwatch = Stopwatch.StartNew();
-            var ready = false;
-            
-            try
-            {
-                // TestActor should start almost instantly (microseconds).
-                // Use SpinWait which will spin for ~10-20 microseconds then yield.
-                var spinWait = new SpinWait();
-                
-                while (stopwatch.Elapsed < deadline)
-                {
-                    ready = testActor is not IRepointableRef repRef || repRef.IsStarted;
-                    if (ready) break;
-                    
-                    // SpinWait automatically handles the progression:
-                    // - First ~10 iterations: tight spin loop (microseconds)
-                    // - Next iterations: Thread.Yield() 
-                    // - Later: Thread.Sleep(0)
-                    // - Finally: Thread.Sleep(1)
-                    // This is optimal for both fast startup and system under load
-                    spinWait.SpinOnce();
-                }
-            }
-            finally
-            {
-                stopwatch.Stop();
-            }
-
-            if (!ready)
-                throw new Exception("Timeout waiting for test actor to be ready");
         }
         
         /// <summary>
@@ -241,6 +208,7 @@ namespace Akka.TestKit
         }
 
         private TimeSpan SingleExpectDefaultTimeout { get { return _testState.TestKitSettings.SingleExpectDefault; } }
+        private TimeSpan ExpectNoMessageDefaultTimeout { get { return _testState.TestKitSettings.ExpectNoMessageDefault; } }
 
         /// <summary>
         /// The <see cref="ActorSystem"/> that is recreated and used for each test.
@@ -457,6 +425,20 @@ namespace Akka.TestKit
         /// <para>
         /// Retrieves the time remaining for execution of the innermost enclosing
         /// <see cref="Within(TimeSpan, Action, TimeSpan?, CancellationToken)">Within</see> block.
+        /// If missing that, then it returns the properly dilated default for this
+        /// case from settings (key: "akka.test.expect-no-message-default").
+        /// </para>
+        /// <remarks>The returned value is always finite.</remarks>
+        /// </summary>
+        public TimeSpan NoMessageRemainingOrDefault
+        {
+            get { return RemainingOr(Dilated(ExpectNoMessageDefaultTimeout)); }
+        }
+
+        /// <summary>
+        /// <para>
+        /// Retrieves the time remaining for execution of the innermost enclosing
+        /// <see cref="Within(TimeSpan, Action, TimeSpan?, CancellationToken)">Within</see> block.
         /// </para>
         /// <remarks>The returned value is always finite.</remarks>
         /// </summary>
@@ -467,9 +449,21 @@ namespace Akka.TestKit
         {
             get
             {
+                // Check AsyncLocal first (async context takes precedence)
+                var asyncEnd = _asyncLocalEnd.Value;
+                if (asyncEnd.HasValue)
+                {
+                    if (asyncEnd < TimeSpan.Zero)
+                        throw new InvalidOperationException($"End can not be negative, was: {asyncEnd}");
+
+                    var asyncRemaining = asyncEnd.Value - Now;
+                    return asyncRemaining < TimeSpan.Zero ? TimeSpan.Zero : asyncRemaining;
+                }
+
+                // Fallback to instance field
                 if(_testState.End is null)
                     throw new InvalidOperationException(@"Remaining may not be called outside of ""within""");
-                
+
                 if (_testState.End < TimeSpan.Zero)
                     throw new InvalidOperationException($"End can not be negative, was: {_testState.End}");
 
@@ -488,6 +482,18 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         protected TimeSpan RemainingOr(TimeSpan duration)
         {
+            // Check AsyncLocal first (async context takes precedence for proper timeout propagation)
+            var asyncEnd = _asyncLocalEnd.Value;
+            if (asyncEnd.HasValue)
+            {
+                if (asyncEnd < TimeSpan.Zero)
+                    throw new InvalidOperationException($"End can not be negative, was: {asyncEnd}");
+
+                var asyncRemaining = asyncEnd.Value - Now;
+                return asyncRemaining < TimeSpan.Zero ? TimeSpan.Zero : asyncRemaining;
+            }
+
+            // Fallback to instance field for backward compatibility with sync code paths
             if (!_testState.End.HasValue) return duration;
             if (_testState.End < TimeSpan.Zero)
                 throw new InvalidOperationException($"End can not be negative, was: {_testState.End}");
@@ -710,10 +716,41 @@ namespace Akka.TestKit
             return CreateTestActor(_testState.System, name);
         }
 
+        private IActorRef CreateInitialTestActor(ActorSystem system, string name)
+        {
+            // Fix both serialization and deadlock issues:
+            // 1. Use isSystemService=true to skip serialization checks
+            // 2. Use isAsync=false to create LocalActorRef synchronously (avoids RepointableActorRef deadlock)
+            // 3. Use ManualResetEventSlim to ensure PreStart completes before returning (fixes parallel init race)
+            using var initComplete = new ManualResetEventSlim(false);
+
+            var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue, initComplete))
+                .WithDispatcher("akka.test.test-actor.dispatcher");
+
+            var systemImpl = system.AsInstanceOf<ActorSystemImpl>();
+            // Use the new AttachChildWithAsync method to create TestActor synchronously
+            var testActor = systemImpl.Provider.SystemGuardian.Cell.AttachChildWithAsync(
+                testActorProps,
+                isSystemService: true,  // Skip serialization checks
+                isAsync: false,         // Create synchronously to avoid deadlock
+                name: name);
+
+            // Wait for TestActor.PreStart() to complete before returning
+            // This ensures the actor is fully initialized and ready to receive messages
+            if (!initComplete.Wait(TimeSpan.FromSeconds(10)))
+            {
+                throw new TimeoutException($"TestActor '{name}' failed to initialize within 10 seconds");
+            }
+
+            return testActor;
+        }
+        
         private IActorRef CreateTestActor(ActorSystem system, string name)
         {
             var testActorProps = Props.Create(() => new InternalTestActor(_testState.Queue))
                 .WithDispatcher("akka.test.test-actor.dispatcher");
+            
+            // For additional test actors, always use the standard SystemActorOf
             var testActor = system.AsInstanceOf<ActorSystemImpl>().SystemActorOf(testActorProps, name);
             return testActor;
         }

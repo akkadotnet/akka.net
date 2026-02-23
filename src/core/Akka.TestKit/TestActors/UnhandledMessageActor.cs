@@ -7,14 +7,14 @@
 
 using Akka.Actor;
 
-namespace Akka.TestKit.TestActors
+#nullable enable
+namespace Akka.TestKit.TestActors;
+
+/// <summary>
+/// An <see cref="UnhandledMessageActor"/> is an actor that don't handle any message
+/// sent to it. An UnhandledMessage will be generated as result of handling any message
+/// </summary>
+public class UnhandledMessageActor : ReceiveActor
 {
-    /// <summary>
-    /// An <see cref="UnhandledMessageActor"/> is an actor that don't handle any message
-    /// sent to it. An UnhandledMessage will be generated as result of handling any message
-    /// </summary>
-    public class UnhandledMessageActor : ReceiveActor
-    {
         
-    }
 }

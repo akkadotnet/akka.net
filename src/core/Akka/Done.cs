@@ -7,19 +7,19 @@
 
 using System.Threading.Tasks;
 
-namespace Akka
+#nullable enable
+namespace Akka;
+
+/// <summary>
+/// Used with <see cref="Task"/> instances to signal completion,
+/// but there is no actual value completed. 
+/// </summary>
+public sealed class Done
 {
     /// <summary>
-    /// Used with <see cref="Task"/> instances to signal completion,
-    /// but there is no actual value completed. 
+    /// The singleton instance of <see cref="Done"/>
     /// </summary>
-    public sealed class Done
-    {
-        /// <summary>
-        /// The singleton instance of <see cref="Done"/>
-        /// </summary>
-        public static readonly Done Instance = new();
+    public static readonly Done Instance = new();
 
-        private Done() { }
-    }
+    private Done() { }
 }

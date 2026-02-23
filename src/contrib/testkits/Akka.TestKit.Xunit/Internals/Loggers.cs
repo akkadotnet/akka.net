@@ -35,6 +35,8 @@ public class TestOutputLogger : ReceiveActor
         Receive<InitializeLogger>(e =>
         {
             e.LoggingBus.Subscribe(Self, typeof (LogEvent));
+            // Send response to maintain protocol - LoggerInitialized implements IDeadLetterSuppression
+            // so it won't interfere with dead letter detection or TestActor message expectations
             Sender.Tell(new LoggerInitialized());
         });
     }

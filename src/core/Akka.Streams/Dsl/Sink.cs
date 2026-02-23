@@ -690,6 +690,21 @@ namespace Akka.Streams.Dsl
             return ChannelSink.AsReader<T>(bufferSize, singleReader, fullMode);
         }
 
+
+        /// <summary>
+        /// Creates a Sink that will emit incoming events directly into the provided <see cref="ChannelWriter{T}"/>.
+        /// It will handle backpressure automatically by respecting the channel's capacity.
+        /// </summary>
+        /// <typeparam name="T">Type of events passed to <paramref name="writer"/>.</typeparam>
+        /// <param name="writer">A <see cref="ChannelWriter{T}"/> to pass events emitted from the materialized graph to.</param>
+        /// <param name="isOwner">
+        /// Determines whether the materialized graph should take ownership of the <paramref name="writer"/>.
+        /// When <c>true</c>, the sink will call <c>Complete()</c> when the stream completes normally,
+        /// and <c>TryComplete(Exception)</c> if the stream fails.
+        /// When <c>false</c>, the sink will not complete the writer, allowing it to be used by multiple producers
+        /// or managed externally.
+        /// </param>
+        /// <returns>A <see cref="Sink{TIn,TMat}"/> that writes to the provided channel.</returns>
         public static Sink<T, NotUsed> FromWriter<T>(ChannelWriter<T> writer,
             bool isOwner)
         {

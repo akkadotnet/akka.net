@@ -10,11 +10,18 @@
       "rollForward": true
     },
     "incrementalist.cmd": {
-      "version": "1.1.0-beta1",
+      "version": "1.2.0",
       "commands": [
         "incrementalist"
       ],
       "rollForward": true
+    },
+    "slopwatch.cmd": {
+      "version": "0.3.0",
+      "commands": [
+        "slopwatch"
+      ],
+      "rollForward": false
     }
   }
 }
