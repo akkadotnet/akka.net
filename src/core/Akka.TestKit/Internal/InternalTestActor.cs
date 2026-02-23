@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Channels;
 using Akka.Actor;
 using Akka.Event;
@@ -21,17 +22,35 @@ namespace Akka.TestKit.Internal;
 internal sealed class InternalTestActor : UntypedActor
 {
     private readonly ChannelWriter<MessageEnvelope> _queue;
+    private readonly ManualResetEventSlim? _initComplete;
     private TestActor.Ignore? _ignore;
     private AutoPilot? _autoPilot;
     private readonly DelegatingSupervisorStrategy _supervisorStrategy = new();
 
     /// <summary>
-    /// TBD
+    /// Creates a new internal test actor.
     /// </summary>
-    /// <param name="queue">TBD</param>
-    public InternalTestActor(ChannelWriter<MessageEnvelope> queue)
+    /// <param name="queue">The message queue to write received messages to.</param>
+    public InternalTestActor(ChannelWriter<MessageEnvelope> queue) : this(queue, null)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new internal test actor with initialization synchronization.
+    /// </summary>
+    /// <param name="queue">The message queue to write received messages to.</param>
+    /// <param name="initComplete">Event to signal when actor initialization is complete.</param>
+    public InternalTestActor(ChannelWriter<MessageEnvelope> queue, ManualResetEventSlim? initComplete)
     {
         _queue = queue;
+        _initComplete = initComplete;
+    }
+
+    protected override void PreStart()
+    {
+        base.PreStart();
+        // Signal that actor initialization is complete
+        _initComplete?.Set();
     }
 
     /// <summary>

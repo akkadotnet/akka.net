@@ -13,7 +13,7 @@ using Akka.Persistence;
 using Akka.Remote;
 using Xunit;
 using Akka.Persistence.Query;
-using static PublicApiGenerator.ApiGenerator;
+using PublicApiGenerator;
 using Akka.Cluster.Sharding;
 using Akka.Cluster.Metrics;
 using Akka.Persistence.Query.InMemory;
@@ -25,9 +25,22 @@ namespace Akka.API.Tests
 {
     public class CoreAPISpec
     {
+        // Exclude compiler-generated state machine attributes from API surface.
+        // These contain auto-generated type names (e.g., <MethodName>d__123) that change
+        // whenever code structure changes, causing unnecessary API approval churn.
+        private static readonly ApiGeneratorOptions ApiOptions = new ApiGeneratorOptions
+        {
+            ExcludeAttributes = new[]
+            {
+                "System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute",
+                "System.Runtime.CompilerServices.AsyncStateMachineAttribute",
+                "System.Runtime.CompilerServices.IteratorStateMachineAttribute"
+            }
+        };
+
         static Task VerifyAssembly<T>()
         {
-            return Verifier.Verify(GeneratePublicApi(typeof(T).Assembly));
+            return Verifier.Verify(typeof(T).Assembly.GeneratePublicApi(ApiOptions));
         }
 
         [Fact]

@@ -74,9 +74,22 @@ namespace Akka.Remote.Tests
             public TelemetrySubscriber()
             {
                 // Receive each type of IActorTelemetryEvent
-                Receive<ActorStarted>(_ => { _actorCreated++; });
-                Receive<ActorStopped>(_ => { _actorStopped++; });
-                Receive<ActorRestarted>(_ => { _actorRestarted++; });
+                // Only count user actors, not system actors
+                Receive<ActorStarted>(e =>
+                {
+                    if (!e.Subject.Path.ToString().Contains("/system/") && !e.Subject.Equals(Self))
+                        _actorCreated++;
+                });
+                Receive<ActorStopped>(e =>
+                {
+                    if (!e.Subject.Path.ToString().Contains("/system/") && !e.Subject.Equals(Self))
+                        _actorStopped++;
+                });
+                Receive<ActorRestarted>(e =>
+                {
+                    if (!e.Subject.Path.ToString().Contains("/system/") && !e.Subject.Equals(Self))
+                        _actorRestarted++;
+                });
                 // receive a request for current counter values and return a GetTelemetry result
                 Receive<GetTelemetryRequest>(_ =>
                     Sender.Tell(new GetTelemetry(_actorCreated, _actorStopped, _actorRestarted)));
@@ -123,10 +136,10 @@ namespace Akka.Remote.Tests
                 // send a request for the current telemetry counters
                 telemetry = await subscriber
                     .Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
-                
-                // verify that created actors is greater than 1
+
+                // verify that no actors have been created yet (subscriber filters out its own events)
                 var previouslyCreated = telemetry.ActorCreated;
-                Assert.True(previouslyCreated > 1); // should have had some /system actors started as well
+                Assert.Equal(0, previouslyCreated);
                 Assert.Equal(0, telemetry.ActorStopped);
                 Assert.Equal(0, telemetry.ActorRestarted);
 
@@ -136,7 +149,8 @@ namespace Akka.Remote.Tests
                 // send a request for the current telemetry counters
                 telemetry = await subscriber
                     .Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
-                // verify that the counters are all zero
+
+                // verify that the counters are all zero (we filter out system actors)
                 Assert.Equal(previouslyCreated, telemetry.ActorCreated); // should not have changed
                 Assert.Equal(0, telemetry.ActorStopped);
                 Assert.Equal(0, telemetry.ActorRestarted);

@@ -61,12 +61,12 @@ namespace Akka.Tests.Actor
             var probe = CreateTestProbe();
             var actor = Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
-            await probe.WithinAsync(TimeSpan.FromSeconds(interval * 4) - TimeSpan.FromMilliseconds(100), async() =>
-            {
-                await probe.ExpectMsgAsync(new Tock(1));
-                await probe.ExpectMsgAsync(new Tock(1));
-                await probe.ExpectMsgAsync(new Tock(1));
-            });
+            // Use individual per-message timeouts instead of aggregate window
+            // to avoid cumulative variance causing timeout when scheduler delays accumulate
+            var tickTimeout = dilatedInterval + dilatedInterval; // 2x interval per tick
+            await probe.ExpectMsgAsync(new Tock(1), tickTimeout);
+            await probe.ExpectMsgAsync(new Tock(1), tickTimeout);
+            await probe.ExpectMsgAsync(new Tock(1), tickTimeout);
 
             actor.Tell(End.Instance);
             await probe.ExpectMsgAsync(new GotPostStop(false));

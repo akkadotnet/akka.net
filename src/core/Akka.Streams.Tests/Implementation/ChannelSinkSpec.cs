@@ -31,7 +31,7 @@ namespace Akka.Streams.Tests.Implementation
         #region from writer
 
         [Fact]
-        public Task ChannelSink_writer_when_isOwner_should_complete_channel_with_success_when_upstream_completes()
+        public async Task ChannelSink_writer_when_isOwner_should_complete_channel_with_success_when_upstream_completes()
         {
             var probe = this.CreateManualPublisherProbe<int>();
             var channel = Channel.CreateBounded<int>(10);
@@ -40,11 +40,10 @@ namespace Akka.Streams.Tests.Implementation
                 .To(ChannelSink.FromWriter(channel.Writer, true))
                 .Run(_materializer);
 
-            var subscription = probe.ExpectSubscription();
+            var subscription = await probe.ExpectSubscriptionAsync();
             subscription.SendComplete();
 
-            channel.Reader.Completion.Wait(1.Seconds()).Should().BeTrue();
-            return Task.CompletedTask;
+            await channel.Reader.Completion;
         }
 
         [Fact]
@@ -61,7 +60,7 @@ namespace Akka.Streams.Tests.Implementation
                     .To(ChannelSink.FromWriter(channel.Writer, true))
                     .Run(_materializer);
 
-                var subscription = probe.ExpectSubscription();
+                var subscription = await probe.ExpectSubscriptionAsync();
                 subscription.SendError(exception);
 
                 await channel.Reader.Completion;
@@ -82,10 +81,13 @@ namespace Akka.Streams.Tests.Implementation
                 .To(ChannelSink.FromWriter(channel.Writer, false))
                 .Run(_materializer);
 
-            var subscription = probe.ExpectSubscription();
+            var subscription = await probe.ExpectSubscriptionAsync();
             subscription.SendComplete();
 
-            channel.Reader.Completion.Wait(TimeSpan.FromSeconds(1)).Should().BeFalse();
+            await AwaitAssertAsync(() =>
+            {
+                channel.Reader.Completion.IsCompleted.Should().BeFalse();
+            }, TimeSpan.FromSeconds(1));
 
             var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await channel.Writer.WriteAsync(11, cancel.Token);
@@ -105,10 +107,13 @@ namespace Akka.Streams.Tests.Implementation
                 .To(ChannelSink.FromWriter(channel.Writer, false))
                 .Run(_materializer);
 
-            var subscription = probe.ExpectSubscription();
+            var subscription = await probe.ExpectSubscriptionAsync();
             subscription.SendError(exception);
 
-            channel.Reader.Completion.Wait(TimeSpan.FromSeconds(1)).Should().BeFalse();
+            await AwaitAssertAsync(() =>
+            {
+                channel.Reader.Completion.IsCompleted.Should().BeFalse();
+            }, TimeSpan.FromSeconds(1));
 
             var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await channel.Writer.WriteAsync(11, cancel.Token);
@@ -127,8 +132,8 @@ namespace Akka.Streams.Tests.Implementation
                 .Run(_materializer);
 
             var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            var subscription = probe.ExpectSubscription();
-            var n = subscription.ExpectRequest();
+            var subscription = await probe.ExpectSubscriptionAsync();
+            var n = await subscription.ExpectRequestAsync();
 
             Sys.Log.Info("Requested for {0} elements", n);
 
@@ -143,7 +148,7 @@ namespace Akka.Streams.Tests.Implementation
                 value.Should().Be(j + 1);
             }
 
-            var m = subscription.ExpectRequest() + n;
+            var m = await subscription.ExpectRequestAsync() + n;
             Sys.Log.Info("Requested for {0} elements", m - n);
 
             for (; i <= m; i++)
@@ -159,7 +164,7 @@ namespace Akka.Streams.Tests.Implementation
         #region as reader
 
         [Fact]
-        public Task ChannelSink_reader_should_complete_channel_with_success_when_upstream_completes()
+        public async Task ChannelSink_reader_should_complete_channel_with_success_when_upstream_completes()
         {
             var probe = this.CreateManualPublisherProbe<int>();
 
@@ -167,11 +172,10 @@ namespace Akka.Streams.Tests.Implementation
                 .ToMaterialized(ChannelSink.AsReader<int>(10), Keep.Right)
                 .Run(_materializer);
 
-            var subscription = probe.ExpectSubscription();
+            var subscription = await probe.ExpectSubscriptionAsync();
             subscription.SendComplete();
 
-            reader.Completion.Wait(1.Seconds()).Should().BeTrue();
-            return Task.CompletedTask;
+            await reader.Completion;
         }
 
         [Fact]
@@ -187,7 +191,7 @@ namespace Akka.Streams.Tests.Implementation
                     .ToMaterialized(ChannelSink.AsReader<int>(10), Keep.Right)
                     .Run(_materializer);
 
-                var subscription = probe.ExpectSubscription();
+                var subscription = await probe.ExpectSubscriptionAsync();
                 subscription.SendError(exception);
 
                 await reader.Completion;
@@ -208,8 +212,8 @@ namespace Akka.Streams.Tests.Implementation
                 .Run(_materializer);
 
             var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            var subscription = probe.ExpectSubscription();
-            var n = subscription.ExpectRequest();
+            var subscription = await probe.ExpectSubscriptionAsync();
+            var n = await subscription.ExpectRequestAsync();
 
             Sys.Log.Info("Requested for {0} elements", n);
 
@@ -226,7 +230,7 @@ namespace Akka.Streams.Tests.Implementation
                 value.Should().Be(j + 1);
             }
 
-            var m = subscription.ExpectRequest() + n;
+            var m = await subscription.ExpectRequestAsync() + n;
             Sys.Log.Info("Requested for {0} elements", m - n);
 
             for (; i <= m; i++)

@@ -36,6 +36,7 @@
         "Hasher",
         "Hipsterize",
         "HOCON",
+        "hostnames",
         "journaled",
         "Kubernetes",
         "lifecycles",
@@ -70,6 +71,7 @@
         "Stannard",
         "substream",
         "substreams",
+        "Tailscale",
         "testkit",
         "threadedness",
         "threadpool",
@@ -83,7 +85,8 @@
         "userspace",
         "watchee",
         "Webcrawler",
-        "Xunit"
+        "Xunit",
+        "ZeroTier"
     ],
     "ignoreWords": [
         "Hanselminutes",

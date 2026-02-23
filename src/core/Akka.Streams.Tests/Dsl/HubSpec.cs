@@ -270,7 +270,10 @@ namespace Akka.Streams.Tests.Dsl
                         .ExpectOneAsync(async () =>
                         {
                             Source.Failed<int>(new TestException("failing")).RunWith(sink, Materializer);
-                            Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
+                            // Throttle the successful producer to ensure the failing producer has time to fail and log
+                            Source.From(Enumerable.Range(1, 10))
+                                .Throttle(5, TimeSpan.FromMilliseconds(150), 5, ThrottleMode.Shaping)
+                                .RunWith(sink, Materializer);
                             var result = await task.WaitAsync(3.Seconds());
                             result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
                         });
@@ -319,48 +322,46 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
-                    .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 8), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
                 (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_prefix_to_consumers_attaching_around_the_same_time_if_one_cancels_earlier()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 19))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
-                    .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 8), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.Take(10).RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
                 (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
                 (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
@@ -380,66 +381,65 @@ namespace Akka.Streams.Tests.Dsl
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_elements_to_consumers_of_different_speed_attaching_around_the_same_time()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
-                    .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 8), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source.Throttle(1, TimeSpan.FromMilliseconds(10), 3, ThrottleMode.Shaping)
                     .RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
                 (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_elements_to_consumers_of_attaching_around_the_same_time_if_the_producer_is_slow()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
                     .Throttle(1, TimeSpan.FromMilliseconds(10), 3, ThrottleMode.Shaping)
-                    .ToMaterialized(BroadcastHub.Sink<int>(8), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 8), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
                 (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_ensure_that_from_two_different_speed_consumers_the_slower_controls_the_rate()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 19))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
-                    .ToMaterialized(BroadcastHub.Sink<int>(1), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 1), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source
@@ -450,33 +450,30 @@ namespace Akka.Streams.Tests.Dsl
                     .Throttle(10, TimeSpan.FromMilliseconds(10), 8, ThrottleMode.Shaping)
                     .RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
                 (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
                 (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 20));
             }, Materializer);
         }
 
-        [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time_with_a_buffer_size_of_one()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var other = Source.From(Enumerable.Range(2, 9))
                     .MapMaterializedValue<TaskCompletionSource<int>>(_ => null);
+                // Use startAfterNrOfConsumers: 2 to ensure both consumers are registered before pulling upstream
                 var (firstElement, source) = Source.Maybe<int>()
                     .Concat(other)
-                    .ToMaterialized(BroadcastHub.Sink<int>(1), Keep.Both)
+                    .ToMaterialized(BroadcastHub.Sink<int>(startAfterNrOfConsumers: 2, bufferSize: 1), Keep.Both)
                     .Run(Materializer);
 
                 var f1 = source.RunWith(Sink.Seq<int>(), Materializer);
                 var f2 = source.RunWith(Sink.Seq<int>(), Materializer);
 
-                // Ensure subscription of Sinks. This is racy but there is no event we can hook into here.
-                await Task.Delay(500);
-                
+                // No Task.Delay needed - hub waits for 2 consumers before pulling upstream
                 firstElement.SetResult(1);
                 (await f1.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
                 (await f2.WaitAsync(3.Seconds())).Should().BeEquivalentTo(Enumerable.Range(1, 10));
@@ -563,6 +560,10 @@ namespace Akka.Streams.Tests.Dsl
                 await downstream1.RequestAsync(4);
                 await downstream2.RequestAsync(8);
 
+                // Sending the first element is in a race with downstream subscribing.
+                // Give a bit of time for the downstream to complete subscriptions.
+                await Task.Delay(100);
+
                 await upstream.AsyncBuilder()
                     .SendNext(Enumerable.Range(1, 8))
                     .ExecuteAsync();
@@ -623,14 +624,20 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = this.CreatePublisherProbe<int>();
                 var hubSource = Source.FromPublisher(upstream).RunWith(BroadcastHub.Sink<int>(4), Materializer);
                 var downstream = this.CreateSubscriberProbe<int>();
-                
-                hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
+
+                // Connect the active downstream subscriber first and ensure it's subscribed
                 hubSource.RunWith(Sink.FromSubscriber(downstream), Materializer);
-                
                 await downstream.EnsureSubscriptionAsync();
-                
                 await downstream.RequestAsync(10);
+
+                // Now connect the immediately-cancelling sink - this tests that the hub
+                // handles a cancelled consumer gracefully without affecting other consumers
+                hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
+
+                // Wait for upstream to receive demand before sending
                 await upstream.ExpectRequestAsync();
+
+                // Verify elements still flow to the active downstream
                 await upstream.SendNextAsync(1);
                 await downstream.ExpectNextAsync(1);
                 await upstream.SendNextAsync(2);
@@ -641,7 +648,7 @@ namespace Akka.Streams.Tests.Dsl
                 await downstream.ExpectNextAsync(4);
                 await upstream.SendNextAsync(5);
                 await downstream.ExpectNextAsync(5);
-                
+
                 await upstream.SendCompleteAsync();
                 await downstream.ExpectCompleteAsync();
             }, Materializer);

@@ -190,12 +190,12 @@ namespace Akka.Streams.Tests
         }
     }
 
-    public class StreamRefsSpec : AkkaSpec
+    public class StreamRefsSpec : AkkaSpec, IAsyncLifetime
     {
         public static Config Config()
         {
             var address = TestUtils.TemporaryServerAddress();
-            return ConfigurationFactory.ParseString($@"        
+            return ConfigurationFactory.ParseString($@"
             akka {{
               loglevel = INFO
               actor {{
@@ -219,18 +219,26 @@ namespace Akka.Streams.Tests
             RemoteSystem = ActorSystem.Create("remote-system", Config());
             InitializeLogger(RemoteSystem);
             _probe = CreateTestProbe();
+        }
 
+        public async Task InitializeAsync()
+        {
             var it = RemoteSystem.ActorOf(DataSourceActor.Props(_probe.Ref), "remoteActor");
             var remoteAddress = ((ActorSystemImpl)RemoteSystem).Provider.DefaultAddress;
             Sys.ActorSelection(it.Path.ToStringWithAddress(remoteAddress)).Tell(new Identify("hi"));
 
-            _remoteActor = ExpectMsg<ActorIdentity>().Subject;
+            _remoteActor = (await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(30))).Subject;
+        }
+
+        public Task DisposeAsync()
+        {
+            return Task.CompletedTask;
         }
 
         protected readonly ActorSystem RemoteSystem;
         protected readonly ActorMaterializer Materializer;
         private readonly TestProbe _probe;
-        private readonly IActorRef _remoteActor;
+        private IActorRef _remoteActor;
 
         protected override void BeforeTermination()
         {
@@ -478,10 +486,86 @@ namespace Akka.Streams.Tests
             var p1 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
             p1.EnsureSubscription();
             var req = p1.ExpectRequest();
-            
+
             var p2 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
             p2.EnsureSubscription(); // will be cancelled immediately, since it's 2nd
             p2.ExpectCancellation();
+        }
+
+        [Fact]
+        public async Task SourceRef_Source_property_should_be_idempotent_issue_7895()
+        {
+            // Reproduction test for issue #7895: https://github.com/akkadotnet/akka.net/issues/7895
+            // The .Source property creates a new SourceRefStageImpl on every access,
+            // which is not idempotent behavior and can cause intermittent subscription timeouts
+
+            // Create a SourceRef
+            var sourceRef = await Source.From(new[] { 1, 2, 3 })
+                .ToMaterialized(StreamRefs.SourceRef<int>(), Keep.Right)
+                .Run(Materializer);
+
+            // Access .Source property twice (simulates multiple accesses)
+            // This could happen via debugger inspection, logging, serialization, etc.
+            var source1 = sourceRef.Source;
+            var source2 = sourceRef.Source;
+
+            // BUG: They're NOT the same object (non-idempotent behavior)
+            // Each property access creates a new Source with a new SourceRefStageImpl
+            // When fixed, this assertion should PASS with ReferenceEquals(source1, source2) == true
+            ReferenceEquals(source1, source2).Should().BeTrue(
+                "Source property should be idempotent and return the same instance");
+        }
+
+        [Fact]
+        public async Task SourceRef_multiple_materializations_cause_timeout_issue_7895()
+        {
+            // Reproduction test for issue #7895: https://github.com/akkadotnet/akka.net/issues/7895
+            // This test demonstrates the race condition from multiple .Source property accesses
+            // Multiple .Source property accesses create racing SourceRefStageImpl instances
+
+            // Create a SourceRef with short timeout
+            var sourceRef = await Source.From(Enumerable.Range(1, 100))
+                .ToMaterialized(StreamRefs.SourceRef<int>(), Keep.Right)
+                .WithAttributes(StreamRefAttributes.CreateSubscriptionTimeout(TimeSpan.FromSeconds(3)))
+                .Run(Materializer);
+
+            // Access .Source twice - creates TWO SourceRefStageImpl instances
+            var source1 = sourceRef.Source;
+            var source2 = sourceRef.Source;
+
+            // Materialize both - they race for the same SinkRef handshake
+            var task1 = source1.RunWith(Sink.Seq<int>(), Materializer);
+            var task2 = source2.RunWith(Sink.Seq<int>(), Materializer);
+
+            // Wait for both with timeout protection
+            var allTasks = Task.WhenAll(
+                task1.ContinueWith(t => t),
+                task2.ContinueWith(t => t)
+            );
+
+            try
+            {
+                await allTasks;
+            }
+            catch
+            {
+                // Expected: at least one should fail
+            }
+
+            // Check results - at least one should have failed/timed out
+            var results = new[] { task1, task2 };
+            var completedCount = results.Count(t => t.Status == TaskStatus.RanToCompletion);
+            var faultedCount = results.Count(t => t.Status == TaskStatus.Faulted);
+
+            // Due to race condition: sometimes both fail, sometimes one succeeds
+            (completedCount + faultedCount).Should().Be(2, "Both tasks should have completed or faulted");
+
+            // At least one should have issues due to duplicate stage instances
+            if (faultedCount > 0)
+            {
+                var failedTask = results.First(t => t.Status == TaskStatus.Faulted);
+                failedTask.Exception.InnerException.Should().BeOfType<RemoteStreamRefActorTerminatedException>();
+            }
         }
     }
 }

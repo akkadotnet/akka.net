@@ -556,7 +556,10 @@ namespace Akka.Streams.Implementation.Fusing
 
             protected internal override void OnTimer(object timerKey)
             {
-                if (IsAvailable(_stage.Out) && !_cancelled.Value)
+                if (_cancelled.Value)
+                    return;
+
+                if (IsAvailable(_stage.Out))
                     Push(_stage.Out, _stage._tick);
             }
 

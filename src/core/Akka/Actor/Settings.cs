@@ -182,6 +182,11 @@ namespace Akka.Actor
                 {
                     LogFormatter = DefaultLogMessageFormatter.Instance;
                 }
+                // SPECIAL CASE - check for the semantic log message formatter, which does not have an empty constructor (it's private)
+                else if (logFormatType == typeof(SemanticLogMessageFormatter))
+                {
+                    LogFormatter = SemanticLogMessageFormatter.Instance;
+                }
                 else
                 {
                     try

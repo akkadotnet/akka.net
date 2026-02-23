@@ -341,20 +341,21 @@ namespace Akka.Streams.Tests.IO
         private FileInfo ManyLines()
         {
             _manyLinesPath = new FileInfo(Path.Combine(Path.GetTempPath(), $"file-source-spec-lines_{LinesCount}.tmp"));
-            var line = "";
-            var lines = new List<string>();
-            for (var i = 0; i < LinesCount; i++)
-                line += "a";
+
+            // Create a reasonable line of text (not LinesCount characters long!)
+            var line = new string('a', 100); // Fixed line length of 100 characters
+            var lines = new List<string>(LinesCount);
             for (var i = 0; i < LinesCount; i++)
                 lines.Add(line);
 
-            File.AppendAllLines(_manyLinesPath.FullName, lines);
+            // Use WriteAllLines to ensure we're not appending to an existing file
+            File.WriteAllLines(_manyLinesPath.FullName, lines);
             return _manyLinesPath;
         }
 
         private FileInfo TestFile()
         {
-            File.AppendAllText(_testFilePath.FullName, _testText);
+            File.WriteAllText(_testFilePath.FullName, _testText);
             return _testFilePath;
         }
 

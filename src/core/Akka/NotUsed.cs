@@ -7,53 +7,34 @@
 
 using System;
 
-namespace Akka
+#nullable enable
+namespace Akka;
+
+/// <summary>
+/// This type is used in generic type signatures wherever the actual value is of no importance.
+/// It is a combination of F#’s 'unit' and C#’s 'void', which both have different issues when
+/// used from the other language. An example use-case is the materialized value of an Akka Stream for cases
+/// where no result shall be returned from materialization.
+/// </summary>
+[Serializable]
+public sealed class NotUsed : IEquatable<NotUsed>, IComparable<NotUsed>
 {
     /// <summary>
-    /// This type is used in generic type signatures wherever the actual value is of no importance.
-    /// It is a combination of F#’s 'unit' and C#’s 'void', which both have different issues when
-    /// used from the other language. An example use-case is the materialized value of an Akka Stream for cases
-    /// where no result shall be returned from materialization.
+    /// The singleton instance of <see cref="NotUsed"/>.
     /// </summary>
-    [Serializable]
-    public sealed class NotUsed : IEquatable<NotUsed>, IComparable<NotUsed>
+    public static readonly NotUsed Instance = new();
+
+    private NotUsed()
     {
-        /// <summary>
-        /// The singleton instance of <see cref="NotUsed"/>.
-        /// </summary>
-        public static readonly NotUsed Instance = new();
-
-        private NotUsed()
-        {
-        }
-
-        public override int GetHashCode()
-        {
-            return 0;
-        }
-
-        
-        public override bool Equals(object obj)
-        {
-            return obj is NotUsed;
-        }
-
-        
-        public override string ToString()
-        {
-            return "()";
-        }
-
-        
-        public bool Equals(NotUsed other)
-        {
-            return true;
-        }
-
-        
-        public int CompareTo(NotUsed other)
-        {
-            return 0;
-        }
     }
+
+    public override int GetHashCode() => 0;
+
+    public override bool Equals(object? obj) => obj is NotUsed;
+
+    public override string ToString() => "()";
+
+    public bool Equals(NotUsed? other) => other is not null;
+
+    public int CompareTo(NotUsed? other) => 0;
 }

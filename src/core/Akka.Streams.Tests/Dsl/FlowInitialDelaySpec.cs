@@ -33,27 +33,26 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public async Task Flow_InitialDelay_must_work_with_zero_delay()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var task = Source.From(Enumerable.Range(1, 10))
-                .InitialDelay(TimeSpan.Zero)
-                .Grouped(100)
-                .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
-                task.Wait(TimeSpan.FromSeconds(1)).Should().BeTrue();
-                task.Result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
-                return Task.CompletedTask;
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var result = await Source.From(Enumerable.Range(1, 10))
+                    .InitialDelay(TimeSpan.Zero)
+                    .Grouped(100)
+                    .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
+
+                result.Should().BeEquivalentTo(Enumerable.Range(1, 10));
             }, Materializer);
         }
 
         [Fact]
         public async Task Flow_InitialDelay_must_delay_elements_by_the_specified_time_but_not_more()
         {
-            await this.AssertAllStagesStoppedAsync(() => {
-                var task = Source.From(Enumerable.Range(1, 10))
-                .InitialDelay(TimeSpan.FromSeconds(2))
-                .InitialTimeout(TimeSpan.FromSeconds(1))
-                .RunWith(Sink.Ignore<int>(), Materializer);
-                task.Invoking(t => t.Wait(TimeSpan.FromSeconds(2))).Should().Throw<TimeoutException>();
-                return Task.CompletedTask;
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var act = async () => await Source.From(Enumerable.Range(1, 10))
+                    .InitialDelay(TimeSpan.FromSeconds(2))
+                    .InitialTimeout(TimeSpan.FromSeconds(1))
+                    .RunWith(Sink.Ignore<int>(), Materializer);
+
+                await act.Should().ThrowAsync<TimeoutException>();
             }, Materializer);
         }
 

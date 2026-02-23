@@ -22,6 +22,18 @@ Use the `Debug`, `Info`, `Warning` and `Error` methods to log.
 _log.Debug("Some message");
 ```
 
+## Context Enrichment and Scopes
+
+You can enrich a logger with additional structured context or create a temporary scope. Context values are appended to the rendered output and are also available to semantic logging sinks.
+
+[!code-csharp[LoggingContextExample](../../../src/core/Akka.Tests/Loggers/LoggingContextSpecs.cs?name=LoggingContextExample)]
+
+Example output:
+
+```text
+[INFO][...][Thread 0007][akka://sys/user/a][Tenant=foo][Partition=12] Processing 42
+```
+
 ## Standard Loggers
 
 Akka.NET comes with two built in loggers.
