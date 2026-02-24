@@ -7,9 +7,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
+using Xunit;
 using Xunit.Sdk;
+using Xunit.v3;
 
 // ReSharper disable once CheckNamespace
 namespace Akka.Tests.Shared.Internals;
@@ -44,11 +46,25 @@ public sealed class RepeatAttribute : DataAttribute
         _count = count;
     }
 
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
-        foreach(var x in Enumerable.Range(1, _count))
-        {
-            yield return [x];
-        }
-    }
+        var rows = new List<ITheoryDataRow>(_count);
+
+        for (var i = 1; i <= _count; i++)
+            rows.Add(new RepeatTheoryDataRow(i));
+
+        return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(rows);    }
+
+    public override bool SupportsDiscoveryEnumeration() => true;
+}
+
+public class RepeatTheoryDataRow(int count) : TheoryDataRowBase
+{
+    /// <summary>
+    /// Gets the row of data.
+    /// </summary>
+    public object?[] Data => [count];
+
+    /// <inheritdoc/>
+    protected override object?[] GetData() => [count];
 }
