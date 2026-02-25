@@ -1007,7 +1007,7 @@ namespace Akka.Cluster.Sharding
             var failOnInvalidStateTransition =
                 Context.System.Settings.Config.GetBoolean(
                     "akka.cluster.sharding.fail-on-invalid-entity-state-transition");
-            _entities = new Entities(Log, settings.RememberEntities, _verboseDebug, failOnInvalidStateTransition);
+            _entities = new Entities(Log, _rememberEntities, _verboseDebug, failOnInvalidStateTransition);
 
             var idleInterval = TimeSpan.FromTicks(_settings.PassivateIdleEntityAfter.Ticks / 2);
             _passivateIdleTask = _settings.ShouldPassivateIdleEntities
