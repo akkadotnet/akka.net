@@ -1410,6 +1410,12 @@ namespace Akka.Cluster.Sharding
                 {
                     _handingOff = _handingOff.Remove(terminated.ActorRef);
                     _log.Debug("{0}: Shard [{1}] handoff complete", _typeName, shard);
+
+                    // Send backup ShardStopped to coordinator in case the RebalanceWorker
+                    // has already timed out and missed the ShardStopped from HandOffStopper.
+                    // The coordinator's Active handler will only deallocate if no rebalance
+                    // is currently in progress for this shard.
+                    _coordinator?.Tell(new ShardCoordinator.ShardStopped(shard));
                 }
                 else
                 {

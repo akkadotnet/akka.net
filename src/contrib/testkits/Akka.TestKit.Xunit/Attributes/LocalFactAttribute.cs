@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.v3;
 
@@ -24,7 +25,9 @@ namespace Akka.TestKit.Xunit.Attributes;
 /// </summary>
 [XunitTestCaseDiscoverer(typeof(FactDiscoverer))]
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-public class LocalFactAttribute: Attribute, IFactAttribute
+public class LocalFactAttribute(
+    [CallerFilePath] string? sourceFilePath = null,
+    [CallerLineNumber] int sourceLineNumber = -1): Attribute, IFactAttribute
 {
     private const string EnvironmentVariableName = "XUNIT_SKIP_LOCAL_FACT";
 
@@ -47,6 +50,12 @@ public class LocalFactAttribute: Attribute, IFactAttribute
 
     /// <inheritdoc/>
     public string? SkipWhen { get; set; }
+
+    /// <inheritdoc/>
+    public string? SourceFilePath { get; } = sourceFilePath;
+    
+    /// <inheritdoc/>
+    public int? SourceLineNumber { get; } = sourceLineNumber < 1 ? null : sourceLineNumber;
 
     /// <inheritdoc/>
     public int Timeout { get; set; }

@@ -879,7 +879,7 @@ namespace Akka.Actor
             IInternalActorRef tmp;
             if (!_children.TryRemove(name, out tmp))
             {
-                Log.Warning("{0} trying to remove non-child {1}", Path, name);
+                Log.Debug("{0} trying to remove non-child {1}", Path, name);
             }
         }
 
@@ -893,7 +893,7 @@ namespace Akka.Actor
             IInternalActorRef tmp;
             if (!_children.TryRemove(name, out tmp))
             {
-                Log.Warning("{0} trying to remove non-child {1}", Path, name);
+                Log.Debug("{0} trying to remove non-child {1}", Path, name);
             }
         }
 
