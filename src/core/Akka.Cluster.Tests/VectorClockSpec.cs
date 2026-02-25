@@ -60,6 +60,7 @@ namespace Akka.Cluster.Tests
             var clock5_2 = clock4_2.Increment(VectorClock.Node.Create("3"));
 
             (clock4_1 < clock5_2).Should().BeTrue();
+            (clock4_1 != clock5_2).Should().BeTrue("before relationship means not equal");
         }
 
         [Fact]
@@ -106,6 +107,8 @@ namespace Akka.Cluster.Tests
             
             (clock3_1 < clock5_2).Should().BeTrue();
             (clock5_2 > clock3_1).Should().BeTrue();
+            (clock3_1 != clock5_2).Should().BeTrue("before relationship means not equal");
+            (clock5_2 != clock3_1).Should().BeTrue("after relationship means not equal");
         }
 
         [Fact]

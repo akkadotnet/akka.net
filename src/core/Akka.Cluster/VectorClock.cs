@@ -339,7 +339,7 @@ namespace Akka.Cluster
             if (ReferenceEquals(left, null))
                 return false;
 
-            return left.IsConcurrentWith(right);
+            return !left.IsSameAs(right);
         }
 
         private static readonly (Node, long) CmpEndMarker = (Node.Create("endmarker"), Timestamp.EndMarker);
