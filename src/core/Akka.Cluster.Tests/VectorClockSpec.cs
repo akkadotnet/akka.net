@@ -30,6 +30,28 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public void A_VectorClock_must_handle_null_equality_correctly()
+        {
+            VectorClock nullClock = null;
+            var clock = VectorClock.Create();
+
+            // null == null should be true
+            (nullClock == null).Should().BeTrue();
+            (null == nullClock).Should().BeTrue();
+
+            // null != null should be false
+            (nullClock != null).Should().BeFalse();
+
+            // clock == null and null == clock should be false
+            (clock == null).Should().BeFalse();
+            (null == clock).Should().BeFalse();
+
+            // clock != null and null != clock should be true
+            (clock != null).Should().BeTrue();
+            (null != clock).Should().BeTrue();
+        }
+
+        [Fact]
         public void A_VectorClock_must_pass_misc_comparison_test1()
         {
             var clock1_1 = VectorClock.Create();
