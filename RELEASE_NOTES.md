@@ -1,3 +1,39 @@
+#### 1.5.61 February 27th, 2026 ####
+
+Akka.NET v1.5.61 is a maintenance release with important bug fixes for Akka.Cluster.Sharding, Akka.Cluster, and Akka.Core.
+
+**Akka.Cluster.Sharding Bug Fixes**
+
+* [Port Pekko ShardStopped handler + handoff safety net](https://github.com/akkadotnet/akka.net/pull/8055) - Fixes [issue #7500](https://github.com/akkadotnet/akka.net/issues/7500). Resolves a critical issue where shards could fail to hand off indefinitely during scale-up events. 
+* [Fix Shard remember-entities flag mismatch causing entity restart failures](https://github.com/akkadotnet/akka.net/pull/8054) - Fixes a bug where the `Entities` class was initialized with the wrong `RememberEntities` flag.
+* [Correct self-comparison in ShardCoordinator ResendShardHost handler](https://github.com/akkadotnet/akka.net/pull/8050) - Fixes a bug where the `ResendShardHost` handler compared a region variable to itself instead of comparing against the message's region.
+
+**Akka.Cluster Bug Fixes**
+
+* [VectorClock inequality fixes](https://github.com/akkadotnet/akka.net/pull/8058) - Fixes the `!=` operator which incorrectly delegated to `IsConcurrentWith` instead of being the logical negation of `==`, and fixes the `<` operator to correctly exclude the equal case.
+* [Correct format index in 3-arg LogInfo overload](https://github.com/akkadotnet/akka.net/pull/8056) - Fixes a logging bug where the 3-arg `LogInfo` overload used the wrong format index.
+
+**Bug Fixes**
+
+* [Fix wrong randomFactor argument type on RetrySupport.Retry()](https://github.com/akkadotnet/akka.net/pull/8061) - Fixes [issue #8059](https://github.com/akkadotnet/akka.net/issues/8059). Changes the `randomFactor` parameter type from `int` to `double` to match the expected behavior for jitter calculations.
+* [AppVersion.CompareTo missing else if breaks comparison symmetry](https://github.com/akkadotnet/akka.net/pull/8051) - Fixes a bug where release versions appeared less than their pre-release counterparts.
+* [Remove stray dollar signs from interpolated strings](https://github.com/akkadotnet/akka.net/pull/8057) - Fixes three string interpolation bugs in output in `ClusterHeartbeat`, `ShardRegion`, and `SinkRefImpl`.
+
+**Improvements**
+
+* [Downgrade VirtualPathContainer RemoveChild log from Warning to Debug](https://github.com/akkadotnet/akka.net/pull/8048) - Fixes [issue #8037](https://github.com/akkadotnet/akka.net/issues/8037). Eliminates noisy warnings during high-load `Ask` operations.
+
+4 contributors since release 1.5.60
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 4       | 2085 | 27   | Aaron Stannard      |
+| 5       | 52   | 14   | Matt Kotsenas       |
+| 3       | 151  | 9    | Gregorius Soedharmo |
+| 1       | 2    | 2    | Apoorv Darshan      |
+
+To see the full set of changes in Akka.NET v1.5.61, [click here](https://github.com/akkadotnet/akka.net/milestone/144?closed=1).
+
 #### 1.5.60 February 9th, 2026 ####
 
 Akka.NET v1.5.60 is a maintenance release with a bug fix and a new feature for structured logging.
