@@ -1073,7 +1073,7 @@ namespace Akka.Cluster.Sharding
             {
                 var qr = ShardsQueryResult<T>.Create(tasks, _shards.Count, timeout);
                 if (qr.Failed.Count > 0)
-                    _log.Warning($"{0}: {qr}", _typeName);
+                    _log.Warning("{0}: {1}", _typeName, qr);
                 return qr;
             });
         }
