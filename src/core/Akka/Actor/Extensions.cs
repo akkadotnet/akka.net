@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Akka.Actor
 {
@@ -107,7 +108,7 @@ namespace Akka.Actor
         /// <param name="system">The actor system from which to retrieve the extension or to register with if it does not exist.</param>
         /// <param name="extensionId">The type of the extension to register if it does not exist in the given actor system.</param>
         /// <returns>The extension retrieved from the given actor system.</returns>
-        public static T WithExtension<T>(this ActorSystem system, Type extensionId) where T : class, IExtension
+        public static T WithExtension<T>(this ActorSystem system, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] Type extensionId) where T : class, IExtension
         {
             if (system.HasExtension<T>())
                 return system.GetExtension<T>();
@@ -126,7 +127,7 @@ namespace Akka.Actor
         /// <typeparam name="TI">The type associated with the extension to retrieve if it does not exist within the system.</typeparam>
         /// <param name="system">The actor system from which to retrieve the extension or to register with if it does not exist.</param>
         /// <returns>The extension retrieved from the given actor system.</returns>
-        public static T WithExtension<T,TI>(this ActorSystem system) where T : class, IExtension
+        public static T WithExtension<T, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)] TI>(this ActorSystem system) where T : class, IExtension
                                                                      where TI: IExtensionId
         {
             if (system.HasExtension<T>())

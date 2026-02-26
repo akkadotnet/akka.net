@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Props.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -7,14 +7,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Linq.Expressions;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Routing;
 using Akka.Util;
-using Akka.Util.Internal;
-using Akka.Util.Reflection;
 using Newtonsoft.Json;
 
 namespace Akka.Actor
@@ -37,7 +34,7 @@ namespace Akka.Actor
         private const string NullActorTypeExceptionText = "Props must be instantiated with an actor type.";
 
         private static readonly Deploy DefaultDeploy = new();
-        private static readonly object[] NoArgs = Array.Empty<object>();
+        private static readonly object[] NoArgs = [];
 
         /// <summary>
         ///     A pre-configured <see cref="Akka.Actor.Props" /> that doesn't create actors.
@@ -46,8 +43,6 @@ namespace Akka.Actor
         ///     </note>
         /// </summary>
         public static readonly Props None = null;
-        private Type _inputType;
-        private Type _outputType;
         private readonly IIndirectActorProducer _producer;
 
         /// <summary>
@@ -163,12 +158,11 @@ namespace Akka.Actor
         /// <param name="args">The arguments needed to create the actor.</param>
         /// <exception cref="ArgumentException">This exception is thrown if <paramref name="type" /> is an unknown actor producer.</exception>
         public Props(Deploy deploy, Type type, params object[] args)
-#pragma warning disable CS0618 // Type or member is obsolete
-            : this(CreateProducer(type, args), deploy, args) // have to preserve the "CreateProducer" call here to preserve backwards compat with Akka.DI.Core
-#pragma warning restore CS0618 // Type or member is obsolete
+            : this(new ActivatorProducer(type, args), deploy, args)
         {
 
         }
+
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Props" /> class using a specified <see cref="IIndirectActorProducer"/>.
@@ -182,7 +176,6 @@ namespace Akka.Actor
         internal Props(IIndirectActorProducer producer, Deploy deploy, params object[] args)
         {
             Deploy = deploy;
-            _inputType = producer.ActorType;
             Arguments = args ?? NoArgs;
             _producer = producer;
         }
@@ -191,13 +184,12 @@ namespace Akka.Actor
         ///     The type of the actor that is created.
         /// </summary>
         [JsonIgnore]
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
         public Type Type
         {
             get
             {
-                if (_outputType == null) _outputType = _producer.ActorType;
-
-                return _outputType;
+                return _producer.ActorType;
             }
         }
 
@@ -225,9 +217,8 @@ namespace Akka.Actor
         /// </summary>
         public string TypeName
         {
-            get => _inputType.AssemblyQualifiedName;
-            //for serialization
-            private set => _inputType = Type.GetType(value);
+            get => _producer.ActorType.AssemblyQualifiedName;
+            //private set => _producer.ActorType = Type.GetType(value);
         }
 
         /// <summary>
@@ -283,7 +274,7 @@ namespace Akka.Actor
 
         private bool CompareInputType(Props other)
         {
-            return _inputType == other._inputType;
+            return _producer.ActorType == other._producer.ActorType;
         }
 
         private bool CompareDeploy(Props other)
@@ -328,7 +319,6 @@ namespace Akka.Actor
             return Equals((Props)obj);
         }
 
-       
         public override int GetHashCode()
         {
             unchecked
@@ -336,7 +326,7 @@ namespace Akka.Actor
                 var hashCode = Deploy != null ? Deploy.GetHashCode() : 0;
                 //  hashCode = (hashCode*397) ^ (SupervisorStrategy != null ? SupervisorStrategy.GetHashCode() : 0);
                 //  hashCode = (hashCode*397) ^ (Arguments != null ? Arguments.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (_inputType != null ? _inputType.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (_producer.ActorType != null ? _producer.ActorType.GetHashCode() : 0);
                 return hashCode;
             }
         }
@@ -349,19 +339,19 @@ namespace Akka.Actor
         /// <param name="supervisorStrategy">Optional: The supervisor strategy used to manage the actor.</param>
         /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
         /// <exception cref="ArgumentException">The create function must be a 'new T (args)' expression</exception>
-        public static Props Create<TActor>(Expression<Func<TActor>> factory,
-            SupervisorStrategy supervisorStrategy = null) where TActor : ActorBase
+        public static Props Create<TActor>(Func<TActor> factory, SupervisorStrategy supervisorStrategy = null) where TActor : ActorBase
         {
-            if (factory.Body is UnaryExpression)
-                return new DynamicProps<TActor>(factory.Compile());
+            return new Props(new FactoryProducer<TActor>(factory), DefaultDeploy, NoArgs) { SupervisorStrategy = supervisorStrategy };
+        }
 
-            var newExpression = factory.Body.AsInstanceOf<NewExpression>();
-            if (newExpression == null)
-                throw new ArgumentException("The create function must be a 'new T (args)' expression");
-
-            var args = newExpression.Arguments.Count > 0 ? newExpression.GetArguments() : NoArgs;
-
-            return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy, args){ SupervisorStrategy = supervisorStrategy };
+        /// <summary>
+        ///     Creates an actor using the given arguments.
+        /// </summary>
+        /// <typeparam name="TActor">The type of the actor to create.</typeparam>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
+        public static Props Create<TActor>() where TActor : ActorBase, new()
+        {
+            return new Props(new FactoryProducer<TActor>(() => new TActor()), DefaultDeploy, NoArgs);
         }
 
         /// <summary>
@@ -373,6 +363,32 @@ namespace Akka.Actor
         public static Props Create<TActor>(params object[] args) where TActor : ActorBase
         {
             return new Props(new ActivatorProducer(typeof(TActor), args), DefaultDeploy, args);
+        }
+
+        /// <summary>
+        ///     Creates an actor using a specified supervisor strategy.
+        /// </summary>
+        /// <typeparam name="TActor">The type of the actor to create.</typeparam>
+        /// <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
+        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase, new()
+        {
+            return new Props(new FactoryProducer<TActor>(() => new TActor()), DefaultDeploy, NoArgs) { SupervisorStrategy = supervisorStrategy };
+        }
+
+        /// <summary>
+        ///     Creates an actor of a specified type.
+        /// </summary>
+        /// <param name="type">The type of the actor to create.</param>
+        /// <param name="args">The arguments needed to create the actor.</param>
+        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
+        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
+        public static Props Create(Type type, params object[] args)
+        {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
+
+            return new Props(type, args);
         }
 
         /// <summary>
@@ -396,32 +412,6 @@ namespace Akka.Actor
         public static Props CreateBy(IIndirectActorProducer producer, params object[] args)
         {
             return new Props(producer, DefaultDeploy, args);
-        }
-
-        /// <summary>
-        ///     Creates an actor using a specified supervisor strategy.
-        /// </summary>
-        /// <typeparam name="TActor">The type of the actor to create.</typeparam>
-        /// <param name="supervisorStrategy">The supervisor strategy used to manage the actor.</param>
-        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
-        public static Props Create<TActor>(SupervisorStrategy supervisorStrategy) where TActor : ActorBase, new()
-        {
-            return new Props(new ActivatorProducer(typeof(TActor), NoArgs), DefaultDeploy, NoArgs){ SupervisorStrategy = supervisorStrategy };
-        }
-
-        /// <summary>
-        ///     Creates an actor of a specified type.
-        /// </summary>
-        /// <param name="type">The type of the actor to create.</param>
-        /// <param name="args">The arguments needed to create the actor.</param>
-        /// <returns>The newly created <see cref="Akka.Actor.Props" />.</returns>
-        /// <exception cref="ArgumentNullException">Props must be instantiated with an actor type.</exception>
-        public static Props Create(Type type, params object[] args)
-        {
-            if (type == null)
-                throw new ArgumentNullException(nameof(type), NullActorTypeExceptionText);
-
-            return new Props(type, args);
         }
 
         /// <summary>
@@ -468,7 +458,7 @@ namespace Akka.Actor
             copy.Deploy = Deploy.WithRouterConfig(routerConfig);
             return copy;
         }
-        
+
         /// <summary>
         ///     Creates a new <see cref="Akka.Actor.Props" /> with a given stash size.
         ///     <note>
@@ -499,12 +489,13 @@ namespace Akka.Actor
         public Props WithDeploy(Deploy deploy)
         {
             var copy = Copy();
-            var original = copy.Deploy;
+            //var original = copy.Deploy;
 
             // TODO: this is a hack designed to preserve explicit router deployments https://github.com/akkadotnet/akka.net/issues/546
             // in reality, we should be able to do copy.Deploy = deploy.WithFallback(copy.Deploy); but that blows up at the moment
             // - Aaron Stannard
             copy.Deploy = deploy.WithFallback(copy.Deploy);
+            
             //if (!(original.RouterConfig is NoRouter || original.RouterConfig is FromConfig) && deploy.RouterConfig is NoRouter)
             //{
             //    copy.Deploy = deploy.WithFallback(copy.Deploy);
@@ -555,17 +546,13 @@ namespace Akka.Actor
         /// <returns>The newly created actor</returns>
         public virtual ActorBase NewActor()
         {
-            var type = Type;
-            var arguments = Arguments;
             try
             {
                 return _producer.Produce();
             }
             catch (Exception e)
             {
-                throw new TypeLoadException(
-                    $"Error while creating actor instance of type {type} with {arguments.Length} args: ({StringFormat.SafeJoin(",", arguments)})",
-                    e);
+                throw new TypeLoadException($"Error while creating actor instance of type {Type} with {Arguments.Length} args: ({StringFormat.SafeJoin(",", Arguments)})", e);
             }
         }
 
@@ -578,23 +565,6 @@ namespace Akka.Actor
             return new Props(_producer, Deploy, Arguments) { SupervisorStrategy = SupervisorStrategy };
         }
 
-        [Obsolete("we should not be calling this method. Pass in an explicit IIndirectActorProducer reference instead.")]
-        private static IIndirectActorProducer CreateProducer(Type type, object[] args)
-        {
-            if (type == null) return DefaultProducer.Instance;
-
-            if (typeof(IIndirectActorProducer).IsAssignableFrom(type))
-                return Activator.CreateInstance(type, args).AsInstanceOf<IIndirectActorProducer>();
-
-            if (typeof(ActorBase).IsAssignableFrom(type)) return new ActivatorProducer(type, args);
-
-            throw new ArgumentException($"Unknown actor producer [{type.FullName}]", nameof(type));
-        }
-
-        /// <summary>
-        ///     Signals the producer that it can release its reference to the actor.
-        /// </summary>
-        /// <param name="actor">The actor to release</param>
         internal void Release(ActorBase actor)
         {
             try
@@ -616,6 +586,7 @@ namespace Akka.Actor
             /// <summary>
             ///     The type of actor to create
             /// </summary>
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
             public Type Type { get; set; }
 
             /// <summary>
@@ -655,26 +626,6 @@ namespace Akka.Actor
             }
         }
 
-        private class DefaultProducer : IIndirectActorProducer
-        {
-            private DefaultProducer(){}
-
-            public static readonly DefaultProducer Instance = new();
-
-            public ActorBase Produce()
-            {
-                throw new InvalidOperationException("No actor producer specified!");
-            }
-
-            public Type ActorType => typeof(ActorBase);
-
-
-            public void Release(ActorBase actor)
-            {
-                actor = null;
-            }
-        }
-
         private class ActivatorProducer : IIndirectActorProducer
         {
             private readonly object[] _args;
@@ -687,11 +638,11 @@ namespace Akka.Actor
 
             public ActorBase Produce()
             {
-                return Activator.CreateInstance(ActorType, _args).AsInstanceOf<ActorBase>();
+                return (ActorBase)Activator.CreateInstance(ActorType, _args);
             }
 
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
             public Type ActorType { get; }
-
 
             public void Release(ActorBase actor)
             {
@@ -699,11 +650,11 @@ namespace Akka.Actor
             }
         }
 
-        private class FactoryConsumer<TActor> : IIndirectActorProducer where TActor : ActorBase
+        private class FactoryProducer<TActor> : IIndirectActorProducer where TActor : ActorBase
         {
             private readonly Func<TActor> _factory;
 
-            public FactoryConsumer(Func<TActor> factory)
+            public FactoryProducer(Func<TActor> factory)
             {
                 _factory = factory;
             }
@@ -713,8 +664,8 @@ namespace Akka.Actor
                 return _factory.Invoke();
             }
 
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
             public Type ActorType => typeof(TActor);
-
 
             public void Release(ActorBase actor)
             {
@@ -751,7 +702,7 @@ namespace Akka.Actor
     /// <typeparam name="TActor">The type of the actor to create.</typeparam>
     internal class DynamicProps<TActor> : Props where TActor : ActorBase
     {
-        private readonly Func<TActor> invoker;
+        private readonly Func<TActor> _invoker;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="DynamicProps{TActor}" /> class.
@@ -760,7 +711,7 @@ namespace Akka.Actor
         public DynamicProps(Func<TActor> invoker)
             : base(typeof(TActor))
         {
-            this.invoker = invoker;
+            this._invoker = invoker;
         }
 
         /// <summary>
@@ -769,7 +720,7 @@ namespace Akka.Actor
         /// <returns>The actor created using the factory method.</returns>
         public override ActorBase NewActor()
         {
-            return invoker.Invoke();
+            return _invoker.Invoke();
         }
 
         #region Copy methods
@@ -777,7 +728,7 @@ namespace Akka.Actor
         private DynamicProps(Props copy, Func<TActor> invoker)
             : base(copy)
         {
-            this.invoker = invoker;
+            this._invoker = invoker;
         }
 
         /// <summary>
@@ -787,7 +738,7 @@ namespace Akka.Actor
         protected override Props Copy()
         {
             var initialCopy = base.Copy();
-            var invokerCopy = (Func<TActor>)invoker.Clone();
+            var invokerCopy = (Func<TActor>)_invoker.Clone();
             return new DynamicProps<TActor>(initialCopy, invokerCopy);
         }
 
@@ -807,6 +758,7 @@ namespace Akka.Actor
         ///     The returned type is not used to produce the actor.
         /// </summary>
         /// <returns>The type of the actor created.</returns>
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)]
         Type ActorType { get; }
 
         /// <summary>

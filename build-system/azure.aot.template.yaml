@@ -1,0 +1,33 @@
+parameters:
+  name: ''
+  displayName: ''
+  vmImage: ''
+  run_if: true
+  timeoutInMinutes: 10
+
+jobs:
+  - job: ${{ parameters.name }}
+    condition: eq( ${{ parameters.run_if }}, true )
+    displayName: ${{ parameters.displayName }}
+    timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
+    pool:
+      vmImage: ${{ parameters.vmImage }}
+    steps:
+       - task: UseDotNet@2
+        displayName: 'Use .NET'
+        inputs:
+          packageType: 'sdk'
+          useGlobalJson: true
+        
+      # Option 1: Use inline script to handle paths properly
+      - task: PowerShell@2
+        inputs:
+          targetType: 'inline'
+          script: |
+            ./scripts/test-aot-compatibility.ps1 net8.0
+          pwsh: true
+
+      - script: 'echo 1>&2'
+        failOnStderr: true
+        displayName: 'If above is partially succeeded, then fail'
+        condition: eq(variables['Agent.JobStatus'], 'SucceededWithIssues')

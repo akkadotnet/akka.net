@@ -604,6 +604,11 @@ namespace Akka.Dispatch
                 case null:
                     throw new ConfigurationException($"Could not resolve dispatcher for path {id}. type is null");
                 default:
+                    #if AOT_ENABLED
+                    // When AOT trimmer is enabled, we cannot use Activator.CreateInstance with a type name string
+                    // TODO: create setup for custom dispatchers
+                    throw new ConfigurationException($"Could not resolve dispatcher type {type} for path {id}. Dynamic type loading is not supported in AOT mode.");
+                    #else
                     Type dispatcherType = Type.GetType(type);
                     if (dispatcherType == null)
                     {
@@ -613,6 +618,7 @@ namespace Akka.Dispatch
                     dispatcher =
                         (MessageDispatcherConfigurator)Activator.CreateInstance(dispatcherType, cfg, Prerequisites);
                     break;
+                    #endif
             }
 
             return dispatcher;

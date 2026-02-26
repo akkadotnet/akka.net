@@ -1010,12 +1010,19 @@ namespace Akka.Actor
                 case null:
                     throw new ConfigurationException("Could not resolve SupervisorStrategyConfigurator. typeName is null");
                 default:
+                    #if AOT_ENABLED
+                    throw new ConfigurationException(
+                        $"Custom SupervisorStrategyConfigurator '{typeName}' is not supported in AOT mode. " +
+                        "Only 'Akka.Actor.DefaultSupervisorStrategy' and 'Akka.Actor.StoppingSupervisorStrategy' are available. " +
+                        "Use ActorSystemSetup to register custom supervisor strategies in AOT scenarios.");
+                    #else
                     Type configuratorType = Type.GetType(typeName);
 
                     if (configuratorType == null)
                         throw new ConfigurationException($"Could not resolve SupervisorStrategyConfigurator type {typeName}");
 
                     return (SupervisorStrategyConfigurator)Activator.CreateInstance(configuratorType);
+                    #endif
             }
         }
     }

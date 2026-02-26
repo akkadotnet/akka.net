@@ -16,7 +16,6 @@ using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
-using System.Reflection;
 using System.Text;
 using Akka.Actor.Setup;
 using Akka.Serialization;
@@ -43,6 +42,7 @@ namespace Akka.Actor.Internal
         private IActorRefProvider _provider;
         private Settings _settings;
         private readonly string _name;
+        private readonly TypeHints _typeHints;
         private Serialization.Serialization _serialization;
         private EventStream _eventStream;
         private Dispatchers _dispatchers;
@@ -91,7 +91,7 @@ namespace Akka.Actor.Internal
                 throw new ArgumentNullException(nameof(config), $"Cannot create {typeof(ActorSystemImpl)}: Configuration must not be null.");
 
             _name = name;
-
+            _typeHints = new TypeHints();
             GuardianProps = guardianProps ?? Option<Props>.None;
 
             ConfigureSettings(config, setup);
@@ -282,7 +282,11 @@ namespace Akka.Actor.Internal
 
         private void ConfigureScheduler()
         {
+            #if AOT_ENABLED
+            var schedulerType = TypeHints.DefaultSchedulerType;
+            #else
             var schedulerType = Type.GetType(_settings.SchedulerClass, true);
+            #endif
             _scheduler = (IScheduler) Activator.CreateInstance(schedulerType, _settings.Config, Log);
         }
 
@@ -294,8 +298,15 @@ namespace Akka.Actor.Internal
 
         private void LoadExtensions()
         {
+            var possibleExtensions = _settings.Config.GetStringList("akka.extensions", []);
+            if (possibleExtensions.Count == 0)
+                return; // skip rest of loading process
+            #if AOT_ENABLED
+            // TODO: need some way of loading extensions in AOT mode - this will probably mean a Setup class.
+            Log.Warning("Extensions are not supported when AOT is enabled.");
+            #else
             var extensions = new List<IExtensionId>();
-            foreach(var extensionFqn in _settings.Config.GetStringList("akka.extensions", new string[] { }))
+            foreach(var extensionFqn in possibleExtensions))
             {
                 var extensionType = Type.GetType(extensionFqn);
                 if(extensionType == null || !typeof(IExtensionId).IsAssignableFrom(extensionType) || extensionType.IsAbstract || !extensionType.IsClass)
@@ -317,6 +328,7 @@ namespace Akka.Actor.Internal
             }
 
             ConfigureExtensions(extensions);
+            #endif
         }
 
         private void ConfigureExtensions(IEnumerable<IExtensionId> extensionIdProviders)
@@ -444,8 +456,12 @@ namespace Akka.Actor.Internal
         {
             try
             {
+                #if AOT_ENABLED
+                Type providerType = TypeHints.DefaultActorRefProviderType;
+                #else
                 Type providerType = Type.GetType(_settings.ProviderClass);
-                global::System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
+                #endif
+                System.Diagnostics.Debug.Assert(providerType != null, "providerType != null");
                 var provider =
                     (IActorRefProvider) Activator.CreateInstance(providerType, _name, _settings, _eventStream);
                 _provider = provider;

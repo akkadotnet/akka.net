@@ -340,6 +340,11 @@ channel-executor.priority = normal");
                 case "channel-executor":
                     return new ChannelExecutorConfigurator(Config, Prerequisites);
                 default:
+                    #if AOT_ENABLED
+                    // Throw a configuration exception if we're in AOT mode since we can't use reflection to load the type
+                    throw new ConfigurationException(
+                        $"Custom executor service configurator '{executor}' cannot be loaded in AOT mode for path {Config.GetString("id", "unknown")}");
+                    #else
                     Type executorConfiguratorType = Type.GetType(executor);
                     if (executorConfiguratorType == null)
                     {
@@ -349,6 +354,7 @@ channel-executor.priority = normal");
 
                     var args = new object[] { Config, Prerequisites };
                     return (ExecutorServiceConfigurator)Activator.CreateInstance(executorConfiguratorType, args);
+                    #endif
             }
         }
     }

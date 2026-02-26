@@ -5,6 +5,11 @@
     <Description>Canonical actor model implementation for .NET with local + distributed actors in C# and F#.</Description>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DefineConstants>AOT_ENABLED</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    
   </PropertyGroup>
 
   <ItemGroup>

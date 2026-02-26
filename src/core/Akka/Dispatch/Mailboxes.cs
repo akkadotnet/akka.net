@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Akka.Actor;
@@ -59,8 +60,15 @@ namespace Akka.Dispatch
             if (mailboxConfig.IsNullOrEmpty())
                 throw ConfigurationException.NullOrEmptyConfig<Mailboxes>("akka.actor.mailbox");
 
-            var requirements = mailboxConfig.GetConfig("requirements").AsEnumerable().ToList();
+            #if AOT_ENABLED
+            // In AOT mode, use hard-coded default mailbox requirements from TypeHints
+            // Custom mailbox requirements must be registered via Setup classes
+            _mailboxBindings = Actor.Internal.TypeHints.DefaultMailboxRequirements
+                .ToDictionary(k => k.Key, v => v.Value);
+            #else
+            // In non-AOT mode, load mailbox requirements from configuration
             _mailboxBindings = new Dictionary<Type, string>();
+            var requirements = mailboxConfig.GetConfig("requirements").AsEnumerable().ToList();
             foreach (var kvp in requirements)
             {
                 var type = Type.GetType(kvp.Key);
@@ -71,6 +79,7 @@ namespace Akka.Dispatch
                 }
                 _mailboxBindings.Add(type, kvp.Value.GetString());
             }
+            #endif
 
             _defaultMailboxConfig = Settings.Config.GetConfig(DefaultMailboxId);
             _defaultStashCapacity = StashCapacityFromConfig(Dispatchers.DefaultDispatcherId, DefaultMailboxId);
@@ -86,7 +95,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="actorType">The type to check.</param>
         /// <returns><c>true</c> if this actor has a message queue type requirement. <c>false</c> otherwise.</returns>
-        public bool HasRequiredType(Type actorType)
+        public bool HasRequiredType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type actorType)
         {
             var interfaces = actorType.GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
@@ -106,7 +115,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="mailboxType">The type of the <see cref="MailboxType"/> to check.</param>
         /// <returns><c>true</c> if this mailboxtype produces queues. <c>false</c> otherwise.</returns>
-        public bool ProducesMessageQueue(Type mailboxType)
+        public bool ProducesMessageQueue([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type mailboxType)
         {
             var interfaces = mailboxType.GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
@@ -123,7 +132,7 @@ namespace Akka.Dispatch
 
         private string LookupId(Type queueType)
         {
-            if (!_mailboxBindings.TryGetValue(queueType, out string id))
+            if (!_mailboxBindings.TryGetValue(queueType, out var id))
                 throw new ConfigurationException($"Mailbox Mapping for [{queueType}] not configured");
             return id;
         }
@@ -154,7 +163,9 @@ namespace Akka.Dispatch
 
         // don't care if these happen twice
         private bool _mailboxSizeWarningIssued = false;
+        #if !AOT_ENABLED // we don't support mailboxes that use this config in AOT mode
         private bool _mailboxNonZeroPushTimeoutWarningIssued = false;
+        #endif
 
         private MailboxType LookupConfigurator(string id)
         {
@@ -167,6 +178,11 @@ namespace Akka.Dispatch
                     configurator = new BoundedMailbox(Settings, Config(id));
                 else
                 {
+                    #if AOT_ENABLED
+                    // In AOT mode, we cannot use reflection to load mailbox types.
+                    // TODO: add support for custom mailbox types via Setup classes
+                    throw new ConfigurationException($"Custom mailbox types are not supported in AOT mode. Cannot load mailbox type [{id}].");
+                    #else
                     if (!Settings.Config.HasPath(id)) throw new ConfigurationException($"Mailbox Type [{id}] not configured");
                     var conf = Config(id);
 
@@ -199,6 +215,7 @@ namespace Akka.Dispatch
                         throw new ArgumentException($"Cannot instantiate MailboxType {mailboxType}, defined in [{id}]. Make sure it has a public " +
                                                      "constructor with [Akka.Actor.Settings, Akka.Configuration.Config] parameters", ex);
                     }
+                    #endif
                 }
 
                 // add the new configurator to the mapping, or keep the existing if it was already added
@@ -227,7 +244,7 @@ namespace Akka.Dispatch
         /// </summary>
         /// <param name="actorType">TBD</param>
         /// <returns>TBD</returns>
-        public Type GetRequiredType(Type actorType)
+        public Type GetRequiredType([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.Interfaces)] Type actorType)
         {
             var interfaces = actorType.GetInterfaces();
             for (int i = 0; i < interfaces.Length; i++)
@@ -243,6 +260,9 @@ namespace Akka.Dispatch
         }
 
         private static readonly Type ProducesMessageQueueGenericType = typeof (IProducesMessageQueue<>);
+
+        [UnconditionalSuppressMessage("AssemblyFiles", "IL2075",
+            Justification = "All MailboxType implementations in Akka.NET have IProducesMessageQueue<T> interfaces preserved")]
         private Type GetProducedMessageQueueType(MailboxType mailboxType)
         {
             var interfaces = mailboxType.GetType().GetInterfaces();

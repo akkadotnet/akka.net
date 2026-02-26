@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Dispatch;
@@ -101,11 +102,23 @@ namespace Akka.Actor
             ProviderClass = ProviderSelectionType.Fqn;
             HasCluster = ProviderSelectionType.HasCluster;
 
+            #if AOT_ENABLED
+            var providerType = TypeHints.DefaultActorRefProviderType;
+            // log a warning if the configured provider does not match the AOT default
+            if (providerType.FullName != ProviderClass)
+            {
+                Console.WriteLine(
+                    "The configured actor provider [{0}] does not match the AOT default provider [{1}]. " +
+                    "Ensure that all types used by the configured provider are preserved for AOT compilation.",
+                    ProviderClass, providerType.FullName);
+            }
+            #else
             var providerType = Type.GetType(ProviderClass);
             if (providerType == null)
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid type name : '{ProviderClass}'");
             if (!typeof(IActorRefProvider).IsAssignableFrom(providerType))
                 throw new ConfigurationException($"'akka.actor.provider' is not a valid actor ref provider: '{ProviderClass}'");
+            #endif
 
             SupervisorStrategyClass = Config.GetString("akka.actor.guardian-supervisor-strategy", null);
 
@@ -139,6 +152,17 @@ namespace Akka.Actor
             }
             else
             {
+                #if AOT_ENABLED
+                StdoutLogger = new StandardOutLogger();
+                // log a warning
+                if (stdoutClassName != typeof(StandardOutLogger).FullName)
+                {
+                    Console.WriteLine(
+                        "The configured standard out logger [{0}] does not match the AOT default logger [{1}]. " +
+                        "Ensure that all types used by the configured logger are preserved for AOT compilation.",
+                        stdoutClassName, typeof(StandardOutLogger).FullName);
+                }
+                #else
                 var stdoutLoggerType = Type.GetType(stdoutClassName);
                 if (stdoutLoggerType == null)
                     throw new ArgumentException($"Could not load type of {stdoutClassName} for standard out logger.");
@@ -154,12 +178,13 @@ namespace Akka.Actor
                     throw new MissingMethodException(
                         "Standard out logger type must inherit from the MinimalLogger abstract class and have an empty constructor.");
                 }
+                #endif
             }
             
             // set the filter
             StdoutLogger!.Filter = LogFilter;
             
-            Loggers = Config.GetStringList("akka.loggers", new string[] { });
+            Loggers = Config.GetStringList("akka.loggers", []);
             LoggersDispatcher = Config.GetString("akka.loggers-dispatcher", null);
             LoggerStartTimeout = Config.GetTimeSpan("akka.logger-startup-timeout", null);
             LoggerAsyncStart = Config.GetBoolean("akka.logger-async-start", false);
@@ -171,6 +196,17 @@ namespace Akka.Actor
             }
             else
             {
+                #if AOT_ENABLED
+                LogFormatter = DefaultLogMessageFormatter.Instance;
+                // log a warning if the configured formatter does not match the AOT default
+                if (loggerFormatterName != typeof(DefaultLogMessageFormatter).FullName)
+                {
+                    Console.WriteLine(
+                        "The configured log message formatter [{0}] does not match the AOT default formatter [{1}]. " +
+                        "Ensure that all types used by the configured formatter are preserved for AOT compilation.",
+                        loggerFormatterName, typeof(DefaultLogMessageFormatter).FullName);
+                }
+                #else
                 var logFormatType = Type.GetType(loggerFormatterName);
                 if (logFormatType == null)
                     throw new ArgumentException($"Could not load type of {loggerFormatterName} for ILogMessageFormatter.");
@@ -199,6 +235,7 @@ namespace Akka.Actor
                             "Log message formatter must inherit from the ILogMessageFormatter and have an empty constructor.");
                     }
                 }
+                #endif
             }
 
             //handled

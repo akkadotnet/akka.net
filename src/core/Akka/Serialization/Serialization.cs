@@ -177,6 +177,27 @@ namespace Akka.Serialization
             _serializerDetails = system.Settings.Setup.Get<SerializationSetup>()
                 .Select(x => x.CreateSerializers(system)).GetOrElse(ImmutableHashSet<SerializerDetails>.Empty);
 
+            #if AOT_ENABLED
+            // In AOT mode, use hard-coded default serializer factories from TypeHints
+            // Custom serializers must be registered via SerializationSetup
+            foreach (var kvp in Actor.Internal.TypeHints.DefaultSerializerFactories)
+            {
+                var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
+                var serializer = kvp.Value(system, serializerConfig);
+                AddSerializer(kvp.Key, serializer);
+            }
+
+            // Log a warning if non-default serializers are configured in HOCON
+            foreach (var kvp in serializersConfig)
+            {
+                if (!Actor.Internal.TypeHints.DefaultSerializerFactories.ContainsKey(kvp.Key))
+                {
+                    system.Log.Warning(
+                        "Serializer '{0}' is configured in HOCON but is not supported in AOT mode. " +
+                        "Use SerializationSetup to register custom serializers in AOT scenarios.", kvp.Key);
+                }
+            }
+            #else
             foreach (var kvp in serializersConfig)
             {
                 var serializerTypeName = kvp.Value.GetString();
@@ -195,6 +216,7 @@ namespace Akka.Serialization
 
                 AddSerializer(kvp.Key, serializer);
             }
+            #endif
 
             // Add any serializers that are registered via the SerializationSetup
             // This has to be done here because SerializationSetup ALWAYS win.
@@ -203,6 +225,35 @@ namespace Akka.Serialization
                 AddSerializer(details.Alias, details.Serializer);
             }
 
+            #if AOT_ENABLED
+            // In AOT mode, use hard-coded default serializer bindings from TypeHints
+            // Custom serializer bindings must be registered via SerializationSetup
+            foreach (var kvp in Actor.Internal.TypeHints.DefaultSerializerBindings)
+            {
+                if (!_serializersByName.TryGetValue(kvp.Value, out var serializer))
+                {
+                    system.Log.Warning("Serialization binding to non existing serializer: '{0}'", kvp.Value);
+                    continue;
+                }
+                AddSerializationMap(kvp.Key, serializer);
+            }
+
+            // Log a warning if non-default serializer bindings are configured in HOCON
+            foreach (var kvp in serializerBindingConfig)
+            {
+                var typename = kvp.Key;
+                // Check if this is a default binding by comparing the type name
+                var isDefaultBinding = Actor.Internal.TypeHints.DefaultSerializerBindings.Keys
+                    .Any(t => t.FullName == typename || t.AssemblyQualifiedName == typename);
+
+                if (!isDefaultBinding)
+                {
+                    system.Log.Warning(
+                        "Serialization binding for type '{0}' is configured in HOCON but is not supported in AOT mode. " +
+                        "Use SerializationSetup to register custom serialization bindings in AOT scenarios.", typename);
+                }
+            }
+            #else
             foreach (var kvp in serializerBindingConfig)
             {
                 var typename = kvp.Key;
@@ -223,6 +274,7 @@ namespace Akka.Serialization
                 }
                 AddSerializationMap(messageType, serializer);
             }
+            #endif
 
             // Add any serializer bindings that are registered via the SerializationSetup
             // This has to be done here because SerializationSetup ALWAYS win.
