@@ -1,4 +1,4 @@
-#### 1.5.61 February 27th, 2026 ####
+#### 1.5.61 February 26th, 2026 ####
 
 Akka.NET v1.5.61 is a maintenance release with important bug fixes for Akka.Cluster.Sharding, Akka.Cluster, and Akka.Core.
 
