@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#nullable enable
 using System;
 using Akka.Actor;
 using Akka.Cluster.Metrics.Collectors;

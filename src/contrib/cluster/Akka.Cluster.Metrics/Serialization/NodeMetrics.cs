@@ -11,7 +11,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Util;
 
-#nullable enable
 namespace Akka.Cluster.Metrics.Serialization
 {
     internal sealed class NodeMetricsComparer: IEqualityComparer<NodeMetrics>

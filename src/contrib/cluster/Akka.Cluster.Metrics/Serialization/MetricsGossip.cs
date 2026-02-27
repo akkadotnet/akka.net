@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-#nullable enable
 using System.Collections.Immutable;
 using System.Linq;
 using Akka.Annotations;
