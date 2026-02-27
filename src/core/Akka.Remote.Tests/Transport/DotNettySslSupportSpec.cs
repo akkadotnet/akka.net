@@ -160,6 +160,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
+            var token = TestContext.Current.CancellationToken;
             Setup(ValidCertPath, Password);
 
             var probe = CreateTestProbe();
@@ -167,8 +168,8 @@ namespace Akka.Remote.Tests.Transport
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3), cancellationToken: token);
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100), cancellationToken: token);
         }
 
         [LocalFact(SkipLocal = "Racy in Azure AzDo CI/CD")]
@@ -198,13 +199,14 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Secure_transport_should_NOT_be_possible_between_systems_using_SSL_and_one_not_using_it()
         {
+            var token = TestContext.Current.CancellationToken;
             Setup(null, null);
 
             var probe = CreateTestProbe();
             await Assert.ThrowsAsync<RemoteTransportException>(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectNoMsgAsync();
+                await probe.ExpectNoMsgAsync(cancellationToken: token);
             });
         }
 

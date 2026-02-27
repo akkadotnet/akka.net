@@ -149,6 +149,7 @@ namespace Akka.Remote.Tests.Serialization
         [Fact]
         public async Task Serialization_of_ActorRef_in_remote_message_must_resolve_Address()
         {
+            var token = TestContext.Current.CancellationToken;
             System2.ActorOf(act =>
             {
                 act.ReceiveAny((o, context) => context.Sender.Tell(o));
@@ -156,23 +157,23 @@ namespace Akka.Remote.Tests.Serialization
 
             var echoSel = Sys.ActorSelection(new RootActorPath(System2Address) / "user" / "echo");
             echoSel.Tell(new Identify(1));
-            var echo = (await ExpectMsgAsync<ActorIdentity>()).Subject;
+            var echo = (await ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject;
 
             echo.Tell(new TestMessage(TestActor, echo));
-            var t1 = await ExpectMsgAsync<TestMessage>();
+            var t1 = await ExpectMsgAsync<TestMessage>(cancellationToken: token);
             t1.From.Should().Be(TestActor);
             t1.To.Should().Be(echo);
 
             echo.Tell(new JsonSerTestMessage(TestActor, echo));
-            var t2 = await ExpectMsgAsync<JsonSerTestMessage>();
+            var t2 = await ExpectMsgAsync<JsonSerTestMessage>(cancellationToken: token);
             t2.From.Should().Be(TestActor);
             t2.To.Should().Be(echo);
 
             echo.Tell(TestActor);
-            await ExpectMsgAsync(TestActor);
+            await ExpectMsgAsync(TestActor, cancellationToken: token);
 
             echo.Tell(echo);
-            await ExpectMsgAsync(echo);
+            await ExpectMsgAsync(echo, cancellationToken: token);
         }
 
         protected override void AfterAll()

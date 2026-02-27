@@ -588,6 +588,7 @@ namespace Akka.Remote.Tests
             var thisSystem = ActorSystem.Create("this-system", config);
             MuteSystem(thisSystem);
 
+            var token = TestContext.Current.CancellationToken;
             try
             {
                 // Set up a mock remote system using the test transport
@@ -599,7 +600,7 @@ namespace Akka.Remote.Tests
                     (new ActorAssociationEventListener(remoteTransportProbe)));
 
                 // Hijack associations through the test transport
-                await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(rawLocalAddress, rawRemoteAddress)));
+                await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(rawLocalAddress, rawRemoteAddress)), cancellationToken: token);
                 var testTransport = registry.TransportFor(rawLocalAddress).Value.Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
@@ -609,21 +610,21 @@ namespace Akka.Remote.Tests
                 dummySelection.Tell("ping", Sys.DeadLetters);
 
                 var remoteHandle =
-                    await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4));
+                    await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4), cancellationToken: token);
                 remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(_ => { }));
 
                 // Now we initiate an emulated inbound connection to the real system
                 var inboundHandleProbe = CreateTestProbe();
 
                 var inboundHandle =
-                    await remoteTransport.Associate(rawLocalAddress).WaitAsync(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+                    await remoteTransport.Associate(rawLocalAddress).WaitAsync(TimeSpan.FromSeconds(3), token);
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(inboundHandleProbe));
 
                 await AwaitAssertAsync(() =>
                 {
                     registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should()
                         .NotBeNull();
-                });
+                }, cancellationToken: token);
 
                 var pduCodec = new AkkaPduProtobuffCodec(Sys);
 
@@ -633,17 +634,17 @@ namespace Akka.Remote.Tests
                 inboundHandle.Write(handshakePacket);
 
                 // No disassociation now, the connection is still stashed
-                await inboundHandleProbe.ExpectNoMsgAsync(1000);
+                await inboundHandleProbe.ExpectNoMsgAsync(1000, token);
 
                 // Quarantine unrelated connection
                 RARP.For(thisSystem).Provider.Quarantine(remoteAddress, -1);
-                await inboundHandleProbe.ExpectNoMsgAsync(1000);
+                await inboundHandleProbe.ExpectNoMsgAsync(1000, token);
 
                 // Quarantine the connection
                 RARP.For(thisSystem).Provider.Quarantine(remoteAddress, remoteUID);
 
                 // Even though the connection is stashed it will be disassociated
-                await inboundHandleProbe.ExpectMsgAsync<Disassociated>();
+                await inboundHandleProbe.ExpectMsgAsync<Disassociated>(cancellationToken: token);
             }
             finally
             {
@@ -654,12 +655,13 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task Drop_sent_messages_over_payload_size()
         {
+            var token = TestContext.Current.CancellationToken;
             var oversized = ByteStringOfSize(MaxPayloadBytes + 1);
             await EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload sent to ")
                 .ExpectOneAsync(async () =>
                 {
-                    await VerifySendAsync(oversized, async () => { await ExpectNoMsgAsync(); });
-                });
+                    await VerifySendAsync(oversized, async () => { await ExpectNoMsgAsync(cancellationToken: token); });
+                }, token);
         }
 
         /// <summary>
@@ -680,18 +682,20 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task Drop_received_messages_over_payload_size()
         {
+            var token = TestContext.Current.CancellationToken;
             await EventFilter.Exception<OversizedPayloadException>(start: "Discarding oversized payload received")
                 .ExpectOneAsync(async () =>
                 {
-                    await VerifySendAsync(MaxPayloadBytes + 1, async () => { await ExpectNoMsgAsync(); });
-                });
+                    await VerifySendAsync(MaxPayloadBytes + 1, async () => { await ExpectNoMsgAsync(cancellationToken: token); });
+                }, token);
         }
 
         [Fact]
         public async Task Nobody_should_be_converted_back_to_its_singleton()
         {
+            var token = TestContext.Current.CancellationToken;
             _here.Tell(ActorRefs.Nobody, TestActor);
-            await ExpectMsgAsync(ActorRefs.Nobody, TimeSpan.FromSeconds(1.5));
+            await ExpectMsgAsync(ActorRefs.Nobody, TimeSpan.FromSeconds(1.5), cancellationToken: token);
         }
 
         [Fact]

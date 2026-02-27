@@ -6,9 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.Remote.Transport.DotNetty;
@@ -73,6 +71,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_active_endpoints_upon_outbound_disassociate()
         {
+            var token = TestContext.Current.CancellationToken;
             var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
             Assert.False(config.IsNullOrEmpty());
 
@@ -92,11 +91,11 @@ namespace Akka.Remote.Tests.Transport
                 // t1 --> t2 association
                 var handle = await t1.Associate(c2.Item1);
                 handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p1));
-                var inboundHandle = (await p2.ExpectMsgAsync<InboundAssociation>()).Association; // wait for the inbound association handle to show up
+                var inboundHandle = (await p2.ExpectMsgAsync<InboundAssociation>(cancellationToken: token)).Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 2));
-                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 2));
+                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 2), cancellationToken: token);
+                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 2), cancellationToken: token);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -105,9 +104,9 @@ namespace Akka.Remote.Tests.Transport
                 handle.Disassociate("Dissociation test", Log);
 
                 // verify that the connections are terminated
-                await p1.ExpectMsgAsync<Disassociated>();
-                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 1));
-                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 1));
+                await p1.ExpectMsgAsync<Disassociated>(cancellationToken: token);
+                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 1), cancellationToken: token);
+                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 1), cancellationToken: token);
 
                 // verify that the connection channels were terminated on both ends
                 chan1.CloseCompletion.IsCompleted.Should().BeTrue();
@@ -123,6 +122,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_active_endpoints_upon_outbound_shutdown()
         {
+            var token = TestContext.Current.CancellationToken;
             var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
             Assert.False(config.IsNullOrEmpty());
 
@@ -142,11 +142,11 @@ namespace Akka.Remote.Tests.Transport
                 // t1 --> t2 association
                 var handle = await t1.Associate(c2.Item1);
                 handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p1));
-                var inboundHandle = (await p2.ExpectMsgAsync<InboundAssociation>()).Association; // wait for the inbound association handle to show up
+                var inboundHandle = (await p2.ExpectMsgAsync<InboundAssociation>(cancellationToken: token)).Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 2));
-                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 2));
+                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 2), cancellationToken: token);
+                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 2), cancellationToken: token);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -154,10 +154,10 @@ namespace Akka.Remote.Tests.Transport
                 //  shutdown remoting on t1
                 await t1.Shutdown();
 
-                await p2.ExpectMsgAsync<Disassociated>();
+                await p2.ExpectMsgAsync<Disassociated>(cancellationToken: token);
                 // verify that the connections are terminated
-                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 0), null, message: $"Expected 0 open connection but found {t1.ConnectionGroup.Count}");
-                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 1), null,message: $"Expected 1 open connection but found {t2.ConnectionGroup.Count}");
+                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 0), null, message: $"Expected 0 open connection but found {t1.ConnectionGroup.Count}", cancellationToken: token);
+                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 1), null, message: $"Expected 1 open connection but found {t2.ConnectionGroup.Count}", cancellationToken: token);
 
                 // verify that the connection channels were terminated on both ends
                 chan1.CloseCompletion.IsCompleted.Should().BeTrue();
@@ -173,6 +173,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_active_endpoints_upon_inbound_disassociate()
         {
+            var token = TestContext.Current.CancellationToken;
             var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
             Assert.False(config.IsNullOrEmpty());
 
@@ -192,11 +193,11 @@ namespace Akka.Remote.Tests.Transport
                 // t1 --> t2 association
                 var handle = await t1.Associate(c2.Item1);
                 handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p1));
-                var inboundHandle = (await p2.ExpectMsgAsync<InboundAssociation>()).Association; // wait for the inbound association handle to show up
+                var inboundHandle = (await p2.ExpectMsgAsync<InboundAssociation>(cancellationToken: token)).Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 2));
-                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 2));
+                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 2), cancellationToken: token);
+                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 2), cancellationToken: token);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -205,8 +206,8 @@ namespace Akka.Remote.Tests.Transport
                 inboundHandle.Disassociate("Dissociation test", Log);
 
                 // verify that the connections are terminated
-                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 1), null, message: $"Expected 1 open connection but found {t1.ConnectionGroup.Count}");
-                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 1), null, message: $"Expected 1 open connection but found {t2.ConnectionGroup.Count}");
+                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 1), null, message: $"Expected 1 open connection but found {t1.ConnectionGroup.Count}", cancellationToken: token);
+                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 1), null, message: $"Expected 1 open connection but found {t2.ConnectionGroup.Count}", cancellationToken: token);
 
                 // verify that the connection channels were terminated on both ends
                 chan1.CloseCompletion.IsCompleted.Should().BeTrue();
@@ -222,6 +223,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_active_endpoints_upon_inbound_shutdown()
         {
+            var token = TestContext.Current.CancellationToken;
             var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
             Assert.False(config.IsNullOrEmpty());
 
@@ -241,11 +243,11 @@ namespace Akka.Remote.Tests.Transport
                 // t1 --> t2 association
                 var handle = await t1.Associate(c2.Item1);
                 handle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p1));
-                var inboundHandle = (await p2.ExpectMsgAsync<InboundAssociation>()).Association; // wait for the inbound association handle to show up
+                var inboundHandle = (await p2.ExpectMsgAsync<InboundAssociation>(cancellationToken: token)).Association; // wait for the inbound association handle to show up
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(p2));
 
-                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 2));
-                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 2));
+                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 2), cancellationToken: token);
+                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 2), cancellationToken: token);
 
                 var chan1 = t1.ConnectionGroup.Single(x => !x.Id.Equals(t1.ServerChannel.Id));
                 var chan2 = t2.ConnectionGroup.Single(x => !x.Id.Equals(t2.ServerChannel.Id));
@@ -254,8 +256,8 @@ namespace Akka.Remote.Tests.Transport
                 await t2.Shutdown();
 
                 // verify that the connections are terminated
-                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 1), null, message: $"Expected 1 open connection but found {t1.ConnectionGroup.Count}");
-                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 0), null, message: $"Expected 0 open connection but found {t2.ConnectionGroup.Count}");
+                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 1), null, message: $"Expected 1 open connection but found {t1.ConnectionGroup.Count}", cancellationToken: token);
+                await AwaitConditionAsync(() => Task.FromResult(t2.ConnectionGroup.Count == 0), null, message: $"Expected 0 open connection but found {t2.ConnectionGroup.Count}", cancellationToken: token);
 
                 // verify that the connection channels were terminated on both ends
                 chan1.CloseCompletion.IsCompleted.Should().BeTrue();
@@ -271,6 +273,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task DotNettyTcpTransport_should_cleanly_terminate_endpoints_upon_failed_outbound_connection()
         {
+            var token = TestContext.Current.CancellationToken;
             var config = Sys.Settings.Config.GetConfig("akka.remote.dot-netty.tcp");
             Assert.False(config.IsNullOrEmpty());
 
@@ -290,7 +293,7 @@ namespace Akka.Remote.Tests.Transport
                 });
 
 
-                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 1));
+                await AwaitConditionAsync(() => Task.FromResult(t1.ConnectionGroup.Count == 1), cancellationToken: token);
             }
             finally
             {

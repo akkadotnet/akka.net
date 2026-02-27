@@ -74,6 +74,7 @@ akka {{
         [Fact]
         public async Task Secure_transport_should_be_possible_between_systems_sharing_the_same_certificate()
         {
+            var token = TestContext.Current.CancellationToken;
             Setup(true);
 
             var probe = CreateTestProbe();
@@ -81,20 +82,21 @@ akka {{
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3), cancellationToken: token);
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100), cancellationToken: token);
         }
 
         [Fact]
         public async Task Secure_transport_should_NOT_be_possible_between_systems_using_SSL_and_one_not_using_it()
         {
+            var token = TestContext.Current.CancellationToken;
             Setup(false);
 
             var probe = CreateTestProbe();
             await Assert.ThrowsAsync<RemoteTransportException>(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectNoMsgAsync();
+                await probe.ExpectNoMsgAsync(cancellationToken: token);
             });
         }
 
@@ -243,6 +245,7 @@ akka {{
         [Fact(DisplayName = "DotNettySslSetup with CustomValidator that accepts should allow connection")]
         public async Task CustomValidator_that_accepts_should_allow_connection()
         {
+            var token = TestContext.Current.CancellationToken;
             var validatorCalled = false;
 
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
@@ -284,8 +287,8 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3), cancellationToken: token);
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100), cancellationToken: token);
 
             // Verify that CustomValidator was actually called
             Assert.True(validatorCalled, "CustomValidator should have been invoked during TLS handshake");
@@ -294,6 +297,7 @@ akka {
         [Fact(DisplayName = "DotNettySslSetup with CustomValidator that rejects should prevent connection")]
         public async Task CustomValidator_that_rejects_should_prevent_connection()
         {
+            var token = TestContext.Current.CancellationToken;
             var validatorCalled = false;
 
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
@@ -334,7 +338,7 @@ akka {
 
             // Connection should fail due to custom validator rejection - TLS handshake fails, so message never arrives
             Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3), cancellationToken: token);
 
             // Verify that CustomValidator was actually called
             Assert.True(validatorCalled, "CustomValidator should have been invoked during TLS handshake");
@@ -412,6 +416,7 @@ akka {{
         [Fact(DisplayName = "CertificateValidation.PinnedCertificate should accept certificates with matching thumbprint")]
         public async Task PinnedCertificate_should_accept_matching_thumbprint()
         {
+            var token = TestContext.Current.CancellationToken;
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
 
             // Create validator that pins to this specific certificate
@@ -446,13 +451,14 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3), cancellationToken: token);
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100), cancellationToken: token);
         }
 
         [Fact(DisplayName = "CertificateValidation.PinnedCertificate should reject certificates with non-matching thumbprint")]
         public async Task PinnedCertificate_should_reject_non_matching_thumbprint()
         {
+            var token = TestContext.Current.CancellationToken;
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
 
             // Create validator that pins to a DIFFERENT thumbprint (connection should fail)
@@ -485,12 +491,13 @@ akka {
 
             // Connection should fail due to thumbprint mismatch
             Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3), cancellationToken: token);
         }
 
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should accept certificates with matching subject")]
         public async Task ValidateSubject_should_accept_matching_subject()
         {
+            var token = TestContext.Current.CancellationToken;
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
 
             // Create validator that accepts the certificate's actual subject
@@ -525,13 +532,14 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3), cancellationToken: token);
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100), cancellationToken: token);
         }
 
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should reject certificates with non-matching subject")]
         public async Task ValidateSubject_should_reject_non_matching_subject()
         {
+            var token = TestContext.Current.CancellationToken;
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
 
             // Create validator with a subject that won't match
@@ -564,7 +572,7 @@ akka {
 
             // Connection should fail due to subject mismatch
             Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3), cancellationToken: token);
         }
 
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should support wildcard patterns")]
@@ -605,6 +613,7 @@ akka {
         [Fact(DisplayName = "CertificateValidation.ValidateIssuer should accept certificates with matching issuer")]
         public async Task ValidateIssuer_should_accept_matching_issuer()
         {
+            var token = TestContext.Current.CancellationToken;
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
 
             // Create validator that accepts the certificate's actual issuer
@@ -639,13 +648,14 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3), cancellationToken: token);
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100), cancellationToken: token);
         }
 
         [Fact(DisplayName = "CertificateValidation.ChainPlusThen should combine chain validation with custom logic")]
         public async Task ChainPlusThen_should_combine_validation()
         {
+            var token = TestContext.Current.CancellationToken;
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
 
             // Create validator that does chain validation PLUS custom check
@@ -695,8 +705,8 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3), cancellationToken: token);
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100), cancellationToken: token);
 
             // Verify custom validation was actually called
             Assert.True(customCheckCalled, "Custom validation logic should have been invoked");
@@ -705,6 +715,7 @@ akka {
         [Fact(DisplayName = "CustomValidator should take precedence over validateCertificateHostname setting")]
         public async Task CustomValidator_should_override_hostname_validation_setting()
         {
+            var token = TestContext.Current.CancellationToken;
             var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
 
             // Create a custom validator that accepts everything
@@ -753,8 +764,8 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3), cancellationToken: token);
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100), cancellationToken: token);
 
             // Verify custom validator was called (proving it took precedence)
             Assert.True(customValidatorCalled, "CustomValidator should have been invoked, proving it takes precedence");

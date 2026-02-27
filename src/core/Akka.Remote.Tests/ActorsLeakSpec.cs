@@ -186,7 +186,7 @@ namespace Akka.Remote.Tests
                 {
                     var probe = CreateTestProbe(remoteSystem);
                     remoteSystem.ActorSelection(echoPath).Tell(new Identify(1), probe.Ref);
-                    (await probe.ExpectMsgAsync<ActorIdentity>()).Subject.ShouldNotBe(null);
+                    (await probe.ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject.ShouldNotBe(null);
 
                     // This will make sure that no SHUTDOWN message gets through
                     await RARP.For(Sys).Provider.Transport
@@ -200,8 +200,8 @@ namespace Akka.Remote.Tests
 
                 await EventFilter.Warning(contains: "Association with remote system").ExpectOneAsync(async () =>
                 {
-                    Assert.True(await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10)));
-                });
+                    Assert.True(await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10), token));
+                }, cancellationToken: token);
             }
 
             // Remote idle for too long case
@@ -217,14 +217,14 @@ namespace Akka.Remote.Tests
                 var probe = CreateTestProbe(idleRemoteSystem);
 
                 idleRemoteSystem.ActorSelection(echoPath).Tell(new Identify(1), probe.Ref);
-                (await probe.ExpectMsgAsync<ActorIdentity>()).Subject.ShouldNotBe(null);
+                (await probe.ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject.ShouldNotBe(null);
 
                 // Watch a remote actor - this results in system message traffic
                 Sys.ActorSelection(new RootActorPath(idleRemoteAddress) / "user" / "stoppable").Tell(new Identify(1));
-                var remoteActor = (await ExpectMsgAsync<ActorIdentity>()).Subject;
+                var remoteActor = (await ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject;
                 await WatchAsync(remoteActor);
                 remoteActor.Tell("stop");
-                await ExpectTerminatedAsync(remoteActor);
+                await ExpectTerminatedAsync(remoteActor, cancellationToken: token);
                 // All system messages have been acked now on this side
 
                 // This will make sure that no SHUTDOWN message gets through
@@ -239,19 +239,19 @@ namespace Akka.Remote.Tests
 
             await EventFilter.Warning(contains: "Association with remote system").ExpectOneAsync(async () =>
             {
-                Assert.True(await idleRemoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10)));
-            });
+                Assert.True(await idleRemoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10), token));
+            }, cancellationToken: token);
 
             /*
              * Wait for the ReliableDeliverySupervisor to receive its "TooLongIdle" message,
              * which will throw a HopelessAssociation wrapped around a TimeoutException.
              */
-            await EventFilter.Exception<TimeoutException>().ExpectOneAsync(() => { return Task.CompletedTask; });
+            await EventFilter.Exception<TimeoutException>().ExpectOneAsync(() => { return Task.CompletedTask; }, cancellationToken: token);
 
             await AwaitAssertAsync(() =>
             {
                 AssertActors(initialActors, targets.SelectMany(CollectLiveActors).ToImmutableHashSet());
-            }, 10.Seconds());
+            }, 10.Seconds(), cancellationToken: token);
         }
     }
 }

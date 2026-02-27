@@ -107,6 +107,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Client_side_tls_handshake_failure_should_shutdown_client()
         {
+            var token = TestContext.Current.CancellationToken;
             // Server has valid cert; client enforces validation so it should reject the self-signed server cert
             ActorSystem server = null;
             ActorSystem client = null;
@@ -136,7 +137,7 @@ namespace Akka.Remote.Tests.Transport
                 {
                     Assert.True(client.WhenTerminated.IsCompleted);
                     await Task.CompletedTask;
-                }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(200));
+                }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(200), cancellationToken: token);
             }
             finally
             {
