@@ -156,7 +156,7 @@ namespace Akka.Cluster.Metrics
         /// <param name="routerDispatcher">Dispatcher to use for the router head actor, which handles supervision, death watch and router management messages</param>
         /// <param name="usePoolDispatcher"></param>
         public AdaptiveLoadBalancingPool(IMetricsSelector? metricsSelector = null, int nrOfInstances = 0, SupervisorStrategy? supervisorStrategy = null,
-                                         string? routerDispatcher = null, bool usePoolDispatcher = false) 
+                                         string? routerDispatcher = null, bool usePoolDispatcher = false)
             : base(nrOfInstances, null, supervisorStrategy ?? DefaultSupervisorStrategy, routerDispatcher ?? Dispatchers.DefaultDispatcherId, usePoolDispatcher)
         {
             MetricsSelector =  metricsSelector ?? MixMetricsSelector.Instance;
@@ -310,7 +310,7 @@ namespace Akka.Cluster.Metrics
         /// <param name="routerDispatcher">
         /// Dispatcher to use for the router head actor, which handles router management messages
         /// </param>
-        public AdaptiveLoadBalancingGroup(IMetricsSelector? metricsSelector = null, IEnumerable<string>? paths = null, string? routerDispatcher = null) 
+        public AdaptiveLoadBalancingGroup(IMetricsSelector? metricsSelector = null, IEnumerable<string>? paths = null, string? routerDispatcher = null)
             : base(paths, routerDispatcher ?? Dispatchers.DefaultDispatcherId)
         {
             _metricsSelector = metricsSelector ?? MixMetricsSelector.Instance;
