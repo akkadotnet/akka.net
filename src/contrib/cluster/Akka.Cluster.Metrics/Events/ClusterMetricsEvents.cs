@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System.Collections.Immutable;
 using Akka.Cluster.Metrics.Serialization;
 

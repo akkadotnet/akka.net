@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Diagnostics;
 using Akka.Cluster.Metrics.Serialization;
