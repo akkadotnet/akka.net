@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -21,6 +22,9 @@ namespace Akka.Tests.Actor.Stash
     public class ActorWithStashSpec : AkkaSpec
     {
         private static StateObj _state;
+        
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public ActorWithStashSpec()
         {
             _state = new StateObj(this);
@@ -100,7 +104,7 @@ namespace Akka.Tests.Actor.Stash
             var slaveProps = Props.Create(() => new SlaveActor(restartLatch, hasMsgLatch, "stashme"));
 
             //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = await boss.Ask<IActorRef>(slaveProps).WithTimeout(TestKitSettings.DefaultTimeout);
+            var slave = await boss.Ask<IActorRef>(slaveProps).WaitAsync(TestKitSettings.DefaultTimeout, Token);
 
             //send a message that will be stashed
             slave.Tell("stashme");
@@ -123,7 +127,7 @@ namespace Akka.Tests.Actor.Stash
             var slaveProps = Props.Create(() => new ActorsThatClearsStashOnPreRestart(restartLatch));
 
             //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = await boss.Ask<IActorRef>(slaveProps).WithTimeout(TestKitSettings.DefaultTimeout);;
+            var slave = await boss.Ask<IActorRef>(slaveProps).WaitAsync(TestKitSettings.DefaultTimeout, Token);
 
             //send messages that will be stashed
             slave.Tell("stashme 1");

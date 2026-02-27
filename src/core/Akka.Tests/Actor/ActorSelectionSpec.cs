@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Actor.Dsl;
@@ -30,6 +31,8 @@ namespace Akka.Tests.Actor
             akka.loglevel=DEBUG
             ";
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         private readonly IActorRef _c1;
         private readonly IActorRef _c2;
         private readonly IActorRef _c21;
@@ -526,10 +529,10 @@ namespace Akka.Tests.Actor
         {
             var creator = CreateTestProbe();
             var top = Sys.ActorOf(Props, "a");
-            var b1 = await top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3));
-            var b2 = await top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3));
-            var c = await b2.Ask<IActorRef>(new Create("c"), TimeSpan.FromSeconds(3));
-            var d = await c.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3));
+            var b1 = await top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3), Token);
+            var b2 = await top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3), Token);
+            var c = await b2.Ask<IActorRef>(new Create("c"), TimeSpan.FromSeconds(3), Token);
+            var d = await c.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3), Token);
 
             var probe = CreateTestProbe();
             Sys.ActorSelection("/user/a/*").Tell(new Identify(1), probe.Ref);
@@ -578,12 +581,12 @@ namespace Akka.Tests.Actor
         {
             var creator = CreateTestProbe();
             var top = Sys.ActorOf(Props, "a");
-            var b1 = await top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3));
-            var b2 = await top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3));
-            var b3 = await top.Ask<IActorRef>(new Create("b3"), TimeSpan.FromSeconds(3));
-            var c1 = await b2.Ask<IActorRef>(new Create("c1"), TimeSpan.FromSeconds(3));
-            var c2 = await b2.Ask<IActorRef>(new Create("c2"), TimeSpan.FromSeconds(3));
-            var d = await c1.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3));
+            var b1 = await top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3), Token);
+            var b2 = await top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3), Token);
+            var b3 = await top.Ask<IActorRef>(new Create("b3"), TimeSpan.FromSeconds(3), Token);
+            var c1 = await b2.Ask<IActorRef>(new Create("c1"), TimeSpan.FromSeconds(3), Token);
+            var c2 = await b2.Ask<IActorRef>(new Create("c2"), TimeSpan.FromSeconds(3), Token);
+            var d = await c1.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3), Token);
 
             var probe = CreateTestProbe();
 

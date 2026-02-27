@@ -83,6 +83,8 @@ namespace Akka.Tests.Actor.Scheduler
 
         public static readonly Config Config = ConfigurationFactory.ParseString("akka.scheduler.implementation = \""+ typeof(ShutdownScheduler).AssemblyQualifiedName + "\"");
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Fact]
         public async Task ActorSystem_must_terminate_scheduler_on_shutdown()
         {
@@ -92,12 +94,13 @@ namespace Akka.Tests.Actor.Scheduler
                 sys = ActorSystem.Create("SchedulerShutdownSys1", Config);
                 var scheduler = (ShutdownScheduler)sys.Scheduler;
                 var currentCounter = scheduler.Shutdown.Current;
-                (await sys.Terminate().AwaitWithTimeout(sys.Settings.SchedulerShutdownTimeout)).Should().BeTrue();
+                (await sys.Terminate().AwaitWithTimeout(sys.Settings.SchedulerShutdownTimeout, Token)).Should().BeTrue();
                 (scheduler.Shutdown.Current).Should().Be(currentCounter + 1);
             }
             finally
             {
-                await sys?.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(5));
+                if(sys is not null)
+                    await sys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(5), Token);
             }
         }
 
@@ -111,18 +114,19 @@ namespace Akka.Tests.Actor.Scheduler
                 sys = ActorSystem.Create("SchedulerShutdownSys1", Config);
                 var scheduler = (ShutdownScheduler)sys.Scheduler;
                 sys.Scheduler.Advanced.ScheduleRepeatedly(TimeSpan.FromMilliseconds(0), TimeSpan.FromMilliseconds(10), () => i++);
-                await Task.Delay(100); // give the scheduler a chance to start and run
+                await Task.Delay(100, Token); // give the scheduler a chance to start and run
                 var currentCounter = scheduler.Shutdown.Current;
-                (await sys.Terminate().AwaitWithTimeout(sys.Settings.SchedulerShutdownTimeout)).Should().BeTrue();
+                (await sys.Terminate().AwaitWithTimeout(sys.Settings.SchedulerShutdownTimeout, Token)).Should().BeTrue();
                 (scheduler.Shutdown.Current).Should().Be(currentCounter + 1);
                 var stoppedValue = i;
                 stoppedValue.Should().BeGreaterThan(0, "should have incremented at least once");
-                await Task.Delay(100);
+                await Task.Delay(100, Token);
                 i.Should().Be(stoppedValue, "Scheduler shutdown; should not still be incrementing values.");
             }
             finally
             {
-                sys?.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(5));
+                if(sys is not null)
+                    await sys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(5), Token);
             }
         }
 
@@ -131,7 +135,7 @@ namespace Akka.Tests.Actor.Scheduler
         {
             ActorSystem sys = ActorSystem.Create("SchedulerShutdownSys2");
             Assert.True(sys.Scheduler is IDisposable);
-            await sys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(5));
+            await sys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(5), Token);
         }
 
 
@@ -159,11 +163,11 @@ namespace Akka.Tests.Actor.Scheduler
             ActorSystem sys = ActorSystem.Create("SchedulerShutdownSys3");
             var receiver = sys.ActorOf(Props.Create(() => new MyScheduledActor()));
             sys.Scheduler.ScheduleTellOnce(0, receiver, "set", ActorRefs.NoSender);
-            await Task.Delay(50); // let the scheduler run
-            var received = await receiver.Ask<bool>("get", TimeSpan.FromSeconds(3));
+            await Task.Delay(50, Token); // let the scheduler run
+            var received = await receiver.Ask<bool>("get", TimeSpan.FromSeconds(3), Token);
             Assert.True(received);
 
-            var terminated = await sys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(5));
+            var terminated = await sys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(5), Token);
             if (!terminated)
                 Assert.Fail("Expected ActorSystem to terminate within 5s. Took longer.");
 

@@ -14,13 +14,14 @@ using Akka.Actor.Internal;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
-using Akka.Tests.Util;
 using Xunit;
 
 namespace Akka.Tests.Actor
 {
     public class InboxSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         private readonly Inbox _inbox;
 
         public InboxSpec()
@@ -65,7 +66,7 @@ namespace Akka.Tests.Actor
             _inbox.Receiver.Tell("hello");
             _inbox.Receiver.Tell("world");
 
-            Task.WaitAll(tasks.Cast<Task>().ToArray());
+            Task.WaitAll(tasks.Cast<Task>().ToArray(), Token);
 
             tasks[0].Result.ShouldBe(42);
             tasks[1].Result.ShouldBe("world");
@@ -169,7 +170,7 @@ namespace Akka.Tests.Actor
         public async Task Inbox_Receive_will_timeout_gracefully_if_timeout_is_already_expired()
         {
             var task = _inbox.ReceiveAsync(TimeSpan.FromSeconds(-1));
-            await Assert.ThrowsAnyAsync<Exception>(() => task.AwaitWithTimeout(TimeSpan.FromMilliseconds(1000)));
+            await Assert.ThrowsAnyAsync<Exception>(() => task.AwaitWithTimeout(TimeSpan.FromMilliseconds(1000), Token));
         }
     }
 }

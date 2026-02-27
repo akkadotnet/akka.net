@@ -279,12 +279,14 @@ namespace Akka.Tests.Dispatch
 
     public class ActorAsyncAwaitSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Fact]
         public async Task UntypedActors_should_be_able_to_async_await_ask_message_loop()
         {
             var actor = Sys.ActorOf(Props.Create<UntypedAsyncAwaitActor>(), "Worker");
             var asker = Sys.ActorOf(Props.Create(() => new UntypedAsker(actor)), "Asker");
-            var task = asker.Ask("start", TimeSpan.FromSeconds(5));
+            var task = asker.Ask("start", TimeSpan.FromSeconds(5), Token);
             actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
@@ -294,7 +296,7 @@ namespace Akka.Tests.Dispatch
         public async Task Actors_should_be_able_to_async_await_in_message_loop()
         {
             var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>());
-            var task = actor.Ask<string>("start", TimeSpan.FromSeconds(5));
+            var task = actor.Ask<string>("start", TimeSpan.FromSeconds(5), Token);
             actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
@@ -305,7 +307,7 @@ namespace Akka.Tests.Dispatch
         {
             var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>(), "Worker");
             var asker = Sys.ActorOf(Props.Create(() => new Asker(actor)), "Asker");
-            var task = asker.Ask("start", TimeSpan.FromSeconds(5));
+            var task = asker.Ask("start", TimeSpan.FromSeconds(5), Token);
             actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
@@ -316,7 +318,7 @@ namespace Akka.Tests.Dispatch
         {
             var actor = Sys.ActorOf(Props.Create<AsyncAwaitActor>().WithDispatcher("akka.actor.task-dispatcher"), "Worker");
             var asker = Sys.ActorOf(Props.Create(() => new BlockingAsker(actor)).WithDispatcher("akka.actor.task-dispatcher"), "Asker");
-            var task = asker.Ask("start", TimeSpan.FromSeconds(5));
+            var task = asker.Ask("start", TimeSpan.FromSeconds(5), Token);
             actor.Tell(123, ActorRefs.NoSender);
             var res = await task;
             Assert.Equal("done", res);
@@ -326,7 +328,7 @@ namespace Akka.Tests.Dispatch
         public async Task Actors_should_be_able_to_block_ask_self_message_loop()
         {
             var asker = Sys.ActorOf(Props.Create(() => new BlockingAskSelf()), "Asker");
-            var task = asker.Ask("start", TimeSpan.FromSeconds(5));
+            var task = asker.Ask("start", TimeSpan.FromSeconds(5), Token);
             var res = await task;
             Assert.Equal("done", res);
         }
@@ -343,7 +345,7 @@ namespace Akka.Tests.Dispatch
         public async Task Actors_should_be_able_to_use_ContinueWith()
         {
             var asker = Sys.ActorOf(Props.Create<AsyncTplActor>());
-            var res = await asker.Ask("start", TimeSpan.FromSeconds(5));
+            var res = await asker.Ask("start", TimeSpan.FromSeconds(5), Token);
             Assert.Equal("done", res);
         }
 
@@ -360,7 +362,7 @@ namespace Akka.Tests.Dispatch
         public async Task Actors_should_be_able_to_suspend_reentrancy()
         {
             var asker = Sys.ActorOf(Props.Create(() => new SuspendActor()));
-            var res = await asker.Ask<int>("start", TimeSpan.FromSeconds(5));
+            var res = await asker.Ask<int>("start", TimeSpan.FromSeconds(5), Token);
             res.ShouldBe(0);
         }
 
@@ -374,7 +376,7 @@ namespace Akka.Tests.Dispatch
                 asker.Tell("msg #" + i);
             }
 
-            var res = await asker.Ask<string>("stop", TimeSpan.FromSeconds(5));
+            var res = await asker.Ask<string>("stop", TimeSpan.FromSeconds(5), Token);
             res.ShouldBe("done");
         }
 
@@ -420,7 +422,7 @@ namespace Akka.Tests.Dispatch
 
             actor.Tell("hello");
 
-            var lastMessage = await actor.Ask(123);
+            var lastMessage = await actor.Ask(123, Token);
 
             lastMessage.ShouldBe("hello");
         }

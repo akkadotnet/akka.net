@@ -30,21 +30,13 @@ namespace Akka.Tests.Util
             // TODO: Align with JVM Akka Generator
             public static Arbitrary<ByteString> ByteStrings()
             {
-                return Arb.From(ArbMap.Default.GeneratorFor<byte[]>().Select(ByteString.CopyFrom));
-            }
-        
-            /*
-            public static Arbitrary<ByteString> ByteStrings()
-            {
                 return Arb.From(Arb.Generate<byte[]>().Select(ByteString.CopyFrom));
             }
-            */
         }
 
         public ByteStringSpec()
         {
-            ArbMap.Default = ArbMap.Merge(ArbMap.Default, typeof(Generators));
-            //Arb.Register<Generators>();
+            Arb.Register<Generators>();
         }
 
         [Fact]

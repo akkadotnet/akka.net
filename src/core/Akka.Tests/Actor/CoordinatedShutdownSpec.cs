@@ -12,6 +12,7 @@ using Akka.Util.Internal;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.TestKit.Extensions;
@@ -23,6 +24,8 @@ namespace Akka.Tests.Actor
 {
     public class CoordinatedShutdownSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public ExtendedActorSystem ExtSys => Sys.AsInstanceOf<ExtendedActorSystem>();
 
         private Phase Phase(params string[] dependsOn)
@@ -397,7 +400,7 @@ namespace Akka.Tests.Actor
         public async Task CoordinatedShutdown_must_terminate_ActorSystem()
         {
             (await CoordinatedShutdown.Get(Sys).Run(customReason)
-                .AwaitWithTimeout(TimeSpan.FromSeconds(10))).Should().BeTrue();
+                .AwaitWithTimeout(TimeSpan.FromSeconds(10), Token)).Should().BeTrue();
 
             Sys.WhenTerminated.IsCompleted.Should().BeTrue();
             CoordinatedShutdown.Get(Sys).ShutdownReason.Should().BeEquivalentTo(customReason);

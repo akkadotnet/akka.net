@@ -8,6 +8,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
@@ -106,6 +107,8 @@ namespace Akka.Tests
             }
         }
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Fact(DisplayName = "invoke preRestart, preStart, postRestart when using OneForOneStrategy")]
         public async Task Actor_lifecycle_test1()
         {
@@ -113,7 +116,7 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTestActor(TestActor, id, generationProvider));
-            var restarter = await supervisor.Ask<IActorRef>(restarterProps);
+            var restarter = await supervisor.Ask<IActorRef>(restarterProps, Token);
 
             await ExpectMsgAsync(("preStart", id, 0));
             restarter.Tell(Kill.Instance);
@@ -144,7 +147,7 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();            
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(TestActor, id, generationProvider));
-            var restarter = await supervisor.Ask<IActorRef>(restarterProps);
+            var restarter = await supervisor.Ask<IActorRef>(restarterProps, Token);
 
             await ExpectMsgAsync(("preStart", id, 0));
             restarter.Tell(Kill.Instance);
@@ -175,7 +178,7 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();            
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(TestActor, id, generationProvider));
-            var restarter = await supervisor.Ask<IInternalActorRef>(restarterProps);
+            var restarter = await supervisor.Ask<IInternalActorRef>(restarterProps, Token);
 
             await ExpectMsgAsync(("preStart", id, 0));
             restarter.Tell("status");
@@ -359,12 +362,12 @@ namespace Akka.Tests
             //we need to wait for the child actor to unregister itself from the parent.
             //this is done after PostStop so we have no way to wait for it
             //ideas?
-            await Task.Delay(100);
+            await Task.Delay(100, Token);
             supervisor.Tell(new SupervisorTestActor.Count());
             await ExpectMsgAsync(1);
             supervisor.Tell(new SupervisorTestActor.Spawn() { Name = names[2] });
             await ExpectMsgAsync(("Created", names[2]));
-            await Task.Delay(100);
+            await Task.Delay(100, Token);
             supervisor.Tell(new SupervisorTestActor.Count());
             await ExpectMsgAsync(2);
             supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[0] });
@@ -372,7 +375,7 @@ namespace Akka.Tests
             supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[2] });
             await ExpectMsgAsync(("Terminated", names[2]));
 
-            await Task.Delay(100);
+            await Task.Delay(100, Token);
             supervisor.Tell(new SupervisorTestActor.Count());
             await ExpectMsgAsync(0);
         }

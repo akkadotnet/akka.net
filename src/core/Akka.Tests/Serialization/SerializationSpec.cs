@@ -6,15 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
 using System.Runtime.Serialization;
-using System.Text.RegularExpressions;
+using System.Threading;
 using Akka.Actor;
 using Akka.Configuration;
-using Akka.Dispatch.SysMsg;
 using Akka.Routing;
 using Akka.Serialization;
 using Akka.TestKit;
@@ -164,6 +160,8 @@ namespace Akka.Tests.Serialization
             public IActorRef ActorRef { get; set; }
         }
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Fact]
         public void Can_serialize_address_message()
         {
@@ -523,7 +521,7 @@ namespace Akka.Tests.Serialization
         {
             Sys.EventStream.Subscribe(TestActor, typeof(object));
             var empty = Sys.ActorOf<EmptyActor>();
-            empty.Ask("hello");
+            empty.Ask("hello", Token);
             var f = ExpectMsg<FutureActorRef<object>>();
 
 

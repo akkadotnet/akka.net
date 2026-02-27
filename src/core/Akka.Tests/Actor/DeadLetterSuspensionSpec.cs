@@ -49,6 +49,8 @@ namespace Akka.Tests.Actor
             }
         }
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         private static readonly Config Config = ConfigurationFactory.ParseString(@"
             akka.loglevel = INFO
             akka.log-dead-letters = 4
@@ -102,7 +104,7 @@ namespace Akka.Tests.Actor
             _droppingActor.Tell(6);
 
             // let suspend-duration elapse
-            await Task.Delay(2050);
+            await Task.Delay(2050, Token);
 
             // re-enabled
             await EventFilter

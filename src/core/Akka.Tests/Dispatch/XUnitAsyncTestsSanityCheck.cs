@@ -5,12 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.TestKit;
 using Xunit;
@@ -19,6 +16,8 @@ namespace Akka.Tests.Dispatch
 {
 	public class XUnitAsyncTestsSanityCheck : AkkaSpec
 	{
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
 		[Fact]
 		public async Task Async_tests_should_not_lose_ambient_context()
 		{
@@ -35,7 +34,7 @@ namespace Akka.Tests.Dispatch
 			for (var t = 0; t < 1000; t++)
 			{
 				Assert.Equal(ambientContext, InternalCurrentActorCellKeeper.Current);
-				await Task.Delay(1);
+				await Task.Delay(1, Token);
 			}
 			await Task.WhenAll(backgroundOps);
 		}

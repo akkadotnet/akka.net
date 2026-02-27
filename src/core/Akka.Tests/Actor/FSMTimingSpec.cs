@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -21,6 +22,8 @@ namespace Akka.Tests.Actor
 {
     public class FSMTimingSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public IActorRef FSM { get; }
 
         public FSMTimingSpec()
@@ -144,7 +147,7 @@ namespace Akka.Tests.Actor
             FSM.Tell(Tick.Instance);
             await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestCancelStateTimerInNamedTimerMessage));
             await ExpectMsgAsync<Tick>(500.Milliseconds());
-            await Task.Delay(200.Milliseconds());
+            await Task.Delay(200.Milliseconds(), Token);
             Resume(FSM);
             await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestCancelStateTimerInNamedTimerMessage, FsmState.TestCancelStateTimerInNamedTimerMessage2), 500.Milliseconds());
             FSM.Tell(Cancel.Instance);

@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Routing;
@@ -133,6 +134,8 @@ namespace Akka.Tests.Routing
             }
         }
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         private async Task<int> RouteeSize(IActorRef router)
         {
             return (await router.Ask<Routees>(new GetRoutees())).Members.Count();
@@ -185,7 +188,7 @@ namespace Akka.Tests.Routing
             {
                 for (int k = 0; k < connectionCount; k++)
                 {
-                    int id = await actor.Ask<int>("hit");
+                    int id = await actor.Ask<int>("hit", Token);
                     replies[id] = replies[id] + 1;
                 }
             }
@@ -261,7 +264,7 @@ namespace Akka.Tests.Routing
             {
                 for (int k = 0; k < connectionCount; k++)
                 {
-                    string id = await actor.Ask<string>("hit");
+                    string id = await actor.Ask<string>("hit", Token);
                     replies[id] = replies[id] + 1;
                 }
             }
@@ -295,7 +298,7 @@ namespace Akka.Tests.Routing
             {
                 for (int k = 0; k < connectionCount; k++)
                 {
-                    string id = await actor.Ask<string>("hit");
+                    string id = await actor.Ask<string>("hit", Token);
                     replies[id] = replies[id] + 1;
                 }
             }

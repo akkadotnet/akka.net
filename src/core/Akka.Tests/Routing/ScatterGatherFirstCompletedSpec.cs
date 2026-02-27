@@ -82,6 +82,8 @@ namespace Akka.Tests.Routing
             }
         }
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Fact]
         public void Scatter_gather_group_must_deliver_a_broadcast_message_using_tell()
         {
@@ -117,7 +119,7 @@ namespace Akka.Tests.Routing
 
             routedActor.Tell(new Broadcast(new Stop(1)));
             shutdownLatch.Ready(TestKitSettings.DefaultTimeout);
-            var res = await routedActor.Ask<int>(0, TimeSpan.FromSeconds(10));
+            var res = await routedActor.Ask<int>(0, TimeSpan.FromSeconds(10), Token);
             res.Should().Be(14);
         }
 
@@ -157,7 +159,7 @@ namespace Akka.Tests.Routing
             var paths = new List<string> { actor1.Path.ToString() };
             var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
 
-            var exception = await routedActor.Ask<Status.Failure>(0, TimeSpan.FromSeconds(5));
+            var exception = await routedActor.Ask<Status.Failure>(0, TimeSpan.FromSeconds(5), Token);
             exception.Should().NotBeNull();
             exception.Cause.Should().BeOfType<AskTimeoutException>();
         }

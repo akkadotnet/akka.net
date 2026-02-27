@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.TestKit;
-using Akka.TestKit.Extensions;
 using Akka.TestKit.TestActors;
 using Akka.Tests.TestUtils;
 using Akka.Util.Internal;
@@ -23,6 +22,8 @@ namespace Akka.Tests.Actor
 {
     public class SupervisorHierarchySpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         private class CountDownActor : ReceiveActor
         {
             private readonly AsyncCountdownEvent _restartsCountdown;
@@ -176,8 +177,8 @@ namespace Akka.Tests.Actor
                 boss.Tell("killCrasher");
                 return Task.CompletedTask;
             });
-            await countDownMessages.WaitAsync().WaitAsync(2.Seconds());
-            await countDownMax.WaitAsync().WaitAsync(2.Seconds());
+            await countDownMessages.WaitAsync(Token).WaitAsync(2.Seconds(), cancellationToken: Token);
+            await countDownMax.WaitAsync(Token).WaitAsync(2.Seconds(), cancellationToken: Token);
         }
 
         private async Task Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<T>() 

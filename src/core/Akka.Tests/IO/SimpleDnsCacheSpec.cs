@@ -5,11 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.IO;
 using Akka.TestKit;
 using Xunit;
+using Dns = Akka.IO.Dns;
 
 namespace Akka.Tests.IO
 {
@@ -31,12 +33,23 @@ namespace Akka.Tests.IO
             }
         }
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+
+        private Task<IPHostEntry> GetHostEntryAsync(string hostName)
+        {
+            #if NETFRAMEWORK
+            return System.Net.Dns.GetHostEntryAsync(hostName);
+            #else
+            return System.Net.Dns.GetHostEntryAsync(hostName, Token);
+            #endif
+        }
+        
         [Fact]
         public async Task Cache_should_not_reply_with_expired_but_not_yet_swept_out_entries()
         {
             var localClock = new AtomicReference<long>(0);
             var cache = new SimpleDnsCacheTestDouble(localClock);
-            var hostEntry = await System.Net.Dns.GetHostEntryAsync("127.0.0.1");
+            var hostEntry = await GetHostEntryAsync("127.0.0.1");
             var cacheEntry = Dns.Resolved.Create("test.local", hostEntry.AddressList);
             cache.Put(cacheEntry, 5000);
 
@@ -53,7 +66,7 @@ namespace Akka.Tests.IO
         {
             var localClock = new AtomicReference<long>(0);
             var cache = new SimpleDnsCacheTestDouble(localClock);
-            var hostEntry = await System.Net.Dns.GetHostEntryAsync("127.0.0.1");
+            var hostEntry = await GetHostEntryAsync("127.0.0.1");
             var cacheEntry = Dns.Resolved.Create("test.local", hostEntry.AddressList);
             cache.Put(cacheEntry, 5000);
 
@@ -75,7 +88,7 @@ namespace Akka.Tests.IO
         {
             var localClock = new AtomicReference<long>(0);
             var cache = new SimpleDnsCacheTestDouble(localClock);
-            var hostEntry = await System.Net.Dns.GetHostEntryAsync("127.0.0.1");
+            var hostEntry = await GetHostEntryAsync("127.0.0.1");
             var cacheEntryOne = Dns.Resolved.Create("test.local", hostEntry.AddressList);
             var cacheEntryTwo = Dns.Resolved.Create("test.local", hostEntry.AddressList);
             long ttl = 500;

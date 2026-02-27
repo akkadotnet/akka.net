@@ -18,6 +18,8 @@ namespace Akka.Tests.Util.Internal
 {
     public class InterlockedSpinTests
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Fact]
         public async Task When_a_shared_variable_is_updated_on_another_thread_Then_the_update_method_is_rerun()
         {
@@ -57,7 +59,7 @@ namespace Akka.Tests.Util.Internal
             hasEnteredUpdateMethod.WaitOne(TimeSpan.FromSeconds(2)); //Wait for THREAD 2 to enter updateWhenSignaled
             sharedVariable = "-";
             okToContinue.Set();	//Signal THREAD 1 it can continue in updateWhenSignaled
-            await task.AwaitWithTimeout(2.Seconds()); //Wait for THREAD 1
+            await task.WaitAsync(2.Seconds(), Token); //Wait for THREAD 1
 
             sharedVariable.ShouldBe("updated");
             numberOfCallsToUpdateWhenSignaled.ShouldBe(2);
@@ -98,11 +100,14 @@ namespace Akka.Tests.Util.Internal
                 return (true, "updated", "returnValue");
             };
             string result;
-            var task = Task.Run(() => { result= InterlockedSpin.ConditionallySwap(ref sharedVariable, updateWhenSignaled); });
+            var task = Task.Run(() =>
+            {
+                result = InterlockedSpin.ConditionallySwap(ref sharedVariable, updateWhenSignaled);
+            }, Token);
             hasEnteredUpdateMethod.WaitOne(TimeSpan.FromSeconds(2)); //Wait for THREAD 2 to enter updateWhenSignaled
             sharedVariable = "-";
             okToContinue.Set();	//Signal THREAD 1 it can continue in updateWhenSignaled
-            await task.AwaitWithTimeout(2.Seconds());	//Wait for THREAD 1
+            await task.WaitAsync(2.Seconds(), Token);	//Wait for THREAD 1
 
             sharedVariable.ShouldBe("updated");
             numberOfCallsToUpdateWhenSignaled.ShouldBe(2);
@@ -147,11 +152,14 @@ namespace Akka.Tests.Util.Internal
                 return (shouldUpdate, "updated", shouldUpdate ? "update" : "break");
             };
             string result = "";
-            var task = Task.Run(() => { result = InterlockedSpin.ConditionallySwap(ref sharedVariable, updateWhenSignaled); });
+            var task = Task.Run(() =>
+            {
+                result = InterlockedSpin.ConditionallySwap(ref sharedVariable, updateWhenSignaled);
+            }, Token);
             hasEnteredUpdateMethod.WaitOne(TimeSpan.FromSeconds(2));
             sharedVariable = "-";
             okToContinue.Set();
-            await task.AwaitWithTimeout(2.Seconds());
+            await task.WaitAsync(2.Seconds(), Token);
 
             sharedVariable.ShouldBe("-");
             numberOfCallsToUpdateWhenSignaled.ShouldBe(2);

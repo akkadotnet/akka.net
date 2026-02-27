@@ -19,6 +19,8 @@ namespace Akka.Tests.Actor
 {
     public class DeadLetterSupressionSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         private class NormalMessage
         {
         }
@@ -133,7 +135,7 @@ namespace Akka.Tests.Actor
             allDeadLetter.Sender.Should().Be(TestActor);
             allDeadLetter.Recipient.Should().Be(Sys.DeadLetters);
 
-            await Task.Delay(200);
+            await Task.Delay(200, Token);
             await deadListener.ExpectNoMsgAsync(TimeSpan.Zero);
             await suppressedListener.ExpectNoMsgAsync(TimeSpan.Zero);
             await allListener.ExpectNoMsgAsync(TimeSpan.Zero);

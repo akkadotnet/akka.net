@@ -289,7 +289,7 @@ namespace Akka.Tests.Pattern
             });
         }
 
-        [SkippableFact]
+        [Fact]
         public async Task BackoffOnRestartSupervisor_must_respect_withinTimeRange_property_of_OneForOneStrategy()
         {
             var probe = CreateTestProbe();
@@ -314,7 +314,7 @@ namespace Akka.Tests.Pattern
             }
 
             // Now wait the length of our window, and throw again. We should still restart.
-            await Task.Delay(2100);
+            await Task.Delay(2100, Token);
 
             var stopwatch = Stopwatch.StartNew();
             // Throw three times rapidly
@@ -324,7 +324,8 @@ namespace Akka.Tests.Pattern
                 await probe.ExpectMsgAsync("STARTED");
             }
             stopwatch.Stop();
-            Skip.If(stopwatch.ElapsedMilliseconds > 1500, "Could not satisfy test condition. Execution time exceeds the prescribed 2 seconds limit.");
+            if(stopwatch.ElapsedMilliseconds > 1500)
+                Assert.Fail("Could not satisfy test condition. Execution time exceeds the prescribed 2 seconds limit.");
             
             // Now we'll issue another request and should be terminated.
             supervisor.Tell("THROW");

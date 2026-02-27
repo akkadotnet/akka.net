@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
@@ -73,6 +74,8 @@ namespace Akka.Tests.Actor
 
         public static readonly Props P = Props.Create<Node>();
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public class Node : ReceiveActor
         {
             private IActorRefProvider Provider { get { return Context.System.AsInstanceOf<ActorSystemImpl>().Provider; } }
@@ -163,7 +166,7 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task ActorSystem_must_find_temporary_actors()
         {
-            var f = c1.Ask(new GetSender(TestActor));
+            var f = c1.Ask(new GetSender(TestActor), Token);
             var a = ExpectMsg<IInternalActorRef>();
             a.Path.Elements.Head().Should().Be("temp");
             Provider.ResolveActorRef(a.Path).Should().Be(a);

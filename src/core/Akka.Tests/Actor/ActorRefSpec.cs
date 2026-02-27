@@ -22,6 +22,8 @@ namespace Akka.Tests.Actor
 {
     public class ActorRefSpec : AkkaSpec, INoImplicitSender
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Fact]
         public void An_ActorRef_should_equal_itself()
         {
@@ -263,8 +265,8 @@ namespace Akka.Tests.Actor
             var timeout = TimeSpan.FromSeconds(20);
             var actorRef = Sys.ActorOf(Props.Create(() => new PoisonPilledActor()));
 
-            var t1 = actorRef.Ask(5, timeout);
-            var t2 = actorRef.Ask(0, timeout);
+            var t1 = actorRef.Ask(5, timeout, Token);
+            var t2 = actorRef.Ask(0, timeout, Token);
             actorRef.Tell(PoisonPill.Instance);
 
             Func<Task> f1 = async () => await t1;
