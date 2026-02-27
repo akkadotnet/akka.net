@@ -80,12 +80,7 @@ namespace Akka.Tests.Actor
     /// </summary>
     public class RemotePathParsingSpec : AkkaSpec
     {
-        public RemotePathParsingSpec()
-        {
-            Arb.Register(typeof(EndpointGenerators));
-        }
-
-        [Property]
+        [Property(Arbitrary = [typeof(EndpointGenerators)])]
         public Property Address_should_parse_from_any_valid_EndPoint(EndPoint ep)
         {
             var addr = EndpointGenerators.ParseAddress(ep);
@@ -93,7 +88,7 @@ namespace Akka.Tests.Actor
             return parsedAddr.Equals(addr).Label($"Should be able to parse endpoint to address and back; expected {addr} but was {parsedAddr}");
         }
 
-        [Property]
+        [Property(Arbitrary = [typeof(EndpointGenerators)])]
         public Property ActorPath_Should_parse_from_any_valid_EndPoint(EndPoint ep)
         {
             var addr = EndpointGenerators.ParseAddress(ep);

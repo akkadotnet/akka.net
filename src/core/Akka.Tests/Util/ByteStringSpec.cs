@@ -24,32 +24,20 @@ namespace Akka.Tests.Util
     /// </summary>
     public class ByteStringSpec
     {
-        class Generators
-        {
-
-            // TODO: Align with JVM Akka Generator
-            public static Arbitrary<ByteString> ByteStrings()
-            {
-                return Arb.From(Arb.Generate<byte[]>().Select(ByteString.CopyFrom));
-            }
-        }
-
-        public ByteStringSpec()
-        {
-            Arb.Register<Generators>();
-        }
+        private static readonly Arbitrary<ByteString> ByteStringArb =
+            Arb.From(ArbMap.Default.GeneratorFor<byte[]>().Select(ByteString.CopyFrom));
 
         [Fact]
         public void A_ByteString_must_have_correct_size_when_concatenating()
         {
-            Prop.ForAll((ByteString a, ByteString b) => (a + b).Count == a.Count + b.Count)
+            Prop.ForAll(ByteStringArb, ByteStringArb, (a, b) => (a + b).Count == a.Count + b.Count)
                 .QuickCheckThrowOnFailure();
         }
 
         [Fact]
         public void A_ByteString_ToReadOnlySpan_must_have_correct_size()
         {
-            Prop.ForAll((ByteString a, ByteString b) =>
+            Prop.ForAll(ByteStringArb, ByteStringArb, (a, b) =>
             {
                 a.ToReadOnlySpan().Length.Should().Be(a.Count);
                 b.ToReadOnlySpan().Length.Should().Be(b.Count);
@@ -111,7 +99,7 @@ namespace Akka.Tests.Util
         [Fact]
         public void A_ByteString_must_be_sequential_when_slicing_from_start()
         {
-            Prop.ForAll((ByteString a, ByteString b) => (a + b).Slice(0, a.Count).SequenceEqual(a))
+            Prop.ForAll(ByteStringArb, ByteStringArb, (ByteString a, ByteString b) => (a + b).Slice(0, a.Count).SequenceEqual(a))
                 .QuickCheckThrowOnFailure();
         }
         [Fact]
@@ -126,7 +114,7 @@ namespace Akka.Tests.Util
         [Fact]
         public void A_ByteString_must_be_equal_to_the_original_when_compacting()
         {
-            Prop.ForAll((ByteString xs) =>
+            Prop.ForAll(ByteStringArb, (ByteString xs) =>
             {
                 var ys = xs.Compact();
                 return xs.SequenceEqual(ys) && ys.IsCompact;
@@ -161,7 +149,7 @@ namespace Akka.Tests.Util
         [Fact]
         public void A_ByteString_must_behave_as_expected_when_compacting()
         {
-            Prop.ForAll((ByteString a) =>
+            Prop.ForAll(ByteStringArb, (ByteString a) =>
             {
                 var wasCompact = a.IsCompact;
                 var b = a.Compact();
