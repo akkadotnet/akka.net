@@ -47,9 +47,6 @@
     <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
     <PackageReference Include="FsCheck" Version="$(FsCheck3Version)" />
     <PackageReference Include="FsCheck.Xunit.v3" Version="$(FsCheck3Version)" />
   </ItemGroup>
