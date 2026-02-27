@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using Akka.Actor;
 using Akka.Cluster.Metrics.Collectors;
@@ -31,7 +32,7 @@ namespace Akka.Cluster.Metrics
             var settings = ClusterMetricsSettings.Create(system.Settings.Config);
 
             var collectorCustom = settings.CollectorProvider;
-            var defaultCollector = typeof(DefaultCollector).AssemblyQualifiedName;
+            var defaultCollector = typeof(DefaultCollector).AssemblyQualifiedName!;
 
             var useCustom = !settings.CollectorFallback;
             var useInternal = settings.CollectorFallback && string.IsNullOrEmpty(settings.CollectorProvider);

@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -109,7 +110,7 @@ namespace Akka.Cluster.Metrics.Collectors
         
         private (double ProcessUsage, double TotalUsage) GetCpuUsages(int currentProcessId)
         {
-            Process[] processes = null;
+            Process[]? processes = null;
             
             try
             {
