@@ -249,7 +249,7 @@ namespace Akka.Cluster.Metrics
             /// <summary>
             /// Metrics selector
             /// </summary>
-            public IMetricsSelector MetricsSelector { get; set; } = null!;
+            public IMetricsSelector? MetricsSelector { get; set; }
             /// <summary>
             /// The number of routees associated with this pool.
             /// </summary>
@@ -262,11 +262,11 @@ namespace Akka.Cluster.Metrics
             /// <summary>
             /// The strategy to use when supervising the pool.
             /// </summary>
-            public SupervisorStrategy SupervisorStrategy { get; set; } = null!;
+            public SupervisorStrategy? SupervisorStrategy { get; set; }
             /// <summary>
             /// The dispatcher to use when passing messages to the routees.
             /// </summary>
-            public string RouterDispatcher { get; set; } = null!;
+            public string? RouterDispatcher { get; set; }
 
             /// <summary>
             /// Creates a <see cref="AdaptiveLoadBalancingPool"/> encapsulated by this surrogate.
@@ -366,15 +366,15 @@ namespace Akka.Cluster.Metrics
             /// <summary>
             /// Metrics selector
             /// </summary>
-            public IMetricsSelector MetricsSelector { get; set; } = null!;
+            public IMetricsSelector? MetricsSelector { get; set; }
             /// <summary>
             /// Retrieves the paths of all routees declared on this router.
             /// </summary>
-            public IEnumerable<string> Paths { get; set; } = null!;
+            public IEnumerable<string>? Paths { get; set; }
             /// <summary>
             /// The dispatcher to use when passing messages to the routees.
             /// </summary>
-            public string RouterDispatcher { get; set; } = null!;
+            public string? RouterDispatcher { get; set; }
 
             /// <summary>
             /// Creates a <see cref="AdaptiveLoadBalancingGroup"/> encapsulated by this surrogate.
