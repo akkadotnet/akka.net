@@ -18,7 +18,6 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -150,7 +149,7 @@ namespace Akka.Remote.Tests
         {
             var probe = CreateTestProbe(_masterSystem);
             var router = _masterSystem.ActorOf(new RoundRobinPool(2).Props(EchoActorProps), "blub");
-            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync();
+            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync(TestContext.Current.CancellationToken);
             var children = new HashSet<ActorPath>(replies);
             children.Should().HaveCount(2);
             children.Select(x => x.Parent).Distinct().Should().HaveCount(1);
@@ -166,7 +165,7 @@ namespace Akka.Remote.Tests
                 new RoundRobinPool(2),
                 new[] { new Address("akka.tcp", _sysName, "127.0.0.1", _port) })
                 .Props(EchoActorProps), "blub2");
-            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync();
+            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync(TestContext.Current.CancellationToken);
             var children = new HashSet<ActorPath>(replies);
             children.Should().HaveCount(2);
             children.Select(x => x.Parent).Distinct().Should().HaveCount(1);
@@ -179,7 +178,7 @@ namespace Akka.Remote.Tests
         {
             var probe = CreateTestProbe(_masterSystem);
             var router = _masterSystem.ActorOf(FromConfig.Instance.Props(EchoActorProps), "elastic-blub");
-            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync();
+            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync(TestContext.Current.CancellationToken);
             var children = new HashSet<ActorPath>(replies);
             children.Should().HaveCount(2);
             children.Select(x => x.Parent).Distinct().Should().HaveCount(1);
@@ -194,7 +193,7 @@ namespace Akka.Remote.Tests
             var router = _masterSystem.ActorOf(FromConfig.Instance.Props(EchoActorProps), "remote-blub");
             router.Path.Address.Should().Be(_intendedRemoteAddress);
 
-            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync();
+            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync(TestContext.Current.CancellationToken);
             var children = new HashSet<ActorPath>(replies);
             children.Should().HaveCount(2);
 
@@ -216,7 +215,7 @@ namespace Akka.Remote.Tests
 
             router.Path.Address.Should().Be(_intendedRemoteAddress);
 
-            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync();
+            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync(TestContext.Current.CancellationToken);
             var children = new HashSet<ActorPath>(replies);
             children.Should().HaveCount(2);
 
@@ -238,7 +237,7 @@ namespace Akka.Remote.Tests
                 .WithDeploy(new Deploy(new RemoteScope(_intendedRemoteAddress))), "local-blub");
             router.Path.Address.ToString().Should().Be($"akka://{_masterSystem.Name}");
 
-            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync();
+            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync(TestContext.Current.CancellationToken);
             var children = new HashSet<ActorPath>(replies);
             children.Should().HaveCount(2);
 
@@ -261,7 +260,7 @@ namespace Akka.Remote.Tests
 
             router.Path.Address.Should().Be(_intendedRemoteAddress);
 
-            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync();
+            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync(TestContext.Current.CancellationToken);
             var children = new HashSet<ActorPath>(replies);
             children.Should().HaveCount(4);
 
@@ -284,7 +283,7 @@ namespace Akka.Remote.Tests
 
             router.Path.Address.Should().Be(_intendedRemoteAddress);
 
-            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync();
+            var replies = await CollectRouteePaths(probe, router, 5).ToListAsync(TestContext.Current.CancellationToken);
             var children = new HashSet<ActorPath>(replies);
             children.Should().HaveCount(4);
 
@@ -299,6 +298,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task RemoteRouter_must_set_supplied_SupervisorStrategy()
         {
+            var token = TestContext.Current.CancellationToken;
             var probe = CreateTestProbe(_masterSystem);
             var escalator = new OneForOneStrategy(ex =>
             {
@@ -314,9 +314,10 @@ namespace Akka.Remote.Tests
 
             // Need to be able to bind EventFilter to additional actor system (masterActorSystem in this case) before this code works
             // EventFilter.Exception<ActorKilledException>().ExpectOne(() => 
-            (await probe.ExpectMsgAsync<Routees>(TimeSpan.FromSeconds(10))).Members.Head().Send(Kill.Instance, TestActor);
+            (await probe.ExpectMsgAsync<Routees>(TimeSpan.FromSeconds(10), cancellationToken: token))
+                .Members.Head().Send(Kill.Instance, TestActor);
             //);
-            await probe.ExpectMsgAsync<ActorKilledException>(TimeSpan.FromSeconds(10));
+            await probe.ExpectMsgAsync<ActorKilledException>(TimeSpan.FromSeconds(10), cancellationToken: token);
         }
 
         [Fact(Skip = "Remote actor's DCN is currently not supported")]
@@ -324,7 +325,7 @@ namespace Akka.Remote.Tests
         {
             var probe = CreateTestProbe(_masterSystem);
             var router = _masterSystem.ActorOf(FromConfig.Instance.Props(EchoActorProps), "round");
-            var replies = await CollectRouteePaths(probe, router, 10).ToListAsync();
+            var replies = await CollectRouteePaths(probe, router, 10).ToListAsync(TestContext.Current.CancellationToken);
             var children = new HashSet<ActorPath>(replies);
             children.Should().HaveCount(5);
             _masterSystem.Stop(router);
@@ -333,13 +334,14 @@ namespace Akka.Remote.Tests
         [Fact(Skip = "Remote actor's DCN is currently not supported")]
         public async Task RemoteRouter_must_load_settings_from_config_for_local_child_router_of_system_actor()
         {
+            var token = TestContext.Current.CancellationToken;
             // we don't really support deployment configuration of system actors, but
             // it's used for the pool of the SimpleDnsManager "/IO-DNS/inet-address"
             var probe = CreateTestProbe(_masterSystem);
             var parent = ((ExtendedActorSystem)_masterSystem).SystemActorOf(FromConfig.Instance.Props(Props.Create<Parent>()), "sys-parent");
             parent.Tell((FromConfig.Instance.Props(EchoActorProps), "round"), probe);
-            var router = probe.ExpectMsg<IActorRef>();
-            var replies = await CollectRouteePaths(probe, router, 10).ToListAsync();
+            var router = await probe.ExpectMsgAsync<IActorRef>(cancellationToken: token);
+            var replies = await CollectRouteePaths(probe, router, 10).ToListAsync(token);
             var children = new HashSet<ActorPath>(replies);
             children.Should().HaveCount(6);
             _masterSystem.Stop(router);

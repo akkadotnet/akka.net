@@ -19,11 +19,10 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Google.Protobuf;
 using Xunit;
-using Xunit.Abstractions;
 using Nito.AsyncEx;
 using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
 using Akka.TestKit.Extensions;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions.Extensions;
 
 namespace Akka.Remote.Tests
@@ -164,7 +163,7 @@ namespace Akka.Remote.Tests
         public async Task Remoting_must_support_remote_lookups()
         {
             _here.Tell("ping", TestActor);
-            await ExpectMsgAsync(("pong", TestActor));
+            await ExpectMsgAsync(("pong", TestActor), cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact]
@@ -173,7 +172,7 @@ namespace Akka.Remote.Tests
             //TODO: using smaller numbers for the cancellation here causes a bug.
             //the remoting layer uses some "initialdelay task.delay" for 4 seconds.
             //so the token is cancelled before the delay completed.. 
-            var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout);
+            var (msg, actorRef) = await _here.Ask<(string, IActorRef)>("ping", DefaultTimeout, TestContext.Current.CancellationToken);
             Assert.Equal("pong", msg);
             Assert.IsType<FutureActorRef<(string, IActorRef)>>(actorRef);
         }
@@ -197,7 +196,7 @@ namespace Akka.Remote.Tests
         {
             // here is really an ActorSelection
             var actorSelection = (ActorSelection)_here;
-            Assert.True(await actorSelection.ResolveOne(10.Seconds()).AwaitWithTimeout(10.2.Seconds()),
+            Assert.True(await actorSelection.ResolveOne(10.Seconds(), TestContext.Current.CancellationToken).AwaitWithTimeout(10.2.Seconds(), TestContext.Current.CancellationToken),
                 "ResolveOne failed to resolve within 10 seconds");
             // the only test is that the ResolveOne works, so if we got here, the test passes
         }
@@ -218,33 +217,36 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task Remoting_must_not_send_remote_recreated_actor_with_same_name()
         {
+            var token = TestContext.Current.CancellationToken;
             var echo = _remoteSystem.ActorOf(Props.Create(() => new Echo1()), "otherEcho1");
             echo.Tell(71);
-            await ExpectMsgAsync(71);
+            await ExpectMsgAsync(71, cancellationToken: token);
             echo.Tell(PoisonPill.Instance);
-            await ExpectMsgAsync("postStop");
+            await ExpectMsgAsync("postStop", cancellationToken: token);
             echo.Tell(72);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
 
             var echo2 = _remoteSystem.ActorOf(Props.Create(() => new Echo1()), "otherEcho1");
             echo2.Tell(73);
-            await ExpectMsgAsync(73);
+            await ExpectMsgAsync(73, cancellationToken: token);
 
             // msg to old IActorRef (different UID) should not get through
             echo2.Path.Uid.ShouldNotBe(echo.Path.Uid);
             echo.Tell(74);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
 
             _remoteSystem.ActorSelection("/user/otherEcho1").Tell(75);
-            await ExpectMsgAsync(75);
+            await ExpectMsgAsync(75, cancellationToken: token);
 
             Sys.ActorSelection("akka.test://remote-sys@localhost:12346/user/otherEcho1").Tell(76);
-            await ExpectMsgAsync(76);
+            await ExpectMsgAsync(76, cancellationToken: token);
         }
 
         [LocalFact(SkipLocal = "Racy in AzDo CI/CD")]
         public async Task Remoting_must_lookup_actors_across_node_boundaries()
         {
+            var token = TestContext.Current.CancellationToken;
+            
             Action<IActorDsl> act = dsl =>
             {
                 dsl.Receive<(Props, string)>((t, ctx) => ctx.Sender.Tell(ctx.ActorOf(t.Item1, t.Item2)));
@@ -260,52 +262,54 @@ namespace Akka.Remote.Tests
 
             // child is configured to be deployed on remote-sys (remoteSystem)
             l.Tell((Props.Create<Echo1>(), "child"));
-            var child = await ExpectMsgAsync<IActorRef>();
+            var child = await ExpectMsgAsync<IActorRef>(cancellationToken: token);
 
             // grandchild is configured to be deployed on RemotingSpec (Sys)
             child.Tell((Props.Create<Echo1>(), "grandchild"));
-            var grandchild = await ExpectMsgAsync<IActorRef>();
+            var grandchild = await ExpectMsgAsync<IActorRef>(cancellationToken: token);
             grandchild.AsInstanceOf<IActorRefScope>().IsLocal.ShouldBeTrue();
             grandchild.Tell(43);
-            await ExpectMsgAsync(43);
-            var myRef = await Sys.ActorSelection("/user/looker/child/grandchild").ResolveOne(TimeSpan.FromSeconds(3));
+            await ExpectMsgAsync(43, cancellationToken: token);
+            var myRef = await Sys.ActorSelection("/user/looker/child/grandchild").ResolveOne(TimeSpan.FromSeconds(3), token);
             (myRef is LocalActorRef)
                 .ShouldBeTrue(); // due to a difference in how ActorFor and ActorSelection are implemented, this will return a LocalActorRef
             myRef.Tell(44);
-            await ExpectMsgAsync(44);
+            await ExpectMsgAsync(44, cancellationToken: token);
             LastSender.ShouldBe(grandchild);
             LastSender.ShouldBeSame(grandchild);
             child.AsInstanceOf<RemoteActorRef>().Parent.ShouldBe(l);
 
-            var cRef = await Sys.ActorSelection("/user/looker/child").ResolveOne(TimeSpan.FromSeconds(3));
+            var cRef = await Sys.ActorSelection("/user/looker/child").ResolveOne(TimeSpan.FromSeconds(3), token);
             cRef.ShouldBe(child);
             (await l.Ask<IActorRef>("child/..", TimeSpan.FromSeconds(3))).ShouldBe(l);
             var selection = await Sys.ActorSelection("/user/looker/child")
                 .Ask<ActorSelection>(new ActorSelReq(".."), TimeSpan.FromSeconds(3));
-            var resolved = await selection.ResolveOne(TimeSpan.FromSeconds(3));
+            var resolved = await selection.ResolveOne(TimeSpan.FromSeconds(3), token);
             resolved.ShouldBe(l);
 
             Watch(child);
             child.Tell(PoisonPill.Instance);
-            await ExpectMsgAsync("postStop");
-            await ExpectTerminatedAsync(child);
+            await ExpectMsgAsync("postStop", cancellationToken: token);
+            await ExpectTerminatedAsync(child, cancellationToken: token);
             l.Tell((Props.Create<Echo1>(), "child"));
             var child2 = ExpectMsg<IActorRef>();
             child2.Tell(45);
-            await ExpectMsgAsync(45);
+            await ExpectMsgAsync(45, cancellationToken: token);
 
             // msg to old IActorRef (different uid) should not get through
             child2.Path.Uid.ShouldNotBe(child.Path.Uid);
             child.Tell(46);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
 
             Sys.ActorSelection("user/looker/child").Tell(47);
-            await ExpectMsgAsync(47);
+            await ExpectMsgAsync(47, cancellationToken: token);
         }
 
         [Fact]
         public async Task Remoting_must_select_actors_across_node_boundaries()
         {
+            var token = TestContext.Current.CancellationToken;
+            
             Action<IActorDsl> act = dsl =>
             {
                 dsl.Receive<(Props, string)>((t, ctx) => ctx.Sender.Tell(ctx.ActorOf(t.Item1, t.Item2)));
@@ -315,76 +319,76 @@ namespace Akka.Remote.Tests
             var l = Sys.ActorOf(Props.Create(() => new Act(act)), "looker");
             // child is configured to be deployed on remoteSystem
             l.Tell((Props.Create<Echo1>(), "child"));
-            var child = await ExpectMsgAsync<IActorRef>();
+            var child = await ExpectMsgAsync<IActorRef>(cancellationToken: token);
 
             // grandchild is configured to be deployed on RemotingSpec (system)
             child.Tell((Props.Create<Echo1>(), "grandchild"));
-            var grandchild = await ExpectMsgAsync<IActorRef>();
+            var grandchild = await ExpectMsgAsync<IActorRef>(cancellationToken: token);
             ((IActorRefScope)grandchild).IsLocal.ShouldBeTrue();
             grandchild.Tell(53);
-            await ExpectMsgAsync(53);
+            await ExpectMsgAsync(53, cancellationToken: token);
 
             var myself = Sys.ActorSelection("user/looker/child/grandchild");
             myself.Tell(54);
-            await ExpectMsgAsync(54);
+            await ExpectMsgAsync(54, cancellationToken: token);
             LastSender.ShouldBe(grandchild);
             LastSender.ShouldBeSame(grandchild);
 
             myself.Tell(new Identify(myself));
-            var grandchild2 = (await ExpectMsgAsync<ActorIdentity>()).Subject;
+            var grandchild2 = (await ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject;
             grandchild2.ShouldBe(grandchild);
 
             Sys.ActorSelection("user/looker/child").Tell(new Identify(null));
-            (await ExpectMsgAsync<ActorIdentity>()).Subject.ShouldBe(child);
+            (await ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject.ShouldBe(child);
 
             l.Tell(new ActorSelReq("child/.."));
-            (await ExpectMsgAsync<ActorSelection>()).Tell(new Identify(null));
-            (await ExpectMsgAsync<ActorIdentity>()).Subject.ShouldBeSame(l);
+            (await ExpectMsgAsync<ActorSelection>(cancellationToken: token)).Tell(new Identify(null));
+            (await ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject.ShouldBeSame(l);
 
             Sys.ActorSelection("user/looker/child").Tell(new ActorSelReq(".."));
-            (await ExpectMsgAsync<ActorSelection>()).Tell(new Identify(null));
-            (await ExpectMsgAsync<ActorIdentity>()).Subject.ShouldBeSame(l);
+            (await ExpectMsgAsync<ActorSelection>(cancellationToken: token)).Tell(new Identify(null));
+            (await ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject.ShouldBeSame(l);
 
             grandchild.Tell((Props.Create<Echo1>(), "grandgrandchild"));
-            var grandgrandchild = await ExpectMsgAsync<IActorRef>();
+            var grandgrandchild = await ExpectMsgAsync<IActorRef>(cancellationToken: token);
 
             Sys.ActorSelection("/user/looker/child").Tell(new Identify("idReq1"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq1")))
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq1"), cancellationToken: token))
                 .Subject.ShouldBe(child);
 
             Sys.ActorSelection(child.Path).Tell(new Identify("idReq2"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq2")))
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq2"), cancellationToken: token))
                 .Subject.ShouldBe(child);
             Sys.ActorSelection("/user/looker/*").Tell(new Identify("idReq3"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq3")))
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq3"), cancellationToken: token))
                 .Subject.ShouldBe(child);
 
             Sys.ActorSelection("/user/looker/child/grandchild").Tell(new Identify("idReq4"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq4")))
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq4"), cancellationToken: token))
                 .Subject.ShouldBe(grandchild);
 
             Sys.ActorSelection(child.Path / "grandchild").Tell(new Identify("idReq5"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq5"))).Subject.ShouldBe(grandchild);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq5"), cancellationToken: token)).Subject.ShouldBe(grandchild);
             Sys.ActorSelection("/user/looker/*/grandchild").Tell(new Identify("idReq6"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq6"))).Subject.ShouldBe(grandchild);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq6"), cancellationToken: token)).Subject.ShouldBe(grandchild);
             Sys.ActorSelection("/user/looker/child/*").Tell(new Identify("idReq7"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq7"))).Subject.ShouldBe(grandchild);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq7"), cancellationToken: token)).Subject.ShouldBe(grandchild);
 
             Sys.ActorSelection(child.Path / "*").Tell(new Identify("idReq8"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq8"))).Subject.ShouldBe(grandchild);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq8"), cancellationToken: token)).Subject.ShouldBe(grandchild);
 
             Sys.ActorSelection("/user/looker/child/grandchild/grandgrandchild").Tell(new Identify("idReq9"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq9"))).Subject.ShouldBe(grandgrandchild);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq9"), cancellationToken: token)).Subject.ShouldBe(grandgrandchild);
 
             Sys.ActorSelection(child.Path / "grandchild" / "grandgrandchild").Tell(new Identify("idReq10"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq10"))).Subject.ShouldBe(grandgrandchild);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq10"), cancellationToken: token)).Subject.ShouldBe(grandgrandchild);
             Sys.ActorSelection("/user/looker/child/*/grandgrandchild").Tell(new Identify("idReq11"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq11"))).Subject.ShouldBe(grandgrandchild);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq11"), cancellationToken: token)).Subject.ShouldBe(grandgrandchild);
             Sys.ActorSelection("/user/looker/child/*/*").Tell(new Identify("idReq12"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq12"))).Subject.ShouldBe(grandgrandchild);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq12"), cancellationToken: token)).Subject.ShouldBe(grandgrandchild);
 
             Sys.ActorSelection(child.Path / "*" / "grandgrandchild").Tell(new Identify("idReq13"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq13"))).Subject.ShouldBe(grandgrandchild);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq13"), cancellationToken: token)).Subject.ShouldBe(grandgrandchild);
 
             //ActorSelection doesn't support ToSerializationFormat directly
             //var sel1 = Sys.ActorSelection("/user/looker/child/grandchild/grandgrandchild");
@@ -392,29 +396,29 @@ namespace Akka.Remote.Tests
             //ExpectMsg<ActorIdentity>(i => i.MessageId.Equals("idReq18")).Subject.ShouldBe(grandgrandchild);
 
             child.Tell(new Identify("idReq14"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq14"))).Subject.ShouldBe(child);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq14"), cancellationToken: token)).Subject.ShouldBe(child);
             Watch(child);
             child.Tell(PoisonPill.Instance);
-            await ExpectMsgAsync("postStop");
-            (await ExpectMsgAsync<Terminated>()).ActorRef.ShouldBe(child);
+            await ExpectMsgAsync("postStop", cancellationToken: token);
+            (await ExpectMsgAsync<Terminated>(cancellationToken: token)).ActorRef.ShouldBe(child);
             l.Tell((Props.Create<Echo1>(), "child"));
-            var child2 = await ExpectMsgAsync<IActorRef>();
+            var child2 = await ExpectMsgAsync<IActorRef>(cancellationToken: token);
             child2.Tell(new Identify("idReq15"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq15"))).Subject.ShouldBe(child2);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq15"), cancellationToken: token)).Subject.ShouldBe(child2);
 
             Sys.ActorSelection(child.Path).Tell(new Identify("idReq16"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq16"))).Subject.ShouldBe(child2);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq16"), cancellationToken: token)).Subject.ShouldBe(child2);
             child.Tell(new Identify("idReq17"));
-            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq17"))).Subject.ShouldBe(null);
+            (await ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals("idReq17"), cancellationToken: token)).Subject.ShouldBe(null);
 
             child2.Tell(55);
-            await ExpectMsgAsync(55);
+            await ExpectMsgAsync(55, cancellationToken: token);
             // msg to old ActorRef (different uid) should not get through
             child2.Path.Uid.ShouldNotBe(child.Path.Uid);
             child.Tell(56);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
             Sys.ActorSelection("user/looker/child").Tell(57);
-            await ExpectMsgAsync(57);
+            await ExpectMsgAsync(57, cancellationToken: token);
         }
 
         [Fact]
@@ -443,19 +447,20 @@ namespace Akka.Remote.Tests
                 "akka.test://remote-sys@localhost:12346/remote/akka.test/RemotingSpec@localhost:12345/user/echo",
                 r.Path.ToString());
             r.Tell("ping", TestActor);
-            await ExpectMsgAsync(("pong", TestActor), TimeSpan.FromSeconds(1.5));
+            await ExpectMsgAsync(("pong", TestActor), TimeSpan.FromSeconds(1.5), cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact()]
         public async Task Bug_884_Remoting_must_support_reply_to_Routee()
         {
+            var token = TestContext.Current.CancellationToken;
             var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new Reporter(TestActor))));
-            var routees = await router.Ask<Routees>(new GetRoutees());
+            var routees = await router.Ask<Routees>(new GetRoutees(), token);
 
             //have one of the routees send the message
             var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
             _here.Tell("ping", targetRoutee);
-            var msg = await ExpectMsgAsync<(string, IActorRef)>();
+            var msg = await ExpectMsgAsync<(string, IActorRef)>(cancellationToken: token);
             Assert.Equal("pong", msg.Item1);
             Assert.Equal(targetRoutee, msg.Item2);
         }
@@ -463,15 +468,16 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task Bug_884_Remoting_must_support_reply_to_child_of_Routee()
         {
+            var token = TestContext.Current.CancellationToken;
             var props = Props.Create(() => new Reporter(TestActor));
             var router = Sys.ActorOf(new RoundRobinPool(3).Props(Props.Create(() => new NestedDeployer(props))));
-            var routees = await router.Ask<Routees>(new GetRoutees());
+            var routees = await router.Ask<Routees>(new GetRoutees(), token);
 
             //have one of the routees send the message
             var targetRoutee = routees.Members.Cast<ActorRefRoutee>().Select(x => x.Actor).First();
-            var reporter = await targetRoutee.Ask<IActorRef>(new NestedDeployer.GetNestedReporter());
+            var reporter = await targetRoutee.Ask<IActorRef>(new NestedDeployer.GetNestedReporter(), token);
             _here.Tell("ping", reporter);
-            var msg = await ExpectMsgAsync<(string, IActorRef)>();
+            var msg = await ExpectMsgAsync<(string, IActorRef)>(cancellationToken: token);
             Assert.Equal("pong", msg.Item1);
             Assert.Equal(reporter, msg.Item2);
         }
@@ -479,6 +485,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task Stash_inbound_connections_until_UID_is_known_for_pending_outbound()
         {
+            var token = TestContext.Current.CancellationToken;
             var localAddress = new Address("akka.test", "system1", "localhost", 1);
             var rawLocalAddress = new Address("test", "system1", "localhost", 1);
             var remoteAddress = new Address("akka.test", "system2", "localhost", 2);
@@ -509,7 +516,7 @@ namespace Akka.Remote.Tests
                     (new ActorAssociationEventListener(remoteTransportProbe)));
 
                 // Hijack associations through the test transport
-                await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(rawLocalAddress, rawRemoteAddress)));
+                await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(rawLocalAddress, rawRemoteAddress)), token);
                 var testTransport = registry.TransportFor(rawLocalAddress).Value.Item1;
                 testTransport.WriteBehavior.PushConstant(true);
 
@@ -519,20 +526,20 @@ namespace Akka.Remote.Tests
                 dummySelection.Tell("ping", Sys.DeadLetters);
 
                 var remoteHandle =
-                    await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4));
+                    await remoteTransportProbe.ExpectMsgAsync<InboundAssociation>(TimeSpan.FromMinutes(4), cancellationToken: token);
                 remoteHandle.Association.ReadHandlerSource.TrySetResult(new ActionHandleEventListener(_ => { }));
 
                 // Now we initiate an emulated inbound connection to the real system
                 var inboundHandleProbe = CreateTestProbe();
                 var inboundHandle =
-                    await remoteTransport.Associate(rawLocalAddress).WithTimeout(TimeSpan.FromSeconds(3));
+                    await remoteTransport.Associate(rawLocalAddress).WaitAsync(TimeSpan.FromSeconds(3), token);
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(inboundHandleProbe));
 
                 await AwaitAssertAsync(() =>
                 {
                     registry.GetRemoteReadHandlerFor(inboundHandle.AsInstanceOf<TestAssociationHandle>()).Should()
                         .NotBeNull();
-                });
+                }, cancellationToken: token);
 
                 var pduCodec = new AkkaPduProtobuffCodec(Sys);
 
@@ -546,12 +553,12 @@ namespace Akka.Remote.Tests
                 inboundHandle.Write(brokenPacket);
 
                 // No disassociation now - the connection is still stashed
-                await inboundHandleProbe.ExpectNoMsgAsync(1000);
+                await inboundHandleProbe.ExpectNoMsgAsync(1000, token);
 
                 // Finish the handshake for the outbound connection - this will unstash the inbound pending connection.
                 remoteHandle.Association.Write(handshakePacket);
 
-                await inboundHandleProbe.ExpectMsgAsync<Disassociated>(TimeSpan.FromMinutes(5));
+                await inboundHandleProbe.ExpectMsgAsync<Disassociated>(TimeSpan.FromMinutes(5), cancellationToken: token);
             }
             finally
             {
@@ -609,7 +616,7 @@ namespace Akka.Remote.Tests
                 var inboundHandleProbe = CreateTestProbe();
 
                 var inboundHandle =
-                    await remoteTransport.Associate(rawLocalAddress).WithTimeout(TimeSpan.FromSeconds(3));
+                    await remoteTransport.Associate(rawLocalAddress).WaitAsync(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
                 inboundHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(inboundHandleProbe));
 
                 await AwaitAssertAsync(() =>

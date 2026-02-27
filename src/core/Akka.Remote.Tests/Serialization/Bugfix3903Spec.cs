@@ -12,7 +12,6 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 
 namespace Akka.Remote.Tests.Serialization
@@ -81,6 +80,7 @@ namespace Akka.Remote.Tests.Serialization
         [Fact]
         public async Task ParentActor_should_be_able_to_deploy_EchoActor_to_remote_system()
         {
+            var token = TestContext.Current.CancellationToken;
             // create a second ActorSystem
             var system2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             InitializeLogger(system2);
@@ -99,20 +99,20 @@ namespace Akka.Remote.Tests.Serialization
                 // have the ParentActor remotely deploy an EchoActor onto the second ActorSystem
                 var child = await parent
                     .Ask<IActorRef>(new ParentActor.DeployChild(
-                        system2.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress), RemainingOrDefault);
+                        system2.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress), RemainingOrDefault, token);
 
                 // assert that Child is a remote actor reference
                 child.Should().BeOfType<RemoteActorRef>();
                 Watch(child);
                 
                 // send a message to the EchoActor and verify that it is received
-                (await child.Ask<string>("hello", RemainingOrDefault)).Should().Be("hello");
+                (await child.Ask<string>("hello", RemainingOrDefault, token)).Should().Be("hello");
                 
                 // cause the child to crash
                 child.Tell(EchoActor.Fail.Instance);
-                var exception = ExpectMsg<ApplicationException>();
+                var exception = ExpectMsg<ApplicationException>(cancellationToken: token);
                 exception.Message.Should().Be("fail");
-                ExpectTerminated(child);
+                await ExpectTerminatedAsync(child, cancellationToken: token);
             }
             finally
             {

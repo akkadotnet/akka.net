@@ -66,10 +66,11 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Transport_must_return_an_Address_and_promise_when_listen_is_called()
         {
+            var token = TestContext.Current.CancellationToken;
             var registry = new AssociationRegistry();
             var transportA = NewTransportA(registry);
 
-            var result = await transportA.Listen().WithTimeout(DefaultTimeout);
+            var result = await transportA.Listen().WaitAsync(DefaultTimeout, token);
 
             Assert.Equal(_addressA, result.Item1);
             Assert.NotNull(result.Item2);
@@ -80,15 +81,18 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Transport_must_associate_successfully_with_another_transport_of_its_kind()
         {
+            var token = TestContext.Current.CancellationToken;
             var registry = new AssociationRegistry();
             var transportA = NewTransportA(registry);
             var transportB = NewTransportB(registry);
 
             // Must complete the returned promise to receive events
-            (await transportA.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
-            (await transportB.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
+            (await transportA.Listen().WaitAsync(DefaultTimeout, token))
+                .Item2.SetResult(new ActorAssociationEventListener(TestActor));
+            (await transportB.Listen().WaitAsync(DefaultTimeout, token))
+                .Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
-            await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(_addressATest, _addressBTest)));
+            await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(_addressATest, _addressBTest)), token);
 
             // task is not awaited deliberately
             var task = transportA.Associate(_addressB);
@@ -98,38 +102,44 @@ namespace Akka.Remote.Tests.Transport
                     return inbound.Association;
 
                 return null;
-            });
+            }, token);
 
             Assert.Contains(registry.LogSnapshot().OfType<AssociateAttempt>(), x => x.LocalAddress == _addressATest && x.RemoteAddress == _addressBTest);
-            await AwaitConditionAsync(() => Task.FromResult(registry.ExistsAssociation(_addressATest, _addressBTest)));
+            await AwaitConditionAsync(() => Task.FromResult(registry.ExistsAssociation(_addressATest, _addressBTest)), token);
         }
 
         [Fact]
         public async Task Transport_must_fail_to_associate_with_non_existing_address()
         {
+            var token = TestContext.Current.CancellationToken;
             var registry = new AssociationRegistry();
             var transportA = NewTransportA(registry);
 
-            (await transportA.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
-            await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(_addressATest)));
+            (await transportA.Listen().WaitAsync(DefaultTimeout, token))
+                .Item2.SetResult(new ActorAssociationEventListener(TestActor));
+            await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(_addressATest)), token);
 
             // Transport throws InvalidAssociationException when trying to associate with non-existing system
             await Assert.ThrowsAsync<InvalidAssociationException>(async () =>
-                await transportA.Associate(_nonExistingAddress).WithTimeout(DefaultTimeout)
+                await transportA.Associate(_nonExistingAddress)
+                    .WaitAsync(DefaultTimeout, token)
             );
         }
 
         [Fact]
         public async Task Transport_must_successfully_send_PDUs()
         {
+            var token = TestContext.Current.CancellationToken;
             var registry = new AssociationRegistry();
             var transportA = NewTransportA(registry);
             var transportB = NewTransportB(registry);
 
-            (await transportA.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
-            (await transportB.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
+            (await transportA.Listen().WaitAsync(DefaultTimeout, token))
+                .Item2.SetResult(new ActorAssociationEventListener(TestActor));
+            (await transportB.Listen().WaitAsync(DefaultTimeout, token))
+                .Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
-            await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(_addressATest, _addressBTest)));
+            await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(_addressATest, _addressBTest)), token);
 
             var associate = transportA.Associate(_addressB);
             var handleB = await ExpectMsgOfAsync(DefaultTimeout, "Expect InboundAssociation from A", o =>
@@ -138,9 +148,9 @@ namespace Akka.Remote.Tests.Transport
                     return handle.Association;
 
                 return null;
-            });
+            }, token);
 
-            var handleA = await associate.WithTimeout(DefaultTimeout);
+            var handleA = await associate.WaitAsync(DefaultTimeout, token);
 
             // Initialize handles
             handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
@@ -149,7 +159,7 @@ namespace Akka.Remote.Tests.Transport
             var payload = ByteString.CopyFromUtf8("PDU");
             var pdu = _withAkkaProtocol ? new AkkaPduProtobuffCodec(Sys).ConstructPayload(payload) : payload;
             
-            await AwaitConditionAsync(() => Task.FromResult(registry.ExistsAssociation(_addressATest, _addressBTest)));
+            await AwaitConditionAsync(() => Task.FromResult(registry.ExistsAssociation(_addressATest, _addressBTest)), token);
 
             handleA.Write(payload);
             await ExpectMsgOfAsync(DefaultTimeout, "Expect InboundPayload from A", o =>
@@ -158,7 +168,7 @@ namespace Akka.Remote.Tests.Transport
                     return inboundPayload.Payload;
 
                 return null;
-            });
+            }, token);
 
             Assert.Contains(registry.LogSnapshot().OfType<WriteAttempt>(), x => x.Sender == _addressATest && x.Recipient == _addressBTest && x.Payload.Equals(pdu));
         }
@@ -166,14 +176,17 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Transport_must_successfully_disassociate()
         {
+            var token = TestContext.Current.CancellationToken;
             var registry = new AssociationRegistry();
             var transportA = NewTransportA(registry);
             var transportB = NewTransportB(registry);
 
-            (await transportA.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
-            (await transportB.Listen().WithTimeout(DefaultTimeout)).Item2.SetResult(new ActorAssociationEventListener(TestActor));
+            (await transportA.Listen().WaitAsync(DefaultTimeout, token))
+                .Item2.SetResult(new ActorAssociationEventListener(TestActor));
+            (await transportB.Listen().WaitAsync(DefaultTimeout, token))
+                .Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
-            await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(_addressATest, _addressBTest)));
+            await AwaitConditionAsync(() => Task.FromResult(registry.TransportsReady(_addressATest, _addressBTest)), token);
 
             var associate = transportA.Associate(_addressB);
             var handleB = await ExpectMsgOfAsync(DefaultTimeout, "Expect InboundAssociation from A", o =>
@@ -182,26 +195,24 @@ namespace Akka.Remote.Tests.Transport
                     return handle.Association;
 
                 return null;
-            });
+            }, token);
 
-            var handleA = await associate.WithTimeout(DefaultTimeout);
+            var handleA = await associate.WaitAsync(DefaultTimeout, token);
 
             // Initialize handles
             handleA.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
             handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
-            await AwaitConditionAsync(() => Task.FromResult(registry.ExistsAssociation(_addressATest, _addressBTest)));
+            await AwaitConditionAsync(() => Task.FromResult(registry.ExistsAssociation(_addressATest, _addressBTest)), token);
 
             handleA.Disassociate("Disassociation test", Log);
 
-            await ExpectMsgOfAsync(DefaultTimeout, "Should receive Disassociated", o => o as Disassociated);
+            await ExpectMsgOfAsync(DefaultTimeout, "Should receive Disassociated", o => o as Disassociated, token);
 
-            await AwaitConditionAsync(() => Task.FromResult(!registry.ExistsAssociation(_addressATest, _addressBTest)));
+            await AwaitConditionAsync(() => Task.FromResult(!registry.ExistsAssociation(_addressATest, _addressBTest)), token);
 
             await AwaitConditionAsync(() =>
-                Task.FromResult(registry.LogSnapshot().OfType<DisassociateAttempt>().Any(x => x.Requestor == _addressATest && x.Remote == _addressBTest))
-
-            );
+                Task.FromResult(registry.LogSnapshot().OfType<DisassociateAttempt>().Any(x => x.Requestor == _addressATest && x.Remote == _addressBTest)), token);
         }
     }
 }

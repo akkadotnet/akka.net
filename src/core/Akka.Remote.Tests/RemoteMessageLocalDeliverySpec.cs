@@ -6,9 +6,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -17,7 +14,6 @@ using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using Akka.TestKit.TestActors;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -74,6 +70,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task RemoteActorRefProvider_should_correctly_resolve_valid_LocalActorRef_from_second_remote_system()
         {
+            var token = TestContext.Current.CancellationToken;
             var sys2 = ActorSystem.Create("Sys2", RemoteConfiguration);
             try
             {
@@ -84,30 +81,30 @@ namespace Akka.Remote.Tests
                     var actorPath = new RootActorPath(sys2Address) / "user" / "myActor";
 
                     // get a remoteactorref for the second system
-                    var remoteActorRef = await Sys.ActorSelection(actorPath).ResolveOne(TimeSpan.FromSeconds(3));
+                    var remoteActorRef = await Sys.ActorSelection(actorPath).ResolveOne(TimeSpan.FromSeconds(3), token);
 
                     // disconnect us from the second actorsystem
                     Assert.True(await RARP.For(Sys)
                         .Provider.Transport.ManagementCommand(new SetThrottle(sys2Address,
-                            ThrottleTransportAdapter.Direction.Both, Blackhole.Instance))
-                        .WithTimeout(TimeSpan.FromSeconds(3)));
+                            ThrottleTransportAdapter.Direction.Both, Blackhole.Instance), token)
+                        .WaitAsync(TimeSpan.FromSeconds(3), token));
 
                     // start deathwatch (won't be delivered initially)
                     Watch(remoteActorRef);
-                    await Task.Delay(TimeSpan.FromSeconds(3)); // if we delay the initial send, this spec will fail
+                    await Task.Delay(TimeSpan.FromSeconds(3), token); // if we delay the initial send, this spec will fail
 
                     Assert.True(await RARP.For(Sys)
                         .Provider.Transport.ManagementCommand(new SetThrottle(sys2Address,
-                            ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance))
-                        .WithTimeout(TimeSpan.FromSeconds(3)));
+                            ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance), token)
+                        .WaitAsync(TimeSpan.FromSeconds(3), token));
 
                     // fire off another non-system message
                     var ai = 
                         await Sys.ActorSelection(actorPath).Ask<ActorIdentity>(new Identify(null), TimeSpan.FromSeconds(3));
 
                     remoteActorRef.Tell(PoisonPill.Instance); // WATCH should be applied first
-                    await ExpectTerminatedAsync(remoteActorRef);
-                });
+                    await ExpectTerminatedAsync(remoteActorRef, cancellationToken: token);
+                }, cancellationToken: token);
             }
             finally
             {

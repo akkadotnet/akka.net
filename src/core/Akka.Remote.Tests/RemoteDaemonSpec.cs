@@ -62,6 +62,7 @@ akka {
         [Fact]
         public async Task Can_create_actor_using_remote_daemon_and_interact_with_child()
         {
+            var token = TestContext.Current.CancellationToken;
             var p = CreateTestProbe();
             Sys.EventStream.Subscribe(p.Ref, typeof(string));
             var supervisor = Sys.ActorOf<SomeActor>();
@@ -76,14 +77,14 @@ akka {
             daemon.Tell(new DaemonMsgCreate(Props.Create(() => new MyRemoteActor(childCreatedEvent)), null, path, supervisor));
 
             //Wait for the child to be created (actors are instantiated async)
-            childCreatedEvent.Wait();
+            childCreatedEvent.Wait(token);
 
             //try to resolve the child actor "child"
             var child = provider.ResolveActorRef(provider.RootPath / "remote/user/foo/child".Split('/'));
             //pass a message to the child
             child.Tell("hello");
             //expect the child to forward the message to the eventstream
-            await p.ExpectMsgAsync("hello");
+            await p.ExpectMsgAsync("hello", cancellationToken: token);
         }
     }
 }

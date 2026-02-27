@@ -178,12 +178,13 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task The_transport_must_stay_alive_after_a_transient_exception_from_the_serializer()
         {
+            var token = TestContext.Current.CancellationToken;
             _system2.ActorOf(EchoActor.Props(), "echo");
 
             var selection = Sys.ActorSelection(new RootActorPath(_system2Address) / "user" / "echo");
 
             selection.Tell("ping", this.TestActor);
-            await ExpectMsgAsync("ping");
+            await ExpectMsgAsync("ping",cancellationToken: token);
 
             // none of these should tear down the connection
             selection.Tell(ManifestIllegal.Instance, this.TestActor);
@@ -195,7 +196,7 @@ namespace Akka.Remote.Tests
 
             // make sure we still have a connection
             selection.Tell("ping", this.TestActor);
-            await ExpectMsgAsync("ping");
+            await ExpectMsgAsync("ping", cancellationToken: token);
         }
     }
 

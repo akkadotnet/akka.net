@@ -60,6 +60,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task Must_receive_Terminated_when_system_of_deserialized_ActorRef_is_not_running()
         {
+            var token = TestContext.Current.CancellationToken;
             var probe = CreateTestProbe();
             Sys.EventStream.Subscribe(probe.Ref, typeof(QuarantinedEvent));
             var rarp = RARP.For(Sys).Provider;
@@ -82,18 +83,19 @@ namespace Akka.Remote.Tests
             };
             Sys.ActorOf(Props.Create(() => new Act(act)).WithDeploy(Deploy.Local));
 
-            await ExpectMsgAsync(@ref, TimeSpan.FromSeconds(20));
+            await ExpectMsgAsync(@ref, TimeSpan.FromSeconds(20), cancellationToken: token);
             // we don't expect real quarantine when the UID is unknown, i.e. QuarantinedEvent is not published 
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(3), token);
             // The following verifies that re-delivery of Watch message is stopped.
             // It was observed as periodic logging of "address is now gated" when the gate was lifted.
             Sys.EventStream.Subscribe(probe.Ref, typeof(Warning));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(rarp.RemoteSettings.RetryGateClosedFor.TotalSeconds*2));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(rarp.RemoteSettings.RetryGateClosedFor.TotalSeconds*2), token);
         }
 
         [Fact]
         public async Task Must_receive_terminated_when_watched_node_is_unknown_host()
         {
+            var token = TestContext.Current.CancellationToken;
             var path = new RootActorPath(new Address("akka.tcp", Sys.Name, "unknownhost", 2552)) / "user" / "subject";
             var rarp = RARP.For(Sys).Provider;
             Action<IActorDsl> act = dsl =>
@@ -110,15 +112,16 @@ namespace Akka.Remote.Tests
 
             Sys.ActorOf(Props.Create(() => new Act(act)).WithDeploy(Deploy.Local), "observer2");
 
-            await ExpectMsgAsync(path, TimeSpan.FromSeconds(60));
+            await ExpectMsgAsync(path, TimeSpan.FromSeconds(60), cancellationToken: token);
         }
 
         [Fact]
         public async Task Must_receive_ActorIdentity_null_when_identified_node_is_unknown_host()
         {
+            var token = TestContext.Current.CancellationToken;
             var path = new RootActorPath(new Address("akka.tcp", Sys.Name, "unknownhost2", 2552)) / "user" / "subject";
             Sys.ActorSelection(path).Tell(new Identify(path));
-            var identify = await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(60));
+            var identify = await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(60), cancellationToken: token);
             identify.Subject.ShouldBe(null);
             identify.MessageId.ShouldBe(path);
         }
@@ -126,6 +129,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task Must_quarantine_systems_after_unsuccessful_system_message_delivery_if_have_not_communicated_before()
         {
+            var token = TestContext.Current.CancellationToken;
             // Synthesize an ActorRef to a remote system this one has never talked to before.
             // This forces ReliableDeliverySupervisor to start with unknown remote system UID.
             var rarp = RARP.For(Sys).Provider;
@@ -140,12 +144,13 @@ namespace Akka.Remote.Tests
 
             var probe = CreateTestProbe();
             probe.Watch(extinctRef);
-            (await probe.ExpectMsgAsync<Terminated>()).ActorRef.ShouldBe(extinctRef);
+            (await probe.ExpectMsgAsync<Terminated>(cancellationToken: token))
+                .ActorRef.ShouldBe(extinctRef);
             probe.Unwatch(extinctRef);
 
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(5));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(5), token);
             Sys.EventStream.Subscribe(probe.Ref, typeof(Warning));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(rarp.RemoteSettings.RetryGateClosedFor.TotalSeconds * 2));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(rarp.RemoteSettings.RetryGateClosedFor.TotalSeconds * 2), token);
         }
     }
 }

@@ -12,14 +12,12 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
 using Akka.TestKit;
-using Akka.TestKit.Extensions;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
 using Akka.Util.Internal;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -182,25 +180,28 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task AkkaProtocolTransport_must_guarantee_at_most_once_delivery_and_message_ordering_despite_packet_loss()
         {
+            var token = TestContext.Current.CancellationToken;
             //todo mute both systems for deadletters for any type of message
             EventFilter.DeadLetter().Mute();
             CreateEventFilter(_systemB).DeadLetter().Mute();
             Assert.True(await RARP.For(Sys)
-                .Provider.Transport.ManagementCommand(new FailureInjectorTransportAdapter.One(AddressB,
-                    new FailureInjectorTransportAdapter.Drop(0.1, 0.1)))
-                .AwaitWithTimeout(3.Seconds()));
+                .Provider.Transport.ManagementCommand(new FailureInjectorTransportAdapter.One(
+                    remoteAddress: AddressB, 
+                    mode: new FailureInjectorTransportAdapter.Drop(0.1, 0.1)), 
+                    cancellationToken: token)
+                .WaitAsync(3.Seconds(), token));
 
             IActorRef here = null;
             await AwaitConditionAsync(async () =>
             {
                 here = await Here();
                 return here != null && !here.Equals(ActorRefs.Nobody);
-            }, TimeSpan.FromSeconds(3));
+            }, TimeSpan.FromSeconds(3), token);
 
             var tester = Sys.ActorOf(Props.Create(() => new SequenceVerifier(here, TestActor)));
             tester.Tell("start");
 
-            await ExpectMsgAsync<(int,int)>(TimeSpan.FromSeconds(60));
+            await ExpectMsgAsync<(int,int)>(TimeSpan.FromSeconds(60), cancellationToken: token);
         }
 
         #endregion

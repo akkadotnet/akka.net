@@ -11,7 +11,6 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -70,6 +69,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Mutual_TLS_should_allow_connection_when_both_nodes_have_valid_certificates()
         {
+            var token = TestContext.Current.CancellationToken;
             // Both server and client have valid certs, mutual TLS enabled
             ActorSystem server = null;
             ActorSystem client = null;
@@ -90,7 +90,7 @@ namespace Akka.Remote.Tests.Transport
                 var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
 
                 // Should successfully connect and communicate
-                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
+                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5), token);
                 Assert.Equal("hello", response);
             }
             finally
@@ -105,6 +105,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Mutual_TLS_disabled_should_allow_standard_TLS_connection()
         {
+            var token = TestContext.Current.CancellationToken;
             // Server has mutual TLS disabled (standard server-only TLS)
             ActorSystem server = null;
             ActorSystem client = null;
@@ -125,7 +126,7 @@ namespace Akka.Remote.Tests.Transport
                 var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
 
                 // Should successfully connect with standard TLS
-                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
+                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5), token);
                 Assert.Equal("hello", response);
             }
             finally
@@ -166,6 +167,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Mutual_TLS_should_fail_when_client_has_no_certificate()
         {
+            var token = TestContext.Current.CancellationToken;
             // Server requires mutual TLS, client has SSL enabled but no certificate configured
             ActorSystem server = null;
             ActorSystem client = null;
@@ -190,7 +192,7 @@ namespace Akka.Remote.Tests.Transport
                 // Enhanced error message "no client certificate provided" will be logged to server logs
                 await Assert.ThrowsAsync<AskTimeoutException>(async () =>
                 {
-                    await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3));
+                    await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3), token);
                 });
             }
             finally
@@ -205,6 +207,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Mutual_TLS_can_be_disabled_for_backward_compatibility()
         {
+            var token = TestContext.Current.CancellationToken;
             // Test that setting require-mutual-authentication = false allows old behavior
             ActorSystem server = null;
             ActorSystem client = null;
@@ -226,7 +229,7 @@ namespace Akka.Remote.Tests.Transport
                 var serverEchoPath = new RootActorPath(serverAddr) / "user" / "echo";
 
                 // Should successfully connect even with mutual TLS disabled
-                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
+                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5), token);
                 Assert.Equal("hello", response);
             }
             finally
@@ -241,6 +244,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task Mutual_TLS_should_fail_when_client_has_different_valid_certificate()
         {
+            var token = TestContext.Current.CancellationToken;
             // Server and client have different valid certificates - mutual TLS should fail
             // because the certificates are not trusted by each other
             ActorSystem server = null;
@@ -268,7 +272,7 @@ namespace Akka.Remote.Tests.Transport
                 // Enhanced error message with certificate validation details will be logged to server logs
                 await Assert.ThrowsAsync<AskTimeoutException>(async () =>
                 {
-                    await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3));
+                    await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3), token);
                 });
             }
             finally
@@ -283,6 +287,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact(DisplayName = "Different certificates with hostname validation disabled should connect successfully")]
         public async Task Hostname_validation_disabled_should_allow_different_certificates()
         {
+            var token = TestContext.Current.CancellationToken;
             // Per-node certificates should work when hostname validation is disabled
             // Note: Using suppressValidation=true to bypass chain validation since test certs are self-signed
             // This isolates the hostname validation logic we're testing
@@ -308,7 +313,7 @@ namespace Akka.Remote.Tests.Transport
                 InitializeLogger(client, "[CLIENT] ");
 
                 // Should successfully connect because hostname validation is disabled
-                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
+                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5), token);
                 Assert.Equal("hello", response);
             }
             finally
@@ -323,6 +328,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact(DisplayName = "Different certificates with hostname validation enabled should fail with name mismatch")]
         public async Task Hostname_validation_enabled_should_reject_different_certificates()
         {
+            var token = TestContext.Current.CancellationToken;
             // When hostname validation is enabled, different certificates should fail with RemoteCertificateNameMismatch
             // Note: Using suppressValidation=true to bypass chain validation and test hostname validation specifically
             ActorSystem server = null;
@@ -349,7 +355,7 @@ namespace Akka.Remote.Tests.Transport
                 // Should fail because hostname in certificate doesn't match connection target (127.0.0.1)
                 await Assert.ThrowsAsync<AskTimeoutException>(async () =>
                 {
-                    await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3));
+                    await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(3), token);
                 });
             }
             finally
@@ -364,6 +370,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact(DisplayName = "Same certificate should connect successfully (typical mutual TLS scenario)")]
         public async Task Same_certificate_should_connect_in_mutual_tls()
         {
+            var token = TestContext.Current.CancellationToken;
             // Typical mutual TLS: Both nodes use the same shared certificate
             // Hostname validation disabled because we're using IPs/per-node certs
             ActorSystem server = null;
@@ -388,7 +395,7 @@ namespace Akka.Remote.Tests.Transport
                 InitializeLogger(client, "[CLIENT] ");
 
                 // Should successfully connect - typical mutual TLS scenario
-                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
+                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5), token);
                 Assert.Equal("hello", response);
             }
             finally
@@ -403,6 +410,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact(DisplayName = "Hostname validation unspecified should default to disabled (backward compatibility)")]
         public async Task Hostname_validation_default_should_be_disabled()
         {
+            var token = TestContext.Current.CancellationToken;
             // When validate-certificate-hostname is not specified, it should default to false
             // Note: Using suppressValidation=true to bypass chain validation and test hostname default behavior
             ActorSystem server = null;
@@ -427,7 +435,7 @@ namespace Akka.Remote.Tests.Transport
                 InitializeLogger(client, "[CLIENT] ");
 
                 // Should successfully connect because hostname validation defaults to disabled
-                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5));
+                var response = await client.ActorSelection(serverEchoPath).Ask<string>("hello", TimeSpan.FromSeconds(5), token);
                 Assert.Equal("hello", response);
             }
             finally

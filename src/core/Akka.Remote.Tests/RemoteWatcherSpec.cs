@@ -6,14 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
-using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -188,98 +187,100 @@ namespace Akka.Remote.Tests
             get { return AddressUidExtension.Uid(_remoteSystem); }
         }
 
-        private async Task<IInternalActorRef> CreateRemoteActor(Props props, string name)
+        private async Task<IInternalActorRef> CreateRemoteActor(Props props, string name, CancellationToken cancellationToken)
         {
             _remoteSystem.ActorOf(props, name);
             Sys.ActorSelection(new RootActorPath(_remoteAddress) / "user" / name).Tell(new Identify(name), TestActor);
-            return (await ExpectMsgAsync<ActorIdentity>()).Subject.AsInstanceOf<IInternalActorRef>();
+            return (await ExpectMsgAsync<ActorIdentity>(cancellationToken: cancellationToken)).Subject.AsInstanceOf<IInternalActorRef>();
         }
 
         [Fact]
         public async Task A_RemoteWatcher_must_have_correct_interaction_when_watching()
         {
+            var token = TestContext.Current.CancellationToken;
             var fd = CreateFailureDetectorRegistry();
             var monitorA = Sys.ActorOf(Props.Create<TestRemoteWatcher>(), "monitor1");
             //TODO: Better way to write this?
-            var monitorB = await CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), TestActor), "monitor1");
+            var monitorB = await CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), TestActor), "monitor1", token);
 
             var a1 = Sys.ActorOf(Props.Create<MyActor>(), "a1").AsInstanceOf<IInternalActorRef>();
             var a2 = Sys.ActorOf(Props.Create<MyActor>(), "a2").AsInstanceOf<IInternalActorRef>();
-            var b1 = await CreateRemoteActor(Props.Create<MyActor>(), "b1");
-            var b2 = await CreateRemoteActor(Props.Create<MyActor>(), "b2");
+            var b1 = await CreateRemoteActor(Props.Create<MyActor>(), "b1", token);
+            var b2 = await CreateRemoteActor(Props.Create<MyActor>(), "b2", token);
 
             monitorA.Tell(new RemoteWatcher.WatchRemote(b1, a1));
             monitorA.Tell(new RemoteWatcher.WatchRemote(b2, a1));
             monitorA.Tell(new RemoteWatcher.WatchRemote(b2, a2));
             monitorA.Tell(RemoteWatcher.Stats.Empty, TestActor);
             // (a1->b1), (a1->b2), (a2->b2)
-            await ExpectMsgAsync(RemoteWatcher.Stats.Counts(3, 1));
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectMsgAsync(RemoteWatcher.Stats.Counts(3, 1), cancellationToken: token);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
             monitorA.Tell(_heartbeatRspB, monitorB);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
 
             monitorA.Tell(new RemoteWatcher.UnwatchRemote(b1, a1));
             // still (a1->b2) and (a2->b2) left
             monitorA.Tell(RemoteWatcher.Stats.Empty, TestActor);
-            await ExpectMsgAsync(RemoteWatcher.Stats.Counts(2, 1));
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectMsgAsync(RemoteWatcher.Stats.Counts(2, 1), cancellationToken: token);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
 
             monitorA.Tell(new RemoteWatcher.UnwatchRemote(b2, a2));
             // still (a1->b2) left
             monitorA.Tell(RemoteWatcher.Stats.Empty, TestActor);
-            await ExpectMsgAsync(RemoteWatcher.Stats.Counts(1, 1));
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectMsgAsync(RemoteWatcher.Stats.Counts(1, 1), cancellationToken: token);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
 
             monitorA.Tell(new RemoteWatcher.UnwatchRemote(b2, a1));
             // all unwatched
             monitorA.Tell(RemoteWatcher.Stats.Empty, TestActor);
-            await ExpectMsgAsync(RemoteWatcher.Stats.Empty);
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectMsgAsync(RemoteWatcher.Stats.Empty, cancellationToken: token);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), token);
 
             // make sure nothing floods over to next test
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(2));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(2), token);
         }
 
         [Fact]
         public async Task A_RemoteWatcher_must_generate_address_terminated_when_missing_heartbeats()
         {
+            var token = TestContext.Current.CancellationToken;
             var p = CreateTestProbe();
             var q = CreateTestProbe();
             Sys.EventStream.Subscribe(p.Ref, typeof (TestRemoteWatcher.AddressTerm));
             Sys.EventStream.Subscribe(q.Ref, typeof(TestRemoteWatcher.Quarantined));
 
             var monitorA = Sys.ActorOf(Props.Create<TestRemoteWatcher>(), "monitor4");
-            var monitorB = await CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), TestActor), "monitor4");
+            var monitorB = await CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), TestActor), "monitor4", token);
 
             var a = Sys.ActorOf(Props.Create<MyActor>(), "a4").AsInstanceOf<IInternalActorRef>();
-            var b = await CreateRemoteActor(Props.Create<MyActor>(), "b4");
+            var b = await CreateRemoteActor(Props.Create<MyActor>(), "b4", token);
 
             monitorA.Tell(new RemoteWatcher.WatchRemote(b, a));
 
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
             monitorA.Tell(_heartbeatRspB, monitorB);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
             monitorA.Tell(_heartbeatRspB, monitorB);
 
             await WithinAsync(10.Seconds(), async () =>
@@ -287,21 +288,22 @@ namespace Akka.Remote.Tests
                 await AwaitAssertAsync(async () =>
                 {
                     monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-                    await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+                    await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
                     //but no HeartbeatRsp
                     monitorA.Tell(RemoteWatcher.ReapUnreachableTick.Instance);
-                    await p.ExpectMsgAsync(new TestRemoteWatcher.AddressTerm(b.Path.Address), TimeSpan.FromSeconds(1));
-                    await q.ExpectMsgAsync(new TestRemoteWatcher.Quarantined(b.Path.Address, RemoteAddressUid), TimeSpan.FromSeconds(1));
-                });
+                    await p.ExpectMsgAsync(new TestRemoteWatcher.AddressTerm(b.Path.Address), TimeSpan.FromSeconds(1), cancellationToken: token);
+                    await q.ExpectMsgAsync(new TestRemoteWatcher.Quarantined(b.Path.Address, RemoteAddressUid), TimeSpan.FromSeconds(1), cancellationToken: token);
+                }, cancellationToken: token);
                 return true;
-            });
+            }, cancellationToken: token);
 
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(2));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(2), token);
         }
 
         [Fact]
         public async Task A_RemoteWatcher_must_generate_address_terminated_when_missing_first_heartbeat()
         {
+            var token = TestContext.Current.CancellationToken;
             var p = CreateTestProbe();
             var q = CreateTestProbe();
             Sys.EventStream.Subscribe(p.Ref, typeof (TestRemoteWatcher.AddressTerm));
@@ -310,15 +312,15 @@ namespace Akka.Remote.Tests
             var fd = CreateFailureDetectorRegistry();
             var heartbeatExpectedResponseAfter = TimeSpan.FromSeconds(2);
             var monitorA = Sys.ActorOf(new Props(new Deploy(), typeof(TestRemoteWatcher), heartbeatExpectedResponseAfter), "monitor5");
-            var monitorB = await CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), TestActor), "monitor5");
+            var monitorB = await CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), TestActor), "monitor5", token);
 
             var a = Sys.ActorOf(Props.Create<MyActor>(), "a5").AsInstanceOf<IInternalActorRef>();
-            var b = await CreateRemoteActor(Props.Create<MyActor>(), "b5");
+            var b = await CreateRemoteActor(Props.Create<MyActor>(), "b5", token);
 
             monitorA.Tell(new RemoteWatcher.WatchRemote(b, a));
 
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
             // no HeartbeatRsp sent
 
             await WithinAsync(20.Seconds(), async () =>
@@ -326,42 +328,43 @@ namespace Akka.Remote.Tests
                 await AwaitAssertAsync(async () =>
                 {
                     monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-                    await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+                    await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
                     //but no HeartbeatRsp
                     monitorA.Tell(RemoteWatcher.ReapUnreachableTick.Instance);
-                    await p.ExpectMsgAsync(new TestRemoteWatcher.AddressTerm(b.Path.Address), TimeSpan.FromSeconds(1));
+                    await p.ExpectMsgAsync(new TestRemoteWatcher.AddressTerm(b.Path.Address), TimeSpan.FromSeconds(1), cancellationToken: token);
                     // no real quarantine when missing first heartbeat, uid unknown
-                    await q.ExpectMsgAsync(new TestRemoteWatcher.Quarantined(b.Path.Address, null), TimeSpan.FromSeconds(1));
-                });
+                    await q.ExpectMsgAsync(new TestRemoteWatcher.Quarantined(b.Path.Address, null), TimeSpan.FromSeconds(1), cancellationToken: token);
+                }, cancellationToken: token);
                 return true;
-            });
+            }, cancellationToken: token);
 
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(2));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(2), token);
         }
 
         [Fact]
         public async Task
             A_RemoteWatcher_must_generate_address_terminated_for_new_watch_after_broken_connection_was_reestablished_and_broken_again()
         {
+            var token = TestContext.Current.CancellationToken;
             var p = CreateTestProbe();
             var q = CreateTestProbe();
             Sys.EventStream.Subscribe(p.Ref, typeof(TestRemoteWatcher.AddressTerm));
             Sys.EventStream.Subscribe(q.Ref, typeof(TestRemoteWatcher.Quarantined));
 
             var monitorA = Sys.ActorOf(Props.Create<TestRemoteWatcher>(), "monitor6");
-            var monitorB = await CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), new[] { TestActor }), "monitor6");
+            var monitorB = await CreateRemoteActor(new Props(new Deploy(), typeof(TestActorProxy), new[] { TestActor }), "monitor6", token);
 
             var a = Sys.ActorOf(Props.Create<MyActor>(), "a6").AsInstanceOf<IInternalActorRef>();
-            var b = await CreateRemoteActor(Props.Create<MyActor>(), "b6");
+            var b = await CreateRemoteActor(Props.Create<MyActor>(), "b6", token);
 
             monitorA.Tell(new RemoteWatcher.WatchRemote(b, a));
 
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
             monitorA.Tell(_heartbeatRspB, monitorB);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
             monitorA.Tell(_heartbeatRspB, monitorB);
 
             await WithinAsync(10.Seconds(), async () =>
@@ -369,48 +372,48 @@ namespace Akka.Remote.Tests
                 await AwaitAssertAsync(async () =>
                 {
                     monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-                    await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+                    await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
                     //but no HeartbeatRsp
                     monitorA.Tell(RemoteWatcher.ReapUnreachableTick.Instance);
-                    await p.ExpectMsgAsync(new TestRemoteWatcher.AddressTerm(b.Path.Address), TimeSpan.FromSeconds(1));
+                    await p.ExpectMsgAsync(new TestRemoteWatcher.AddressTerm(b.Path.Address), TimeSpan.FromSeconds(1), cancellationToken: token);
                     await q.ExpectMsgAsync(new TestRemoteWatcher.Quarantined(b.Path.Address, RemoteAddressUid),
-                        TimeSpan.FromSeconds(1));
-                });
+                        TimeSpan.FromSeconds(1), cancellationToken: token);
+                }, cancellationToken: token);
                 return true;
-            });
+            }, cancellationToken: token);
 
             //real AddressTerminated would trigger Terminated for b6, simulate that here
             _remoteSystem.Stop(b);
             await AwaitAssertAsync(async () =>
             {
                 monitorA.Tell(RemoteWatcher.Stats.Empty, TestActor);
-                await ExpectMsgAsync(RemoteWatcher.Stats.Empty);
-            });
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(2));
+                await ExpectMsgAsync(RemoteWatcher.Stats.Empty, cancellationToken: token);
+            }, cancellationToken: token);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(2), token);
 
             //assume that connection comes up again, or remote system is restarted
-            var c = await CreateRemoteActor(Props.Create<MyActor>(), "c6");
+            var c = await CreateRemoteActor(Props.Create<MyActor>(), "c6", token);
             monitorA.Tell(new RemoteWatcher.WatchRemote(c,a));
 
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
             monitorA.Tell(_heartbeatRspB, monitorB);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
             monitorA.Tell(_heartbeatRspB, monitorB);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
             monitorA.Tell(RemoteWatcher.ReapUnreachableTick.Instance, TestActor);
-            await p.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await p.ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
             monitorA.Tell(_heartbeatRspB, monitorB);
             monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-            await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+            await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
             monitorA.Tell(RemoteWatcher.ReapUnreachableTick.Instance, TestActor);
-            await p.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-            await q.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await p.ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
+            await q.ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
 
             //then stop heartbeating again; should generate a new AddressTerminated
             await WithinAsync(10.Seconds(), async () =>
@@ -418,17 +421,17 @@ namespace Akka.Remote.Tests
                 await AwaitAssertAsync(async () =>
                 {
                     monitorA.Tell(RemoteWatcher.HeartbeatTick.Instance, TestActor);
-                    await ExpectMsgAsync<RemoteWatcher.Heartbeat>();
+                    await ExpectMsgAsync<RemoteWatcher.Heartbeat>(cancellationToken: token);
                     //but no HeartbeatRsp
                     monitorA.Tell(RemoteWatcher.ReapUnreachableTick.Instance);
-                    await p.ExpectMsgAsync(new TestRemoteWatcher.AddressTerm(b.Path.Address), TimeSpan.FromSeconds(1));
-                    await q.ExpectMsgAsync(new TestRemoteWatcher.Quarantined(b.Path.Address, RemoteAddressUid), TimeSpan.FromSeconds(1));
-                });
+                    await p.ExpectMsgAsync(new TestRemoteWatcher.AddressTerm(b.Path.Address), TimeSpan.FromSeconds(1), cancellationToken: token);
+                    await q.ExpectMsgAsync(new TestRemoteWatcher.Quarantined(b.Path.Address, RemoteAddressUid), TimeSpan.FromSeconds(1), cancellationToken: token);
+                }, cancellationToken: token);
                 return true;
-            });
+            }, cancellationToken: token);
 
             //make sure nothing floods over to next test
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(2));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(2), token);
         }
 
     }

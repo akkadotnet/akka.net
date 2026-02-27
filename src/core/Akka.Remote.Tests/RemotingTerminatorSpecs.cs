@@ -14,7 +14,6 @@ using Akka.TestKit.Extensions;
 using Akka.TestKit.TestActors;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -51,33 +50,37 @@ namespace Akka.Remote.Tests
                 Sys.EventStream.Subscribe(TestActor, typeof (RemotingShutdownEvent));
                 Sys.EventStream.Subscribe(TestActor, typeof (RemotingErrorEvent));
                 Assert.True(await Sys.Terminate().AwaitWithTimeout(RemainingOrDefault), "Expected to terminate within 10 seconds, but didn't.");
-            });
+            }, cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact]
         public async Task RemotingTerminator_should_shutdown_promptly_with_some_associations()
         {
+            var token = TestContext.Current.CancellationToken;
             _sys2 = ActorSystem.Create("System2", RemoteConfig);
             InitializeLogger(_sys2);
             var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
 
             // open an association
             var associated = await Sys.ActorSelection(new RootActorPath(sys2Address)/"system"/"remote-watcher")
-                .ResolveOne(TimeSpan.FromSeconds(4));
+                .ResolveOne(TimeSpan.FromSeconds(4), token);
 
             Sys.EventStream.Subscribe(TestActor, typeof(RemotingShutdownEvent));
             Sys.EventStream.Subscribe(TestActor, typeof(RemotingErrorEvent));
             var terminationTask = Sys.Terminate();
-            await ExpectMsgAsync<RemotingShutdownEvent>();
-            Assert.True(await terminationTask.AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
+            await ExpectMsgAsync<RemotingShutdownEvent>(cancellationToken: token);
+            Assert.True(await terminationTask.AwaitWithTimeout(10.Seconds(), token), 
+                "Expected to terminate within 10 seconds, but didn't.");
 
             // now terminate the second system
-            Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
+            Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds(), token), 
+                "Expected to terminate within 10 seconds, but didn't.");
         }
 
         [Fact]
         public async Task RemotingTerminator_should_shutdown_properly_with_remotely_deployed_actor()
         {
+            var token = TestContext.Current.CancellationToken;
             _sys2 = ActorSystem.Create("System2", RemoteConfig);
             InitializeLogger(_sys2);
             var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
@@ -89,20 +92,23 @@ namespace Akka.Remote.Tests
             Watch(associated);
 
             // verify that the association is open (don't terminate until handshake is finished)
-            var actorIdentity = await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault);
+            var actorIdentity = await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault, token);
             actorIdentity.MessageId.ShouldBe("foo");
 
             // terminate the DEPLOYED system
-            Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
-            await ExpectTerminatedAsync(associated); // expect that the remote deployed actor is dead
+            Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds(), token), 
+                "Expected to terminate within 10 seconds, but didn't.");
+            await ExpectTerminatedAsync(associated, cancellationToken: token); // expect that the remote deployed actor is dead
 
             // now terminate the DEPLOYER system
-            Assert.True(await Sys.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
+            Assert.True(await Sys.Terminate().AwaitWithTimeout(10.Seconds(), token), 
+                "Expected to terminate within 10 seconds, but didn't.");
         }
 
         [Fact]
         public async Task RemotingTerminator_should_shutdown_properly_without_exception_logging_while_graceful_shutdown()
         {
+            var token = TestContext.Current.CancellationToken;
             await EventFilter.Exception<ShutDownAssociation>().ExpectAsync(0,
                 async () =>
                 {
@@ -116,19 +122,19 @@ namespace Akka.Remote.Tests
                     Watch(associated);
 
                     // verify that the association is open (don't terminate until handshake is finished)
-                    (await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault)).MessageId.ShouldBe("foo");
+                    (await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault, token)).MessageId.ShouldBe("foo");
 
                     // terminate the DEPLOYED system
                     await WithinAsync(TimeSpan.FromSeconds(10), async () =>
                     {
                         var terminationTask = _sys2.Terminate(); // start termination process
-                        await ExpectTerminatedAsync(associated);  // expect that the remote deployed actor is dead
-                        Assert.True(await terminationTask.AwaitWithTimeout(RemainingOrDefault), "Expected to terminate within 10 seconds, but didn't.");
-                    });
+                        await ExpectTerminatedAsync(associated, cancellationToken: token);  // expect that the remote deployed actor is dead
+                        Assert.True(await terminationTask.AwaitWithTimeout(RemainingOrDefault, cancellationToken: token), "Expected to terminate within 10 seconds, but didn't.");
+                    }, cancellationToken: token);
 
                     // now terminate the DEPLOYER system
-                    Assert.True(await Sys.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
-                });
+                    Assert.True(await Sys.Terminate().AwaitWithTimeout(10.Seconds(), cancellationToken: token), "Expected to terminate within 10 seconds, but didn't.");
+                }, token);
         }
     }
 }

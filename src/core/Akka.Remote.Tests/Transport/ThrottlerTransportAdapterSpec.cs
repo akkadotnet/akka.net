@@ -13,7 +13,6 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.TestKit;
-using Akka.TestKit.Extensions;
 using Akka.TestKit.Internal;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;
@@ -22,7 +21,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -186,61 +184,62 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task ThrottlerTransportAdapter_must_maintain_average_message_rate()
         {
+            var token = TestContext.Current.CancellationToken;
             await Throttle(
                     ThrottleTransportAdapter.Direction.Send,
                     new Remote.Transport.TokenBucket(PingPacketSize * 4, BytesPerSecond, 0, 0))
-                .WaitAsync(TimeSpan.FromSeconds(3));
+                .WaitAsync(TimeSpan.FromSeconds(3), token);
 
             var here = await Here();
             var tester = Sys.ActorOf(Props.Create(() => new ThrottlingTester(here, TestActor)));
             tester.Tell("start");
 
-            var time = TimeSpan.FromTicks(await ExpectMsgAsync<long>(TimeSpan.FromSeconds(TotalTime + 12))).TotalSeconds;
+            var time = TimeSpan.FromTicks(await ExpectMsgAsync<long>(TimeSpan.FromSeconds(TotalTime + 12), cancellationToken: token)).TotalSeconds;
             Log.Warning("Total time of transmission: {0}", time);
             time.Should().BeGreaterThan(TotalTime - 12);
 
             await Throttle(ThrottleTransportAdapter.Direction.Send, Unthrottled.Instance)
-                .WaitAsync(TimeSpan.FromSeconds(3));
+                .WaitAsync(TimeSpan.FromSeconds(3), token);
         }
 
         [Fact]
         public async Task ThrottlerTransportAdapter_must_survive_blackholing()
         {
-            
+            var token = TestContext.Current.CancellationToken;
             var here = await Here();
             here.Tell(new ThrottlingTester.Lost("BlackHole 1"));
-            await ExpectMsgAsync(new ThrottlingTester.Lost("BlackHole 1"));
+            await ExpectMsgAsync(new ThrottlingTester.Lost("BlackHole 1"), cancellationToken: token);
 
             MuteDeadLetters(typeof(ThrottlingTester.Lost));
             MuteDeadLetters(_systemB, typeof(ThrottlingTester.Lost));
 
             await Throttle(ThrottleTransportAdapter.Direction.Both, Blackhole.Instance)
-                .WaitAsync(3.Seconds());
+                .WaitAsync(3.Seconds(), token);
 
             here.Tell(new ThrottlingTester.Lost("BlackHole 2"));
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-            await Disassociate().WaitAsync(TimeSpan.FromSeconds(3));
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
+            await Disassociate().WaitAsync(TimeSpan.FromSeconds(3), token);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), token);
 
             await Throttle(ThrottleTransportAdapter.Direction.Both, Unthrottled.Instance)
-                .WaitAsync(TimeSpan.FromSeconds(3));
+                .WaitAsync(TimeSpan.FromSeconds(3), token);
 
             // after we remove the Blackhole we can't be certain of the state
             // of the connection, repeat until success
             here.Tell(new ThrottlingTester.Lost("BlackHole 3"));
             await AwaitConditionAsync(async () =>
             {
-                var received = await ReceiveOneAsync(TimeSpan.Zero);
+                var received = await ReceiveOneAsync(TimeSpan.Zero, token);
                 if (received != null && received.Equals(new ThrottlingTester.Lost("BlackHole 3")))
                     return true;
 
                 here.Tell(new ThrottlingTester.Lost("BlackHole 3"));
 
                 return false;
-            }, TimeSpan.FromSeconds(15));
+            }, TimeSpan.FromSeconds(15), token);
 
             here.Tell("Cleanup");
-            await FishForMessageAsync(o => o.Equals("Cleanup"), TimeSpan.FromSeconds(5));
+            await FishForMessageAsync(o => o.Equals("Cleanup"), TimeSpan.FromSeconds(5), cancellationToken: token);
         }
 
         #endregion

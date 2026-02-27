@@ -12,7 +12,6 @@ using Akka.Event;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -36,6 +35,7 @@ namespace Akka.Remote.Tests.Transport
         public void PinnedCertificate_should_reject_null_certificate()
         {
             // Arrange
+            var token = TestContext.Current.CancellationToken;
             var validator = CertificateValidation.PinnedCertificate("ABCD1234");
 
             // Act & Assert
@@ -43,7 +43,7 @@ namespace Akka.Remote.Tests.Transport
             {
                 var result = validator(null, null, "test-peer", SslPolicyErrors.None, _log);
                 Assert.False(result);
-            });
+            }, token);
         }
 
         // Note: X509Certificate2 always has a thumbprint when properly constructed,
@@ -125,6 +125,7 @@ namespace Akka.Remote.Tests.Transport
         public void PinnedCertificate_should_reject_non_matching_thumbprint()
         {
             // Arrange
+            var token = TestContext.Current.CancellationToken;
             var cert = new X509Certificate2(ValidCertPath, Password);
             var validator = CertificateValidation.PinnedCertificate(
                 "1111111111111111111111111111111111111111",
@@ -135,7 +136,7 @@ namespace Akka.Remote.Tests.Transport
             {
                 var result = validator(cert, null, "test-peer", SslPolicyErrors.None, _log);
                 Assert.False(result);
-            });
+            }, token);
         }
 
         #endregion
@@ -146,6 +147,7 @@ namespace Akka.Remote.Tests.Transport
         public void ValidateSubject_should_reject_null_certificate()
         {
             // Arrange
+            var token = TestContext.Current.CancellationToken;
             var validator = CertificateValidation.ValidateSubject("CN=TestSubject");
 
             // Act & Assert
@@ -153,7 +155,7 @@ namespace Akka.Remote.Tests.Transport
             {
                 var result = validator(null, null, "test-peer", SslPolicyErrors.None, _log);
                 Assert.False(result);
-            });
+            }, token);
         }
 
         [Fact(DisplayName = "ValidateSubject should throw if pattern is null or empty")]
@@ -173,6 +175,7 @@ namespace Akka.Remote.Tests.Transport
         public void ValidateIssuer_should_reject_null_certificate()
         {
             // Arrange
+            var token = TestContext.Current.CancellationToken;
             var validator = CertificateValidation.ValidateIssuer("CN=TestIssuer");
 
             // Act & Assert
@@ -180,14 +183,14 @@ namespace Akka.Remote.Tests.Transport
             {
                 var result = validator(null, null, "test-peer", SslPolicyErrors.None, _log);
                 Assert.False(result);
-            });
+            }, token);
         }
 
         [Fact(DisplayName = "ValidateIssuer should throw if pattern is null or empty")]
         public void ValidateIssuer_should_throw_if_pattern_null_or_empty()
         {
             // Act & Assert
-            Assert.Throws<ArgumentException>(() => CertificateValidation.ValidateIssuer(null));
+            Assert.Throws<ArgumentException>(() => CertificateValidation.ValidateIssuer(null!));
             Assert.Throws<ArgumentException>(() => CertificateValidation.ValidateIssuer(""));
             Assert.Throws<ArgumentException>(() => CertificateValidation.ValidateIssuer("  "));
         }
@@ -200,7 +203,7 @@ namespace Akka.Remote.Tests.Transport
         public void Combine_should_handle_null_validators()
         {
             // Act & Assert - Should throw ArgumentException
-            Assert.Throws<ArgumentException>(() => CertificateValidation.Combine(null));
+            Assert.Throws<ArgumentException>(() => CertificateValidation.Combine(null!));
         }
 
         [Fact(DisplayName = "Combine should handle empty validators array")]
@@ -215,6 +218,7 @@ namespace Akka.Remote.Tests.Transport
         public void Combine_should_short_circuit_on_first_failure()
         {
             // Arrange
+            var token = TestContext.Current.CancellationToken;
             var callCount = 0;
             CertificateValidationCallback validator1 = (cert, chain, peer, errors, log) =>
             {
@@ -238,7 +242,7 @@ namespace Akka.Remote.Tests.Transport
                 var result = combined(cert, null, "test-peer", SslPolicyErrors.None, _log);
                 Assert.False(result);
                 Assert.Equal(1, callCount); // Only first validator should be called - short-circuit behavior
-            });
+            }, cancellationToken: token);
         }
 
         #endregion

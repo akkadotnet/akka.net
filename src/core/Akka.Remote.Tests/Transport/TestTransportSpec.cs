@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Remote.Transport;
 using Akka.TestKit;
-using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
 using Google.Protobuf;
 using Xunit;
@@ -35,11 +34,12 @@ namespace Akka.Remote.Tests.Transport
         public async Task TestTransport_must_return_an_Address_and_TaskCompletionSource_on_Listen()
         {
             //arrange
+            var token = TestContext.Current.CancellationToken;
             var registry = new AssociationRegistry();
             var transportA = new TestTransport(_addressA, registry);
 
             //act
-            var result = await transportA.Listen().WithTimeout(DefaultTimeout);
+            var result = await transportA.Listen().WaitAsync(DefaultTimeout, token);
 
             //assert
             Assert.Equal(_addressA, result.Item1);
@@ -55,6 +55,7 @@ namespace Akka.Remote.Tests.Transport
         public async Task TestTransport_must_associate_successfully_with_another_TestTransport()
         {
             //arrange
+            var token = TestContext.Current.CancellationToken;
             var registry = new AssociationRegistry();
             var transportA = new TestTransport(_addressA, registry);
             var transportB = new TestTransport(_addressB, registry);
@@ -62,10 +63,12 @@ namespace Akka.Remote.Tests.Transport
             //act
 
             //must complete returned promises to receive events
-            var localConnectionFuture = await transportA.Listen().WithTimeout(DefaultTimeout);
+            var localConnectionFuture = await transportA.Listen()
+                .WaitAsync(DefaultTimeout, token);
             localConnectionFuture.Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
-            var remoteConnectionFuture = await transportB.Listen().WithTimeout(DefaultTimeout);
+            var remoteConnectionFuture = await transportB.Listen()
+                .WaitAsync(DefaultTimeout, token);
             remoteConnectionFuture.Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
             var ready = registry.TransportsReady(_addressA, _addressB);
@@ -74,7 +77,7 @@ namespace Akka.Remote.Tests.Transport
             // task is deliberately not awaited
             var task = transportA.Associate(_addressB);
             await ExpectMsgOfAsync(DefaultTimeout, "Expect InboundAssociation from A",
-                m => m.AsInstanceOf<InboundAssociation>().Association);
+                m => m.AsInstanceOf<InboundAssociation>().Association, token);
 
             //assert
             var associateAttempt = (registry.LogSnapshot().Single(x => x is AssociateAttempt)).AsInstanceOf<AssociateAttempt>();
@@ -86,17 +89,20 @@ namespace Akka.Remote.Tests.Transport
         public async Task TestTransport_fail_to_association_with_non_existing_Address()
         {
             //arrange
+            var token = TestContext.Current.CancellationToken;
             var registry = new AssociationRegistry();
             var transportA = new TestTransport(_addressA, registry);
 
             //act
-            var result = await transportA.Listen().WithTimeout(DefaultTimeout);
+            var result = await transportA.Listen()
+                .WaitAsync(DefaultTimeout, token);
             result.Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
             //assert
             await Assert.ThrowsAsync<InvalidAssociationException>(async () =>
             {
-                await transportA.Associate(_nonExistantAddress).WithTimeout(DefaultTimeout);
+                await transportA.Associate(_nonExistantAddress)
+                    .WaitAsync(DefaultTimeout, token);
             });
         }
 
@@ -104,6 +110,7 @@ namespace Akka.Remote.Tests.Transport
         public async Task TestTransport_should_emulate_sending_PDUs()
         {
             //arrange
+            var token = TestContext.Current.CancellationToken;
             var registry = new AssociationRegistry();
             var transportA = new TestTransport(_addressA, registry);
             var transportB = new TestTransport(_addressB, registry);
@@ -111,10 +118,12 @@ namespace Akka.Remote.Tests.Transport
             //act
 
             //must complete returned promises to receive events
-            var localConnectionFuture = await transportA.Listen().WithTimeout(DefaultTimeout);
+            var localConnectionFuture = await transportA.Listen()
+                .WaitAsync(DefaultTimeout, token);
             localConnectionFuture.Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
-            var remoteConnectionFuture = await transportB.Listen().WithTimeout(DefaultTimeout);
+            var remoteConnectionFuture = await transportB.Listen()
+                .WaitAsync(DefaultTimeout, token);
             remoteConnectionFuture.Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
             var ready = registry.TransportsReady(_addressA, _addressB);
@@ -126,10 +135,10 @@ namespace Akka.Remote.Tests.Transport
                 if (o is InboundAssociation handle && handle.Association.RemoteAddress.Equals(_addressA)) 
                     return handle.Association;
                 return null;
-            });
+            }, token);
             handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
-            await associate.WithTimeout(DefaultTimeout);
+            await associate.WaitAsync(DefaultTimeout, token);
             var handleA = await associate;
 
             //Initialize handles
@@ -148,7 +157,7 @@ namespace Akka.Remote.Tests.Transport
                 if (o is InboundPayload payload && payload.Payload.Equals(akkaPdu)) 
                     return akkaPdu;
                 return null;
-            });
+            }, token);
 
             var writeAttempt = (registry.LogSnapshot().Single(x => x is WriteAttempt)).AsInstanceOf<WriteAttempt>();
             Assert.True(writeAttempt.Sender.Equals(_addressA) && writeAttempt.Recipient.Equals(_addressB)
@@ -159,6 +168,7 @@ namespace Akka.Remote.Tests.Transport
         public async Task TestTransport_should_emulate_disassociation()
         {
             //arrange
+            var token = TestContext.Current.CancellationToken;
             var registry = new AssociationRegistry();
             var transportA = new TestTransport(_addressA, registry);
             var transportB = new TestTransport(_addressB, registry);
@@ -166,10 +176,10 @@ namespace Akka.Remote.Tests.Transport
             //act
 
             //must complete returned promises to receive events
-            var localConnectionFuture = await transportA.Listen().WithTimeout(DefaultTimeout);
+            var localConnectionFuture = await transportA.Listen().WaitAsync(DefaultTimeout, token);
             localConnectionFuture.Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
-            var remoteConnectionFuture = await transportB.Listen().WithTimeout(DefaultTimeout);
+            var remoteConnectionFuture = await transportB.Listen().WaitAsync(DefaultTimeout, token);
             remoteConnectionFuture.Item2.SetResult(new ActorAssociationEventListener(TestActor));
 
             var ready = registry.TransportsReady(_addressA, _addressB);
@@ -181,10 +191,10 @@ namespace Akka.Remote.Tests.Transport
                 if (o is InboundAssociation handle && handle.Association.RemoteAddress.Equals(_addressA)) 
                     return handle.Association;
                 return null;
-            });
+            }, token);
             handleB.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
-            await associate.WithTimeout(DefaultTimeout);
+            await associate.WaitAsync(DefaultTimeout, token);
             var handleA = await associate;
 
             //Initialize handles
@@ -195,7 +205,7 @@ namespace Akka.Remote.Tests.Transport
 
             handleA.Disassociate("Disassociation test", Log);
 
-            var msg = await ExpectMsgOfAsync(DefaultTimeout, "Expected Disassociated", o => o.AsInstanceOf<Disassociated>());
+            var msg = await ExpectMsgOfAsync(DefaultTimeout, "Expected Disassociated", o => o.AsInstanceOf<Disassociated>(), token);
 
             //assert
             Assert.NotNull(msg);

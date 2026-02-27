@@ -15,11 +15,10 @@ using Akka.Configuration;
 using Akka.Routing;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.BugFixes
 {
-    public class BugFix4384Spec : TestKit.Xunit2.TestKit
+    public class BugFix4384Spec : TestKit.Xunit.TestKit
     {
         public ActorSystem Sys1 { get; }
         public Address Sys1Address { get; }
@@ -57,6 +56,7 @@ namespace Akka.Remote.Tests.BugFixes
         [Fact]
         public async Task Ask_from_local_actor_without_remote_association_should_work()
         {
+            var token = TestContext.Current.CancellationToken;
             // create actor in Sys1
             const string actorName = "actor1";
             Sys1.ActorOf(dsl => dsl.ReceiveAny((m, _) => TestActor.Tell(m)), actorName);
@@ -66,13 +66,14 @@ namespace Akka.Remote.Tests.BugFixes
             
             // make sure that actor1 is able to resolve temporary actor's path
             // see https://github.com/akkadotnet/akka.net/issues/4384 - tmp actor should belong to Sys2 here
-            var msg = await sel.Ask<ActorIdentity>(new Identify("foo"), TimeSpan.FromSeconds(30));
+            var msg = await sel.Ask<ActorIdentity>(new Identify("foo"), TimeSpan.FromSeconds(30), token);
             msg.MessageId.Should().Be("foo");
         }
         
         [Fact(Skip = "The spec above contains the reproduction of the real issue")]
         public async Task ConsistentHashingPoolRoutersShouldWorkAsExpectedWithHashMapping()
         {
+            var token = TestContext.Current.CancellationToken;
             var poolRouter =
                 Sys1.ActorOf(Props.Create(() => new ReporterActor(TestActor)).WithRouter(new ConsistentHashingPool(5,
                         msg =>
@@ -84,23 +85,23 @@ namespace Akka.Remote.Tests.BugFixes
                     "router1");
 
             // use some auto-received messages to ensure that those still work
-            var numRoutees = (await poolRouter.Ask<Routees>(new GetRoutees(), TimeSpan.FromSeconds(2))).Members.Count();
+            var numRoutees = (await poolRouter.Ask<Routees>(new GetRoutees(), TimeSpan.FromSeconds(2), cancellationToken: token)).Members.Count();
             
             // establish association between ActorSystems
             var sys2Probe = CreateTestProbe(Sys2);
             var secondActor = Sys1.ActorOf(act => act.ReceiveAny((o, ctx) => ctx.Sender.Tell(o)), "foo");
 
             Sys2.ActorSelection(new RootActorPath(Sys1Address) / "user" / secondActor.Path.Name).Tell("foo", sys2Probe);
-            await sys2Probe.ExpectMsgAsync("foo");
+            await sys2Probe.ExpectMsgAsync("foo", cancellationToken: token);
 
             // have ActorSystem2 message it via tell
             var sel = Sys2.ActorSelection(new RootActorPath(Sys1Address) / "user" / "router1");
             sel.Tell(new HashableString("foo"));
-            await ExpectMsgAsync<HashableString>(str => str.Str.Equals("foo"));
+            await ExpectMsgAsync<HashableString>(str => str.Str.Equals("foo"), cancellationToken: token);
 
             // have ActorSystem2 message it via Ask. Task is intentionally not awaited.
-            var task = sel.Ask(new Identify("bar2"), TimeSpan.FromSeconds(3)).PipeTo(sys2Probe);
-            var remoteRouter = (await sys2Probe.ExpectMsgAsync<ActorIdentity>(x => x.MessageId.Equals("bar2"), TimeSpan.FromSeconds(5))).Subject;
+            var task = sel.Ask(new Identify("bar2"), TimeSpan.FromSeconds(3), cancellationToken: token).PipeTo(sys2Probe);
+            var remoteRouter = (await sys2Probe.ExpectMsgAsync<ActorIdentity>(x => x.MessageId.Equals("bar2"), TimeSpan.FromSeconds(5), cancellationToken: token)).Subject;
 
             var s2Actor = Sys2.ActorOf(act =>
             {
@@ -111,7 +112,7 @@ namespace Akka.Remote.Tests.BugFixes
                 });
             });
             s2Actor.Tell("hit");
-            await sys2Probe.ExpectMsgAsync<ActorIdentity>(x => x.MessageId.Equals("hit"), TimeSpan.FromSeconds(5));
+            await sys2Probe.ExpectMsgAsync<ActorIdentity>(x => x.MessageId.Equals("hit"), TimeSpan.FromSeconds(5), cancellationToken: token);
         }
 
         class ReporterActor : ReceiveActor

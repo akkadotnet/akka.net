@@ -14,9 +14,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
-using Akka.Event;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -152,6 +150,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact(DisplayName = "Server should NOT shutdown when invalid traffic (like HTTP) hits TLS port")]
         public async Task Server_side_invalid_traffic_should_not_shutdown_server()
         {
+            var token = TestContext.Current.CancellationToken;
             // This test addresses issue https://github.com/akkadotnet/akka.net/issues/7938
             // When invalid traffic (like HTTP requests) hits a TLS-enabled port,
             // the server should reject the connection but NOT shut down
@@ -175,12 +174,16 @@ namespace Akka.Remote.Tests.Transport
                 try
                 {
                     using var tcpClient = new TcpClient();
+                    #if NETFRAMEWORK
                     await tcpClient.ConnectAsync("127.0.0.1", port);
+                    #else
+                    await tcpClient.ConnectAsync("127.0.0.1", port, token);
+                    #endif
 
                     // Send an HTTP OPTIONS request (as described in the bug report)
                     var httpRequest = Encoding.UTF8.GetBytes("OPTIONS / HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n");
-                    await tcpClient.GetStream().WriteAsync(httpRequest, 0, httpRequest.Length);
-                    await tcpClient.GetStream().FlushAsync();
+                    await tcpClient.GetStream().WriteAsync(httpRequest, 0, httpRequest.Length, token);
+                    await tcpClient.GetStream().FlushAsync(token);
 
                     // Connection should be closed by server after rejecting invalid TLS
                     tcpClient.Close();
@@ -193,7 +196,7 @@ namespace Akka.Remote.Tests.Transport
                 // Verify the server hasn't initiated shutdown
                 // If it was going to shut down due to TLS failure, it would have done so immediately
                 await AwaitConditionAsync(() => !server.WhenTerminated.IsCompleted,
-                    TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100));
+                    TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100), cancellationToken: token);
 
                 // CRITICAL ASSERTION: Server should NOT have shut down
                 Assert.False(server.WhenTerminated.IsCompleted,

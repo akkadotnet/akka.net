@@ -5,14 +5,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -105,6 +103,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public async Task RemoteActorRefs_should_not_produce_telemetry()
         {
+            var token = TestContext.Current.CancellationToken;
             // create a second ActorSystem that connects to Sys
             var system2 = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
             try
@@ -114,7 +113,7 @@ namespace Akka.Remote.Tests
 
                 // send a request for the current telemetry counters
                 var telemetry = await subscriber
-                    .Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
+                    .Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance, token);
 
                 // verify that the counters are all correct
                 Assert.Equal(0, telemetry.ActorCreated);
@@ -131,11 +130,11 @@ namespace Akka.Remote.Tests
                 var actor1Path = new RootActorPath(address) / "user" / "actor1";
 
                 // have system2 send a request to actor1 via Akka.Remote
-                var actor2 = await system2.ActorSelection(actor1Path).ResolveOne(RemainingOrDefault);
+                var actor2 = await system2.ActorSelection(actor1Path).ResolveOne(RemainingOrDefault, token);
 
                 // send a request for the current telemetry counters
                 telemetry = await subscriber
-                    .Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
+                    .Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance, token);
 
                 // verify that no actors have been created yet (subscriber filters out its own events)
                 var previouslyCreated = telemetry.ActorCreated;
@@ -148,7 +147,7 @@ namespace Akka.Remote.Tests
 
                 // send a request for the current telemetry counters
                 telemetry = await subscriber
-                    .Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance);
+                    .Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance, token);
 
                 // verify that the counters are all zero (we filter out system actors)
                 Assert.Equal(previouslyCreated, telemetry.ActorCreated); // should not have changed

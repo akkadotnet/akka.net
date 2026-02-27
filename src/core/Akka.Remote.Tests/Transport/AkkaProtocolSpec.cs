@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -19,7 +18,6 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Google.Protobuf;
 using Xunit;
-using Xunit.Abstractions;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 using static FluentAssertions.FluentActions;
 
@@ -133,6 +131,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task ProtocolStateActor_must_register_itself_as_reader_on_injected_handles()
         {
+            var token = TestContext.Current.CancellationToken;
             var collaborators = GetCollaborators();
             Sys.ActorOf(ProtocolStateActor.InboundProps(
                 handshakeInfo: new HandshakeInfo(_localAddress, 42), 
@@ -142,12 +141,13 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await collaborators.Handle.ReadHandlerSource.Task.WithTimeout(DefaultTimeout);
+            await collaborators.Handle.ReadHandlerSource.Task.WaitAsync(DefaultTimeout, token);
         }
 
         [Fact]
         public async Task ProtocolStateActor_must_in_inbound_mode_accept_payload_after_Associate_PDU_received()
         {
+            var token = TestContext.Current.CancellationToken;
             var collaborators = GetCollaborators();
             var reader = Sys.ActorOf(ProtocolStateActor.InboundProps(
                 handshakeInfo: new HandshakeInfo(_localAddress, 42),
@@ -159,7 +159,7 @@ namespace Akka.Remote.Tests.Transport
 
             reader.Tell(TestAssociate(33), TestActor);
 
-            await AwaitConditionAsync(() => Task.FromResult(collaborators.FailureDetector.IsMonitoring), DefaultTimeout);
+            await AwaitConditionAsync(() => Task.FromResult(collaborators.FailureDetector.IsMonitoring), DefaultTimeout, token);
 
             var wrappedHandle = await ExpectMsgOfAsync(DefaultTimeout, "expected InboundAssociation", o =>
             {
@@ -168,7 +168,7 @@ namespace Akka.Remote.Tests.Transport
                 var association = (AkkaProtocolHandle)inbound.Association;
                 Assert.Equal(33, association.HandshakeInfo.Uid);
                 return association;
-            });
+            }, token);
             Assert.NotNull(wrappedHandle);
 
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
@@ -176,18 +176,19 @@ namespace Akka.Remote.Tests.Transport
             Assert.True(collaborators.FailureDetector.IsMonitoring);
 
             // Heartbeat was sent in response to Associate
-            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsHeartbeat(collaborators.Registry)), DefaultTimeout);
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsHeartbeat(collaborators.Registry)), DefaultTimeout, token);
 
             reader.Tell(_testPayload, TestActor);
             await ExpectMsgAsync<InboundPayload>(inbound =>
             {
                 Assert.Equal(_testEnvelope, inbound.Payload);
-            }, hint: "expected InboundPayload");
+            }, hint: "expected InboundPayload", cancellationToken: token);
         }
 
         [Fact]
         public async Task ProtocolStateActor_must_in_inbound_mode_disassociate_when_an_unexpected_message_arrives_instead_of_Associate()
         {
+            var token = TestContext.Current.CancellationToken;
             var collaborators = GetCollaborators();
 
             var reader = Sys.ActorOf(ProtocolStateActor.InboundProps(
@@ -208,12 +209,13 @@ namespace Akka.Remote.Tests.Transport
             {
                 var snapshots = collaborators.Registry.LogSnapshot();
                 return Task.FromResult(snapshots.Any(x => x is DisassociateAttempt));
-            }, DefaultTimeout);
+            }, DefaultTimeout, token);
         }
 
         [Fact]
         public async Task ProtocolStateActor_must_in_outbound_mode_delay_readiness_until_handshake_finished()
         {
+            var token = TestContext.Current.CancellationToken;
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
 
@@ -227,19 +229,19 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout);
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout, token);
             
-            await AwaitConditionAsync(() => Task.FromResult(collaborators.FailureDetector.IsMonitoring), DefaultTimeout);
+            await AwaitConditionAsync(() => Task.FromResult(collaborators.FailureDetector.IsMonitoring), DefaultTimeout, token);
 
             //keeps sending heartbeats
-            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsHeartbeat(collaborators.Registry)), DefaultTimeout);
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsHeartbeat(collaborators.Registry)), DefaultTimeout, token);
 
             Assert.False(statusPromise.Task.IsCompleted);
 
             //finish the connection by sending back an associate message
             reader.Tell(TestAssociate(33), TestActor);
 
-            await statusPromise.Task.WithTimeout(3.Seconds());
+            await statusPromise.Task.WaitAsync(3.Seconds(), token);
             switch (statusPromise.Task.Result)
             {
                 case AkkaProtocolHandle h:
@@ -255,6 +257,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task ProtocolStateActor_must_handle_explicit_disassociate_messages()
         {
+            var token = TestContext.Current.CancellationToken;
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
 
@@ -268,11 +271,11 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout);
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout, token);
 
             reader.Tell(TestAssociate(33), TestActor);
 
-            await statusPromise.Task.WithTimeout(3.Seconds());
+            await statusPromise.Task.WaitAsync(3.Seconds(), token);
             var result = await statusPromise.Task;
             switch (result)
             {
@@ -297,12 +300,13 @@ namespace Akka.Remote.Tests.Transport
                 Assert.Equal(DisassociateInfo.Unknown, disassociated.Info);
 
                 return disassociated;
-            });
+            }, token);
         }
 
         [Fact]
         public async Task ProtocolStateActor_must_handle_transport_level_disassociations()
         {
+            var token = TestContext.Current.CancellationToken;
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
 
@@ -316,11 +320,11 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout);
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout, token);
 
             reader.Tell(TestAssociate(33), TestActor);
 
-            await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
+            await statusPromise.Task.WaitAsync(TimeSpan.FromSeconds(3), token);
             var result = await statusPromise.Task;
             switch (result)
             {
@@ -345,12 +349,13 @@ namespace Akka.Remote.Tests.Transport
                 Assert.Equal(DisassociateInfo.Unknown, disassociated.Info);
 
                 return disassociated;
-            });
+            }, token);
         }
 
         [Fact]
         public async Task ProtocolStateActor_must_disassociate_when_failure_detector_signals_failure()
         {
+            var token = TestContext.Current.CancellationToken;
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
 
@@ -364,11 +369,11 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout);
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout, token);
 
             stateActor.Tell(TestAssociate(33), TestActor);
 
-            await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
+            await statusPromise.Task.WaitAsync(TimeSpan.FromSeconds(3), token);
             var result = await statusPromise.Task;
             switch (result)
             {
@@ -384,7 +389,7 @@ namespace Akka.Remote.Tests.Transport
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
             //wait for one heartbeat
-            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsHeartbeat(collaborators.Registry)), DefaultTimeout);
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsHeartbeat(collaborators.Registry)), DefaultTimeout, token);
 
             collaborators.FailureDetector.SetAvailable(false);
 
@@ -396,12 +401,13 @@ namespace Akka.Remote.Tests.Transport
                 Assert.Equal(DisassociateInfo.Unknown, disassociated.Info);
 
                 return disassociated;
-            });
+            }, token);
         }
 
         [Fact]
         public async Task ProtocolStateActor_must_handle_correctly_when_the_handler_is_registered_only_after_the_association_is_already_closed()
         {
+            var token = TestContext.Current.CancellationToken;
             var collaborators = GetCollaborators();
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
 
@@ -415,11 +421,11 @@ namespace Akka.Remote.Tests.Transport
                 codec: _codec,
                 failureDetector: collaborators.FailureDetector));
 
-            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout);
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout, token);
 
             stateActor.Tell(TestAssociate(33), TestActor);
 
-            await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(3));
+            await statusPromise.Task.WaitAsync(TimeSpan.FromSeconds(3), token);
             var result = await statusPromise.Task;
             switch (result)
             {
@@ -445,12 +451,13 @@ namespace Akka.Remote.Tests.Transport
                 Assert.Equal(DisassociateInfo.Unknown, disassociated.Info);
 
                 return disassociated;
-            });
+            }, token);
         }
 
         [Fact]
         public async Task ProtocolStateActor_must_give_up_outbound_after_connection_timeout()
         {
+            var token = TestContext.Current.CancellationToken;
             var collaborators = GetCollaborators();
             collaborators.Handle.Writeable = false;
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
@@ -473,15 +480,16 @@ namespace Akka.Remote.Tests.Transport
 
             await Awaiting(async () =>
             {
-                await statusPromise.Task.WithTimeout(TimeSpan.FromSeconds(5));
+                await statusPromise.Task.WaitAsync(TimeSpan.FromSeconds(5), token);
             }).Should().ThrowAsync<TimeoutException>();
             
-            await ExpectTerminatedAsync(stateActor);
+            await ExpectTerminatedAsync(stateActor, cancellationToken: token);
         }
 
         [Fact]
         public async Task ProtocolStateActor_must_give_up_inbound_after_connection_timeout()
         {
+            var token = TestContext.Current.CancellationToken;
             var collaborators = GetCollaborators();
             collaborators.Handle.Writeable = false;
             collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
@@ -498,7 +506,7 @@ namespace Akka.Remote.Tests.Transport
                 failureDetector: collaborators.FailureDetector));
 
             Watch(reader);
-            await ExpectTerminatedAsync(reader);
+            await ExpectTerminatedAsync(reader, cancellationToken: token);
         }
 
         #endregion

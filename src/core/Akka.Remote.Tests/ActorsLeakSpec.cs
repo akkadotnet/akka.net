@@ -23,7 +23,6 @@ using Akka.TestKit.TestEvent;
 using Xunit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -96,6 +95,7 @@ namespace Akka.Remote.Tests
         [Fact(Skip = "EventFilter can receive 1-2 notifications about nodes shutting down depending on timing, which makes this spec racy")]
         public async Task Remoting_must_not_leak_actors()
         {
+            var token = TestContext.Current.CancellationToken;
             var actorRef = Sys.ActorOf(EchoActor.Props(this, true), "echo");
             var echoPath = new RootActorPath(RARP.For(Sys).Provider.DefaultAddress)/"user"/"echo";
 
@@ -103,7 +103,7 @@ namespace Akka.Remote.Tests
                 async x =>
                 {
                     Sys.ActorSelection(x).Tell(new Identify(0));
-                    return (await ExpectMsgAsync<ActorIdentity>()).Subject;
+                    return (await ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject;
                 }));
 
             var initialActors = targets.SelectMany(CollectLiveActors).ToImmutableHashSet();
@@ -119,14 +119,14 @@ namespace Akka.Remote.Tests
                 {
                     var probe = CreateTestProbe(remoteSystem);
                     remoteSystem.ActorSelection(echoPath).Tell(new Identify(1), probe.Ref);
-                    (await probe.ExpectMsgAsync<ActorIdentity>()).Subject.ShouldNotBe(null);
+                    (await probe.ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject.ShouldNotBe(null);
                 }
                 finally
                 {
                     Shutdown(remoteSystem);
                 }
 
-                Assert.True(await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10)));
+                await remoteSystem.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(10), token);
             }
 
             // Quarantine an old incarnation case
@@ -145,7 +145,7 @@ namespace Akka.Remote.Tests
                     // the message from remote to local will cause inbound connection established
                     var probe = CreateTestProbe(remoteSystem);
                     remoteSystem.ActorSelection(echoPath).Tell(new Identify(1), probe.Ref);
-                    (await probe.ExpectMsgAsync<ActorIdentity>()).Subject.ShouldNotBe(null);
+                    (await probe.ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject.ShouldNotBe(null);
 
                     var beforeQuarantineActors = targets.SelectMany(CollectLiveActors).ToImmutableHashSet();
 
@@ -155,19 +155,19 @@ namespace Akka.Remote.Tests
 
                     // the message from local to remote should reuse passive inbound connection
                     Sys.ActorSelection(new RootActorPath(remoteAddress) / "user" / "stoppable").Tell(new Identify(1));
-                    (await ExpectMsgAsync<ActorIdentity>()).Subject.ShouldNotBe(null);
+                    (await ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject.ShouldNotBe(null);
 
                     await AwaitAssertAsync(() =>
                     {
                         var afterQuarantineActors = targets.SelectMany(CollectLiveActors).ToImmutableHashSet();
                         AssertActors(beforeQuarantineActors, afterQuarantineActors);
-                    }, TimeSpan.FromSeconds(10));
+                    }, TimeSpan.FromSeconds(10), cancellationToken: token);
                 }
                 finally
                 {
                     Shutdown(remoteSystem);
                 }
-                Assert.True(await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10)));
+                await remoteSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10), token);
             }
             
             // Bugfix: need to filter out the AssociationTermination messages for remote@127.0.0.1:2553 from the quarantine
@@ -189,8 +189,9 @@ namespace Akka.Remote.Tests
                     (await probe.ExpectMsgAsync<ActorIdentity>()).Subject.ShouldNotBe(null);
 
                     // This will make sure that no SHUTDOWN message gets through
-                    Assert.True(await RARP.For(Sys).Provider.Transport.ManagementCommand(new ForceDisassociate(remoteAddress))
-                            .AwaitWithTimeout(TimeSpan.FromSeconds(3)));
+                    await RARP.For(Sys).Provider.Transport
+                        .ManagementCommand(new ForceDisassociate(remoteAddress), token)
+                        .WaitAsync(TimeSpan.FromSeconds(3), token);
                 }
                 finally
                 {
@@ -227,8 +228,9 @@ namespace Akka.Remote.Tests
                 // All system messages have been acked now on this side
 
                 // This will make sure that no SHUTDOWN message gets through
-                Assert.True(await RARP.For(Sys).Provider.Transport.ManagementCommand(new ForceDisassociate(idleRemoteAddress))
-                        .AwaitWithTimeout(TimeSpan.FromSeconds(3)));
+                await RARP.For(Sys).Provider.Transport
+                    .ManagementCommand(new ForceDisassociate(idleRemoteAddress), token)
+                    .WaitAsync(TimeSpan.FromSeconds(3), token);
             }
             finally
             {

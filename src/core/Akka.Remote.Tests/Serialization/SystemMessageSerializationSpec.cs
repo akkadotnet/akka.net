@@ -7,7 +7,6 @@
 
 using System;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
@@ -16,7 +15,6 @@ using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Serialization
 {

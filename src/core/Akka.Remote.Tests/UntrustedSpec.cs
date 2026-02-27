@@ -13,7 +13,6 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -79,7 +78,7 @@ namespace Akka.Remote.Tests
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements);
             sel.Tell("hello");
-            await ExpectMsgAsync("hello");
+            await ExpectMsgAsync("hello", cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact]
@@ -93,7 +92,7 @@ namespace Akka.Remote.Tests
 
             var remoteDaemon = await RemoteDaemon(); 
             remoteDaemon.Tell("hello");
-            await logProbe.ExpectMsgAsync<Debug>();
+            await logProbe.ExpectMsgAsync<Debug>(cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact]
@@ -106,18 +105,19 @@ namespace Akka.Remote.Tests
             target2.Tell(PoisonPill.Instance);
             _client.Stop(target2);
             target2.Tell("blech");
-            await ExpectMsgAsync("blech");
+            await ExpectMsgAsync("blech", cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact]
         public async Task Untrusted_mode_must_discard_watch_messages()
         {
+            var token = TestContext.Current.CancellationToken;
             var target2 = await Target2();
             _client.ActorOf(Props.Create(() => new Target2Watch(target2, TestActor)).WithDeploy(Deploy.Local));
             _receptionist.Tell(new StopChild1("child2"));
-            await ExpectMsgAsync("child2 stopped");
+            await ExpectMsgAsync("child2 stopped", cancellationToken: token);
             // no Terminated msg, since watch was discarded
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: token);
         }
 
         [Fact]
@@ -125,7 +125,7 @@ namespace Akka.Remote.Tests
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/TestActor.Path.Elements);
             sel.Tell("hello");
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact]
@@ -133,7 +133,7 @@ namespace Akka.Remote.Tests
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements/"child1");
             sel.Tell("hello");
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact]
@@ -141,7 +141,7 @@ namespace Akka.Remote.Tests
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements/"*");
             sel.Tell("hello");
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact]
@@ -149,21 +149,22 @@ namespace Akka.Remote.Tests
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements);
             sel.Tell(PoisonPill.Instance);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: TestContext.Current.CancellationToken);
         }
 
 
         [Fact]
         public async Task Untrusted_mode_must_discard_actor_selection_with_non_root_anchor()
         {
+            var token = TestContext.Current.CancellationToken;
             var p = CreateTestProbe(_client);
             _client.ActorSelection(new RootActorPath(_address)/_receptionist.Path.Elements)
                 .Tell(new Identify(null), p.Ref);
-            var clientReceptionistRef = (await p.ExpectMsgAsync<ActorIdentity>()).Subject;
+            var clientReceptionistRef = (await p.ExpectMsgAsync<ActorIdentity>(cancellationToken: token)).Subject;
 
             var sel = ActorSelection(clientReceptionistRef, _receptionist.Path.ToStringWithoutAddress());
             sel.Tell("hello");
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: token);
         }
 
 

@@ -6,9 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.Remote.Transport.DotNetty;
@@ -19,7 +17,6 @@ using DotNetty.Transport.Channels.Embedded;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {
@@ -82,6 +79,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task BatchWriter_should_succeed_with_timer()
         {
+            var token = TestContext.Current.CancellationToken;
             var writer = new FlushConsolidationHandler();
             var ch = new EmbeddedChannel(Flush, writer);
 
@@ -107,7 +105,7 @@ namespace Akka.Remote.Tests.Transport
                 {
                     ch.RunPendingTasks(); // force scheduled task to run
                     ch.OutboundMessages.Count.Should().Be(ints.Length);
-                }, interval: 100.Milliseconds());
+                }, interval: 100.Milliseconds(), cancellationToken: token);
 
                 // reset the outbound queue
                 ch.OutboundMessages.Clear();
@@ -120,6 +118,7 @@ namespace Akka.Remote.Tests.Transport
         [Fact]
         public async Task BatchWriter_should_flush_messages_during_shutdown()
         {
+            var token = TestContext.Current.CancellationToken;
             var writer = new FlushConsolidationHandler();
             var ch = new EmbeddedChannel(Flush, writer);
 
@@ -147,7 +146,7 @@ namespace Akka.Remote.Tests.Transport
             {
                 ch.RunPendingTasks(); // force scheduled task to run
                 ch.OutboundMessages.Count.Should().Be(ints.Length);
-            }, interval: 100.Milliseconds());
+            }, interval: 100.Milliseconds(), cancellationToken: token);
 
 
         }

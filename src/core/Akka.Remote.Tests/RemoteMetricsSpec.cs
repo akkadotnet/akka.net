@@ -5,8 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -14,7 +12,6 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
@@ -62,7 +59,7 @@ namespace Akka.Remote.Tests
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_subject.Path.Elements);
             sel.Tell(new byte[200]);
-            await ExpectMsgAsync<PayloadSize>();
+            await ExpectMsgAsync<PayloadSize>(cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact]
@@ -70,9 +67,9 @@ namespace Akka.Remote.Tests
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_subject.Path.Elements);
             sel.Tell(new byte[200]);
-            await ExpectMsgAsync<PayloadSize>();
+            await ExpectMsgAsync<PayloadSize>(cancellationToken: TestContext.Current.CancellationToken);
             sel.Tell(new byte[300]);
-            await ExpectMsgAsync<NewMaximum>();
+            await ExpectMsgAsync<NewMaximum>(cancellationToken: TestContext.Current.CancellationToken);
         }
 
 
@@ -81,7 +78,7 @@ namespace Akka.Remote.Tests
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_subject.Path.Elements);
             sel.Tell(new byte[1]);
-            await ExpectNoMsgAsync();
+            await ExpectNoMsgAsync(cancellationToken: TestContext.Current.CancellationToken);
         }
 
         [Fact]
@@ -89,9 +86,9 @@ namespace Akka.Remote.Tests
         {
             var sel = _client.ActorSelection(new RootActorPath(_address)/_subject.Path.Elements);
             sel.Tell(new byte[200]);
-            await ExpectMsgAsync<PayloadSize>();
+            await ExpectMsgAsync<PayloadSize>(cancellationToken: TestContext.Current.CancellationToken);
             sel.Tell(new byte[200]);
-            await ExpectNoMsgAsync();
+            await ExpectNoMsgAsync(cancellationToken: TestContext.Current.CancellationToken);
         }
 
         private class Subject : ActorBase

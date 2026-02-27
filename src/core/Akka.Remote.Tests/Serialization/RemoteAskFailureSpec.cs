@@ -14,12 +14,11 @@ using Akka.Event;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using static  FluentAssertions.FluentActions;
 
 namespace Akka.Remote.Tests.Serialization
 {
-    public class RemoteAskFailureSpec: TestKit.Xunit2.TestKit
+    public class RemoteAskFailureSpec: TestKit.Xunit.TestKit
     {
         private static Config Config(int port) => @$"
 akka.actor.ask-timeout = 5s
@@ -50,11 +49,12 @@ akka.remote.dot-netty.tcp.port = {port}";
         [Fact(DisplayName = "Ask operation using selector to a remote actor that expects Status.Failure should return Status.Failure")]
         public async Task RemoteSelectorFailureMessageTest()
         {
+            var token = TestContext.Current.CancellationToken;
             _sys2.ActorOf(Props.Create(() => new FailActor()), "fail");
             var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
             var selector = _sys1.ActorSelection($"akka.tcp://{_sys2.Name}@{sys2Address.Host}:{sys2Address.Port}/user/fail");
 
-            var fail = await selector.Ask<Status.Failure>("doesn't matter");
+            var fail = await selector.Ask<Status.Failure>("doesn't matter", token);
             fail.Cause.Should().NotBeNull();
             fail.Cause.Should().BeOfType<TestException>();
             fail.Cause.Message.Should().Be("BOOM");
@@ -76,13 +76,14 @@ akka.remote.dot-netty.tcp.port = {port}";
         [Fact(DisplayName = "Ask operation using deployment to a remote actor that expects Status.Failure should return Status.Failure")]
         public async Task RemoteDeploymentFailureMessageTest()
         {
+            var token = TestContext.Current.CancellationToken;
             var sys2Address = RARP.For(_sys2).Provider.DefaultAddress;
             var remote = _sys1.ActorOf(
                 Props.Create(() => new FailActor())
                     .WithDeploy(new Deploy(new RemoteScope(sys2Address))), 
                 "fail");
 
-            var fail = await remote.Ask<Status.Failure>("doesn't matter");
+            var fail = await remote.Ask<Status.Failure>("doesn't matter", token);
             fail.Cause.Should().NotBeNull();
             fail.Cause.Should().BeOfType<TestException>();
             fail.Cause.Message.Should().Be("BOOM");
