@@ -7,12 +7,12 @@
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
-using System.Threading;
 using FluentAssertions.Extensions;
 using System.Threading.Tasks;
 
@@ -146,6 +146,8 @@ namespace Akka.Tests.Pattern
         }
         #endregion
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Fact]
         public async Task BackoffOnRestartSupervisor_must_terminate_when_child_terminates()
         {

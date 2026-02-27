@@ -22,7 +22,6 @@ using Akka.Dispatch;
 using Akka.Event;
 using Akka.TestKit.Extensions;
 using FluentAssertions.Execution;
-using Akka.Tests.Util;
 
 namespace Akka.Tests.Actor
 {
@@ -37,6 +36,7 @@ namespace Akka.Tests.Actor
         {
         }
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
 
         [Fact]
         public void Reject_invalid_names()
@@ -74,11 +74,15 @@ namespace Akka.Tests.Actor
             // Actor system should be started to attach the EventFilterFactory
             system.Start();
 
-            var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
+            var eventFilter = new EventFilterFactory(new TestKit.Xunit.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
             var expected = "log-config-on-start : on";
-            await eventFilter.Info(contains:expected).ExpectOneAsync(() => { system.Start(); return Task.CompletedTask; });
+            await eventFilter.Info(contains:expected).ExpectOneAsync(() =>
+            {
+                system.Start();
+                return Task.CompletedTask;
+            }, Token);
 
             await system.Terminate();
         }
@@ -93,10 +97,14 @@ namespace Akka.Tests.Actor
             // Actor system should be started to attach the EventFilterFactory
             system.Start();
 
-            var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
+            var eventFilter = new EventFilterFactory(new TestKit.Xunit.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
-            await eventFilter.Info().ExpectAsync(0, () => { system.Start(); return Task.CompletedTask; });
+            await eventFilter.Info().ExpectAsync(0, () =>
+            {
+                system.Start();
+                return Task.CompletedTask;
+            }, Token);
 
             await system.Terminate();
         }
@@ -117,7 +125,7 @@ namespace Akka.Tests.Actor
 
             try
             {
-                var testKit = new TestKit.Xunit2.TestKit(sys);
+                var testKit = new TestKit.Xunit.TestKit(sys);
                 var probe = testKit.CreateTestProbe();
                 var a = sys.ActorOf(Props.Create<Terminater>());
 
@@ -135,7 +143,7 @@ namespace Akka.Tests.Actor
 
                     // Now send the message that should become a dead letter
                     a.Tell("boom");
-                });
+                }, Token);
             }
             finally { Shutdown(sys); }
         }
@@ -146,8 +154,8 @@ namespace Akka.Tests.Actor
             var actorSystem = ActorSystem
                 .Create(Guid.NewGuid().ToString());
             var st = Stopwatch.StartNew();
-            var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1)).ContinueWith(_ => actorSystem.Terminate());
-            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(2))).ShouldBeTrue();
+            var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1), Token).ContinueWith(_ => actorSystem.Terminate());
+            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(2), Token)).ShouldBeTrue();
             Assert.True(st.Elapsed.TotalSeconds >= .9);
         }
 
@@ -155,7 +163,7 @@ namespace Akka.Tests.Actor
         public async Task Given_a_system_that_isnt_going_to_shutdown_When_waiting_for_system_shutdown_Then_it_times_out()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
-            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromMilliseconds(10))).ShouldBeFalse();
+            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromMilliseconds(10), Token)).ShouldBeFalse();
         }
 
         [Fact]
@@ -196,19 +204,19 @@ namespace Akka.Tests.Actor
 
             actorSystem.RegisterOnTermination(() =>
             {
-                Task.Delay(Dilated(TimeSpan.FromMilliseconds(50))).Wait();
+                Task.Delay(Dilated(TimeSpan.FromMilliseconds(50))).Wait(Token);
                 callbackWasRun = true;
             });
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             new TaskFactory().StartNew(() =>
             {
-                Task.Delay(Dilated(TimeSpan.FromMilliseconds(200))).Wait();
+                Task.Delay(Dilated(TimeSpan.FromMilliseconds(200))).Wait(Token);
                 actorSystem.Terminate();
             });
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-            await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(5));
+            await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(5), Token);
             Assert.True(callbackWasRun);
         }
 
@@ -217,7 +225,7 @@ namespace Akka.Tests.Actor
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
 
-            await actorSystem.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(10));
+            await actorSystem.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(10), Token);
             
             var ex = Assert.Throws<InvalidOperationException>(() => actorSystem.RegisterOnTermination(() => { }));
             Assert.Equal("ActorSystem already terminated.", ex.Message);
@@ -228,9 +236,9 @@ namespace Akka.Tests.Actor
         {
             var timeout = Dilated(TimeSpan.FromSeconds(20));
             var waves = Task.WhenAll(
-                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000),
-                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000),
-                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000));
+                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000, Token),
+                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000, Token),
+                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000, Token));
 
             await waves.AwaitWithTimeout(timeout.Duration() + TimeSpan.FromSeconds(5));
 
@@ -368,7 +376,7 @@ namespace Akka.Tests.Actor
 
             a.Tell("die");
 
-            Assert.True(system.WhenTerminated.Wait(1000));
+            Assert.True(system.WhenTerminated.Wait(1000, Token));
         }
     }
 

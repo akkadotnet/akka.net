@@ -9,9 +9,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.TestKit;
-using Akka.TestKit.TestActors;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor;
 

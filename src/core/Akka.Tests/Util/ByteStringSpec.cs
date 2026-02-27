@@ -13,6 +13,7 @@ using Akka.IO;
 using Akka.TestKit;
 using FluentAssertions;
 using FsCheck;
+using FsCheck.Fluent;
 using Xunit;
 
 namespace Akka.Tests.Util
@@ -29,13 +30,21 @@ namespace Akka.Tests.Util
             // TODO: Align with JVM Akka Generator
             public static Arbitrary<ByteString> ByteStrings()
             {
+                return Arb.From(ArbMap.Default.GeneratorFor<byte[]>().Select(ByteString.CopyFrom));
+            }
+        
+            /*
+            public static Arbitrary<ByteString> ByteStrings()
+            {
                 return Arb.From(Arb.Generate<byte[]>().Select(ByteString.CopyFrom));
             }
+            */
         }
 
         public ByteStringSpec()
         {
-            Arb.Register<Generators>();
+            ArbMap.Default = ArbMap.Merge(ArbMap.Default, typeof(Generators));
+            //Arb.Register<Generators>();
         }
 
         [Fact]

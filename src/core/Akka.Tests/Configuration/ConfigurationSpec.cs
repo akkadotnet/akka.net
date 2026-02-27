@@ -6,18 +6,14 @@
 //-----------------------------------------------------------------------
 #if !CORECLR
 using System;
-using System.IO;
 using Akka.Configuration.Hocon;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 

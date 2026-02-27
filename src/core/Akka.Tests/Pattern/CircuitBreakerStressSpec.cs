@@ -14,7 +14,6 @@ using Akka.Pattern;
 using Akka.TestKit;
 using Akka.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Pattern
 {
@@ -102,6 +101,8 @@ namespace Akka.Tests.Pattern
             }
         }
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public CircuitBreakerStressSpec(ITestOutputHelper output) 
             : base(output)
         { }
@@ -119,7 +120,7 @@ namespace Akka.Tests.Pattern
                 }
 
             // let them work for a while
-            await Task.Delay(3000);
+            await Task.Delay(3000, Token);
 
             foreach (var stressActor in stressActors)
             {

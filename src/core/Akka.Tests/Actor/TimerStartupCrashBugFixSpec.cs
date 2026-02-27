@@ -11,12 +11,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Akka.Routing;
 using Akka.TestKit;
 using FluentAssertions;
-using FsCheck;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor;
 

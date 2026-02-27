@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -16,7 +17,6 @@ using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Loggers
 {
@@ -27,6 +27,8 @@ akka.loglevel = OFF
 akka.stdout-loglevel = OFF
 akka.stdout-logger-class = ""Akka.Tests.Loggers.ThrowingLogger, Akka.Tests""");
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public ShutdownLoggerSpec(ITestOutputHelper output) : base(Config, output)
         {
         }
@@ -38,7 +40,7 @@ akka.stdout-logger-class = ""Akka.Tests.Loggers.ThrowingLogger, Akka.Tests""");
             
             var probeRef = Sys.ActorOf(Props.Create(() => new LogProbe()));
             probeRef.Tell(new InitializeLogger(Sys.EventStream));
-            var probe = await probeRef.Ask<LogProbe>("hey");
+            var probe = await probeRef.Ask<LogProbe>("hey", Token);
             
             await Sys.Terminate();
 

@@ -13,7 +13,6 @@ using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Loggers
 {

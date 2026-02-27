@@ -17,12 +17,13 @@ using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.IO
 {
     public class UdpConnectedIntegrationSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public UdpConnectedIntegrationSpec(ITestOutputHelper output)
             : base("""
                    
@@ -199,7 +200,7 @@ namespace Akka.Tests.IO
             await clientProbe.ExpectMsgAsync<UdpConnected.Disconnected>();
             
             // wait for all SocketAsyncEventArgs to be released
-            await Task.Delay(1000);
+            await Task.Delay(1000, Token);
             
             poolInfo = udpConnection.SocketEventArgsPool.BufferPoolInfo;
             poolInfo.Type.Should().Be(typeof(DirectBufferPool));

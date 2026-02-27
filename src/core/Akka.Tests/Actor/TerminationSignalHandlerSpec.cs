@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -16,7 +17,6 @@ using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Actor.CoordinatedShutdown;
 
 namespace Akka.Tests.Actor;
@@ -34,6 +34,8 @@ public class TerminationSignalHandlerSpec : AkkaSpec
 
     private static readonly Phase EmptyPhase = new(ImmutableHashSet<string>.Empty, TimeSpan.FromSeconds(10), true);
 
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+    
     /// <summary>
     /// Test double for <see cref="ITerminationSignalHandler"/> that allows simulating termination signals.
     /// </summary>
@@ -125,7 +127,7 @@ public class TerminationSignalHandlerSpec : AkkaSpec
             testHandler.SimulateTerminationSignal();
 
             // Assert
-            var result = await taskExecuted.Task.AwaitWithTimeout(TimeSpan.FromSeconds(10));
+            var result = await taskExecuted.Task.AwaitWithTimeout(TimeSpan.FromSeconds(10), Token);
             result.Should().BeTrue();
             coord.ShutdownReason.Should().Be(ClrExitReason.Instance);
         }
@@ -168,7 +170,7 @@ public class TerminationSignalHandlerSpec : AkkaSpec
             testHandler.SimulateTerminationSignal();
 
             // Assert
-            var result = await flagObserved.Task.AwaitWithTimeout(TimeSpan.FromSeconds(10));
+            var result = await flagObserved.Task.AwaitWithTimeout(TimeSpan.FromSeconds(10), Token);
             result.Should().BeTrue();
         }
         finally
@@ -197,7 +199,7 @@ public class TerminationSignalHandlerSpec : AkkaSpec
         await sys.Terminate();
 
         // Give continuation time to run
-        await Task.Delay(100);
+        await Task.Delay(100, Token);
 
         // Assert
         testHandler.IsDisposed.Should().BeTrue();
@@ -235,7 +237,7 @@ public class TerminationSignalHandlerSpec : AkkaSpec
             testHandler.SimulateTerminationSignal();
 
             // Wait for shutdown to complete
-            await sys.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10));
+            await sys.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(10), Token);
 
             // Assert - task should only have executed once
             executionCount.Should().Be(1);
@@ -283,7 +285,7 @@ public class TerminationSignalHandlerSpec : AkkaSpec
             testHandler.SimulateTerminationSignal();
 
             // Assert - second task should still execute despite first task throwing
-            var result = await secondTaskExecuted.Task.AwaitWithTimeout(TimeSpan.FromSeconds(10));
+            var result = await secondTaskExecuted.Task.AwaitWithTimeout(TimeSpan.FromSeconds(10), Token);
             result.Should().BeTrue();
         }
         finally

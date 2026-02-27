@@ -5,14 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
-using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.Configs;
@@ -21,7 +17,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Serialization
 {

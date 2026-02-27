@@ -13,8 +13,8 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
@@ -92,6 +92,8 @@ namespace Akka.Tests.Pattern
         private IActorRef Create(BackoffOptions options) => Sys.ActorOf(BackoffSupervisor.Props(options));
         #endregion
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public async Task BackoffSupervisor_must_start_child_again_when_it_stops_when_using_Backoff_OnStop()
         {
@@ -515,7 +517,7 @@ namespace Akka.Tests.Pattern
             });
 
             // Supervisor should still be alive (no final stop message received yet)
-            await supervisorWatcher.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await supervisorWatcher.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), Token);
 
             // Now send the final stop message and kill the new child
             // The supervisor should terminate because it received the final stop message
@@ -524,7 +526,7 @@ namespace Akka.Tests.Pattern
             await ExpectMsgAsync(stopMessage); // Child echoes the message
             c2.Tell(PoisonPill.Instance);
             await ExpectTerminatedAsync(c2);
-            await supervisorWatcher.ExpectTerminatedAsync(supervisor);
+            await supervisorWatcher.ExpectTerminatedAsync(supervisor, cancellationToken: Token);
         }
     }
 }

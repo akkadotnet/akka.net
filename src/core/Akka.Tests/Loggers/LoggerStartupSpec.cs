@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -14,14 +15,15 @@ using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Loggers
 {
-    public class LoggerStartupSpec : TestKit.Xunit2.TestKit
+    public class LoggerStartupSpec : TestKit.Xunit.TestKit
     {
         private const int LoggerResponseDelayMs = 1_000;
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public LoggerStartupSpec(ITestOutputHelper helper) : base(nameof(LoggerStartupSpec), helper)
         {
             XUnitOutLogger.Helper = helper;
@@ -59,14 +61,14 @@ akka.logger-startup-timeout = 100ms").WithFallback(DefaultConfig);
                 {
                     var dbg = logProbe.ExpectMsg<Debug>();
                     dbg.Message.ToString().Should().Contain(nameof(SlowLoggerActor)).And.Contain("started");
-                });
+                }, cancellationToken: Token);
                 
                 var logger = Logging.GetLogger(sys, this);
                 logger.Error("TEST");
                 await AwaitAssertAsync(() =>
                 {
                     probe.ExpectMsg<string>().Should().Be("TEST");
-                });
+                }, cancellationToken: Token);
             }
             finally
             {

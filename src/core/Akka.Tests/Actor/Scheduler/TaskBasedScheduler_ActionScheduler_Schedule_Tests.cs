@@ -13,13 +13,14 @@ using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Akka.Tests.Actor.Scheduler
 {
     // ReSharper disable once InconsistentNaming
     public class DefaultScheduler_ActionScheduler_Schedule_Tests : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Theory]
         [InlineData(10, 1000)]
         public async Task ScheduleRepeatedly_in_milliseconds_Tests_and_verify_the_interval(int initialDelay, int interval)
@@ -250,7 +251,7 @@ namespace Akka.Tests.Actor.Scheduler
                 manualResetEvent.IsSet.ShouldBeFalse();
                 testScheduler.ScheduleOnce(0, () => manualResetEvent.Set());
 
-                manualResetEvent.Wait(500).ShouldBeTrue();
+                manualResetEvent.Wait(500, Token).ShouldBeTrue();
             }
             finally
             {
@@ -269,7 +270,7 @@ namespace Akka.Tests.Actor.Scheduler
                 manualResetEvent.IsSet.ShouldBeFalse();
                 testScheduler.ScheduleRepeatedly(0, 100, () => manualResetEvent.Set());
 
-                manualResetEvent.Wait(500).ShouldBeTrue();
+                manualResetEvent.Wait(500, Token).ShouldBeTrue();
             }
             finally
             {
@@ -290,8 +291,8 @@ namespace Akka.Tests.Actor.Scheduler
                     Interlocked.Increment(ref timesCalled);
                     throw new Exception("Crash");
                 });
-                await AwaitConditionAsync(() => Task.FromResult(timesCalled >= 1));
-                await Task.Delay(200); //Allow any scheduled actions to be fired. 
+                await AwaitConditionAsync(() => Task.FromResult(timesCalled >= 1), Token);
+                await Task.Delay(200, Token); //Allow any scheduled actions to be fired. 
 
                 //We expect only one of the scheduled actions to actually fire
                 timesCalled.ShouldBe(1);

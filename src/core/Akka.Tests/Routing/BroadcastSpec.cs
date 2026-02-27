@@ -5,14 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
+using System.Threading;
 using Akka.Actor;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 
 namespace Akka.Tests.Routing
@@ -34,6 +33,8 @@ namespace Akka.Tests.Routing
             }
         }
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Fact]
         public void BroadcastGroup_router_must_broadcast_message_using_Tell()
         {
@@ -69,7 +70,7 @@ namespace Akka.Tests.Routing
 
             var paths = new List<string> { actor1.Path.ToString(), actor2.Path.ToString() };
             var routedActor = Sys.ActorOf(new BroadcastGroup(paths).Props());
-            routedActor.Ask(new Broadcast(1));
+            routedActor.Ask(new Broadcast(1), Token);
             routedActor.Tell(new Broadcast("end"));
 
             doneLatch.Ready(RemainingOrDefault);

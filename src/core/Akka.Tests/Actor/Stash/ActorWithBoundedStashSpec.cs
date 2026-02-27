@@ -7,14 +7,12 @@
 
 using System;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor.Stash
 {

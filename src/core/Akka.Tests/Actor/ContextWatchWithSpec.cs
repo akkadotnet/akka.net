@@ -7,16 +7,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
-using FluentAssertions;
 using FluentAssertions.Extensions;
-using Newtonsoft.Json;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor
 {
@@ -29,6 +25,8 @@ namespace Akka.Tests.Actor
             _outputHelper = outputHelper;
         }
         
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         [Fact(Skip = "This test is used with Performance Profiler to check memory leaks")]
         public async Task Context_WatchWith_Should_not_have_memory_leak()
         {
@@ -36,7 +34,7 @@ namespace Akka.Tests.Actor
             {
                 actorSystem.ActorOf(Props.Create<LoadHandler>());
 
-                await Task.Delay(60.Seconds());
+                await Task.Delay(60.Seconds(), Token);
             }
         }
         

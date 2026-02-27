@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -15,16 +16,17 @@ using Akka.Util;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Tests.Delivery.TestConsumer;
 using static Akka.Tests.Delivery.TestProducer;
 
 namespace Akka.Tests.Delivery;
 
-public class ReliableDeliverySpecs : TestKit.Xunit2.TestKit
+public class ReliableDeliverySpecs : TestKit.Xunit.TestKit
 {
     internal static readonly Config Config = @"akka.reliable-delivery.consumer-controller.flow-control-window = 20";
 
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
     public ReliableDeliverySpecs(ITestOutputHelper output) : this(output, Config)
     {
     }
@@ -55,7 +57,7 @@ public class ReliableDeliverySpecs : TestKit.Xunit2.TestKit
         
         consumerController.Tell(new ConsumerController.RegisterToProducerController<Job>(producerController));
 
-        var collected = await consumerEndProbe.ExpectMsgAsync<Collected>(TimeSpan.FromSeconds(5));
+        var collected = await consumerEndProbe.ExpectMsgAsync<Collected>(TimeSpan.FromSeconds(5), cancellationToken: Token);
     }
 
     [Fact]
@@ -73,11 +75,11 @@ public class ReliableDeliverySpecs : TestKit.Xunit2.TestKit
         
         consumerController.Tell(new ConsumerController.RegisterToProducerController<Job>(producerController));
 
-        var messageCount = (await consumerEndProbe.ExpectMsgAsync<Collected>(TimeSpan.FromSeconds(5))).MessageCount;
+        var messageCount = (await consumerEndProbe.ExpectMsgAsync<Collected>(TimeSpan.FromSeconds(5), cancellationToken: Token)).MessageCount;
         if (Chunked)
-            replyProbe.ReceiveN(messageCount, 5.Seconds());
+            replyProbe.ReceiveN(messageCount, 5.Seconds(), Token);
         else
-            replyProbe.ReceiveN(messageCount, 5.Seconds()).Should().BeEquivalentTo(Enumerable.Range(1, messageCount));
+            replyProbe.ReceiveN(messageCount, 5.Seconds(), Token).Should().BeEquivalentTo(Enumerable.Range(1, messageCount));
         
     }
 
@@ -128,8 +130,8 @@ public class ReliableDeliverySpecs : TestKit.Xunit2.TestKit
         Watch(consumerController);
         consumerController.Tell(new ConsumerController.RegisterToProducerController<Job>(producerController));
 
-        await consumerEndProbe.ExpectMsgAsync<Collected>(TimeSpan.FromSeconds(5));
-        await ExpectTerminatedAsync(consumerController);
+        await consumerEndProbe.ExpectMsgAsync<Collected>(TimeSpan.FromSeconds(5), cancellationToken: Token);
+        await ExpectTerminatedAsync(consumerController, cancellationToken: Token);
         
         var consumerEndProbe2 = CreateTestProbe();
         var consumerController2 = Sys.ActorOf(ConsumerController.Create<Job>(Sys, Option<IActorRef>.None), $"consumerController2-{_idCount}");
@@ -137,7 +139,7 @@ public class ReliableDeliverySpecs : TestKit.Xunit2.TestKit
         
         consumerController2.Tell(new ConsumerController.RegisterToProducerController<Job>(producerController));
         
-        await consumerEndProbe2.ExpectMsgAsync<Collected>(TimeSpan.FromSeconds(5));
+        await consumerEndProbe2.ExpectMsgAsync<Collected>(TimeSpan.FromSeconds(5), cancellationToken: Token);
     }
 
     [Fact]
@@ -155,13 +157,13 @@ public class ReliableDeliverySpecs : TestKit.Xunit2.TestKit
         
         consumerController.Tell(new ConsumerController.RegisterToProducerController<Job>(producerController1));
 
-        (await producerProbe1.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).SendNextTo.Tell(new Job("msg-1"));
-        var delivery1 = await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        (await producerProbe1.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).SendNextTo.Tell(new Job("msg-1"));
+        var delivery1 = await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>(cancellationToken: Token);
         delivery1.Message.Should().Be(new Job("msg-1"));
         delivery1.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         
-        (await producerProbe1.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).SendNextTo.Tell(new Job("msg-2"));
-        var delivery2 = await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        (await producerProbe1.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).SendNextTo.Tell(new Job("msg-2"));
+        var delivery2 = await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>(cancellationToken: Token);
         delivery2.Message.Should().Be(new Job("msg-2"));
         delivery2.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         
@@ -172,13 +174,13 @@ public class ReliableDeliverySpecs : TestKit.Xunit2.TestKit
         producerController2.Tell(new ProducerController.Start<Job>(producerProbe2.Ref));
         producerController2.Tell(new ProducerController.RegisterConsumer<Job>(consumerController));
         
-        (await producerProbe2.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).SendNextTo.Tell(new Job("msg-3"));
-        var delivery3 = await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        (await producerProbe2.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).SendNextTo.Tell(new Job("msg-3"));
+        var delivery3 = await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>(cancellationToken: Token);
         delivery3.Message.Should().Be(new Job("msg-3"));
         delivery3.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
         
-        (await producerProbe2.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).SendNextTo.Tell(new Job("msg-4"));
-        var delivery4 = await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>();
+        (await producerProbe2.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).SendNextTo.Tell(new Job("msg-4"));
+        var delivery4 = await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>(cancellationToken: Token);
         delivery4.Message.Should().Be(new Job("msg-4"));
         delivery4.ConfirmTo.Tell(ConsumerController.Confirmed.Instance);
     }

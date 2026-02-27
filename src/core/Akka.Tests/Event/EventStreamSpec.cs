@@ -12,17 +12,17 @@ using Akka.TestKit;
 using Akka.Tests.TestUtils;
 using System;
 using System.Linq;
+using System.Threading;
 using Akka.Util.Internal;
 using Xunit;
 using System.Threading.Tasks;
-using FluentAssertions;
-using FluentAssertions.Extensions;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Event
 {
     public class EventStreamSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public EventStreamSpec(ITestOutputHelper output)
             : base(GetConfig(), output)
         {
@@ -106,7 +106,7 @@ namespace Akka.Tests.Event
         [Fact]
         public async Task Be_able_to_log_unhandled_messages()
         {
-            var testKit = new TestKit.Xunit2.TestKit(config: GetDebugUnhandledMessagesConfig(), output: Output);
+            var testKit = new TestKit.Xunit.TestKit(config: GetDebugUnhandledMessagesConfig(), output: Output);
             try
             {
                 var msg = new UnhandledMessage(42, testKit.Sys.DeadLetters, testKit.Sys.DeadLetters);
@@ -115,7 +115,7 @@ namespace Akka.Tests.Event
                     {
                         testKit.Sys.EventStream.Publish(msg);
                         return Task.CompletedTask;
-                    });
+                    }, Token);
             }
             finally
             {
@@ -129,7 +129,7 @@ namespace Akka.Tests.Event
         [Fact]
         public async Task Bugfix3267_able_to_log_unhandled_messages_with_nosender()
         {
-            var testKit = new TestKit.Xunit2.TestKit(config: GetDebugUnhandledMessagesConfig(), output: Output);
+            var testKit = new TestKit.Xunit.TestKit(config: GetDebugUnhandledMessagesConfig(), output: Output);
             try
             {
                 // sender is NoSender
@@ -139,7 +139,7 @@ namespace Akka.Tests.Event
                     {
                         testKit.Sys.EventStream.Publish(msg);
                         return Task.CompletedTask;
-                    });
+                    }, Token);
             }
             finally
             {

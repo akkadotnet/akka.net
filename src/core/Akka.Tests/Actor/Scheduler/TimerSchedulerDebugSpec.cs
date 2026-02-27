@@ -10,11 +10,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Configuration;
-using Akka.TestKit;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using Debug = Akka.Event.Debug;
 
 namespace Akka.Tests.Actor.Scheduler;
@@ -39,25 +36,29 @@ internal sealed class TimerTestActor: UntypedActor, IWithTimers
     public ITimerScheduler Timers { get; set; }
 }
     
-public class TimerSchedulerDebug: TestKit.Xunit2.TestKit
+public class TimerSchedulerDebug: TestKit.Xunit.TestKit
 {
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
     public TimerSchedulerDebug(ITestOutputHelper output) : base("akka.actor.debug.log-timers = true", null, output)
     {
     }
 
     [Fact]
-    public void ShouldHonorDebugFlag()
+    public async Task ShouldHonorDebugFlag()
     {
         Sys.EventStream.Subscribe(TestActor, typeof(Debug));
         var timerActor = Sys.ActorOf<TimerTestActor>();
         timerActor.Tell("startTimer");
 
-        FishForMessage(msg => msg is Debug dbg && dbg.Message.ToString()!.StartsWith("Start timer ["));
+        await FishForMessageAsync(msg => msg is Debug dbg && dbg.Message.ToString()!.StartsWith("Start timer ["), cancellationToken: Token);
     }
 }
 
-public class TimerSchedulerSuppressDebug: TestKit.Xunit2.TestKit
+public class TimerSchedulerSuppressDebug: TestKit.Xunit.TestKit
 {
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
     public TimerSchedulerSuppressDebug(ITestOutputHelper output) : base("akka.actor.debug.log-timers = false", null, output)
     {
     }
@@ -71,7 +72,8 @@ public class TimerSchedulerSuppressDebug: TestKit.Xunit2.TestKit
 
         await ExpectNoMsgAsync(
             predicate: msg => msg is Debug dbg && dbg.Message.ToString()!.StartsWith("Start timer ["), 
-            timeout: 1.Seconds());
+            timeout: 1.Seconds(),
+            cancellationToken: Token);
     }
     
     private async Task ExpectNoMsgAsync(

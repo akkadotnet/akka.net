@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -17,14 +18,13 @@ using Akka.IO;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Tests.Delivery.TestConsumer;
 using static Akka.Delivery.DurableProducerQueue;
 using static Akka.Tests.Delivery.TestDurableProducerQueue;
 
 namespace Akka.Tests.Delivery;
 
-public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
+public class DurableProducerControllerSpecs : TestKit.Xunit.TestKit
 {
     private static readonly Config Config = @"akka.reliable-delivery.consumer-controller.flow-control-window = 20
      akka.reliable-delivery.consumer-controller.resend-interval-min = 1s";
@@ -34,6 +34,8 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
     {
     }
 
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
     private int _idCount = 0;
     private int NextId() => _idCount++;
 
@@ -60,16 +62,16 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
         producerController.Tell(new ProducerController.RegisterConsumer<Job>(consumerControllerProbe));
 
         // no request to producer since it has unconfirmed to begin with
-        await producerProbe.ExpectNoMsgAsync(100);
+        await producerProbe.ExpectNoMsgAsync(100, cancellationToken: Token);
 
-        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 3, producerController).AsFirst());
-        await consumerControllerProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 3, producerController).AsFirst(), cancellationToken: Token);
+        await consumerControllerProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), Token);
         producerController.Tell(new ProducerController.Request(3L, 13L, true, false));
-        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 4, producerController));
+        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 4, producerController), cancellationToken: Token);
 
-        var sendTo = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).SendNextTo;
+        var sendTo = (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).SendNextTo;
         sendTo.Tell(new Job("msg-5"));
-        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 5, producerController));
+        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 5, producerController), cancellationToken: Token);
     }
 
     [Fact]
@@ -89,8 +91,8 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
 
         producerController.Tell(new ProducerController.RegisterConsumer<Job>(consumerControllerProbe));
 
-        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).SendNextTo.Tell(new Job("msg-1"));
-        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 1, producerController));
+        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).SendNextTo.Tell(new Job("msg-1"));
+        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 1, producerController), cancellationToken: Token);
 
         await AwaitAssertAsync(() =>
         {
@@ -98,7 +100,7 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
                 ImmutableList.Create<MessageSent<Job>>()
                     .Add(new MessageSent<Job>(1, new Job("msg-1"), false, NoQualifier, TestTimestamp))));
             return Task.CompletedTask;
-        });
+        }, cancellationToken: Token);
 
         producerController.Tell(new ProducerController.Request(1L, 10L, true, false));
         await AwaitAssertAsync(() =>
@@ -108,18 +110,18 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
                     .Add(NoQualifier, (1L, TestTimestamp)),
                 ImmutableList<MessageSent<Job>>.Empty));
             return Task.CompletedTask;
-        });
+        }, cancellationToken: Token);
 
         var replyTo = CreateTestProbe();
-        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).AskNextTo(
+        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).AskNextTo(
             new ProducerController.MessageWithConfirmation<Job>(new Job("msg-2"), replyTo.Ref));
-        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 2, producerController, ack: true));
-        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).AskNextTo(
+        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 2, producerController, ack: true), cancellationToken: Token);
+        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).AskNextTo(
             new ProducerController.MessageWithConfirmation<Job>(new Job("msg-3"), replyTo.Ref));
-        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 3, producerController, ack: true));
-        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).AskNextTo(
+        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 3, producerController, ack: true), cancellationToken: Token);
+        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).AskNextTo(
             new ProducerController.MessageWithConfirmation<Job>(new Job("msg-4"), replyTo.Ref));
-        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 4, producerController, ack: true));
+        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 4, producerController, ack: true), cancellationToken: Token);
         producerController.Tell(new ProducerController.Ack(3L));
 
         await AwaitAssertAsync(() =>
@@ -130,7 +132,7 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
                 ImmutableList<MessageSent<Job>>.Empty.Add(new MessageSent<Job>(4, new Job("msg-4"), true, NoQualifier,
                     TestTimestamp))));
             return Task.CompletedTask;
-        });
+        }, cancellationToken: Token);
     }
 
     [Fact]
@@ -151,16 +153,16 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
 
         var replyTo = CreateTestProbe();
 
-        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).AskNextTo(
+        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).AskNextTo(
             new ProducerController.MessageWithConfirmation<Job>(new Job("msg-1"), replyTo.Ref));
-        await replyTo.ExpectMsgAsync(1L);
+        await replyTo.ExpectMsgAsync(1L, cancellationToken: Token);
 
-        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 1, producerController, ack: true));
+        await consumerControllerProbe.ExpectMsgAsync(SequencedMessage(ProducerId, 1, producerController, ack: true), cancellationToken: Token);
         producerController.Tell(new ProducerController.Request(1L, 10L, true, false));
 
-        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).AskNextTo(
+        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).AskNextTo(
             new ProducerController.MessageWithConfirmation<Job>(new Job("msg-2"), replyTo.Ref));
-        replyTo.ExpectMsg(2L);
+        replyTo.ExpectMsg(2L, cancellationToken: Token);
     }
 
     [Fact]
@@ -182,8 +184,8 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
 
         producerController.Tell(new ProducerController.RegisterConsumer<Job>(consumerControllerProbe));
 
-        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).SendNextTo.Tell(new Job("abc"));
-        await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).SendNextTo.Tell(new Job("abc"));
+        await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>(cancellationToken: Token);
 
         await AwaitAssertAsync(() =>
         {
@@ -192,13 +194,13 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
             durableState.Unconfirmed.Count.Should().Be(1);
             durableState.Unconfirmed.First().Message.IsMessage.Should().BeFalse();
             return Task.CompletedTask;
-        });
+        }, cancellationToken: Token);
 
         producerController.Tell(new ProducerController.Request(0L, 10L, true, false));
 
-        await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>(cancellationToken: Token);
 
-        var seqMsg3 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        var seqMsg3 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>(cancellationToken: Token);
         seqMsg3.Message.IsMessage.Should().BeFalse();
         seqMsg3.IsFirstChunk.Should().BeFalse();
         seqMsg3.IsLastChunk.Should().BeTrue();
@@ -211,7 +213,7 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
             durableState.Unconfirmed.Count.Should().Be(3);
             durableState.Unconfirmed.First().Message.IsMessage.Should().BeFalse();
             return Task.CompletedTask;
-        });
+        }, cancellationToken: Token);
     }
 
     [Fact]
@@ -251,7 +253,7 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
         
         producerController.Tell(new ProducerController.RegisterConsumer<Job>(consumerControllerProbe));
 
-        var seqMsg3 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        var seqMsg3 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>(cancellationToken: Token);
         seqMsg3.SeqNr.Should().Be(3);
         seqMsg3.IsFirstChunk.Should().BeTrue();
         seqMsg3.IsLastChunk.Should().BeTrue();
@@ -259,11 +261,11 @@ public class DurableProducerControllerSpecs : TestKit.Xunit2.TestKit
         producerController.Tell(new ProducerController.Request(0L, 10L, true, false));
         
         // 4 and 5 discarded because missing last chunk
-        await consumerControllerProbe.ExpectNoMsgAsync();
+        await consumerControllerProbe.ExpectNoMsgAsync(cancellationToken: Token);
         
-        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>()).SendNextTo.Tell(new Job("g"));
+        (await producerProbe.ExpectMsgAsync<ProducerController.RequestNext<Job>>(cancellationToken: Token)).SendNextTo.Tell(new Job("g"));
         
-        var seqMsg4 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>();
+        var seqMsg4 = await consumerControllerProbe.ExpectMsgAsync<ConsumerController.SequencedMessage<Job>>(cancellationToken: Token);
         seqMsg4.SeqNr.Should().Be(4);
         seqMsg4.IsFirstChunk.Should().BeTrue();
         seqMsg4.IsLastChunk.Should().BeTrue();

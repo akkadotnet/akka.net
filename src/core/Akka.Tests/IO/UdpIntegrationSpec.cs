@@ -15,7 +15,6 @@ using Akka.IO;
 using Akka.IO.Buffers;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using System.Threading.Tasks;
@@ -24,6 +23,8 @@ namespace Akka.Tests.IO
 {
     public class UdpIntegrationSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public UdpIntegrationSpec(ITestOutputHelper output)
             : base(@"
                     akka.actor.serialize-creators = on
@@ -230,7 +231,7 @@ namespace Akka.Tests.IO
             await clientProbe.ExpectMsgAsync<Udp.Unbound>();
             
             // wait for all SocketAsyncEventArgs to be released
-            await Task.Delay(1000);
+            await Task.Delay(1000, Token);
             
             poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
             poolInfo.Type.Should().Be(typeof(DirectBufferPool));
@@ -272,7 +273,7 @@ namespace Akka.Tests.IO
             await serverProbe.ExpectMsgAsync<Udp.Unbound>();
             
             // wait for all SocketAsyncEventArgs to be released
-            await Task.Delay(1000);
+            await Task.Delay(1000, Token);
             
             poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
             poolInfo.Type.Should().Be(typeof(DirectBufferPool));

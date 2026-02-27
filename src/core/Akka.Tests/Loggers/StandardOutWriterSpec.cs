@@ -7,11 +7,11 @@
 
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit;
 using Akka.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Loggers
 {
@@ -21,6 +21,8 @@ namespace Akka.Tests.Loggers
     /// </summary>
     public class StandardOutWriterSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public StandardOutWriterSpec(ITestOutputHelper output) : base(output)
         {
         }
@@ -45,7 +47,7 @@ namespace Akka.Tests.Loggers
                         StandardOutWriter.WriteLine($"Task {taskId} - Line {j}");
                         StandardOutWriter.Write($"Task {taskId} - Write {j} ");
                     }
-                });
+                }, Token);
             }
 
             // Should complete without throwing IndexOutOfRangeException

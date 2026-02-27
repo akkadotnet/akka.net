@@ -6,17 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 
 namespace Akka.Tests.Actor

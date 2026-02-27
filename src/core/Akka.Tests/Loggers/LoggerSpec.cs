@@ -11,14 +11,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Actor.Internal;
-using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.Tests.Shared.Internals;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 
 namespace Akka.Tests.Loggers
@@ -32,6 +28,8 @@ akka.stdout-loglevel = DEBUG");
         public static readonly (string t, string[] p) Case =  
             ("This is {0} a {1} janky formatting. {4}", new []{"also", "very", "not cool"});
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public LoggerSpec(ITestOutputHelper output) : base(Config, output)
         { }
 
@@ -41,7 +39,7 @@ akka.stdout-loglevel = DEBUG");
             var events = new List<LogEvent>();
 
             // Need to wait until TestOutputLogger initializes
-            await Task.Delay(500);
+            await Task.Delay(500, Token);
             Sys.EventStream.Subscribe(TestActor, typeof(LogEvent));
 
             Sys.Log.Error(new FakeException("BOOM"), Case.t, Case.p);

@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Threading;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
@@ -17,7 +18,6 @@ using Akka.TestKit.Configs;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Serialization
 {
@@ -82,6 +82,8 @@ namespace Akka.Tests.Serialization
 
         public static readonly ActorSystemSetup ActorSystemSettings = ActorSystemSetup.Create(SerializationSettings, Bootstrap);
 
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+        
         public SerializationSetupSpec(ITestOutputHelper output) 
             : base(ActorSystem.Create("SerializationSettingsSpec", ActorSystemSettings), output) { }
 
@@ -138,7 +140,7 @@ namespace Akka.Tests.Serialization
             var serializer = sys2.Serialization.FindSerializerFor(new ProgammaticDummy());
             serializer.Should().BeOfType<TestSerializer>();
 
-            sys2.Terminate().Wait();
+            sys2.Terminate().Wait(Token);
         }
     }
 }

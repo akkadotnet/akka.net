@@ -9,7 +9,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -21,7 +20,6 @@ using Akka.TestKit;
 using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor.Dispatch
 {
@@ -428,6 +426,7 @@ namespace Akka.Tests.Actor.Dispatch
 
         protected abstract MessageDispatcherInterceptor InterceptedDispatcher();
         protected abstract string DispatcherType { get; }
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
 
         protected IActorRef NewTestActor(string dispatcher)
         {
@@ -507,7 +506,7 @@ namespace Akka.Tests.Actor.Dispatch
                     {
                         a.Tell(new CountDown(counter));
                     }
-                });
+                }, Token);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
@@ -519,7 +518,7 @@ namespace Akka.Tests.Actor.Dispatch
             }
             finally
             {
-                var stats = await a.Ask<InterceptorStats>(GetStats.Instance);
+                var stats = await a.Ask<InterceptorStats>(GetStats.Instance, Token);
                 _testOutputHelper.WriteLine("Observed stats: {0}", stats);
 
                 Sys.Stop(a);
@@ -681,6 +680,7 @@ namespace Akka.Tests.Actor.Dispatch
         [Fact]
         public async Task A_dispatcher_must_process_messages_in_parallel()
         {
+            var token = TestContext.Current.CancellationToken;
             var dispatcher = InterceptedDispatcher();
             var aStart = new CountdownEvent(1);
             var aStop = new CountdownEvent(1);
@@ -699,7 +699,7 @@ namespace Akka.Tests.Actor.Dispatch
             Sys.Stop(a);
             Sys.Stop(b);
 
-            await Task.WhenAll(a.WatchAsync(), b.WatchAsync()).WaitAsync(RemainingOrDefault);
+            await Task.WhenAll(a.WatchAsync(token), b.WatchAsync(token)).WaitAsync(RemainingOrDefault, token);
 
             AssertRefDefaultZero(a, dispatcher, registers:1, unregisters:1, msgsReceived:1, msgsProcessed:1);
             AssertRefDefaultZero(b, dispatcher, registers: 1, unregisters: 1, msgsReceived: 1, msgsProcessed: 1);
