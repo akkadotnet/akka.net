@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
