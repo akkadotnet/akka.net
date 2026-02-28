@@ -39,12 +39,12 @@ akka.stdout-loglevel = DEBUG");
             var events = new List<LogEvent>();
 
             // Need to wait until TestOutputLogger initializes
-            await Task.Delay(500, Token);
+            await Task.Delay(500, cancellationToken: Token);
             Sys.EventStream.Subscribe(TestActor, typeof(LogEvent));
 
             Sys.Log.Error(new FakeException("BOOM"), Case.t, Case.p);
-            events.Add(await ExpectMsgAsync<Error>());
-            events.Add(await ExpectMsgAsync<Error>());
+            events.Add(await ExpectMsgAsync<Error>(cancellationToken: Token));
+            events.Add(await ExpectMsgAsync<Error>(cancellationToken: Token));
 
             events.All(e => e is Error).Should().BeTrue();
             events.Select(e => e.Cause).Any(c => c is FakeException).Should().BeTrue();
@@ -52,22 +52,22 @@ akka.stdout-loglevel = DEBUG");
 
             events.Clear();
             Sys.Log.Warning(Case.t, Case.p);
-            events.Add(await ExpectMsgAsync<LogEvent>());
-            events.Add(await ExpectMsgAsync<LogEvent>());
+            events.Add(await ExpectMsgAsync<LogEvent>(cancellationToken: Token));
+            events.Add(await ExpectMsgAsync<LogEvent>(cancellationToken: Token));
             events.Any(e => e is Warning).Should().BeTrue();
             events.First(e => e is Error).Cause.Should().BeOfType<FormatException>();
 
             events.Clear();
             Sys.Log.Info(Case.t, Case.p);
-            events.Add(await ExpectMsgAsync<LogEvent>());
-            events.Add(await ExpectMsgAsync<LogEvent>());
+            events.Add(await ExpectMsgAsync<LogEvent>(cancellationToken: Token));
+            events.Add(await ExpectMsgAsync<LogEvent>(cancellationToken: Token));
             events.Any(e => e is Info).Should().BeTrue();
             events.First(e => e is Error).Cause.Should().BeOfType<FormatException>();
 
             events.Clear();
             Sys.Log.Debug(Case.t, Case.p);
-            events.Add(await ExpectMsgAsync<LogEvent>());
-            events.Add(await ExpectMsgAsync<LogEvent>());
+            events.Add(await ExpectMsgAsync<LogEvent>(cancellationToken: Token));
+            events.Add(await ExpectMsgAsync<LogEvent>(cancellationToken: Token));
             events.Any(e => e is Debug).Should().BeTrue();
             events.First(e => e is Error).Cause.Should().BeOfType<FormatException>();
         }
@@ -82,16 +82,16 @@ akka.stdout-loglevel = DEBUG");
             sys2.EventStream.Subscribe(probe, typeof(LogEvent));
 
             sys2.Log.Error(new FakeException("BOOM"), Case.t, Case.p);
-            (await probe.ExpectMsgAsync<Error>()).Cause.Should().BeOfType<FakeException>();
+            (await probe.ExpectMsgAsync<Error>(cancellationToken: Token)).Cause.Should().BeOfType<FakeException>();
 
             sys2.Log.Warning(Case.t, Case.p);
-            await probe.ExpectMsgAsync<Warning>();
+            await probe.ExpectMsgAsync<Warning>(cancellationToken: Token);
 
             sys2.Log.Info(Case.t, Case.p);
-            await probe.ExpectMsgAsync<Info>();
+            await probe.ExpectMsgAsync<Info>(cancellationToken: Token);
 
             sys2.Log.Debug(Case.t, Case.p);
-            await probe.ExpectMsgAsync<Debug>();
+            await probe.ExpectMsgAsync<Debug>(cancellationToken: Token);
 
             await sys2.Terminate();
         }
@@ -106,16 +106,16 @@ akka.stdout-loglevel = DEBUG");
             sys2.EventStream.Subscribe(probe, typeof(LogEvent));
 
             sys2.Log.Error(new FakeException("BOOM"), Case.t, Case.p);
-            (await probe.ExpectMsgAsync<Error>()).Cause.Should().BeOfType<FakeException>();
+            (await probe.ExpectMsgAsync<Error>(cancellationToken: Token)).Cause.Should().BeOfType<FakeException>();
 
             sys2.Log.Warning(Case.t, Case.p);
-            await probe.ExpectMsgAsync<Warning>();
+            await probe.ExpectMsgAsync<Warning>(cancellationToken: Token);
 
             sys2.Log.Info(Case.t, Case.p);
-            await probe.ExpectMsgAsync<Info>();
+            await probe.ExpectMsgAsync<Info>(cancellationToken: Token);
 
             sys2.Log.Debug(Case.t, Case.p);
-            await probe.ExpectMsgAsync<Debug>();
+            await probe.ExpectMsgAsync<Debug>(cancellationToken: Token);
 
             await sys2.Terminate();
         }

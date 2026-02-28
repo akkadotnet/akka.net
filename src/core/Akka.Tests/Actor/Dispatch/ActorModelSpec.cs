@@ -506,7 +506,7 @@ namespace Akka.Tests.Actor.Dispatch
                     {
                         a.Tell(new CountDown(counter));
                     }
-                }, Token);
+                }, cancellationToken: Token);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             }
 
@@ -518,7 +518,7 @@ namespace Akka.Tests.Actor.Dispatch
             }
             finally
             {
-                var stats = await a.Ask<InterceptorStats>(GetStats.Instance, Token);
+                var stats = await a.Ask<InterceptorStats>(GetStats.Instance, cancellationToken: Token);
                 _testOutputHelper.WriteLine("Observed stats: {0}", stats);
 
                 Sys.Stop(a);
@@ -630,7 +630,7 @@ namespace Akka.Tests.Actor.Dispatch
                     f6.Result.ShouldBe("bar2");
                     Assert.False(f3.IsCompleted);
                     Assert.False(f5.IsCompleted);
-                });
+                }, cancellationToken: Token);
         }
 
         [Fact]
@@ -643,8 +643,8 @@ namespace Akka.Tests.Actor.Dispatch
             }
             var a = NewTestActor(dispatcher.Id);
             a.Tell(DoubleStop.Instance);
-            AwaitCondition(() => StatsFor(a, dispatcher).Registers.Current == 1);
-            AwaitCondition(() => StatsFor(a, dispatcher).Unregisters.Current == 1);
+            AwaitCondition(() => StatsFor(a, dispatcher).Registers.Current == 1, cancellationToken: Token);
+            AwaitCondition(() => StatsFor(a, dispatcher).Unregisters.Current == 1, cancellationToken: Token);
         }
     }
 

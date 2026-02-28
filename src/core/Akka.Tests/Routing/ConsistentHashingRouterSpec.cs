@@ -14,11 +14,14 @@ using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using System.Threading;
 
 namespace Akka.Tests.Routing
 {
     public class ConsistentHashingRouterSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         #region Actors & Message Classes
 
         public class Echo : UntypedActor
@@ -114,7 +117,7 @@ namespace Akka.Tests.Routing
         [Fact]
         public async Task Consistent_hashing_pool_router_must_create_routees_from_configuration()
         {
-            var currentRoutees = await _router1.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
+            var currentRoutees = await _router1.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null), cancellationToken: Token);
             currentRoutees.Members.Count().Should().Be(3);
         }
 
@@ -122,19 +125,19 @@ namespace Akka.Tests.Routing
         public async Task Consistent_hashing_pool_router_must_select_destination_based_on_consistent_hash_key_of_message()
         {
             _router1.Tell(new Msg("a", "A"));
-            var destinationA = await ExpectMsgAsync<IActorRef>();
+            var destinationA = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             _router1.Tell(new ConsistentHashableEnvelope("AA", "a"));
-            await ExpectMsgAsync(destinationA);
+            await ExpectMsgAsync(destinationA, cancellationToken: Token);
 
             _router1.Tell(new Msg(17, "A"));
-            var destinationB = await ExpectMsgAsync<IActorRef>();
+            var destinationB = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             _router1.Tell(new ConsistentHashableEnvelope("BB", 17));
-            await ExpectMsgAsync(destinationB);
+            await ExpectMsgAsync(destinationB, cancellationToken: Token);
 
             _router1.Tell(new Msg(new MsgKey("c"), "C"));
-            var destinationC = await ExpectMsgAsync<IActorRef>();
+            var destinationC = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             _router1.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
-            await ExpectMsgAsync(destinationC);
+            await ExpectMsgAsync(destinationC, cancellationToken: Token);
         }
 
         [Fact]
@@ -153,25 +156,25 @@ namespace Akka.Tests.Routing
             var router2 = Sys.ActorOf(new ConsistentHashingPool(1, hashMapping).Props(Props.Create<Echo>()), "router2");
 
             router2.Tell(new Msg2("a", "A"));
-            var destinationA = await ExpectMsgAsync<IActorRef>();
+            var destinationA = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             router2.Tell(new ConsistentHashableEnvelope("AA", "a"));
-            await ExpectMsgAsync(destinationA);
+            await ExpectMsgAsync(destinationA, cancellationToken: Token);
 
             router2.Tell(new Msg2(17, "A"));
-            var destinationB = await ExpectMsgAsync<IActorRef>();
+            var destinationB = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             router2.Tell(new ConsistentHashableEnvelope("BB", 17));
-            await ExpectMsgAsync(destinationB);
+            await ExpectMsgAsync(destinationB, cancellationToken: Token);
 
             router2.Tell(new Msg2(new MsgKey("c"), "C"));
-            var destinationC = await ExpectMsgAsync<IActorRef>();
+            var destinationC = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             router2.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
-            await ExpectMsgAsync(destinationC);
+            await ExpectMsgAsync(destinationC, cancellationToken: Token);
         }
 
         [Fact]
         public async Task Consistent_hashing_group_router_must_create_routees_from_configuration()
         {
-            var currentRoutees = await _router3.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null));
+            var currentRoutees = await _router3.Ask<Routees>(new GetRoutees(), GetTimeoutOrDefault(null), cancellationToken: Token);
             currentRoutees.Members.Count().ShouldBe(3);
         }
 
@@ -179,19 +182,19 @@ namespace Akka.Tests.Routing
         public async Task Consistent_hashing_group_router_must_select_destination_based_on_consistent_hash_key_of_message()
         {
             _router3.Tell(new Msg("a", "A"));
-            var destinationA = await ExpectMsgAsync<IActorRef>();
+            var destinationA = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             _router3.Tell(new ConsistentHashableEnvelope("AA", "a"));
-            await ExpectMsgAsync(destinationA);
+            await ExpectMsgAsync(destinationA, cancellationToken: Token);
 
             _router3.Tell(new Msg(17, "A"));
-            var destinationB = await ExpectMsgAsync<IActorRef>();
+            var destinationB = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             _router3.Tell(new ConsistentHashableEnvelope("BB", 17));
-            await ExpectMsgAsync(destinationB);
+            await ExpectMsgAsync(destinationB, cancellationToken: Token);
 
             _router3.Tell(new Msg(new MsgKey("c"), "C"));
-            var destinationC = await ExpectMsgAsync<IActorRef>();
+            var destinationC = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             _router3.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
-            await ExpectMsgAsync(destinationC);
+            await ExpectMsgAsync(destinationC, cancellationToken: Token);
         }
 
         [Fact]
@@ -212,19 +215,19 @@ namespace Akka.Tests.Routing
             var router4 = Sys.ActorOf(new ConsistentHashingGroup(paths, hashMapping).Props(), "router4");
 
             router4.Tell(new Msg2("a", "A"));
-            var destinationA = await ExpectMsgAsync<IActorRef>();
+            var destinationA = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             router4.Tell(new ConsistentHashableEnvelope("AA", "a"));
-            await ExpectMsgAsync(destinationA);
+            await ExpectMsgAsync(destinationA, cancellationToken: Token);
 
             router4.Tell(new Msg2(17, "A"));
-            var destinationB = await ExpectMsgAsync<IActorRef>();
+            var destinationB = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             router4.Tell(new ConsistentHashableEnvelope("BB", 17));
-            await ExpectMsgAsync(destinationB);
+            await ExpectMsgAsync(destinationB, cancellationToken: Token);
 
             router4.Tell(new Msg2(new MsgKey("c"), "C"));
-            var destinationC = await ExpectMsgAsync<IActorRef>();
+            var destinationC = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             router4.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
-            await ExpectMsgAsync(destinationC);
+            await ExpectMsgAsync(destinationC, cancellationToken: Token);
         }
     }
 }

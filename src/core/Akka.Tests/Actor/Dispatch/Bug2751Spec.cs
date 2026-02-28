@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor.Dispatch
 {
@@ -18,6 +19,8 @@ namespace Akka.Tests.Actor.Dispatch
     /// </summary>
     public class Bug2751Spec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         private class StopActor : ReceiveActor
         {
             private readonly IActorRef _testActor;
@@ -45,10 +48,10 @@ namespace Akka.Tests.Actor.Dispatch
         {
             var stopper = Sys.ActorOf(Props.Create(() => new StopActor(TestActor)));
             stopper.Tell("stop");
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(250));
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(250), cancellationToken: Token);
             Watch(stopper);
-            await ExpectTerminatedAsync(stopper);
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectTerminatedAsync(stopper, cancellationToken: Token);
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), cancellationToken: Token);
         }
     }
 

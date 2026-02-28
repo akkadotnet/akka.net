@@ -5,16 +5,20 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     
     public class ActorBecomeTests : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
 
         [Fact]
         public async Task When_calling_become_Then_the_new_handler_is_used()
@@ -29,7 +33,7 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
 
             //Then
-            await ExpectMsgAsync("2:hello");
+            await ExpectMsgAsync("2:hello", cancellationToken: Token);
         }
 
 
@@ -55,7 +59,7 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
 
             //Then
-            await ExpectMsgAsync("1:hello");
+            await ExpectMsgAsync("1:hello", cancellationToken: Token);
         }
 
 
@@ -80,7 +84,7 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
 
             //Then
-            await ExpectMsgAsync("2:hello");
+            await ExpectMsgAsync("2:hello", cancellationToken: Token);
         }
 
         [Fact]
@@ -98,10 +102,10 @@ namespace Akka.Tests.Actor
             //which means this message should never be handled, because only B() has a receive for this.
             actor.Tell(2, TestActor);
 
-            await ExpectMsgAsync("A says: hi");
-            await ExpectMsgAsync("A says: True");
+            await ExpectMsgAsync("A says: hi", cancellationToken: Token);
+            await ExpectMsgAsync("A says: True", cancellationToken: Token);
             //we dont expect any further messages
-            await ExpectNoMsgAsync(default);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
 
         private class BecomeActor : UntypedActor

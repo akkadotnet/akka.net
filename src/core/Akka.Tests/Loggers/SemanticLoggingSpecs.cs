@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="SemanticLoggingSpecs.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -13,11 +13,14 @@ using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Loggers
 {
     public class SemanticLoggingSpecs : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public SemanticLoggingSpecs() : base(ConfigurationFactory.ParseString(@"
             akka {
                 loglevel = INFO
@@ -350,7 +353,7 @@ namespace Akka.Tests.Loggers
             EventFilter.Info("OnCreateBet BetId:{BetId} created").ExpectOne(() =>
             {
                 Log.Info("OnCreateBet BetId:{BetId} created", 12345);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact(DisplayName = "EventFilter should match semantic logging templates with contains")]
@@ -359,7 +362,7 @@ namespace Akka.Tests.Loggers
             EventFilter.Info(contains: "BetId:{BetId}").ExpectOne(() =>
             {
                 Log.Info("OnCreateBet BetId:{BetId} created", 12345);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact(DisplayName = "EventFilter should match semantic logging templates with partial pattern")]
@@ -368,7 +371,7 @@ namespace Akka.Tests.Loggers
             EventFilter.Info(start: "User {UserId}").ExpectOne(() =>
             {
                 Log.Info("User {UserId} logged in from {IpAddress}", 123, "192.168.1.1");
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact(DisplayName = "EventFilter should still match formatted output when template doesn't match")]
@@ -378,7 +381,7 @@ namespace Akka.Tests.Loggers
             EventFilter.Info(contains: "12345").ExpectOne(() =>
             {
                 Log.Info("OnCreateBet BetId:{BetId} created", 12345);
-            });
+            }, cancellationToken: Token);
         }
 
         // BUG: Placeholder followed by }} fails

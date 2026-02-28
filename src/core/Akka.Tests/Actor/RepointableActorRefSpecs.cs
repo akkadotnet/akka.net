@@ -10,11 +10,14 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class RepointableActorRefSpecs : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public class Bug2182Actor : ReceiveActor, IWithUnboundedStash
         {
             public Bug2182Actor()
@@ -51,7 +54,7 @@ namespace Akka.Tests.Actor
         {
             var actor = Sys.ActorOf(Props.Create(() => new Bug2182Actor()).WithDispatcher("akka.test.calling-thread-dispatcher"), "buggy");
             actor.Tell("foo");
-            await ExpectMsgAsync("foo");
+            await ExpectMsgAsync("foo", cancellationToken: Token);
         }
     }
 }

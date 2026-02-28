@@ -21,6 +21,8 @@ namespace Akka.Tests.Routing
 {
     public class ResizerSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public ResizerSpec() : base(GetConfig())
         {
         }
@@ -252,7 +254,7 @@ namespace Akka.Tests.Routing
 
             // first message should create the minimum number of routees
             router.Tell("echo");
-            await ExpectMsgAsync("reply");
+            await ExpectMsgAsync("reply", cancellationToken: Token);
 
             (await RouteeSize(router)).Should().Be(resizer.LowerBound);
 
@@ -301,7 +303,7 @@ namespace Akka.Tests.Routing
 
             // first message should create the minimum number of routees
             router.Tell("echo");
-            await ExpectMsgAsync("reply");
+            await ExpectMsgAsync("reply", cancellationToken: Token);
 
             (await RouteeSize(router)).Should().Be(resizer.LowerBound);
 
@@ -373,7 +375,7 @@ namespace Akka.Tests.Routing
                     await Task.Delay(Dilated(20.Milliseconds()));
                     return (await RouteeSize(router)) < z;
                 }, Dilated(500.Milliseconds()));
-            });
+            }, cancellationToken: Token);
         }
     }
 }

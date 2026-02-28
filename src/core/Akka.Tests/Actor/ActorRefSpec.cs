@@ -123,7 +123,7 @@ namespace Akka.Tests.Actor
 
             aref.Tell(PoisonPill.Instance);
 
-            await ExpectMsgAsync<Terminated>();
+            await ExpectMsgAsync<Terminated>(cancellationToken: Token);
 
             var bserializer = Sys.Serialization.FindSerializerForType(typeof (IActorRef));
 
@@ -141,7 +141,7 @@ namespace Akka.Tests.Actor
                 {
                     return Task.FromResult(false);
                 }
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -172,7 +172,7 @@ namespace Akka.Tests.Actor
                 boss.Tell("send kill");
                 latch.Ready(TimeSpan.FromSeconds(5));
                 return Task.CompletedTask;
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -255,7 +255,7 @@ namespace Akka.Tests.Actor
         {
             var a = Sys.ActorOf(NonPublicActor.CreateProps());
             a.Tell("pigdog", TestActor);
-            await ExpectMsgAsync("pigdog");
+            await ExpectMsgAsync("pigdog", cancellationToken: Token);
             Sys.Stop(a);
         }
 
@@ -265,8 +265,8 @@ namespace Akka.Tests.Actor
             var timeout = TimeSpan.FromSeconds(20);
             var actorRef = Sys.ActorOf(Props.Create(() => new PoisonPilledActor()));
 
-            var t1 = actorRef.Ask(5, timeout, Token);
-            var t2 = actorRef.Ask(0, timeout, Token);
+            var t1 = actorRef.Ask(5, timeout, cancellationToken: Token);
+            var t2 = actorRef.Ask(0, timeout, cancellationToken: Token);
             actorRef.Tell(PoisonPill.Instance);
 
             Func<Task> f1 = async () => await t1;
@@ -306,7 +306,7 @@ namespace Akka.Tests.Actor
         {          
             var actor = ActorOfAsTestActorRef<NonPublicActor>(Props.Create<NonPublicActor>(SupervisorStrategy.StoppingStrategy));
             // actors with a null sender should always write to deadletters
-            await EventFilter.DeadLetter<object>().ExpectOneAsync(() => { actor.Tell(new object(), null); return Task.CompletedTask; });
+            await EventFilter.DeadLetter<object>().ExpectOneAsync(() => { actor.Tell(new object(), null); return Task.CompletedTask; }, cancellationToken: Token);
 
             // will throw an exception if there's a bug
             await ExpectNoMsgAsync(CancellationToken.None);

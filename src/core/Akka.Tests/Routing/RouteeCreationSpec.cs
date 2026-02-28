@@ -15,11 +15,14 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Threading;
 
 namespace Akka.Tests.Routing
 {
     public class RouteeCreationSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         private class RouteeActor : ReceiveActor
         {
             public RouteeActor(IActorRef testActor)
@@ -52,7 +55,7 @@ namespace Akka.Tests.Routing
 
             for (int i = 1; i <= n; i++)
             {
-                (await ExpectMsgAsync<ActorIdentity>()).Subject.Should().NotBeNull();
+                (await ExpectMsgAsync<ActorIdentity>(cancellationToken: Token)).Subject.Should().NotBeNull();
             }
         }
 
@@ -69,9 +72,9 @@ namespace Akka.Tests.Routing
                 }
 
                 return null;
-            }, msgs: n).ToListAsync();
+            }, msgs: n, cancellationToken: Token).ToListAsync(Token);
 
-            await ExpectNoMsgAsync(100.Milliseconds());
+            await ExpectNoMsgAsync(100.Milliseconds(), cancellationToken: Token);
 
             gotIt.Count.Should().Be(n, $"Got only {gotIt.Count} from [{string.Join(", ", gotIt)}]");
         }

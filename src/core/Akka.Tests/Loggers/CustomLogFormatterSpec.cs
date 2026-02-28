@@ -13,11 +13,14 @@ using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Loggers
 {
     public class CustomLogFormatterSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         // <CustomLogFormatter>
         private class CustomLogFormatter : ILogMessageFormatter
         {
@@ -52,7 +55,7 @@ namespace Akka.Tests.Loggers
             Sys.Log.Error("This is a test {0}", 1); // formatters aren't used when we're logging const strings
             
             // assert
-            var msg = await probe.ExpectMsgAsync<Error>();
+            var msg = await probe.ExpectMsgAsync<Error>(cancellationToken: Token);
             msg.Message.Should().BeAssignableTo<LogMessage>();
             msg.ToString().Should().Contain("Custom: This is a test 1");
             
@@ -60,7 +63,7 @@ namespace Akka.Tests.Loggers
             {
                 Sys.Log.Error("This is a test {0}", 1);
                 return Task.CompletedTask;
-            });
+            }, cancellationToken: Token);
         }
         
         [Fact]
@@ -71,7 +74,7 @@ namespace Akka.Tests.Loggers
             {
                 Sys.Log.Error("This is a test {0}", 1);
                 return Task.CompletedTask;
-            });
+            }, cancellationToken: Token);
         }
     }
 }

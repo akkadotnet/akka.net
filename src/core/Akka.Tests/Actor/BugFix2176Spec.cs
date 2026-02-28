@@ -9,11 +9,14 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class BugFix2176Spec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         private class Actor1 : ReceiveActor
         {
             private readonly IActorRef _testActor;
@@ -59,14 +62,14 @@ namespace Akka.Tests.Actor
         public async Task Fix2176_Constructor_Should_create_valid_child_actor()
         {
             var actor = Sys.ActorOf(Props.Create(() => new Actor1NonAsync(TestActor)), "actor1");
-            await ExpectMsgAsync("started");
+            await ExpectMsgAsync("started", cancellationToken: Token);
         }
 
         [Fact]
         public async Task Fix2176_RunTask_Should_create_valid_child_actor()
         {
             var actor = Sys.ActorOf(Props.Create(() => new Actor1(TestActor)), "actor1");
-            await ExpectMsgAsync("started");
+            await ExpectMsgAsync("started", cancellationToken: Token);
         }
     }
 }

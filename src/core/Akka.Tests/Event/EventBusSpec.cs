@@ -14,6 +14,7 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Event
 {
@@ -74,6 +75,8 @@ namespace Akka.Tests.Event
 
     public class EventBusSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+
         internal ActorEventBus<object, Type> _bus;
 
         protected object _evt;
@@ -151,8 +154,8 @@ namespace Akka.Tests.Event
         {
             _bus.Subscribe(_subscriber, _classifier);
             _bus.Publish(_evt);
-            await ExpectMsgAsync(_evt);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync(_evt, cancellationToken: Token);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
             _bus.Unsubscribe(_subscriber);
         }
 
@@ -164,11 +167,11 @@ namespace Akka.Tests.Event
             _bus.Publish(_evt);
             _bus.Publish(_evt);
 
-            await ExpectMsgAsync(_evt);
-            await ExpectMsgAsync(_evt);
-            await ExpectMsgAsync(_evt);
+            await ExpectMsgAsync(_evt, cancellationToken: Token);
+            await ExpectMsgAsync(_evt, cancellationToken: Token);
+            await ExpectMsgAsync(_evt, cancellationToken: Token);
 
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
             _bus.Unsubscribe(_subscriber, _classifier);
         }
 
@@ -182,11 +185,11 @@ namespace Akka.Tests.Event
             _bus.Subscribe(otherSubscriber, otherClassifier);
             _bus.Publish(_evt);
 
-            await ExpectMsgAsync(_evt);
+            await ExpectMsgAsync(_evt, cancellationToken: Token);
 
             _bus.Unsubscribe(_subscriber, _classifier);
             _bus.Unsubscribe(otherSubscriber, otherClassifier);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
 
         [Fact]
@@ -195,7 +198,7 @@ namespace Akka.Tests.Event
             _bus.Subscribe(_subscriber, _classifier);
             _bus.Unsubscribe(_subscriber, _classifier);
             _bus.Publish(_evt);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
 
         [Fact]

@@ -21,6 +21,8 @@ namespace Akka.Tests.Actor
 {
     public class ActorRefIgnoreSpec : AkkaSpec, INoImplicitSender
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact]
         public async Task IgnoreActorRef_should_ignore_all_incoming_messages()
         {
@@ -28,17 +30,17 @@ namespace Akka.Tests.Actor
 
             var probe = CreateTestProbe("response-probe");
             askMeRef.Tell(new Request(probe.Ref));
-            await probe.ExpectMsgAsync(1);
+            await probe.ExpectMsgAsync(1, cancellationToken: Token);
 
             // this is more a compile-time proof
             // since the reply is ignored, we can't check that a message was sent to it
             askMeRef.Tell(new Request(Sys.IgnoreRef));
 
-            await probe.ExpectNoMsgAsync(default);
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
 
             // but we do check that the counter has increased when we used the ActorRef.ignore
             askMeRef.Tell(new Request(probe.Ref));
-            await probe.ExpectMsgAsync(3);
+            await probe.ExpectMsgAsync(3, cancellationToken: Token);
         }
 
         [Fact]
@@ -51,7 +53,7 @@ namespace Akka.Tests.Actor
 
             Assert.Throws<AskTimeoutException>(() =>
             {
-                _ = askMeRef.Ask(new Request(Sys.IgnoreRef), timeout).GetAwaiter().GetResult();
+                _ = askMeRef.Ask(new Request(Sys.IgnoreRef), timeout, cancellationToken: Token).GetAwaiter().GetResult();
             });
         }
 
@@ -63,7 +65,7 @@ namespace Akka.Tests.Actor
 
             // this proves that the actor started and is operational and 'watch' didn't impact it
             forwardMessageRef.Tell("abc");
-            await probe.ExpectMsgAsync("abc");
+            await probe.ExpectMsgAsync("abc", cancellationToken: Token);
         }
 
         [Fact]

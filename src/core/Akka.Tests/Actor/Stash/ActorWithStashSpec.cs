@@ -71,9 +71,9 @@ namespace Akka.Tests.Actor.Stash
             _state.ExpectedException = new TestLatch();
             var stasher = ActorOf<StashAndReplyActor>("stashing-actor");
             stasher.Tell("hello");
-            await ExpectMsgAsync("bye");
+            await ExpectMsgAsync("bye", cancellationToken: Token);
             stasher.Tell("hello");
-            await ExpectMsgAsync("bye");
+            await ExpectMsgAsync("bye", cancellationToken: Token);
         }
 
         [Fact]
@@ -91,7 +91,7 @@ namespace Akka.Tests.Actor.Stash
                 {
                     Sys.Stop(stasher);
                     await ExpectTerminatedAsync(stasher);
-                });
+                }, cancellationToken: Token);
         }
 
         [Fact]
@@ -104,7 +104,7 @@ namespace Akka.Tests.Actor.Stash
             var slaveProps = Props.Create(() => new SlaveActor(restartLatch, hasMsgLatch, "stashme"));
 
             //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = await boss.Ask<IActorRef>(slaveProps).WaitAsync(TestKitSettings.DefaultTimeout, Token);
+            var slave = await boss.Ask<IActorRef>(slaveProps, cancellationToken: Token).WaitAsync(TestKitSettings.DefaultTimeout, cancellationToken: Token);
 
             //send a message that will be stashed
             slave.Tell("stashme");
@@ -127,7 +127,7 @@ namespace Akka.Tests.Actor.Stash
             var slaveProps = Props.Create(() => new ActorsThatClearsStashOnPreRestart(restartLatch));
 
             //Send the props to supervisor, which will create an actor and return the ActorRef
-            var slave = await boss.Ask<IActorRef>(slaveProps).WaitAsync(TestKitSettings.DefaultTimeout, Token);
+            var slave = await boss.Ask<IActorRef>(slaveProps, cancellationToken: Token).WaitAsync(TestKitSettings.DefaultTimeout, cancellationToken: Token);
 
             //send messages that will be stashed
             slave.Tell("stashme 1");
@@ -145,15 +145,15 @@ namespace Akka.Tests.Actor.Stash
             //So when the cell tries to unstash, it will not unstash messages. If it would TestActor
             //would receive all stashme messages instead of "this should bounce back"
             restartLatch.Ready(TimeSpan.FromSeconds(1110));
-            await ExpectMsgAsync("this should bounce back");
+            await ExpectMsgAsync("this should bounce back", cancellationToken: Token);
         }
 
         [Fact]
         public async Task An_actor_must_rereceive_unstashed_Terminated_messages()
         {
             ActorOf(Props.Create(() => new TerminatedMessageStashingActor(TestActor)), "terminated-message-stashing-actor");
-            await ExpectMsgAsync("terminated1");
-            await ExpectMsgAsync("terminated2");
+            await ExpectMsgAsync("terminated1", cancellationToken: Token);
+            await ExpectMsgAsync("terminated2", cancellationToken: Token);
         }
 
         private class UnboundedStashActor : BlackHoleActor, IWithUnboundedStash

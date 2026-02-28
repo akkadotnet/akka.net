@@ -13,12 +13,15 @@ using Akka.TestKit;
 using Akka.TestKit.Xunit.Attributes;
 using Akka.Util.Internal;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor.Scheduler
 {
     // ReSharper disable once InconsistentNaming
     public class DefaultScheduler_TellScheduler_Schedule_Tests : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
 #pragma warning disable xUnit1008
         [LocalTheory(SkipLocal = "Tests that messages are sent with the specified interval, however due to inaccuracy " +
                                  "of Task.Delay this often fails. Run this especially if you've made changes to DedicatedThreadScheduler")]
@@ -91,9 +94,9 @@ namespace Akka.Tests.Actor.Scheduler
                     TimeSpan.FromMilliseconds(interval), TestActor, "Test", ActorRefs.NoSender);
 
                 //Just check that we receives more than one message
-                await ExpectMsgAsync("Test");
-                await ExpectMsgAsync("Test");
-                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test", cancellationToken: Token);
+                await ExpectMsgAsync("Test", cancellationToken: Token);
+                await ExpectMsgAsync("Test", cancellationToken: Token);
             }
             finally
             {
@@ -116,11 +119,11 @@ namespace Akka.Tests.Actor.Scheduler
                     scheduler.ScheduleTellOnce(time, TestActor, "Test" + time, ActorRefs.NoSender);
                 }
 
-                await ExpectMsgAsync("Test1");
-                await ExpectMsgAsync("Test50");
-                await ExpectMsgAsync("Test110");
+                await ExpectMsgAsync("Test1", cancellationToken: Token);
+                await ExpectMsgAsync("Test50", cancellationToken: Token);
+                await ExpectMsgAsync("Test110", cancellationToken: Token);
 
-                await ExpectNoMsgAsync(50);
+                await ExpectNoMsgAsync(50, cancellationToken: Token);
             }
             finally
             {
@@ -144,13 +147,13 @@ namespace Akka.Tests.Actor.Scheduler
                 }
 
                 //Perform the test
-                await ExpectMsgAsync("Test1");
-                await ExpectMsgAsync("Test1");
-                await ExpectMsgAsync("Test50");
-                await ExpectMsgAsync("Test50");
-                await ExpectMsgAsync("Test100");
-                await ExpectMsgAsync("Test100");
-                await ExpectNoMsgAsync(50);
+                await ExpectMsgAsync("Test1", cancellationToken: Token);
+                await ExpectMsgAsync("Test1", cancellationToken: Token);
+                await ExpectMsgAsync("Test50", cancellationToken: Token);
+                await ExpectMsgAsync("Test50", cancellationToken: Token);
+                await ExpectMsgAsync("Test100", cancellationToken: Token);
+                await ExpectMsgAsync("Test100", cancellationToken: Token);
+                await ExpectNoMsgAsync(50, cancellationToken: Token);
             }
             finally
             {
@@ -171,7 +174,7 @@ namespace Akka.Tests.Actor.Scheduler
                 XAssert.Throws<ArgumentOutOfRangeException>(() =>
                             scheduler.ScheduleTellOnce(invalidTime, TestActor, "Test", ActorRefs.NoSender)
                 );
-                await ExpectNoMsgAsync(50);
+                await ExpectNoMsgAsync(50, cancellationToken: Token);
 
             }
             finally
@@ -192,7 +195,7 @@ namespace Akka.Tests.Actor.Scheduler
                 XAssert.Throws<ArgumentOutOfRangeException>(() =>
                             scheduler.ScheduleTellRepeatedly(invalidTime, 100, TestActor, "Test", ActorRefs.NoSender)
                 );
-                await ExpectNoMsgAsync(50);
+                await ExpectNoMsgAsync(50, cancellationToken: Token);
             }
             finally
             {
@@ -213,7 +216,7 @@ namespace Akka.Tests.Actor.Scheduler
                 XAssert.Throws<ArgumentOutOfRangeException>(() =>
                             scheduler.ScheduleTellRepeatedly(42, invalidInterval, TestActor, "Test", ActorRefs.NoSender)
                 );
-                await ExpectNoMsgAsync(50);
+                await ExpectNoMsgAsync(50, cancellationToken: Token);
             }
             finally
             {
@@ -228,7 +231,7 @@ namespace Akka.Tests.Actor.Scheduler
             try
             {
                 scheduler.ScheduleTellOnce(0, TestActor, "Test", ActorRefs.NoSender);
-                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test", cancellationToken: Token);
             }
             finally
             {
@@ -244,7 +247,7 @@ namespace Akka.Tests.Actor.Scheduler
             try
             {
                 scheduler.ScheduleTellRepeatedly(0, 60*1000, TestActor, "Test", ActorRefs.NoSender);
-                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test", cancellationToken: Token);
             }
             finally
             {

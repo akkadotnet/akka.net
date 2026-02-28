@@ -170,10 +170,10 @@ namespace Akka.Tests.Actor
             var subscriber = Sys.ActorOf(Props.Create<TelemetrySubscriber>(), "subscriber");
             
             // wait until telemetry value is stable
-            await WaitUntilStableAsync(subscriber, TimeSpan.FromSeconds(5), Token);
+            await WaitUntilStableAsync(subscriber, TimeSpan.FromSeconds(5), token: Token);
             
             // request current telemetry values (ensure that the actor has started, so counter values will be accurate)
-            var baseline = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance, Token);
+            var baseline = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance, cancellationToken: Token);
             
             // create a parent actor
             var parent = Sys.ActorOf(Props.Create<ParentActor>(), "parent");
@@ -182,7 +182,7 @@ namespace Akka.Tests.Actor
             parent.Tell(new CreateChildren(100));
 
             // wait for the parent to reply back
-            ExpectMsg("done");
+            ExpectMsg("done", cancellationToken: Token);
             
             // awaitassert collecting data from the telemetry subscriber until we can see that 101 actors have been created
             // 100 children + parent
@@ -199,7 +199,7 @@ namespace Akka.Tests.Actor
             parent.Tell(RestartChildren.Instance);
             
             // wait for the parent to reply back
-            ExpectMsg("done");
+            ExpectMsg("done", cancellationToken: Token);
 
             // await assert collecting data from the telemetry subscriber until we can see that 102 actors have been restarted
             await AwaitAssertAsync(async () =>
@@ -231,10 +231,10 @@ namespace Akka.Tests.Actor
             // create a TelemetrySubscriber actor
             var subscriber = Sys.ActorOf(Props.Create<TelemetrySubscriber>(), "subscriber");
             
-            await WaitUntilStableAsync(subscriber, TimeSpan.FromSeconds(5), Token);
+            await WaitUntilStableAsync(subscriber, TimeSpan.FromSeconds(5), token: Token);
             
             // request current telemetry values (ensure that the actor has started, so counter values will be accurate)
-            var baseline = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance, Token);
+            var baseline = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance, cancellationToken: Token);
             
             // create a parent actor
             var parent = Sys.ActorOf(Props.Create<ParentActor>(), "parent");
@@ -243,7 +243,7 @@ namespace Akka.Tests.Actor
             parent.Tell(new CreateChildren(100));
 
             // wait for the parent to reply back
-            ExpectMsg("done");
+            ExpectMsg("done", cancellationToken: Token);
             
             // awaitassert collecting data from the telemetry subscriber until we can see that 102 actors have been created
             // 100 children + parent
@@ -282,10 +282,10 @@ namespace Akka.Tests.Actor
             // create a TelemetrySubscriber actor
             var subscriber = Sys.ActorOf(Props.Create<TelemetrySubscriber>(), "subscriber");
             
-            await WaitUntilStableAsync(subscriber, TimeSpan.FromSeconds(5), Token);
+            await WaitUntilStableAsync(subscriber, TimeSpan.FromSeconds(5), token: Token);
             
             // request current telemetry values (ensure that the actor has started, so counter values will be accurate)
-            var baseline = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance, Token);
+            var baseline = await subscriber.Ask<TelemetrySubscriber.GetTelemetry>(TelemetrySubscriber.GetTelemetryRequest.Instance, cancellationToken: Token);
             
             // create a pool router
             var router = Sys.ActorOf(Props.Create<ChildActor>().WithRouter(new RoundRobinPool(10)), "router");

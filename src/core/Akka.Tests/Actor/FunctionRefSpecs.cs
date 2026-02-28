@@ -11,11 +11,14 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class FunctionRefSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         
         #region internal classes
 
@@ -142,7 +145,7 @@ namespace Akka.Tests.Actor
             var forwarder = await GetFunctionRef(s);
 
             forwarder.Tell("hello");
-            await ExpectMsgAsync(new Forwarded("hello", TestActor));
+            await ExpectMsgAsync(new Forwarded("hello", TestActor), cancellationToken: Token);
         }
 
         [Fact]
@@ -153,7 +156,7 @@ namespace Akka.Tests.Actor
             
             await WatchAsync(forwarder);
             s.Tell(new DropForwarder(forwarder));
-            await ExpectTerminatedAsync(forwarder);
+            await ExpectTerminatedAsync(forwarder, cancellationToken: Token);
         }
 
         [Fact]
@@ -163,10 +166,10 @@ namespace Akka.Tests.Actor
             var forwarder = await GetFunctionRef(s);
 
             s.Tell(new GetForwarder(TestActor));
-            var f = await ExpectMsgAsync<FunctionRef>();
+            var f = await ExpectMsgAsync<FunctionRef>(cancellationToken: Token);
             forwarder.Watch(f);
             s.Tell(new DropForwarder(f));
-            await ExpectMsgAsync(new Forwarded(new Terminated(f, true, false), f));
+            await ExpectMsgAsync(new Forwarded(new Terminated(f, true, false), f), cancellationToken: Token);
         }
 
         [Fact]
@@ -177,7 +180,7 @@ namespace Akka.Tests.Actor
 
             await WatchAsync(forwarder);
             s.Tell(PoisonPill.Instance);
-            await ExpectTerminatedAsync(forwarder);
+            await ExpectTerminatedAsync(forwarder, cancellationToken: Token);
         }
 
         private async Task<FunctionRef> GetFunctionRef(IActorRef s)
@@ -199,7 +202,7 @@ namespace Akka.Tests.Actor
             var forwarder = await GetFunctionRef(s);
 
             forwarder.Tell("hello");
-            await ExpectMsgAsync(new Forwarded("hello", TestActor));
+            await ExpectMsgAsync(new Forwarded("hello", TestActor), cancellationToken: Token);
         }
 
         [Fact]
@@ -210,7 +213,7 @@ namespace Akka.Tests.Actor
             
             await WatchAsync(forwarder);
             s.Tell(new DropForwarder(forwarder));
-            await ExpectTerminatedAsync(forwarder);
+            await ExpectTerminatedAsync(forwarder, cancellationToken: Token);
         }
 
         [Fact]
@@ -220,10 +223,10 @@ namespace Akka.Tests.Actor
             var forwarder = await GetFunctionRef(s);
 
             s.Tell(new GetForwarder(TestActor));
-            var f = await ExpectMsgAsync<FunctionRef>();
+            var f = await ExpectMsgAsync<FunctionRef>(cancellationToken: Token);
             forwarder.Watch(f);
             s.Tell(new DropForwarder(f));
-            await ExpectMsgAsync(new Forwarded(new Terminated(f, true, false), f));
+            await ExpectMsgAsync(new Forwarded(new Terminated(f, true, false), f), cancellationToken: Token);
         }
 
         [Fact]
@@ -234,7 +237,7 @@ namespace Akka.Tests.Actor
 
             await WatchAsync(forwarder);
             s.Tell(PoisonPill.Instance);
-            await ExpectTerminatedAsync(forwarder);
+            await ExpectTerminatedAsync(forwarder, cancellationToken: Token);
         }
 
         private IActorRef SupSuperActor() => Sys.ActorOf(Props.Create<SupSuper>(), "supsuper");
@@ -252,7 +255,7 @@ namespace Akka.Tests.Actor
                 // this relies upon serialize-messages during tests
                 TestActor.Tell(new DropForwarder(fref));
                 await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-            });
+            }, cancellationToken: Token);
         }
     }
 }

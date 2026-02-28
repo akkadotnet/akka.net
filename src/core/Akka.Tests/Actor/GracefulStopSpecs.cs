@@ -13,11 +13,14 @@ using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Xunit;
 using FluentAssertions;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class GracefulStopSpecs : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact(DisplayName = "GracefulStop should terminate target actor on-time")]
         public async Task GracefulStopShouldTerminateOnTime()
         {
@@ -27,7 +30,7 @@ namespace Akka.Tests.Actor
 
             // act
             var stopped = await actor.GracefulStop(TimeSpan.FromSeconds(3));
-            await ExpectTerminatedAsync(actor);
+            await ExpectTerminatedAsync(actor, cancellationToken: Token);
 
             // assert
             stopped.Should().BeTrue();
@@ -42,7 +45,7 @@ namespace Akka.Tests.Actor
 
             // act
             Sys.Stop(actor);
-            await ExpectTerminatedAsync(actor);
+            await ExpectTerminatedAsync(actor, cancellationToken: Token);
             var stopped = await actor.GracefulStop(TimeSpan.FromSeconds(3));
 
             // assert

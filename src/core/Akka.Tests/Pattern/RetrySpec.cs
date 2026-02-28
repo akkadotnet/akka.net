@@ -10,11 +10,14 @@ using System.Threading.Tasks;
 using Akka.TestKit;
 using Xunit;
 using static Akka.Pattern.RetrySupport;
+using System.Threading;
 
 namespace Akka.Tests.Pattern
 {
     public class RetrySpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact]
         public async Task Pattern_Retry_must_run_a_successful_task_immediately()
         {
@@ -22,7 +25,7 @@ namespace Akka.Tests.Pattern
             {
                 var remaining = await Retry(() => Task.FromResult(5), 5, TimeSpan.FromSeconds(1), Sys.Scheduler);
                 Assert.Equal(5, remaining);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -37,7 +40,7 @@ namespace Akka.Tests.Pattern
                     return Task.FromResult(counter);
                 }, 5, TimeSpan.FromSeconds(1), Sys.Scheduler);
                 Assert.Equal(1, remaining);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -49,7 +52,7 @@ namespace Akka.Tests.Pattern
                     await Retry(() => Task.FromException<int>(new InvalidOperationException("Mexico")), 
                         5, TimeSpan.FromMilliseconds(100), Sys.Scheduler));
                 Assert.Equal("Mexico", exception.Message);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -74,7 +77,7 @@ namespace Akka.Tests.Pattern
             {
                 var remaining = await Retry(Attempt, 10, TimeSpan.FromMilliseconds(100), Sys.Scheduler);
                 Assert.Equal(5, remaining);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -100,7 +103,7 @@ namespace Akka.Tests.Pattern
                 var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => 
                     await Retry(Attempt, 5, TimeSpan.FromMilliseconds(100), Sys.Scheduler));
                 Assert.Equal("6", exception.Message);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -132,7 +135,7 @@ namespace Akka.Tests.Pattern
                     }, Sys.Scheduler));
                 Assert.Equal("6", exception.Message);
                 Assert.Equal(5, attemptedCount);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -161,7 +164,7 @@ namespace Akka.Tests.Pattern
 
                 var elapse = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - start;
                 Assert.True(elapse <= 100);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -186,7 +189,7 @@ namespace Akka.Tests.Pattern
             {
                 var remaining = await Retry(Attempt, 10, TimeSpan.FromMilliseconds(100), Sys.Scheduler);
                 Assert.Equal(5, remaining);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -198,7 +201,7 @@ namespace Akka.Tests.Pattern
                     () => Task.FromResult(5), 5,
                     TimeSpan.FromMilliseconds(100), TimeSpan.FromSeconds(1), 0.2, Sys.Scheduler);
                 Assert.Equal(5, remaining);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -222,7 +225,7 @@ namespace Akka.Tests.Pattern
                     Attempt, 5,
                     TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(500), 0.0, Sys.Scheduler);
                 Assert.Equal(5, remaining);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -243,7 +246,7 @@ namespace Akka.Tests.Pattern
                         Attempt, 3,
                         TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(200), 0.0, Sys.Scheduler));
                 Assert.Equal("4", exception.Message);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -268,7 +271,7 @@ namespace Akka.Tests.Pattern
                     Attempt, 5,
                     TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(500), 0.2, Sys.Scheduler);
                 Assert.Equal(42, remaining);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]

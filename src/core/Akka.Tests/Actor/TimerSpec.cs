@@ -15,6 +15,7 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
 using static Akka.Actor.FSMBase;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
@@ -32,6 +33,8 @@ namespace Akka.Tests.Actor
 
     public abstract class AbstractTimerSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+
         int interval = 1;
         TimeSpan dilatedInterval;
 
@@ -48,11 +51,11 @@ namespace Akka.Tests.Actor
             var probe = CreateTestProbe();
             var actor = Sys.ActorOf(TargetProps(probe.Ref, TimeSpan.FromMilliseconds(10), false));
 
-            await probe.ExpectMsgAsync(new Tock(1));
-            await probe.ExpectNoMsgAsync(100);
+            await probe.ExpectMsgAsync(new Tock(1), cancellationToken: Token);
+            await probe.ExpectNoMsgAsync(100, cancellationToken: Token);
 
             actor.Tell(End.Instance);
-            await probe.ExpectMsgAsync(new GotPostStop(false));
+            await probe.ExpectMsgAsync(new GotPostStop(false), cancellationToken: Token);
         }
 
         [Fact]
@@ -64,12 +67,12 @@ namespace Akka.Tests.Actor
             // Use individual per-message timeouts instead of aggregate window
             // to avoid cumulative variance causing timeout when scheduler delays accumulate
             var tickTimeout = dilatedInterval + dilatedInterval; // 2x interval per tick
-            await probe.ExpectMsgAsync(new Tock(1), tickTimeout);
-            await probe.ExpectMsgAsync(new Tock(1), tickTimeout);
-            await probe.ExpectMsgAsync(new Tock(1), tickTimeout);
+            await probe.ExpectMsgAsync(new Tock(1), tickTimeout, cancellationToken: Token);
+            await probe.ExpectMsgAsync(new Tock(1), tickTimeout, cancellationToken: Token);
+            await probe.ExpectMsgAsync(new Tock(1), tickTimeout, cancellationToken: Token);
 
             actor.Tell(End.Instance);
-            await probe.ExpectMsgAsync(new GotPostStop(false));
+            await probe.ExpectMsgAsync(new GotPostStop(false), cancellationToken: Token);
         }
 
         [Fact]
@@ -78,17 +81,17 @@ namespace Akka.Tests.Actor
             var probe = CreateTestProbe();
             var actor = Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
-            await probe.ExpectMsgAsync(new Tock(1));
+            await probe.ExpectMsgAsync(new Tock(1), cancellationToken: Token);
 
             var latch = CreateTestLatch(1);
             // next Tock(1) enqueued in mailboxed, but should be discarded because of new timer
             actor.Tell(new SlowThenBump(latch));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100), cancellationToken: Token);
             latch.CountDown();
-            await probe.ExpectMsgAsync(new Tock(2));
+            await probe.ExpectMsgAsync(new Tock(2), cancellationToken: Token);
 
             actor.Tell(End.Instance);
-            await probe.ExpectMsgAsync(new GotPostStop(false));
+            await probe.ExpectMsgAsync(new GotPostStop(false), cancellationToken: Token);
         }
 
         [Fact]
@@ -97,13 +100,13 @@ namespace Akka.Tests.Actor
             var probe = CreateTestProbe();
             var actor = Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
-            await probe.ExpectMsgAsync(new Tock(1));
+            await probe.ExpectMsgAsync(new Tock(1), cancellationToken: Token);
 
             actor.Tell(Cancel.Instance);
-            await probe.ExpectNoMsgAsync(dilatedInterval + TimeSpan.FromMilliseconds(100));
+            await probe.ExpectNoMsgAsync(dilatedInterval + TimeSpan.FromMilliseconds(100), cancellationToken: Token);
 
             actor.Tell(End.Instance);
-            await probe.ExpectMsgAsync(new GotPostStop(false));
+            await probe.ExpectMsgAsync(new GotPostStop(false), cancellationToken: Token);
         }
 
         [Fact]
@@ -113,10 +116,10 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
             actor.Tell(new Throw(new Exc()));
-            await probe.ExpectMsgAsync(new GotPreRestart(false));
+            await probe.ExpectMsgAsync(new GotPreRestart(false), cancellationToken: Token);
 
             actor.Tell(End.Instance);
-            await probe.ExpectMsgAsync(new GotPostStop(false));
+            await probe.ExpectMsgAsync(new GotPostStop(false), cancellationToken: Token);
         }
 
         [Fact]
@@ -126,19 +129,19 @@ namespace Akka.Tests.Actor
             var startCounter = new AtomicCounter(0);
             var actor = Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true, () => startCounter.IncrementAndGet()));
 
-            await probe.ExpectMsgAsync(new Tock(1));
+            await probe.ExpectMsgAsync(new Tock(1), cancellationToken: Token);
 
             var latch = CreateTestLatch(1);
             // next Tock(1) is enqueued in mailbox, but should be discarded by new incarnation
             actor.Tell(new SlowThenThrow(latch, new Exc()));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100), cancellationToken: Token);
             latch.CountDown();
-            await probe.ExpectMsgAsync(new GotPreRestart(false));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval / 2));
-            await probe.ExpectMsgAsync(new Tock(2)); // this is from the startCounter increment
+            await probe.ExpectMsgAsync(new GotPreRestart(false), cancellationToken: Token);
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval / 2), cancellationToken: Token);
+            await probe.ExpectMsgAsync(new Tock(2), cancellationToken: Token); // this is from the startCounter increment
 
             actor.Tell(End.Instance);
-            await probe.ExpectMsgAsync(new GotPostStop(false));
+            await probe.ExpectMsgAsync(new GotPostStop(false), cancellationToken: Token);
         }
 
         [Fact]
@@ -147,22 +150,22 @@ namespace Akka.Tests.Actor
             var probe = CreateTestProbe();
             var actor = Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
-            await probe.ExpectMsgAsync(new Tock(1));
+            await probe.ExpectMsgAsync(new Tock(1), cancellationToken: Token);
             // change state so that we see that the restart starts over again
             actor.Tell(Bump.Instance);
 
-            await probe.ExpectMsgAsync(new Tock(2));
+            await probe.ExpectMsgAsync(new Tock(2), cancellationToken: Token);
 
             var latch = CreateTestLatch(1);
             // next Tock(2) is enqueued in mailbox, but should be discarded by new incarnation
             actor.Tell(new SlowThenThrow(latch, new Exc()));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(interval) + TimeSpan.FromMilliseconds(100), cancellationToken: Token);
             latch.CountDown();
-            await probe.ExpectMsgAsync(new GotPreRestart(false));
-            await probe.ExpectMsgAsync(new Tock(1));
+            await probe.ExpectMsgAsync(new GotPreRestart(false), cancellationToken: Token);
+            await probe.ExpectMsgAsync(new Tock(1), cancellationToken: Token);
 
             actor.Tell(End.Instance);
-            await probe.ExpectMsgAsync(new GotPostStop(false));
+            await probe.ExpectMsgAsync(new GotPostStop(false), cancellationToken: Token);
         }
 
         [Fact]
@@ -172,7 +175,7 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf(TargetProps(probe.Ref, dilatedInterval, true));
 
             actor.Tell(End.Instance);
-            await probe.ExpectMsgAsync(new GotPostStop(false));
+            await probe.ExpectMsgAsync(new GotPostStop(false), cancellationToken: Token);
         }
 
         [Fact]
@@ -184,7 +187,7 @@ namespace Akka.Tests.Actor
             Watch(actor);
             actor.Tell(AutoReceive.Instance);
 
-            await ExpectTerminatedAsync(actor);
+            await ExpectTerminatedAsync(actor, cancellationToken: Token);
         }
 
 
@@ -538,15 +541,17 @@ namespace Akka.Tests.Actor
 
     public class TimersAndStashSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+
         [Fact]
         public async Task Timers_combined_with_stashing_should_work()
         {
 
             var probe = CreateTestProbe();
             var actor = Sys.ActorOf(Props.Create(() => new ActorWithTimerAndStash(probe.Ref)));
-            await probe.ExpectMsgAsync("saw-scheduled");
+            await probe.ExpectMsgAsync("saw-scheduled", cancellationToken: Token);
             actor.Tell(StopStashing.Instance);
-            await probe.ExpectMsgAsync("scheduled");
+            await probe.ExpectMsgAsync("scheduled", cancellationToken: Token);
         }
 
         #region actors

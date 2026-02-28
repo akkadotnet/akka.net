@@ -14,11 +14,14 @@ using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor;
 
 public class TimerStartupCrashBugFixSpec : AkkaSpec
 {
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
     public TimerStartupCrashBugFixSpec(ITestOutputHelper output) : base(output: output, Akka.Configuration.Config.Empty)
     {
         Sys.Log.Info("Starting TimerStartupCrashBugFixSpec");
@@ -85,7 +88,7 @@ public class TimerStartupCrashBugFixSpec : AkkaSpec
         while (i == 0)
         {
             // guarantee that the actor has started and processed a message from scheduler
-            i = await actors[0].Ask<int>(TimerActor.Check.Instance);
+            i = await actors[0].Ask<int>(TimerActor.Check.Instance, cancellationToken: Token);
         }
 
 

@@ -14,11 +14,14 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
+using System.Threading;
 
 namespace Akka.Tests.Event
 {
     public class LoggerSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public static readonly Config Config = @"akka.loglevel = DEBUG";
 
         public LoggerSpec(ITestOutputHelper helper) : base(Config, helper) { }
@@ -97,10 +100,10 @@ namespace Akka.Tests.Event
                     logEvent.Cause.Should().BeNull();
             }
 
-            var log = await ExpectMsgAsync<LogEvent>();
+            var log = await ExpectMsgAsync<LogEvent>(cancellationToken: Token);
             ProcessLog(log);
 
-            var log2 = await ExpectMsgAsync<LogEvent>();
+            var log2 = await ExpectMsgAsync<LogEvent>(cancellationToken: Token);
             ProcessLog(log2);
         }
 
@@ -116,19 +119,19 @@ namespace Akka.Tests.Event
             {
                 var shutdownInitiated = await ExpectMsgAsync<Debug>(TestKitSettings.DefaultTimeout);
                 shutdownInitiated.Message.ShouldBe("System shutdown initiated");
-            });
+            }, cancellationToken: Token);
             
-            var loggerStarted = await ExpectMsgAsync<Debug>(TestKitSettings.DefaultTimeout);
+            var loggerStarted = await ExpectMsgAsync<Debug>(TestKitSettings.DefaultTimeout, cancellationToken: Token);
             loggerStarted.Message.ShouldBe("Shutting down: StandardOutLogger started");
             loggerStarted.LogClass.ShouldBe(typeof(EventStream));
             loggerStarted.LogSource.ShouldBe(typeof(EventStream).Name);
 
-            var loggerStopped = await ExpectMsgAsync<Debug>(TestKitSettings.DefaultTimeout);
+            var loggerStopped = await ExpectMsgAsync<Debug>(TestKitSettings.DefaultTimeout, cancellationToken: Token);
             loggerStopped.Message.ShouldBe("All default loggers stopped");
             loggerStopped.LogClass.ShouldBe(typeof(EventStream));
             loggerStopped.LogSource.ShouldBe(typeof(EventStream).Name);
 
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
     }
 }

@@ -20,6 +20,8 @@ namespace Akka.Tests.Actor
 
     public class ActorCellSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public class DummyActor : ReceiveActor
         {
             public DummyActor()
@@ -47,13 +49,13 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf(Props.Create(() => new DummyActor()));
             
             // act
-            await actor.Ask<string>("hello", RemainingOrDefault);
+            await actor.Ask<string>("hello", RemainingOrDefault, cancellationToken: Token);
             
             // assert
             var refCell = (ActorRefWithCell)actor;
             //wait while current message is not null (that is, receive is not yet completed/exited)
 
-            AwaitCondition(() => refCell.Underlying is ActorCell { CurrentMessage: null });
+            AwaitCondition(() => refCell.Underlying is ActorCell { CurrentMessage: null }, cancellationToken: Token);
         }
 
         [Fact]
@@ -63,14 +65,14 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf(Props.Create(() => new DummyAsyncActor()));
             
             // act
-            await actor.Ask<string>("hello", RemainingOrDefault);
+            await actor.Ask<string>("hello", RemainingOrDefault, cancellationToken: Token);
 
             // assert
             
             var refCell = (ActorRefWithCell)actor;
             //wait while current message is not null (that is, receive is not yet completed/exited)
 
-            AwaitCondition(() => refCell.Underlying is ActorCell { CurrentMessage: null });
+            AwaitCondition(() => refCell.Underlying is ActorCell { CurrentMessage: null }, cancellationToken: Token);
         }
     }
 }

@@ -40,11 +40,11 @@ akka.stdout-logger-class = ""Akka.Tests.Loggers.ThrowingLogger, Akka.Tests""");
             
             var probeRef = Sys.ActorOf(Props.Create(() => new LogProbe()));
             probeRef.Tell(new InitializeLogger(Sys.EventStream));
-            var probe = await probeRef.Ask<LogProbe>("hey", Token);
+            var probe = await probeRef.Ask<LogProbe>("hey", cancellationToken: Token);
             
             await Sys.Terminate();
 
-            await Task.Delay(RemainingOrDefault);
+            await Task.Delay(RemainingOrDefault, cancellationToken: Token);
             if (probe.Events.Any(o => o is Error err && err.Cause is ShutdownLogException))
                 throw new Exception("Test failed, log should not be called after shutdown.");
         }

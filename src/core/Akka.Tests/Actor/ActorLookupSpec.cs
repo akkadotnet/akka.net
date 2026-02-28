@@ -144,10 +144,10 @@ namespace Akka.Tests.Actor
             var a1 = Sys.ActorOf(P, name);
             Watch(a1);
             a1.Tell(PoisonPill.Instance);
-            await ExpectTerminatedAsync(a1);
+            await ExpectTerminatedAsync(a1, cancellationToken: Token);
 
             // let it be completely removed from the user guardian
-            await ExpectNoMsgAsync(1.Seconds());
+            await ExpectNoMsgAsync(1.Seconds(), cancellationToken: Token);
 
             // not equal, because it's terminated
             Provider.ResolveActorRef(a1.Path.ToString()).Should().NotBe(a1);
@@ -160,14 +160,14 @@ namespace Akka.Tests.Actor
 
             Watch(a2);
             a2.Tell(PoisonPill.Instance);
-            await ExpectTerminatedAsync(a2);
+            await ExpectTerminatedAsync(a2, cancellationToken: Token);
         }
 
         [Fact]
         public async Task ActorSystem_must_find_temporary_actors()
         {
-            var f = c1.Ask(new GetSender(TestActor), Token);
-            var a = ExpectMsg<IInternalActorRef>();
+            var f = c1.Ask(new GetSender(TestActor), cancellationToken: Token);
+            var a = ExpectMsg<IInternalActorRef>(cancellationToken: Token);
             a.Path.Elements.Head().Should().Be("temp");
             Provider.ResolveActorRef(a.Path).Should().Be(a);
             Provider.ResolveActorRef(a.Path.ToString()).Should().Be(a);
@@ -175,12 +175,12 @@ namespace Akka.Tests.Actor
             // should already be dead
             var shouldBeDead = Provider.ResolveActorRef(a.Path + "/hello");
             await WatchAsync(shouldBeDead);
-            await ExpectTerminatedAsync(shouldBeDead);
+            await ExpectTerminatedAsync(shouldBeDead, cancellationToken: Token);
             
             f.IsCompleted.Should().Be(false);
             a.Tell(42);
-            await AwaitAssertAsync(() => f.IsCompleted.Should().Be(true));
-            await AwaitAssertAsync(() => f.Result.Should().Be(42));
+            await AwaitAssertAsync(() => f.IsCompleted.Should().Be(true), cancellationToken: Token);
+            await AwaitAssertAsync(() => f.Result.Should().Be(42), cancellationToken: Token);
         }
 
         /*

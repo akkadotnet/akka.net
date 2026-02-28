@@ -120,12 +120,12 @@ namespace Akka.Tests.Pattern
                 }
 
             // let them work for a while
-            await Task.Delay(3000, Token);
+            await Task.Delay(3000, cancellationToken: Token);
 
             foreach (var stressActor in stressActors)
             {
                 stressActor.Tell(GetResult.Instance);
-                var result = ExpectMsg<Result>();
+                var result = ExpectMsg<Result>(cancellationToken: Token);
                 Output.WriteLine("FailCount:{0}, DoneCount:{1}, CircCount:{2}, TimeoutCount:{3}", 
                     result.FailCount, result.DoneCount, result.CircCount, result.TimeoutCount);
                 

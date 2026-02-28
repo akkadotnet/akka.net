@@ -26,6 +26,8 @@ namespace Akka.Tests.Actor
 {
     public class DeathWatchSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         private IActorRef _supervisor;
         private IActorRef _terminal;
 
@@ -65,10 +67,10 @@ namespace Akka.Tests.Actor
             Sys.EventStream.Subscribe(TestActor, typeof (DeadLetter));
 
             actor.Tell(PoisonPill.Instance);
-            await ExpectMsgAsync<Terminated>();
+            await ExpectMsgAsync<Terminated>(cancellationToken: Token);
 
             actor.Tell(new Envelope("SomeUserMessage", TestActor));
-            await ExpectMsgAsync<DeadLetter>(d => ((Envelope)d.Message).Message.Equals("SomeUserMessage"));
+            await ExpectMsgAsync<DeadLetter>(d => ((Envelope)d.Message).Message.Equals("SomeUserMessage"), cancellationToken: Token);
 
             //The actor should Terminate, exchange the mailbox to a DeadLetterMailbox and forward the user message to the DeadLetterMailbox
             
@@ -80,7 +82,7 @@ namespace Akka.Tests.Actor
         {
             const string msg = "hello";
             (await StartWatching(_terminal)).Tell(msg);
-            await ExpectMsgAsync(msg);
+            await ExpectMsgAsync(msg, cancellationToken: Token);
             _terminal.Tell(PoisonPill.Instance);
             await ExpectTerminationOf(_terminal);
         }
@@ -91,9 +93,9 @@ namespace Akka.Tests.Actor
             const string msg = "hello";
             const string terminationMsg = "watchee terminated";
             (await StartWatchingWith(_terminal, terminationMsg)).Tell(msg);
-            await ExpectMsgAsync(msg);
+            await ExpectMsgAsync(msg, cancellationToken: Token);
             _terminal.Tell(PoisonPill.Instance);
-            await ExpectMsgAsync(terminationMsg);
+            await ExpectMsgAsync(terminationMsg, cancellationToken: Token);
         }
 
         [Fact]
@@ -122,7 +124,7 @@ namespace Akka.Tests.Actor
             var monitor3 = await StartWatching(_terminal);
 
             monitor2.Tell("ping");
-            await ExpectMsgAsync("pong");      // since Watch and Unwatch are asynchronous, we need some sync
+            await ExpectMsgAsync("pong", cancellationToken: Token);      // since Watch and Unwatch are asynchronous, we need some sync
 
             _terminal.Tell(PoisonPill.Instance);
 
@@ -146,7 +148,7 @@ namespace Akka.Tests.Actor
                 var t1 = supervisor.Ask(Props.Create(() => new EchoTestActor()));
                 await t1.AwaitWithTimeout(timeout);
                 var terminal = (LocalActorRef) t1.Result;
-                
+
                 var t2 = supervisor.Ask(CreateWatchAndForwarderProps(terminal, TestActor));
                 await t2.AwaitWithTimeout(timeout);
                 var monitor = (IActorRef) t2.Result;
@@ -163,7 +165,7 @@ namespace Akka.Tests.Actor
                 terminal.IsTerminated.ShouldBe(true);
 
                 Sys.Stop(supervisor);
-            });
+            }, cancellationToken: Token);
         }
 
         // See issue: #61
@@ -209,7 +211,7 @@ namespace Akka.Tests.Actor
                 ((IInternalActorRef)TestActor).IsTerminated.ShouldBe(false);
 #pragma warning restore CS0618 // Type or member is obsolete
                 result.ShouldOnlyContainInOrder("1", "2", "3");
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -218,9 +220,9 @@ namespace Akka.Tests.Actor
             var parent = Sys.ActorOf(Props.Create(() => new KnobActor(TestActor)).WithDeploy(Deploy.Local));
 
             parent.Tell(Knob);
-            await ExpectMsgAsync(Bonk);
+            await ExpectMsgAsync(Bonk, cancellationToken: Token);
             parent.Tell(Knob);
-            await ExpectMsgAsync(Bonk);
+            await ExpectMsgAsync(Bonk, cancellationToken: Token);
         }
 
         [Fact]
@@ -228,7 +230,7 @@ namespace Akka.Tests.Actor
         {
             var subject = Sys.ActorOf(Props.Create(() => new EchoActor(_terminal)));
             ((IInternalActorRef)TestActor).SendSystemMessage(new DeathWatchNotification(subject, true, false));
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(3), cancellationToken: Token);
         }
 
         // See issue: #61
@@ -245,7 +247,7 @@ namespace Akka.Tests.Actor
             t1.Ready(TimeSpan.FromSeconds(3));
             Watch(p.Ref);
             Sys.Stop(p.Ref);
-            await ExpectTerminatedAsync(p.Ref);
+            await ExpectTerminatedAsync(p.Ref, cancellationToken: Token);
             w.Tell(new U(p.Ref));
             t2.CountDown();
 
@@ -255,9 +257,9 @@ namespace Akka.Tests.Actor
             // - process the Terminated
             // If it receives the Terminated it will die, which in fact it should not
             w.Tell(new Identify(null));
-            await ExpectMsgAsync<ActorIdentity>(ai => ai.Subject == w);
+            await ExpectMsgAsync<ActorIdentity>(ai => ai.Subject == w, cancellationToken: Token);
             w.Tell(new Identify(null));
-            await ExpectMsgAsync<ActorIdentity>(ai => ai.Subject == w);
+            await ExpectMsgAsync<ActorIdentity>(ai => ai.Subject == w, cancellationToken: Token);
         }
 
         private async Task ExpectTerminationOf(IActorRef actorRef)

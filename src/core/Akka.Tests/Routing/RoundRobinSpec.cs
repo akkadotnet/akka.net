@@ -194,7 +194,7 @@ namespace Akka.Tests.Routing
             {
                 for (int k = 0; k < connectionCount; k++)
                 {
-                    int id = await actor.Ask<int>("hit", Token);
+                    int id = await actor.Ask<int>("hit", cancellationToken: Token);
                     replies[id] = replies[id] + 1;
                 }
             }
@@ -267,7 +267,7 @@ namespace Akka.Tests.Routing
             {
                 for (int k = 0; k < connectionCount; k++)
                 {
-                    string id = await actor.Ask<string>("hit", Token);
+                    string id = await actor.Ask<string>("hit", cancellationToken: Token);
                     replies[id] = replies[id] + 1;
                 }
             }
@@ -299,14 +299,14 @@ namespace Akka.Tests.Routing
             {
                 for (int k = 0; k < connectionCount; k++)
                 {
-                    string id = await actor.Ask<string>("hit", Token);
+                    string id = await actor.Ask<string>("hit", cancellationToken: Token);
                     replies[id] = replies[id] + 1;
                 }
             }
 
             Watch(actor);
             actor.Tell(new Broadcast("end"));
-            await ExpectTerminatedAsync(actor);
+            await ExpectTerminatedAsync(actor, cancellationToken: Token);
 
             replies.Values.ForEach(c => c.Should().Be(iterationCount));
         }

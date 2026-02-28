@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="ReceiveActorTests.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -19,6 +19,8 @@ namespace Akka.Tests.Actor
 
     public partial class ReceiveActorTests : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact]
         public async Task Given_actor_with_no_receive_specified_When_receiving_message_Then_it_should_be_unhandled()
         {
@@ -31,7 +33,7 @@ namespace Akka.Tests.Actor
             actor.Tell("Something");
 
             //Then
-            await ExpectMsgAsync<UnhandledMessage>(m => ((string)m.Message) == "Something" && m.Recipient == actor);
+            await ExpectMsgAsync<UnhandledMessage>(m => ((string)m.Message) == "Something" && m.Recipient == actor, cancellationToken: Token);
             system.EventStream.Unsubscribe(TestActor, typeof(UnhandledMessage));
         }
 
@@ -48,7 +50,7 @@ namespace Akka.Tests.Actor
 
             //Then
             //We expect a exception was thrown when the actor called Receive, and that it was sent back to us
-            await ExpectMsgAsync<InvalidOperationException>();
+            await ExpectMsgAsync<InvalidOperationException>(cancellationToken: Token);
         }
 
         [Fact]
@@ -63,8 +65,8 @@ namespace Akka.Tests.Actor
             actor.Tell("Something else", TestActor);
 
             //Then
-            await ExpectMsgAsync((object) "Something");
-            await ExpectMsgAsync((object) "Something else");
+            await ExpectMsgAsync((object) "Something", cancellationToken: Token);
+            await ExpectMsgAsync((object) "Something else", cancellationToken: Token);
         }
 
         [Fact]
@@ -81,10 +83,10 @@ namespace Akka.Tests.Actor
             actor.Tell(15, TestActor);
 
             //Then
-            await ExpectMsgAsync((object) "int<5:0");
-            await ExpectMsgAsync((object) "int<10:5");
-            await ExpectMsgAsync((object) "int<15:10");
-            await ExpectMsgAsync((object) "int:15");
+            await ExpectMsgAsync((object) "int<5:0", cancellationToken: Token);
+            await ExpectMsgAsync((object) "int<10:5", cancellationToken: Token);
+            await ExpectMsgAsync((object) "int<15:10", cancellationToken: Token);
+            await ExpectMsgAsync((object) "int:15", cancellationToken: Token);
         }
 
         [Fact]
@@ -102,11 +104,11 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
 
             //Then
-            await ExpectMsgAsync((object) "int<5:0");
-            await ExpectMsgAsync((object) "int<10:5");
-            await ExpectMsgAsync((object) "int<15:10");
-            await ExpectMsgAsync((object) "int:15");
-            await ExpectMsgAsync((object) "string:hello");
+            await ExpectMsgAsync((object) "int<5:0", cancellationToken: Token);
+            await ExpectMsgAsync((object) "int<10:5", cancellationToken: Token);
+            await ExpectMsgAsync((object) "int<15:10", cancellationToken: Token);
+            await ExpectMsgAsync((object) "int:15", cancellationToken: Token);
+            await ExpectMsgAsync((object) "string:hello", cancellationToken: Token);
         }
 
 
@@ -122,8 +124,8 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
 
             //Then
-            await ExpectMsgAsync((object)"int:4711");
-            await ExpectMsgAsync((object)"any:hello");
+            await ExpectMsgAsync((object)"int:4711", cancellationToken: Token);
+            await ExpectMsgAsync((object)"any:hello", cancellationToken: Token);
         }
 
         [Fact]
@@ -136,7 +138,7 @@ namespace Akka.Tests.Actor
             actor.Tell(4711, TestActor);
 
             //Then
-            await ExpectMsgAsync(4711);
+            await ExpectMsgAsync(4711, cancellationToken: Token);
         }
 
         [Fact]
@@ -165,7 +167,7 @@ namespace Akka.Tests.Actor
             actor.Tell(new ReceiveCanHandleBaseMessage(), TestActor);
 
             //Then
-            await ExpectMsgAsync("Handled");
+            await ExpectMsgAsync("Handled", cancellationToken: Token);
         }
 
         private class NoReceiveActor : ReceiveActor

@@ -12,11 +12,14 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using System.Threading;
 
 namespace Akka.Tests.Actor.Stash;
 
 public class StashCapacitySpecs : AkkaSpec
 {
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
     public StashCapacitySpecs(ITestOutputHelper output) : base(Config.Empty, output: output)
     {
         
@@ -30,7 +33,7 @@ public class StashCapacitySpecs : AkkaSpec
         stashActor.Tell(new StashMessage("1"));
         stashActor.Tell(new StashMessage("2"));
         stashActor.Tell(GetStashReadout.Instance);
-        var readout1 = await ExpectMsgAsync<StashReadout>();
+        var readout1 = await ExpectMsgAsync<StashReadout>(cancellationToken: Token);
         readout1.Capacity.Should().Be(-1); // unbounded stash returns -1 for capacity
         readout1.Size.Should().Be(2);
         readout1.IsEmpty.Should().BeFalse();
@@ -38,7 +41,7 @@ public class StashCapacitySpecs : AkkaSpec
         
         stashActor.Tell(UnstashMessage.Instance);
         stashActor.Tell(GetStashReadout.Instance);
-        var readout2 = await ExpectMsgAsync<StashReadout>();
+        var readout2 = await ExpectMsgAsync<StashReadout>(cancellationToken: Token);
         readout2.Capacity.Should().Be(-1);
         readout2.Size.Should().Be(1);
         readout2.IsEmpty.Should().BeFalse();
@@ -46,7 +49,7 @@ public class StashCapacitySpecs : AkkaSpec
         
         stashActor.Tell(UnstashMessage.Instance);
         stashActor.Tell(GetStashReadout.Instance);
-        var readout3 = await ExpectMsgAsync<StashReadout>();
+        var readout3 = await ExpectMsgAsync<StashReadout>(cancellationToken: Token);
         readout3.Capacity.Should().Be(-1);
         readout3.Size.Should().Be(0);
         readout3.IsEmpty.Should().BeTrue();

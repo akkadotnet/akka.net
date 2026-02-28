@@ -13,6 +13,7 @@ using Akka.TestKit;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor.Setup
 {
@@ -48,6 +49,8 @@ namespace Akka.Tests.Actor.Setup
 
     public class ActorSystemSetupSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+
         [Fact]
         public void ActorSystemSettingsShouldStoreAndRetrieveSetup()
         {
@@ -105,7 +108,7 @@ namespace Akka.Tests.Actor.Setup
             }
             finally
             {
-                system?.Terminate().Wait(TimeSpan.FromSeconds(5));
+                system?.Terminate().Wait((int)TimeSpan.FromSeconds(5).TotalMilliseconds, Token);
             }
         }
 

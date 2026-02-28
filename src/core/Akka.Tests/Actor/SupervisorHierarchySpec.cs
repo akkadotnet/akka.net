@@ -128,12 +128,12 @@ namespace Akka.Tests.Actor
 
             Func<Exception, Directive> decider = _ => { return Directive.Escalate; };
             var managerProps = new PropsWithName(Props.Create(() => new CountDownActor(countDown, new AllForOneStrategy(decider))), "manager");
-            var manager = await boss.Ask<IActorRef>(managerProps, TestKitSettings.DefaultTimeout);
+            var manager = await boss.Ask<IActorRef>(managerProps, TestKitSettings.DefaultTimeout, cancellationToken: Token);
 
             var workerProps = Props.Create(() => new CountDownActor(countDown, SupervisorStrategy.DefaultStrategy));
-            var worker1 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker1"), TestKitSettings.DefaultTimeout);
-            var worker2 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker2"), TestKitSettings.DefaultTimeout);
-            var worker3 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker3"), TestKitSettings.DefaultTimeout);
+            var worker1 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker1"), TestKitSettings.DefaultTimeout, cancellationToken: Token);
+            var worker2 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker2"), TestKitSettings.DefaultTimeout, cancellationToken: Token);
+            var worker3 = await manager.Ask<IActorRef>(new PropsWithName(workerProps, "worker3"), TestKitSettings.DefaultTimeout, cancellationToken: Token);
 
             await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async () =>
             {
@@ -143,7 +143,7 @@ namespace Akka.Tests.Actor
 
                 await countDown.WaitAsync().WaitAsync(5.Seconds());
                 //countDown.Wait(TimeSpan.FromSeconds(5)).ShouldBe(true);
-            });
+            }, cancellationToken: Token);
 
         }
 
@@ -176,9 +176,9 @@ namespace Akka.Tests.Actor
                 boss.Tell("killCrasher");
                 boss.Tell("killCrasher");
                 return Task.CompletedTask;
-            });
-            await countDownMessages.WaitAsync(Token).WaitAsync(2.Seconds(), cancellationToken: Token);
-            await countDownMax.WaitAsync(Token).WaitAsync(2.Seconds(), cancellationToken: Token);
+            }, cancellationToken: Token);
+            await countDownMessages.WaitAsync(cancellationToken: Token).WaitAsync(2.Seconds(), cancellationToken: Token);
+            await countDownMax.WaitAsync(cancellationToken: Token).WaitAsync(2.Seconds(), cancellationToken: Token);
         }
 
         private async Task Helper_A_supervisor_hierarchy_must_resume_children_after_Resume<T>() 
@@ -242,18 +242,18 @@ namespace Akka.Tests.Actor
             //      |
             //    worker
             slowResumer.Tell("spawn:boss");
-            var boss = await ExpectMsgAsync<IActorRef>();
+            var boss = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             boss.Tell("spawn:middle");
-            var middle = await ExpectMsgAsync<IActorRef>();
+            var middle = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             middle.Tell("spawn:worker");
-            var worker = await ExpectMsgAsync<IActorRef>();
+            var worker = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
 
             //Check everything is in place by sending ping to worker and expect it to respond with pong
             worker.Tell("ping");
-            await ExpectMsgAsync("pong");
+            await ExpectMsgAsync("pong", cancellationToken: Token);
             await EventFilter.Warning("expected").ExpectOneAsync(async () => //expected exception is thrown by the boss when it crashes
             {
-                //Let boss crash, this means any child under boss should be suspended, so we wait for worker to become suspended.                
+                //Let boss crash, this means any child under boss should be suspended, so we wait for worker to become suspended.
                 boss.Tell("fail");
                 await AwaitConditionAsync(() => Task.FromResult(((LocalActorRef)worker).Cell.Mailbox.IsSuspended()));
 
@@ -265,10 +265,10 @@ namespace Akka.Tests.Actor
 
                 //By counting down the latch slowResumer will continue in the supervisorstrategy and will return Resume.
                 latch.CountDown();
-            });
+            }, cancellationToken: Token);
 
             //Check that all children, and especially worker is resumed. It should receive the ping and respond with a pong
-            await ExpectMsgAsync("pong", TimeSpan.FromMinutes(10));
+            await ExpectMsgAsync("pong", TimeSpan.FromMinutes(10), cancellationToken: Token);
         }
 
         [Fact]
@@ -310,7 +310,7 @@ namespace Akka.Tests.Actor
                     //Send failresumer some meatballs. This message will be forwarded to failingChild
                     failresumer.Tell("Köttbullar");
                     ExpectMsg("Köttbullar");
-                });
+                }, cancellationToken: Token);
 
             createAttempt.Current.ShouldBe(6);
             preStartCalled.Current.ShouldBe(1);

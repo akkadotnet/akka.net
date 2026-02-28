@@ -152,7 +152,7 @@ namespace Akka.Tests.Pattern
 
                 await AssertCustomStrategy(Create(OnStopOptions().WithSupervisorStrategy(stoppingStrategy)));
                 await AssertCustomStrategy(Create(OnFailureOptions().WithSupervisorStrategy(restartingStrategy)));
-            });
+            }, cancellationToken: Token);
             return;
 
             async Task AssertCustomStrategy(IActorRef supervisor)
@@ -194,7 +194,7 @@ namespace Akka.Tests.Pattern
                 });
                 supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
                 (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(1);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -269,7 +269,7 @@ namespace Akka.Tests.Pattern
                     Create(OnFailureOptions(ManualChild.Props(TestActor))
                         .WithManualReset()
                         .WithSupervisorStrategy(restartingStrategy)));
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -297,7 +297,7 @@ namespace Akka.Tests.Pattern
 
                 supervisor.Tell("boom");
                 await ExpectMsgAsync("child was stopped");
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -324,7 +324,7 @@ namespace Akka.Tests.Pattern
 
                 supervisor.Tell("boom"); //this will be sent to deadLetters
                await ExpectNoMsgAsync(500);
-            });
+            }, cancellationToken: Token);
         }
 
         [Theory, ClassData(typeof(DelayTable))]
@@ -478,16 +478,16 @@ namespace Akka.Tests.Pattern
             const string stopMessage = "stop";
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 100).WithFinalStopMessage(message => ReferenceEquals(message, stopMessage)));
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-            var c1 = (await  ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
+            var c1 = (await  ExpectMsgAsync<BackoffSupervisor.CurrentChild>(cancellationToken: Token)).Ref;
             var parentSupervisor = CreateTestProbe();
             await WatchAsync(c1);
             await parentSupervisor.WatchAsync(supervisor);
 
             supervisor.Tell(stopMessage);
-            await ExpectMsgAsync("stop");
+            await ExpectMsgAsync("stop", cancellationToken: Token);
             c1.Tell(PoisonPill.Instance);
-            await ExpectTerminatedAsync(c1);
-            await parentSupervisor.ExpectTerminatedAsync(supervisor);
+            await ExpectTerminatedAsync(c1, cancellationToken: Token);
+            await parentSupervisor.ExpectTerminatedAsync(supervisor, cancellationToken: Token);
         }
 
         [Fact]
@@ -497,13 +497,13 @@ namespace Akka.Tests.Pattern
             var supervisorWatcher = new TestProbe(Sys, new XunitAssertions());
             var supervisor = Create(OnStopOptions(maxNrOfRetries: 100).WithFinalStopMessage(message => ReferenceEquals(message, stopMessage)));
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-            var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
+            var c1 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>(cancellationToken: Token)).Ref;
             await WatchAsync(c1);
             await supervisorWatcher.WatchAsync(supervisor);
 
             // Kill child without sending final stop message first
             c1.Tell(PoisonPill.Instance);
-            await ExpectTerminatedAsync(c1);
+            await ExpectTerminatedAsync(c1, cancellationToken: Token);
 
             // Wait for the supervisor to restart the child (backoff delay is 100ms minimum)
             // This verifies that supervisor didn't stop - it restarted the child instead
@@ -514,18 +514,18 @@ namespace Akka.Tests.Pattern
                 c2 = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
                 c2.Should().NotBeSameAs(c1);
                 c2.IsNobody().Should().BeFalse();
-            });
+            }, cancellationToken: Token);
 
             // Supervisor should still be alive (no final stop message received yet)
-            await supervisorWatcher.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), Token);
+            await supervisorWatcher.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), cancellationToken: Token);
 
             // Now send the final stop message and kill the new child
             // The supervisor should terminate because it received the final stop message
             await WatchAsync(c2);
             supervisor.Tell(stopMessage);
-            await ExpectMsgAsync(stopMessage); // Child echoes the message
+            await ExpectMsgAsync(stopMessage, cancellationToken: Token); // Child echoes the message
             c2.Tell(PoisonPill.Instance);
-            await ExpectTerminatedAsync(c2);
+            await ExpectTerminatedAsync(c2, cancellationToken: Token);
             await supervisorWatcher.ExpectTerminatedAsync(supervisor, cancellationToken: Token);
         }
     }

@@ -13,20 +13,23 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using static Akka.Actor.FSMBase;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class FSMTransitionSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact]
         public async Task FSMTransitionNotifier_must_not_trigger_onTransition_for_stay()
         {
             var fsm = Sys.ActorOf(Props.Create(() => new SendAnyTransitionFSM(TestActor)));
-            await ExpectMsgAsync((0, 0)); // caused by initialize(), OK.
+            await ExpectMsgAsync((0, 0), cancellationToken: Token); // caused by initialize(), OK.
             fsm.Tell("stay"); // no transition event
-            await ExpectNoMsgAsync(500.Milliseconds());
+            await ExpectNoMsgAsync(500.Milliseconds(), cancellationToken: Token);
             fsm.Tell("goto"); // goto(current state)
-            await ExpectMsgAsync((0, 0));
+            await ExpectMsgAsync((0, 0), cancellationToken: Token);
         }
 
         [Fact]
@@ -42,7 +45,7 @@ namespace Akka.Tests.Actor
                 await ExpectMsgAsync(new Transition<int>(fsm, 0, 1));
                 fsm.Tell("tick");
                 await ExpectMsgAsync(new Transition<int>(fsm, 1, 0));
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -58,7 +61,7 @@ namespace Akka.Tests.Actor
                 await forward.GracefulStop(5.Seconds());
                 fsm.Tell("tick");
                 await ExpectNoMsgAsync(200.Milliseconds());
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -70,7 +73,7 @@ namespace Akka.Tests.Actor
             {
                 fsm.Tell("tick");
                 await ExpectMsgAsync((0, 1));
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -89,7 +92,7 @@ namespace Akka.Tests.Actor
                 fsm.Tell("tick");
                 await ExpectMsgAsync((1, 1));
                 await ExpectMsgAsync(new Transition<int>(fsm, 1, 1));
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -99,9 +102,9 @@ namespace Akka.Tests.Actor
             var fsm = Sys.ActorOf(Props.Create(() => new OtherFSM(TestActor)));
 
             fsm.Tell(new SubscribeTransitionCallBack(forward));
-            await ExpectMsgAsync(new CurrentState<int>(fsm, 0));
+            await ExpectMsgAsync(new CurrentState<int>(fsm, 0), cancellationToken: Token);
             fsm.Tell("stay");
-            await ExpectNoMsgAsync(500.Milliseconds());
+            await ExpectNoMsgAsync(500.Milliseconds(), cancellationToken: Token);
         }
 
         [Fact]
@@ -110,9 +113,9 @@ namespace Akka.Tests.Actor
             var fsmref = Sys.ActorOf<LeakyFSM>();
 
             fsmref.Tell("switch");
-            await ExpectMsgAsync((0, 1));
+            await ExpectMsgAsync((0, 1), cancellationToken: Token);
             fsmref.Tell("test");
-            await ExpectMsgAsync("ok");
+            await ExpectMsgAsync("ok", cancellationToken: Token);
         }
 
         #region Test actors

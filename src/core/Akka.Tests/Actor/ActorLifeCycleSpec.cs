@@ -116,27 +116,27 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTestActor(TestActor, id, generationProvider));
-            var restarter = await supervisor.Ask<IActorRef>(restarterProps, Token);
+            var restarter = await supervisor.Ask<IActorRef>(restarterProps, cancellationToken: Token);
 
-            await ExpectMsgAsync(("preStart", id, 0));
+            await ExpectMsgAsync(("preStart", id, 0), cancellationToken: Token);
             restarter.Tell(Kill.Instance);
-            await ExpectMsgAsync(("preRestart", id, 0));
-            await ExpectMsgAsync(("postRestart", id, 1));
+            await ExpectMsgAsync(("preRestart", id, 0), cancellationToken: Token);
+            await ExpectMsgAsync(("postRestart", id, 1), cancellationToken: Token);
             restarter.Tell("status");
-            await ExpectMsgAsync(("OK", id, 1));
+            await ExpectMsgAsync(("OK", id, 1), cancellationToken: Token);
             restarter.Tell(Kill.Instance);
-            await ExpectMsgAsync(("preRestart", id, 1));
-            await ExpectMsgAsync(("postRestart", id, 2));
+            await ExpectMsgAsync(("preRestart", id, 1), cancellationToken: Token);
+            await ExpectMsgAsync(("postRestart", id, 2), cancellationToken: Token);
             restarter.Tell("status");
-            await ExpectMsgAsync(("OK", id, 2));
+            await ExpectMsgAsync(("OK", id, 2), cancellationToken: Token);
             restarter.Tell(Kill.Instance);
-            await ExpectMsgAsync(("preRestart", id, 2));
-            await ExpectMsgAsync(("postRestart", id, 3));
+            await ExpectMsgAsync(("preRestart", id, 2), cancellationToken: Token);
+            await ExpectMsgAsync(("postRestart", id, 3), cancellationToken: Token);
             restarter.Tell("status");
-            await ExpectMsgAsync(("OK", id, 3));
+            await ExpectMsgAsync(("OK", id, 3), cancellationToken: Token);
             restarter.Tell(Kill.Instance);
-            await ExpectMsgAsync(("postStop", id, 3));
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync(("postStop", id, 3), cancellationToken: Token);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
             Sys.Stop(supervisor);
         }
 
@@ -147,27 +147,27 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();            
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(TestActor, id, generationProvider));
-            var restarter = await supervisor.Ask<IActorRef>(restarterProps, Token);
+            var restarter = await supervisor.Ask<IActorRef>(restarterProps, cancellationToken: Token);
 
-            await ExpectMsgAsync(("preStart", id, 0));
+            await ExpectMsgAsync(("preStart", id, 0), cancellationToken: Token);
             restarter.Tell(Kill.Instance);
-            await ExpectMsgAsync(("postStop", id, 0));
-            await ExpectMsgAsync(("preStart", id, 1));
+            await ExpectMsgAsync(("postStop", id, 0), cancellationToken: Token);
+            await ExpectMsgAsync(("preStart", id, 1), cancellationToken: Token);
             restarter.Tell("status");
-            await ExpectMsgAsync(("OK", id, 1));
+            await ExpectMsgAsync(("OK", id, 1), cancellationToken: Token);
             restarter.Tell(Kill.Instance);
-            await ExpectMsgAsync(("postStop", id, 1));
-            await ExpectMsgAsync(("preStart", id, 2));
+            await ExpectMsgAsync(("postStop", id, 1), cancellationToken: Token);
+            await ExpectMsgAsync(("preStart", id, 2), cancellationToken: Token);
             restarter.Tell("status");
-            await ExpectMsgAsync(("OK", id, 2));
+            await ExpectMsgAsync(("OK", id, 2), cancellationToken: Token);
             restarter.Tell(Kill.Instance);
-            await ExpectMsgAsync(("postStop", id, 2));
-            await ExpectMsgAsync(("preStart", id, 3));
+            await ExpectMsgAsync(("postStop", id, 2), cancellationToken: Token);
+            await ExpectMsgAsync(("preStart", id, 3), cancellationToken: Token);
             restarter.Tell("status");
-            await ExpectMsgAsync(("OK", id, 3));
+            await ExpectMsgAsync(("OK", id, 3), cancellationToken: Token);
             restarter.Tell(Kill.Instance);
-            await ExpectMsgAsync(("postStop", id, 3));
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync(("postStop", id, 3), cancellationToken: Token);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
             Sys.Stop(supervisor);
         } 
 
@@ -178,14 +178,14 @@ namespace Akka.Tests
             string id = Guid.NewGuid().ToString();            
             var supervisor = Sys.ActorOf(Props.Create(() => new Supervisor(new OneForOneStrategy(3, TimeSpan.FromSeconds(1000), x => Directive.Restart))));
             var restarterProps = Props.Create(() => new LifeCycleTest2Actor(TestActor, id, generationProvider));
-            var restarter = await supervisor.Ask<IInternalActorRef>(restarterProps, Token);
+            var restarter = await supervisor.Ask<IInternalActorRef>(restarterProps, cancellationToken: Token);
 
-            await ExpectMsgAsync(("preStart", id, 0));
+            await ExpectMsgAsync(("preStart", id, 0), cancellationToken: Token);
             restarter.Tell("status");
-            await ExpectMsgAsync(("OK", id, 0));
+            await ExpectMsgAsync(("OK", id, 0), cancellationToken: Token);
             restarter.Stop();
-            await ExpectMsgAsync(("postStop", id, 0));
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync(("postStop", id, 0), cancellationToken: Token);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
 
 
@@ -208,7 +208,7 @@ namespace Akka.Tests
             await EventFilter.Exception<Exception>(message: "hurrah").ExpectOneAsync(() => {
                 a.Tell(PoisonPill.Instance);
                 return Task.CompletedTask;
-            });            
+            }, cancellationToken: Token);
         }
 
         public class Become
@@ -253,20 +253,20 @@ namespace Akka.Tests
             var a = Sys.ActorOf(Props.Create(() => new BecomeActor(TestActor)));
 
             a.Tell("hello");
-            await ExpectMsgAsync(42);
+            await ExpectMsgAsync(42, cancellationToken: Token);
             a.Tell(new Become());
-            await ExpectMsgAsync("ok");
+            await ExpectMsgAsync("ok", cancellationToken: Token);
             a.Tell("hello");
-            await ExpectMsgAsync(43);
+            await ExpectMsgAsync(43, cancellationToken: Token);
 
             await EventFilter.Exception<Exception>("buh").ExpectOneAsync(async () =>
             {
                 a.Tell("fail");
                 await Task.CompletedTask;
-            });
+            }, cancellationToken: Token);
             
             a.Tell("hello");
-            await ExpectMsgAsync(42);
+            await ExpectMsgAsync(42, cancellationToken: Token);
         }
 
         public class SupervisorTestActor : UntypedActor
@@ -349,35 +349,35 @@ namespace Akka.Tests
             var names = new[] {"Bob", "Jameson", "Natasha"};
             var supervisor = Sys.ActorOf(Props.Create(() => new SupervisorTestActor(TestActor)));
             supervisor.Tell(new SupervisorTestActor.Spawn(){ Name = names[0] });
-            await ExpectMsgAsync(("Created",names[0]));
+            await ExpectMsgAsync(("Created",names[0]), cancellationToken: Token);
             supervisor.Tell(new SupervisorTestActor.Count());
-            await ExpectMsgAsync(1);
+            await ExpectMsgAsync(1, cancellationToken: Token);
             supervisor.Tell(new SupervisorTestActor.Spawn() { Name = names[1] });
-            await ExpectMsgAsync(("Created", names[1]));
+            await ExpectMsgAsync(("Created", names[1]), cancellationToken: Token);
             supervisor.Tell(new SupervisorTestActor.Count());
-            await ExpectMsgAsync(2);
+            await ExpectMsgAsync(2, cancellationToken: Token);
             supervisor.Tell(new SupervisorTestActor.ContextStop() { Name = names[1] });
-            await ExpectMsgAsync(("Terminated", names[1]));
+            await ExpectMsgAsync(("Terminated", names[1]), cancellationToken: Token);
        
             //we need to wait for the child actor to unregister itself from the parent.
             //this is done after PostStop so we have no way to wait for it
             //ideas?
-            await Task.Delay(100, Token);
+            await Task.Delay(100, cancellationToken: Token);
             supervisor.Tell(new SupervisorTestActor.Count());
-            await ExpectMsgAsync(1);
+            await ExpectMsgAsync(1, cancellationToken: Token);
             supervisor.Tell(new SupervisorTestActor.Spawn() { Name = names[2] });
-            await ExpectMsgAsync(("Created", names[2]));
-            await Task.Delay(100, Token);
+            await ExpectMsgAsync(("Created", names[2]), cancellationToken: Token);
+            await Task.Delay(100, cancellationToken: Token);
             supervisor.Tell(new SupervisorTestActor.Count());
-            await ExpectMsgAsync(2);
+            await ExpectMsgAsync(2, cancellationToken: Token);
             supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[0] });
-            await ExpectMsgAsync(("Terminated", names[0]));
+            await ExpectMsgAsync(("Terminated", names[0]), cancellationToken: Token);
             supervisor.Tell(new SupervisorTestActor.Stop() { Name = names[2] });
-            await ExpectMsgAsync(("Terminated", names[2]));
+            await ExpectMsgAsync(("Terminated", names[2]), cancellationToken: Token);
 
-            await Task.Delay(100, Token);
+            await Task.Delay(100, cancellationToken: Token);
             supervisor.Tell(new SupervisorTestActor.Count());
-            await ExpectMsgAsync(0);
+            await ExpectMsgAsync(0, cancellationToken: Token);
         }
 
 
@@ -410,14 +410,14 @@ namespace Akka.Tests
 
             broken.Tell(message);
 
-            await ExpectMsgAsync<MyCustomException>();
-            await ExpectMsgAsync(message);
-            await ExpectMsgAsync(TestActor);
+            await ExpectMsgAsync<MyCustomException>(cancellationToken: Token);
+            await ExpectMsgAsync(message, cancellationToken: Token);
+            await ExpectMsgAsync(TestActor, cancellationToken: Token);
             
             // test the `Restart` built-in message
             broken.Tell(IntentionalRestart.Instance);
-            await ExpectMsgAsync<IntentionalActorRestartException>();
-            await ExpectMsgAsync(TestActor);
+            await ExpectMsgAsync<IntentionalActorRestartException>(cancellationToken: Token);
+            await ExpectMsgAsync(TestActor, cancellationToken: Token);
         }
     }
 }

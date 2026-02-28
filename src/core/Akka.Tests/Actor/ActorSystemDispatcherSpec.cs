@@ -13,11 +13,14 @@ using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class ActorSystemDispatcherSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         private static Config Config => ConfigurationFactory.ParseString(@"
     dispatcher-loop-1 = dispatcher-loop-2
     dispatcher-loop-2 = dispatcher-loop-1
@@ -41,7 +44,7 @@ namespace Akka.Tests.Actor
 
                 actor.Tell("ping", probe);
 
-                await probe.ExpectMsgAsync("ping", TimeSpan.FromSeconds(1));
+                await probe.ExpectMsgAsync("ping", TimeSpan.FromSeconds(1), cancellationToken: Token);
             }
             finally
             {

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
@@ -27,16 +28,16 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
             actor.Tell(4711, TestActor);
             //Then
-            await ExpectMsgAsync((object) "string2:hello");
-            await ExpectMsgAsync<UnhandledMessage>( m => ((int)m.Message) == 4711 && m.Recipient == actor);
+            await ExpectMsgAsync((object) "string2:hello", cancellationToken: Token);
+            await ExpectMsgAsync<UnhandledMessage>( m => ((int)m.Message) == 4711 && m.Recipient == actor, cancellationToken: Token);
 
             //When
             actor.Tell("BECOME", TestActor);    //Switch to state3
             actor.Tell("hello", TestActor);
             actor.Tell(4711, TestActor);
             //Then
-            await ExpectMsgAsync((object) "string3:hello");
-            await ExpectMsgAsync<UnhandledMessage>(m => ((int)m.Message) == 4711 && m.Recipient == actor);
+            await ExpectMsgAsync((object) "string3:hello", cancellationToken: Token);
+            await ExpectMsgAsync<UnhandledMessage>(m => ((int)m.Message) == 4711 && m.Recipient == actor, cancellationToken: Token);
         }
 
         [Fact]
@@ -53,7 +54,7 @@ namespace Akka.Tests.Actor
             actor.Tell("hello", TestActor);
 
             //Then
-            await ExpectMsgAsync((object) "string2:hello");
+            await ExpectMsgAsync((object) "string2:hello", cancellationToken: Token);
         }
 
         [Fact]
@@ -66,25 +67,25 @@ namespace Akka.Tests.Actor
             //When
             actor.Tell("hello", TestActor);
             //Then
-            await ExpectMsgAsync((object) "string3:hello");
+            await ExpectMsgAsync((object) "string3:hello", cancellationToken: Token);
 
             //When
             actor.Tell("UNBECOME", TestActor);  //Switch back to state2
             actor.Tell("hello", TestActor);
             //Then
-            await ExpectMsgAsync((object) "string2:hello");
+            await ExpectMsgAsync((object) "string2:hello", cancellationToken: Token);
 
             //When
             actor.Tell("UNBECOME", TestActor);  //Switch back to state1
             actor.Tell("hello", TestActor);
             //Then
-            await ExpectMsgAsync((object) "string1:hello");
+            await ExpectMsgAsync((object) "string1:hello", cancellationToken: Token);
 
             //When
             actor.Tell("UNBECOME", TestActor);  //should still be in state1
             actor.Tell("hello", TestActor);
             //Then
-            await ExpectMsgAsync((object) "string1:hello");
+            await ExpectMsgAsync((object) "string1:hello", cancellationToken: Token);
         }
 
         private class BecomeActor : ReceiveActor

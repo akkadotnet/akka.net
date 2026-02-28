@@ -19,11 +19,14 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace Akka.Tests.Routing
 {
     public class RoutingSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public RoutingSpec(ITestOutputHelper output) : base(GetConfig(), output:output)
         {
         }
@@ -167,13 +170,13 @@ namespace Akka.Tests.Routing
             router.Tell("");
             router.Tell("");
 
-            var c1 = await ExpectMsgAsync<IActorRef>();
-            var c2 = await ExpectMsgAsync<IActorRef>();
+            var c1 = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
+            var c2 = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
 
             Watch(router);
             Watch(c2);
             Sys.Stop(c2);
-            (await ExpectTerminatedAsync(c2)).ExistenceConfirmed.Should().BeTrue();
+            (await ExpectTerminatedAsync(c2, cancellationToken: Token)).ExistenceConfirmed.Should().BeTrue();
 
             // it might take a while until the Router has actually processed the Terminated message
             await AwaitConditionAsync(async () =>
@@ -190,10 +193,10 @@ namespace Akka.Tests.Routing
                 }, msgs: 2).ToListAsync();
 
                 return res.Count == 2 && res.All(c => c.Equals(c1));
-            });
+            }, cancellationToken: Token);
 
             Sys.Stop(c1);
-            (await ExpectTerminatedAsync(router)).ExistenceConfirmed.Should().BeTrue();
+            (await ExpectTerminatedAsync(router, cancellationToken: Token)).ExistenceConfirmed.Should().BeTrue();
         }
 
         [Fact]
@@ -206,13 +209,13 @@ namespace Akka.Tests.Routing
             latch.Ready(RemainingOrDefault);
 
             router.Tell(new GetRoutees());
-            var routees = (await ExpectMsgAsync<Routees>()).Members.ToList();
+            var routees = (await ExpectMsgAsync<Routees>(cancellationToken: Token)).Members.ToList();
             routees.Count.Should().Be(2);
 
             routees.ForEach(r => r.Send(PoisonPill.Instance, TestActor));
             
             // expect no Terminated
-            await ExpectNoMsgAsync(2.Seconds());
+            await ExpectNoMsgAsync(2.Seconds(), cancellationToken: Token);
         }
 
         [Fact]
@@ -220,10 +223,10 @@ namespace Akka.Tests.Routing
         {
             var router = Sys.ActorOf(FromConfig.Instance.Props(Props.Create<BlackHoleActor>()), "router1");
             router.Tell(new GetRoutees());
-            (await ExpectMsgAsync<Routees>()).Members.Count().Should().Be(3);
+            (await ExpectMsgAsync<Routees>(cancellationToken: Token)).Members.Count().Should().Be(3);
             Watch(router);
             Sys.Stop(router);
-            await ExpectTerminatedAsync(router);
+            await ExpectTerminatedAsync(router, cancellationToken: Token);
         }
 
         [Fact]
@@ -231,7 +234,7 @@ namespace Akka.Tests.Routing
         {
             var router = Sys.ActorOf(new RoundRobinPool(0).Props(Props.Create<BlackHoleActor>()), "router2");
             router.Tell(new GetRoutees());
-            (await ExpectMsgAsync<Routees>()).Members.Count().Should().Be(3);
+            (await ExpectMsgAsync<Routees>(cancellationToken: Token)).Members.Count().Should().Be(3);
             Sys.Stop(router);
         }
 
@@ -243,7 +246,7 @@ namespace Akka.Tests.Routing
             var router = Sys.ActorOf(new RoundRobinPool(0, resizer).Props(Props.Create<BlackHoleActor>()), "router3");
             latch.Ready(RemainingOrDefault);
             router.Tell(new GetRoutees());
-            (await ExpectMsgAsync<Routees>()).Members.Count().Should().Be(3);
+            (await ExpectMsgAsync<Routees>(cancellationToken: Token)).Members.Count().Should().Be(3);
             Sys.Stop(router);
         }
 
@@ -261,17 +264,17 @@ namespace Akka.Tests.Routing
             await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async() =>
             {
                 (await ExpectMsgAsync<Routees>()).Members.First().Send(Kill.Instance, TestActor);
-            });
-            await ExpectMsgAsync<ActorKilledException>();
+            }, cancellationToken: Token);
+            await ExpectMsgAsync<ActorKilledException>(cancellationToken: Token);
 
             var router2 = Sys.ActorOf(new RoundRobinPool(1).WithSupervisorStrategy(escalator).Props(Props.Create<BlackHoleActor>()));
             router2.Tell(new GetRoutees());
             await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async () =>
             {
                 (await ExpectMsgAsync<Routees>()).Members.First().Send(Kill.Instance, TestActor);
-            });
+            }, cancellationToken: Token);
 
-            await ExpectMsgAsync<ActorKilledException>();
+            await ExpectMsgAsync<ActorKilledException>(cancellationToken: Token);
         }
 
         [Fact]
@@ -288,8 +291,8 @@ namespace Akka.Tests.Routing
             await EventFilter.Exception<ActorKilledException>().ExpectOneAsync(async() =>
             {
                 (await ExpectMsgAsync<Routees>()).Members.First().Send(Kill.Instance, TestActor);
-            });
-            await ExpectMsgAsync<ActorKilledException>();
+            }, cancellationToken: Token);
+            await ExpectMsgAsync<ActorKilledException>(cancellationToken: Token);
         }
 
         [Fact]
@@ -301,7 +304,7 @@ namespace Akka.Tests.Routing
             for (var i = 0; i < 3; i++)
             {
                 router.Tell("die");
-                ExpectMsg("restarted");
+                ExpectMsg("restarted", cancellationToken: Token);
                 restarted.Add(LastSender.Path.Name);
             }
 
@@ -314,7 +317,7 @@ namespace Akka.Tests.Routing
         {
             var actor = Sys.ActorOf<InlineRouterActor>();
             actor.Tell("start");
-            await ExpectMsgAsync("hello");
+            await ExpectMsgAsync("hello", cancellationToken: Token);
         }
 
         [Fact]
@@ -324,8 +327,8 @@ namespace Akka.Tests.Routing
             routedActor.Tell("hello");
             routedActor.Tell("end");
 
-            await ExpectMsgAsync("hello");
-            await ExpectMsgAsync("end");
+            await ExpectMsgAsync("hello", cancellationToken: Token);
+            await ExpectMsgAsync("end", cancellationToken: Token);
         }
 
         [Fact]
@@ -363,12 +366,12 @@ namespace Akka.Tests.Routing
         {
             var router = Sys.ActorOf(new BroadcastPool(5).Props(Props.Create<Echo>()));
             router.Tell("hello", TestActor);
-            await ExpectMsgAsync<IActorRef>();
-            await ExpectMsgAsync<IActorRef>();
-            await ExpectMsgAsync<IActorRef>();
-            await ExpectMsgAsync<IActorRef>();
-            await ExpectMsgAsync<IActorRef>();
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
+            await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
+            await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
+            await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
+            await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
 
         [Fact]

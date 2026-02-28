@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor.Dispatch
 {
@@ -23,6 +24,8 @@ namespace Akka.Tests.Actor.Dispatch
     /// </summary>
     public class CurrentSynchronizationContextDispatcherSpecs : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         private static Config _config = ConfigurationFactory.ParseString(@"
             akka.actor.deployment {
                /some-ui-actor{
@@ -38,7 +41,7 @@ namespace Akka.Tests.Actor.Dispatch
         {
             var uiActor = Sys.ActorOf(EchoActor.Props(this), "some-ui-actor");
             uiActor.Tell("ping");
-            await ExpectMsgAsync("ping");
+            await ExpectMsgAsync("ping", cancellationToken: Token);
         }
     }
 }

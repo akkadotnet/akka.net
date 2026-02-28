@@ -11,11 +11,14 @@ using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class ActorDslSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact]
         public async Task A_lightweight_creator_must_support_creating_regular_actors()
         {
@@ -23,7 +26,7 @@ namespace Akka.Tests.Actor
                 c.Receive<string>(msg => msg == "hello", (msg, ctx) => TestActor.Tell("hi")))));
 
             a.Tell("hello");
-            await ExpectMsgAsync("hi");
+            await ExpectMsgAsync("hi", cancellationToken: Token);
         }
 
         [Fact]
@@ -52,15 +55,15 @@ namespace Akka.Tests.Actor
             }));
 
             a.Tell("info");
-            await ExpectMsgAsync("A");
+            await ExpectMsgAsync("A", cancellationToken: Token);
 
             a.Tell("switch");
             a.Tell("info");
-            await ExpectMsgAsync("B");
+            await ExpectMsgAsync("B", cancellationToken: Token);
 
             a.Tell("switch");
             a.Tell("info");
-            await ExpectMsgAsync("A");
+            await ExpectMsgAsync("A", cancellationToken: Token);
         }
 
         [Fact]
@@ -76,8 +79,8 @@ namespace Akka.Tests.Actor
             });
 
             Sys.Stop(a);
-            await ExpectMsgAsync(started);
-            await ExpectMsgAsync(stopped);
+            await ExpectMsgAsync(started, cancellationToken: Token);
+            await ExpectMsgAsync(stopped, cancellationToken: Token);
         }
 
         [Fact(Skip = "TODO: requires event filters")]
@@ -104,7 +107,7 @@ namespace Akka.Tests.Actor
                 act.ReceiveAny((x, _) => TestActor.Tell(x));
             }, "fred");
 
-            await ExpectMsgAsync("hello from akka://" + Sys.Name + "/user/fred/barney");
+            await ExpectMsgAsync("hello from akka://" + Sys.Name + "/user/fred/barney", cancellationToken: Token);
             LastSender.ShouldBe(a);
         }
 
@@ -134,11 +137,11 @@ namespace Akka.Tests.Actor
             }, "parent");
             
             parent.Tell("ping");
-            await ExpectMsgAsync("pong");
+            await ExpectMsgAsync("pong", cancellationToken: Token);
 
             parent.Tell("crash");
-            await ExpectMsgAsync("restarting parent");
-            await ExpectMsgAsync("stopping child");
+            await ExpectMsgAsync("restarting parent", cancellationToken: Token);
+            await ExpectMsgAsync("stopping child", cancellationToken: Token);
         }
 
         [Fact]
@@ -176,13 +179,13 @@ namespace Akka.Tests.Actor
             });
 
             parent.Tell("ping");
-            await ExpectMsgAsync("pong");
+            await ExpectMsgAsync("pong", cancellationToken: Token);
 
             parent.Tell("pong");
-            await ExpectMsgAsync("ping");
+            await ExpectMsgAsync("ping", cancellationToken: Token);
 
             parent.Tell("hi");
-            await ExpectMsgAsync("hello");
+            await ExpectMsgAsync("hello", cancellationToken: Token);
         }
     }
 }

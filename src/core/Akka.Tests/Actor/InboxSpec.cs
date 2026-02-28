@@ -66,7 +66,7 @@ namespace Akka.Tests.Actor
             _inbox.Receiver.Tell("hello");
             _inbox.Receiver.Tell("world");
 
-            Task.WaitAll(tasks.Cast<Task>().ToArray(), Token);
+            Task.WaitAll(tasks.Cast<Task>().ToArray(), cancellationToken: Token);
 
             tasks[0].Result.ShouldBe(42);
             tasks[1].Result.ShouldBe("world");
@@ -93,14 +93,14 @@ namespace Akka.Tests.Actor
                 foreach (var zero in Enumerable.Repeat(0, 1000))
                     _inbox.Receiver.Tell(zero);
 
-                await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+                await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
 
                 //The inbox is full. Sending another message should result in a Warning message
-                await EventFilter.Warning(start: "Dropping message").ExpectOneAsync(() => { _inbox.Receiver.Tell(42); return Task.CompletedTask; });
+                await EventFilter.Warning(start: "Dropping message").ExpectOneAsync(() => { _inbox.Receiver.Tell(42); return Task.CompletedTask; }, cancellationToken: Token);
 
                 //The inbox is still full. But since the warning message has already been sent, no more warnings should be sent
                 _inbox.Receiver.Tell(42);
-                await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+                await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
 
                 //Receive all messages from the inbox
                 var gotit = Enumerable.Repeat(0, 1000).Select(_ => _inbox.Receive());
@@ -133,7 +133,7 @@ namespace Akka.Tests.Actor
                 Assert.NotNull(ex);
                 Assert.True(IsTimeoutException(ex), $"Expected TimeoutException but got: {ex.GetType().Name}");
                 return Task.CompletedTask;
-            });
+            }, cancellationToken: Token);
 
             await WithinAsync(TimeSpan.FromSeconds(1), () =>
             {
@@ -141,7 +141,7 @@ namespace Akka.Tests.Actor
                 Assert.NotNull(ex);
                 Assert.True(IsTimeoutException(ex), $"Expected TimeoutException but got: {ex.GetType().Name}");
                 return Task.CompletedTask;
-            });
+            }, cancellationToken: Token);
         }
 
         private static bool IsTimeoutException(Exception ex)
@@ -170,7 +170,7 @@ namespace Akka.Tests.Actor
         public async Task Inbox_Receive_will_timeout_gracefully_if_timeout_is_already_expired()
         {
             var task = _inbox.ReceiveAsync(TimeSpan.FromSeconds(-1));
-            await Assert.ThrowsAnyAsync<Exception>(() => task.AwaitWithTimeout(TimeSpan.FromMilliseconds(1000), Token));
+            await Assert.ThrowsAnyAsync<Exception>(() => task.AwaitWithTimeout(TimeSpan.FromMilliseconds(1000), cancellationToken: Token));
         }
     }
 }

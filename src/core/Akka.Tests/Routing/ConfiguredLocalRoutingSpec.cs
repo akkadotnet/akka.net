@@ -18,11 +18,14 @@ using Akka.Configuration;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Routing
 {
     public class ConfiguredLocalRoutingSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public ConfiguredLocalRoutingSpec() : base(GetConfig())
         {
         }
@@ -289,7 +292,7 @@ namespace Akka.Tests.Routing
             var expected = new List<string> { "a", "b", "c" }.Select( i => Sys.ActorSelection("/user/weird/$" + i).ResolveOne(RemainingOrDefault).Result).ToList();
 
             received.Should().BeEquivalentTo(expected);
-            await ExpectNoMsgAsync(1.Seconds());
+            await ExpectNoMsgAsync(1.Seconds(), cancellationToken: Token);
         }
 
         [Fact]
@@ -297,7 +300,7 @@ namespace Akka.Tests.Routing
         {
             var myRouter = Sys.ActorOf(FromConfig.Instance.Props(), "myrouter");
             myRouter.Tell("foo");
-            await ExpectMsgAsync("bar");
+            await ExpectMsgAsync("bar", cancellationToken: Token);
         }
 
         [Fact(Skip = "SystemActors DSN has not implemented yet")]
@@ -307,14 +310,14 @@ namespace Akka.Tests.Routing
             var parent = Sys.AsInstanceOf<ExtendedActorSystem>().SystemActorOf(Props.Create<Parent>(), "sys-parent");
             parent.Tell(new PropsName(Props.Create<EchoActor>(), "round"), probe.Ref);
 
-            var router = await probe.ExpectMsgAsync<IActorRef>();
+            var router = await probe.ExpectMsgAsync<IActorRef>(cancellationToken: Token);
 
             var replies = new List<ActorPath>();
             for (int i = 0; i < 10; i++)
             {
                 var msg = i.ToString();
                 router.Tell(msg, probe.Ref);
-                await probe.ExpectMsgAsync(msg);
+                await probe.ExpectMsgAsync(msg, cancellationToken: Token);
                 replies.Add(probe.LastSender.Path);
             }
 

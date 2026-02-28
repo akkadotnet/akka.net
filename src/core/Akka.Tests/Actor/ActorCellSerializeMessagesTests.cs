@@ -9,11 +9,14 @@ using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
+using System.Threading;
 
 namespace Akka.Tests.Actor;
 
 public class ActorCellSerializeMessagesTests: AkkaSpec
 {
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
     private class InnerMessage
     {
         public InnerMessage(string payload)
@@ -51,7 +54,7 @@ public class ActorCellSerializeMessagesTests: AkkaSpec
     {
         var actor = Sys.ActorOf(Props.Create(() => new EchoActor()));
         actor.Tell(new MessageWrapper(new InnerMessage("payload")));
-        var receivedMsg = ExpectMsg<MessageWrapper>();
+        var receivedMsg = ExpectMsg<MessageWrapper>(cancellationToken: Token);
         receivedMsg.Message.Should().BeOfType<InnerMessage>().Which.Payload.Should().Be("payload");
     }
 }

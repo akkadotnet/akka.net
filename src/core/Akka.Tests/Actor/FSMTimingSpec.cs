@@ -37,9 +37,9 @@ namespace Akka.Tests.Actor
         public async Task FSM_must_receive_StateTimeout()
         {
             FSM.Tell(FsmState.TestStateTimeout);
-            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
-            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
-            await ExpectNoMsgAsync(50.Milliseconds());
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout), cancellationToken: Token);
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial), cancellationToken: Token);
+            await ExpectNoMsgAsync(50.Milliseconds(), cancellationToken: Token);
 
         }
 
@@ -48,10 +48,10 @@ namespace Akka.Tests.Actor
         {
             FSM.Tell(FsmState.TestStateTimeout);
             FSM.Tell(Cancel.Instance);
-            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
-            await ExpectMsgAsync<Cancel>();
-            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
-            await ExpectNoMsgAsync(50.Milliseconds());
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout), cancellationToken: Token);
+            await ExpectMsgAsync<Cancel>(cancellationToken: Token);
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial), cancellationToken: Token);
+            await ExpectNoMsgAsync(50.Milliseconds(), cancellationToken: Token);
         }
 
         [Fact]
@@ -61,7 +61,7 @@ namespace Akka.Tests.Actor
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
             stoppingActor.Tell(FsmState.TestStoppingActorStateTimeout);
 
-            await ExpectNoMsgAsync(300.Milliseconds());
+            await ExpectNoMsgAsync(300.Milliseconds(), cancellationToken: Token);
 
         }
 
@@ -74,14 +74,14 @@ namespace Akka.Tests.Actor
                 FSM.Tell(FsmState.TestStateTimeoutOverride);
                 await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestStateTimeout));
                 await ExpectNoMsgAsync(300.Milliseconds());
-            });
+            }, cancellationToken: Token);
 
             await WithinAsync(1.Seconds(), async () =>
             {
                 FSM.Tell(Cancel.Instance);
                 await ExpectMsgAsync<Cancel>();
                 await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestStateTimeout, FsmState.Initial));
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -97,7 +97,7 @@ namespace Akka.Tests.Actor
                     await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestSingleTimer, FsmState.Initial));
                 });
                 await ExpectNoMsgAsync(500.Milliseconds());
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -118,26 +118,26 @@ namespace Akka.Tests.Actor
                     await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestSingleTimerResubmit, FsmState.Initial));
                 });
                 await ExpectNoMsgAsync(500.Milliseconds());
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
         public async Task FSM_must_correctly_cancel_a_named_timer()
         {
             FSM.Tell(FsmState.TestCancelTimer);
-            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestCancelTimer));
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestCancelTimer), cancellationToken: Token);
             await WithinAsync(500.Milliseconds(), async() =>
             {
                 FSM.Tell(Tick.Instance);
                 await ExpectMsgAsync<Tick>();
-            });
+            }, cancellationToken: Token);
 
             await WithinAsync(300.Milliseconds(), 1.Seconds(), async() =>
             {
                 await ExpectMsgAsync<Tock>();
-            });
+            }, cancellationToken: Token);
             FSM.Tell(Cancel.Instance);
-            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestCancelTimer, FsmState.Initial), 1.Seconds());
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestCancelTimer, FsmState.Initial), 1.Seconds(), cancellationToken: Token);
         }
 
         [Fact]
@@ -145,35 +145,35 @@ namespace Akka.Tests.Actor
         {
             FSM.Tell(FsmState.TestCancelStateTimerInNamedTimerMessage);
             FSM.Tell(Tick.Instance);
-            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestCancelStateTimerInNamedTimerMessage));
-            await ExpectMsgAsync<Tick>(500.Milliseconds());
-            await Task.Delay(200.Milliseconds(), Token);
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestCancelStateTimerInNamedTimerMessage), cancellationToken: Token);
+            await ExpectMsgAsync<Tick>(500.Milliseconds(), cancellationToken: Token);
+            await Task.Delay(200.Milliseconds(), cancellationToken: Token);
             Resume(FSM);
-            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestCancelStateTimerInNamedTimerMessage, FsmState.TestCancelStateTimerInNamedTimerMessage2), 500.Milliseconds());
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestCancelStateTimerInNamedTimerMessage, FsmState.TestCancelStateTimerInNamedTimerMessage2), 500.Milliseconds(), cancellationToken: Token);
             FSM.Tell(Cancel.Instance);
             await WithinAsync(500.Milliseconds(), async() =>
             {
                 await ExpectMsgAsync<Cancel>();
                 await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestCancelStateTimerInNamedTimerMessage2, FsmState.Initial));
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
         public async Task FSM_must_receive_and_cancel_a_repeated_timer()
         {
             FSM.Tell(FsmState.TestRepeatedTimer);
-            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestRepeatedTimer));
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestRepeatedTimer), cancellationToken: Token);
             var seq = await ReceiveWhileAsync(2.Seconds(), o =>
             {
                 if (o is Tick)
                     return o;
                 return null;
-            }).ToListAsync();
+            }, cancellationToken: Token).ToListAsync(Token);
             seq.Should().HaveCount(5);
             await WithinAsync(500.Milliseconds(), async() =>
             {
                 await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.TestRepeatedTimer, FsmState.Initial));
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -187,7 +187,7 @@ namespace Akka.Tests.Actor
             //    () =>
             //    {
             FSM.Tell(FsmState.TestUnhandled);
-            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestUnhandled));
+            await ExpectMsgAsync(new Transition<FsmState>(FSM, FsmState.Initial, FsmState.TestUnhandled), cancellationToken: Token);
             await WithinAsync(3.Seconds(), async() =>
             {
                 FSM.Tell(Tick.Instance);
@@ -200,7 +200,7 @@ namespace Akka.Tests.Actor
                 transition.FsmRef.Should().Be(FSM);
                 transition.From.Should().Be(FsmState.TestUnhandled);
                 transition.To.Should().Be(FsmState.Initial);
-            });
+            }, cancellationToken: Token);
             //    });
         }
 

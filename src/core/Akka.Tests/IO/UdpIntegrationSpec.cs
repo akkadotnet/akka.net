@@ -67,7 +67,7 @@ namespace Akka.Tests.IO
             var data = ByteString.FromString("To infinity and beyond!");
             (await SimpleSender()).Tell(Udp.Send.Create(data, localEndpoint));
 
-            await ExpectMsgAsync<Udp.Received>(x => x.Data.ShouldBe(data));
+            await ExpectMsgAsync<Udp.Received>(x => x.Data.ShouldBe(data), cancellationToken: Token);
         }
 
         [Fact]
@@ -80,7 +80,7 @@ namespace Akka.Tests.IO
                 + ByteString.FromString(" string!");
             (await SimpleSender()).Tell(Udp.Send.Create(data, localEndpoint));
 
-            await ExpectMsgAsync<Udp.Received>(x => x.Data.ShouldBe(data));
+            await ExpectMsgAsync<Udp.Received>(x => x.Data.ShouldBe(data), cancellationToken: Token);
         }
 
         [Fact]
@@ -95,17 +95,17 @@ namespace Akka.Tests.IO
             client.Tell(Udp.Send.Create(data, serverLocalEndpoint));
             client.Tell(Udp.Send.Create(data, serverLocalEndpoint));
 
-            var raw = await ReceiveNAsync(3, default).ToListAsync();
+            var raw = await ReceiveNAsync(3, RemainingOrDefault, cancellationToken: Token).ToListAsync(Token);
             var msgs = raw.Cast<Udp.Received>();
             msgs.Sum(x => x.Data.Count).Should().Be(data.Count*3);
-            await ExpectNoMsgAsync(100.Milliseconds()); 
+            await ExpectNoMsgAsync(100.Milliseconds(), cancellationToken: Token);
 
             // repeat in the other direction
             server.Tell(Udp.Send.Create(data, clientLocalEndpoint));
             server.Tell(Udp.Send.Create(data, clientLocalEndpoint));
             server.Tell(Udp.Send.Create(data, clientLocalEndpoint));
 
-            raw = await ReceiveNAsync(3, default).ToListAsync();
+            raw = await ReceiveNAsync(3, RemainingOrDefault, cancellationToken: Token).ToListAsync(Token);
             msgs = raw.Cast<Udp.Received>();
             msgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
         }
@@ -219,19 +219,19 @@ namespace Akka.Tests.IO
                 for (var i = 0; i < batchSize; i++) 
                     server.Tell(Udp.Send.Create(data, clientLocalEndpoint));
 
-                var msgs = await clientProbe.ReceiveNAsync(batchSize, default).ToListAsync();
+                var msgs = await clientProbe.ReceiveNAsync(batchSize, RemainingOrDefault, cancellationToken: Token).ToListAsync(Token);
                 var receives = msgs.Cast<Udp.Received>();
                 receives.Sum(r => r.Data.Count).Should().Be(data.Count * batchSize);
             }
             
             // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
             server.Tell(Udp.Unbind.Instance, serverProbe);
-            await serverProbe.ExpectMsgAsync<Udp.Unbound>();
+            await serverProbe.ExpectMsgAsync<Udp.Unbound>(cancellationToken: Token);
             client.Tell(Udp.Unbind.Instance, clientProbe);
-            await clientProbe.ExpectMsgAsync<Udp.Unbound>();
+            await clientProbe.ExpectMsgAsync<Udp.Unbound>(cancellationToken: Token);
             
             // wait for all SocketAsyncEventArgs to be released
-            await Task.Delay(1000, Token);
+            await Task.Delay(1000, cancellationToken: Token);
             
             poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
             poolInfo.Type.Should().Be(typeof(DirectBufferPool));
@@ -263,17 +263,17 @@ namespace Akka.Tests.IO
                 for (int i = 0; i < batchSize; i++) 
                     sender.Tell(Udp.Send.Create(data, serverLocalEndpoint));
 
-                var msgs = await serverProbe.ReceiveNAsync(batchSize, 10.Seconds())
-                    .Cast<Udp.Received>().ToListAsync();
+                var msgs = await serverProbe.ReceiveNAsync(batchSize, 10.Seconds(), cancellationToken: Token)
+                    .Cast<Udp.Received>().ToListAsync(Token);
                 msgs.Sum(r => r.Data.Count).Should().Be(data.Count * batchSize);
             }
             
             // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
             server.Tell(Udp.Unbind.Instance, serverProbe);
-            await serverProbe.ExpectMsgAsync<Udp.Unbound>();
+            await serverProbe.ExpectMsgAsync<Udp.Unbound>(cancellationToken: Token);
             
             // wait for all SocketAsyncEventArgs to be released
-            await Task.Delay(1000, Token);
+            await Task.Delay(1000, cancellationToken: Token);
             
             poolInfo = udp.SocketEventArgsPool.BufferPoolInfo;
             poolInfo.Type.Should().Be(typeof(DirectBufferPool));
@@ -289,7 +289,7 @@ namespace Akka.Tests.IO
             commander.Send(
                 Udp.Instance.Apply(Sys).Manager, 
                 new Udp.Bind(TestActor, new IPEndPoint(IPAddress.Loopback, 0), options: new[] {assertOption}));
-            await commander.ExpectMsgAsync<Udp.Bound>();
+            await commander.ExpectMsgAsync<Udp.Bound>(cancellationToken: Token);
             Assert.Equal(1, assertOption.BeforeCalled);
         }
 
@@ -301,7 +301,7 @@ namespace Akka.Tests.IO
             commander.Send(
                 Udp.Instance.Apply(Sys).Manager,
                 new Udp.Bind(TestActor, new IPEndPoint(IPAddress.Loopback, 0), options: new[] { assertOption }));
-            await commander.ExpectMsgAsync<Udp.Bound>();
+            await commander.ExpectMsgAsync<Udp.Bound>(cancellationToken: Token);
             Assert.Equal(1, assertOption.AfterCalled);
         }
 
@@ -316,7 +316,7 @@ namespace Akka.Tests.IO
                     TestActor, 
                     new IPEndPoint(IPAddress.Loopback, 0), 
                     options: new[] { assertOption }));
-            await commander.ExpectMsgAsync<Udp.Bound>();
+            await commander.ExpectMsgAsync<Udp.Bound>(cancellationToken: Token);
             Assert.Equal(1, assertOption.OpenCalled);
         }
 

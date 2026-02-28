@@ -19,6 +19,8 @@ using Xunit;
 namespace Akka.Tests.Actor.Scheduler;
 
 public class BugFix7247Spec : AkkaSpec {
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
     public sealed class NoCellActorRef : MinimalActorRef
     {
         public NoCellActorRef(ActorPath path, TaskCompletionSource<object> firstMessage)
@@ -52,7 +54,7 @@ public class BugFix7247Spec : AkkaSpec {
         {
             var allRoutees = await router.Ask<Routees>(GetRoutees.Instance);
             allRoutees.Members.Count().ShouldBeGreaterThan(0);
-        });
+        }, cancellationToken: Token);
         
         // act
         var msg = "hit";

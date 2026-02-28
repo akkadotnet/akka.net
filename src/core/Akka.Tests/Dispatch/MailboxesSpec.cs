@@ -24,6 +24,7 @@ using FsCheck;
 using FsCheck.Xunit;
 using Xunit;
 using Config = Akka.Configuration.Config;
+using System.Threading;
 
 namespace Akka.Tests.Dispatch
 {
@@ -145,6 +146,8 @@ namespace Akka.Tests.Dispatch
 
     public class MailboxesSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+
         public MailboxesSpec() : base(GetConfig())
         {            
         }
@@ -204,7 +207,7 @@ stable-prio-mailbox{
             actor.SendSystemMessage(new Suspend());
 
             // wait until we can confirm that the mailbox is suspended before we begin sending messages
-            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
+            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()), cancellationToken: Token);
 
             actor.Tell(true);
             for (var i = 0; i < 30; i++)
@@ -222,15 +225,15 @@ stable-prio-mailbox{
             //resume mailbox, this prevents the mailbox from running to early
             //priority mailbox is best effort only
             
-            await ExpectMsgAsync("a");
-            await ExpectMsgAsync(true);
+            await ExpectMsgAsync("a", cancellationToken: Token);
+            await ExpectMsgAsync(true, cancellationToken: Token);
             for (var i = 0; i < 60; i++)
             {
-                await ExpectMsgAsync(1);
+                await ExpectMsgAsync(1, cancellationToken: Token);
             }
-            await ExpectMsgAsync(2.0);
+            await ExpectMsgAsync(2.0, cancellationToken: Token);
 
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3), cancellationToken: Token);
         }
 
         [Fact]
@@ -242,7 +245,7 @@ stable-prio-mailbox{
             actor.SendSystemMessage(new Suspend());
 
             // wait until we can confirm that the mailbox is suspended before we begin sending messages
-            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
+            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()), cancellationToken: Token);
 
             actor.Tell(true);
             for (var i = 0; i < 30; i++)
@@ -260,15 +263,15 @@ stable-prio-mailbox{
             //resume mailbox, this prevents the mailbox from running to early
             //priority mailbox is best effort only
 
-            await ExpectMsgAsync("a");
-            await ExpectMsgAsync(true);
+            await ExpectMsgAsync("a", cancellationToken: Token);
+            await ExpectMsgAsync(true, cancellationToken: Token);
             for (var i = 0; i < 60; i++)
             {
-                await ExpectMsgAsync(i);
+                await ExpectMsgAsync(i, cancellationToken: Token);
             }
-            await ExpectMsgAsync(2.0);
+            await ExpectMsgAsync(2.0, cancellationToken: Token);
 
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3), cancellationToken: Token);
         }
 
         [Fact]
@@ -279,7 +282,7 @@ stable-prio-mailbox{
             //pause mailbox until all messages have been told
             actor.SendSystemMessage(new Suspend());
 
-            await AwaitConditionAsync(()=> Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
+            await AwaitConditionAsync(()=> Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()), cancellationToken: Token);
             // creates 50 messages with values spanning from Int32.MinValue to Int32.MaxValue
             var values = new int[50];
             var increment = (int)(UInt32.MaxValue / values.Length);
@@ -301,12 +304,12 @@ stable-prio-mailbox{
             // expect the messages in the correct order
             foreach (var value in values)
             {
-                await ExpectMsgAsync(value);
-                await ExpectMsgAsync(value);
-                await ExpectMsgAsync(value);
+                await ExpectMsgAsync(value, cancellationToken: Token);
+                await ExpectMsgAsync(value, cancellationToken: Token);
+                await ExpectMsgAsync(value, cancellationToken: Token);
             }
 
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3), cancellationToken: Token);
         }
 
         [Fact]
@@ -317,7 +320,7 @@ stable-prio-mailbox{
             //pause mailbox until all messages have been told
             actor.SendSystemMessage(new Suspend());
 
-            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
+            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()), cancellationToken: Token);
 
             var values = new int[10];
             var increment = (int)(UInt32.MaxValue / values.Length);
@@ -347,9 +350,9 @@ stable-prio-mailbox{
                     await ExpectMsgAsync(value);
                     await ExpectMsgAsync(value);
                 }
-            }); 
+            }, cancellationToken: Token); 
 
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3), cancellationToken: Token);
         }
 
         [Fact]
@@ -360,7 +363,7 @@ stable-prio-mailbox{
             //pause mailbox until all messages have been told
             actor.SendSystemMessage(new Suspend());
 
-            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()));
+            await AwaitConditionAsync(() => Task.FromResult(((ActorRefWithCell)actor).Underlying is ActorCell actorCell && actorCell.Mailbox.IsSuspended()), cancellationToken: Token);
 
             var values = new int[10];
             var increment = (int)(UInt32.MaxValue / values.Length);
@@ -390,9 +393,9 @@ stable-prio-mailbox{
                     await ExpectMsgAsync(value);
                     await ExpectMsgAsync(value);
                 }
-            });
+            }, cancellationToken: Token);
 
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(0.3), cancellationToken: Token);
         }
     }
 }

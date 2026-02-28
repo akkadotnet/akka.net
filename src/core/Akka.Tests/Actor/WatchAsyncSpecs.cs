@@ -18,6 +18,8 @@ namespace Akka.Tests.Actor
 {
     public class WatchAsyncSpecs : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact(DisplayName = "WatchAsync should return true when actor is terminated")]
         public async Task WatchAsync_should_return_true_when_actor_is_terminated()
         {
@@ -41,7 +43,7 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf(BlackHoleActor.Props);
             Watch(actor);
             Sys.Stop(actor);
-            await ExpectTerminatedAsync(actor);
+            await ExpectTerminatedAsync(actor, cancellationToken: Token);
 
             // act
 

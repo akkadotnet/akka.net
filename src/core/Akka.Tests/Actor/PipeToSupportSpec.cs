@@ -14,11 +14,14 @@ using Akka.Event;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class PipeToSupportSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         private readonly TaskCompletionSource<string> _taskCompletionSource;
         private readonly Task<string> _task;
         private readonly Task _taskWithoutResult;
@@ -45,7 +48,7 @@ namespace Akka.Tests.Actor
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             task.PipeTo(TestActor);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            await ExpectMsgAsync("foo");
+            await ExpectMsgAsync("foo", cancellationToken: Token);
         }
 
         [Fact]
@@ -55,7 +58,7 @@ namespace Akka.Tests.Actor
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             task.PipeTo(TestActor);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            await ExpectMsgAsync("foo");
+            await ExpectMsgAsync("foo", cancellationToken: Token);
         }
 
         [Fact]
@@ -65,7 +68,7 @@ namespace Akka.Tests.Actor
             _task.PipeTo(TestActor);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("Hello");
-            await ExpectMsgAsync("Hello");
+            await ExpectMsgAsync("Hello", cancellationToken: Token);
         }
 
         [Fact]
@@ -75,7 +78,7 @@ namespace Akka.Tests.Actor
             _valueTask.PipeTo(TestActor);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("Hello");
-            await ExpectMsgAsync("Hello");
+            await ExpectMsgAsync("Hello", cancellationToken: Token);
         }
 
         [Fact]
@@ -85,7 +88,7 @@ namespace Akka.Tests.Actor
             _taskWithoutResult.PipeTo(TestActor);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("Hello");
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), cancellationToken: Token);
         }
 
         [Fact]
@@ -95,7 +98,7 @@ namespace Akka.Tests.Actor
             _valueTaskWithoutResult.PipeTo(TestActor);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("Hello");
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100), cancellationToken: Token);
         }
 
         [Fact]
@@ -108,8 +111,8 @@ namespace Akka.Tests.Actor
             _taskWithoutResult.PipeTo(TestActor);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetException(new Exception("Boom"));
-            await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom");
-            await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom");
+            await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom", cancellationToken: Token);
+            await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom", cancellationToken: Token);
         }
 
         [Fact]
@@ -122,8 +125,8 @@ namespace Akka.Tests.Actor
             _valueTaskWithoutResult.PipeTo(TestActor);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetException(new Exception("Boom"));
-            await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom");
-            await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom");
+            await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom", cancellationToken: Token);
+            await ExpectMsgAsync<Status.Failure>(x => x.Cause.Message == "Boom", cancellationToken: Token);
         }
 
         [Fact]
@@ -136,7 +139,7 @@ namespace Akka.Tests.Actor
             _taskWithoutResult.PipeTo(TestActor, success: () => "Hello");
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("World");
-            var pipeTo = await ReceiveNAsync(2, default).Cast<string>().ToListAsync();
+            var pipeTo = await ReceiveNAsync(2, RemainingOrDefault, cancellationToken: Token).Cast<string>().ToListAsync(Token);
             pipeTo.Should().Contain("Hello");
             pipeTo.Should().Contain("Hello World");
         }
@@ -151,7 +154,7 @@ namespace Akka.Tests.Actor
             _valueTaskWithoutResult.PipeTo(TestActor, success: () => "Hello");
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetResult("World");
-            var pipeTo = await ReceiveNAsync(2, default).Cast<string>().ToListAsync();
+            var pipeTo = await ReceiveNAsync(2, RemainingOrDefault, cancellationToken: Token).Cast<string>().ToListAsync(Token);
             pipeTo.Should().Contain("Hello");
             pipeTo.Should().Contain("Hello World");
         }
@@ -166,8 +169,8 @@ namespace Akka.Tests.Actor
             _taskWithoutResult.PipeTo(TestActor, failure: e => "Such a " + e.Message);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetException(new Exception("failure..."));
-            await ExpectMsgAsync("Such a failure...");
-            await ExpectMsgAsync("Such a failure...");
+            await ExpectMsgAsync("Such a failure...", cancellationToken: Token);
+            await ExpectMsgAsync("Such a failure...", cancellationToken: Token);
         }
 
         [Fact]
@@ -180,8 +183,8 @@ namespace Akka.Tests.Actor
             _valueTaskWithoutResult.PipeTo(TestActor, failure: e => "Such a " + e.Message);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             _taskCompletionSource.SetException(new Exception("failure..."));
-            await ExpectMsgAsync("Such a failure...");
-            await ExpectMsgAsync("Such a failure...");
+            await ExpectMsgAsync("Such a failure...", cancellationToken: Token);
+            await ExpectMsgAsync("Such a failure...", cancellationToken: Token);
         }
     }
 }

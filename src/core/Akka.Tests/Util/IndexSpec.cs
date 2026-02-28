@@ -14,11 +14,14 @@ using Akka.TestKit.Extensions;
 using Akka.Util;
 using Xunit;
 using FluentAssertions;
+using System.Threading;
 
 namespace Akka.Tests.Util
 {
     public class IndexSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         private Index<string, int> Empty => new();
 
         private Index<string, int> IndexWithValues
@@ -164,7 +167,7 @@ namespace Akka.Tests.Util
 
             var tasks = Enumerable.Repeat(randomTask(), nrOfTasks).Select(Task.Run);
 
-            (await Task.WhenAll(tasks.ToArray()).AwaitWithTimeout(GetTimeoutOrDefault(null))).Should().BeTrue();
+            (await Task.WhenAll(tasks.ToArray()).AwaitWithTimeout(GetTimeoutOrDefault(null), cancellationToken: Token)).Should().BeTrue();
         }
     }
 }

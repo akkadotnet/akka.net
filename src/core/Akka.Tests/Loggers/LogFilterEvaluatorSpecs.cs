@@ -15,6 +15,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Loggers;
 
@@ -24,6 +25,8 @@ namespace Akka.Tests.Loggers;
 // ReSharper disable once ClassNeverInstantiated.Global
 public class LogFilterEvaluatorSpecs
 {
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
     public class LogFilterSetupSpecs : AkkaSpec
     {
         // <CreateLoggerSetup>
@@ -93,10 +96,10 @@ public class LogFilterEvaluatorSpecs
             loggingAdapter2.Warning("baz");
             
             // expect only the last message to be received
-            ReceiveN(3);
+            ReceiveN(3, cancellationToken: Token);
             
             // check that the last message was the one that was allowed through
-            await AwaitAssertAsync(() => _logger.Events.Count.Should().Be(1));
+            await AwaitAssertAsync(() => _logger.Events.Count.Should().Be(1), cancellationToken: Token);
             var msg = _logger.Events[0];
             msg.Message.Should().Be("baz");
             msg.LogSource.Should().StartWith("Akka.Util.Test2");

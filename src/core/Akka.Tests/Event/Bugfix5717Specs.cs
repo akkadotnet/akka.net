@@ -10,11 +10,14 @@ using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Event
 {
     public class Bugfix5717Specs : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public Bugfix5717Specs(ITestOutputHelper output) : base(Config.Empty, output){}
         
         /// <summary>
@@ -34,14 +37,14 @@ namespace Akka.Tests.Event
             es.Subscribe(a2.Ref, typeof(string));
             es.Publish(tm1);
             es.Publish(tm2);
-            await a1.ExpectMsgAsync(tm1);
-            await a2.ExpectMsgAsync(tm1);
-            await a2.ExpectMsgAsync(tm2);
+            await a1.ExpectMsgAsync(tm1, cancellationToken: Token);
+            await a2.ExpectMsgAsync(tm1, cancellationToken: Token);
+            await a2.ExpectMsgAsync(tm2, cancellationToken: Token);
 
             // kill second test probe
             Watch(a2);
             Sys.Stop(a2);
-            await ExpectTerminatedAsync(a2);
+            await ExpectTerminatedAsync(a2, cancellationToken: Token);
 
             /*
              * It's possible that the `Terminate` message may not have been processed by the
@@ -59,7 +62,7 @@ namespace Akka.Tests.Event
                     es.Publish(tm2);
                     await a1.ExpectMsgAsync(tm1);
                 });
-            }, interval:TimeSpan.FromSeconds(250));
+            }, interval:TimeSpan.FromSeconds(250), cancellationToken: Token);
         }       
     }
 }

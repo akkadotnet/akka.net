@@ -10,9 +10,12 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor {
     public class HotSwapSpec : AkkaSpec {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
 
         [Fact]
         public async Task Must_be_able_to_become_in_its_constructor() 
@@ -20,7 +23,7 @@ namespace Akka.Tests.Actor {
             var a = Sys.ActorOf<ConstructorBecomer>();
 
             a.Tell("pigdog");
-            await ExpectMsgAsync("pigdog");
+            await ExpectMsgAsync("pigdog", cancellationToken: Token);
         }
 
         [Fact]
@@ -28,7 +31,7 @@ namespace Akka.Tests.Actor {
             var a = Sys.ActorOf<MultipleConstructorBecomer>();
 
             a.Tell("pigdog");
-            await ExpectMsgAsync("4:pigdog");
+            await ExpectMsgAsync("4:pigdog", cancellationToken: Token);
         }
 
         [Fact]
@@ -36,9 +39,9 @@ namespace Akka.Tests.Actor {
             var a = Sys.ActorOf<StackingConstructorBecomer>();
 
             a.Tell("pigdog");
-            await ExpectMsgAsync("pigdog:pigdog");
+            await ExpectMsgAsync("pigdog:pigdog", cancellationToken: Token);
             a.Tell("badass");
-            await ExpectMsgAsync("badass:badass");
+            await ExpectMsgAsync("badass:badass", cancellationToken: Token);
         }
 
         [Fact]
@@ -49,10 +52,10 @@ namespace Akka.Tests.Actor {
             a.Tell("pigdog");
             a.Tell("pigdog");
             a.Tell("pigdog");
-            await ExpectMsgAsync("4:pigdog");
-            await ExpectMsgAsync("3:pigdog");
-            await ExpectMsgAsync("2:pigdog");
-            await ExpectMsgAsync("1:pigdog");
+            await ExpectMsgAsync("4:pigdog", cancellationToken: Token);
+            await ExpectMsgAsync("3:pigdog", cancellationToken: Token);
+            await ExpectMsgAsync("2:pigdog", cancellationToken: Token);
+            await ExpectMsgAsync("1:pigdog", cancellationToken: Token);
         }
 
         [Fact]
@@ -61,10 +64,10 @@ namespace Akka.Tests.Actor {
             var a = Sys.ActorOf<HotSwapWithBecome>();
 
             a.Tell("init");
-            await ExpectMsgAsync("init");
+            await ExpectMsgAsync("init", cancellationToken: Token);
             a.Tell("swap");
             a.Tell("swapped");
-            await ExpectMsgAsync("swapped");
+            await ExpectMsgAsync("swapped", cancellationToken: Token);
         }
 
         [Fact]
@@ -72,14 +75,14 @@ namespace Akka.Tests.Actor {
             var a = Sys.ActorOf<HotSwapRevertUnBecome>();
 
             a.Tell("init");
-            await ExpectMsgAsync("init");
+            await ExpectMsgAsync("init", cancellationToken: Token);
             a.Tell("swap");
             a.Tell("swapped");
-            await ExpectMsgAsync("swapped");
+            await ExpectMsgAsync("swapped", cancellationToken: Token);
 
             a.Tell("revert");
             a.Tell("init");
-            await ExpectMsgAsync("init");
+            await ExpectMsgAsync("init", cancellationToken: Token);
         }
 
         [Fact]
@@ -87,22 +90,22 @@ namespace Akka.Tests.Actor {
             var a = Sys.ActorOf<RevertToInitialState>();
 
             a.Tell("state");
-            await ExpectMsgAsync("0");
+            await ExpectMsgAsync("0", cancellationToken: Token);
 
             a.Tell("swap");
-            await ExpectMsgAsync("swapped");
+            await ExpectMsgAsync("swapped", cancellationToken: Token);
 
             a.Tell("state");
-            await ExpectMsgAsync("1");
+            await ExpectMsgAsync("1", cancellationToken: Token);
 
             await EventFilter.Exception<Exception>("Crash (expected)!").ExpectAsync(1, () =>
             {
                 a.Tell("crash");
                 return Task.CompletedTask;
-            });
+            }, cancellationToken: Token);
 
             a.Tell("state");
-            await ExpectMsgAsync("0");
+            await ExpectMsgAsync("0", cancellationToken: Token);
 
         }
 

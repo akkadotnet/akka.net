@@ -15,12 +15,15 @@ using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor;
 
 #nullable enable
 public class ActorLifeCycleFlowSpec : AkkaSpec
 {
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
     internal static class Msg
     {
         public enum CallTime
@@ -235,7 +238,7 @@ public class ActorLifeCycleFlowSpec : AkkaSpec
         await AssertActorStartFlow(1, _emptyTimers);
 
         testActor.Tell(new Msg.Crash("I crashed"));
-        await ExpectMsgAsync(new Msg.Crashed(1));
+        await ExpectMsgAsync(new Msg.Crashed(1), cancellationToken: Token);
         await AssertActorRestartFlow(1, _emptyTimers, _emptyTimers);
         
         testActor.Tell(new Msg.Stop());
@@ -250,17 +253,17 @@ public class ActorLifeCycleFlowSpec : AkkaSpec
 
         var startedKeys = new[] { new Msg.StartTimer(Msg.Methods.None, Msg.CallTime.Single) }.ToImmutableArray();
         testActor.Tell(startedKeys[0]);
-        await ExpectMsgAsync<Msg.TimerStarted>();
+        await ExpectMsgAsync<Msg.TimerStarted>(cancellationToken: Token);
         testActor.Tell(new Msg.GetTimers());
-        var timers = await ExpectMsgAsync<Msg.Timers>();
+        var timers = await ExpectMsgAsync<Msg.Timers>(cancellationToken: Token);
         timers.ActiveTimers.Length.Should().Be(1);
         
         testActor.Tell(new Msg.Crash("I crashed"));
-        await ExpectMsgAsync(new Msg.Crashed(1));
+        await ExpectMsgAsync(new Msg.Crashed(1), cancellationToken: Token);
         await AssertActorRestartFlow(1, startedKeys, _emptyTimers);
         
         testActor.Tell(new Msg.GetTimers());
-        timers = await ExpectMsgAsync<Msg.Timers>();
+        timers = await ExpectMsgAsync<Msg.Timers>(cancellationToken: Token);
         timers.ActiveTimers.Length.Should().Be(0);
         
         testActor.Tell(new Msg.Stop());
@@ -280,11 +283,11 @@ public class ActorLifeCycleFlowSpec : AkkaSpec
         await AssertActorStartFlow(1, timerKeys);
 
         testActor.Tell(new Msg.Crash("I crashed"));
-        await ExpectMsgAsync(new Msg.Crashed(1));
+        await ExpectMsgAsync(new Msg.Crashed(1), cancellationToken: Token);
         await AssertActorRestartFlow(1, _emptyTimers, timerKeys);
         
         testActor.Tell(new Msg.GetTimers());
-        var timers = await ExpectMsgAsync<Msg.Timers>();
+        var timers = await ExpectMsgAsync<Msg.Timers>(cancellationToken: Token);
         timers.ActiveTimers.Length.Should().Be(0);
         
         testActor.Tell(new Msg.Stop());
@@ -305,11 +308,11 @@ public class ActorLifeCycleFlowSpec : AkkaSpec
         await AssertActorStartFlow(1, timerKeys);
 
         testActor.Tell(new Msg.Crash("I crashed"));
-        await ExpectMsgAsync(new Msg.Crashed(1));
+        await ExpectMsgAsync(new Msg.Crashed(1), cancellationToken: Token);
         await AssertActorRestartFlow(1, _emptyTimers, timerKeys);
 
         testActor.Tell(new Msg.GetTimers());
-        var timers = await ExpectMsgAsync<Msg.Timers>();
+        var timers = await ExpectMsgAsync<Msg.Timers>(cancellationToken: Token);
         timers.ActiveTimers.Length.Should().Be(4);
         timers.ActiveTimers[0].Should().Be(new Msg.StartTimer(Msg.Methods.AroundPostRestart, Msg.CallTime.PreBase));
         timers.ActiveTimers[1].Should().Be(new Msg.StartTimer(Msg.Methods.PostRestart, Msg.CallTime.PreBase));

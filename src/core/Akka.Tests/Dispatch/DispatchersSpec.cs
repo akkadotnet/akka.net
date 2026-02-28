@@ -13,11 +13,14 @@ using Akka.Dispatch;
 using Akka.Routing;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Dispatch
 {
     public class DispatchersSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
 
         #region Test Config
         public static Config DispatcherConfiguration
@@ -128,7 +131,7 @@ namespace Akka.Tests.Dispatch
                 var expected = "myapp.mydispatcher";
                 var actual = await ExpectMsgAsync<string>(TimeSpan.FromMilliseconds(50));
                 actual.ShouldBe(expected);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -142,7 +145,7 @@ namespace Akka.Tests.Dispatch
                 var expected = "myapp.mydispatcher";
                 var actual = await ExpectMsgAsync<string>(TimeSpan.FromMilliseconds(50));
                 actual.ShouldBe(expected);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -156,7 +159,7 @@ namespace Akka.Tests.Dispatch
                 var expected = "myapp.my-fork-join-dispatcher";
                 var actual = await ExpectMsgAsync<string>(TimeSpan.FromMilliseconds(200));
                 actual.ShouldBe(expected);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -171,7 +174,7 @@ namespace Akka.Tests.Dispatch
                 var expected = "akka.actor.deployment./pool1.pool-dispatcher";
                 var actual = await ExpectMsgAsync<string>(TimeSpan.FromMilliseconds(50));
                 actual.ShouldBe(expected);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]

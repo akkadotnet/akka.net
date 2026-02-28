@@ -119,7 +119,7 @@ namespace Akka.Tests.Routing
 
             routedActor.Tell(new Broadcast(new Stop(1)));
             shutdownLatch.Ready(TestKitSettings.DefaultTimeout);
-            var res = await routedActor.Ask<int>(0, TimeSpan.FromSeconds(10), Token);
+            var res = await routedActor.Ask<int>(0, TimeSpan.FromSeconds(10), cancellationToken: Token);
             res.Should().Be(14);
         }
 
@@ -129,7 +129,7 @@ namespace Akka.Tests.Routing
             var probe = CreateTestProbe();
             var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedPool(0, TimeSpan.FromSeconds(5)).Props(Props.Empty));
             routedActor.Tell("hello", probe.Ref);
-            var message = await probe.ExpectMsgAsync<Status.Failure>(2.Seconds());
+            var message = await probe.ExpectMsgAsync<Status.Failure>(2.Seconds(), cancellationToken: Token);
             message.Should().NotBeNull();
             message.Cause.Should().BeOfType<AskTimeoutException>();
         }
@@ -146,8 +146,8 @@ namespace Akka.Tests.Routing
 
             routedActor.Tell(0);
 
-            await ExpectMsgAsync<int>();
-            await ExpectNoMsgAsync();
+            await ExpectMsgAsync<int>(cancellationToken: Token);
+            await ExpectNoMsgAsync(cancellationToken: Token);
         }
 
         // Resolved https://github.com/akkadotnet/akka.net/issues/1718
@@ -159,7 +159,7 @@ namespace Akka.Tests.Routing
             var paths = new List<string> { actor1.Path.ToString() };
             var routedActor = Sys.ActorOf(new ScatterGatherFirstCompletedGroup(paths, TimeSpan.FromSeconds(3)).Props());
 
-            var exception = await routedActor.Ask<Status.Failure>(0, TimeSpan.FromSeconds(5), Token);
+            var exception = await routedActor.Ask<Status.Failure>(0, TimeSpan.FromSeconds(5), cancellationToken: Token);
             exception.Should().NotBeNull();
             exception.Cause.Should().BeOfType<AskTimeoutException>();
         }

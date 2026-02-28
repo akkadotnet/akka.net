@@ -10,11 +10,14 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Serialization;
 
 public class SerializeAllMessagesSpec : AkkaSpec
 {
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
     public SerializeAllMessagesSpec(ITestOutputHelper output) : base("akka.actor.serialize-messages = on", output)
     {
     }
@@ -69,6 +72,6 @@ public class SerializeAllMessagesSpec : AkkaSpec
             // Act
             myActor.Tell(wrappedMessage);
             await myProbe.ExpectMsgAsync("worked");
-        });
+        }, cancellationToken: Token);
     }
 }

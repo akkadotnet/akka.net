@@ -126,7 +126,7 @@ namespace Akka.Tests.Actor
         public async Task Can_Ask_actor()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            var res = await actor.Ask<string>("answer", Token);
+            var res = await actor.Ask<string>("answer", cancellationToken: Token);
             res.ShouldBe("answer");
         }
 
@@ -134,7 +134,7 @@ namespace Akka.Tests.Actor
         public async Task Can_Ask_actor_with_timeout()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            var res = await actor.Ask<string>("answer", TimeSpan.FromSeconds(10), Token);
+            var res = await actor.Ask<string>("answer", TimeSpan.FromSeconds(10), cancellationToken: Token);
             res.ShouldBe("answer");
         }
 
@@ -142,7 +142,7 @@ namespace Akka.Tests.Actor
         public async Task Can_get_timeout_when_asking_actor()
         {
             var actor = Sys.ActorOf<SomeActor>();
-            await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("timeout", TimeSpan.FromSeconds(3), Token));
+            await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("timeout", TimeSpan.FromSeconds(3), cancellationToken: Token));
         }
 
         [Fact]
@@ -150,10 +150,10 @@ namespace Akka.Tests.Actor
         {
             var actor = Sys.ActorOf<SomeActor>();            
             
-            await EventFilter.DeadLetter<object>().ExpectOneAsync(TimeSpan.FromSeconds(5), async () => 
+            await EventFilter.DeadLetter<object>().ExpectOneAsync(TimeSpan.FromSeconds(5), async () =>
             {
-                await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("delay", TimeSpan.FromSeconds(1), Token));
-            });
+                await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("delay", TimeSpan.FromSeconds(1), cancellationToken: Token));
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -165,7 +165,7 @@ namespace Akka.Tests.Actor
             {
                 var result = await actor.Ask<string>("many", TimeSpan.FromSeconds(1));
                 result.ShouldBe("answer1");
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -177,7 +177,7 @@ namespace Akka.Tests.Actor
             {
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
                     await Assert.ThrowsAsync<TaskCanceledException>(async () => await actor.Ask<string>("delay", Timeout.InfiniteTimeSpan, cts.Token));
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -187,8 +187,8 @@ namespace Akka.Tests.Actor
 
             await EventFilter.DeadLetter<object>().ExpectOne(async () =>
             {
-                await Assert.ThrowsAsync<ArgumentException>(async () => await actor.Ask<string>("invalid", TimeSpan.FromSeconds(1), Token));
-            });
+                await Assert.ThrowsAsync<ArgumentException>(async () => await actor.Ask<string>("invalid", TimeSpan.FromSeconds(1), cancellationToken: Token));
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -196,7 +196,7 @@ namespace Akka.Tests.Actor
         {
             var actor = Sys.ActorOf<SomeActor>();
 
-            await Assert.ThrowsAsync<InvalidOperationException>(async () => await actor.Ask<ISystemMessage>("system", TimeSpan.FromSeconds(1), Token));
+            await Assert.ThrowsAsync<InvalidOperationException>(async () => await actor.Ask<ISystemMessage>("system", TimeSpan.FromSeconds(1), cancellationToken: Token));
         }
 
         [Fact]
@@ -215,7 +215,7 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf<SomeActor>();
             try
             {
-                await actor.Ask<string>("timeout", Token);
+                await actor.Ask<string>("timeout", cancellationToken: Token);
                 Assert.Fail("the ask should have timed out with default timeout");
             }
             catch (AskTimeoutException e)
@@ -254,7 +254,7 @@ namespace Akka.Tests.Actor
         {
             var actor = Sys.ActorOf<SomeActor>();
 
-            await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("timeout", Token));
+            await Assert.ThrowsAsync<AskTimeoutException>(async () => await actor.Ask<string>("timeout", cancellationToken: Token));
 
             await Are_Temp_Actors_Removed(actor);
         }
@@ -265,7 +265,7 @@ namespace Akka.Tests.Actor
             var actor = Sys.ActorOf<SomeActor>();
 
             // expect int, but in fact string
-            await Assert.ThrowsAsync<ArgumentException>(async () => await actor.Ask<int>("answer", Token));
+            await Assert.ThrowsAsync<ArgumentException>(async () => await actor.Ask<int>("answer", cancellationToken: Token));
         }
         
         /// <summary>
@@ -280,7 +280,7 @@ namespace Akka.Tests.Actor
             }));
 
             // expect a string, but the answer should be `null`
-            var resp = await actor.Ask<string>(1, Token);
+            var resp = await actor.Ask<string>(1, cancellationToken: Token);
             resp.Should().BeNullOrEmpty();
         }
 
@@ -297,10 +297,10 @@ namespace Akka.Tests.Actor
                 context.Sender.Tell(new Status.Failure(new Exception(textExceptionMessage)));
             }));
 
-            var ex = await Assert.ThrowsAsync<Exception>(async () => await actor.Ask("answer", Token));
+            var ex = await Assert.ThrowsAsync<Exception>(async () => await actor.Ask("answer", cancellationToken: Token));
             ex.Message.ShouldBe(textExceptionMessage);
 
-            ex = await Assert.ThrowsAsync<Exception>(async () => await actor.Ask<object>("answer", Token));
+            ex = await Assert.ThrowsAsync<Exception>(async () => await actor.Ask<object>("answer", cancellationToken: Token));
             ex.Message.ShouldBe(textExceptionMessage);
         }
 
@@ -317,10 +317,10 @@ namespace Akka.Tests.Actor
                 context.Sender.Tell(new Status.Failure(new Exception(textExceptionMessage)));
             }));
 
-            var failure = await actor.Ask<Status.Failure>("answer", Token);
+            var failure = await actor.Ask<Status.Failure>("answer", cancellationToken: Token);
             failure.Cause.Message.ShouldBe(textExceptionMessage);
 
-            var status = await actor.Ask<Status>("answer", Token);
+            var status = await actor.Ask<Status>("answer", cancellationToken: Token);
             Assert.IsType<Status.Failure>(status);
             ((Status.Failure)status).Cause.Message.ShouldBe(textExceptionMessage);
         }
@@ -363,7 +363,7 @@ namespace Akka.Tests.Actor
             var replyActor = Sys.ActorOf<ReplyActor>();
             var waitActor = Sys.ActorOf(Props.Create(() => new WaitActor(replyActor, TestActor)));
             waitActor.Tell("ask");
-            await ExpectMsgAsync("bar");
+            await ExpectMsgAsync("bar", cancellationToken: Token);
         }
     }
 }

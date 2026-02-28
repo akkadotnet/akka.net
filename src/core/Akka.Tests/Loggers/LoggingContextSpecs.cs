@@ -1,4 +1,4 @@
-// <copyright file="LoggingContextSpecs.cs" company="Akka.NET Project">
+﻿// <copyright file="LoggingContextSpecs.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -11,11 +11,14 @@ using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Loggers
 {
     public class LoggingContextSpecs : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         private static readonly Config SpecConfig = ConfigurationFactory.ParseString(@"
             akka.loglevel = INFO
             akka.stdout-loglevel = OFF
@@ -55,7 +58,7 @@ namespace Akka.Tests.Loggers
 
             contextLog.Info("Processing {RequestId}", 123);
 
-            var logEvent = ExpectMsg<Info>(e => e.Message.ToString().Contains("Processing"));
+            var logEvent = ExpectMsg<Info>(e => e.Message.ToString().Contains("Processing"), cancellationToken: Token);
 
             logEvent.LogSource.Should().StartWith("context-spec");
             logEvent.TryGetProperties(out var properties).Should().BeTrue();
@@ -78,13 +81,13 @@ namespace Akka.Tests.Loggers
             using (var scope = log.BeginScope("Tenant", "foo"))
             {
                 scope.Log.Info("Scoped {Id}", 1);
-                var scopedEvent = ExpectMsg<Info>(e => e.Message.ToString().Contains("Scoped"));
+                var scopedEvent = ExpectMsg<Info>(e => e.Message.ToString().Contains("Scoped"), cancellationToken: Token);
                 scopedEvent.TryGetProperties(out var scopedProperties).Should().BeTrue();
                 scopedProperties.Should().ContainEquivalentOf(new KeyValuePair<string, object>("Tenant", "foo"));
             }
 
             log.Info("Outside {Id}", 2);
-            var outsideEvent = ExpectMsg<Info>(e => e.Message.ToString().Contains("Outside"));
+            var outsideEvent = ExpectMsg<Info>(e => e.Message.ToString().Contains("Outside"), cancellationToken: Token);
             outsideEvent.TryGetProperties(out var outsideProperties).Should().BeTrue();
             outsideProperties.Any(p => p.Key == "Tenant").Should().BeFalse();
         }

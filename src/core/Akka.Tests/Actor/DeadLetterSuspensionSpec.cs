@@ -87,34 +87,34 @@ namespace Akka.Tests.Actor
         {
             await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(1))
-                .ExpectAsync(1, () => { _deadActor.Tell(1); return Task.CompletedTask; });
+                .ExpectAsync(1, () => { _deadActor.Tell(1); return Task.CompletedTask; }, cancellationToken: Token);
 
             await EventFilter
                 .Info(start: ExpectedDroppedLogMessage(2))
-                .ExpectAsync(1, () => { _droppingActor.Tell(2); return Task.CompletedTask; });
+                .ExpectAsync(1, () => { _droppingActor.Tell(2); return Task.CompletedTask; }, cancellationToken: Token);
 
             await EventFilter
                 .Info(start: ExpectedUnhandledLogMessage(3))
-                .ExpectAsync(1, () => { _unhandledActor.Tell(3); return Task.CompletedTask; });
+                .ExpectAsync(1, () => { _unhandledActor.Tell(3); return Task.CompletedTask; }, cancellationToken: Token);
 
             await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(4) + ", no more dead letters will be logged in next")
-                .ExpectAsync(1, () => { _deadActor.Tell(4); return Task.CompletedTask; });
+                .ExpectAsync(1, () => { _deadActor.Tell(4); return Task.CompletedTask; }, cancellationToken: Token);
             _deadActor.Tell(5);
             _droppingActor.Tell(6);
 
             // let suspend-duration elapse
-            await Task.Delay(2050, Token);
+            await Task.Delay(2050, cancellationToken: Token);
 
             // re-enabled
             await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(7) + ", of which 2 were not logged")
-                .ExpectAsync(1, () => { _deadActor.Tell(7); return Task.CompletedTask; });
+                .ExpectAsync(1, () => { _deadActor.Tell(7); return Task.CompletedTask; }, cancellationToken: Token);
 
             // reset count
             await EventFilter
                 .Info(start: ExpectedDeadLettersLogMessage(1))
-                .ExpectAsync(1, () => { _deadActor.Tell(8); return Task.CompletedTask; });
+                .ExpectAsync(1, () => { _deadActor.Tell(8); return Task.CompletedTask; }, cancellationToken: Token);
         }
     }
 }

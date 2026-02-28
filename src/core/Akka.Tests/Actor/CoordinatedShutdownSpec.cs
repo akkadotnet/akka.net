@@ -212,8 +212,8 @@ namespace Akka.Tests.Actor
                 return TaskEx.Completed;
             });
 
-            await co.Run(CoordinatedShutdown.UnknownReason.Instance).AwaitWithTimeout(RemainingOrDefault);
-            (await ReceiveNAsync(4, default).ToListAsync()).Should().Equal(new object[] { "A", "B", "B", "C" });
+            await co.Run(CoordinatedShutdown.UnknownReason.Instance).AwaitWithTimeout(RemainingOrDefault, cancellationToken: Token);
+            (await ReceiveNAsync(4, RemainingOrDefault, cancellationToken: Token).ToListAsync(Token)).Should().Equal(new object[] { "A", "B", "B", "C" });
         }
 
         [Fact]
@@ -245,8 +245,8 @@ namespace Akka.Tests.Actor
                 return TaskEx.Completed;
             });
 
-            await co.Run(customReason, "b").AwaitWithTimeout(RemainingOrDefault);
-            (await ReceiveNAsync(2, default).ToListAsync()).Should().Equal(new object[] { "B", "C" });
+            await co.Run(customReason, "b").AwaitWithTimeout(RemainingOrDefault, cancellationToken: Token);
+            (await ReceiveNAsync(2, RemainingOrDefault, cancellationToken: Token).ToListAsync(Token)).Should().Equal(new object[] { "B", "C" });
             co.ShutdownReason.Should().BeEquivalentTo(customReason);
         }
 
@@ -266,12 +266,12 @@ namespace Akka.Tests.Actor
             });
 
             co.ShutdownReason.Should().BeNull();
-            await co.Run(customReason).AwaitWithTimeout(RemainingOrDefault);
+            await co.Run(customReason).AwaitWithTimeout(RemainingOrDefault, cancellationToken: Token);
             co.ShutdownReason.Should().BeEquivalentTo(customReason);
-            await ExpectMsgAsync("A");
-            await co.Run(CoordinatedShutdown.UnknownReason.Instance).AwaitWithTimeout(RemainingOrDefault);
+            await ExpectMsgAsync("A", cancellationToken: Token);
+            await co.Run(CoordinatedShutdown.UnknownReason.Instance).AwaitWithTimeout(RemainingOrDefault, cancellationToken: Token);
             TestActor.Tell("done");
-            await ExpectMsgAsync("done"); // no additional A
+            await ExpectMsgAsync("done", cancellationToken: Token); // no additional A
             co.ShutdownReason.Should().BeEquivalentTo(customReason);
         }
 
@@ -311,11 +311,11 @@ namespace Akka.Tests.Actor
                 return TaskEx.Completed;
             });
 
-            await co.Run(CoordinatedShutdown.UnknownReason.Instance).AwaitWithTimeout(RemainingOrDefault);
-            await ExpectMsgAsync("A");
-            await ExpectMsgAsync("A");
-            await ExpectMsgAsync("B");
-            await ExpectMsgAsync("C");
+            await co.Run(CoordinatedShutdown.UnknownReason.Instance).AwaitWithTimeout(RemainingOrDefault, cancellationToken: Token);
+            await ExpectMsgAsync("A", cancellationToken: Token);
+            await ExpectMsgAsync("A", cancellationToken: Token);
+            await ExpectMsgAsync("B", cancellationToken: Token);
+            await ExpectMsgAsync("C", cancellationToken: Token);
         }
 
         [Fact]
@@ -341,9 +341,9 @@ namespace Akka.Tests.Actor
             });
 
             var task = co.Run(CoordinatedShutdown.UnknownReason.Instance);
-            await ExpectMsgAsync("B");
-            await Assert.ThrowsAsync<TimeoutException>(async() => await task.AwaitWithTimeout(RemainingOrDefault));
-            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200)); // C not run
+            await ExpectMsgAsync("B", cancellationToken: Token);
+            await Assert.ThrowsAsync<TimeoutException>(async() => await task.AwaitWithTimeout(RemainingOrDefault, cancellationToken: Token));
+            await ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200), cancellationToken: Token); // C not run
         }
 
         [Fact]
@@ -367,9 +367,9 @@ namespace Akka.Tests.Actor
                 return TaskEx.Completed;
             });
 
-            await co.Run(CoordinatedShutdown.UnknownReason.Instance).AwaitWithTimeout(RemainingOrDefault);
-            await ExpectMsgAsync("A");
-            await ExpectMsgAsync("B");
+            await co.Run(CoordinatedShutdown.UnknownReason.Instance).AwaitWithTimeout(RemainingOrDefault, cancellationToken: Token);
+            await ExpectMsgAsync("A", cancellationToken: Token);
+            await ExpectMsgAsync("B", cancellationToken: Token);
         }
 
         [Fact]
@@ -400,7 +400,7 @@ namespace Akka.Tests.Actor
         public async Task CoordinatedShutdown_must_terminate_ActorSystem()
         {
             (await CoordinatedShutdown.Get(Sys).Run(customReason)
-                .AwaitWithTimeout(TimeSpan.FromSeconds(10), Token)).Should().BeTrue();
+                .AwaitWithTimeout(TimeSpan.FromSeconds(10), cancellationToken: Token)).Should().BeTrue();
 
             Sys.WhenTerminated.IsCompleted.Should().BeTrue();
             CoordinatedShutdown.Get(Sys).ShutdownReason.Should().BeEquivalentTo(customReason);

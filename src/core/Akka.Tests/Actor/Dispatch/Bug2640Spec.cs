@@ -25,6 +25,8 @@ namespace Akka.Tests.Actor.Dispatch
     /// </summary>
     public class Bug2640Spec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public Bug2640Spec(ITestOutputHelper helper) : base(DispatcherConfig, helper)
         {
         }
@@ -75,17 +77,17 @@ namespace Akka.Tests.Actor.Dispatch
                 .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
 
             Dictionary<int, Thread> threads = null;
-            Watch(actor);
+            await WatchAsync(actor);
             for (var i = 0; i < 100; i++)
                 actor.Tell(GetThread.Instance);
 
-            var objs = await ReceiveNAsync(100, default).ToListAsync();
+            var objs = await ReceiveNAsync(100, RemainingOrDefault, cancellationToken: Token).ToListAsync(Token);
             threads = objs.Cast<Thread>().GroupBy(x => x.ManagedThreadId)
                 .ToDictionary(x => x.Key, grouping => grouping.First());
 
             await Sys.Terminate();
             await AwaitAssertAsync(() =>
-                threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
+                threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"), cancellationToken: Token);
         }
 
         [Fact(DisplayName = "ForkJoinExecutor should terminate all threads upon all attached actors shutting down")]
@@ -95,19 +97,19 @@ namespace Akka.Tests.Actor.Dispatch
                 .WithDispatcher("myapp.my-fork-join-dispatcher").WithRouter(new RoundRobinPool(4)));
 
             Dictionary<int, Thread> threads = null;
-            Watch(actor);
+            await WatchAsync(actor);
             for (var i = 0; i < 100; i++)
                 actor.Tell(GetThread.Instance);
 
-            var objs = await ReceiveNAsync(100, default).ToListAsync();
+            var objs = await ReceiveNAsync(100, RemainingOrDefault, cancellationToken: Token).ToListAsync(Token);
 
             threads = objs.Cast<Thread>().GroupBy(x => x.ManagedThreadId)
                 .ToDictionary(x => x.Key, grouping => grouping.First());
 
             Sys.Stop(actor);
-            await ExpectTerminatedAsync(actor);
+            await ExpectTerminatedAsync(actor, cancellationToken: Token);
             await AwaitAssertAsync(() =>
-                threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"));
+                threads.Values.All(x => x.IsAlive == false).Should().BeTrue("All threads should be stopped"), cancellationToken: Token);
         }
 
         [Fact(DisplayName = "PinnedDispatcher should terminate its thread upon actor shutdown")]
@@ -118,12 +120,12 @@ namespace Akka.Tests.Actor.Dispatch
 
             Watch(actor);
             actor.Tell(GetThread.Instance);
-            var thread = await ExpectMsgAsync<Thread>();
+            var thread = await ExpectMsgAsync<Thread>(cancellationToken: Token);
             thread.IsAlive.Should().BeTrue();
 
             Sys.Stop(actor);
-            await ExpectTerminatedAsync(actor);
-            await AwaitConditionAsync(() => Task.FromResult(!thread.IsAlive)); // wait for thread to terminate
+            await ExpectTerminatedAsync(actor, cancellationToken: Token);
+            await AwaitConditionAsync(() => Task.FromResult(!thread.IsAlive), cancellationToken: Token); // wait for thread to terminate
         }
     }
 }

@@ -11,11 +11,14 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class ActorProducerPipelineTests : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         #region internal test classes
 
         internal class TestException : Exception
@@ -136,7 +139,7 @@ namespace Akka.Tests.Actor
                 var ask = await actor.Ask<string[]>("plugins", TimeSpan.FromSeconds(1));
 
                 ask.ShouldOnlyContainInOrder("failing plugin", "working plugin");
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -160,8 +163,8 @@ namespace Akka.Tests.Actor
             var plugA = ActorOf<PlugActorA>();
             var plugB = ActorOf<PlugActorB>();
 
-            (await plugA.Ask<string[]>("plugins", TimeSpan.FromSeconds(3))).ShouldOnlyContainInOrder("working plugin", typeof(PlugActorA).ToString());
-            (await plugB.Ask<string[]>("plugins", TimeSpan.FromSeconds(3))).ShouldOnlyContainInOrder("working plugin", typeof(PlugActorB).ToString());
+            (await plugA.Ask<string[]>("plugins", TimeSpan.FromSeconds(3), cancellationToken: Token)).ShouldOnlyContainInOrder("working plugin", typeof(PlugActorA).ToString());
+            (await plugB.Ask<string[]>("plugins", TimeSpan.FromSeconds(3), cancellationToken: Token)).ShouldOnlyContainInOrder("working plugin", typeof(PlugActorB).ToString());
         }
 
         [Fact]
@@ -172,14 +175,14 @@ namespace Akka.Tests.Actor
             _resolver.Insert(1, new OrderedPlugin2()).ShouldBeTrue();
 
             var actor = ActorOf<PlugActor>();
-            (await actor.Ask<string[]>("plugins", TimeSpan.FromSeconds(3))).ShouldOnlyContainInOrder("plugin-1", "plugin-2", "plugin-3");
+            (await actor.Ask<string[]>("plugins", TimeSpan.FromSeconds(3), cancellationToken: Token)).ShouldOnlyContainInOrder("plugin-1", "plugin-2", "plugin-3");
         }
 
         [Fact]
         public async Task DefaultPipeline_should_apply_stashing_to_actors_implementing_it()
         {
             var actor = ActorOf<StashingActor>();
-            (await actor.Ask<string>(StashStatus.Instance, TimeSpan.FromSeconds(3))).ShouldBe("actor stash is initialized");
+            (await actor.Ask<string>(StashStatus.Instance, TimeSpan.FromSeconds(3), cancellationToken: Token)).ShouldBe("actor stash is initialized");
         }
 
         [Fact]
@@ -197,7 +200,7 @@ namespace Akka.Tests.Actor
                 // stop actor
                 actor.Tell(PoisonPill.Instance);
                 return Task.CompletedTask;
-            });
+            }, cancellationToken: Token);
         }
     }
 }

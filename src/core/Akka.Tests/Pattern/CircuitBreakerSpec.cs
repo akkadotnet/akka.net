@@ -23,6 +23,8 @@ namespace Akka.Tests.Pattern
 {
     public class ASynchronousCircuitBreakerThatIsClosed : CircuitBreakerSpecBase
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact(DisplayName = "A synchronous circuit breaker that is closed must allow calls through")]
         public void Must_allow_calls_through()
         {
@@ -86,11 +88,11 @@ namespace Akka.Tests.Pattern
             var breaker = ShortCallTimeoutCb();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             // meant to run as detached task
-            var t = Task.Run(() => breaker.Instance.WithSyncCircuitBreaker(() => Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)))));
-            await AwaitConditionAsync(() => t.Status >= TaskStatus.Running); // need to kick off the task before we can check the latch
+            var t = Task.Run(() => breaker.Instance.WithSyncCircuitBreaker(() => Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)))), cancellationToken: Token);
+            await AwaitConditionAsync(() => t.Status >= TaskStatus.Running, cancellationToken: Token); // need to kick off the task before we can check the latch
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             var epsilon = TimeSpan.FromMilliseconds(500); // need to pad timeouts due to non-determinism of OS scheduler
-            await AwaitConditionAsync(() => breaker.Instance.CurrentFailureCount == 1, TimeSpan.FromMilliseconds(900) + epsilon, TimeSpan.FromMilliseconds(100));
+            await AwaitConditionAsync(() => breaker.Instance.CurrentFailureCount == 1, TimeSpan.FromMilliseconds(900) + epsilon, TimeSpan.FromMilliseconds(100), cancellationToken: Token);
         }
     }
 
@@ -196,11 +198,13 @@ namespace Akka.Tests.Pattern
 
     public class AnAsynchronousCircuitBreakerThatIsClosed : CircuitBreakerSpecBase
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+
         [Fact(DisplayName = "An asynchronous circuit breaker that is closed must allow calls through")]
         public async Task Must_allow_calls_through()
         {
             var breaker = LongCallTimeoutCb();
-            var result = await breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)).WaitAsync(AwaitTimeout);
+            var result = await breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)).WaitAsync(AwaitTimeout, Token);
             Assert.Equal("hi", result);
         }
 
@@ -229,9 +233,9 @@ namespace Akka.Tests.Pattern
             var breaker = MultiFailureCb();
             await WaitForTaskToBeScheduled(breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)));
             await WaitForTaskToBeScheduled(Enumerable.Range(1, 4).Select(_ => breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct))).ToList());
-            await AwaitAssertAsync(() => breaker.Instance.CurrentFailureCount.ShouldBe(4), AwaitTimeout);
+            await AwaitAssertAsync(() => breaker.Instance.CurrentFailureCount.ShouldBe(4), AwaitTimeout, cancellationToken: Token);
             await WaitForTaskToBeScheduled(breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)));
-            await AwaitAssertAsync(() => breaker.Instance.CurrentFailureCount.ShouldBe(0), AwaitTimeout);
+            await AwaitAssertAsync(() => breaker.Instance.CurrentFailureCount.ShouldBe(0), AwaitTimeout, cancellationToken: Token);
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is closed must increment failure count on callTimeout")]
@@ -264,13 +268,15 @@ namespace Akka.Tests.Pattern
 
     public class AnAsynchronousCircuitBreakerThatIsHalfOpen : CircuitBreakerSpecBase
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+
         [Fact(DisplayName = "An asynchronous circuit breaker that is half open must pass through next call and close on success")]
         public async Task Must_pass_through_next_call_and_close_on_success()
         {
             var breaker = ShortResetTimeoutCb();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
             Assert.True(CheckLatch(breaker.HalfOpenLatch));
-            var result = await breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)).WaitAsync(AwaitTimeout);
+            var result = await breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)).WaitAsync(AwaitTimeout, Token);
             Assert.Equal("hi", result);
             Assert.True(CheckLatch(breaker.ClosedLatch));
         }
@@ -302,6 +308,8 @@ namespace Akka.Tests.Pattern
 
     public class AnAsynchronousCircuitBreakerThatIsOpen : CircuitBreakerSpecBase
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+
         [Fact(DisplayName = "An asynchronous circuit breaker that is open must throw exceptions when called before reset timeout")]
         public async Task Must_throw_exceptions_when_called_before_reset_timeout()
         {
@@ -333,7 +341,7 @@ namespace Akka.Tests.Pattern
                 () => breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct)));
             var shortRemainingDuration = e1.RemainingDuration;
 
-            await Task.Delay(Dilated(TimeSpan.FromMilliseconds(1000)));
+            await Task.Delay(Dilated(TimeSpan.FromMilliseconds(1000)), cancellationToken: Token);
             Assert.True(CheckLatch(breaker.HalfOpenLatch));
 
             // transit to open again

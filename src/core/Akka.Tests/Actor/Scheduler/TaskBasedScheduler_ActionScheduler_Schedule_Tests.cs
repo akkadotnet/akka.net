@@ -50,7 +50,7 @@ namespace Akka.Tests.Actor.Scheduler
                 scheduler.ScheduleRepeatedly(initialDelay, interval, () => receiver.Tell(""), cancelable);
 
                 //Expect to get a list from receiver after it has received three messages
-                var dateTimeOffsets = await ExpectMsgAsync<List<DateTimeOffset>>();
+                var dateTimeOffsets = await ExpectMsgAsync<List<DateTimeOffset>>(cancellationToken: Token);
                 dateTimeOffsets.ShouldHaveCount(3);
                 // CI machines can have significant timing variability due to CPU contention,
                 // virtualization overhead, and GC pauses. Use 30% tolerance to accommodate
@@ -92,9 +92,9 @@ namespace Akka.Tests.Actor.Scheduler
                 testScheduler.ScheduleRepeatedly(initialDelay, interval, () => TestActor.Tell("Test"));
 
                 //Just check that we receives more than one message
-                await ExpectMsgAsync("Test");
-                await ExpectMsgAsync("Test");
-                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test", cancellationToken: Token);
+                await ExpectMsgAsync("Test", cancellationToken: Token);
+                await ExpectMsgAsync("Test", cancellationToken: Token);
             }
             finally
             {
@@ -116,9 +116,9 @@ namespace Akka.Tests.Actor.Scheduler
                     TimeSpan.FromMilliseconds(interval), () => TestActor.Tell("Test"));
 
                 //Just check that we receives more than one message
-                await ExpectMsgAsync("Test");
-                await ExpectMsgAsync("Test");
-                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test", cancellationToken: Token);
+                await ExpectMsgAsync("Test", cancellationToken: Token);
+                await ExpectMsgAsync("Test", cancellationToken: Token);
             }
             finally
             {
@@ -138,10 +138,10 @@ namespace Akka.Tests.Actor.Scheduler
                 testScheduler.ScheduleOnce(50, () => TestActor.Tell("Test1"));
                 testScheduler.ScheduleOnce(100, () => TestActor.Tell("Test2"));
 
-                await ExpectMsgAsync("Test1");
-                await ExpectMsgAsync("Test2");
+                await ExpectMsgAsync("Test1", cancellationToken: Token);
+                await ExpectMsgAsync("Test2", cancellationToken: Token);
 
-                await ExpectNoMsgAsync(100);
+                await ExpectNoMsgAsync(100, cancellationToken: Token);
             }
             finally
             {
@@ -167,13 +167,13 @@ namespace Akka.Tests.Actor.Scheduler
                 }
 
                 //Perform the test
-                await ExpectMsgAsync("Test1");
-                await ExpectMsgAsync("Test1");
-                await ExpectMsgAsync("Test50");
-                await ExpectMsgAsync("Test50");
-                await ExpectMsgAsync("Test100");
-                await ExpectMsgAsync("Test100");
-                await ExpectNoMsgAsync(50);
+                await ExpectMsgAsync("Test1", cancellationToken: Token);
+                await ExpectMsgAsync("Test1", cancellationToken: Token);
+                await ExpectMsgAsync("Test50", cancellationToken: Token);
+                await ExpectMsgAsync("Test50", cancellationToken: Token);
+                await ExpectMsgAsync("Test100", cancellationToken: Token);
+                await ExpectMsgAsync("Test100", cancellationToken: Token);
+                await ExpectNoMsgAsync(50, cancellationToken: Token);
             }
             finally
             {
@@ -251,7 +251,7 @@ namespace Akka.Tests.Actor.Scheduler
                 manualResetEvent.IsSet.ShouldBeFalse();
                 testScheduler.ScheduleOnce(0, () => manualResetEvent.Set());
 
-                manualResetEvent.Wait(500, Token).ShouldBeTrue();
+                manualResetEvent.Wait(500, cancellationToken: Token).ShouldBeTrue();
             }
             finally
             {
@@ -270,7 +270,7 @@ namespace Akka.Tests.Actor.Scheduler
                 manualResetEvent.IsSet.ShouldBeFalse();
                 testScheduler.ScheduleRepeatedly(0, 100, () => manualResetEvent.Set());
 
-                manualResetEvent.Wait(500, Token).ShouldBeTrue();
+                manualResetEvent.Wait(500, cancellationToken: Token).ShouldBeTrue();
             }
             finally
             {
@@ -291,8 +291,8 @@ namespace Akka.Tests.Actor.Scheduler
                     Interlocked.Increment(ref timesCalled);
                     throw new Exception("Crash");
                 });
-                await AwaitConditionAsync(() => Task.FromResult(timesCalled >= 1), Token);
-                await Task.Delay(200, Token); //Allow any scheduled actions to be fired. 
+                await AwaitConditionAsync(() => Task.FromResult(timesCalled >= 1), cancellationToken: Token);
+                await Task.Delay(200, cancellationToken: Token); //Allow any scheduled actions to be fired. 
 
                 //We expect only one of the scheduled actions to actually fire
                 timesCalled.ShouldBe(1);

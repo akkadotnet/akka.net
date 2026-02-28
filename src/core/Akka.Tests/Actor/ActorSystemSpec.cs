@@ -82,7 +82,7 @@ namespace Akka.Tests.Actor
             {
                 system.Start();
                 return Task.CompletedTask;
-            }, Token);
+            }, cancellationToken: Token);
 
             await system.Terminate();
         }
@@ -104,7 +104,7 @@ namespace Akka.Tests.Actor
             {
                 system.Start();
                 return Task.CompletedTask;
-            }, Token);
+            }, cancellationToken: Token);
 
             await system.Terminate();
         }
@@ -143,7 +143,7 @@ namespace Akka.Tests.Actor
 
                     // Now send the message that should become a dead letter
                     a.Tell("boom");
-                }, Token);
+                }, cancellationToken: Token);
             }
             finally { Shutdown(sys); }
         }
@@ -154,8 +154,8 @@ namespace Akka.Tests.Actor
             var actorSystem = ActorSystem
                 .Create(Guid.NewGuid().ToString());
             var st = Stopwatch.StartNew();
-            var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1), Token).ContinueWith(_ => actorSystem.Terminate());
-            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(2), Token)).ShouldBeTrue();
+            var asyncShutdownTask = Task.Delay(TimeSpan.FromSeconds(1), cancellationToken: Token).ContinueWith(_ => actorSystem.Terminate());
+            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(2), cancellationToken: Token)).ShouldBeTrue();
             Assert.True(st.Elapsed.TotalSeconds >= .9);
         }
 
@@ -163,7 +163,7 @@ namespace Akka.Tests.Actor
         public async Task Given_a_system_that_isnt_going_to_shutdown_When_waiting_for_system_shutdown_Then_it_times_out()
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
-            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromMilliseconds(10), Token)).ShouldBeFalse();
+            (await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromMilliseconds(10), cancellationToken: Token)).ShouldBeFalse();
         }
 
         [Fact]
@@ -204,19 +204,19 @@ namespace Akka.Tests.Actor
 
             actorSystem.RegisterOnTermination(() =>
             {
-                Task.Delay(Dilated(TimeSpan.FromMilliseconds(50))).Wait(Token);
+                Task.Delay(Dilated(TimeSpan.FromMilliseconds(50))).Wait(cancellationToken: Token);
                 callbackWasRun = true;
             });
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            new TaskFactory().StartNew(() =>
+            new TaskFactory(cancellationToken: Token).StartNew(() =>
             {
-                Task.Delay(Dilated(TimeSpan.FromMilliseconds(200))).Wait(Token);
+                Task.Delay(Dilated(TimeSpan.FromMilliseconds(200))).Wait(cancellationToken: Token);
                 actorSystem.Terminate();
-            });
+            }, Token);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 
-            await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(5), Token);
+            await actorSystem.WhenTerminated.AwaitWithTimeout(TimeSpan.FromSeconds(5), cancellationToken: Token);
             Assert.True(callbackWasRun);
         }
 
@@ -225,7 +225,7 @@ namespace Akka.Tests.Actor
         {
             var actorSystem = ActorSystem.Create(Guid.NewGuid().ToString());
 
-            await actorSystem.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(10), Token);
+            await actorSystem.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(10), cancellationToken: Token);
             
             var ex = Assert.Throws<InvalidOperationException>(() => actorSystem.RegisterOnTermination(() => { }));
             Assert.Equal("ActorSystem already terminated.", ex.Message);
@@ -236,11 +236,11 @@ namespace Akka.Tests.Actor
         {
             var timeout = Dilated(TimeSpan.FromSeconds(20));
             var waves = Task.WhenAll(
-                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000, Token),
-                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000, Token),
-                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000, Token));
+                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000, cancellationToken: Token),
+                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000, cancellationToken: Token),
+                Sys.ActorOf(Props.Create<Wave>()).Ask<string>(50000, cancellationToken: Token));
 
-            await waves.AwaitWithTimeout(timeout.Duration() + TimeSpan.FromSeconds(5));
+            await waves.AwaitWithTimeout(timeout.Duration() + TimeSpan.FromSeconds(5), cancellationToken: Token);
 
             Assert.Equal(new[] { "done", "done", "done" }, await waves);
         }
@@ -249,7 +249,7 @@ namespace Akka.Tests.Actor
         public async Task Find_actors_that_just_have_been_created()
         {
             Sys.ActorOf(Props.Create(() => new FastActor(new TestLatch(), TestActor)).WithDispatcher("slow"));
-            Assert.Equal(typeof(LocalActorRef), await ExpectMsgAsync<Type>());
+            Assert.Equal(typeof(LocalActorRef), await ExpectMsgAsync<Type>(cancellationToken: Token));
         }
 
         [Fact()]
@@ -353,7 +353,7 @@ namespace Akka.Tests.Actor
 
             a.Tell("die");
 
-            var t = await probe.ExpectTerminatedAsync(a);
+            var t = await probe.ExpectTerminatedAsync(a, cancellationToken: Token);
 
             Assert.True(t.ExistenceConfirmed);
             Assert.False(t.AddressTerminated);
@@ -376,7 +376,7 @@ namespace Akka.Tests.Actor
 
             a.Tell("die");
 
-            Assert.True(system.WhenTerminated.Wait(1000, Token));
+            Assert.True(system.WhenTerminated.Wait(1000, cancellationToken: Token));
         }
     }
 

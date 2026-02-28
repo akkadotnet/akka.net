@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="TcpIntegrationSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -20,11 +20,14 @@ using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
 using Akka.Util;
+using System.Threading;
 
 namespace Akka.Tests.IO
 {
     public class TcpIntegrationSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public const int InternalConnectionActorMaxQueueSize = 10000;
         
         class Aye : Tcp.Event { public static readonly Aye Instance = new(); }
@@ -173,26 +176,26 @@ namespace Akka.Tests.IO
             var bindCommander = CreateTestProbe();
             bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(family == AddressFamily.InterNetwork ? IPAddress.Loopback 
                 : IPAddress.IPv6Loopback, 0)));
-            var boundMsg = await bindCommander.ExpectMsgAsync<Tcp.Bound>();
+            var boundMsg = await bindCommander.ExpectMsgAsync<Tcp.Bound>(cancellationToken: Token);
 
             // setup client to connect 
             var targetAddress = new DnsEndPoint("localhost", boundMsg.LocalAddress.AsInstanceOf<IPEndPoint>().Port);
             var clientHandler = CreateTestProbe();
             Sys.Tcp().Tell(new Tcp.Connect(targetAddress), clientHandler);
-            await clientHandler.ExpectMsgAsync<Tcp.Connected>(TimeSpan.FromSeconds(3));
+            await clientHandler.ExpectMsgAsync<Tcp.Connected>(TimeSpan.FromSeconds(3), cancellationToken: Token);
             var clientEp = clientHandler.Sender;
             clientEp.Tell(new Tcp.Register(clientHandler));
-            await serverHandler.ExpectMsgAsync<Tcp.Connected>();
+            await serverHandler.ExpectMsgAsync<Tcp.Connected>(cancellationToken: Token);
             serverHandler.Sender.Tell(new Tcp.Register(serverHandler));
 
             var str = Enumerable.Repeat("f", 567).Join("");
             var testData = ByteString.FromString(str);
             clientEp.Tell(Tcp.Write.Create(testData, Ack.Instance), clientHandler);
-            await clientHandler.ExpectMsgAsync<Ack>();
+            await clientHandler.ExpectMsgAsync<Ack>(cancellationToken: Token);
             var received = await serverHandler
-                .ReceiveWhileAsync(o => o as Tcp.Received, 
-                    RemainingOrDefault, 
-                    TimeSpan.FromSeconds(0.5)).ToListAsync();
+                .ReceiveWhileAsync(o => o as Tcp.Received,
+                    RemainingOrDefault,
+                    TimeSpan.FromSeconds(0.5), cancellationToken: Token).ToListAsync(Token);
 
             received.Sum(s => s.Data.Count).Should().Be(testData.Count);
         }
@@ -485,7 +488,7 @@ namespace Akka.Tests.IO
             var endpoint = new IPEndPoint(IPAddress.Parse("192.0.2.1"), 23825);
             connectCommander.Send(Sys.Tcp(), new Tcp.Connect(endpoint));
             // expecting CommandFailed or no reply (within timeout)
-            var replies = await connectCommander.ReceiveWhileAsync(TimeSpan.FromSeconds(1), x => x as Tcp.Connected).ToListAsync();
+            var replies = await connectCommander.ReceiveWhileAsync(TimeSpan.FromSeconds(1), x => x as Tcp.Connected, cancellationToken: Token).ToListAsync(Token);
             replies.Count.ShouldBe(0);
         }
 
@@ -497,7 +500,7 @@ namespace Akka.Tests.IO
             Sys.Tcp().Tell(new Tcp.Connect(endpoint), probe.Ref);
             
             // expecting CommandFailed or no reply (within timeout)
-            var replies = await probe.ReceiveWhileAsync(TimeSpan.FromSeconds(5), x => x as Tcp.CommandFailed).ToListAsync();
+            var replies = await probe.ReceiveWhileAsync(TimeSpan.FromSeconds(5), x => x as Tcp.CommandFailed, cancellationToken: Token).ToListAsync(Token);
             replies.Count.ShouldBe(1);
         }
 

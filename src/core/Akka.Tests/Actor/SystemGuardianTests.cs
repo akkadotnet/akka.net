@@ -11,11 +11,14 @@ using Akka.Dispatch.SysMsg;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class SystemGuardianTests : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         readonly IInternalActorRef _userGuardian;
         readonly IInternalActorRef _systemGuardian;
 
@@ -32,7 +35,7 @@ namespace Akka.Tests.Actor
             _systemGuardian.Tell(RegisterTerminationHook.Instance);
             _userGuardian.Tell(PoisonPill.Instance);
             
-            await ExpectMsgAsync<TerminationHook>();
+            await ExpectMsgAsync<TerminationHook>(cancellationToken: Token);
         }
 
         [Fact]
@@ -43,9 +46,9 @@ namespace Akka.Tests.Actor
             _systemGuardian.Tell(RegisterTerminationHook.Instance);
             _userGuardian.Tell(PoisonPill.Instance);
 
-            await ExpectMsgAsync<TerminationHook>();
+            await ExpectMsgAsync<TerminationHook>(cancellationToken: Token);
             _systemGuardian.Tell(TerminationHookDone.Instance);
-            await probe.ExpectTerminatedAsync(_systemGuardian);
+            await probe.ExpectTerminatedAsync(_systemGuardian, cancellationToken: Token);
         }
 
         [Fact]
@@ -60,7 +63,7 @@ namespace Akka.Tests.Actor
 
             _userGuardian.Tell(PoisonPill.Instance);
 
-            await guardianWatcher.ExpectTerminatedAsync(_systemGuardian);
+            await guardianWatcher.ExpectTerminatedAsync(_systemGuardian, cancellationToken: Token);
         }
     }
 }

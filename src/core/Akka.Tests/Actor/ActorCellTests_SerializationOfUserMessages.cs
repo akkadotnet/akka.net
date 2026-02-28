@@ -11,11 +11,14 @@ using Akka.Actor;
 using Akka.TestKit;
 using Akka.Tests.TestUtils;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class WhenSerializeAllMessagesIsOff : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public class SomeUserMessage : Comparable
         {
             public string A { get; set; }
@@ -39,7 +42,7 @@ namespace Akka.Tests.Actor
             };
             TestActor.Tell(message);
 
-            var result = await ExpectMsgAsync<SomeUserMessage>();
+            var result = await ExpectMsgAsync<SomeUserMessage>(cancellationToken: Token);
 
             Assert.False(Sys.Settings.SerializeAllMessages);
             Assert.Equal(message, result);
@@ -50,6 +53,8 @@ namespace Akka.Tests.Actor
 
     public class WhenSerializeAllMessagesIsOn : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
+
         public class SomeUserMessage : Comparable
         {
             public string A { get; set; }
@@ -72,7 +77,7 @@ namespace Akka.Tests.Actor
             };
             TestActor.Tell(message);
 
-            var result = await ExpectMsgAsync<SomeUserMessage>();
+            var result = await ExpectMsgAsync<SomeUserMessage>(cancellationToken: Token);
 
             Assert.True(Sys.Settings.SerializeAllMessages);
             Assert.Equal(message, result);

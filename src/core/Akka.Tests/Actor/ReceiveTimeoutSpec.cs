@@ -14,6 +14,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions.Extensions;
 using Xunit;
+using System.Threading;
 
 
 namespace Akka.Tests.Actor
@@ -21,9 +22,10 @@ namespace Akka.Tests.Actor
     public class Tick { }
 
     public class TransparentTick : INotInfluenceReceiveTimeout { }
-    
+
     public class ReceiveTimeoutSpec : AkkaSpec
     {
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public class TimeoutActor : ActorBase
         {
             private TestLatch _timeoutLatch;
@@ -281,11 +283,11 @@ namespace Akka.Tests.Actor
 
             //Stop and wait for the actor to terminate
             Sys.Stop(timeoutActor);
-            await ExpectTerminatedAsync(timeoutActor);
+            await ExpectTerminatedAsync(timeoutActor, cancellationToken: Token);
 
             //We should not get any messages now. If we get a message now, 
             //it's a DeadLetter with ReceiveTimeout, meaning the receivetimeout wasn't cancelled.
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
 
         [Fact]

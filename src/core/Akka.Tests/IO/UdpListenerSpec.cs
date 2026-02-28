@@ -16,11 +16,14 @@ using Xunit;
 using UdpListener = Akka.IO.UdpListener;
 using FluentAssertions;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace Akka.Tests.IO
 {
     public class UdpListenerSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public UdpListenerSpec(ITestOutputHelper output)
             : base(@"
                     akka.actor.serialize-creators = on
@@ -40,7 +43,7 @@ namespace Akka.Tests.IO
                 var endpoint = new IPEndPoint(IPAddress.Loopback, 12345);
                 var handler = Sys.ActorOf(Props.Create(() => new MockUdpHandler()));
                 Sys.Udp().Tell(new Udp.Bind(handler, endpoint), probe.Ref);
-                var bound = await probe.ExpectMsgAsync<Udp.Bound>();
+                var bound = await probe.ExpectMsgAsync<Udp.Bound>(cancellationToken: Token);
                 
                 bound.LocalAddress.Should().BeOfType<IPEndPoint>();
                 var boundEndpoint = (IPEndPoint)bound.LocalAddress;
@@ -64,7 +67,7 @@ namespace Akka.Tests.IO
                 var endpoint = new IPEndPoint(IPAddress.IPv6Loopback, 12345);
                 var handler = Sys.ActorOf(Props.Create(() => new MockUdpHandler()));
                 Sys.Udp().Tell(new Udp.Bind(handler, endpoint), probe.Ref);
-                var bound = await probe.ExpectMsgAsync<Udp.Bound>();
+                var bound = await probe.ExpectMsgAsync<Udp.Bound>(cancellationToken: Token);
                 
                 bound.LocalAddress.Should().BeOfType<IPEndPoint>();
                 var boundEndpoint = (IPEndPoint)bound.LocalAddress;

@@ -12,12 +12,15 @@ using Akka.TestKit;
 using Akka.TestKit.Xunit.Attributes;
 using Akka.Util.Internal;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor.Scheduler
 {
     // ReSharper disable once InconsistentNaming
     public class DefaultScheduler_ActionScheduler_Cancellation_Tests : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact]
         public async Task When_ScheduleOnce_using_canceled_Cancelable_Then_their_actions_should_not_be_invoked()
         {
@@ -30,7 +33,7 @@ namespace Akka.Tests.Actor.Scheduler
                 scheduler.ScheduleOnce(0, () => TestActor.Tell("Test"), canceled);
 
                 //Validate that no messages were sent
-                await ExpectNoMsgAsync(100);
+                await ExpectNoMsgAsync(100, cancellationToken: Token);
             }
             finally
             {
@@ -51,7 +54,7 @@ namespace Akka.Tests.Actor.Scheduler
                 scheduler.ScheduleRepeatedly(50, 100, () => TestActor.Tell("Test2"), canceled);
 
                 //Validate that no messages were sent
-                await ExpectNoMsgAsync(150);
+                await ExpectNoMsgAsync(150, cancellationToken: Token);
             }
             finally
             {
@@ -72,7 +75,7 @@ namespace Akka.Tests.Actor.Scheduler
                 cancelable.Cancel();
 
                 //Validate that no messages were sent
-                await ExpectNoMsgAsync(150);
+                await ExpectNoMsgAsync(150, cancellationToken: Token);
             }
             finally
             {
@@ -93,7 +96,7 @@ namespace Akka.Tests.Actor.Scheduler
                 cancelable.Cancel();
 
                 //Validate that no messages were sent
-                await ExpectNoMsgAsync(150);
+                await ExpectNoMsgAsync(150, cancellationToken: Token);
             }
             finally
             {
@@ -111,11 +114,11 @@ namespace Akka.Tests.Actor.Scheduler
             {
                 var cancelable = new Cancelable(scheduler);
                 scheduler.ScheduleRepeatedly(0, 150, () => TestActor.Tell("Test"), cancelable);
-                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test", cancellationToken: Token);
                 cancelable.Cancel();
 
                 //Validate that no more messages were sent
-                await ExpectNoMsgAsync(200);
+                await ExpectNoMsgAsync(200, cancellationToken: Token);
             }
             finally
             {

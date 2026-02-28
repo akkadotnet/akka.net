@@ -22,6 +22,8 @@ namespace Akka.Tests.Routing
 {
     public class TailChoppingSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         class TailChopTestActor : ReceiveActor
         {
             private readonly TimeSpan _sleepTime;
@@ -118,7 +120,7 @@ namespace Akka.Tests.Routing
             var routedActor = Sys.ActorOf(new TailChoppingGroup(paths, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(50)).Props());
 
             probe.Send(routedActor, "");
-            await probe.ExpectMsgAsync("ack");
+            await probe.ExpectMsgAsync("ack", cancellationToken: Token);
 
             var actorList = new List<IActorRef> { actor1, actor2 };
             OneOfShouldEqual(1, actorList)(x => (int)x.Ask("times").Result).Should().BeTrue();
@@ -138,7 +140,7 @@ namespace Akka.Tests.Routing
             var routedActor = Sys.ActorOf(new TailChoppingGroup(paths, TimeSpan.FromMilliseconds(300), TimeSpan.FromMilliseconds(50)).Props());
 
             probe.Send(routedActor, "");
-            var failure = await probe.ExpectMsgAsync<Status.Failure>();
+            var failure = await probe.ExpectMsgAsync<Status.Failure>(cancellationToken: Token);
             failure.Cause.Should().BeOfType<AskTimeoutException>();
 
             var actorList = new List<IActorRef> { actor1, actor2 };
@@ -158,7 +160,7 @@ namespace Akka.Tests.Routing
             var routedActor = Sys.ActorOf(new TailChoppingGroup(paths, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(100)).Props());
 
             probe.Send(routedActor, "");
-            await probe.ExpectMsgAsync("ack", 2.Seconds());
+            await probe.ExpectMsgAsync("ack", 2.Seconds(), cancellationToken: Token);
 
             routedActor.Tell(new Broadcast("stop"));
         }

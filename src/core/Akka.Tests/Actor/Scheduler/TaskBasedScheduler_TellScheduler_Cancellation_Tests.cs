@@ -11,12 +11,15 @@ using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor.Scheduler
 {
     // ReSharper disable once InconsistentNaming
     public class DefaultScheduler_TellScheduler_Cancellation_Tests : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact]
         public async Task When_ScheduleTellOnce_using_canceled_Cancelable_Then_their_actions_should_not_be_invoked()
         {
@@ -30,7 +33,7 @@ namespace Akka.Tests.Actor.Scheduler
                 scheduler.ScheduleTellOnce(1, TestActor, "Test", ActorRefs.NoSender, canceled);
 
                 //Validate that no messages were sent
-                await ExpectNoMsgAsync(100);
+                await ExpectNoMsgAsync(100, cancellationToken: Token);
             }
             finally
             {
@@ -51,7 +54,7 @@ namespace Akka.Tests.Actor.Scheduler
                 scheduler.ScheduleTellRepeatedly(1, 2, TestActor, "Test", ActorRefs.NoSender, canceled);
 
                 //Validate that no messages were sent
-                await ExpectNoMsgAsync(100);
+                await ExpectNoMsgAsync(100, cancellationToken: Token);
             }
             finally
             {
@@ -72,7 +75,7 @@ namespace Akka.Tests.Actor.Scheduler
                 cancelable.Cancel();
 
                 //Validate that no messages were sent
-                await ExpectNoMsgAsync(150);
+                await ExpectNoMsgAsync(150, cancellationToken: Token);
             }
             finally
             {
@@ -94,7 +97,7 @@ namespace Akka.Tests.Actor.Scheduler
                 cancelable.Cancel();
 
                 //Validate that no messages were sent
-                await ExpectNoMsgAsync(150);
+                await ExpectNoMsgAsync(150, cancellationToken: Token);
             }
             finally
             {
@@ -113,11 +116,11 @@ namespace Akka.Tests.Actor.Scheduler
             {
                 var cancelable = new Cancelable(scheduler);
                 scheduler.ScheduleTellRepeatedly(0, 150, TestActor, "Test", ActorRefs.NoSender, cancelable);
-                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test", cancellationToken: Token);
                 cancelable.Cancel();
 
                 //Validate that no more messages were sent
-                await ExpectNoMsgAsync(200);
+                await ExpectNoMsgAsync(200, cancellationToken: Token);
             }
             finally
             {
@@ -139,10 +142,10 @@ namespace Akka.Tests.Actor.Scheduler
                 cancelableOdd.CancelAfter(50);
 
                 //Expect one message
-                await ExpectMsgAsync("Test");
+                await ExpectMsgAsync("Test", cancellationToken: Token);
 
                 //Validate that no messages were sent
-                await ExpectNoMsgAsync(200);
+                await ExpectNoMsgAsync(200, cancellationToken: Token);
             }
             finally
             {

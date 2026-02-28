@@ -8,11 +8,14 @@
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor.Stash;
 
 public class Bugfix7398Specs : AkkaSpec
 {
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
     public Bugfix7398Specs(ITestOutputHelper output)
         : base(output)
     {
@@ -41,6 +44,6 @@ public class Bugfix7398Specs : AkkaSpec
         {
             var actor = Sys.ActorOf(Props.Create<IllegalStashActor>());
             actor.Tell("hello");
-        });
+        }, cancellationToken: Token);
     }
 }

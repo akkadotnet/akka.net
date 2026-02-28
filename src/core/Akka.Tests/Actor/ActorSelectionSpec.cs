@@ -138,7 +138,7 @@ namespace Akka.Tests.Actor
             var a1 = Sys.ActorOf(Props, name);
             Watch(a1);
             a1.Tell(PoisonPill.Instance);
-            var msg = await ExpectMsgAsync<Terminated>();
+            var msg = await ExpectMsgAsync<Terminated>(cancellationToken: Token);
             msg.ActorRef.ShouldBe(a1);
 
             //not equal because it's terminated
@@ -153,7 +153,7 @@ namespace Akka.Tests.Actor
 
             Watch(a2);
             a2.Tell(PoisonPill.Instance);
-            msg = await ExpectMsgAsync<Terminated>();
+            msg = await ExpectMsgAsync<Terminated>(cancellationToken: Token);
             msg.ActorRef.ShouldBe(a2);
         }
 
@@ -405,7 +405,7 @@ namespace Akka.Tests.Actor
         public async Task An_ActorSelection_must_send_messages_directly()
         {
             new ActorSelection(_c1, "").Tell(new GetSender(TestActor));
-            await ExpectMsgAsync(TestActor);
+            await ExpectMsgAsync(TestActor, cancellationToken: Token);
             LastSender.ShouldBe(_c1);
         }
 
@@ -413,7 +413,7 @@ namespace Akka.Tests.Actor
         public async Task An_ActorSelection_must_send_messages_to_string_path()
         {
             Sys.ActorSelection("/user/c2/c21").Tell(new GetSender(TestActor));
-            await ExpectMsgAsync(TestActor);
+            await ExpectMsgAsync(TestActor, cancellationToken: Token);
             LastSender.ShouldBe(_c21);
         }
 
@@ -421,7 +421,7 @@ namespace Akka.Tests.Actor
         public async Task An_ActorSelection_must_send_messages_to_actor_path()
         {
             Sys.ActorSelection(_c2.Path / "c21").Tell(new GetSender(TestActor));
-            await ExpectMsgAsync(TestActor);
+            await ExpectMsgAsync(TestActor, cancellationToken: Token);
             LastSender.ShouldBe(_c21);
         }
 
@@ -430,9 +430,9 @@ namespace Akka.Tests.Actor
         {
             new ActorSelection(_c21, "../../*").Tell(new GetSender(TestActor), _c1);
             //Three messages because the selection includes the TestActor, GetSender -> TestActor + response from c1 and c2 to TestActor
-            var actors = (await ReceiveWhileAsync(_ => LastSender, msgs: 3).ToListAsync()).Distinct();
+            var actors = (await ReceiveWhileAsync(_ => LastSender, msgs: 3, cancellationToken: Token).ToListAsync(Token)).Distinct();
             actors.Should().BeEquivalentTo(_c1, _c2);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
 
         [Fact]
@@ -440,9 +440,9 @@ namespace Akka.Tests.Actor
         {
             new ActorSelection(_c21, "../../*/c21").Tell(new GetSender(TestActor), _c2);
 
-            var actors = (await ReceiveWhileAsync(_ => LastSender, msgs: 2).ToListAsync()).Distinct();
+            var actors = (await ReceiveWhileAsync(_ => LastSender, msgs: 2, cancellationToken: Token).ToListAsync(Token)).Distinct();
             actors.Should().HaveCount(1).And.Subject.First().ShouldBe(_c21);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
 
         }
 
@@ -450,7 +450,7 @@ namespace Akka.Tests.Actor
         public async Task An_ActorSelection_must_resolve_one_actor_with_timeout()
         {
             var s = Sys.ActorSelection("user/c2");
-            (await s.ResolveOne(Dilated(TimeSpan.FromSeconds(1)))).ShouldBe(_c2);
+            (await s.ResolveOne(Dilated(TimeSpan.FromSeconds(1)), ct: Token)).ShouldBe(_c2);
         }
 
         [Fact]
@@ -492,7 +492,7 @@ namespace Akka.Tests.Actor
             var p = CreateTestProbe();
             Sys.EventStream.Subscribe(p.Ref, typeof(DeadLetter));
             Sys.ActorSelection("/user/missing").Tell("boom", TestActor);
-            var d = await p.ExpectMsgAsync<DeadLetter>();
+            var d = await p.ExpectMsgAsync<DeadLetter>(cancellationToken: Token);
             d.Message.ShouldBe("boom");
             d.Sender.ShouldBe(TestActor);
             d.Recipient.Path.ToStringWithoutAddress().ShouldBe("/user/missing");
@@ -516,11 +516,11 @@ namespace Akka.Tests.Actor
             // deliver two ActorSelections - one from outside any actors, one from inside
             // they have different anchors to start with, so the results may differ
             Sys.ActorSelection(actorPathStr).Tell("foo");
-            var msg = await ExpectMsgAsync<DeadLetter>();
+            var msg = await ExpectMsgAsync<DeadLetter>(cancellationToken: Token);
             msg.Message.Should().Be("foo");
 
             actorA.Tell("foo");
-            msg = await ExpectMsgAsync<DeadLetter>();
+            msg = await ExpectMsgAsync<DeadLetter>(cancellationToken: Token);
             msg.Message.Should().Be("foo");
         }
 
@@ -529,51 +529,51 @@ namespace Akka.Tests.Actor
         {
             var creator = CreateTestProbe();
             var top = Sys.ActorOf(Props, "a");
-            var b1 = await top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3), Token);
-            var b2 = await top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3), Token);
-            var c = await b2.Ask<IActorRef>(new Create("c"), TimeSpan.FromSeconds(3), Token);
-            var d = await c.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3), Token);
+            var b1 = await top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3), cancellationToken: Token);
+            var b2 = await top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3), cancellationToken: Token);
+            var c = await b2.Ask<IActorRef>(new Create("c"), TimeSpan.FromSeconds(3), cancellationToken: Token);
+            var d = await c.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3), cancellationToken: Token);
 
             var probe = CreateTestProbe();
             Sys.ActorSelection("/user/a/*").Tell(new Identify(1), probe.Ref);
-            var received = await probe.ReceiveNAsync(2, default)
+            var received = await probe.ReceiveNAsync(2, RemainingOrDefault, cancellationToken: Token)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
-                .ToListAsync();
+                .ToListAsync(Token);
             received.Should().BeEquivalentTo(new[] { b1, b2 });
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200), cancellationToken: Token);
 
             Sys.ActorSelection("/user/a/b1/*").Tell(new Identify(2), probe.Ref);
-            var identity = await probe.ExpectMsgAsync<ActorIdentity>();
+            var identity = await probe.ExpectMsgAsync<ActorIdentity>(cancellationToken: Token);
             identity.Should().BeEquivalentTo(new ActorIdentity(2, null));
 
             Sys.ActorSelection("/user/a/*/c").Tell(new Identify(3), probe.Ref);
-            identity = await probe.ExpectMsgAsync<ActorIdentity>();
+            identity = await probe.ExpectMsgAsync<ActorIdentity>(cancellationToken: Token);
             identity.Should().BeEquivalentTo(new ActorIdentity(3, c));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200), cancellationToken: Token);
 
             Sys.ActorSelection("/user/a/b2/*/d").Tell(new Identify(4), probe.Ref);
-            identity = await probe.ExpectMsgAsync<ActorIdentity>();
+            identity = await probe.ExpectMsgAsync<ActorIdentity>(cancellationToken: Token);
             identity.Should().BeEquivalentTo(new ActorIdentity(4, d));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200), cancellationToken: Token);
 
             Sys.ActorSelection("/user/a/*/*/d").Tell(new Identify(5), probe.Ref);
-            identity = await probe.ExpectMsgAsync<ActorIdentity>();
+            identity = await probe.ExpectMsgAsync<ActorIdentity>(cancellationToken: Token);
             identity.Should().BeEquivalentTo(new ActorIdentity(5, d));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200), cancellationToken: Token);
 
             Sys.ActorSelection("/user/a/*/c/*").Tell(new Identify(6), probe.Ref);
-            identity = await probe.ExpectMsgAsync<ActorIdentity>();
+            identity = await probe.ExpectMsgAsync<ActorIdentity>(cancellationToken: Token);
             identity.Should().BeEquivalentTo(new ActorIdentity(6, d));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200), cancellationToken: Token);
 
             Sys.ActorSelection("/user/a/b2/*/d/e").Tell(new Identify(7), probe.Ref);
-            identity = await probe.ExpectMsgAsync<ActorIdentity>();
+            identity = await probe.ExpectMsgAsync<ActorIdentity>(cancellationToken: Token);
             identity.Should().BeEquivalentTo(new ActorIdentity(7, null));
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200), cancellationToken: Token);
 
             Sys.ActorSelection("/user/a/*/c/d/e").Tell(new Identify(8), probe.Ref);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500), cancellationToken: Token);
         }
 
         [Fact]
@@ -581,36 +581,36 @@ namespace Akka.Tests.Actor
         {
             var creator = CreateTestProbe();
             var top = Sys.ActorOf(Props, "a");
-            var b1 = await top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3), Token);
-            var b2 = await top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3), Token);
-            var b3 = await top.Ask<IActorRef>(new Create("b3"), TimeSpan.FromSeconds(3), Token);
-            var c1 = await b2.Ask<IActorRef>(new Create("c1"), TimeSpan.FromSeconds(3), Token);
-            var c2 = await b2.Ask<IActorRef>(new Create("c2"), TimeSpan.FromSeconds(3), Token);
-            var d = await c1.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3), Token);
+            var b1 = await top.Ask<IActorRef>(new Create("b1"), TimeSpan.FromSeconds(3), cancellationToken: Token);
+            var b2 = await top.Ask<IActorRef>(new Create("b2"), TimeSpan.FromSeconds(3), cancellationToken: Token);
+            var b3 = await top.Ask<IActorRef>(new Create("b3"), TimeSpan.FromSeconds(3), cancellationToken: Token);
+            var c1 = await b2.Ask<IActorRef>(new Create("c1"), TimeSpan.FromSeconds(3), cancellationToken: Token);
+            var c2 = await b2.Ask<IActorRef>(new Create("c2"), TimeSpan.FromSeconds(3), cancellationToken: Token);
+            var d = await c1.Ask<IActorRef>(new Create("d"), TimeSpan.FromSeconds(3), cancellationToken: Token);
 
             var probe = CreateTestProbe();
 
             // grab everything below /user/a
             Sys.ActorSelection("/user/a/**").Tell(new Identify(1), probe.Ref);
-            var received = await probe.ReceiveNAsync(6, default)
+            var received = await probe.ReceiveNAsync(6, RemainingOrDefault, cancellationToken: Token)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
-                .ToListAsync();
+                .ToListAsync(Token);
             received.Should().BeEquivalentTo(b1, b2, b3, c1, c2, d);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500), cancellationToken: Token);
 
             // grab everything below /user/a/b2
             Sys.ActorSelection("/user/a/b2/**").Tell(new Identify(2), probe.Ref);
-            received = await probe.ReceiveNAsync(3, default)
+            received = await probe.ReceiveNAsync(3, RemainingOrDefault, cancellationToken: Token)
                 .Cast<ActorIdentity>()
                 .Select(i => i.Subject)
-                .ToListAsync();
+                .ToListAsync(Token);
             received.Should().BeEquivalentTo(c1, c2, d);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500), cancellationToken: Token);
 
             // nothing under /user/a/b2/c1/d
             Sys.ActorSelection("/user/a/b2/c1/d/**").Tell(new Identify(3), probe.Ref);
-            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(500), cancellationToken: Token);
 
             Invoking(() => Sys.ActorSelection("/user/a/**/d").Tell(new Identify(4), probe.Ref))
                 .Should().Throw<IllegalActorNameException>();
@@ -620,7 +620,7 @@ namespace Akka.Tests.Actor
         public async Task An_ActorSelection_must_forward_to_selection()
         {
             _c2.Tell(new Forward("c21", "hello"), TestActor);
-            await ExpectMsgAsync("hello");
+            await ExpectMsgAsync("hello", cancellationToken: Token);
             LastSender.ShouldBe(_c21);
         }
 

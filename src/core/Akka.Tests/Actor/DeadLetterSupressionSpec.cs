@@ -62,42 +62,42 @@ namespace Akka.Tests.Actor
             deadActor.Tell(new SuppressedMessage());
             deadActor.Tell(new NormalMessage());
 
-            var deadLetter = await deadListener.ExpectMsgAsync<DeadLetter>();
+            var deadLetter = await deadListener.ExpectMsgAsync<DeadLetter>(cancellationToken: Token);
             deadLetter.Message.Should().BeOfType<NormalMessage>();
             deadLetter.Sender.Should().Be(TestActor);
             deadLetter.Recipient.Should().Be(deadActor);
-            await deadListener.ExpectNoMsgAsync(200.Milliseconds());
+            await deadListener.ExpectNoMsgAsync(200.Milliseconds(), cancellationToken: Token);
 
-            var suppressedDeadLetter = await suppressedListener.ExpectMsgAsync<SuppressedDeadLetter>();
+            var suppressedDeadLetter = await suppressedListener.ExpectMsgAsync<SuppressedDeadLetter>(cancellationToken: Token);
             suppressedDeadLetter.Message.Should().BeOfType<SuppressedMessage>();
             suppressedDeadLetter.Sender.Should().Be(TestActor);
             suppressedDeadLetter.Recipient.Should().Be(Sys.DeadLetters);
-            await suppressedListener.ExpectNoMsgAsync(200.Milliseconds());
+            await suppressedListener.ExpectNoMsgAsync(200.Milliseconds(), cancellationToken: Token);
 
-            var allSuppressedDeadLetter = await allListener.ExpectMsgAsync<SuppressedDeadLetter>();
+            var allSuppressedDeadLetter = await allListener.ExpectMsgAsync<SuppressedDeadLetter>(cancellationToken: Token);
             allSuppressedDeadLetter.Message.Should().BeOfType<SuppressedMessage>();
             allSuppressedDeadLetter.Sender.Should().Be(TestActor);
             allSuppressedDeadLetter.Recipient.Should().Be(Sys.DeadLetters);
 
-            var allDeadLetter = await allListener.ExpectMsgAsync<DeadLetter>();
+            var allDeadLetter = await allListener.ExpectMsgAsync<DeadLetter>(cancellationToken: Token);
             allDeadLetter.Message.Should().BeOfType<NormalMessage>();
             allDeadLetter.Sender.Should().Be(TestActor);
             allDeadLetter.Recipient.Should().Be(deadActor);
 
-            await allListener.ExpectNoMsgAsync(200.Milliseconds());
+            await allListener.ExpectNoMsgAsync(200.Milliseconds(), cancellationToken: Token);
 
             // unwrap for ActorSelection
             Sys.ActorSelection(deadActor.Path).Tell(new SuppressedMessage());
             Sys.ActorSelection(deadActor.Path).Tell(new NormalMessage());
 
             // the recipient ref isn't the same as deadActor here so only checking the message
-            deadLetter = await deadListener.ExpectMsgAsync<DeadLetter>();//
+            deadLetter = await deadListener.ExpectMsgAsync<DeadLetter>(cancellationToken: Token);//
             deadLetter.Message.Should().BeOfType<NormalMessage>();
-            suppressedDeadLetter = await suppressedListener.ExpectMsgAsync<SuppressedDeadLetter>();
+            suppressedDeadLetter = await suppressedListener.ExpectMsgAsync<SuppressedDeadLetter>(cancellationToken: Token);
             suppressedDeadLetter.Message.Should().BeOfType<SuppressedMessage>();
 
-            await deadListener.ExpectNoMsgAsync(200.Milliseconds());
-            await suppressedListener.ExpectNoMsgAsync(200.Milliseconds());
+            await deadListener.ExpectNoMsgAsync(200.Milliseconds(), cancellationToken: Token);
+            await suppressedListener.ExpectNoMsgAsync(200.Milliseconds(), cancellationToken: Token);
         }
 
         [Fact]
@@ -115,46 +115,46 @@ namespace Akka.Tests.Actor
             Sys.DeadLetters.Tell(new SuppressedMessage());
             Sys.DeadLetters.Tell(new NormalMessage());
 
-            var deadLetter = await deadListener.ExpectMsgAsync<DeadLetter>(200.Milliseconds());
+            var deadLetter = await deadListener.ExpectMsgAsync<DeadLetter>(200.Milliseconds(), cancellationToken: Token);
             deadLetter.Message.Should().BeOfType<NormalMessage>();
             deadLetter.Sender.Should().Be(TestActor);
             deadLetter.Recipient.Should().Be(Sys.DeadLetters);
 
-            var suppressedDeadLetter = await suppressedListener.ExpectMsgAsync<SuppressedDeadLetter>(200.Milliseconds());
+            var suppressedDeadLetter = await suppressedListener.ExpectMsgAsync<SuppressedDeadLetter>(200.Milliseconds(), cancellationToken: Token);
             suppressedDeadLetter.Message.Should().BeOfType<SuppressedMessage>();
             suppressedDeadLetter.Sender.Should().Be(TestActor);
             suppressedDeadLetter.Recipient.Should().Be(Sys.DeadLetters);
 
-            var allSuppressedDeadLetter = await allListener.ExpectMsgAsync<SuppressedDeadLetter>(200.Milliseconds());
+            var allSuppressedDeadLetter = await allListener.ExpectMsgAsync<SuppressedDeadLetter>(200.Milliseconds(), cancellationToken: Token);
             allSuppressedDeadLetter.Message.Should().BeOfType<SuppressedMessage>();
             allSuppressedDeadLetter.Sender.Should().Be(TestActor);
             allSuppressedDeadLetter.Recipient.Should().Be(Sys.DeadLetters);
 
-            var allDeadLetter = await allListener.ExpectMsgAsync<DeadLetter>(200.Milliseconds());
+            var allDeadLetter = await allListener.ExpectMsgAsync<DeadLetter>(200.Milliseconds(), cancellationToken: Token);
             allDeadLetter.Message.Should().BeOfType<NormalMessage>();
             allDeadLetter.Sender.Should().Be(TestActor);
             allDeadLetter.Recipient.Should().Be(Sys.DeadLetters);
 
-            await Task.Delay(200, Token);
-            await deadListener.ExpectNoMsgAsync(TimeSpan.Zero);
-            await suppressedListener.ExpectNoMsgAsync(TimeSpan.Zero);
-            await allListener.ExpectNoMsgAsync(TimeSpan.Zero);
+            await Task.Delay(200, cancellationToken: Token);
+            await deadListener.ExpectNoMsgAsync(TimeSpan.Zero, cancellationToken: Token);
+            await suppressedListener.ExpectNoMsgAsync(TimeSpan.Zero, cancellationToken: Token);
+            await allListener.ExpectNoMsgAsync(TimeSpan.Zero, cancellationToken: Token);
 
             // unwrap for ActorSelection
             Sys.ActorSelection(Sys.DeadLetters.Path).Tell(new SuppressedMessage());
             Sys.ActorSelection(Sys.DeadLetters.Path).Tell(new NormalMessage());
 
-            deadLetter = await deadListener.ExpectMsgAsync<DeadLetter>();
+            deadLetter = await deadListener.ExpectMsgAsync<DeadLetter>(cancellationToken: Token);
             deadLetter.Message.Should().BeOfType<NormalMessage>();
             deadLetter.Sender.Should().Be(TestActor);
             deadLetter.Recipient.Should().Be(Sys.DeadLetters);
-            suppressedDeadLetter = await suppressedListener.ExpectMsgAsync<SuppressedDeadLetter>();
+            suppressedDeadLetter = await suppressedListener.ExpectMsgAsync<SuppressedDeadLetter>(cancellationToken: Token);
             suppressedDeadLetter.Message.Should().BeOfType<SuppressedMessage>();
             suppressedDeadLetter.Sender.Should().Be(TestActor);
             suppressedDeadLetter.Recipient.Should().Be(Sys.DeadLetters);
 
-            await deadListener.ExpectNoMsgAsync(200.Milliseconds());
-            await suppressedListener.ExpectNoMsgAsync(200.Milliseconds());
+            await deadListener.ExpectNoMsgAsync(200.Milliseconds(), cancellationToken: Token);
+            await suppressedListener.ExpectNoMsgAsync(200.Milliseconds(), cancellationToken: Token);
         }
     }
 }

@@ -153,11 +153,11 @@ namespace Akka.Tests.Pattern
         {
             var probe = CreateTestProbe();
             var supervisor = Sys.ActorOf(SupervisorProps(probe.Ref));
-            await probe.ExpectMsgAsync("STARTED");
+            await probe.ExpectMsgAsync("STARTED", cancellationToken: Token);
 
             probe.Watch(supervisor);
             supervisor.Tell("DIE");
-            await probe.ExpectTerminatedAsync(supervisor);
+            await probe.ExpectTerminatedAsync(supervisor, cancellationToken: Token);
         }
 
         [Fact(Skip = "This test is very over-fitted for time and will never run reliably on busy CI/CD")]
@@ -165,7 +165,7 @@ namespace Akka.Tests.Pattern
         {
             var probe = CreateTestProbe();
             var supervisor = Sys.ActorOf(SupervisorProps(probe.Ref));
-            await probe.ExpectMsgAsync("STARTED");
+            await probe.ExpectMsgAsync("STARTED", cancellationToken: Token);
 
             await EventFilter.Exception<TestException>().ExpectAsync(3, () =>
             {
@@ -184,15 +184,15 @@ namespace Akka.Tests.Pattern
                     // numRestart = 2 ~ 800 millis
                     await probe.ExpectMsgAsync<string>(900.Milliseconds(), "STARTED");
                 });
-            });
+            }, cancellationToken: Token);
 
             // Verify that we only have one child at this point by selecting all the children
             // under the supervisor and broadcasting to them.
             // If there exists more than one child, we will get more than one reply.
             var supervisionChildSelection = Sys.ActorSelection(supervisor.Path / "*");
             supervisionChildSelection.Tell("testmsg", probe.Ref);
-            await probe.ExpectMsgAsync("testmsg");
-            await probe.ExpectNoMsgAsync();
+            await probe.ExpectMsgAsync("testmsg", cancellationToken: Token);
+            await probe.ExpectNoMsgAsync(cancellationToken: Token);
         }
 
         [Fact]
@@ -200,7 +200,7 @@ namespace Akka.Tests.Pattern
         {
             var probe = CreateTestProbe();
             var supervisor = Sys.ActorOf(SupervisorProps(probe.Ref));
-            await probe.ExpectMsgAsync("STARTED");
+            await probe.ExpectMsgAsync("STARTED", cancellationToken: Token);
 
             await EventFilter.Exception<TestException>().ExpectAsync(1, async() =>
             {
@@ -209,7 +209,7 @@ namespace Akka.Tests.Pattern
                 // subsequently stop itself.
                 supervisor.Tell("THROW_STOPPING_EXCEPTION");
                 await probe.ExpectTerminatedAsync(supervisor);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -217,11 +217,11 @@ namespace Akka.Tests.Pattern
         {
             var probe = CreateTestProbe();
             var parent = Sys.ActorOf(TestParentActor.Props(probe.Ref, SupervisorProps(probe.Ref)));
-            await probe.ExpectMsgAsync("STARTED");
+            await probe.ExpectMsgAsync("STARTED", cancellationToken: Token);
             var child = probe.LastSender;
 
             child.Tell(("TO_PARENT", "TEST_MESSAGE"));
-            await probe.ExpectMsgAsync("TEST_MESSAGE");
+            await probe.ExpectMsgAsync("TEST_MESSAGE", cancellationToken: Token);
         }
 
         [Fact]
@@ -236,22 +236,22 @@ namespace Akka.Tests.Pattern
 
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
             // new instance
-            var child = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref;
+            var child = (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>(cancellationToken: Token)).Ref;
 
             child.Tell("PING");
-            await ExpectMsgAsync("PONG");
+            await ExpectMsgAsync("PONG", cancellationToken: Token);
 
             supervisor.Tell("THROW");
-            await ExpectMsgAsync("THROWN");
+            await ExpectMsgAsync("THROWN", cancellationToken: Token);
 
             child.Tell("PING");
-            await ExpectNoMsgAsync(100.Milliseconds()); // Child is in limbo due to latch in postStop. There is no Terminated message yet
+            await ExpectNoMsgAsync(100.Milliseconds(), cancellationToken: Token); // Child is in limbo due to latch in postStop. There is no Terminated message yet
 
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-            (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref.Should().BeSameAs(child);
+            (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>(cancellationToken: Token)).Ref.Should().BeSameAs(child);
 
             supervisor.Tell(BackoffSupervisor.GetRestartCount.Instance);
-            (await ExpectMsgAsync<BackoffSupervisor.RestartCount>()).Count.Should().Be(0);
+            (await ExpectMsgAsync<BackoffSupervisor.RestartCount>(cancellationToken: Token)).Count.Should().Be(0);
 
             postStopLatch.CountDown();
 
@@ -261,7 +261,7 @@ namespace Akka.Tests.Pattern
                 supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
                 // new instance
                 (await ExpectMsgAsync<BackoffSupervisor.CurrentChild>()).Ref.Should().NotBeSameAs(child);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -269,7 +269,7 @@ namespace Akka.Tests.Pattern
         {
             var probe = CreateTestProbe();
             var supervisor = Sys.ActorOf(SupervisorProps(probe.Ref));
-            await probe.ExpectMsgAsync("STARTED");
+            await probe.ExpectMsgAsync("STARTED", cancellationToken: Token);
 
             await EventFilter.Exception<TestException>().ExpectAsync(5, async() =>
             {
@@ -286,7 +286,7 @@ namespace Akka.Tests.Pattern
                 }
 
                 await probe.ExpectTerminatedAsync(supervisor);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -303,25 +303,25 @@ namespace Akka.Tests.Pattern
             var supervisor = Sys.ActorOf(BackoffSupervisor.Props(options));
 
             supervisor.Tell(BackoffSupervisor.GetCurrentChild.Instance);
-            await probe.ExpectMsgAsync("STARTED");
+            await probe.ExpectMsgAsync("STARTED", cancellationToken: Token);
 
             probe.Watch(supervisor);
             // Throw three times rapidly
             for (var i = 1; i <= 3; i++)
             {
                 supervisor.Tell("THROW");
-                await probe.ExpectMsgAsync("STARTED");
+                await probe.ExpectMsgAsync("STARTED", cancellationToken: Token);
             }
 
             // Now wait the length of our window, and throw again. We should still restart.
-            await Task.Delay(2100, Token);
+            await Task.Delay(2100, cancellationToken: Token);
 
             var stopwatch = Stopwatch.StartNew();
             // Throw three times rapidly
             for (var i = 1; i <= 3; i++)
             {
                 supervisor.Tell("THROW");
-                await probe.ExpectMsgAsync("STARTED");
+                await probe.ExpectMsgAsync("STARTED", cancellationToken: Token);
             }
             stopwatch.Stop();
             if(stopwatch.ElapsedMilliseconds > 1500)
@@ -329,7 +329,7 @@ namespace Akka.Tests.Pattern
             
             // Now we'll issue another request and should be terminated.
             supervisor.Tell("THROW");
-            await probe.ExpectTerminatedAsync(supervisor);
+            await probe.ExpectTerminatedAsync(supervisor, cancellationToken: Token);
         }
     }
 }

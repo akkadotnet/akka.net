@@ -102,11 +102,11 @@ namespace Akka.Tests.IO
                 received.Data.ShouldBe(data1);
                 received.Sender.ShouldBe(clientLocalEndpoint);
                 return received.Sender;
-            });
+            }, cancellationToken: Token);
 
             server.Tell(Udp.Send.Create(data2, clientAddress));
 
-            await ExpectMsgAsync<UdpConnected.Received>(x => x.Data.ShouldBe(data2));
+            await ExpectMsgAsync<UdpConnected.Received>(x => x.Data.ShouldBe(data2), cancellationToken: Token);
         }
 
         [Fact]
@@ -125,11 +125,11 @@ namespace Akka.Tests.IO
                 if (msg is not Udp.Received received) throw new Exception();
                 received.Data.ShouldBe(data1);
                 return received.Sender;
-            });
+            }, cancellationToken: Token);
 
             server.Tell(Udp.Send.Create(data2, clientLocalEndpoint));
 
-            await clientProbe.ExpectMsgAsync<UdpConnected.Received>(x => x.Data.ShouldBe(data2));
+            await clientProbe.ExpectMsgAsync<UdpConnected.Received>(x => x.Data.ShouldBe(data2), cancellationToken: Token);
         }
 
         [Fact]
@@ -147,17 +147,17 @@ namespace Akka.Tests.IO
             client.Tell(UdpConnected.Send.Create(data));
             client.Tell(UdpConnected.Send.Create(data));
 
-            var raw = await serverProbe.ReceiveNAsync(3, default).ToListAsync();
+            var raw = await serverProbe.ReceiveNAsync(3, RemainingOrDefault, cancellationToken: Token).ToListAsync(Token);
             var serverMsgs = raw.Cast<Udp.Received>();
             serverMsgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
-            await serverProbe.ExpectNoMsgAsync(100.Milliseconds());
+            await serverProbe.ExpectNoMsgAsync(100.Milliseconds(), cancellationToken: Token);
 
             // repeat in the other direction
             server.Tell(Udp.Send.Create(data, clientEndPoint));
             server.Tell(Udp.Send.Create(data, clientEndPoint));
             server.Tell(Udp.Send.Create(data, clientEndPoint));
 
-            raw = await clientProbe.ReceiveNAsync(3, default).ToListAsync();
+            raw = await clientProbe.ReceiveNAsync(3, RemainingOrDefault, cancellationToken: Token).ToListAsync(Token);
             var clientMsgs = raw.Cast<UdpConnected.Received>();
             clientMsgs.Sum(x => x.Data.Count).Should().Be(data.Count * 3);
         }
@@ -188,19 +188,19 @@ namespace Akka.Tests.IO
                 for (var j = 0; j < batchSize; ++j)
                     client.Tell(UdpConnected.Send.Create(data));
 
-                var msgs = await serverProbe.ReceiveNAsync(batchSize, TimeSpan.FromSeconds(10))
-                    .Cast<Udp.Received>().ToListAsync();
+                var msgs = await serverProbe.ReceiveNAsync(batchSize, TimeSpan.FromSeconds(10), cancellationToken: Token)
+                    .Cast<Udp.Received>().ToListAsync(Token);
                 msgs.Sum(m => m.Data.Count).Should().Be(data.Count * batchSize);
             }
 
             // stop all connections so all receives are stopped and all pending SocketAsyncEventArgs are collected
             server.Tell(Udp.Unbind.Instance, serverProbe);
-            await serverProbe.ExpectMsgAsync<Udp.Unbound>();
+            await serverProbe.ExpectMsgAsync<Udp.Unbound>(cancellationToken: Token);
             client.Tell(UdpConnected.Disconnect.Instance, clientProbe);
-            await clientProbe.ExpectMsgAsync<UdpConnected.Disconnected>();
+            await clientProbe.ExpectMsgAsync<UdpConnected.Disconnected>(cancellationToken: Token);
             
             // wait for all SocketAsyncEventArgs to be released
-            await Task.Delay(1000, Token);
+            await Task.Delay(1000, cancellationToken: Token);
             
             poolInfo = udpConnection.SocketEventArgsPool.BufferPoolInfo;
             poolInfo.Type.Should().Be(typeof(DirectBufferPool));

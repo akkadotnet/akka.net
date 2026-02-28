@@ -10,17 +10,20 @@ using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests
 {
     public class DeadLettersSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact]
         public async Task Can_send_messages_to_dead_letters()
         {
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
             Sys.DeadLetters.Tell("foobar");
-            await ExpectMsgAsync<DeadLetter>(deadLetter=>deadLetter.Message.Equals("foobar"));
+            await ExpectMsgAsync<DeadLetter>(deadLetter=>deadLetter.Message.Equals("foobar"), cancellationToken: Token);
         }
 
         private sealed record WrappedClass(object Message) : IWrappedMessage;
@@ -35,7 +38,7 @@ namespace Akka.Tests
         {
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
             Sys.DeadLetters.Tell(new WrappedClass("chocolate-beans"));
-            await ExpectMsgAsync<DeadLetter>();
+            await ExpectMsgAsync<DeadLetter>(cancellationToken: Token);
         }
         
         [Fact]
@@ -43,7 +46,7 @@ namespace Akka.Tests
         {
             Sys.EventStream.Subscribe(TestActor, typeof(AllDeadLetters));
             Sys.DeadLetters.Tell(new WrappedClass(new SuppressedMessage()));
-            var msg = await ExpectMsgAsync<SuppressedDeadLetter>();
+            var msg = await ExpectMsgAsync<SuppressedDeadLetter>(cancellationToken: Token);
             msg.Message.ToString()!.Contains("SuppressedMessage").ShouldBeTrue();
         }
         
@@ -53,7 +56,7 @@ namespace Akka.Tests
             Sys.EventStream.Subscribe(TestActor, typeof(DeadLetter));
             var selection = Sys.ActorSelection("/user/foobar");
             selection.Tell(new WrappedClass("chocolate-beans"));
-            await ExpectMsgAsync<DeadLetter>();
+            await ExpectMsgAsync<DeadLetter>(cancellationToken: Token);
         }
         
         [Fact]
@@ -62,7 +65,7 @@ namespace Akka.Tests
             Sys.EventStream.Subscribe(TestActor, typeof(AllDeadLetters));
             var selection = Sys.ActorSelection("/user/foobar");
             selection.Tell(new WrappedClass(new SuppressedMessage()));
-            var msg = await ExpectMsgAsync<SuppressedDeadLetter>();
+            var msg = await ExpectMsgAsync<SuppressedDeadLetter>(cancellationToken: Token);
             msg.Message.ToString()!.Contains("SuppressedMessage").ShouldBeTrue();
         }
     }

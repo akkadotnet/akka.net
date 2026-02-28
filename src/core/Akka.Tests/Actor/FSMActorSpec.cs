@@ -16,11 +16,14 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
 using static Akka.Actor.FSMBase;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class FSMActorSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         #region Actors
         public class Latches
         {
@@ -440,7 +443,7 @@ namespace Akka.Tests.Actor
                 lockFsm.Tell("not_handled");
                 latches.UnhandledLatch.Ready(timeout);
                 return Task.CompletedTask;
-            });
+            }, cancellationToken: Token);
 
             var answerLatch = new TestLatch();
             var tester = Sys.ActorOf(Props.Create(() => new AnswerTester(answerLatch, lockFsm)));
@@ -464,7 +467,7 @@ namespace Akka.Tests.Actor
                 error.LogSource.Should().Contain(name);
                 error.Message.Should().Be("Next state 2 does not exist");
                 Sys.EventStream.Unsubscribe(TestActor);
-            });
+            }, cancellationToken: Token);
         }
 
         [Fact]
@@ -474,7 +477,7 @@ namespace Akka.Tests.Actor
             var actorRef = Sys.ActorOf(Props.Create(() => new ActorStopTermination(started, TestActor)));
             started.Ready();
             Sys.Stop(actorRef);
-            var stopEvent = await ExpectMsgAsync<StopEvent<int, object>>(1.Seconds());
+            var stopEvent = await ExpectMsgAsync<StopEvent<int, object>>(1.Seconds(), cancellationToken: Token);
             stopEvent.Reason.Should().BeOfType<Shutdown>();
             stopEvent.TerminatedState.Should().Be(1);
         }
@@ -485,7 +488,7 @@ namespace Akka.Tests.Actor
             var expected = "pigdog";
             var actorRef = Sys.ActorOf(Props.Create(() => new ActorStopReason(expected, TestActor)));
             actorRef.Tell(2);
-            await ExpectMsgAsync("green");
+            await ExpectMsgAsync("green", cancellationToken: Token);
         }
 
         [Fact]
@@ -508,11 +511,11 @@ namespace Akka.Tests.Actor
             CheckTimersActive(false);
 
             fsmRef.Tell("start");
-            await ExpectMsgAsync("starting", 1.Seconds());
+            await ExpectMsgAsync("starting", 1.Seconds(), cancellationToken: Token);
             CheckTimersActive(true);
 
             fsmRef.Tell("stop");
-            await ExpectMsgAsync("stopped", 1.Seconds());
+            await ExpectMsgAsync("stopped", 1.Seconds(), cancellationToken: Token);
         }
 
         [Fact(Skip = "Not implemented yet")]
@@ -525,13 +528,13 @@ namespace Akka.Tests.Actor
         {
             var fsmRef = new TestActorRef<RollingEventLogFsm>(Sys, Props.Create<RollingEventLogFsm>());
             fsmRef.Tell("log");
-            await ExpectMsgAsync<object>(1.Seconds());
+            await ExpectMsgAsync<object>(1.Seconds(), cancellationToken: Token);
             fsmRef.Tell("count");
             fsmRef.Tell("log");
-            await ExpectMsgAsync<object>(1.Seconds());
+            await ExpectMsgAsync<object>(1.Seconds(), cancellationToken: Token);
             fsmRef.Tell("count");
             fsmRef.Tell("log");
-            await ExpectMsgAsync<object>(1.Seconds());
+            await ExpectMsgAsync<object>(1.Seconds(), cancellationToken: Token);
         }
 
         [Fact]
@@ -540,8 +543,8 @@ namespace Akka.Tests.Actor
             var fsmRef = Sys.ActorOf(Props.Create<TransformingStateFsm>());
             fsmRef.Tell(new SubscribeTransitionCallBack(TestActor));
             fsmRef.Tell("go");
-            await ExpectMsgAsync(new CurrentState<int>(fsmRef, 0));
-            await ExpectMsgAsync(new Transition<int>(fsmRef, 0, 1));
+            await ExpectMsgAsync(new CurrentState<int>(fsmRef, 0), cancellationToken: Token);
+            await ExpectMsgAsync(new Transition<int>(fsmRef, 0, 1), cancellationToken: Token);
         }
 
         [Fact(Skip = "Not implemented yet")]
@@ -554,10 +557,10 @@ namespace Akka.Tests.Actor
 
             try
             {
-                await p.ExpectMsgAsync<StateTimeout>();
+                await p.ExpectMsgAsync<StateTimeout>(cancellationToken: Token);
                 fsmRef.Tell(OverrideTimeoutToInf);
-                await p.ExpectMsgAsync(OverrideTimeoutToInf);
-                await p.ExpectNoMsgAsync(3.Seconds());
+                await p.ExpectMsgAsync(OverrideTimeoutToInf, cancellationToken: Token);
+                await p.ExpectNoMsgAsync(3.Seconds(), cancellationToken: Token);
             }
             finally
             {

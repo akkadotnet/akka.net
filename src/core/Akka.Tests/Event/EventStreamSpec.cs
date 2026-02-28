@@ -73,10 +73,10 @@ namespace Akka.Tests.Event
             bus.Subscribe(TestActor, typeof(M));
 
             bus.Publish(new M { Value = 42 });
-            await ExpectMsgAsync(new M { Value = 42 });
+            await ExpectMsgAsync(new M { Value = 42 }, cancellationToken: Token);
             bus.Unsubscribe(TestActor);
             bus.Publish(new M { Value = 43 });
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
 
         [Fact]
@@ -115,7 +115,7 @@ namespace Akka.Tests.Event
                     {
                         testKit.Sys.EventStream.Publish(msg);
                         return Task.CompletedTask;
-                    }, Token);
+                    }, cancellationToken: Token);
             }
             finally
             {
@@ -139,7 +139,7 @@ namespace Akka.Tests.Event
                     {
                         testKit.Sys.EventStream.Publish(msg);
                         return Task.CompletedTask;
-                    }, Token);
+                    }, cancellationToken: Token);
             }
             finally
             {
@@ -158,20 +158,20 @@ namespace Akka.Tests.Event
             bus.Subscribe(TestActor, typeof(B2));
             bus.Publish(c);
             bus.Publish(b2);
-            await ExpectMsgAsync(b2);
+            await ExpectMsgAsync(b2, cancellationToken: Token);
             bus.Subscribe(TestActor, typeof(A));
             bus.Publish(c);
-            await ExpectMsgAsync(c);
+            await ExpectMsgAsync(c, cancellationToken: Token);
             bus.Publish(b1);
-            await ExpectMsgAsync(b1);
+            await ExpectMsgAsync(b1, cancellationToken: Token);
 
             bus.Unsubscribe(TestActor, typeof(B1));
             bus.Publish(c); //should not publish
             bus.Publish(b2); //should publish
             bus.Publish(a); //should publish
-            await ExpectMsgAsync(b2);
-            await ExpectMsgAsync(a);
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync(b2, cancellationToken: Token);
+            await ExpectMsgAsync(a, cancellationToken: Token);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
 
         [Fact(DisplayName = "manage sub-channels using classes and traits (update on subscribe)")]
@@ -191,11 +191,11 @@ namespace Akka.Tests.Event
             es.Subscribe(a4.Ref, typeof(CCATBT)).ShouldBeTrue();
             es.Publish(tm1);
             es.Publish(tm2);
-            await a1.ExpectMsgAsync((object)tm2);
-            await a2.ExpectMsgAsync((object)tm2);
-            await a3.ExpectMsgAsync((object)tm1);
-            await a3.ExpectMsgAsync((object)tm2);
-            await a4.ExpectMsgAsync((object)tm2);
+            await a1.ExpectMsgAsync((object)tm2, cancellationToken: Token);
+            await a2.ExpectMsgAsync((object)tm2, cancellationToken: Token);
+            await a3.ExpectMsgAsync((object)tm1, cancellationToken: Token);
+            await a3.ExpectMsgAsync((object)tm2, cancellationToken: Token);
+            await a4.ExpectMsgAsync((object)tm2, cancellationToken: Token);
             es.Unsubscribe(a1.Ref, typeof(AT)).ShouldBeTrue();
             es.Unsubscribe(a2.Ref, typeof(BT)).ShouldBeTrue();
             es.Unsubscribe(a3.Ref, typeof(CC)).ShouldBeTrue();
@@ -221,10 +221,10 @@ namespace Akka.Tests.Event
             es.Unsubscribe(a3.Ref, typeof(CC));
             es.Publish(tm1);
             es.Publish(tm2);
-            await a1.ExpectMsgAsync((object)tm2);
-            await a2.ExpectMsgAsync((object)tm2);
-            await a3.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-            await a4.ExpectMsgAsync((object)tm2);
+            await a1.ExpectMsgAsync((object)tm2, cancellationToken: Token);
+            await a2.ExpectMsgAsync((object)tm2, cancellationToken: Token);
+            await a3.ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
+            await a4.ExpectMsgAsync((object)tm2, cancellationToken: Token);
             es.Unsubscribe(a1.Ref, typeof(AT)).ShouldBeTrue();
             es.Unsubscribe(a2.Ref, typeof(BT)).ShouldBeTrue();
             es.Unsubscribe(a3.Ref, typeof(CC)).ShouldBeFalse();
@@ -249,10 +249,10 @@ namespace Akka.Tests.Event
             es.Unsubscribe(a3.Ref).ShouldBeTrue();
             es.Publish(tm1);
             es.Publish(tm2);
-            await a1.ExpectMsgAsync((object)tm2);
-            await a2.ExpectMsgAsync((object)tm2);
-            await a3.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-            await a4.ExpectMsgAsync((object)tm2);
+            await a1.ExpectMsgAsync((object)tm2, cancellationToken: Token);
+            await a2.ExpectMsgAsync((object)tm2, cancellationToken: Token);
+            await a3.ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
+            await a4.ExpectMsgAsync((object)tm2, cancellationToken: Token);
             es.Unsubscribe(a1.Ref, typeof(AT)).ShouldBeTrue();
             es.Unsubscribe(a2.Ref, typeof(BT)).ShouldBeTrue();
             es.Unsubscribe(a3.Ref, typeof(CC)).ShouldBeFalse();
@@ -275,7 +275,7 @@ namespace Akka.Tests.Event
             var bus = new EventStream(false);
             bus.StartDefaultLoggers((ActorSystemImpl)Sys);
             bus.Publish(new SetTarget(TestActor));
-            await ExpectMsgAsync("OK", TimeSpan.FromSeconds(5));
+            await ExpectMsgAsync("OK", TimeSpan.FromSeconds(5), cancellationToken: Token);
 
             verifyLevel(bus, LogLevel.InfoLevel);
             bus.SetLogLevel(LogLevel.WarningLevel);

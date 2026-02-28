@@ -15,28 +15,31 @@ using Akka.TestKit.Extensions;
 using Xunit;
 using Akka.TestKit.TestActors;
 using Akka.Tests.Util;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class LocalActorRefProviderSpec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         [Fact]
         public async Task A_LocalActorRefs_ActorCell_must_not_retain_its_original_Props_when_Terminated()
         {
             var parent = Sys.ActorOf(Props.Create(() => new ParentActor()));
             parent.Tell("GetChild", TestActor);
-            var child = await ExpectMsgAsync<IActorRef>();
+            var child = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             var childPropsBeforeTermination = ((LocalActorRef)child).Underlying.Props;
             Assert.Equal(Props.Empty, childPropsBeforeTermination);
             Watch(parent);
             Sys.Stop(parent);
-            await ExpectTerminatedAsync(parent);
+            await ExpectTerminatedAsync(parent, cancellationToken: Token);
             await AwaitAssertAsync(() =>
                 {
                     var childPropsAfterTermination = ((LocalActorRef)child).Underlying.Props;
                     Assert.NotEqual(childPropsBeforeTermination, childPropsAfterTermination);
                     Assert.Equal(ActorCell.TerminatedProps, childPropsAfterTermination);
-                });
+                }, cancellationToken: Token);
         }
 
         [Fact]
@@ -54,7 +57,7 @@ namespace Akka.Tests.Actor
                 var actors = Enumerable.Range(0, 4)
                     .Select(_ => Task.Run(() => Sys.ActorOf(Props.Create(() => new BlackHoleActor()), address))).ToArray();
                 // Use WhenAll with empty ContinueWith to swallow all exceptions, so we can inspect the tasks afterwards.
-                await Task.WhenAll(actors).ContinueWith(_ => { }).AwaitWithTimeout(timeout);
+                await Task.WhenAll(actors).ContinueWith(_ => { }, Token).AwaitWithTimeout(timeout, cancellationToken: Token);
                 Assert.True(actors.Any(x => x.Status == TaskStatus.RanToCompletion && x.Result != null), "Failed to create any Actors");
                 Assert.True(actors.Any(x => x.Status == TaskStatus.Faulted && x.Exception.InnerException is InvalidActorNameException), "Succeeded in creating all Actors. Some should have failed.");
             }
@@ -67,7 +70,7 @@ namespace Akka.Tests.Actor
             await EventFilter.Exception<InvalidActorNameException>(message: "Actor name \"duplicate\" is not unique!").ExpectOneAsync(() => {
                 supervisor.Tell("");
                 return Task.CompletedTask;
-            });
+            }, cancellationToken: Token);
         }
 
         [Theory]

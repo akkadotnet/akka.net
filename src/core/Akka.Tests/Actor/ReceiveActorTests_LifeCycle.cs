@@ -9,6 +9,7 @@ using System;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
@@ -26,7 +27,7 @@ namespace Akka.Tests.Actor
 
             //Then
             actor.Tell("hello", TestActor);
-            await ExpectMsgAsync((object) "1:hello");
+            await ExpectMsgAsync((object) "1:hello", cancellationToken: Token);
         }
 
         [Fact]
@@ -42,7 +43,7 @@ namespace Akka.Tests.Actor
 
             //Then
             actor.Tell("hello", TestActor);
-            await ExpectMsgAsync((object) "1:hello");
+            await ExpectMsgAsync((object) "1:hello", cancellationToken: Token);
         }
 
 
@@ -59,7 +60,7 @@ namespace Akka.Tests.Actor
 
             //Then
             actor.Tell("hello", TestActor);
-            await ExpectMsgAsync((object) "1:hello");
+            await ExpectMsgAsync((object) "1:hello", cancellationToken: Token);
         }
 
         private class CrashActor : ReceiveActor

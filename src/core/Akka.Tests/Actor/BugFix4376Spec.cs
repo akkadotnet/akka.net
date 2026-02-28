@@ -15,6 +15,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
@@ -23,6 +24,8 @@ namespace Akka.Tests.Actor
     /// </summary>
     public class BugFix4376Spec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public BugFix4376Spec(ITestOutputHelper output): base(output) { }
 
         private class SimpleActor : ReceiveActor
@@ -129,12 +132,12 @@ namespace Akka.Tests.Actor
             {
                 var result = await poolActorRef.Ask<int>(2, RemainingOrDefault);
                 result.Should().Be(2);
-            });
+            }, cancellationToken: Token);
 
             // Verify router can handle sustained traffic after recovery
             for (var i = 0; i < 19; i++)
             {
-                var result = await poolActorRef.Ask<int>(2, RemainingOrDefault);
+                var result = await poolActorRef.Ask<int>(2, RemainingOrDefault, cancellationToken: Token);
                 result.Should().Be(2);
             }
         }
@@ -158,12 +161,12 @@ namespace Akka.Tests.Actor
             {
                 var result = await poolActorRef.Ask<int>(2, RemainingOrDefault);
                 result.Should().Be(2);
-            });
+            }, cancellationToken: Token);
 
             // Verify router can handle sustained traffic after recovery
             for (var i = 0; i < 19; i++)
             {
-                var result = await poolActorRef.Ask<int>(2, RemainingOrDefault);
+                var result = await poolActorRef.Ask<int>(2, RemainingOrDefault, cancellationToken: Token);
                 result.Should().Be(2);
             }
         }
@@ -183,12 +186,12 @@ namespace Akka.Tests.Actor
             }
 
             poolActorRef.Tell(2);
-            await ExpectMsgAsync<int>();
-            await ExpectMsgAsync<int>();
-            await ExpectMsgAsync<int>();
-            await ExpectMsgAsync<int>();
-            await ExpectMsgAsync<int>();
-            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync<int>(cancellationToken: Token);
+            await ExpectMsgAsync<int>(cancellationToken: Token);
+            await ExpectMsgAsync<int>(cancellationToken: Token);
+            await ExpectMsgAsync<int>(cancellationToken: Token);
+            await ExpectMsgAsync<int>(cancellationToken: Token);
+            await ExpectNoMsgAsync(TimeSpan.FromSeconds(1), cancellationToken: Token);
         }
 
         [Fact]
@@ -220,12 +223,12 @@ namespace Akka.Tests.Actor
             {
                 var result = await groupActorRef.Ask<int>(2, RemainingOrDefault);
                 result.Should().Be(2);
-            });
+            }, cancellationToken: Token);
 
             // Verify router can handle sustained traffic after recovery
             for (var i = 0; i < 19; i++)
             {
-                var result = await groupActorRef.Ask<int>(2, RemainingOrDefault);
+                var result = await groupActorRef.Ask<int>(2, RemainingOrDefault, cancellationToken: Token);
                 result.Should().Be(2);
             }
         }
@@ -259,12 +262,12 @@ namespace Akka.Tests.Actor
             {
                 var result = await groupActorRef.Ask<int>(2, RemainingOrDefault);
                 result.Should().Be(2);
-            });
+            }, cancellationToken: Token);
 
             // Verify router can handle sustained traffic after recovery
             for (var i = 0; i < 19; i++)
             {
-                var result = await groupActorRef.Ask<int>(2, RemainingOrDefault);
+                var result = await groupActorRef.Ask<int>(2, RemainingOrDefault, cancellationToken: Token);
                 result.Should().Be(2);
             }
         }
@@ -284,7 +287,7 @@ namespace Akka.Tests.Actor
             await AwaitAssertAsync(() =>
             {
                 counter.Current.Should().Be(0);
-            });
+            }, cancellationToken: Token);
         }
     }
 }

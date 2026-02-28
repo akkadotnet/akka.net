@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="Bugfix7501Specs.cs" company="Akka.NET Project">
 //      Copyright (C) 2009-2025 Lightbend Inc. <http://www.lightbend.com>
 //      Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -10,11 +10,14 @@ using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.TestKit;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor;
 
 public class Bugfix7501Specs : AkkaSpec
 {
+
+    private static CancellationToken Token => TestContext.Current.CancellationToken;
     public Bugfix7501Specs(ITestOutputHelper output) : base(output)
     {
         
@@ -48,15 +51,15 @@ public class Bugfix7501Specs : AkkaSpec
 
         // act
         await customDeathWatchProbe.WatchAsync(watcher);
-        await watcher.Ask<string>("boo", RemainingOrDefault);
-        var futureActorRef = await ExpectMsgAsync<IActorRef>();
+        await watcher.Ask<string>("boo", RemainingOrDefault, cancellationToken: Token);
+        var futureActorRef = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
         await WatchAsync(futureActorRef); // Ask is finished - should immediately dead-letter
         
         // assert
-        await ExpectTerminatedAsync(futureActorRef);
+        await ExpectTerminatedAsync(futureActorRef, cancellationToken: Token);
         
         // get the DeathWatch notification from the original actor
         // this can only be received if the original actor got a Terminated message from FutureActorRef
-        await customDeathWatchProbe.ExpectTerminatedAsync(watcher);
+        await customDeathWatchProbe.ExpectTerminatedAsync(watcher, cancellationToken: Token);
     }
 }

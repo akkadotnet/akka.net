@@ -10,11 +10,14 @@ using Akka.Actor;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
+using System.Threading;
 
 namespace Akka.Tests.Actor
 {
     public class BugFix4823Spec : AkkaSpec
     {
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
         public BugFix4823Spec(ITestOutputHelper outputHelper) : base(outputHelper)
         {
         }
@@ -24,8 +27,8 @@ namespace Akka.Tests.Actor
         {
             var identity = ActorOfAsTestActorRef<MyActor>(Props.Create(() => new MyActor(TestActor)), TestActor);
             identity.Tell(NotUsed.Instance);
-            var selfBefore = await ExpectMsgAsync<IActorRef>();
-            var selfAfter = await ExpectMsgAsync<IActorRef>();
+            var selfBefore = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
+            var selfAfter = await ExpectMsgAsync<IActorRef>(cancellationToken: Token);
             selfAfter.Should().Be(selfBefore);
         }
 
