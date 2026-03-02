@@ -2,6 +2,8 @@
 
 **Placeholder for nightly build**
 
+* Core: Add `ILoggingAdapter` context enrichment, explicit scopes, and bracketed context output in StandardOutLogger and Xunit logger
+
 #### 1.5.47 August 12th, 2025 ####
 
 Akka.NET v1.5.47 is a minor patch containing several stability improvements to Akka.TestKit.

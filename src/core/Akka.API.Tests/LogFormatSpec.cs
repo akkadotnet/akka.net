@@ -167,6 +167,45 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
         await Verifier.Verify(text);
     }
 
+    [Fact]
+    public async Task ShouldIncludeContextInDefaultLogFormat()
+    {
+        // arrange
+        var filePath = Path.GetTempFileName();
+
+        // act
+        using (new OutputRedirector(filePath))
+        {
+            var enrichedLog = Sys.Log
+                .WithContext("Tenant", "foo")
+                .WithContext("Partition", 12);
+
+            enrichedLog.Info("Contexted {Value}", 42);
+
+            using (var scope = Sys.Log.BeginScope("RequestId", "REQ-123"))
+            {
+                scope.Log.Info("Scoped {Value}", 7);
+            }
+
+            await AwaitConditionAsync(() =>
+            {
+                return _logger.Events.Any(e => e.Message.ToString()!.Contains("Contexted"))
+                       && _logger.Events.Any(e => e.Message.ToString()!.Contains("Scoped"));
+            });
+        }
+
+        // assert
+        // ReSharper disable once MethodHasAsyncOverload
+        var text = File.ReadAllText(filePath);
+        text = SanitizeDateTime(text);
+        text = SanitizeThreadNumber(text);
+        text = SanitizeTestEventListener(text);
+        text = SanitizeDefaultLoggersStarted(text);
+        text = SanitizeCustomLoggerRemoved(text);
+
+        await Verifier.Verify(text);
+    }
+
     private static string SanitizeDefaultLoggersStarted(string logs)
     {
         var pattern = @"^.*Default Loggers started.*$\r?\n?";
