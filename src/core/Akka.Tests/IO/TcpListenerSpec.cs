@@ -13,7 +13,6 @@ using Akka.Actor;
 using Akka.IO;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using TcpListener = Akka.IO.TcpListener;
 
 namespace Akka.Tests.IO

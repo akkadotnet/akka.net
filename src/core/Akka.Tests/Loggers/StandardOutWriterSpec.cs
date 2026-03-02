@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Akka.TestKit;
 using Akka.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Loggers
 {
