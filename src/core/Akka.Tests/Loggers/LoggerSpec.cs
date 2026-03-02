@@ -18,7 +18,6 @@ using Akka.Event;
 using Akka.TestKit;
 using Akka.Tests.Shared.Internals;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 
 namespace Akka.Tests.Loggers
