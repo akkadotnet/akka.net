@@ -15,12 +15,11 @@ using Akka.Delivery.Internal;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Tests.Delivery.TestConsumer;
 
 namespace Akka.Tests.Delivery;
 
-public class ConsumerControllerSpecs : TestKit.Xunit2.TestKit
+public class ConsumerControllerSpecs : TestKit.Xunit.TestKit
 {
     public static readonly Config Config = @"
         akka.reliable-delivery.consumer-controller {

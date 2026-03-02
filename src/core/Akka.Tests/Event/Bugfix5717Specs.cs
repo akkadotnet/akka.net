@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Event
 {
