@@ -12,7 +12,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit;
 using Akka.Util;
 
 namespace Akka.Coordination.Tests
