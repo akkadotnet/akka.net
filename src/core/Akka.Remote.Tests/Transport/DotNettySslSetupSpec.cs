@@ -14,7 +14,6 @@ using Akka.Configuration;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Util.RuntimeDetector;
 
 namespace Akka.Remote.Tests.Transport
