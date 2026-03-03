@@ -4,7 +4,7 @@ Akka.NET v1.5.62 is a maintenance release with an important bug fix for logging 
 
 **Bug Fixes**
 
-* [Fix: catch FormatException in log formatters to prevent third-party logger crashes](https://github.com/akkadotnet/akka.net/pull/8070) - Fixes a crash where malformed log format strings.
+* [Fix: catch FormatException in log formatters to prevent third-party logger crashes](https://github.com/akkadotnet/akka.net/pull/8070) - Fixes a crash caused by malformed log format strings.
 
 1 contributor since release 1.5.61
 
