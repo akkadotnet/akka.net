@@ -38,40 +38,28 @@ akka.stdout-loglevel = DEBUG");
         [Fact]
         public async Task TestOutputLogger_WithBadFormattingMustNotThrow()
         {
-            var events = new List<LogEvent>();
-
             // Need to wait until TestOutputLogger initializes
             await Task.Delay(500);
             Sys.EventStream.Subscribe(TestActor, typeof(LogEvent));
 
+            // Bad format strings should now produce diagnostic messages rather than throwing FormatException.
+            // Only the original log event should be published (no secondary Error event).
             Sys.Log.Error(new FakeException("BOOM"), Case.t, Case.p);
-            events.Add(await ExpectMsgAsync<Error>());
-            events.Add(await ExpectMsgAsync<Error>());
+            var errorEvt = await ExpectMsgAsync<Error>();
+            errorEvt.Cause.Should().BeOfType<FakeException>();
+            errorEvt.ToString().Should().Contain("[INVALID LOG FORMAT]");
 
-            events.All(e => e is Error).Should().BeTrue();
-            events.Select(e => e.Cause).Any(c => c is FakeException).Should().BeTrue();
-            events.Select(e => e.Cause).Any(c => c is AggregateException).Should().BeTrue();
-
-            events.Clear();
             Sys.Log.Warning(Case.t, Case.p);
-            events.Add(await ExpectMsgAsync<LogEvent>());
-            events.Add(await ExpectMsgAsync<LogEvent>());
-            events.Any(e => e is Warning).Should().BeTrue();
-            events.First(e => e is Error).Cause.Should().BeOfType<FormatException>();
+            var warningEvt = await ExpectMsgAsync<Warning>();
+            warningEvt.ToString().Should().Contain("[INVALID LOG FORMAT]");
 
-            events.Clear();
             Sys.Log.Info(Case.t, Case.p);
-            events.Add(await ExpectMsgAsync<LogEvent>());
-            events.Add(await ExpectMsgAsync<LogEvent>());
-            events.Any(e => e is Info).Should().BeTrue();
-            events.First(e => e is Error).Cause.Should().BeOfType<FormatException>();
+            var infoEvt = await ExpectMsgAsync<Info>();
+            infoEvt.ToString().Should().Contain("[INVALID LOG FORMAT]");
 
-            events.Clear();
             Sys.Log.Debug(Case.t, Case.p);
-            events.Add(await ExpectMsgAsync<LogEvent>());
-            events.Add(await ExpectMsgAsync<LogEvent>());
-            events.Any(e => e is Debug).Should().BeTrue();
-            events.First(e => e is Error).Cause.Should().BeOfType<FormatException>();
+            var debugEvt = await ExpectMsgAsync<Debug>();
+            debugEvt.ToString().Should().Contain("[INVALID LOG FORMAT]");
         }
 
         [Fact]
