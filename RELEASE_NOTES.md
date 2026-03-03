@@ -1,3 +1,19 @@
+#### 1.5.62 March 4th, 2026 ####
+
+Akka.NET v1.5.62 is a maintenance release with an important bug fix for logging stability when using third-party logging providers.
+
+**Bug Fixes**
+
+* [Fix: catch FormatException in log formatters to prevent third-party logger crashes](https://github.com/akkadotnet/akka.net/pull/8070) - Fixes a crash where malformed log format strings (e.g. `"{0} {1} {2}"` with only two arguments) caused a `FormatException` to propagate through `SemanticLogMessageFormatter` and `DefaultLogMessageFormatter`, crashing third-party logging actors such as `SerilogLogger` and `NLogLogger`. The exception is now caught at the formatter level and replaced with a diagnostic string. Defense-in-depth catches were also added in `LogFilterEvaluator.ShouldTryKeepMessage()` to protect against custom formatters that may throw.
+
+1 contributor since release 1.5.61
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 1       | 213  | 35   | Aaron Stannard      |
+
+To see the full set of changes in Akka.NET v1.5.62, [click here](https://github.com/akkadotnet/akka.net/milestone/145?closed=1).
+
 #### 1.5.61 February 26th, 2026 ####
 
 Akka.NET v1.5.61 is a maintenance release with important bug fixes for Akka.Cluster.Sharding, Akka.Cluster, and Akka.Core.
