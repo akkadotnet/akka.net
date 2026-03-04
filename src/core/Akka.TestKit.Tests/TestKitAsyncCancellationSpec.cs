@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.TestKit
 {
