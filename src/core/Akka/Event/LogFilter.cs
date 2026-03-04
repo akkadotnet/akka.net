@@ -190,7 +190,15 @@ public class LogFilterEvaluator
         else
         {
             // allocate the message just once
-            var nullCheck = evt.ToString();
+            string nullCheck;
+            try
+            {
+                nullCheck = evt.ToString();
+            }
+            catch (FormatException)
+            {
+                nullCheck = FallbackFormat(evt);
+            }
 
             if (nullCheck == null)
                 return false; // no message to filter
@@ -207,8 +215,26 @@ public class LogFilterEvaluator
         // expand the message if we haven't already
         // NOTE: might result in duplicate allocations in third party logging libraries. They'll have to adjust their
         // code accordingly after this feature ships.
-        expandedLogMessage = (string.IsNullOrEmpty(expandedLogMessage) ? evt.Message.ToString() : expandedLogMessage)!;
+        if (string.IsNullOrEmpty(expandedLogMessage))
+        {
+            try
+            {
+                expandedLogMessage = evt.Message.ToString()!;
+            }
+            catch (FormatException)
+            {
+                expandedLogMessage = FallbackFormat(evt);
+            }
+        }
         return true;
+    }
+
+    private static string FallbackFormat(LogEvent evt)
+    {
+        if (evt.Message is LogMessage lm)
+            return $"[INVALID LOG FORMAT] str=[{lm.Format}], args=[{lm.Unformatted()}]. " +
+                   "Please fix the format string in the logging call site.";
+        return evt.Message?.ToString() ?? string.Empty;
     }
 
     /// <summary>
@@ -224,7 +250,14 @@ public class LogFilterEvaluator
 
         public override bool ShouldTryKeepMessage(LogEvent evt, out string expandedLogMessage)
         {
-            expandedLogMessage = evt.ToString()!;
+            try
+            {
+                expandedLogMessage = evt.ToString()!;
+            }
+            catch (FormatException)
+            {
+                expandedLogMessage = FallbackFormat(evt);
+            }
             return true;
         }
     }
