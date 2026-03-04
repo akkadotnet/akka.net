@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
+    <PackageReference Include="System.Diagnostics.StackTrace" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FsCheck.Xunit.v3" Version="$(FsCheck3Version)" />
+    <PackageReference Include="Fsharp.Core" Version="$(FsharpVersion)" />
+  </ItemGroup>
+
+</Project>

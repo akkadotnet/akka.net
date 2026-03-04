@@ -15,13 +15,12 @@ using Akka.Util;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Tests.Delivery.TestConsumer;
 using static Akka.Tests.Delivery.TestProducer;
 
 namespace Akka.Tests.Delivery;
 
-public class ReliableDeliverySpecs : TestKit.Xunit2.TestKit
+public class ReliableDeliverySpecs : TestKit.Xunit.TestKit
 {
     internal static readonly Config Config = @"akka.reliable-delivery.consumer-controller.flow-control-window = 20";
 

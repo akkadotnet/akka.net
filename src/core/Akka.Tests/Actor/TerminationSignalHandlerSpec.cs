@@ -16,7 +16,6 @@ using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Actor.CoordinatedShutdown;
 
 namespace Akka.Tests.Actor;

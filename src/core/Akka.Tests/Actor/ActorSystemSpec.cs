@@ -74,7 +74,7 @@ namespace Akka.Tests.Actor
             // Actor system should be started to attach the EventFilterFactory
             system.Start();
 
-            var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
+            var eventFilter = new EventFilterFactory(new TestKit.Xunit.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
             var expected = "log-config-on-start : on";
@@ -93,7 +93,7 @@ namespace Akka.Tests.Actor
             // Actor system should be started to attach the EventFilterFactory
             system.Start();
 
-            var eventFilter = new EventFilterFactory(new TestKit.Xunit2.TestKit(system));
+            var eventFilter = new EventFilterFactory(new TestKit.Xunit.TestKit(system));
 
             // Notice here we forcedly start actor system again to monitor how it processes
             await eventFilter.Info().ExpectAsync(0, () => { system.Start(); return Task.CompletedTask; });
@@ -117,7 +117,7 @@ namespace Akka.Tests.Actor
 
             try
             {
-                var testKit = new TestKit.Xunit2.TestKit(sys);
+                var testKit = new TestKit.Xunit.TestKit(sys);
                 var probe = testKit.CreateTestProbe();
                 var a = sys.ActorOf(Props.Create<Terminater>());
 

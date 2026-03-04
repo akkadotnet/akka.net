@@ -18,7 +18,6 @@ using Akka.IO;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 using System.Runtime.InteropServices;
 using Akka.Util;
