@@ -116,6 +116,7 @@ namespace Akka.Coordination.Tests
 
         public TestProbe Probe { get; }
         private AtomicReference<Task<bool>> nextAcquireResult;
+        private AtomicReference<Task<bool>> nextReleaseResult = new(Task.FromResult(true));
         private AtomicBoolean nextCheckLeaseResult = new(false);
         private AtomicReference<Action<Exception>> currentCallBack = new(_ => { });
         private ILoggingAdapter _log;
@@ -136,6 +137,8 @@ namespace Akka.Coordination.Tests
 
         public void SetNextAcquireResult(Task<bool> next) => nextAcquireResult.GetAndSet(next);
 
+        public void SetNextReleaseResult(Task<bool> next) => nextReleaseResult.GetAndSet(next);
+
         public void SetNextCheckLeaseResult(bool value) => nextCheckLeaseResult.GetAndSet(value);
 
         public Action<Exception> GetCurrentCallback() => currentCallBack.Value;
@@ -151,7 +154,7 @@ namespace Akka.Coordination.Tests
         public override Task<bool> Release()
         {
             Probe.Ref.Tell(new ReleaseReq(Settings.OwnerName));
-            return Task.FromResult(true);
+            return nextReleaseResult.Value;
         }
 
         public override bool CheckLease() => nextCheckLeaseResult.Value;

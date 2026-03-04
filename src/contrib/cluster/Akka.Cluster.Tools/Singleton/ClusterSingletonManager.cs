@@ -1441,7 +1441,12 @@ namespace Akka.Cluster.Tools.Singleton
                 if (from == ClusterSingletonState.Oldest && _lease != null)
                 {
                     Log.Info("Releasing lease as leaving Oldest");
-                    _lease.Release().ContinueWith(r => new ReleaseLeaseResult(r.Result)).PipeTo(Self);
+                    _lease.Release().ContinueWith(r =>
+                    {
+                        if (r.IsCanceled || r.IsFaulted)
+                            return (object)new ReleaseLeaseFailure(r.Exception ?? (Exception)new LeaseException("Failed to release lease"));
+                        return new ReleaseLeaseResult(r.Result);
+                    }).PipeTo(Self);
                 }
 
                 if (to is ClusterSingletonState.Younger or ClusterSingletonState.Oldest) GetNextOldestChanged();
