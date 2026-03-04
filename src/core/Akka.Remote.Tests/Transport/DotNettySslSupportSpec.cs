@@ -13,10 +13,9 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Util.RuntimeDetector;
 
 namespace Akka.Remote.Tests.Transport
