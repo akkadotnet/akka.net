@@ -20,7 +20,7 @@ using Akka.TestKit.Extensions;
 using Akka.Util;
 using FluentAssertions.Extensions;
 using Reactive.Streams;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Streams.Tests
 {

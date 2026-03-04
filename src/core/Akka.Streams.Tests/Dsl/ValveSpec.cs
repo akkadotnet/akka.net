@@ -19,7 +19,7 @@ using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class ValveSpec : Akka.TestKit.Xunit2.TestKit
+    public class ValveSpec : Akka.TestKit.Xunit.TestKit
     {
         [Fact]
         public async Task Closed_Valve_should_emit_only_3_elements_into_a_sequence_when_the_valve_is_switched_to_open()

@@ -17,10 +17,9 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests
 {
@@ -221,7 +220,7 @@ namespace Akka.Streams.Tests
             _probe = CreateTestProbe();
         }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             var it = RemoteSystem.ActorOf(DataSourceActor.Props(_probe.Ref), "remoteActor");
             var remoteAddress = ((ActorSystemImpl)RemoteSystem).Provider.DefaultAddress;
@@ -230,9 +229,9 @@ namespace Akka.Streams.Tests
             _remoteActor = (await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(30))).Subject;
         }
 
-        public Task DisposeAsync()
+        public ValueTask DisposeAsync()
         {
-            return Task.CompletedTask;
+            return new ValueTask(Task.CompletedTask);
         }
 
         protected readonly ActorSystem RemoteSystem;

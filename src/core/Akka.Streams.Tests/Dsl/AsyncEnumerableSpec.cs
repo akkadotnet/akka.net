@@ -16,7 +16,6 @@ using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Akka.TestKit.Extensions;

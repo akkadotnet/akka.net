@@ -15,7 +15,6 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Streams.Tests.Dsl.TestConfig;
 // ReSharper disable InvokeAsExtensionMethod
 
