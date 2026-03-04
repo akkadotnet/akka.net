@@ -1770,17 +1770,17 @@ namespace Akka.Streams.Dsl
 
                 public override void PreStart()
                 {
-                    void OnHubReady(Task<Action<IHubEvent>> t)
+                    void OnHubReady(Result<Action<IHubEvent>> result)
                     {
-                        if (t.IsCanceled || t.IsFaulted)
-                            FailStage(t.Exception);
-                        else
+                        if (result.IsSuccess)
                         {
-                            _hubCallback = t.Result;
+                            _hubCallback = result.Value;
                             _hubCallback(RegistrationPending.Instance);
                             if (IsAvailable(_source._out))
                                 OnPull();
                         }
+                        else
+                            FailStage(result.Exception);
                     }
 
                     void Register()
@@ -1799,8 +1799,8 @@ namespace Akka.Streams.Dsl
                         var newRegistrations = o.Registrations.Add(_consumer);
                         if (_source._logic.State.CompareAndSet(o, new Open(o.CallbackTask, newRegistrations)))
                         {
-                            var callback = GetAsyncCallback<Task<Action<IHubEvent>>>(OnHubReady);
-                            o.CallbackTask.ContinueWith(callback);
+                            var callback = GetAsyncCallback<Result<Action<IHubEvent>>>(OnHubReady);
+                            o.CallbackTask.ContinueWith(t => callback(Result.FromTask(t)));
                         }
                         else Register();
                     }
