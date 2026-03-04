@@ -10,7 +10,10 @@
       xUnit1031 is a temporary fix, we will need to pay this technical debt 
       and make everything fully async in the future 
     -->
-    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632</NoWarn>
+    <!-- 
+      xUnit1051 is to suppress xUnit oppinionated cancellation token warning. 
+    -->
+    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <!-- Set the language version for C# if we're not inside an F# project -->
@@ -37,6 +40,7 @@
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <FsCheckVersion>2.16.6</FsCheckVersion>
+    <FsCheck3Version>3.3.2</FsCheck3Version>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
     <MultiNodeAdapterVersion>1.5.40</MultiNodeAdapterVersion>
