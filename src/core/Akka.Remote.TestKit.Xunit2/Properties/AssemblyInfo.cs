@@ -16,24 +16,9 @@ using System.Runtime.InteropServices;
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
 // COM, set the ComVisible attribute to true on that type.
-
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-
-[assembly: Guid("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
+[assembly: Guid("de375180-0f6f-40c5-9dd4-3a27e2559d5d")]
 [assembly: InternalsVisibleTo("Akka.Remote.TestKit.Tests")]
-[assembly: InternalsVisibleTo("Akka.Remote.TestKit")]
-[assembly: InternalsVisibleTo("Akka.Remote.TestKit.Xunit2")]
-[assembly: InternalsVisibleTo("Akka.Remote.Tests")]
-[assembly: InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
-[assembly: InternalsVisibleTo("Akka.Remote.Tests.Performance")]
-[assembly: InternalsVisibleTo("Akka.Cluster")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Tests")]
-[assembly: InternalsVisibleTo("Akka.Cluster.TestKit")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Tools")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Sharding")]
-[assembly: InternalsVisibleTo("Akka.Cluster.Metrics")]
-[assembly: InternalsVisibleTo("Akka.Benchmarks")]
-[assembly: InternalsVisibleTo("Akka.Persistence.Tests")]
+
