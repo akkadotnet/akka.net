@@ -16,6 +16,7 @@ using Akka.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Serialization
 {

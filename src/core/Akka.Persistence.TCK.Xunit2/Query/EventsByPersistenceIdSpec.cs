@@ -17,10 +17,11 @@ using Akka.Streams.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
-    public abstract class EventsByPersistenceIdSpec : Akka.TestKit.Xunit.TestKit
+    public abstract class EventsByPersistenceIdSpec : Akka.TestKit.Xunit2.TestKit
     {
         protected ActorMaterializer Materializer { get; }
 

@@ -11,11 +11,11 @@ using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Util.Internal;
-using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK
 {
-    public abstract class PluginSpec : Akka.TestKit.Xunit.TestKit, IDisposable
+    public abstract class PluginSpec : Akka.TestKit.Xunit2.TestKit, IDisposable
     {
         private static readonly AtomicCounter Counter = new(0);
 

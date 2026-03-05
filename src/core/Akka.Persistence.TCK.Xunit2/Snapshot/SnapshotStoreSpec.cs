@@ -17,6 +17,7 @@ using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Snapshot
 {

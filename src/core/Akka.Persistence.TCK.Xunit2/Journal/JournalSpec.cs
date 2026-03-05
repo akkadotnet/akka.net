@@ -17,6 +17,7 @@ using Akka.Persistence.TCK.Serialization;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Journal
 {

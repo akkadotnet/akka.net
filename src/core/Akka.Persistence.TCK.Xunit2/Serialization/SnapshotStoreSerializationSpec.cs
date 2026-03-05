@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Serialization;
 using Xunit;
+using Xunit.Abstractions;
 using Akka.Util.Internal;
 using FluentAssertions;
 
