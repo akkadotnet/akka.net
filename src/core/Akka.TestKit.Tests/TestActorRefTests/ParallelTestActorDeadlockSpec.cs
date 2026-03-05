@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
@@ -46,7 +45,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
                 {
                     _output.WriteLine($"[{id}] Creating TestKit...");
                     // Create TestKit synchronously like a normal test would
-                    using var testKit = new Akka.TestKit.Xunit2.TestKit($"test-{id}", output: _output);
+                    using var testKit = new Akka.TestKit.Xunit.TestKit($"test-{id}", output: _output);
                     _output.WriteLine($"[{id}] TestKit created");
 
                     // Simulate what happens in Akka.Hosting - actor creation during startup
