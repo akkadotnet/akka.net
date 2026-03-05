@@ -12,7 +12,6 @@ using Akka.Event;
 using Akka.Remote.Transport.DotNetty;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {

@@ -13,7 +13,6 @@ using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests
 {
