@@ -16,7 +16,6 @@ using Akka.TestKit;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Util.RuntimeDetector;
 using Config = Akka.Configuration.Config;
 using FluentAssertions;
