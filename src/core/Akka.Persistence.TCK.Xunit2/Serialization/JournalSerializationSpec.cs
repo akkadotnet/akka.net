@@ -26,13 +26,13 @@ namespace Akka.Persistence.TCK.Serialization
             : base(ConfigurationFactory.ParseString(@"
                 akka.actor {
                   serializers {
-                    my-payload = ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayloadSerializer, Akka.Persistence.TCK""
-                    my-payload2 = ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload2Serializer, Akka.Persistence.TCK""
+                    my-payload = ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayloadSerializer, Akka.Persistence.TCK.Xunit2""
+                    my-payload2 = ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload2Serializer, Akka.Persistence.TCK.Xunit2""
                   }
                   serialization-bindings {
-                    ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload, Akka.Persistence.TCK"" = my-payload
-                    ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload2, Akka.Persistence.TCK"" = my-payload2
-                    ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload3, Akka.Persistence.TCK"" = my-payload
+                    ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload, Akka.Persistence.TCK.Xunit2"" = my-payload
+                    ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload2, Akka.Persistence.TCK.Xunit2"" = my-payload2
+                    ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload3, Akka.Persistence.TCK.Xunit2"" = my-payload
                   }
                 }
             ").WithFallback(config), actorSystem, output)

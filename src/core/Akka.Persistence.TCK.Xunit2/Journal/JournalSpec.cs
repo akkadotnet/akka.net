@@ -27,10 +27,10 @@ namespace Akka.Persistence.TCK.Journal
             ConfigurationFactory.ParseString(@"akka.persistence.publish-plugin-commands = on
             akka.actor{
                 serializers{
-                    persistence-tck-test=""Akka.Persistence.TCK.Serialization.TestSerializer,Akka.Persistence.TCK""
+                    persistence-tck-test=""Akka.Persistence.TCK.Serialization.TestSerializer,Akka.Persistence.TCK.Xunit2""
                 }
                 serialization-bindings {
-                    ""Akka.Persistence.TCK.Serialization.TestPayload,Akka.Persistence.TCK"" = persistence-tck-test
+                    ""Akka.Persistence.TCK.Serialization.TestPayload,Akka.Persistence.TCK.Xunit2"" = persistence-tck-test
                 }
             }");
 

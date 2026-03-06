@@ -25,12 +25,12 @@ namespace Akka.Persistence.TCK.Serialization
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
 akka.actor {
     serializers {
-        my-snapshot = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer, Akka.Persistence.TCK""
-        my-snapshot2 = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer2, Akka.Persistence.TCK""
+        my-snapshot = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer, Akka.Persistence.TCK.Xunit2""
+        my-snapshot2 = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer2, Akka.Persistence.TCK.Xunit2""
     }
     serialization-bindings {
-        ""Akka.Persistence.TCK.Serialization.Test+MySnapshot, Akka.Persistence.TCK"" = my-snapshot
-        ""Akka.Persistence.TCK.Serialization.Test+MySnapshot2, Akka.Persistence.TCK"" = my-snapshot2
+        ""Akka.Persistence.TCK.Serialization.Test+MySnapshot, Akka.Persistence.TCK.Xunit2"" = my-snapshot
+        ""Akka.Persistence.TCK.Serialization.Test+MySnapshot2, Akka.Persistence.TCK.Xunit2"" = my-snapshot2
     }
 }");
         
