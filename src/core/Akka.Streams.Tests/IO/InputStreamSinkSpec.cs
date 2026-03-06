@@ -16,10 +16,9 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.IO;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.IO
 {

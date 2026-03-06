@@ -22,7 +22,7 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class PagedSourceSpec
     {
-        public class MultiplesOfTwo : Akka.TestKit.Xunit2.TestKit
+        public class MultiplesOfTwo : Akka.TestKit.Xunit.TestKit
         {
             private class MultiplesOfTwoPage
             {
@@ -64,7 +64,7 @@ namespace Akka.Streams.Tests.Dsl
             }
         }
 
-        public class IndexedStringPages : Akka.TestKit.Xunit2.TestKit
+        public class IndexedStringPages : Akka.TestKit.Xunit.TestKit
         {
             private readonly Source<string, NotUsed> _source = PagedSource.Create
             (
@@ -102,7 +102,7 @@ namespace Akka.Streams.Tests.Dsl
             }
         }
 
-        public class LinkedIntPages : Akka.TestKit.Xunit2.TestKit
+        public class LinkedIntPages : Akka.TestKit.Xunit.TestKit
         {
             private readonly Source<int, NotUsed> _source = PagedSource.Create
             (

@@ -16,13 +16,12 @@ using FluentAssertions;
 using Reactive.Streams;
 using Akka.TestKit.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using Fuse = Akka.Streams.Implementation.Fusing.Fusing;
 using System.Threading.Tasks;
 
 namespace Akka.Streams.Tests.Implementation
 {
-    public class StreamLayoutSpec : Akka.TestKit.Xunit2.TestKit
+    public class StreamLayoutSpec : Akka.TestKit.Xunit.TestKit
     {
         #region internal classes
 
