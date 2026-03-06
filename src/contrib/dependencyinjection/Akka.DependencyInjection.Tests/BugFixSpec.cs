@@ -14,7 +14,6 @@ using Akka.TestKit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 using static FluentAssertions.FluentActions;
 
@@ -60,7 +59,7 @@ namespace Akka.DependencyInjection.Tests
         }
         
         
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             await _akkaService.StartAsync(default);
             InitializeLogger(_akkaService.ActorSystem);
@@ -73,9 +72,9 @@ namespace Akka.DependencyInjection.Tests
             base.AfterAll();
         }
 
-        public Task DisposeAsync()
+        public ValueTask DisposeAsync()
         {
-            return Task.CompletedTask;
+            return new ValueTask(Task.CompletedTask);
         }
         
         internal class AkkaService : IHostedService

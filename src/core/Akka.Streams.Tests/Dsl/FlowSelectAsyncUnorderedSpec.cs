@@ -18,12 +18,11 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using Akka.Util.Internal;
 using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions.Extensions;
 
 // ReSharper disable InvokeAsExtensionMethod

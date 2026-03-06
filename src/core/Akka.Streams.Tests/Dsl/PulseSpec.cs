@@ -17,7 +17,7 @@ using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class PulseSpec : Akka.TestKit.Xunit2.TestKit
+    public class PulseSpec : Akka.TestKit.Xunit.TestKit
     {
         private readonly TimeSpan _pulseInterval = TimeSpan.FromMilliseconds(20);
 

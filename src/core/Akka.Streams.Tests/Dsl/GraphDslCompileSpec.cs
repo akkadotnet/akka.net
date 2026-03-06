@@ -16,7 +16,6 @@ using Akka.TestKit;
 using FluentAssertions;
 using Microsoft.CSharp.RuntimeBinder;
 using Xunit;
-using Xunit.Abstractions;
 // ReSharper disable RedundantTypeArgumentsOfMethod
 // ReSharper disable InvokeAsExtensionMethod
 // ReSharper disable UnusedVariable

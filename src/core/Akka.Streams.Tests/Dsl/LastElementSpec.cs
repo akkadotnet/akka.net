@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class LastElementSpec : Akka.TestKit.Xunit2.TestKit
+    public class LastElementSpec : Akka.TestKit.Xunit.TestKit
     {
         [Fact]
         public async Task A_stream_via_LastElement_should_materialize_to_the_last_element_emitted_by_a_finite_nonempty_successful_source()
