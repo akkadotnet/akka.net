@@ -28,5 +28,44 @@
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <PackageReference Include="System.Collections.Specialized" Version="4.3.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Akka.Remote.TestKit\BarrierCoordinator.cs">
+      <Link>BarrierCoordinator.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\CommandLine.cs">
+      <Link>CommandLine.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Conductor.cs">
+      <Link>Conductor.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Controller.cs">
+      <Link>Controller.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\DataTypes.cs">
+      <Link>DataTypes.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Extension.cs">
+      <Link>Extension.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\MsgDecoder.cs">
+      <Link>MsgDecoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\MsgEncoder.cs">
+      <Link>MsgEncoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Player.cs">
+      <Link>Player.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Proto\ProtobufDecoder.cs">
+      <Link>Proto\ProtobufDecoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Proto\ProtobufEncoder.cs">
+      <Link>Proto\ProtobufEncoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\RemoteConnection.cs">
+      <Link>RemoteConnection.cs</Link>
+    </Compile>
+  </ItemGroup>
   
 </Project>
