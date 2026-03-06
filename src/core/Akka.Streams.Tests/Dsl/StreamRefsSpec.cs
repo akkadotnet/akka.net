@@ -17,10 +17,9 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests
 {
@@ -221,7 +220,7 @@ namespace Akka.Streams.Tests
             _probe = CreateTestProbe();
         }
 
-        public async Task InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             var it = RemoteSystem.ActorOf(DataSourceActor.Props(_probe.Ref), "remoteActor");
             var remoteAddress = ((ActorSystemImpl)RemoteSystem).Provider.DefaultAddress;
@@ -230,9 +229,9 @@ namespace Akka.Streams.Tests
             _remoteActor = (await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(30))).Subject;
         }
 
-        public Task DisposeAsync()
+        public ValueTask DisposeAsync()
         {
-            return Task.CompletedTask;
+            return new ValueTask(Task.CompletedTask);
         }
 
         protected readonly ActorSystem RemoteSystem;
@@ -255,7 +254,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SourceRef_must_send_messages_via_remoting()
         {
-            _remoteActor.Tell("give");
+            _remoteActor.Tell("give", TestActor);
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
             sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>", ex => new Status.Failure(ex)), Materializer);
@@ -268,7 +267,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SourceRef_must_fail_when_remote_source_failed()
         {
-            _remoteActor.Tell("give-fail");
+            _remoteActor.Tell("give-fail", TestActor);
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
             sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>", ex => new Status.Failure(ex)), Materializer);
@@ -282,7 +281,7 @@ namespace Akka.Streams.Tests
         public void SourceRef_must_complete_properly_when_remote_source_is_empty()
         {
             // this is a special case since it makes sure that the remote stage is still there when we connect to it
-            _remoteActor.Tell("give-complete-asap");
+            _remoteActor.Tell("give-complete-asap", TestActor);
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
             sourceRef.Source.RunWith(Sink.ActorRef<string>(_probe.Ref, "<COMPLETE>", ex => new Status.Failure(ex)), Materializer);
@@ -293,7 +292,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SourceRef_must_respect_backpressure_from_implied_by_target_Sink()
         {
-            _remoteActor.Tell("give-infinite");
+            _remoteActor.Tell("give-infinite", TestActor);
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
             var probe = sourceRef.Source.RunWith(this.SinkProbe<string>(), Materializer);
@@ -320,7 +319,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SourceRef_must_receive_timeout_if_subscribing_too_late_to_the_source_ref()
         {
-            _remoteActor.Tell("give-subscribe-timeout");
+            _remoteActor.Tell("give-subscribe-timeout", TestActor);
             var sourceRef = ExpectMsg<ISourceRef<string>>();
 
 
@@ -338,7 +337,7 @@ namespace Akka.Streams.Tests
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void SourceRef_must_not_receive_subscription_timeout_when_got_subscribed()
         {
-            _remoteActor.Tell("give-subscribe-timeout");
+            _remoteActor.Tell("give-subscribe-timeout", TestActor);
             var remoteSource = ExpectMsg<ISourceRef<string>>();
             // materialize directly and start consuming, timeout is 500ms
             var eventualString = remoteSource.Source
@@ -352,7 +351,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SourceRef_must_not_receive_timeout_when_data_is_being_sent()
         {
-            _remoteActor.Tell("give-infinite");
+            _remoteActor.Tell("give-infinite", TestActor);
             var remoteSource = ExpectMsg<ISourceRef<string>>();
 
             var done = remoteSource.Source
@@ -366,7 +365,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SinkRef_must_receive_elements_via_remoting()
         {
-            _remoteActor.Tell("receive");
+            _remoteActor.Tell("receive", TestActor);
             var remoteSink = ExpectMsg<ISinkRef<string>>();
 
             Source.From(new[] { "hello", "world" })
@@ -381,7 +380,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SinkRef_must_fail_origin_if_remote_Sink_gets_a_failure()
         {
-            _remoteActor.Tell("receive");
+            _remoteActor.Tell("receive", TestActor);
             var remoteSink = ExpectMsg<ISinkRef<string>>();
 
             Source.Failed<string>(new Exception("Boom!"))
@@ -396,7 +395,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SinkRef_must_receive_hundreds_of_elements_via_remoting()
         {
-            _remoteActor.Tell("receive");
+            _remoteActor.Tell("receive", TestActor);
             var remoteSink = ExpectMsg<ISinkRef<string>>();
 
             var msgs = Enumerable.Range(1, 100).Select(i => "payload-" + i).ToArray();
@@ -414,7 +413,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SinkRef_must_receive_timeout_if_subscribing_too_late_to_the_sink_ref()
         {
-            _remoteActor.Tell("receive-subscribe-timeout");
+            _remoteActor.Tell("receive-subscribe-timeout", TestActor);
             var remoteSink = ExpectMsg<ISinkRef<string>>();
 
             // not materializing it, awaiting the timeout...
@@ -432,7 +431,7 @@ namespace Akka.Streams.Tests
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
         public void SinkRef_must_not_receive_timeout_if_subscribing_is_already_done_to_the_sink_ref()
         {
-            _remoteActor.Tell("receive-subscribe-timeout");
+            _remoteActor.Tell("receive-subscribe-timeout", TestActor);
             var remoteSink = ExpectMsg<ISinkRef<string>>();
             Source.Repeat("whatever")
                 .Throttle(1, 100.Milliseconds(), 1, ThrottleMode.Shaping)
@@ -450,7 +449,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SinkRef_must_not_receive_timeout_while_data_is_being_sent()
         {
-            _remoteActor.Tell("receive-ignore");
+            _remoteActor.Tell("receive-ignore", TestActor);
             var remoteSink = ExpectMsg<ISinkRef<string>>();
 
             var done =
@@ -468,7 +467,7 @@ namespace Akka.Streams.Tests
         [Fact(Skip = "FIXME: how to pass test assertions to remote system?")]
         public void SinkRef_must_respect_backpressure_implied_by_origin_Sink()
         {
-            _remoteActor.Tell("receive-32");
+            _remoteActor.Tell("receive-32", TestActor);
             var sinkRef = ExpectMsg<ISinkRef<string>>();
 
             Source.Repeat("hello").RunWith(sinkRef.Sink, Materializer);
@@ -480,7 +479,7 @@ namespace Akka.Streams.Tests
         [Fact]
         public void SinkRef_must_not_allow_materializing_multiple_times()
         {
-            _remoteActor.Tell("receive-subscribe-timeout");
+            _remoteActor.Tell("receive-subscribe-timeout", TestActor);
             var sinkRef = ExpectMsg<ISinkRef<string>>();
 
             var p1 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);

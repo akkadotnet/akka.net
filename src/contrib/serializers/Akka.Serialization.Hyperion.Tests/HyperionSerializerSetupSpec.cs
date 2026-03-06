@@ -21,7 +21,6 @@ using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 using Hyperion;
 using Hyperion.Internal;

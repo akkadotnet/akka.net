@@ -15,11 +15,10 @@ using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using Akka.TestKit.Extensions;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using Decider = Akka.Streams.Supervision.Decider;
 using FluentAssertions.Extensions;
 

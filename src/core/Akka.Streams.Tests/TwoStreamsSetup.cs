@@ -8,7 +8,7 @@
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Reactive.Streams;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Streams.Tests
 {
