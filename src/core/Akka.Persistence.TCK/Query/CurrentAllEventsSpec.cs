@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Akka.Persistence.TCK.Query
 {
-    public class CurrentAllEventsSpec : Akka.TestKit.Xunit.TestKit
+    public class CurrentAllEventsSpec : XTestKit
     {
         // Expect should be passing by default, need to make them less sencitive to timing
         private static readonly Config DefaultTimeoutConfig = "akka.test.single-expect-default = 30s";

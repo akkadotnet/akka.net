@@ -23,7 +23,7 @@ using Xunit;
 
 namespace Akka.Persistence.TCK.Query
 {
-    public abstract class PersistenceIdsSpec : Akka.TestKit.Xunit.TestKit
+    public abstract class PersistenceIdsSpec : XTestKit
     {
         protected ActorMaterializer Materializer { get; }
 

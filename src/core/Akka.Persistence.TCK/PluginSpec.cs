@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Akka.Persistence.TCK
 {
-    public abstract class PluginSpec : Akka.TestKit.Xunit.TestKit, IDisposable
+    public abstract class PluginSpec : XTestKit, IDisposable
     {
         private static readonly AtomicCounter Counter = new(0);
 

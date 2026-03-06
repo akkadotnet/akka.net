@@ -31,7 +31,7 @@ namespace Akka.Persistence.TestKit.Performance
     /// 
     /// In case your journal plugin needs some kind of teardown, override the `AfterAll` method (don't forget to call `base` in your overridden methods).
     /// </summary>
-    public abstract class JournalPerfSpec : Akka.TestKit.Xunit.TestKit
+    public abstract class JournalPerfSpec : XTestKit
     {
         private readonly TestProbe _testProbe;
 

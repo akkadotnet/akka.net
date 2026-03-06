@@ -20,7 +20,7 @@ using Xunit;
 
 namespace Akka.Persistence.TCK.Query
 {
-    public abstract class EventsByPersistenceIdSpec : Akka.TestKit.Xunit.TestKit
+    public abstract class EventsByPersistenceIdSpec : XTestKit
     {
         protected ActorMaterializer Materializer { get; }
 

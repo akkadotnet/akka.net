@@ -19,7 +19,7 @@ using static Akka.Persistence.Query.Offset;
 
 namespace Akka.Persistence.TCK.Query
 {
-    public abstract class CurrentEventsByTagSpec : Akka.TestKit.Xunit.TestKit
+    public abstract class CurrentEventsByTagSpec : XTestKit
     {
         protected ActorMaterializer Materializer { get; }
 
