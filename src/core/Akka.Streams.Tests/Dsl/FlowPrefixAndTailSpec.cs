@@ -197,7 +197,7 @@ namespace Akka.Streams.Tests.Dsl
                 tail.To(Sink.FromSubscriber(subscriber)).Run(tightTimeoutMaterializer);
                 subscriber.ExpectSubscriptionAndError()
                     .Message.Should()
-                    .Be("Substream Source has not been materialized in 00:00:00.3000000");
+                    .Be("Substream Source(TailSource) has not been materialized in 00:00:00.3000000");
                 return Task.CompletedTask;
             }, Materializer);
         }

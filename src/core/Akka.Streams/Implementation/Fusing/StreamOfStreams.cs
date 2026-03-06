@@ -1225,6 +1225,15 @@ namespace Akka.Streams.Implementation.Fusing
     {
         #region internal classes 
 
+        private class EmptyObject
+        {
+            public static readonly EmptyObject Instance = new ();
+
+            private EmptyObject()
+            {
+            }
+        }
+    
         private sealed class Logic : OutGraphStageLogic
         {
             private readonly SubSource<T> _stage;
@@ -1243,11 +1252,11 @@ namespace Akka.Streams.Implementation.Fusing
             private void SetCallback(Action<IActorSubscriberMessage> callback)
             {
                 // Single atomic operation that both attempts the change AND returns the previous value
-                var previous = _stage._status.CompareExchange(null, callback);
+                var previous = _stage._status.CompareExchange(EmptyObject.Instance, callback);
                 
                 switch (previous)
                 {
-                    case null:
+                    case EmptyObject:
                         return; // Success - we set the callback, previous was null
                     // CompareExchange failed - handle the different states based on what was actually there
                     case OnComplete:
@@ -1291,7 +1300,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         private readonly string _name;
         private readonly Outlet<T> _out = new("SubSource.out");
-        private readonly AtomicReference<object> _status = new();
+        private readonly AtomicReference<object> _status = new(EmptyObject.Instance);
 
         /// <summary>
         /// TBD
@@ -1330,11 +1339,22 @@ namespace Akka.Streams.Implementation.Fusing
         public void PushSubstream(T elem)
         {
             var s = _status.Value;
-            var f = s as Action<IActorSubscriberMessage>;
-
-            if (f == null)
-                throw new IllegalStateException("cannot push to uninitialized substream");
-            f(new OnNext(elem));
+            switch (s)
+            {
+                case Action<IActorSubscriberMessage> callback:
+                    callback(new OnNext(elem));
+                    return;
+                case EmptyObject:
+                    throw new IllegalStateException("cannot push to uninitialized substream");
+                case OnComplete:
+                    // Already completed
+                    throw new IllegalStateException("cannot push to completed substream");
+                case OnError:
+                    // Already failed, keep the exception
+                    throw new IllegalStateException("cannot push to errored substream");
+                default:
+                    throw new IllegalStateException($"Unexpected SubSource({_name}) status: {s}");
+            }
         }
 
         /// <summary>
@@ -1342,13 +1362,28 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public void CompleteSubstream()
         {
-            var s = _status.Value;
-            var f = s as Action<IActorSubscriberMessage>;
-
-            if (f != null)
-                f(OnComplete.Instance);
-            else if (!_status.CompareAndSet(null, OnComplete.Instance))
-                ((Action<IActorSubscriberMessage>) _status.Value)(OnComplete.Instance);
+            while (true)
+            {
+                var s = _status.Value;
+                switch (s)
+                {
+                    case Action<IActorSubscriberMessage> callback:
+                        callback(OnComplete.Instance);
+                        return;
+                    case EmptyObject:
+                        if (!_status.CompareAndSet(EmptyObject.Instance, OnComplete.Instance))
+                            continue;
+                        return;
+                    case OnComplete:
+                        // Already completed
+                        return;
+                    case OnError:
+                        // Already failed, keep the exception
+                        return;
+                    default:
+                        throw new IllegalStateException($"Unexpected SubSource({_name}) status: {s}");
+                }
+            }
         }
 
         /// <summary>
@@ -1357,14 +1392,29 @@ namespace Akka.Streams.Implementation.Fusing
         /// <param name="ex">TBD</param>
         public void FailSubstream(Exception ex)
         {
-            var s = _status.Value;
-            var f = s as Action<IActorSubscriberMessage>;
             var failure = new OnError(ex);
-
-            if (f != null)
-                f(failure);
-            else if (!_status.CompareAndSet(null, failure))
-                ((Action<IActorSubscriberMessage>) _status.Value)(failure);
+            while (true)
+            {
+                var s = _status.Value;
+                switch (s)
+                {
+                    case Action<IActorSubscriberMessage> callback:
+                        callback(failure);
+                        return;
+                    case EmptyObject:
+                        if (!_status.CompareAndSet(EmptyObject.Instance, failure))
+                            continue;
+                        return;
+                    case OnComplete:
+                        // Completion happened first
+                        return;
+                    case OnError:
+                        // Already failed, keep original exception
+                        return;
+                    default:
+                        throw new IllegalStateException($"Unexpected SubSource({_name}) status: {s}");
+                }
+            }
         }
 
         /// <summary>
@@ -1372,7 +1422,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         /// <param name="d">TBD</param>
         /// <returns>TBD</returns>
-        public bool Timeout(TimeSpan d) => _status.CompareAndSet(null, new OnError(new SubscriptionTimeoutException($"Substream Source has not been materialized in {d}")));
+        public bool Timeout(TimeSpan d) => _status.CompareAndSet(EmptyObject.Instance, new OnError(new SubscriptionTimeoutException($"Substream Source({_name}) has not been materialized in {d}")));
 
         /// <summary>
         /// TBD
