@@ -16,7 +16,8 @@ using Akka.Configuration;
 namespace Akka.IO
 {
     /// <summary>
-    /// TBD
+    /// DNS resolver actor that uses <see cref="System.Net.Dns.GetHostEntryAsync(string)"/> to resolve hostnames
+    /// and caches results using a <see cref="SimpleDnsCache"/>.
     /// </summary>
     public class InetAddressDnsResolver : ActorBase
     {
@@ -26,10 +27,10 @@ namespace Akka.IO
         private readonly bool _useIpv6;
 
         /// <summary>
-        /// TBD
+        /// Creates a new <see cref="InetAddressDnsResolver"/> with the specified cache and configuration.
         /// </summary>
-        /// <param name="cache">TBD</param>
-        /// <param name="config">TBD</param>
+        /// <param name="cache">The DNS cache for storing resolved entries.</param>
+        /// <param name="config">The HOCON configuration specifying TTL and IPv6 settings.</param>
         public InetAddressDnsResolver(SimpleDnsCache cache, Config config)
         {
             _cache = cache;
@@ -39,10 +40,10 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Handles incoming <see cref="Dns.Resolve"/> messages by returning cached results or performing an async DNS lookup.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The message to handle.</param>
+        /// <returns><see langword="true"/> if the message was handled; otherwise <see langword="false"/>.</returns>
         protected override bool Receive(object message)
         {
             if (message is Dns.Resolve resolve)
