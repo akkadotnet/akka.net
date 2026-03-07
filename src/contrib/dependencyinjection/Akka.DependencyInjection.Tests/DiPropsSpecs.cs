@@ -14,7 +14,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.DependencyInjection.Tests;
 
@@ -23,7 +22,7 @@ public class DiPropsSpecs : IAsyncLifetime
     private readonly IServiceProvider _serviceProvider;
     private readonly AkkaService _akkaService;
     private readonly ITestOutputHelper _output;
-    private TestKit.Xunit2.TestKit _testKit;
+    private TestKit.Xunit.TestKit _testKit;
 
     public DiPropsSpecs(ITestOutputHelper output)
     {
@@ -60,13 +59,13 @@ public class DiPropsSpecs : IAsyncLifetime
         actorRef.MailboxType.GetType().Should().Be(typeof(CustomMailbox));
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _akkaService.StartAsync(default);
-        _testKit = new TestKit.Xunit2.TestKit(_akkaService.ActorSystem, _output);
+        _testKit = new TestKit.Xunit.TestKit(_akkaService.ActorSystem, _output);
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await _akkaService.StopAsync();
     }

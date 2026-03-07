@@ -100,9 +100,14 @@ namespace Akka.Event
                     for (int i = 0; i < readOnlyList.Count; i++)
                         argArray[i] = readOnlyList[i];
 
-                    // For positional templates, use string.Format directly without catching FormatException
-                    // to maintain backward compatibility with DefaultLogMessageFormatter behavior
-                    return string.Format(format, argArray);
+                    try
+                    {
+                        return string.Format(format, argArray);
+                    }
+                    catch (FormatException)
+                    {
+                        return FormatDiagnostic(format, argArray);
+                    }
                 }
                 else
                 {
@@ -128,15 +133,29 @@ namespace Akka.Event
 
             if (isPositional2)
             {
-                // For positional templates, use string.Format directly without catching FormatException
-                // to maintain backward compatibility with DefaultLogMessageFormatter behavior
-                return string.Format(format, argArray);
+                try
+                {
+                    return string.Format(format, argArray);
+                }
+                catch (FormatException)
+                {
+                    return FormatDiagnostic(format, argArray);
+                }
             }
             else
             {
                 // Named template - do semantic substitution
                 return FormatNamedTemplate(format, propertyNames2, argArray);
             }
+        }
+
+        /// <summary>
+        /// Produces a diagnostic string when string.Format fails due to mismatched format/args.
+        /// </summary>
+        private static string FormatDiagnostic(string format, object[] args)
+        {
+            return $"[INVALID LOG FORMAT] str=[{format}], args=[{string.Join(", ", args)}]. " +
+                   "Please fix the format string in the logging call site.";
         }
 
         /// <summary>

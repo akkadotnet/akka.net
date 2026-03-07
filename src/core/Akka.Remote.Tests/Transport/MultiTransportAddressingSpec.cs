@@ -11,14 +11,13 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport;
 
 /// <summary>
 /// Added this spec to prove the existence of https://github.com/akkadotnet/akka.net/issues/7378
 /// </summary>
-public class MultiTransportAddressingSpec : TestKit.Xunit2.TestKit
+public class MultiTransportAddressingSpec : TestKit.Xunit.TestKit
 {
     public MultiTransportAddressingSpec(ITestOutputHelper output) : base(GetConfig(Sys1Port1, Sys1Port2), "MultiTransportSpec", output)
     {

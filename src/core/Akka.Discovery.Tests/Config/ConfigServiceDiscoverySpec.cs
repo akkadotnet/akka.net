@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Akka.Discovery.Tests.Config
 {
-    public class ConfigServiceDiscoverySpec : TestKit.Xunit2.TestKit
+    public class ConfigServiceDiscoverySpec : TestKit.Xunit.TestKit
     {
         private static Configuration.Config Config => ConfigurationFactory.ParseString(@"
             akka {

@@ -13,7 +13,6 @@ using FluentAssertions;
 using Microsoft.CSharp.RuntimeBinder;
 using Reactive.Streams;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {

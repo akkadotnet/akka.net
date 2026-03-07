@@ -22,7 +22,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {

@@ -16,7 +16,6 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Event;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Transport
 {

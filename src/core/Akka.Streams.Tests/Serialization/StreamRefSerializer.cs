@@ -10,12 +10,11 @@ using Akka.Serialization;
 using Akka.Streams.Implementation.StreamRef;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Serialization;
 
-public class StreamRefSerializer: Akka.TestKit.Xunit2.TestKit
+public class StreamRefSerializer: Akka.TestKit.Xunit.TestKit
 {
     public StreamRefSerializer(ITestOutputHelper output) 
         : base(ActorMaterializer.DefaultConfig(), nameof(StreamRefSerializer), output)

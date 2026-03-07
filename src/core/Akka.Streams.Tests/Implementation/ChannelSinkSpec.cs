@@ -15,11 +15,10 @@ using Akka.Streams.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Implementation
 {
-    public class ChannelSinkSpec : Akka.TestKit.Xunit2.TestKit
+    public class ChannelSinkSpec : Akka.TestKit.Xunit.TestKit
     {
         private readonly ActorMaterializer _materializer;
 

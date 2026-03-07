@@ -287,5 +287,36 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             _cluster.Leave(_cluster.SelfAddress);
             testLease.Probe.ExpectMsg(new TestLease.ReleaseReq(_leaseOwner));
         }
+
+        [Fact]
+        public void ClusterSingleton_with_lease_should_log_error_when_lease_release_fails_on_leaving_oldest()
+        {
+            var singletonProbe = CreateTestProbe();
+            var settings = NextSettings();
+
+            Sys.ActorOf(
+                ClusterSingletonManager.Props(Props.Create(() => new ImportantSingleton(singletonProbe.Ref)), PoisonPill.Instance, settings),
+                settings.SingletonName);
+
+            TestLease testLease = null;
+            AwaitAssert(() =>
+            {
+                testLease = _testLeaseExt.GetTestLease(LeaseNameFor(settings));
+            });
+
+            singletonProbe.ExpectNoMsg(_shortDuration);
+            testLease.Probe.ExpectMsg(new TestLease.AcquireReq(_leaseOwner));
+            testLease.InitialPromise.SetResult(true);
+            singletonProbe.ExpectMsg("preStart");
+
+            // Make release return a faulted task
+            testLease.SetNextReleaseResult(Task.FromException<bool>(new TestException("lease release failed")));
+
+            EventFilter.Error(contains: "Failed to release lease").ExpectOne(() =>
+            {
+                _cluster.Leave(_cluster.SelfAddress);
+                testLease.Probe.ExpectMsg(new TestLease.ReleaseReq(_leaseOwner));
+            });
+        }
     }
 }

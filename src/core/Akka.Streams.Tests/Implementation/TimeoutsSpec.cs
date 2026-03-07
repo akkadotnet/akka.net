@@ -13,11 +13,10 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Implementation
