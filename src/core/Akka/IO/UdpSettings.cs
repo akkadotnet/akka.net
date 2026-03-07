@@ -31,7 +31,7 @@ namespace Akka.IO
         /// Creates a new instance of <see cref="UdpSettings"/> class 
         /// and fills it with values parsed from provided HOCON config.
         /// </summary>
-        /// <param name="config">TBD</param>
+        /// <param name="config">The HOCON configuration to parse UDP settings from.</param>
         public static UdpSettings Create(Config config)
         {
             if (config.IsNullOrEmpty())
@@ -77,7 +77,9 @@ namespace Akka.IO
         public int InitialSocketAsyncEventArgs { get; }
 
         /// <summary>
-        /// TBD
+        /// The maximum number of datagrams to receive in a single batch read cycle before
+        /// yielding back to the dispatcher. Higher values decrease latency; lower values
+        /// increase fairness on the worker dispatcher.
         /// </summary>
         public int BatchReceiveLimit { get; }
 

@@ -43,7 +43,7 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the UDP extension instance used for socket configuration and resource management.
         /// </summary>
         protected override UdpExt Udp => _udp;
 
@@ -59,17 +59,17 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Not supported. The actor switches to send-only behavior during <see cref="AroundPreStart"/>.
         /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="message">The incoming message.</param>
+        /// <returns>This method always throws <see cref="NotSupportedException"/>.</returns>
         protected override bool Receive(object message)
         {
             throw new NotSupportedException();
         }
 
         /// <summary>
-        /// TBD
+        /// Releases resources by closing the underlying socket when the actor is stopped.
         /// </summary>
         protected override void PostStop()
         {

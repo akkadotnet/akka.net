@@ -67,7 +67,7 @@ namespace Akka.IO
 
         protected sealed override Socket Socket { get; }
         /// <summary>
-        /// TBD
+        /// Gets the UDP extension instance used for socket configuration and resource management.
         /// </summary>
         protected sealed override UdpExt Udp { get; }
 
@@ -130,7 +130,7 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Releases resources by closing the underlying datagram channel when the actor is stopped.
         /// </summary>
         protected override void PostStop()
         {
