@@ -1,10 +1,10 @@
-﻿[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Reflection.AssemblyMetadataAttribute("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
 [assembly: System.Runtime.Versioning.TargetFrameworkAttribute(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.Cluster.Metrics
 {
     public sealed class AdaptiveLoadBalancingGroup : Akka.Routing.Group
     {
-        public AdaptiveLoadBalancingGroup(Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null, System.Collections.Generic.IEnumerable<string> paths = null, string routerDispatcher = null) { }
+        public AdaptiveLoadBalancingGroup(Akka.Cluster.Metrics.IMetricsSelector? metricsSelector = null, System.Collections.Generic.IEnumerable<string>? paths = null, string? routerDispatcher = null) { }
         public AdaptiveLoadBalancingGroup(Akka.Configuration.Config config) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
@@ -14,9 +14,9 @@ namespace Akka.Cluster.Metrics
         public class AdaptiveLoadBalancingGroupSurrogate : Akka.Util.ISurrogate
         {
             public AdaptiveLoadBalancingGroupSurrogate() { }
-            public Akka.Cluster.Metrics.IMetricsSelector MetricsSelector { get; set; }
-            public System.Collections.Generic.IEnumerable<string> Paths { get; set; }
-            public string RouterDispatcher { get; set; }
+            public Akka.Cluster.Metrics.IMetricsSelector? MetricsSelector { get; set; }
+            public System.Collections.Generic.IEnumerable<string>? Paths { get; set; }
+            public string? RouterDispatcher { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
@@ -30,10 +30,10 @@ namespace Akka.Cluster.Metrics
     }
     public sealed class AdaptiveLoadBalancingPool : Akka.Routing.Pool
     {
-        public AdaptiveLoadBalancingPool(Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null, int nrOfInstances = 0, Akka.Actor.SupervisorStrategy supervisorStrategy = null, string routerDispatcher = null, bool usePoolDispatcher = False) { }
+        public AdaptiveLoadBalancingPool(Akka.Cluster.Metrics.IMetricsSelector? metricsSelector = null, int nrOfInstances = 0, Akka.Actor.SupervisorStrategy? supervisorStrategy = null, string? routerDispatcher = null, bool usePoolDispatcher = False) { }
         public AdaptiveLoadBalancingPool(Akka.Configuration.Config config) { }
         public Akka.Cluster.Metrics.IMetricsSelector MetricsSelector { get; }
-        public override Akka.Routing.Resizer Resizer { get; }
+        public override Akka.Routing.Resizer? Resizer { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
@@ -44,17 +44,17 @@ namespace Akka.Cluster.Metrics
         public class AdaptiveLoadBalancingPoolSurrogate : Akka.Util.ISurrogate
         {
             public AdaptiveLoadBalancingPoolSurrogate() { }
-            public Akka.Cluster.Metrics.IMetricsSelector MetricsSelector { get; set; }
+            public Akka.Cluster.Metrics.IMetricsSelector? MetricsSelector { get; set; }
             public int NrOfInstances { get; set; }
-            public string RouterDispatcher { get; set; }
-            public Akka.Actor.SupervisorStrategy SupervisorStrategy { get; set; }
+            public string? RouterDispatcher { get; set; }
+            public Akka.Actor.SupervisorStrategy? SupervisorStrategy { get; set; }
             public bool UsePoolDispatcher { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
     public sealed class AdaptiveLoadBalancingRoutingLogic : Akka.Routing.RoutingLogic, Akka.Cluster.Metrics.IClusterMetricsRoutingLogic
     {
-        public AdaptiveLoadBalancingRoutingLogic(Akka.Actor.ActorSystem system, Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null) { }
+        public AdaptiveLoadBalancingRoutingLogic(Akka.Actor.ActorSystem system, Akka.Cluster.Metrics.IMetricsSelector? metricsSelector = null) { }
         public void MetricsChanged(Akka.Cluster.Metrics.Events.ClusterMetricsChanged @event) { }
         public override Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees) { }
     }
@@ -288,7 +288,7 @@ namespace Akka.Cluster.Metrics.Serialization
         public Akka.Cluster.Metrics.Serialization.MetricsSelector MetricsSelector { get; set; }
         public uint NrOfInstances { get; set; }
         public static Google.Protobuf.MessageParser<Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool> Parser { get; }
-        public string RouterDispatcher { get; set; }
+        public string? RouterDispatcher { get; set; }
         public bool UsePoolDispatcher { get; set; }
         public int CalculateSize() { }
         public Akka.Cluster.Metrics.Serialization.AdaptiveLoadBalancingPool Clone() { }
@@ -475,7 +475,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 public int CalculateSize() { }
                 public Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA Clone() { }
                 public override bool Equals(object other) { }
-                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA other) { }
+                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA? other) { }
                 public static double GetAlpha(System.TimeSpan halfLife, System.TimeSpan collectInterval) { }
                 public override int GetHashCode() { }
                 public void MergeFrom(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA other) { }
@@ -513,7 +513,7 @@ namespace Akka.Cluster.Metrics.Serialization
                 public static Akka.Util.Option<Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA> CreateEWMA(Akka.Cluster.Metrics.Helpers.AnyNumber value, Akka.Util.Option<double> decayFactor) { }
                 [Akka.Annotations.InternalApiAttribute()]
                 public static bool Defined(Akka.Cluster.Metrics.Helpers.AnyNumber value) { }
-                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric other) { }
+                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric? other) { }
                 public override int GetHashCode() { }
                 public void MergeFrom(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.Metric other) { }
                 public void MergeFrom(Google.Protobuf.CodedInputStream input) { }
