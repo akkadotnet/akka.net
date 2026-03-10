@@ -5,11 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using Akka.Actor;
+
 namespace Akka.Persistence.TestKit.Tests
 {
-    using System;
-    using Actor;
-
     public class SnapshotActor : UntypedPersistentActor
     {
         public SnapshotActor(IActorRef probe)
