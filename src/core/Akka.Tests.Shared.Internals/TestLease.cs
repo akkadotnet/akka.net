@@ -108,11 +108,12 @@ public class TestLease : Lease
 
     public static Config Configuration
     {
-        get { return ConfigurationFactory.ParseString(@"
-                test-lease {
-                    lease-class = ""Akka.Coordination.Tests.TestLease, Akka.Coordination.Tests""
-                }
-                "); }
+        get { return ConfigurationFactory.ParseString(
+            $$"""
+              test-lease {
+                  lease-class = "{{typeof(TestLease).FullName}}, {{typeof(TestLease).Assembly.GetName().Name}}"
+              }
+              """); }
     }
 
     public TestProbe Probe { get; }
