@@ -353,7 +353,7 @@ namespace Akka.Cluster.Metrics.Serialization
             if (proto.MetricsSelector != null)
             {
                 var s = proto.MetricsSelector;
-                selector = _serialization.Value.Deserialize(s.Data.ToByteArray(), (int)s.SerializerId, s.Manifest) as IMetricsSelector;
+                selector = (_serialization.Value.Deserialize(s.Data.ToByteArray(), (int)s.SerializerId, s.Manifest) as IMetricsSelector)!;
             }
             else
             {
@@ -374,13 +374,13 @@ namespace Akka.Cluster.Metrics.Serialization
             return new Metrics.MixMetricsSelector(proto.Selectors.Select(s =>
             {
                 // should be safe because we serialized only the right subtypes of MetricsSelector
-                return MetricSelectorFromProto(s) as CapacityMetricsSelector;
+                return (MetricSelectorFromProto(s) as CapacityMetricsSelector)!;
             }).ToImmutableArray());
         }
 
         private IMetricsSelector MetricSelectorFromProto(Serialization.Proto.MetricsSelector selector)
         {
-            return _serialization.Value.Deserialize(selector.Data.ToByteArray(), (int)selector.SerializerId, selector.Manifest) as IMetricsSelector;
+            return (_serialization.Value.Deserialize(selector.Data.ToByteArray(), (int)selector.SerializerId, selector.Manifest) as IMetricsSelector)!;
         }
         
     }
