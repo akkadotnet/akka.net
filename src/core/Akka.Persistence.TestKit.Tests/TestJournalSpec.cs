@@ -7,16 +7,14 @@
 
 
 using Akka.Configuration;
+using System;
+using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.TestKit;
+using Xunit;
 
 namespace Akka.Persistence.TestKit.Tests
 {
-    using System;
-    using System.Threading.Tasks;
-    using Actor;
-    using Akka.Persistence.TestKit;
-    using Akka.TestKit;
-    using Xunit;
-
     public class TestJournalSpec : PersistenceTestKit
     {
         // Expect should be passing by default, need to make them less sencitive to timing
