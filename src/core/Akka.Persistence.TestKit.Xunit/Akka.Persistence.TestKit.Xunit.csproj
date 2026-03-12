@@ -1,18 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>TestKit for writing tests for Akka.NET Persistance module.</Description>
+    <Description>TestKit for writing tests for Akka.NET Persistance module using xUnit</Description>
     <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
-    <PackageTags>$(AkkaPackageTags);testkit;persistance</PackageTags>
+    <PackageTags>$(AkkaPackageTags);testkit;persistance;xunit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="config.conf" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+    <ProjectReference Include="..\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
   </ItemGroup>
 
