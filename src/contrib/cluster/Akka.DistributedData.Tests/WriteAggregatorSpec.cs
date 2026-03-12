@@ -15,12 +15,11 @@ using Akka.DistributedData.Internal;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
     [Collection("DistributedDataSpec")]
-    public class WriteAggregatorSpec : Akka.TestKit.Xunit2.TestKit
+    public class WriteAggregatorSpec : Akka.TestKit.Xunit.TestKit
     {
         internal class TestWriteAggregator<T> : WriteAggregator where T : IReplicatedData
         {
