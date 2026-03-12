@@ -29,10 +29,10 @@ namespace Akka.Persistence.Custom.Tests
                         plugin = ""akka.persistence.journal.custom-sqlite""
                         custom-sqlite {
                             event-adapters {
-                                custom-adapter = ""Akka.Persistence.TCK.Serialization.TestJournal+MyWriteAdapter, Akka.Persistence.TCK""
+                                custom-adapter = ""Akka.Persistence.TCK.Serialization.TestJournal+MyWriteAdapter, Akka.Persistence.TCK.Xunit2""
                             }
                             event-adapter-bindings = {
-                                ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload3, Akka.Persistence.TCK"" = custom-adapter
+                                ""Akka.Persistence.TCK.Serialization.TestJournal+MyPayload3, Akka.Persistence.TCK.Xunit2"" = custom-adapter
                             }
                             class = ""Akka.Persistence.Custom.Journal.SqliteJournal, Akka.Persistence.Custom""
                             plugin-dispatcher = ""akka.actor.default-dispatcher""

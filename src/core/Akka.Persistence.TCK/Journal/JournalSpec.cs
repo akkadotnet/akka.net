@@ -17,22 +17,24 @@ using Akka.Persistence.TCK.Serialization;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Journal
 {
     public abstract class JournalSpec : PluginSpec
     {
         protected static readonly Config Config =
-            ConfigurationFactory.ParseString(@"akka.persistence.publish-plugin-commands = on
-            akka.actor{
-                serializers{
-                    persistence-tck-test=""Akka.Persistence.TCK.Serialization.TestSerializer,Akka.Persistence.TCK""
+            ConfigurationFactory.ParseString(
+                $$"""
+                akka.persistence.publish-plugin-commands = on
+                akka.actor {
+                    serializers { 
+                        persistence-tck-test="{{typeof(TestSerializer).FullName}}, {{typeof(TestSerializer).Assembly.GetName().Name}}"
+                    }
+                    serialization-bindings {
+                        "{{typeof(TestPayload).FullName}}, {{typeof(TestPayload).Assembly.GetName().Name}}" = persistence-tck-test
+                    }
                 }
-                serialization-bindings {
-                    ""Akka.Persistence.TCK.Serialization.TestPayload,Akka.Persistence.TCK"" = persistence-tck-test
-                }
-            }");
+                """);
 
         private static readonly string _specConfigTemplate = @"
             akka.persistence {{

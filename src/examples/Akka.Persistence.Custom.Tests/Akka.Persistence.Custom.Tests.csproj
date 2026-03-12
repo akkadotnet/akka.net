@@ -16,7 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\core\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj" />
+      <ProjectReference Include="..\..\core\Akka.Persistence.TCK.Xunit2\Akka.Persistence.TCK.Xunit2.csproj" />
       <ProjectReference Include="..\Akka.Persistence.Custom\Akka.Persistence.Custom.csproj" />
     </ItemGroup>
 
