@@ -282,6 +282,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Tests.Shared.Internals.Xunit3", "src\core\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj", "{24DD484D-0F15-4D13-B603-F2E4A901CDBC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Remote.TestKit.Xunit2", "src\core\Akka.Remote.TestKit.Xunit2\Akka.Remote.TestKit.Xunit2.csproj", "{BEFD4BF5-7508-48A6-809C-BAE9802C5AB0}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Akka.Persistence.TestKit.Xunit", "src\core\Akka.Persistence.TestKit.Xunit\Akka.Persistence.TestKit.Xunit.csproj", "{164DFDEA-609E-43F6-AE5F-1A013A990A9F}"
 EndProject
 Global
