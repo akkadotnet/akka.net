@@ -17,7 +17,6 @@ using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Snapshot
 {
@@ -27,23 +26,25 @@ namespace Akka.Persistence.TCK.Snapshot
     /// </summary>
     public abstract class SnapshotStoreSpec : PluginSpec
     {
-        private static readonly string _specConfigTemplate = @"
-            akka.persistence.publish-plugin-commands = on
-            akka.persistence.snapshot-store {
-                plugin = ""akka.persistence.snapshot-store.my""
-                my {
-                    class = ""TestPersistencePlugin.MySnapshotStore, TestPersistencePlugin""
-                    plugin-dispatcher = ""akka.persistence.dispatchers.default-plugin-dispatcher""
-                }
-            }
-            akka.actor{
-                serializers{
-                    persistence-tck-test=""Akka.Persistence.TCK.Serialization.TestSerializer,Akka.Persistence.TCK""
-                }
-                serialization-bindings {
-                    ""Akka.Persistence.TCK.Serialization.TestPayload,Akka.Persistence.TCK"" = persistence-tck-test
-                }
-            }";
+        private static readonly string _specConfigTemplate = 
+            $$"""
+              akka.persistence.publish-plugin-commands = on
+              akka.persistence.snapshot-store {
+                  plugin = "akka.persistence.snapshot-store.my"
+                  my {
+                      class = "TestPersistencePlugin.MySnapshotStore, TestPersistencePlugin"
+                      plugin-dispatcher = "akka.persistence.dispatchers.default-plugin-dispatcher"
+                  }
+              }
+              akka.actor{
+                  serializers{
+                      persistence-tck-test="{{typeof(TestSerializer).FullName}}, {{typeof(TestSerializer).Assembly.GetName().Name}}"
+                  }
+                  serialization-bindings {
+                      "{{typeof(TestPayload).FullName}}, {{typeof(TestPayload).Assembly.GetName().Name}}" = persistence-tck-test
+                  }
+              }
+              """;
 
         protected static readonly Config Config = 
             ConfigurationFactory.ParseString(_specConfigTemplate);

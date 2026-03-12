@@ -14,13 +14,12 @@ using Akka.Streams;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
 using static Akka.Persistence.Query.Offset;
 
 namespace Akka.Persistence.TCK.Query
 {
-    public abstract class CurrentEventsByTagSpec : Akka.TestKit.Xunit2.TestKit
+    public abstract class CurrentEventsByTagSpec : XTestKit
     {
         protected ActorMaterializer Materializer { get; }
 

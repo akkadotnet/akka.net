@@ -17,6 +17,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Sql.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK.Xunit2")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.TestKit")]
