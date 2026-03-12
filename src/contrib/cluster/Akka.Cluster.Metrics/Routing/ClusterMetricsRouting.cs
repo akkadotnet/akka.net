@@ -45,7 +45,7 @@ namespace Akka.Cluster.Metrics
         /// <param name="metricsSelector">
         /// Decides what probability to use for selecting a routee, based on remaining capacity as indicated by the node metrics
         /// </param>
-        public AdaptiveLoadBalancingRoutingLogic(ActorSystem system, IMetricsSelector metricsSelector = null)
+        public AdaptiveLoadBalancingRoutingLogic(ActorSystem system, IMetricsSelector? metricsSelector = null)
         {
             _system = system;
             _metricsSelector = metricsSelector ?? MixMetricsSelector.Instance;
@@ -154,8 +154,8 @@ namespace Akka.Cluster.Metrics
         /// <param name="supervisorStrategy">strategy for supervising the routees, see 'Supervision Setup' in class summary</param>
         /// <param name="routerDispatcher">Dispatcher to use for the router head actor, which handles supervision, death watch and router management messages</param>
         /// <param name="usePoolDispatcher"></param>
-        public AdaptiveLoadBalancingPool(IMetricsSelector metricsSelector = null, int nrOfInstances = 0, SupervisorStrategy supervisorStrategy = null,
-                                         string routerDispatcher = null, bool usePoolDispatcher = false) 
+        public AdaptiveLoadBalancingPool(IMetricsSelector? metricsSelector = null, int nrOfInstances = 0, SupervisorStrategy? supervisorStrategy = null,
+                                         string? routerDispatcher = null, bool usePoolDispatcher = false)
             : base(nrOfInstances, null, supervisorStrategy ?? DefaultSupervisorStrategy, routerDispatcher ?? Dispatchers.DefaultDispatcherId, usePoolDispatcher)
         {
             MetricsSelector =  metricsSelector ?? MixMetricsSelector.Instance;
@@ -200,7 +200,7 @@ namespace Akka.Cluster.Metrics
         public override int GetNrOfInstances(ActorSystem system) => NrOfInstances;
 
         /// <inheritdoc />
-        public override Resizer Resizer => null;
+        public override Resizer? Resizer => null;
 
         /// <summary>
         /// Setting the supervisor strategy to be used for the â€œheadâ€ Router actor.
@@ -249,7 +249,7 @@ namespace Akka.Cluster.Metrics
             /// <summary>
             /// Metrics selector
             /// </summary>
-            public IMetricsSelector MetricsSelector { get; set; }
+            public IMetricsSelector? MetricsSelector { get; set; }
             /// <summary>
             /// The number of routees associated with this pool.
             /// </summary>
@@ -262,11 +262,11 @@ namespace Akka.Cluster.Metrics
             /// <summary>
             /// The strategy to use when supervising the pool.
             /// </summary>
-            public SupervisorStrategy SupervisorStrategy { get; set; }
+            public SupervisorStrategy? SupervisorStrategy { get; set; }
             /// <summary>
             /// The dispatcher to use when passing messages to the routees.
             /// </summary>
-            public string RouterDispatcher { get; set; }
+            public string? RouterDispatcher { get; set; }
 
             /// <summary>
             /// Creates a <see cref="AdaptiveLoadBalancingPool"/> encapsulated by this surrogate.
@@ -309,7 +309,7 @@ namespace Akka.Cluster.Metrics
         /// <param name="routerDispatcher">
         /// Dispatcher to use for the router head actor, which handles router management messages
         /// </param>
-        public AdaptiveLoadBalancingGroup(IMetricsSelector metricsSelector = null, IEnumerable<string> paths = null, string routerDispatcher = null) 
+        public AdaptiveLoadBalancingGroup(IMetricsSelector? metricsSelector = null, IEnumerable<string>? paths = null, string? routerDispatcher = null)
             : base(paths, routerDispatcher ?? Dispatchers.DefaultDispatcherId)
         {
             _metricsSelector = metricsSelector ?? MixMetricsSelector.Instance;
@@ -366,15 +366,15 @@ namespace Akka.Cluster.Metrics
             /// <summary>
             /// Metrics selector
             /// </summary>
-            public IMetricsSelector MetricsSelector { get; set; }
+            public IMetricsSelector? MetricsSelector { get; set; }
             /// <summary>
             /// Retrieves the paths of all routees declared on this router.
             /// </summary>
-            public IEnumerable<string> Paths { get; set; }
+            public IEnumerable<string>? Paths { get; set; }
             /// <summary>
             /// The dispatcher to use when passing messages to the routees.
             /// </summary>
-            public string RouterDispatcher { get; set; }
+            public string? RouterDispatcher { get; set; }
 
             /// <summary>
             /// Creates a <see cref="AdaptiveLoadBalancingGroup"/> encapsulated by this surrogate.
