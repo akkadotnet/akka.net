@@ -10,7 +10,6 @@ using System.Numerics;
 using Akka.Actor;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {
