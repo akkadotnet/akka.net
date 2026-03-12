@@ -50,7 +50,7 @@ jobs:
           Ensure-DirectoryPath -Path "bin/output"
         displayName: 'Ensure output directories'
 
-      - script: dotnet build -c Release
+      - script: dotnet build akka.slnx -c Release
         displayName: "Compile"
         continueOnError: false
 
