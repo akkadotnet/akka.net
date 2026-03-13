@@ -10,7 +10,6 @@ using System.Collections.Immutable;
 using Akka.Actor;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tests
 {

@@ -18,7 +18,6 @@ using Akka.TestKit.Extensions;
 using Akka.Util.Internal;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
 using Akka.Util;
 using FluentAssertions.Extensions;
 using static FluentAssertions.FluentActions;
