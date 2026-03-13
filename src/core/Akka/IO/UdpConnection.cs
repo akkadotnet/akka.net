@@ -210,6 +210,7 @@ namespace Akka.IO
             }
         }
 
+        /// <inheritdoc/>
         protected override void PostStop()
         {
             Log.Debug("Closing DatagramChannel after being stopped");

@@ -129,6 +129,7 @@ namespace Akka.IO
             ReceiveAsync();
         }
 
+        /// <inheritdoc/>
         protected override void PostStop()
         {
             if (Socket.Connected)

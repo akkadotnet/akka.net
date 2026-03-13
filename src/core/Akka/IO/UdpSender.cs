@@ -58,11 +58,13 @@ namespace Akka.IO
             Context.Become(SendHandlers);
         }
 
+        /// <inheritdoc/>
         protected override bool Receive(object message)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc/>
         protected override void PostStop()
         {
             _log.Debug("Closing Socket after being stopped");
