@@ -59,7 +59,7 @@ namespace Akka.IO
         public static readonly Dns Instance = new();
 
         /// <summary>
-        /// TBD
+        /// Base class for DNS-related commands.
         /// </summary>
         public abstract class Command : INoSerializationVerificationNeeded
         { }
@@ -193,11 +193,7 @@ namespace Akka.IO
             return Instance.Apply(system).Cache.Resolve(name, system, sender);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="system">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         public override DnsExt CreateExtension(ExtendedActorSystem system)
         {
             return new DnsExt(system);
@@ -205,19 +201,19 @@ namespace Akka.IO
     }
 
     /// <summary>
-    /// TBD
+    /// The Akka.IO DNS extension that manages DNS resolution settings, caching, and the DNS manager actor.
     /// </summary>
     public class DnsExt : IOExtension
     {
         /// <summary>
-        /// TBD
+        /// Configuration settings for the DNS extension.
         /// </summary>
         public class DnsSettings
         {
             /// <summary>
-            /// TBD
+            /// Creates a new <see cref="DnsSettings"/> instance from the provided configuration.
             /// </summary>
-            /// <param name="config">TBD</param>
+            /// <param name="config">The HOCON configuration for the DNS extension.</param>
             public DnsSettings(Config config)
             {
                 if (config.IsNullOrEmpty())
@@ -230,19 +226,19 @@ namespace Akka.IO
             }
 
             /// <summary>
-            /// TBD
+            /// The dispatcher to use for DNS resolution actors.
             /// </summary>
             public string Dispatcher { get; private set; }
             /// <summary>
-            /// TBD
+            /// The name of the configured DNS resolver.
             /// </summary>
             public string Resolver { get; private set; }
             /// <summary>
-            /// TBD
+            /// The HOCON configuration section for the selected resolver.
             /// </summary>
             public Config ResolverConfig { get; private set; }
             /// <summary>
-            /// TBD
+            /// The fully qualified type name of the <see cref="IDnsProvider"/> implementation.
             /// </summary>
             public string ProviderObjectName { get; private set; }
         }
@@ -251,9 +247,9 @@ namespace Akka.IO
         private IActorRef _manager;
 
         /// <summary>
-        /// TBD
+        /// Initializes the DNS extension for the specified actor system, loading settings and creating the DNS provider.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The actor system this extension is being created for.</param>
         public DnsExt(ExtendedActorSystem system)
         {
             _system = system;
@@ -268,9 +264,7 @@ namespace Akka.IO
             Cache = Provider.Cache;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override IActorRef Manager
         {
             get
@@ -282,24 +276,24 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Returns the DNS manager actor reference.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <returns>The DNS manager <see cref="IActorRef"/>.</returns>
         public IActorRef GetResolver()
         {
             return _manager;
         }
 
         /// <summary>
-        /// TBD
+        /// The DNS configuration settings.
         /// </summary>
         public DnsSettings Settings { get; private set; }
         /// <summary>
-        /// TBD
+        /// The DNS cache used for storing and retrieving resolved DNS entries.
         /// </summary>
         public DnsBase Cache { get; private set; }
         /// <summary>
-        /// TBD
+        /// The DNS provider that supplies the resolver actor and cache implementations.
         /// </summary>
         public IDnsProvider Provider { get; private set; }
     }

@@ -15,7 +15,6 @@ using Akka.Persistence.Journal;
 using Akka.TestKit;
 using Akka.TestKit.Configs;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests;
 

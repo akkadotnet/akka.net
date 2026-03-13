@@ -21,12 +21,12 @@ namespace Akka.IO
     internal static class IpExtensions
     {
         /// <summary>
-        /// TBD
+        /// Retrieves the value of a private or internal instance field via reflection.
         /// </summary>
-        /// <param name="type">TBD</param>
-        /// <param name="instance">TBD</param>
-        /// <param name="fieldName">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="type">The <see cref="Type"/> that declares the field.</param>
+        /// <param name="instance">The object instance from which to read the field value.</param>
+        /// <param name="fieldName">The name of the field to retrieve.</param>
+        /// <returns>The value of the specified field, or <see langword="null"/> if the field is not found.</returns>
         internal static object GetInstanceField(Type type, object instance, string fieldName)
         {
             BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
@@ -36,10 +36,10 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Maps an IPv6 address to its equivalent IPv4 address. Returns the original address if it is already IPv4.
         /// </summary>
-        /// <param name="ipa">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="ipa">The <see cref="IPAddress"/> to convert.</param>
+        /// <returns>The mapped <see cref="IPAddress"/> in IPv4 form.</returns>
         public static IPAddress MapToIPv4(this IPAddress ipa)
         {
             ushort[] m_Numbers = GetInstanceField(typeof(IPAddress), ipa, "m_Numbers") as ushort[];
@@ -63,10 +63,10 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Maps an IPv4 address to its IPv4-mapped IPv6 representation. Returns the original address if it is already IPv6.
         /// </summary>
-        /// <param name="ipa">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="ipa">The <see cref="IPAddress"/> to convert.</param>
+        /// <returns>The mapped <see cref="IPAddress"/> in IPv6 form.</returns>
         public static IPAddress MapToIPv6(this IPAddress ipa)
         {
             if (ipa.AddressFamily == AddressFamily.InterNetworkV6)

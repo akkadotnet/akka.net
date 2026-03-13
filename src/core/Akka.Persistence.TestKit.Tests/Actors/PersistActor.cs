@@ -5,11 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using Akka.Actor;
+
 namespace Akka.Persistence.TestKit.Tests
 {
-    using System;
-    using Actor;
-
     public class PersistActor : UntypedPersistentActor
     {
         public PersistActor(IActorRef probe)

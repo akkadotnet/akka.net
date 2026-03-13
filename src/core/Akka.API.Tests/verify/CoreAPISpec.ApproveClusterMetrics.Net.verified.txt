@@ -6,7 +6,7 @@ namespace Akka.Cluster.Metrics
     public sealed class AdaptiveLoadBalancingGroup : Akka.Routing.Group
     {
         public AdaptiveLoadBalancingGroup(Akka.Configuration.Config config) { }
-        public AdaptiveLoadBalancingGroup(Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null, System.Collections.Generic.IEnumerable<string> paths = null, string routerDispatcher = null) { }
+        public AdaptiveLoadBalancingGroup(Akka.Cluster.Metrics.IMetricsSelector? metricsSelector = null, System.Collections.Generic.IEnumerable<string>? paths = null, string? routerDispatcher = null) { }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override System.Collections.Generic.IEnumerable<string> GetPaths(Akka.Actor.ActorSystem system) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
@@ -15,9 +15,9 @@ namespace Akka.Cluster.Metrics
         public class AdaptiveLoadBalancingGroupSurrogate : Akka.Util.ISurrogate
         {
             public AdaptiveLoadBalancingGroupSurrogate() { }
-            public Akka.Cluster.Metrics.IMetricsSelector MetricsSelector { get; set; }
-            public System.Collections.Generic.IEnumerable<string> Paths { get; set; }
-            public string RouterDispatcher { get; set; }
+            public Akka.Cluster.Metrics.IMetricsSelector? MetricsSelector { get; set; }
+            public System.Collections.Generic.IEnumerable<string>? Paths { get; set; }
+            public string? RouterDispatcher { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
@@ -32,9 +32,9 @@ namespace Akka.Cluster.Metrics
     public sealed class AdaptiveLoadBalancingPool : Akka.Routing.Pool
     {
         public AdaptiveLoadBalancingPool(Akka.Configuration.Config config) { }
-        public AdaptiveLoadBalancingPool(Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null, int nrOfInstances = 0, Akka.Actor.SupervisorStrategy supervisorStrategy = null, string routerDispatcher = null, bool usePoolDispatcher = false) { }
+        public AdaptiveLoadBalancingPool(Akka.Cluster.Metrics.IMetricsSelector? metricsSelector = null, int nrOfInstances = 0, Akka.Actor.SupervisorStrategy? supervisorStrategy = null, string? routerDispatcher = null, bool usePoolDispatcher = false) { }
         public Akka.Cluster.Metrics.IMetricsSelector MetricsSelector { get; }
-        public override Akka.Routing.Resizer Resizer { get; }
+        public override Akka.Routing.Resizer? Resizer { get; }
         public override Akka.Routing.Router CreateRouter(Akka.Actor.ActorSystem system) { }
         public override int GetNrOfInstances(Akka.Actor.ActorSystem system) { }
         public override Akka.Actor.Props RoutingLogicController(Akka.Routing.RoutingLogic routingLogic) { }
@@ -45,17 +45,17 @@ namespace Akka.Cluster.Metrics
         public class AdaptiveLoadBalancingPoolSurrogate : Akka.Util.ISurrogate
         {
             public AdaptiveLoadBalancingPoolSurrogate() { }
-            public Akka.Cluster.Metrics.IMetricsSelector MetricsSelector { get; set; }
+            public Akka.Cluster.Metrics.IMetricsSelector? MetricsSelector { get; set; }
             public int NrOfInstances { get; set; }
-            public string RouterDispatcher { get; set; }
-            public Akka.Actor.SupervisorStrategy SupervisorStrategy { get; set; }
+            public string? RouterDispatcher { get; set; }
+            public Akka.Actor.SupervisorStrategy? SupervisorStrategy { get; set; }
             public bool UsePoolDispatcher { get; set; }
             public Akka.Util.ISurrogated FromSurrogate(Akka.Actor.ActorSystem system) { }
         }
     }
     public sealed class AdaptiveLoadBalancingRoutingLogic : Akka.Routing.RoutingLogic, Akka.Cluster.Metrics.IClusterMetricsRoutingLogic
     {
-        public AdaptiveLoadBalancingRoutingLogic(Akka.Actor.ActorSystem system, Akka.Cluster.Metrics.IMetricsSelector metricsSelector = null) { }
+        public AdaptiveLoadBalancingRoutingLogic(Akka.Actor.ActorSystem system, Akka.Cluster.Metrics.IMetricsSelector? metricsSelector = null) { }
         public void MetricsChanged(Akka.Cluster.Metrics.Events.ClusterMetricsChanged @event) { }
         public override Akka.Routing.Routee Select(object message, Akka.Routing.Routee[] routees) { }
     }
@@ -325,8 +325,8 @@ namespace Akka.Cluster.Metrics.Serialization
                 public EWMA(double value, double alpha) { }
                 public double Alpha { get; }
                 public double Value { get; }
-                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA other) { }
-                public override bool Equals(object obj) { }
+                public bool Equals(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA? other) { }
+                public override bool Equals(object? obj) { }
                 public override int GetHashCode() { }
                 public static double GetAlpha(System.TimeSpan halfLife, System.TimeSpan collectInterval) { }
                 public static Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA operator +(Akka.Cluster.Metrics.Serialization.NodeMetrics.Types.EWMA current, double xn) { }

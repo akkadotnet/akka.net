@@ -6,15 +6,14 @@
 //-----------------------------------------------------------------------
 
 using Akka.Event;
-using Xunit.Abstractions;
+using System;
+using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.TestKit;
+using Xunit;
 
 namespace Akka.Persistence.TestKit.Tests
 {
-    using System;
-    using System.Threading.Tasks;
-    using Actor;
-    using Akka.TestKit;
-    using Xunit;
 
     public class CounterActor : UntypedPersistentActor
     {
