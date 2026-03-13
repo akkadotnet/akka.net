@@ -120,19 +120,20 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         private static Config SpecConfig =>
-            ConfigurationFactory.ParseString(@"
-
-                akka.loglevel = DEBUG
-                akka.actor.provider = ""cluster""
-                akka.remote.dot-netty.tcp.port = 0
-                test-lease {
-                    lease-class = ""Akka.TestKit.TestLease, Akka.Tests.Shared.Internals""
-                    heartbeat-interval = 1s
-                    heartbeat-timeout = 120s
-                    lease-operation-timeout = 3s
-                }
-                akka.cluster.sharding.verbose-debug-logging = on
-                akka.cluster.sharding.fail-on-invalid-entity-state-transition = on")
+            ConfigurationFactory.ParseString(
+                    $$"""
+                    akka.loglevel = DEBUG
+                    akka.actor.provider = "cluster"
+                    akka.remote.dot-netty.tcp.port = 0
+                    test-lease {
+                        lease-class = "{{typeof(TestLease).FullName}}, {{typeof(TestLease).Assembly.GetName().Name}}"
+                        heartbeat-interval = 1s
+                        heartbeat-timeout = 120s
+                        lease-operation-timeout = 3s
+                    }
+                    akka.cluster.sharding.verbose-debug-logging = on
+                    akka.cluster.sharding.fail-on-invalid-entity-state-transition = on
+                    """)
                 .WithFallback(ClusterSingleton.DefaultConfig())
                 .WithFallback(ClusterSharding.DefaultConfig());
 
