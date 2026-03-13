@@ -193,11 +193,7 @@ namespace Akka.IO
             return Instance.Apply(system).Cache.Resolve(name, system, sender);
         }
 
-        /// <summary>
-        /// Creates a new <see cref="DnsExt"/> extension instance for the specified actor system.
-        /// </summary>
-        /// <param name="system">The actor system to create the extension for.</param>
-        /// <returns>A new <see cref="DnsExt"/> instance.</returns>
+        /// <inheritdoc/>
         public override DnsExt CreateExtension(ExtendedActorSystem system)
         {
             return new DnsExt(system);
@@ -268,9 +264,7 @@ namespace Akka.IO
             Cache = Provider.Cache;
         }
 
-        /// <summary>
-        /// The DNS manager actor responsible for handling <see cref="Dns.Resolve"/> commands. Created lazily on first access.
-        /// </summary>
+        /// <inheritdoc/>
         public override IActorRef Manager
         {
             get

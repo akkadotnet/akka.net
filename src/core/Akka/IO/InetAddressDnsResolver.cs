@@ -39,11 +39,7 @@ namespace Akka.IO
             _useIpv6 = config.GetBoolean( "use-ipv6" , false);
         }
 
-        /// <summary>
-        /// Handles incoming <see cref="Dns.Resolve"/> messages by returning cached results or performing an async DNS lookup.
-        /// </summary>
-        /// <param name="message">The message to handle.</param>
-        /// <returns><see langword="true"/> if the message was handled; otherwise <see langword="false"/>.</returns>
+        /// <inheritdoc/>
         protected override bool Receive(object message)
         {
             if (message is Dns.Resolve resolve)
