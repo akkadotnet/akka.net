@@ -210,9 +210,6 @@ namespace Akka.IO
             }
         }
 
-        /// <summary>
-        /// Releases resources by closing the underlying datagram channel when the actor is stopped.
-        /// </summary>
         protected override void PostStop()
         {
             Log.Debug("Closing DatagramChannel after being stopped");

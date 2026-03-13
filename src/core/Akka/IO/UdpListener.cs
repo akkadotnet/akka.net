@@ -129,9 +129,6 @@ namespace Akka.IO
             ReceiveAsync();
         }
 
-        /// <summary>
-        /// Releases resources by closing the underlying datagram channel when the actor is stopped.
-        /// </summary>
         protected override void PostStop()
         {
             if (Socket.Connected)

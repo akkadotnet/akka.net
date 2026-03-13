@@ -58,19 +58,11 @@ namespace Akka.IO
             Context.Become(SendHandlers);
         }
 
-        /// <summary>
-        /// Not supported. The actor switches to send-only behavior during <see cref="AroundPreStart"/>.
-        /// </summary>
-        /// <param name="message">The incoming message.</param>
-        /// <returns>This method always throws <see cref="NotSupportedException"/>.</returns>
         protected override bool Receive(object message)
         {
             throw new NotSupportedException();
         }
 
-        /// <summary>
-        /// Releases resources by closing the underlying socket when the actor is stopped.
-        /// </summary>
         protected override void PostStop()
         {
             _log.Debug("Closing Socket after being stopped");
