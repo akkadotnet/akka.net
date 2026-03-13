@@ -13,7 +13,6 @@ using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests;
