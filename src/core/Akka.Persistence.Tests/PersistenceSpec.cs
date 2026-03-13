@@ -14,7 +14,7 @@ using Akka.Configuration;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Persistence.Tests
 {
