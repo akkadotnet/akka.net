@@ -13,7 +13,6 @@ using Akka.Configuration;
 using Akka.DistributedData.Internal;
 using Google.Protobuf;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 using Address = Akka.Actor.Address;
 using UniqueAddress = Akka.Cluster.UniqueAddress;
@@ -24,7 +23,7 @@ using System.Linq;
 namespace Akka.DistributedData.Tests.Serialization
 {
     [Collection("DistributedDataSpec")]
-    public class ReplicatorMessageSerializerSpec : TestKit.Xunit2.TestKit
+    public class ReplicatorMessageSerializerSpec : TestKit.Xunit.TestKit
     {
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
             akka.actor {

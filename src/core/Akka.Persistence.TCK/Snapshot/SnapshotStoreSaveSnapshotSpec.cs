@@ -17,7 +17,6 @@ using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Snapshot;
 
@@ -31,7 +30,8 @@ public class SnapshotStoreSaveSnapshotSpec : PluginSpec
 {
     private const int RepeatCount = 200;
 
-    private const string SpecConfigTemplate = """
+    private static readonly string SpecConfigTemplate = 
+        $$"""
 akka.persistence.publish-plugin-commands = on
 akka.persistence.snapshot-store {
     plugin = "akka.persistence.snapshot-store.my"
@@ -42,10 +42,10 @@ akka.persistence.snapshot-store {
 }
 akka.actor {
     serializers {
-        persistence-tck-test="Akka.Persistence.TCK.Serialization.TestSerializer, Akka.Persistence.TCK"
+        persistence-tck-test="{{typeof(TestSerializer).FullName}}, {{typeof(TestSerializer).Assembly.GetName().Name}}"
     }
     serialization-bindings {
-        "Akka.Persistence.TCK.Serialization.TestPayload, Akka.Persistence.TCK" = persistence-tck-test
+        "{{typeof(TestPayload).FullName}}, {{typeof(TestPayload).Assembly.GetName().Name}}" = persistence-tck-test
     }
 }
 """;

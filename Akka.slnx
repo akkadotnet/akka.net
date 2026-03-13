@@ -144,6 +144,7 @@
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
+    <Project Path="src/core/Akka.Persistence.TCK.Xunit2/Akka.Persistence.TCK.Xunit2.csproj" />
     <Project Path="src/core/Akka.Persistence.TestKit.Tests/Akka.Persistence.TestKit.Tests.csproj" />
     <Project Path="src/core/Akka.Persistence.TestKit.Xunit/Akka.Persistence.TestKit.Xunit.csproj" />
     <Project Path="src/core/Akka.Persistence.TestKit.Xunit2/Akka.Persistence.TestKit.Xunit2.csproj" />
@@ -164,6 +165,7 @@
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
+    <Project Path="src/core/Akka.Remote.TestKit.Xunit2/Akka.Remote.TestKit.Xunit2.csproj" />
     <Project Path="src/core/Akka.Remote.Tests.MultiNode/Akka.Remote.Tests.MultiNode.csproj">
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />

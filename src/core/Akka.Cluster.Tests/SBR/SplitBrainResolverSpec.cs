@@ -24,7 +24,6 @@ using Akka.Remote;
 using System.Text.RegularExpressions;
 using System.Threading;
 using Akka.Util;
-using Akka.Coordination.Tests;
 using FluentAssertions.Extensions;
 
 namespace Akka.Cluster.Tests.SBR

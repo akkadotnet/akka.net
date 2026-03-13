@@ -1,0 +1,71 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>TestKit for Testing Distributed Akka.NET Applications</Description>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <PackageTags>$(AkkaPackageTags);network;testkit</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Internals\Reference.conf" />
+    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+    <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Access="internal" Include="../../protobuf/TestConductorProtocol.proto" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
+    <PackageReference Include="System.Collections.Specialized" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Akka.Remote.TestKit\BarrierCoordinator.cs">
+      <Link>BarrierCoordinator.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\CommandLine.cs">
+      <Link>CommandLine.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Conductor.cs">
+      <Link>Conductor.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Controller.cs">
+      <Link>Controller.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\DataTypes.cs">
+      <Link>DataTypes.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Extension.cs">
+      <Link>Extension.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\MsgDecoder.cs">
+      <Link>MsgDecoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\MsgEncoder.cs">
+      <Link>MsgEncoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Player.cs">
+      <Link>Player.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Proto\ProtobufDecoder.cs">
+      <Link>Proto\ProtobufDecoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Proto\ProtobufEncoder.cs">
+      <Link>Proto\ProtobufEncoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\RemoteConnection.cs">
+      <Link>RemoteConnection.cs</Link>
+    </Compile>
+  </ItemGroup>
+  
+</Project>
