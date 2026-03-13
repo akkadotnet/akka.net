@@ -7,7 +7,7 @@
 
 using Akka.Persistence.Journal;
 using Akka.Persistence.TCK.Journal;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Persistence.TCK.Tests
 {

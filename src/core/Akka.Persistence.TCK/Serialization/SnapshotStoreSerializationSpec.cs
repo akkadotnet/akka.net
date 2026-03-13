@@ -13,7 +13,6 @@ using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Serialization;
 using Xunit;
-using Xunit.Abstractions;
 using Akka.Util.Internal;
 using FluentAssertions;
 
@@ -22,17 +21,20 @@ namespace Akka.Persistence.TCK.Serialization
 {
     public abstract class SnapshotStoreSerializationSpec : PluginSpec
     {
-        private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
-akka.actor {
-    serializers {
-        my-snapshot = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer, Akka.Persistence.TCK""
-        my-snapshot2 = ""Akka.Persistence.TCK.Serialization.Test+MySnapshotSerializer2, Akka.Persistence.TCK""
-    }
-    serialization-bindings {
-        ""Akka.Persistence.TCK.Serialization.Test+MySnapshot, Akka.Persistence.TCK"" = my-snapshot
-        ""Akka.Persistence.TCK.Serialization.Test+MySnapshot2, Akka.Persistence.TCK"" = my-snapshot2
-    }
-}");
+        private static readonly Config BaseConfig = ConfigurationFactory.ParseString(
+            $$"""
+              akka.actor {
+                  serializers {
+                  my-payload = "{{typeof(Test.MySnapshotSerializer).FullName}}, {{typeof(Test.MySnapshotSerializer).Assembly.GetName().Name}}"
+                      my-snapshot = "{{typeof(Test.MySnapshotSerializer).FullName}}, {{typeof(Test.MySnapshotSerializer).Assembly.GetName().Name}}"
+                      my-snapshot2 = "{{typeof(Test.MySnapshotSerializer2).FullName}}, {{typeof(Test.MySnapshotSerializer2).Assembly.GetName().Name}}"
+                  }
+                  serialization-bindings {
+                      "{{typeof(Test.MySnapshot).FullName}}, {{typeof(Test.MySnapshot).Assembly.GetName().Name}}" = my-snapshot
+                      "{{typeof(Test.MySnapshot2).FullName}}, {{typeof(Test.MySnapshot2).Assembly.GetName().Name}}" = my-snapshot2
+                  }
+              }
+              """);
         
         private static ActorSystemSetup WithConfig(Config? config = null)
         {

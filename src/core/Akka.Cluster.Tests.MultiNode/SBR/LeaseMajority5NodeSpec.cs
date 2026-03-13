@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
-using Akka.Coordination.Tests;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
@@ -68,7 +67,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                 }
 
                 test-lease {
-                    lease-class = ""Akka.Coordination.Tests.TestLease, Akka.Coordination.Tests""
+                    lease-class = ""Akka.TestKit.TestLease, Akka.Tests.Shared.Internals""
                     heartbeat-interval = 1s
                     heartbeat-timeout = 120s
                     lease-operation-timeout = 3s

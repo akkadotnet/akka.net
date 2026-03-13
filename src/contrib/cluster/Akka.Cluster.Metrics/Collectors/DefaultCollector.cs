@@ -110,7 +110,7 @@ namespace Akka.Cluster.Metrics.Collectors
         
         private (double ProcessUsage, double TotalUsage) GetCpuUsages(int currentProcessId)
         {
-            Process[] processes = null;
+            Process[]? processes = null;
             
             try
             {

@@ -13,7 +13,6 @@ using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Coordination;
-using Akka.Coordination.Tests;
 using Akka.Event;
 using Akka.TestKit;
 using Akka.Util;
@@ -128,7 +127,7 @@ namespace Akka.Cluster.Sharding.Tests
                 akka.actor.provider = ""cluster""
                 akka.remote.dot-netty.tcp.port = 0
                 test-lease {
-                    lease-class = ""Akka.Coordination.Tests.TestLease, Akka.Coordination.Tests""
+                    lease-class = ""Akka.TestKit.TestLease, Akka.Tests.Shared.Internals""
                     heartbeat-interval = 1s
                     heartbeat-timeout = 120s
                     lease-operation-timeout = 3s
