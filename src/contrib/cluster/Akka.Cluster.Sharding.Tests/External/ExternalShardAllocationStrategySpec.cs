@@ -18,7 +18,6 @@ using Akka.DistributedData;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests.External
 {

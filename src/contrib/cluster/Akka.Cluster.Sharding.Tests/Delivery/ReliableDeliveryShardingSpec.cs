@@ -19,12 +19,11 @@ using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Tests.Delivery.TestConsumer;
 
 namespace Akka.Cluster.Sharding.Tests.Delivery;
 
-public class ReliableDeliveryShardingSpec : TestKit.Xunit2.TestKit
+public class ReliableDeliveryShardingSpec : TestKit.Xunit.TestKit
 {
     public static Config Configuration = @"
         akka.loglevel = DEBUG
