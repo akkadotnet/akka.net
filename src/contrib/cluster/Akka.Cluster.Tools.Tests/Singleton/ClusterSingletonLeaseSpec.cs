@@ -23,7 +23,6 @@ using DotNetty.Common.Concurrency;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {

@@ -13,7 +13,6 @@ using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.PublishSubscribe;
 
