@@ -83,7 +83,11 @@ namespace Akka.Streams.Tests.IO
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
 
                 var arr = new byte[_byteString.Count + 1];
+#if NETFRAMEWORK
                 inputStream.Read(arr, 0, arr.Length).Should().Be(arr.Length - 1);
+#else
+                inputStream.ReadAtLeast(arr, arr.Length, throwOnEndOfStream: false).Should().Be(arr.Length - 1);
+#endif
                 inputStream.Dispose();
                 ByteString.FromBytes(arr).Should().BeEquivalentTo(Enumerable.Concat(_byteString, ByteString.FromBytes(new byte[] { 0 })));
                 return Task.CompletedTask;
@@ -100,7 +104,11 @@ namespace Akka.Streams.Tests.IO
                 .Run(_materializer);
                 var probe = run.Item1;
                 var inputStream = run.Item2;
+#if NETFRAMEWORK
                 var f = Task.Run(() => inputStream.Read(new byte[_byteString.Count], 0, _byteString.Count));
+#else
+                var f = Task.Run(() => { inputStream.ReadExactly(new byte[_byteString.Count], 0, _byteString.Count); return _byteString.Count; });
+#endif
 
                 f.Wait(Timeout).Should().BeFalse();
 
@@ -129,7 +137,11 @@ namespace Akka.Streams.Tests.IO
                 inputStream.Dispose();
                 probe.ExpectCancellation();
 
+#if NETFRAMEWORK
                 Action block = () => inputStream.Read(new byte[1], 0, 1);
+#else
+                Action block = () => inputStream.ReadExactly(new byte[1], 0, 1);
+#endif
                 block.Should().Throw<IOException>();
                 return Task.CompletedTask;
             }, _materializer);
@@ -188,10 +200,17 @@ namespace Akka.Streams.Tests.IO
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
                 var buf = new byte[3];
 
+#if NETFRAMEWORK
                 Action(() => inputStream.Read(buf, -1, 2)).Should().Throw<ArgumentException>();
                 Action(() => inputStream.Read(buf, 0, 5)).Should().Throw<ArgumentException>();
                 Action(() => inputStream.Read(Array.Empty<byte>(), 0, 1)).Should().Throw<ArgumentException>();
                 Action(() => inputStream.Read(buf, 0, 0)).Should().Throw<ArgumentException>();
+#else
+                Action(() => inputStream.ReadExactly(buf, -1, 2)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.ReadExactly(buf, 0, 5)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.ReadExactly(Array.Empty<byte>(), 0, 1)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.ReadExactly(buf, 0, 0)).Should().Throw<ArgumentException>();
+#endif
                 return Task.CompletedTask;
             }, _materializer);
         }
@@ -381,7 +400,11 @@ namespace Akka.Streams.Tests.IO
         private (int, ByteString) ReadN(Stream s, int n)
         {
             var buf = new byte[n];
+#if NETFRAMEWORK
             var r = s.Read(buf, 0, n);
+#else
+            var r = s.ReadAtLeast(buf, n, throwOnEndOfStream: false);
+#endif
             return (r, ByteString.FromBytes(buf, 0, r));
         }
 
