@@ -1,0 +1,310 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Benchmark/">
+    <Project Path="src/benchmark/Akka.Benchmarks/Akka.Benchmarks.csproj" />
+    <Project Path="src/benchmark/Akka.Cluster.Benchmarks/Akka.Cluster.Benchmarks.csproj" />
+    <Project Path="src/benchmark/Akka.Cluster.Cpu.Benchmark/Akka.Cluster.Cpu.Benchmark.csproj" />
+    <Project Path="src/benchmark/PingPong/PingPong.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/benchmark/RemotePingPong/RemotePingPong.csproj" />
+    <Project Path="src/benchmark/SerializationBenchmarks/SerializationBenchmarks.csproj" />
+    <Project Path="src/benchmark/SpawnBenchmark/SpawnBenchmark.csproj" />
+  </Folder>
+  <Folder Name="/Build/">
+    <File Path="build.fsx" />
+    <File Path="Directory.Build.props" />
+    <File Path="NuGet.Config" />
+    <File Path="RELEASE_NOTES.md" />
+  </Folder>
+  <Folder Name="/Contrib/" />
+  <Folder Name="/Contrib/Cluster/">
+    <Project Path="src/contrib/cluster/Akka.Cluster.Metrics.Tests.MultiNode/Akka.Cluster.Metrics.Tests.MultiNode.csproj" />
+    <Project Path="src/contrib/cluster/Akka.Cluster.Metrics.Tests/Akka.Cluster.Metrics.Tests.csproj" />
+    <Project Path="src/contrib/cluster/Akka.Cluster.Metrics/Akka.Cluster.Metrics.csproj" />
+    <Project Path="src/contrib/cluster/Akka.Cluster.Sharding.Tests.MultiNode/Akka.Cluster.Sharding.Tests.MultiNode.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/contrib/cluster/Akka.Cluster.Sharding.Tests/Akka.Cluster.Sharding.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/contrib/cluster/Akka.Cluster.Sharding/Akka.Cluster.Sharding.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/contrib/cluster/Akka.Cluster.Tools.Tests.MultiNode/Akka.Cluster.Tools.Tests.MultiNode.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/contrib/cluster/Akka.Cluster.Tools.Tests/Akka.Cluster.Tools.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/contrib/cluster/Akka.Cluster.Tools/Akka.Cluster.Tools.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/contrib/cluster/Akka.DistributedData.LightningDB/Akka.DistributedData.LightningDB.csproj" />
+    <Project Path="src/contrib/cluster/Akka.DistributedData.Tests.MultiNode/Akka.DistributedData.Tests.MultiNode.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/contrib/cluster/Akka.DistributedData.Tests/Akka.DistributedData.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/contrib/cluster/Akka.DistributedData/Akka.DistributedData.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/Contrib/DependencyInjection/">
+    <Project Path="src/contrib/dependencyinjection/Akka.DependencyInjection.Tests/Akka.DependencyInjection.Tests.csproj" />
+    <Project Path="src/contrib/dependencyinjection/Akka.DependencyInjection/Akka.DependencyInjection.csproj" />
+  </Folder>
+  <Folder Name="/Contrib/Persistence/">
+    <Project Path="src/contrib/persistence/Akka.Persistence.Query.InMemory.Tests/Akka.Persistence.Query.InMemory.Tests.csproj" />
+    <Project Path="src/contrib/persistence/Akka.Persistence.Query.InMemory/Akka.Persistence.Query.InMemory.csproj" />
+  </Folder>
+  <Folder Name="/Contrib/Serializers/">
+    <Project Path="src/contrib/serializers/Akka.Serialization.Hyperion.Tests/Akka.Serialization.Hyperion.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/contrib/serializers/Akka.Serialization.Hyperion/Akka.Serialization.Hyperion.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/contrib/serializers/Akka.Serialization.TestKit/Akka.Serialization.TestKit.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/Contrib/TestKits/">
+    <Project Path="src/contrib/testkits/Akka.TestKit.Xunit.Tests/Akka.TestKit.Xunit.Tests.csproj" />
+    <Project Path="src/contrib/testkits/Akka.TestKit.Xunit/Akka.TestKit.Xunit.csproj" />
+    <Project Path="src/contrib/testkits/Akka.TestKit.Xunit2.Tests/Akka.TestKit.Xunit2.Tests.csproj" />
+    <Project Path="src/contrib/testkits/Akka.TestKit.Xunit2/Akka.TestKit.Xunit2.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+  </Folder>
+  <Folder Name="/Contrib/Transports/" />
+  <Folder Name="/Core/">
+    <Project Path="src/core/Akka.API.Tests/Akka.API.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Cluster.TestKit/Akka.Cluster.TestKit.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Cluster.Tests.MultiNode/Akka.Cluster.Tests.MultiNode.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Cluster.Tests.Performance/Akka.Cluster.Tests.Performance.csproj" />
+    <Project Path="src/core/Akka.Cluster.Tests/Akka.Cluster.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Cluster/Akka.Cluster.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Coordination.Tests/Akka.Coordination.Tests.csproj" />
+    <Project Path="src/core/Akka.Coordination/Akka.Coordination.csproj" />
+    <Project Path="src/core/Akka.Discovery.Tests/Akka.Discovery.Tests.csproj" />
+    <Project Path="src/core/Akka.Discovery/Akka.Discovery.csproj" />
+    <Project Path="src/core/Akka.Docs.Tests/Akka.Docs.Tests.csproj" />
+    <Project Path="src/core/Akka.Docs.Tutorials/Akka.Docs.Tutorials.csproj" />
+    <Project Path="src/core/Akka.FSharp.Tests/Akka.FSharp.Tests.fsproj" />
+    <Project Path="src/core/Akka.FSharp/Akka.FSharp.fsproj" />
+    <Project Path="src/core/Akka.Persistence.FSharp/Akka.Persistence.FSharp.fsproj" />
+    <Project Path="src/core/Akka.Persistence.Query.Tests/Akka.Persistence.Query.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Persistence.Query/Akka.Persistence.Query.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Persistence.TCK.Tests/Akka.Persistence.TCK.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Persistence.TCK/Akka.Persistence.TCK.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Persistence.TCK.Xunit2/Akka.Persistence.TCK.Xunit2.csproj" />
+    <Project Path="src/core/Akka.Persistence.TestKit.Tests/Akka.Persistence.TestKit.Tests.csproj" />
+    <Project Path="src/core/Akka.Persistence.TestKit.Xunit/Akka.Persistence.TestKit.Xunit.csproj" />
+    <Project Path="src/core/Akka.Persistence.TestKit.Xunit2/Akka.Persistence.TestKit.Xunit2.csproj" />
+    <Project Path="src/core/Akka.Persistence.TestKit/Akka.Persistence.TestKit.csproj" />
+    <Project Path="src/core/Akka.Persistence.Tests/Akka.Persistence.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Persistence/Akka.Persistence.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Remote.TestKit.Tests/Akka.Remote.TestKit.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Remote.TestKit/Akka.Remote.TestKit.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Remote.TestKit.Xunit2/Akka.Remote.TestKit.Xunit2.csproj" />
+    <Project Path="src/core/Akka.Remote.Tests.MultiNode/Akka.Remote.Tests.MultiNode.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Remote.Tests.Performance/Akka.Remote.Tests.Performance.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Remote/Akka.Remote.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Streams.TestKit.Tests/Akka.Streams.TestKit.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Streams.TestKit/Akka.Streams.TestKit.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Streams.Tests.Performance/Akka.Streams.Tests.Performance.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Streams.Tests.TCK/Akka.Streams.Tests.TCK.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Streams.Tests/Akka.Streams.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Streams/Akka.Streams.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.TestKit.Tests/Akka.TestKit.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.TestKit/Akka.TestKit.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Tests.Performance/Akka.Tests.Performance.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Tests.Shared.Internals.Xunit3/Akka.Tests.Shared.Internals.Xunit3.csproj" />
+    <Project Path="src/core/Akka.Tests.Shared.Internals/Akka.Tests.Shared.Internals.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka.Tests/Akka.Tests.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+    </Project>
+    <Project Path="src/core/Akka/Akka.csproj">
+      <Build Solution="*|x64" Project="false" />
+      <Build Solution="*|x86" Project="false" />
+      <Deploy Solution="Release|Any CPU" />
+    </Project>
+  </Folder>
+  <Folder Name="/Docs/" />
+  <Folder Name="/Examples/" />
+  <Folder Name="/Examples/AspNetCore/">
+    <Project Path="src/examples/AspNetCore/Akka.AspNetCore/Akka.AspNetCore.csproj" />
+    <Project Path="src/examples/AspNetCore/Samples.Akka.AspNetCore/Samples.Akka.AspNetCore.csproj" />
+  </Folder>
+  <Folder Name="/Examples/Chat/">
+    <Project Path="src/examples/Chat/ChatClient/ChatClient.csproj" />
+    <Project Path="src/examples/Chat/ChatMessages/ChatMessages.csproj" />
+    <Project Path="src/examples/Chat/ChatServer/ChatServer.csproj" />
+  </Folder>
+  <Folder Name="/Examples/Cluster/">
+    <Project Path="src/examples/Cluster/DData/DDataStressTest/DDataStressTest.csproj" />
+    <Project Path="src/examples/Cluster/Roles/Samples.Cluster.Transformation/Samples.Cluster.Transformation.csproj" />
+    <Project Path="src/examples/Cluster/Samples.Cluster.Simple/Samples.Cluster.Simple.csproj" />
+  </Folder>
+  <Folder Name="/Examples/Cluster/Metrics/">
+    <Project Path="src/examples/Cluster/Metrics/Samples.Cluster.AdaptiveGroup/Samples.Cluster.AdaptiveGroup.csproj" />
+    <Project Path="src/examples/Cluster/Metrics/Samples.Cluster.Metrics.Common/Samples.Cluster.Metrics.Common.csproj" />
+    <Project Path="src/examples/Cluster/Metrics/Samples.Cluster.Metrics/Samples.Cluster.Metrics.csproj" />
+  </Folder>
+  <Folder Name="/Examples/Cluster/PublishSubscribe/">
+    <Project Path="src/examples/Cluster/PublishSubscribe/SampleDestination/SampleDestination.csproj" />
+    <Project Path="src/examples/Cluster/PublishSubscribe/SamplePublisher/SamplePublisher.csproj" />
+    <Project Path="src/examples/Cluster/PublishSubscribe/SamplePublishSubscribe/SampleSubscriber.csproj" />
+    <Project Path="src/examples/Cluster/PublishSubscribe/SampleSender/SampleSender.csproj" />
+  </Folder>
+  <Folder Name="/Examples/Cluster/Sharding/">
+    <Project Path="src/examples/Cluster/ClusterSharding/ClusterSharding.Node/ClusterSharding.Node.csproj" />
+    <Project Path="src/examples/Cluster/ClusterSharding/ShoppingCart/ShoppingCart.csproj" />
+  </Folder>
+  <Folder Name="/Examples/Cluster/Tools/">
+    <Project Path="src/examples/Cluster/ClusterTools/ClusterToolsExample.Node/ClusterToolsExample.Node.csproj" />
+    <Project Path="src/examples/Cluster/ClusterTools/ClusterToolsExample.Seed/ClusterToolsExample.Seed.csproj" />
+    <Project Path="src/examples/Cluster/ClusterTools/ClusterToolsExample.Shared/ClusterToolsExample.Shared.csproj" />
+  </Folder>
+  <Folder Name="/Examples/HeadlessService/">
+    <Project Path="src/examples/HeadlessService/AkkaHeadlesssService/AkkaHeadlesssService.csproj" />
+  </Folder>
+  <Folder Name="/Examples/HelloAkka/">
+    <Project Path="src/examples/HelloAkka/HelloWorld/HelloWorld.csproj" />
+  </Folder>
+  <Folder Name="/Examples/Persistence/">
+    <Project Path="src/examples/Akka.Persistence.Custom.Tests/Akka.Persistence.Custom.Tests.csproj" />
+    <Project Path="src/examples/Akka.Persistence.Custom/Akka.Persistence.Custom.csproj" />
+    <Project Path="src/examples/PersistenceExample/PersistenceExample.csproj" />
+  </Folder>
+  <Folder Name="/Examples/TcpEchoServer/">
+    <Project Path="src/examples/TcpEchoService.Server/TcpEchoService.Server.csproj" />
+  </Folder>
+  <Folder Name="/Examples/WIndowsService/">
+    <Project Path="src/examples/WindowsService/AkkaWindowsService/AkkaWindowsService.csproj" />
+  </Folder>
+  <Folder Name="/Protobuf/">
+    <File Path="protobuf/ClusterClientMessages.proto" />
+    <File Path="protobuf/ClusterMessages.proto" />
+    <File Path="protobuf/ClusterShardingMessages.proto" />
+    <File Path="protobuf/ContainerFormats.proto" />
+    <File Path="protobuf/DistributedPubSubMessages.proto" />
+    <File Path="protobuf/Persistence.proto" />
+    <File Path="protobuf/StreamRefMessages.proto" />
+    <File Path="protobuf/SystemMessageFormats.proto" />
+    <File Path="protobuf/TestConductorProtocol.proto" />
+    <File Path="protobuf/WireFormats.proto" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Akka.sln.DotSettings" />
+    <File Path="Directory.Build.props" />
+    <File Path="NuGet.Config" />
+  </Folder>
+  <Properties Name="Performance">
+    <Property Name="HasPerformanceSessions" Value="true" />
+  </Properties>
+</Solution>

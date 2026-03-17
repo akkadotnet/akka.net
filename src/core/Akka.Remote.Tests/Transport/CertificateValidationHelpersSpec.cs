@@ -71,7 +71,7 @@ namespace Akka.Remote.Tests.Transport
         public void PinnedCertificate_should_filter_empty_thumbprints()
         {
             // Arrange
-            var cert = new X509Certificate2(ValidCertPath, Password);
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var thumbprint = cert.Thumbprint;
 
             // Include some empty/null values that should be filtered out
@@ -88,7 +88,7 @@ namespace Akka.Remote.Tests.Transport
         public void PinnedCertificate_should_be_case_insensitive()
         {
             // Arrange
-            var cert = new X509Certificate2(ValidCertPath, Password);
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var thumbprint = cert.Thumbprint;
 
             // Test with lowercase thumbprint in allowed list
@@ -105,7 +105,7 @@ namespace Akka.Remote.Tests.Transport
         public void PinnedCertificate_should_accept_from_multiple_allowed()
         {
             // Arrange
-            var cert = new X509Certificate2(ValidCertPath, Password);
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var thumbprint = cert.Thumbprint;
 
             var validator = CertificateValidation.PinnedCertificate(
@@ -124,7 +124,7 @@ namespace Akka.Remote.Tests.Transport
         public void PinnedCertificate_should_reject_non_matching_thumbprint()
         {
             // Arrange
-            var cert = new X509Certificate2(ValidCertPath, Password);
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var validator = CertificateValidation.PinnedCertificate(
                 "1111111111111111111111111111111111111111",
                 "2222222222222222222222222222222222222222");
@@ -229,7 +229,7 @@ namespace Akka.Remote.Tests.Transport
             };
 
             var combined = CertificateValidation.Combine(validator1, validator2);
-            var cert = new X509Certificate2(ValidCertPath, Password);
+            var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Act & Assert
             EventFilter.Error(contains: "First validator failed").ExpectOne(() =>

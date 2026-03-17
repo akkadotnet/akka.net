@@ -9,6 +9,11 @@
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 
+  <!-- NOTE: Remove this after MNTR have been updated -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jhpv-4q4f-43g5" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
     <PackageReference Include="Akka.Remote.TestKit" Version="1.5.40" ExcludeAssets="all" PrivateAssets="all" />

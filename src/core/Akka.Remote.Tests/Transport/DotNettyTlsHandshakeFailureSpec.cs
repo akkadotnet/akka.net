@@ -58,7 +58,7 @@ namespace Akka.Remote.Tests.Transport
 
         private static void CreateCertificateWithoutPrivateKey()
         {
-            var fullCert = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.Exportable);
+            var fullCert = CertificateHelper.LoadPkcs12(ValidCertPath, Password, X509KeyStorageFlags.Exportable);
             var publicKeyBytes = fullCert.Export(X509ContentType.Cert);
             var dir = Path.GetDirectoryName(NoKeyCertPath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
