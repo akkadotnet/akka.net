@@ -268,7 +268,7 @@ namespace Akka.Remote.Tests.Transport
                 store.Open(OpenFlags.ReadWrite);
 
 
-                var cert = new X509Certificate2(ValidCertPath, Password);
+                var cert = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
                 Thumbprint = cert.Thumbprint;
                 store.Add(cert);
             }

@@ -367,7 +367,11 @@ namespace Akka.Remote.Transport.DotNetty
                 RemoteCertificateValidationCallback validationCallback = (sender, cert, chain, errors) =>
                 {
                     // Convert X509Certificate to X509Certificate2 if needed
+#if NET10_0_OR_GREATER
+                    var x509Cert = cert as X509Certificate2 ?? (cert != null ? X509CertificateLoader.LoadCertificate(cert.GetRawCertData()) : null);
+#else
                     var x509Cert = cert as X509Certificate2 ?? (cert != null ? new X509Certificate2(cert) : null);
+#endif
                     return validator(x509Cert, chain, remoteAddress.ToString(), errors, Log);
                 };
 
@@ -432,7 +436,11 @@ namespace Akka.Remote.Transport.DotNetty
                         // Extract client address from channel
                         var remoteAddress = channel.RemoteAddress?.ToString() ?? "unknown";
                         // Convert X509Certificate to X509Certificate2 if needed
+#if NET10_0_OR_GREATER
+                        var x509Cert = certificate as X509Certificate2 ?? X509CertificateLoader.LoadCertificate(certificate.GetRawCertData());
+#else
                         var x509Cert = certificate as X509Certificate2 ?? new X509Certificate2(certificate);
+#endif
                         return validator(x509Cert, chain, remoteAddress, errors, Log);
                     };
 
