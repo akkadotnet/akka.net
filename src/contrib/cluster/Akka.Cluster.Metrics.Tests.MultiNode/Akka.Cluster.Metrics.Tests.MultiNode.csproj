@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Akka.Cluster.Metrics.Tests\Akka.Cluster.Metrics.Tests.csproj" />
+         <!-- <ProjectReference Include="..\Akka.Cluster.Metrics.Tests\Akka.Cluster.Metrics.Tests.csproj" /> -->
         <ProjectReference Include="..\Akka.Cluster.Metrics\Akka.Cluster.Metrics.csproj" />
         <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
     </ItemGroup>
@@ -19,6 +19,12 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="..\Akka.Cluster.Metrics.Tests\Helpers\ClusterMetricsView.cs">
+        <Link>ClusterMetricsView.cs</Link>
+      </Compile>
     </ItemGroup>
 
 </Project>

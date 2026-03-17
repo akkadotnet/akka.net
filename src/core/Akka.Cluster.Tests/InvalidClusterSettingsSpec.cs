@@ -9,7 +9,6 @@ using Akka.Configuration;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
 
 namespace Akka.Cluster.Tests

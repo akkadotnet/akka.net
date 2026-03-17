@@ -13,7 +13,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Coordination;
 using Akka.TestKit;
-using Xunit.Abstractions;
 using Akka.Util.Internal;
 using Xunit;
 using Akka.Cluster.SBR;
