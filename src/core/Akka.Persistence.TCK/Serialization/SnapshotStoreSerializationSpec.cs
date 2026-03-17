@@ -14,7 +14,6 @@ using Akka.Persistence.Fsm;
 using Akka.Serialization;
 using Xunit;
 using Akka.Util.Internal;
-using FluentAssertions;
 
 #nullable enable
 namespace Akka.Persistence.TCK.Serialization
