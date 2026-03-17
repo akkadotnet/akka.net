@@ -13,6 +13,7 @@ using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.TestKit;
+using Akka.Streams.Dsl;
 using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
@@ -33,13 +34,6 @@ namespace Akka.Persistence.TCK.Query
         {
             Materializer = Sys.Materializer();
         }
-
-        /// <summary>
-        /// Called after events are written and before queries are executed.
-        /// Override this in backends with eventually-consistent read models
-        /// to wait for the read side to catch up.
-        /// </summary>
-        protected virtual Task WaitForReadSideAsync() => Task.CompletedTask;
 
         [Fact]
         public void ReadJournal_should_implement_ICurrentEventsByTagQuery()
@@ -69,7 +63,8 @@ namespace Akka.Persistence.TCK.Query
             b.Tell("a green leaf");
             ExpectMsg("a green leaf-done");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            // Poll until projections have caught up (tolerates eventually-consistent backends)
+            WaitForTagEvents(queries, "green", 3);
 
             var greenSrc = queries.CurrentEventsByTag("green", offset: NoOffset());
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -108,7 +103,8 @@ namespace Akka.Persistence.TCK.Query
             b.Tell("a black car");
             ExpectMsg("a black car-done");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            // Ensure backend has caught up before querying a non-existent tag
+            WaitForTagEvents(queries, "green", 1);
 
             var greenSrc = queries.CurrentEventsByTag("pink", offset: NoOffset());
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -138,7 +134,7 @@ namespace Akka.Persistence.TCK.Query
             b.Tell("a green leaf");
             ExpectMsg("a green leaf-done");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForTagEvents(queries, "green", 3);
 
             var c = Sys.ActorOf(Query.TestActor.Props("c"));
 
@@ -183,7 +179,7 @@ namespace Akka.Persistence.TCK.Query
             c.Tell("a green cucumber");
             ExpectMsg("a green cucumber-done");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForTagEvents(queries, "green", 4);
 
             var greenSrc1 = queries.CurrentEventsByTag("green", offset: NoOffset());
             var probe1 = greenSrc1.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -214,7 +210,7 @@ namespace Akka.Persistence.TCK.Query
                 ExpectMsg("a green apple-done");
             }
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForTagEvents(queries, "green", 150);
 
             var greenSrc = queries.CurrentEventsByTag("green", offset: NoOffset());
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -243,7 +239,7 @@ namespace Akka.Persistence.TCK.Query
             a.Tell("a green banana");
             ExpectMsg("a green banana-done");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForTagEvents(queries, "green", 2);
 
             var greenSrc = queries.CurrentEventsByTag("green", offset: NoOffset());
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -251,6 +247,21 @@ namespace Akka.Persistence.TCK.Query
             probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
             probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
             probe.Cancel();
+        }
+
+        /// <summary>
+        /// Polls the tag projection until the expected number of events are indexed.
+        /// Passes immediately for synchronous backends; converges for eventually-consistent ones.
+        /// </summary>
+        private void WaitForTagEvents(ICurrentEventsByTagQuery queries, string tag, int expectedCount)
+        {
+            AwaitConditionAsync(async () =>
+            {
+                var events = await queries.CurrentEventsByTag(tag, NoOffset())
+                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
+                return events.Count >= expectedCount;
+            }, max: expectedCount > 100 ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(10))
+                .GetAwaiter().GetResult();
         }
 
         private EventEnvelope ExpectEnvelope(TestSubscriber.Probe<EventEnvelope> probe, string persistenceId, long sequenceNr, string @event, string tag)

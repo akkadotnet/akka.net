@@ -32,13 +32,6 @@ namespace Akka.Persistence.TCK.Query
             Materializer = Sys.Materializer();
         }
 
-        /// <summary>
-        /// Called after events are written and before queries are executed.
-        /// Override this in backends with eventually-consistent read models
-        /// to wait for the read side to catch up.
-        /// </summary>
-        protected virtual Task WaitForReadSideAsync() => Task.CompletedTask;
-
         [Fact]
         public void ReadJournal_should_implement_ICurrentEventsByPersistenceIdQuery()
         {
@@ -51,7 +44,7 @@ namespace Akka.Persistence.TCK.Query
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("a");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForPersistenceIdEvents(queries, "a", 3);
 
             var src = queries.CurrentEventsByPersistenceId("a", 0, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
@@ -69,7 +62,7 @@ namespace Akka.Persistence.TCK.Query
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("b");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForPersistenceIdEvents(queries, "b", 3);
 
             var src = queries.CurrentEventsByPersistenceId("b", 0L, 2L);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
@@ -84,7 +77,7 @@ namespace Akka.Persistence.TCK.Query
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("f");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForPersistenceIdEvents(queries, "f", 3);
 
             var src = queries.CurrentEventsByPersistenceId("f", 0L, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
@@ -110,7 +103,7 @@ namespace Akka.Persistence.TCK.Query
             pref.Tell(new TestActor.DeleteCommand(3));
             AwaitAssert(() => ExpectMsg("3-deleted"));
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForPersistenceIdEvents(queries, "g1", 0);
 
             var src = queries.CurrentEventsByPersistenceId("g1", 0, long.MaxValue);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
@@ -125,7 +118,7 @@ namespace Akka.Persistence.TCK.Query
             pref.Tell(new TestActor.DeleteCommand(3));
             AwaitAssert(() => ExpectMsg("3-deleted"));
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForPersistenceIdEvents(queries, "g2", 0);
 
             var src = queries.CurrentEventsByPersistenceId("g2", 0, 0);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
@@ -140,7 +133,7 @@ namespace Akka.Persistence.TCK.Query
             pref.Tell(new TestActor.DeleteCommand(2));
             AwaitAssert(() => ExpectMsg("2-deleted"));
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForPersistenceIdEvents(queries, "h", 1);
 
             var src = queries.CurrentEventsByPersistenceId("h", 0L, long.MaxValue);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
@@ -165,7 +158,7 @@ namespace Akka.Persistence.TCK.Query
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("k1");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForPersistenceIdEvents(queries, "k1", 3);
 
             var src = queries.CurrentEventsByPersistenceId("k1", 0, 0);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
@@ -187,7 +180,7 @@ namespace Akka.Persistence.TCK.Query
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("l");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            WaitForPersistenceIdEvents(queries, "l", 3);
 
             var src = queries.CurrentEventsByPersistenceId("l", 4L, 3L);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
@@ -199,9 +192,9 @@ namespace Akka.Persistence.TCK.Query
         {
             Setup("m");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
-
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
+            WaitForPersistenceIdEvents(queries, "m", 3);
+
             var src = queries.CurrentEventsByPersistenceId("m", 0L, long.MaxValue);
 
             var probe = src.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -210,6 +203,26 @@ namespace Akka.Persistence.TCK.Query
             probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
             probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
             probe.ExpectComplete();
+        }
+
+        /// <summary>
+        /// Polls the persistence id query until the expected number of events are available.
+        /// Passes immediately for synchronous backends; converges for eventually-consistent ones.
+        /// </summary>
+        private void WaitForPersistenceIdEvents(
+            ICurrentEventsByPersistenceIdQuery queries,
+            string persistenceId,
+            int expectedCount)
+        {
+            if (expectedCount <= 0)
+                return;
+
+            AwaitConditionAsync(async () =>
+            {
+                var events = await queries.CurrentEventsByPersistenceId(persistenceId, 0, long.MaxValue)
+                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
+                return events.Count >= expectedCount;
+            }, TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
         }
 
         private IActorRef Setup(string persistenceId)

@@ -13,6 +13,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
 using Akka.Streams;
+using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Xunit;
 
@@ -40,13 +41,6 @@ namespace Akka.Persistence.TCK.Query
             Materializer = Sys.Materializer();
         }
 
-        /// <summary>
-        /// Called after events are written and before queries are executed.
-        /// Override this in backends with eventually-consistent read models
-        /// to wait for the read side to catch up.
-        /// </summary>
-        protected virtual Task WaitForReadSideAsync() => Task.CompletedTask;
-
         [Fact]
         public void ReadJournal_should_implement_ICurrentAllEventsQuery()
         {
@@ -67,7 +61,13 @@ namespace Akka.Persistence.TCK.Query
             b.Tell("test");
             ExpectMsg("test-done");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            // Poll until all events are visible (tolerates eventually-consistent backends)
+            AwaitConditionAsync(async () =>
+            {
+                var events = await queries.CurrentAllEvents(NoOffset.Instance)
+                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
+                return events.Count >= 3;
+            }, TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
 
             var eventSrc = queries.CurrentAllEvents(NoOffset.Instance);
             var probe = eventSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -132,7 +132,12 @@ namespace Akka.Persistence.TCK.Query
             b.Tell("test");
             ExpectMsg("test-done");
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            AwaitConditionAsync(async () =>
+            {
+                var events = await queries.CurrentAllEvents(NoOffset.Instance)
+                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
+                return events.Count >= 3;
+            }, TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
 
             var eventSrc1 = queries.CurrentAllEvents(NoOffset.Instance);
             var probe1 = eventSrc1.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -161,7 +166,12 @@ namespace Akka.Persistence.TCK.Query
                 ExpectMsg("a green apple-done");
             }
 
-            WaitForReadSideAsync().GetAwaiter().GetResult();
+            AwaitConditionAsync(async () =>
+            {
+                var events = await queries.CurrentAllEvents(NoOffset.Instance)
+                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
+                return events.Count >= 150;
+            }, TimeSpan.FromSeconds(30)).GetAwaiter().GetResult();
 
             var greenSrc = queries.CurrentAllEvents(NoOffset.Instance);
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
