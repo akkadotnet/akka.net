@@ -10,7 +10,6 @@ using Akka.Annotations;
 using Akka.Cluster.Metrics.Helpers;
 using Akka.Util;
 
-#nullable enable
 namespace Akka.Cluster.Metrics.Serialization
 {
     public sealed partial class NodeMetrics

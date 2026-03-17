@@ -51,9 +51,9 @@ namespace Akka.IO
         private readonly UdpExt _udp;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="UdpManager"/> class.
         /// </summary>
-        /// <param name="udp">TBD</param>
+        /// <param name="udp">The UDP extension providing settings and socket event argument pooling.</param>
         public UdpManager(UdpExt udp)
         {
             _udp = udp;

@@ -11,12 +11,10 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
-using Akka.Coordination.Tests;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Sharding.Tests
 {

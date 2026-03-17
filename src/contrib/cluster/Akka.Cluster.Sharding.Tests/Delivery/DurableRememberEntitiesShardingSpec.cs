@@ -17,7 +17,6 @@ using Akka.Event;
 using Akka.Persistence.Delivery;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 using static Akka.Tests.Delivery.TestConsumer;
 

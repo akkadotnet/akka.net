@@ -17,11 +17,10 @@ using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {
-    public class ClusterSingletonProxySpec : TestKit.Xunit2.TestKit
+    public class ClusterSingletonProxySpec : TestKit.Xunit.TestKit
     {
         public ClusterSingletonProxySpec(ITestOutputHelper output): base(output: output)
         {
@@ -235,7 +234,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
             }
         }
         
-        private class ActorSys : TestKit.Xunit2.TestKit
+        private class ActorSys : TestKit.Xunit.TestKit
         {
             public Cluster Cluster { get; }
 
