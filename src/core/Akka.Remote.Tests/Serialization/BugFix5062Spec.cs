@@ -20,7 +20,6 @@ using Akka.TestKit;
 using FluentAssertions;
 using Google.Protobuf;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.Serialization
 {

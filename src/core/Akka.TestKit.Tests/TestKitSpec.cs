@@ -9,7 +9,6 @@ using Akka.Actor;
 using Akka.Actor.Dsl;
 using Akka.Configuration;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 using static FluentAssertions.FluentActions;
 
@@ -29,7 +28,7 @@ namespace Akka.TestKit.Tests
         {
             using (var sys = ActorSystem.Create(nameof(TestKitSpec)))
             {
-                var testkit = new TestKit.Xunit2.TestKit(sys, _output);
+                var testkit = new TestKit.Xunit.TestKit(sys, _output);
                 var echoActor = testkit.Sys.ActorOf(c => c.ReceiveAny((m, _) => testkit.TestActor.Tell(m))); 
                 Invoking(() =>
                 {
@@ -43,9 +42,9 @@ namespace Akka.TestKit.Tests
         [Fact(DisplayName = "TestKit should accept ActorSystem with TestKit.DefaultConfig")]
         public void TestKitConfigTest()
         {
-            using (var sys = ActorSystem.Create(nameof(TestKitSpec), TestKit.Xunit2.TestKit.DefaultConfig))
+            using (var sys = ActorSystem.Create(nameof(TestKitSpec), TestKit.Xunit.TestKit.DefaultConfig))
             {
-                var testkit = new TestKit.Xunit2.TestKit(sys, _output);
+                var testkit = new TestKit.Xunit.TestKit(sys, _output);
                 var echoActor = testkit.Sys.ActorOf(c => c.ReceiveAny((m, _) => testkit.TestActor.Tell(m))); 
                 Invoking(() =>
                 {

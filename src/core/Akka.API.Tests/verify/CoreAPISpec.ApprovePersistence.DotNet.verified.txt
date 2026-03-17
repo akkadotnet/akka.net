@@ -1,6 +1,7 @@
 ﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK.Xunit2")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("e3bcba88-003c-4cda-8a60-f0c2553fe3c8")]

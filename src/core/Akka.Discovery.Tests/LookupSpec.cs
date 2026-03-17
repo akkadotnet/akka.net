@@ -10,11 +10,10 @@ using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Discovery.Tests
 {
-    public class LookupSpec : TestKit.Xunit2.TestKit
+    public class LookupSpec : TestKit.Xunit.TestKit
     {
         private readonly List<string> srvWithInvalidDomainNames;
         private readonly List<string> srvWithValidDomainNames;

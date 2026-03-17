@@ -11,7 +11,6 @@ using Akka.Actor;
 using Akka.Cluster;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.DistributedData.Tests
 {

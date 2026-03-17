@@ -13,7 +13,6 @@ using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
 using Akka.TestKit.Extensions;
-using Xunit.Abstractions;
 using FluentAssertions.Extensions;
 using System.Threading.Tasks;
 

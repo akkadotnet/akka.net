@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Streams.Tests.Dsl.TestConfig;
 
 namespace Akka.Streams.Tests.Dsl

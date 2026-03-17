@@ -12,7 +12,6 @@ using Akka.TestKit;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.DependencyInjection.Tests
 {

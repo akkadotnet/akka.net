@@ -101,7 +101,8 @@ namespace Akka.Cluster.Metrics.Collectors
                 
                 // CPU % by all processes that are used for overall CPU capacity calculation
                 var totalCpu = NodeMetrics.Types.Metric.Create(StandardMetrics.CpuTotalUsage, totalCpuUsage);
-                metrics.Add(totalCpu.Value);
+                if(totalCpu.HasValue)
+                    metrics.Add(totalCpu.Value);
             
                 return new NodeMetrics(_address, DateTime.UtcNow.ToTimestamp(), metrics);
             }
@@ -109,7 +110,7 @@ namespace Akka.Cluster.Metrics.Collectors
         
         private (double ProcessUsage, double TotalUsage) GetCpuUsages(int currentProcessId)
         {
-            Process[] processes = null;
+            Process[]? processes = null;
             
             try
             {

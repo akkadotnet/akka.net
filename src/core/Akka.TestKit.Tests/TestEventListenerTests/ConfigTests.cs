@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Akka.TestKit.Tests.TestEventListenerTests
 {
-    public class ConfigTests : TestKit.Xunit2.TestKit
+    public class ConfigTests : TestKit.Xunit.TestKit
     {
         [Fact]
         public void TestEventListener_is_in_config_by_default()

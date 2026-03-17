@@ -15,11 +15,10 @@ using Akka.Configuration;
 using Akka.Routing;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Remote.Tests.BugFixes
 {
-    public class BugFix4384Spec : TestKit.Xunit2.TestKit
+    public class BugFix4384Spec : TestKit.Xunit.TestKit
     {
         public ActorSystem Sys1 { get; }
         public Address Sys1Address { get; }

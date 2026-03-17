@@ -20,11 +20,10 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
-    public abstract class PersistenceIdsSpec : Akka.TestKit.Xunit2.TestKit
+    public abstract class PersistenceIdsSpec : XTestKit
     {
         protected ActorMaterializer Materializer { get; }
 

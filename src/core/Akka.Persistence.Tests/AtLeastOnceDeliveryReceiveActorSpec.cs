@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using Xunit;
 
 namespace Akka.Persistence.Tests

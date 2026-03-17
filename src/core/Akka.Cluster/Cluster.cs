@@ -711,11 +711,11 @@ namespace Akka.Cluster
             /// <param name="template">The template being rendered and logged.</param>
             /// <param name="arg1">The first argument that fills in the corresponding template placeholder.</param>
             /// <param name="arg2">The second argument that fills in the corresponding template placeholder.</param>
-            /// <param name="arg3">The second argument that fills in the corresponding template placeholder.</param>
+            /// <param name="arg3">The third argument that fills in the corresponding template placeholder.</param>
             internal void LogInfo(string template, object arg1, object arg2, object arg3)
             {
                 if (_settings.LogInfo)
-                    _log.Info("Cluster Node [{2}] - " + template, arg1, arg2, arg3, _selfAddress);
+                    _log.Info("Cluster Node [{3}] - " + template, arg1, arg2, arg3, _selfAddress);
             }
         }
 

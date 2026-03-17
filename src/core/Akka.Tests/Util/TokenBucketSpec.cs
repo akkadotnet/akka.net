@@ -10,7 +10,6 @@ using System.Diagnostics.CodeAnalysis;
 using Akka.TestKit;
 using Akka.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Util
 {

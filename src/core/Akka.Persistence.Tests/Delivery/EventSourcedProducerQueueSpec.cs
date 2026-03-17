@@ -15,7 +15,6 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using static Akka.Delivery.DurableProducerQueue;
 
 namespace Akka.Persistence.Tests.Delivery;

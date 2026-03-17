@@ -1790,9 +1790,34 @@ namespace Akka.Cluster.Sharding
                     }
                     return true;
 
+                case ShardStopped m:
+                    // Ported from Pekko: clean up unAckedHostShards when shard reports stopped
+                    if (_unAckedHostShards.TryGetValue(m.Shard, out var stopCancel))
+                    {
+                        stopCancel.Cancel();
+                        _unAckedHostShards = _unAckedHostShards.Remove(m.Shard);
+                    }
+
+                    // Safety net: if no rebalance is in progress for this shard (RebalanceWorker
+                    // already timed out), deallocate the shard so it can be reallocated elsewhere.
+                    // This prevents the shard from being endlessly recreated via GetShardHome/ShardHome.
+                    if (!_rebalanceInProgress.ContainsKey(m.Shard) && State.Shards.ContainsKey(m.Shard))
+                    {
+                        Log.Info("{0}: Shard [{1}] stopped - performing late deallocation (rebalance worker timed out).",
+                            TypeName, m.Shard);
+                        Update(new ShardHomeDeallocated(m.Shard), evt =>
+                        {
+                            State = State.Updated(evt);
+                            Log.Debug("{0}: Shard [{1}] deallocated (late)", TypeName, m.Shard);
+                            AllocateShardHomesForRememberEntities();
+                            _context.Self.Tell(new GetShardHome(m.Shard), _ignoreRef);
+                        });
+                    }
+                    return true;
+
                 case ResendShardHost m:
                     {
-                        if (State.Shards.TryGetValue(m.Shard, out var region) && region.Equals(region))
+                        if (State.Shards.TryGetValue(m.Shard, out var region) && region.Equals(m.Region))
                             SendHostShardMsg(m.Shard, region);
                         else
                         {

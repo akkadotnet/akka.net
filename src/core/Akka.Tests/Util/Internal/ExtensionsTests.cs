@@ -12,6 +12,7 @@ using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;
 using FsCheck;
+using FsCheck.Fluent;
 using FsCheck.Xunit;
 using Xunit;
 
@@ -106,8 +107,7 @@ namespace Akka.Tests.Util.Internal
         [Property]
         public void SplitDottedPathHonouringQuotesWithTestOracle()
         {
-            Arb.Register<ConfigStringsGen>();
-            Prop.ForAll<string>(s =>
+            Prop.ForAll(ConfigStringsGen.EventLocations(), (string s) =>
                     SplitDottedPathHonouringQuotesOracle(s).SequenceEqual(s.SplitDottedPathHonouringQuotes()))
                 .QuickCheckThrowOnFailure();
         }
@@ -131,13 +131,13 @@ namespace Akka.Tests.Util.Internal
             {
                 var z =
                     from size in Gen.Choose(1, 50)
-                    let letters = Arb.toGen(Arb.Default.Char().Filter(c => (c >= 'A' && c <= 'z') || c == '.'))
+                    let letters = ArbMap.Default.GeneratorFor<char>().Where(c => (c >= 'A' && c <= 'z') || c == '.')
                     let len = Gen.Choose(1, 200)
                     let words = len
-                        .SelectMany(i => Gen.ArrayOf(i, letters)
-                            .SelectMany(ls => Arb.Generate<bool>()
+                        .SelectMany(i => letters.ArrayOf(i)
+                            .SelectMany(ls => ArbMap.Default.GeneratorFor<bool>()
                                 .Select(b => ls.Contains('.') || b ? "\"" + new string(ls) + "\"" : new string(ls))))
-                    from wx in Gen.ArrayOf(size, words).Select(ww => String.Join(".", ww))
+                    from wx in words.ArrayOf(size).Select(ww => string.Join(".", ww))
                     select wx;
                 return z;
             }

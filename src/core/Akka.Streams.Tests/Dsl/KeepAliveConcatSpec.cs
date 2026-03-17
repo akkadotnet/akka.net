@@ -13,13 +13,12 @@ using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using System.Threading.Tasks;
 using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class KeepAliveConcatSpec : Akka.TestKit.Xunit2.TestKit
+    public class KeepAliveConcatSpec : Akka.TestKit.Xunit.TestKit
     {
         public KeepAliveConcatSpec(ITestOutputHelper output)
             : base(output: output)

@@ -10,13 +10,13 @@ using System.Linq;
 using System.Collections.Generic;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class IntervalBasedRateLimiterSpec : Akka.TestKit.Xunit2.TestKit
+    public class IntervalBasedRateLimiterSpec : Akka.TestKit.Xunit.TestKit
     {
         private readonly Source<int, NotUsed> _infiniteSource = Source.From(Enumerable.Range(1, int.MaxValue - 1));
 

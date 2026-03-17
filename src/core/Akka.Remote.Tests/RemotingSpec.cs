@@ -19,11 +19,10 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Google.Protobuf;
 using Xunit;
-using Xunit.Abstractions;
 using Nito.AsyncEx;
 using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
 using Akka.TestKit.Extensions;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions.Extensions;
 
 namespace Akka.Remote.Tests

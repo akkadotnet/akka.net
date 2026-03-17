@@ -229,7 +229,7 @@ namespace Akka.Util
                             {
                                 if (_rest == "" && other._rest != "")
                                     diff = 1;
-                                if (other._rest == "" && _rest != "")
+                                else if (other._rest == "" && _rest != "")
                                     diff = -1;
                                 else
                                     diff = string.Compare(_rest, other._rest, StringComparison.Ordinal);

@@ -3,20 +3,22 @@
 
   <PropertyGroup>
    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
-    <ProjectReference Include="..\Akka.Persistence.TestKit.Xunit2\Akka.Persistence.TestKit.Xunit2.csproj" />
+    <ProjectReference Include="..\Akka.Persistence.TestKit.Xunit\Akka.Persistence.TestKit.Xunit.csproj" />
     <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
-    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
-    <PackageReference Include="xunit" Version="$(XunitVersion)" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitVersion)" />
+    <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
   </ItemGroup>
 

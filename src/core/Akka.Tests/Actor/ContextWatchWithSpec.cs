@@ -16,7 +16,6 @@ using FluentAssertions;
 using FluentAssertions.Extensions;
 using Newtonsoft.Json;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Tests.Actor
 {
