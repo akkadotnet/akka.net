@@ -31,8 +31,8 @@
     <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.26.1</ProtobufVersion>
     <GrpcToolsVersion>2.60.0</GrpcToolsVersion>
-    <BenchmarkDotNetVersion>0.13.12</BenchmarkDotNetVersion>
-    <NetTestVersion>net8.0</NetTestVersion>
+    <BenchmarkDotNetVersion>0.15.4</BenchmarkDotNetVersion>
+    <NetTestVersion>net10.0</NetTestVersion>
     <FsharpVersion>6.0.5</FsharpVersion>
     <NetFrameworkTestVersion>net48</NetFrameworkTestVersion>
     <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
@@ -46,6 +46,7 @@
     <MultiNodeAdapterVersion>1.5.25</MultiNodeAdapterVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>
     <MsExtVersion>[6.0.*,)</MsExtVersion>
+    <MsExtTestVersion>10.0.5</MsExtTestVersion>
     <AkkaAnalyzerVersion>0.3.3</AkkaAnalyzerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>

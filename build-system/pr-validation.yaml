@@ -80,7 +80,7 @@ jobs:
       name: "net_tests_windows"
       displayName: ".NET Unit Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net8.0 --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "net_tests_windows-$(Build.BuildId)"
 
@@ -89,7 +89,7 @@ jobs:
       name: "net_tests_linux"
       displayName: ".NET Unit Tests (Linux)"
       vmImage: "ubuntu-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net8.0 --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "net_tests_linux-$(Build.BuildId)"
 
@@ -98,7 +98,7 @@ jobs:
       name: "net_mntr_windows"
       displayName: ".NET Multi-Node Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net8.0 --logger:trx --results-directory TestResults/multinode"
+      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults/multinode"
       outputDirectory: "TestResults"
       artifactName: "net_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
