@@ -11,10 +11,9 @@ using Akka.Actor;
 using Akka.Coordination;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 #nullable enable
 namespace DocsExamples.Utilities.Leases;
