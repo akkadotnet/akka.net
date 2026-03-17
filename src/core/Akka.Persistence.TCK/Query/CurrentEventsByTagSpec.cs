@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -32,6 +33,13 @@ namespace Akka.Persistence.TCK.Query
         {
             Materializer = Sys.Materializer();
         }
+
+        /// <summary>
+        /// Called after events are written and before queries are executed.
+        /// Override this in backends with eventually-consistent read models
+        /// to wait for the read side to catch up.
+        /// </summary>
+        protected virtual Task WaitForReadSideAsync() => Task.CompletedTask;
 
         [Fact]
         public void ReadJournal_should_implement_ICurrentEventsByTagQuery()
@@ -60,6 +68,8 @@ namespace Akka.Persistence.TCK.Query
             ExpectMsg("a green banana-done");
             b.Tell("a green leaf");
             ExpectMsg("a green leaf-done");
+
+            WaitForReadSideAsync().GetAwaiter().GetResult();
 
             var greenSrc = queries.CurrentEventsByTag("green", offset: NoOffset());
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -98,6 +108,8 @@ namespace Akka.Persistence.TCK.Query
             b.Tell("a black car");
             ExpectMsg("a black car-done");
 
+            WaitForReadSideAsync().GetAwaiter().GetResult();
+
             var greenSrc = queries.CurrentEventsByTag("pink", offset: NoOffset());
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe.Request(2).ExpectComplete();
@@ -125,6 +137,8 @@ namespace Akka.Persistence.TCK.Query
             ExpectMsg("a green banana-done");
             b.Tell("a green leaf");
             ExpectMsg("a green leaf-done");
+
+            WaitForReadSideAsync().GetAwaiter().GetResult();
 
             var c = Sys.ActorOf(Query.TestActor.Props("c"));
 
@@ -169,6 +183,8 @@ namespace Akka.Persistence.TCK.Query
             c.Tell("a green cucumber");
             ExpectMsg("a green cucumber-done");
 
+            WaitForReadSideAsync().GetAwaiter().GetResult();
+
             var greenSrc1 = queries.CurrentEventsByTag("green", offset: NoOffset());
             var probe1 = greenSrc1.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe1.Request(2);
@@ -198,6 +214,8 @@ namespace Akka.Persistence.TCK.Query
                 ExpectMsg("a green apple-done");
             }
 
+            WaitForReadSideAsync().GetAwaiter().GetResult();
+
             var greenSrc = queries.CurrentEventsByTag("green", offset: NoOffset());
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe.Request(150);
@@ -224,6 +242,8 @@ namespace Akka.Persistence.TCK.Query
             ExpectMsg("a black car-done");
             a.Tell("a green banana");
             ExpectMsg("a green banana-done");
+
+            WaitForReadSideAsync().GetAwaiter().GetResult();
 
             var greenSrc = queries.CurrentEventsByTag("green", offset: NoOffset());
             var probe = greenSrc.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
