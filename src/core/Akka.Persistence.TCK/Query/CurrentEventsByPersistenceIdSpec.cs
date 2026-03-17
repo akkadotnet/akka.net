@@ -43,6 +43,8 @@ namespace Akka.Persistence.TCK.Query
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("a");
 
+            WaitForPersistenceIdEvents(queries, "a", 3);
+
             var src = queries.CurrentEventsByPersistenceId("a", 0, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
             probe.Request(2)
@@ -58,6 +60,9 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("b");
+
+            WaitForPersistenceIdEvents(queries, "b", 3);
+
             var src = queries.CurrentEventsByPersistenceId("b", 0L, 2L);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
                 .Request(5)
@@ -70,6 +75,9 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("f");
+
+            WaitForPersistenceIdEvents(queries, "f", 3);
+
             var src = queries.CurrentEventsByPersistenceId("f", 0L, long.MaxValue);
             var probe = src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer);
             probe.Request(2)
@@ -94,6 +102,8 @@ namespace Akka.Persistence.TCK.Query
             pref.Tell(new TestActor.DeleteCommand(3));
             AwaitAssert(() => ExpectMsg("3-deleted"));
 
+            WaitForPersistenceIdEvents(queries, "g1", 0);
+
             var src = queries.CurrentEventsByPersistenceId("g1", 0, long.MaxValue);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
         }
@@ -107,6 +117,8 @@ namespace Akka.Persistence.TCK.Query
             pref.Tell(new TestActor.DeleteCommand(3));
             AwaitAssert(() => ExpectMsg("3-deleted"));
 
+            WaitForPersistenceIdEvents(queries, "g2", 0);
+
             var src = queries.CurrentEventsByPersistenceId("g2", 0, 0);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
         }
@@ -119,6 +131,8 @@ namespace Akka.Persistence.TCK.Query
 
             pref.Tell(new TestActor.DeleteCommand(2));
             AwaitAssert(() => ExpectMsg("2-deleted"));
+
+            WaitForPersistenceIdEvents(queries, "h", 1);
 
             var src = queries.CurrentEventsByPersistenceId("h", 0L, long.MaxValue);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer)
@@ -143,6 +157,8 @@ namespace Akka.Persistence.TCK.Query
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("k1");
 
+            WaitForPersistenceIdEvents(queries, "k1", 3);
+
             var src = queries.CurrentEventsByPersistenceId("k1", 0, 0);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
         }
@@ -163,6 +179,8 @@ namespace Akka.Persistence.TCK.Query
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
             var pref = Setup("l");
 
+            WaitForPersistenceIdEvents(queries, "l", 3);
+
             var src = queries.CurrentEventsByPersistenceId("l", 4L, 3L);
             src.Select(x => x.Event).RunWith(this.SinkProbe<object>(), Materializer).Request(1).ExpectComplete();
         }
@@ -172,8 +190,10 @@ namespace Akka.Persistence.TCK.Query
         public void ReadJournal_CurrentEventsByPersistenceId_should_include_timestamp_in_EventEnvelope()
         {
             Setup("m");
-            
+
             var queries = ReadJournal.AsInstanceOf<ICurrentEventsByPersistenceIdQuery>();
+            WaitForPersistenceIdEvents(queries, "m", 3);
+
             var src = queries.CurrentEventsByPersistenceId("m", 0L, long.MaxValue);
 
             var probe = src.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -182,6 +202,26 @@ namespace Akka.Persistence.TCK.Query
             Assert.True( probe.ExpectNext().Timestamp > 0 );
             Assert.True( probe.ExpectNext().Timestamp > 0 );
             probe.ExpectComplete();
+        }
+
+        /// <summary>
+        /// Polls the persistence id query until the expected number of events are available.
+        /// Passes immediately for synchronous backends; converges for eventually-consistent ones.
+        /// </summary>
+        private void WaitForPersistenceIdEvents(
+            ICurrentEventsByPersistenceIdQuery queries,
+            string persistenceId,
+            int expectedCount)
+        {
+            if (expectedCount <= 0)
+                return;
+
+            AwaitConditionAsync(async () =>
+            {
+                var events = await queries.CurrentEventsByPersistenceId(persistenceId, 0, long.MaxValue)
+                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
+                return events.Count >= expectedCount;
+            }, TimeSpan.FromSeconds(10)).GetAwaiter().GetResult();
         }
 
         private IActorRef Setup(string persistenceId)
