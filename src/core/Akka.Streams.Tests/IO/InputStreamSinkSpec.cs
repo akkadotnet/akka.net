@@ -86,7 +86,7 @@ namespace Akka.Streams.Tests.IO
 #if NETFRAMEWORK
                 inputStream.Read(arr, 0, arr.Length).Should().Be(arr.Length - 1);
 #else
-                inputStream.ReadAtLeast(arr, arr.Length, throwOnEndOfStream: false).Should().Be(arr.Length - 1);
+                inputStream.Read(arr.AsSpan()).Should().Be(arr.Length - 1);
 #endif
                 inputStream.Dispose();
                 ByteString.FromBytes(arr).Should().BeEquivalentTo(Enumerable.Concat(_byteString, ByteString.FromBytes(new byte[] { 0 })));
@@ -209,7 +209,7 @@ namespace Akka.Streams.Tests.IO
                 Action(() => inputStream.ReadExactly(buf, -1, 2)).Should().Throw<ArgumentException>();
                 Action(() => inputStream.ReadExactly(buf, 0, 5)).Should().Throw<ArgumentException>();
                 Action(() => inputStream.ReadExactly(Array.Empty<byte>(), 0, 1)).Should().Throw<ArgumentException>();
-                Action(() => inputStream.ReadExactly(buf, 0, 0)).Should().Throw<ArgumentException>();
+                Action(() => inputStream.Read(buf.AsSpan(0, 0))).Should().Throw<ArgumentException>();
 #endif
                 return Task.CompletedTask;
             }, _materializer);
@@ -403,7 +403,7 @@ namespace Akka.Streams.Tests.IO
 #if NETFRAMEWORK
             var r = s.Read(buf, 0, n);
 #else
-            var r = s.ReadAtLeast(buf, n, throwOnEndOfStream: false);
+            var r = s.Read(buf.AsSpan(0, n));
 #endif
             return (r, ByteString.FromBytes(buf, 0, r));
         }
