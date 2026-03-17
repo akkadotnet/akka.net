@@ -17,7 +17,6 @@ using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 using FluentAssertions;
 
 namespace Akka.Cluster.Tools.Tests.ClusterClient;

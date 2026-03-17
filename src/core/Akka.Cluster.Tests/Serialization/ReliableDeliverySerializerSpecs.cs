@@ -17,7 +17,6 @@ using Akka.Event;
 using Akka.IO;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
-using Xunit.Abstractions;
 using FluentAssertions;
 using Xunit;
 

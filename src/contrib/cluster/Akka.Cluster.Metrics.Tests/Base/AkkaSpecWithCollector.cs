@@ -16,7 +16,7 @@ using Akka.Cluster.Metrics.Collectors;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.TestKit;
 using FluentAssertions.Extensions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Cluster.Metrics.Tests.Base
 {
