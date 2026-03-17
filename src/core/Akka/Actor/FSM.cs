@@ -154,44 +154,44 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// Send this to an <see cref="SubscribeTransitionCallBack"/> to request first the <see cref="UnsubscribeTransitionCallBack"/>
+        /// Send this to an <see cref="FSMBase"/> to request first the <see cref="CurrentState{TS}"/>
         /// followed by a series of <see cref="Transition{TS}"/> updates. Cancel the subscription using
-        /// <see cref="CurrentState{TS}"/>.
+        /// <see cref="UnsubscribeTransitionCallBack"/>.
         /// </summary>
         public sealed class SubscribeTransitionCallBack
         {
             /// <summary>
             /// Initializes a new instance of the SubscribeTransitionCallBack
             /// </summary>
-            /// <param name="actorRef">TBD</param>
+            /// <param name="actorRef">The actor to subscribe for state transition notifications.</param>
             public SubscribeTransitionCallBack(IActorRef actorRef)
             {
                 ActorRef = actorRef;
             }
 
             /// <summary>
-            /// TBD
+            /// The actor that will receive <see cref="CurrentState{TS}"/> and <see cref="Transition{TS}"/> messages.
             /// </summary>
             public IActorRef ActorRef { get; }
         }
 
         /// <summary>
-        /// Unsubscribe from <see cref="SubscribeTransitionCallBack"/> notifications which were
-        /// initialized by sending the corresponding <see cref="Transition{TS}"/>.
+        /// Unsubscribe from <see cref="Transition{TS}"/> notifications which were
+        /// initialized by sending the corresponding <see cref="SubscribeTransitionCallBack"/>.
         /// </summary>
         public sealed class UnsubscribeTransitionCallBack
         {
             /// <summary>
             /// Initializes a new instance of the UnsubscribeTransitionCallBack
             /// </summary>
-            /// <param name="actorRef">TBD</param>
+            /// <param name="actorRef">The actor to unsubscribe from state transition notifications.</param>
             public UnsubscribeTransitionCallBack(IActorRef actorRef)
             {
                 ActorRef = actorRef;
             }
 
             /// <summary>
-            /// TBD
+            /// The actor that will no longer receive <see cref="Transition{TS}"/> messages.
             /// </summary>
             public IActorRef ActorRef { get; }
         }

@@ -20,9 +20,9 @@ namespace Akka.IO
         private readonly UdpConnectedExt _udpConn;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="UdpConnectedManager"/> class.
         /// </summary>
-        /// <param name="udpConn">TBD</param>
+        /// <param name="udpConn">The UDP connected extension providing settings and socket event argument pooling.</param>
         public UdpConnectedManager(UdpConnectedExt udpConn)
         {
             _udpConn = udpConn;

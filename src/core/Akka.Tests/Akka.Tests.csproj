@@ -24,11 +24,6 @@
     <PackageReference Include="FsCheck.Xunit.v3" Version="$(FsCheck3Version)" />
   </ItemGroup>
 
-  <!-- Exclude System.Linq.Async for .NET 10+ as it conflicts with built-in BCL methods -->
-  <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))">
-    <PackageReference Include="System.Linq.Async" Version="6.0.1" ExcludeAssets="all" PrivateAssets="all" />
-  </ItemGroup>
-
   <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetTestVersion)'">
     <DefineConstants>$(DefineConstants);CORECLR</DefineConstants>
   </PropertyGroup>

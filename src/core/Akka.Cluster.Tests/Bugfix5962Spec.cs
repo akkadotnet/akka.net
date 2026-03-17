@@ -12,13 +12,12 @@ using Akka.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using static FluentAssertions.FluentActions;
 
 
 namespace Akka.Cluster.Tests
 {
-     public class Bugfix5962Spec : TestKit.Xunit2.TestKit
+     public class Bugfix5962Spec : TestKit.Xunit.TestKit
     {
         private static readonly Config Config = ConfigurationFactory.ParseString(@"
 akka {

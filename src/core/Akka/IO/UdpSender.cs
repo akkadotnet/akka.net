@@ -43,7 +43,7 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// TBD
+        /// Gets the UDP extension instance used for socket configuration and resource management.
         /// </summary>
         protected override UdpExt Udp => _udp;
 
@@ -58,19 +58,13 @@ namespace Akka.IO
             Context.Become(SendHandlers);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
-        /// <returns>TBD</returns>
+        /// <inheritdoc/>
         protected override bool Receive(object message)
         {
             throw new NotSupportedException();
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         protected override void PostStop()
         {
             _log.Debug("Closing Socket after being stopped");

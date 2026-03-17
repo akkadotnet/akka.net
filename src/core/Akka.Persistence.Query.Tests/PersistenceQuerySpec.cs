@@ -8,12 +8,11 @@
 using System;
 using Akka.Configuration;
 using Xunit;
-using Xunit.Abstractions;
 using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Persistence.Query.Tests
 {
-    public class PersistenceQuerySpec : TestKit.Xunit2.TestKit
+    public class PersistenceQuerySpec : TestKit.Xunit.TestKit
     {
         public static readonly Config Config = DummyReadJournalProvider.Config.WithFallback(ConfigurationFactory.Default());
 

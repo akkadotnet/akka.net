@@ -48,7 +48,7 @@ akka {{
             if (!enableSsl)
                 return setup;
             
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             return setup.And(new DotNettySslSetup(certificate, true));
         }
 
@@ -102,7 +102,7 @@ akka {{
         [Fact(DisplayName = "DotNettySslSetup with 2 parameters should configure effective DotNettyTransportSettings with defaults (RequireMutualAuth=true, ValidateHostname=false)")]
         public void Two_parameter_setup_should_configure_transport_settings_with_defaults()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var sslSetup = new DotNettySslSetup(certificate, suppressValidation: true);
 
             var actorSystemSetup = ActorSystemSetup.Empty
@@ -132,7 +132,7 @@ akka {
         [Fact(DisplayName = "DotNettySslSetup with 3 parameters should configure effective DotNettyTransportSettings with specified RequireMutualAuth and default ValidateHostname=false")]
         public void Three_parameter_setup_should_configure_transport_settings()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var sslSetup = new DotNettySslSetup(certificate, suppressValidation: false, requireMutualAuthentication: false);
 
             var actorSystemSetup = ActorSystemSetup.Empty
@@ -162,7 +162,7 @@ akka {
         [Fact(DisplayName = "DotNettySslSetup with 4 parameters should configure effective DotNettyTransportSettings with all specified values")]
         public void Four_parameter_setup_should_configure_transport_settings_with_all_values()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
             var sslSetup = new DotNettySslSetup(certificate, suppressValidation: true, requireMutualAuthentication: false, validateCertificateHostname: true);
 
             var actorSystemSetup = ActorSystemSetup.Empty
@@ -197,11 +197,11 @@ akka {
 
             // HOCON certificate
             const string hoconCertPath = "Resources/akka-validcert.pfx";
-            var hoconCert = new X509Certificate2(hoconCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var hoconCert = CertificateHelper.LoadPkcs12(hoconCertPath, Password);
 
             // Programmatic setup certificate (different from HOCON)
             const string setupCertPath = "Resources/akka-client-cert.pfx";
-            var setupCert = new X509Certificate2(setupCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var setupCert = CertificateHelper.LoadPkcs12(setupCertPath, Password);
 
             var sslSetup = new DotNettySslSetup(setupCert, suppressValidation: true, requireMutualAuthentication: false, validateCertificateHostname: true);
 
@@ -246,7 +246,7 @@ akka {{
         {
             var validatorCalled = false;
 
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Custom validator that accepts all certificates
             CertificateValidationCallback customValidator = (cert, chain, peer, errors, log) =>
@@ -297,7 +297,7 @@ akka {
         {
             var validatorCalled = false;
 
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Custom validator that rejects all certificates
             CertificateValidationCallback customValidator = (cert, chain, peer, errors, log) =>
@@ -344,7 +344,7 @@ akka {
         [Fact(DisplayName = "DotNettySslSetup should pass CustomValidator to SslSettings")]
         public void DotNettySslSetup_should_pass_CustomValidator_to_SslSettings()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             var customValidator = CertificateValidation.ValidateChain();
             var sslSetup = new DotNettySslSetup(certificate, suppressValidation: false, requireMutualAuthentication: true, customValidator: customValidator);
@@ -372,7 +372,7 @@ akka {
         [Fact(DisplayName = "DotNettySslSetup should take precedence when both setup and HOCON SSL are configured (and log warning)")]
         public void DotNettySslSetup_should_take_precedence_when_both_configured()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // HOCON certificate (different from setup)
             const string hoconCertPath = "Resources/akka-validcert.pfx";
@@ -413,7 +413,7 @@ akka {{
         [Fact(DisplayName = "CertificateValidation.PinnedCertificate should accept certificates with matching thumbprint")]
         public async Task PinnedCertificate_should_accept_matching_thumbprint()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Create validator that pins to this specific certificate
             var validator = CertificateValidation.PinnedCertificate(certificate.Thumbprint);
@@ -454,7 +454,7 @@ akka {
         [Fact(DisplayName = "CertificateValidation.PinnedCertificate should reject certificates with non-matching thumbprint")]
         public async Task PinnedCertificate_should_reject_non_matching_thumbprint()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Create validator that pins to a DIFFERENT thumbprint (connection should fail)
             var validator = CertificateValidation.PinnedCertificate("0000000000000000000000000000000000000000");
@@ -492,7 +492,7 @@ akka {
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should accept certificates with matching subject")]
         public async Task ValidateSubject_should_accept_matching_subject()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Create validator that accepts the certificate's actual subject
             var validator = CertificateValidation.ValidateSubject(certificate.Subject);
@@ -533,7 +533,7 @@ akka {
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should reject certificates with non-matching subject")]
         public async Task ValidateSubject_should_reject_non_matching_subject()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Create validator with a subject that won't match
             var validator = CertificateValidation.ValidateSubject("CN=WrongSubject");
@@ -571,7 +571,7 @@ akka {
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should support wildcard patterns")]
         public void ValidateSubject_should_support_wildcards()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Extract the CN from the subject (e.g., "CN=akka.net, O=Test")
             // If subject is "CN=akka.net, O=Test", wildcard "CN=akka*" should match
@@ -606,7 +606,7 @@ akka {
         [Fact(DisplayName = "CertificateValidation.ValidateIssuer should accept certificates with matching issuer")]
         public async Task ValidateIssuer_should_accept_matching_issuer()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Create validator that accepts the certificate's actual issuer
             var validator = CertificateValidation.ValidateIssuer(certificate.Issuer);
@@ -647,7 +647,7 @@ akka {
         [Fact(DisplayName = "CertificateValidation.ChainPlusThen should combine chain validation with custom logic")]
         public async Task ChainPlusThen_should_combine_validation()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Create validator that does chain validation PLUS custom check
             // Note: For self-signed certificates, chain validation will fail, so we'll verify
@@ -706,7 +706,7 @@ akka {
         [Fact(DisplayName = "CustomValidator should take precedence over validateCertificateHostname setting")]
         public async Task CustomValidator_should_override_hostname_validation_setting()
         {
-            var certificate = new X509Certificate2(ValidCertPath, Password, X509KeyStorageFlags.DefaultKeySet);
+            var certificate = CertificateHelper.LoadPkcs12(ValidCertPath, Password);
 
             // Create a custom validator that accepts everything
             var customValidatorCalled = false;

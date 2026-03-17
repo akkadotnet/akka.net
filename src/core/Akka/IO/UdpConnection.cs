@@ -31,8 +31,12 @@ namespace Akka.IO
         private Received _pendingRead;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the <see cref="UdpConnection"/> class,
+        /// resolving DNS if needed and establishing a connected UDP socket to the remote address.
         /// </summary>
+        /// <param name="udp">The UDP connected extension providing settings and socket event argument pooling.</param>
+        /// <param name="commander">The actor that issued the <see cref="Connect"/> command and will receive connection results.</param>
+        /// <param name="connect">The connect command containing remote address, local address, handler, and socket options.</param>
         public UdpConnection(UdpConnectedExt udp, IActorRef commander, Connect connect)
         {
             Udp = udp;
@@ -206,9 +210,7 @@ namespace Akka.IO
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         protected override void PostStop()
         {
             Log.Debug("Closing DatagramChannel after being stopped");
