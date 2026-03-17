@@ -10,7 +10,7 @@ using Akka;
 using Akka.Actor;
 using Akka.Streams;
 using Akka.Streams.Dsl;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit;
 using Xunit;
 
 namespace DocsExamples.Streams
