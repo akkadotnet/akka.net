@@ -227,7 +227,8 @@ namespace Akka.Actor
         {
             get => _inputType.AssemblyQualifiedName;
             //for serialization
-            private set => _inputType = Type.GetType(value);
+            private set => _inputType = Type.GetType(value)
+                ?? throw new TypeLoadException($"Could not resolve actor type [{value}].");
         }
 
         /// <summary>

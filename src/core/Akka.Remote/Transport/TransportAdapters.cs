@@ -94,7 +94,9 @@ namespace Akka.Remote.Transport
                 try
                 {
                     var adapterTypeName = Type.GetType(adapter.Value);
-                    // ReSharper disable once AssignNullToNotNullAttribute
+                    if (adapterTypeName is null)
+                        throw new ArgumentException(
+                            $"Cannot initiate transport adapter {adapter.Value}. Type could not be resolved.");
                     var newAdapter = (ITransportAdapterProvider)Activator.CreateInstance(adapterTypeName);
                     _adaptersTable.Add(adapter.Key, newAdapter);
                 }

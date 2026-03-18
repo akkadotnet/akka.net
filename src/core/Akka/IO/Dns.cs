@@ -263,8 +263,11 @@ namespace Akka.IO
                 throw ConfigurationException.NullOrEmptyConfig<DnsSettings>("akka.io.dns");
 
             Settings = new DnsSettings(config);
-            //TODO: system.dynamicAccess.getClassFor[DnsProvider](Settings.ProviderObjectName).get.newInstance()
-            Provider = (IDnsProvider) Activator.CreateInstance(Type.GetType(Settings.ProviderObjectName));
+            var dnsProviderType = Type.GetType(Settings.ProviderObjectName);
+            if (dnsProviderType is null)
+                throw new ConfigurationException(
+                    $"Could not resolve DNS provider type [{Settings.ProviderObjectName}]. Ensure the type name is fully qualified.");
+            Provider = (IDnsProvider) Activator.CreateInstance(dnsProviderType);
             Cache = Provider.Cache;
         }
 
