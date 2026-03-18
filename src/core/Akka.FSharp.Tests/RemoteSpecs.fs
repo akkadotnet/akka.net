@@ -11,7 +11,6 @@ open System
 open Akka.Actor
 open Akka.Event
 open Xunit
-open Xunit.Abstractions
 open Akka.FSharp
 open Akka.Remote
 open Akka.TestKit

@@ -497,7 +497,11 @@ namespace Akka.Remote.Transport.DotNetty
             if (string.IsNullOrEmpty(certificatePath))
                 throw new ArgumentNullException(nameof(certificatePath), "Path to SSL certificate was not found (by default it can be found under `akka.remote.dot-netty.tcp.ssl.certificate.path`)");
 
+#if NET10_0_OR_GREATER
+            Certificate = X509CertificateLoader.LoadPkcs12FromFile(certificatePath, certificatePassword, flags);
+#else
             Certificate = new X509Certificate2(certificatePath, certificatePassword, flags);
+#endif
             SuppressValidation = suppressValidation;
             RequireMutualAuthentication = requireMutualAuthentication;
             ValidateCertificateHostname = validateCertificateHostname;

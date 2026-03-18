@@ -15,10 +15,9 @@ using Akka.Actor.Dsl;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace DocsExamples.Debugging
 {
