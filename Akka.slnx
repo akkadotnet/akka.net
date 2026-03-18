@@ -194,7 +194,6 @@
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
-    <Project Path="src/core/Akka.Streams.Tests.TCK.Xunit2/Akka.Streams.Tests.TCK.Xunit2.csproj" />
     <Project Path="src/core/Akka.Streams.Tests.TCK/Akka.Streams.Tests.TCK.csproj">
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
