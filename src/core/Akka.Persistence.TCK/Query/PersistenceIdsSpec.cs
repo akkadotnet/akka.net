@@ -17,7 +17,6 @@ using Akka.Streams;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
 
@@ -80,7 +79,7 @@ namespace Akka.Persistence.TCK.Query
             var expected = new List<string> { "h", "i", "j" };
             probe.Within(TimeSpan.FromSeconds(10), () =>
             {
-                expected.Remove(probe.Request(1).ExpectNext()).Should().BeTrue();
+                Assert.True(expected.Remove(probe.Request(1).ExpectNext()));
                 return probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             });
 

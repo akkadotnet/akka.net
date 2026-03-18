@@ -14,8 +14,6 @@ using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.TCK.Serialization;
 using Akka.TestKit;
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Xunit;
 
 namespace Akka.Persistence.TCK.Snapshot
@@ -234,7 +232,7 @@ namespace Akka.Persistence.TCK.Snapshot
         {
             var md = Metadata[2];
             // timestamp argument is less than the actual metadata data stored in the database, no deletion occured
-            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, md.Timestamp - 2.Seconds());
+            md = new SnapshotMetadata(md.PersistenceId, md.SequenceNr, md.Timestamp - TimeSpan.FromSeconds(2));
             var command = new DeleteSnapshot(md);
             var sub = CreateTestProbe();
 
