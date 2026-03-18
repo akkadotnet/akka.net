@@ -15,7 +15,6 @@ using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
 using Xunit;
 
 namespace Akka.Persistence.TCK.Query
@@ -199,9 +198,9 @@ namespace Akka.Persistence.TCK.Query
 
             var probe = src.RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
             probe.Request(5);
-            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
-            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
-            probe.ExpectNext().Timestamp.Should().BeGreaterThan(0);
+            Assert.True( probe.ExpectNext().Timestamp > 0 );
+            Assert.True( probe.ExpectNext().Timestamp > 0 );
+            Assert.True( probe.ExpectNext().Timestamp > 0 );
             probe.ExpectComplete();
         }
 

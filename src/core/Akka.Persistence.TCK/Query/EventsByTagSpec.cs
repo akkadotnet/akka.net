@@ -12,7 +12,6 @@ using Akka.Persistence.Query;
 using Akka.Streams;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
-using FluentAssertions;
 using Xunit;
 using Xunit.Sdk;
 using static Akka.Persistence.Query.Offset;
@@ -114,13 +113,13 @@ namespace Akka.Persistence.TCK.Query
         private EventEnvelope ExpectEnvelope(TestSubscriber.Probe<EventEnvelope> probe, string persistenceId, long sequenceNr, string @event, string tag)
         {
             var envelope = probe.ExpectNext<EventEnvelope>(_ => true);
-            envelope.PersistenceId.Should().Be(persistenceId);
-            envelope.SequenceNr.Should().Be(sequenceNr);
-            envelope.Event.Should().Be(@event);
+            Assert.Equal(persistenceId, envelope.PersistenceId);
+            Assert.Equal(sequenceNr, envelope.SequenceNr);
+            Assert.Equal(@event, envelope.Event);
             if (SupportsTagsInEventEnvelope)
             {
-                envelope.Tags.Should().NotBeNull();
-                envelope.Tags.Should().Contain(tag);
+                Assert.NotNull(envelope.Tags);
+                Assert.Contains(tag, envelope.Tags);
             }
             return envelope;
         }
