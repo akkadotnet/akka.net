@@ -611,9 +611,8 @@ namespace Akka.Remote
                 {
                     try
                     {
-                        var oldBuffer = _resendBuffer;
                         _resendBuffer = _resendBuffer.Acknowledge(ack);
-                        if (ReferenceEquals(_resendBuffer, oldBuffer) && ack.CumulativeAck > _resendBuffer.MaxSeq)
+                        if (ack.CumulativeAck > _resendBuffer.MaxSeq)
                         {
                             _log.Warning(
                                 "Ignoring stale ACK [{0}] for send buffer [{1}] - likely from a previous association to [{2}]",
