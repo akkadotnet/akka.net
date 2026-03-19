@@ -10,7 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using FluentAssertions;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;

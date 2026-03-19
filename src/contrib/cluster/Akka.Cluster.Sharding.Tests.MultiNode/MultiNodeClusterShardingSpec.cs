@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Event;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.TestKit.TestActors;
 using Akka.Util;
 using FluentAssertions;

@@ -14,7 +14,7 @@ using DotNetty.Transport.Channels;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 
-namespace Akka.Remote.TestKit.Proto
+namespace Akka.Remote.TestKit.v3.Proto
 {
     /// <summary>
     /// Encodes a generic object into a <see cref="IByteBuffer"/> using Google protobufs

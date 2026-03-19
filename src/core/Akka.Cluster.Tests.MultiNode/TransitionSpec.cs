@@ -13,7 +13,7 @@ using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using FluentAssertions;
 
 namespace Akka.Cluster.Tests.MultiNode

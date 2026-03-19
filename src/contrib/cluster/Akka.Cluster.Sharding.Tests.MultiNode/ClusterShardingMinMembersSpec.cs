@@ -9,7 +9,7 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
 

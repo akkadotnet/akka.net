@@ -20,7 +20,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.Internal;

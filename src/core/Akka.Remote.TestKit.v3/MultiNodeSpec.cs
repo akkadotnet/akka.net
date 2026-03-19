@@ -23,10 +23,10 @@ using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Xunit;
+using Akka.TestKit.Xunit.v3;
 using Akka.Util.Internal;
 
-namespace Akka.Remote.TestKit;
+namespace Akka.Remote.TestKit.v3;
 
 /// <summary>
 /// Configure the role names and participants of the test, including configuration settings

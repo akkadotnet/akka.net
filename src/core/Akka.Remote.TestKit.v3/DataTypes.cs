@@ -11,7 +11,7 @@ using Akka.Remote.Transport;
 using Akka.Util;
 using Address = Akka.Actor.Address;
 
-namespace Akka.Remote.TestKit
+namespace Akka.Remote.TestKit.v3
 {
     public sealed class RoleName : IEquatable<RoleName>
     {

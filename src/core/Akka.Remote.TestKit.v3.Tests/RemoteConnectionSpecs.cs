@@ -19,7 +19,7 @@ using Akka.Util.Internal;
 using DotNetty.Transport.Channels;
 using Xunit;
 
-namespace Akka.Remote.TestKit.Tests
+namespace Akka.Remote.TestKit.v3.Tests
 {
     public class RemoteConnectionSpecs : AkkaSpec
     {

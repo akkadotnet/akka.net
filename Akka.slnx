@@ -157,15 +157,15 @@
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
-    <Project Path="src/core/Akka.Remote.TestKit.Tests/Akka.Remote.TestKit.Tests.csproj">
+    <Project Path="src/core/Akka.Remote.TestKit.v3.Tests/Akka.Remote.TestKit.v3.Tests.csproj">
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
-    <Project Path="src/core/Akka.Remote.TestKit/Akka.Remote.TestKit.csproj">
+    <Project Path="src/core/Akka.Remote.TestKit.v3/Akka.Remote.TestKit.v3.csproj">
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
-    <Project Path="src/core/Akka.Remote.TestKit.Xunit2/Akka.Remote.TestKit.Xunit2.csproj" />
+    <Project Path="src/core/Akka.Remote.TestKit/Akka.Remote.TestKit.csproj" />
     <Project Path="src/core/Akka.Remote.Tests.MultiNode/Akka.Remote.Tests.MultiNode.csproj">
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />

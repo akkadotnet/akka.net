@@ -18,7 +18,7 @@ using Akka.Actor.Setup;
 using Akka.Cluster.Tests.MultiNode;
 using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.TestKit.Xunit;

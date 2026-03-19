@@ -8,7 +8,7 @@
 using System;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Xunit;
 
 namespace Akka.Remote.Tests.MultiNode

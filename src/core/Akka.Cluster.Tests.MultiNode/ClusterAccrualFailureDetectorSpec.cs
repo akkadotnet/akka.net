@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.Remote.Transport;
 using Akka.TestKit;
 using Akka.Cluster.Tests.MultiNode;

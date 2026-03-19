@@ -11,7 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.Routing;
 using Akka.TestKit;
 using Akka.Util.Internal;

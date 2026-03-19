@@ -12,7 +12,7 @@ using Akka.Cluster.Routing;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.Routing;
 
 namespace Akka.Cluster.Tests.MultiNode.Routing

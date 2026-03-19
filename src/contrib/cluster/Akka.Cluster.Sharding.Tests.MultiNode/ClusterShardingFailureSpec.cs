@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.Remote.Transport;
 using Akka.Util;
 using FluentAssertions;

@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Remote.TestKit.Xunit2\Akka.Remote.TestKit.Xunit2.csproj" />
+    <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 

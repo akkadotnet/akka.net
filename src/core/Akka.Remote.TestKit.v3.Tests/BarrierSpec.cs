@@ -12,7 +12,7 @@ using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
 
-namespace Akka.Remote.TestKit.Tests
+namespace Akka.Remote.TestKit.v3.Tests
 {
     public class BarrierSpec : AkkaSpec
     {

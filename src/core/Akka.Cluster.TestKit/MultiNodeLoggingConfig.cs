@@ -7,7 +7,7 @@
 
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 
 namespace Akka.Cluster.Tests.MultiNode
 {

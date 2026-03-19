@@ -18,7 +18,7 @@ using Akka.Discovery.Config;
 using Akka.Event;
 using Akka.Management.Dsl;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
 using FluentAssertions.Extensions;

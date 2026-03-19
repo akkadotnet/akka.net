@@ -16,7 +16,7 @@ using Akka.Cluster.Tools.PublishSubscribe;
 using Akka.Cluster.Tools.PublishSubscribe.Internal;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;

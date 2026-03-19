@@ -16,7 +16,7 @@ using DotNetty.Common.Internal.Logging;
 using DotNetty.Transport.Channels;
 using Microsoft.Extensions.Logging;
 
-namespace Akka.Remote.TestKit
+namespace Akka.Remote.TestKit.v3
 {
     internal class MsgDecoder : MessageToMessageDecoder<object>
     {
@@ -27,13 +27,13 @@ namespace Akka.Remote.TestKit
             return new Address(addr.Protocol, addr.System, addr.Hostname, (int)addr.Port);
         }
 
-        public static ThrottleTransportAdapter.Direction Proto2Direction(Proto.Msg.InjectFailure.Types.Direction dir)
+        public static ThrottleTransportAdapter.Direction Proto2Direction(TestKit.Proto.Msg.InjectFailure.Types.Direction dir)
         {
             switch (dir)
             {
-                case Proto.Msg.InjectFailure.Types.Direction.Send: return ThrottleTransportAdapter.Direction.Send;
-                case Proto.Msg.InjectFailure.Types.Direction.Receive: return ThrottleTransportAdapter.Direction.Receive;
-                case Proto.Msg.InjectFailure.Types.Direction.Both:
+                case TestKit.Proto.Msg.InjectFailure.Types.Direction.Send: return ThrottleTransportAdapter.Direction.Send;
+                case TestKit.Proto.Msg.InjectFailure.Types.Direction.Receive: return ThrottleTransportAdapter.Direction.Receive;
+                case TestKit.Proto.Msg.InjectFailure.Types.Direction.Both:
                 default: return ThrottleTransportAdapter.Direction.Both;
             }
         }
@@ -52,10 +52,10 @@ namespace Akka.Remote.TestKit
                 {
                     switch (w.Barrier.Op)
                     {
-                        case Proto.Msg.EnterBarrier.Types.BarrierOp.Succeeded: return new BarrierResult(w.Barrier.Name, true);
-                        case Proto.Msg.EnterBarrier.Types.BarrierOp.Failed: return new BarrierResult(w.Barrier.Name, false);
-                        case Proto.Msg.EnterBarrier.Types.BarrierOp.Fail: return new FailBarrier(w.Barrier.Name, new RoleName(w.Barrier.RoleName));
-                        case Proto.Msg.EnterBarrier.Types.BarrierOp.Enter:
+                        case TestKit.Proto.Msg.EnterBarrier.Types.BarrierOp.Succeeded: return new BarrierResult(w.Barrier.Name, true);
+                        case TestKit.Proto.Msg.EnterBarrier.Types.BarrierOp.Failed: return new BarrierResult(w.Barrier.Name, false);
+                        case TestKit.Proto.Msg.EnterBarrier.Types.BarrierOp.Fail: return new FailBarrier(w.Barrier.Name, new RoleName(w.Barrier.RoleName));
+                        case TestKit.Proto.Msg.EnterBarrier.Types.BarrierOp.Enter:
                             return new EnterBarrier(w.Barrier.Name, w.Barrier.Timeout > 0 ? (TimeSpan?)TimeSpan.FromTicks(w.Barrier.Timeout) : null, new RoleName(w.Barrier.RoleName));
                     }
                 }
@@ -64,17 +64,17 @@ namespace Akka.Remote.TestKit
                     var f = w.Failure;
                     switch (f.Failure)
                     {
-                        case Proto.Msg.InjectFailure.Types.FailType.Throttle:
+                        case TestKit.Proto.Msg.InjectFailure.Types.FailType.Throttle:
                             return new ThrottleMsg(Proto2Address(f.Address), Proto2Direction(f.Direction), f.RateMBit);
-                        case Proto.Msg.InjectFailure.Types.FailType.Abort:
+                        case TestKit.Proto.Msg.InjectFailure.Types.FailType.Abort:
                             return new DisconnectMsg(Proto2Address(f.Address), true);
-                        case Proto.Msg.InjectFailure.Types.FailType.Disconnect:
+                        case TestKit.Proto.Msg.InjectFailure.Types.FailType.Disconnect:
                             return new DisconnectMsg(Proto2Address(f.Address), false);
-                        case Proto.Msg.InjectFailure.Types.FailType.Exit:
+                        case TestKit.Proto.Msg.InjectFailure.Types.FailType.Exit:
                             return new TerminateMsg(new Right<bool, int>(f.ExitValue));
-                        case Proto.Msg.InjectFailure.Types.FailType.Shutdown:
+                        case TestKit.Proto.Msg.InjectFailure.Types.FailType.Shutdown:
                             return new TerminateMsg(new Left<bool, int>(false));
-                        case Proto.Msg.InjectFailure.Types.FailType.ShutdownAbrupt:
+                        case TestKit.Proto.Msg.InjectFailure.Types.FailType.ShutdownAbrupt:
                             return new TerminateMsg(new Left<bool, int>(true));
                     }
                 }

@@ -10,7 +10,7 @@
   <ItemGroup>
     <EmbeddedResource Include="Internals\Reference.conf" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit.v3\Akka.TestKit.Xunit.v3.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,11 +23,49 @@
 
   <ItemGroup>
     <Protobuf Access="internal" Include="../../protobuf/TestConductorProtocol.proto" />
-
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
     <PackageReference Include="System.Collections.Specialized" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Akka.Remote.TestKit.v3\BarrierCoordinator.cs">
+      <Link>BarrierCoordinator.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\CommandLine.cs">
+      <Link>CommandLine.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\Conductor.cs">
+      <Link>Conductor.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\Controller.cs">
+      <Link>Controller.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\DataTypes.cs">
+      <Link>DataTypes.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\Extension.cs">
+      <Link>Extension.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\MsgDecoder.cs">
+      <Link>MsgDecoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\MsgEncoder.cs">
+      <Link>MsgEncoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\Player.cs">
+      <Link>Player.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\Proto\ProtobufDecoder.cs">
+      <Link>Proto\ProtobufDecoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\Proto\ProtobufEncoder.cs">
+      <Link>Proto\ProtobufEncoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit.v3\RemoteConnection.cs">
+      <Link>RemoteConnection.cs</Link>
+    </Compile>
   </ItemGroup>
   
 </Project>

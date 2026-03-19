@@ -12,7 +12,7 @@ using System.Threading;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit;
+using Akka.Remote.TestKit.v3;
 using Akka.TestKit;
 using Akka.Util;
 

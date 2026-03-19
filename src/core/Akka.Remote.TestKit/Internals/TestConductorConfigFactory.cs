@@ -10,7 +10,7 @@ using System.IO;
 using System.Reflection;
 using Akka.Configuration;
 
-namespace Akka.Remote.TestKit.Internals
+namespace Akka.Remote.TestKit.v3.Internals
 {
     /// <summary>
     /// This class contains methods used to retrieve Multi-Node TestKit configuration options from this assembly's resources
@@ -26,7 +26,7 @@ namespace Akka.Remote.TestKit.Internals
         /// <returns>The configuration that contains default values for all Multi-Node TestKit options.</returns>
         public static Config Default()
         {
-            return FromResource("Akka.Remote.TestKit.Internals.Reference.conf");
+            return FromResource("Akka.Remote.TestKit.v3.Internals.Reference.conf");
         }
 
         /// <summary>

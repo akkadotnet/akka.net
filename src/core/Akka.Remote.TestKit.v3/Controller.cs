@@ -14,7 +14,7 @@ using Akka.Actor;
 using Akka.Event;
 using DotNetty.Transport.Channels;
 
-namespace Akka.Remote.TestKit
+namespace Akka.Remote.TestKit.v3
 {
     /// <summary>
     /// This controls test execution by managing barriers (delegated to
