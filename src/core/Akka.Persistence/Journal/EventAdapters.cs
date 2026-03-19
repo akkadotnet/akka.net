@@ -327,7 +327,9 @@ namespace Akka.Persistence.Journal
             // It is primarily ordered by the most specific classes first, and secondly in the configured order.
             var bindings = Sort(adapterBindings.Select(kv =>
             {
-                var type = Type.GetType(kv.Key);
+                var type = Type.GetType(kv.Key)
+                    ?? throw new ConfigurationException(
+                        $"Could not resolve event adapter binding type [{kv.Key}]. Ensure the type name is fully qualified.");
                 var adapter = kv.Value.Length == 1
                     ? handlers[kv.Value[0]]
                     : CombineAdapters(kv.Value.Select(h => handlers[h]));
@@ -433,7 +435,9 @@ namespace Akka.Persistence.Journal
 
         private static T Instantiate<T>(string qualifiedName, ExtendedActorSystem system)
         {
-            var type = Type.GetType(qualifiedName);
+            var type = Type.GetType(qualifiedName)
+                ?? throw new ConfigurationException(
+                    $"Could not resolve event adapter type [{qualifiedName}]. Ensure the type name is fully qualified.");
             if (!typeof(T).IsAssignableFrom(type))
                 throw new ArgumentException(string.Format("Couldn't create instance of [{0}] from provided qualified type name [{1}], because it's not assignable from it",
                     typeof(T), qualifiedName));
