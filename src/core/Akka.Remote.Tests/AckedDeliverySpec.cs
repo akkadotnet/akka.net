@@ -205,6 +205,33 @@ namespace Akka.Remote.Tests
         }
 
         [Fact]
+        public void SendBuffer_must_ignore_stale_ack_from_previous_association()
+        {
+            // Reproduces GitHub #6414: a fresh send buffer (MaxSeq = -1) receives a stale ACK
+            // from a previous association. This must be a no-op, not a throw.
+            var b0 = new AckedSendBuffer<Sequenced>(10);
+
+            // ACK[0] from stale receiver state - MaxSeq is -1, CumulativeAck is 0
+            var result = b0.Acknowledge(new Ack(new SeqNo(0)));
+            Assert.Same(b0, result); // should return the same instance (no-op)
+        }
+
+        [Fact]
+        public void SendBuffer_must_ignore_stale_ack_when_buffer_has_messages_with_lower_seqnos()
+        {
+            // A buffer with some messages receives a stale ACK referencing a higher sequence
+            // number than anything buffered - should be a no-op.
+            var b0 = new AckedSendBuffer<Sequenced>(10);
+            var msg0 = Msg(0);
+            var msg1 = Msg(1);
+            var b1 = b0.Buffer(msg0).Buffer(msg1); // MaxSeq = 1
+
+            // Stale ACK referencing SeqNo(5) which we never sent
+            var result = b1.Acknowledge(new Ack(new SeqNo(5)));
+            Assert.Same(b1, result); // should return the same instance (no-op)
+        }
+
+        [Fact]
         public void SendBuffer_must_throw_exception_if_nonbuffered_sequence_number_is_NACKed()
         {
             var b0 = new AckedSendBuffer<Sequenced>(10);
