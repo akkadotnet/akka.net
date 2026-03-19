@@ -5,10 +5,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.TestKit.Xunit.v3;
 using Xunit;
 using Xunit.Sdk;
 
-namespace Akka.TestKit.Xunit2.Tests;
+namespace Akka.TestKit.Xunit.v3.Tests;
 
 public class XunitAssertionsSpec
 {

@@ -14,7 +14,7 @@ using static FluentAssertions.FluentActions;
 
 namespace Akka.TestKit.Tests.TestKitBaseTests
 {
-    public class AwaitAssertTests : TestKit.Xunit.TestKit
+    public class AwaitAssertTests : TestKit.Xunit.v3.TestKit
     {
         public AwaitAssertTests() : base("akka.test.timefactor=2")
         {

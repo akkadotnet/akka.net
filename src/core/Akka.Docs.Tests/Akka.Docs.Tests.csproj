@@ -15,7 +15,7 @@
     <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
     <ProjectReference Include="..\..\contrib\cluster\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit.v3\Akka.TestKit.Xunit.v3.csproj" />
   </ItemGroup>
 
   <ItemGroup>

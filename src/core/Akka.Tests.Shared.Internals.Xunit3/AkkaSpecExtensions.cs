@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Akka.TestKit.Xunit.Internals;
+using Akka.TestKit.Xunit.v3.Internals;
 using Xunit;
 
 // ReSharper disable once CheckNamespace

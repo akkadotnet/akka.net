@@ -10,7 +10,7 @@
     <ItemGroup>
         <ProjectReference Include="..\Akka.Persistence.Query\Akka.Persistence.Query.csproj"/>
         <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj"/>
-        <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj"/>
+        <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj"/>
         <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj"/>
     </ItemGroup>
 

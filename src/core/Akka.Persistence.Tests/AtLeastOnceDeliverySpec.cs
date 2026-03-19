@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Xunit.Attributes;
+using Akka.TestKit.Xunit.v3.Attributes;
 using Xunit;
 using FluentAssertions;
 

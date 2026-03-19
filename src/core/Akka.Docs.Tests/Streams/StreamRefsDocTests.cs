@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Akka;
 using Akka.Streams;
 using Akka.Streams.Dsl;
-using Akka.TestKit.Xunit;
+using Akka.TestKit.Xunit.v3;
 using Xunit;
 using Akka.Actor;
 using Akka.IO;

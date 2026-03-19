@@ -24,7 +24,7 @@ using Xunit.Sdk;
 // ReSharper disable once CheckNamespace
 namespace Akka.TestKit
 {
-    public abstract class AkkaSpec : Xunit2.TestKit    //AkkaSpec is not part of TestKit
+    public abstract class AkkaSpec : Xunit.TestKit    //AkkaSpec is not part of TestKit
     {
         private static Regex _nameReplaceRegex = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
         private static readonly Config _akkaSpecConfig = ConfigurationFactory.ParseString(@"

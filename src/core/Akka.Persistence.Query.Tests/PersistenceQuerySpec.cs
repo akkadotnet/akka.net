@@ -12,7 +12,7 @@ using ConfigurationFactory = Akka.Configuration.ConfigurationFactory;
 
 namespace Akka.Persistence.Query.Tests
 {
-    public class PersistenceQuerySpec : TestKit.Xunit.TestKit
+    public class PersistenceQuerySpec : TestKit.Xunit.v3.TestKit
     {
         public static readonly Config Config = DummyReadJournalProvider.Config.WithFallback(ConfigurationFactory.Default());
 

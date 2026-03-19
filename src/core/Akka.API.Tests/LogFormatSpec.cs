@@ -26,7 +26,7 @@ namespace Akka.API.Tests;
 ///
 /// Need to assert that the default log format is still working as expected.
 /// </summary>
-public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
+public sealed class DefaultLogFormatSpec : TestKit.Xunit.TestKit
 {
     public DefaultLogFormatSpec() : base(CustomLoggerSetup())
     {

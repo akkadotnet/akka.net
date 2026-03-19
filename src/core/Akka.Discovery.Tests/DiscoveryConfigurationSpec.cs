@@ -18,7 +18,7 @@ using static FluentAssertions.FluentActions;
 
 namespace Akka.Discovery.Tests
 {
-    public class DiscoveryConfigurationSpec : TestKit.Xunit.TestKit
+    public class DiscoveryConfigurationSpec : TestKit.Xunit.v3.TestKit
     {
         [Fact]
         public void ServiceDiscovery_should_give_warning_when_no_default_discovery_configured()

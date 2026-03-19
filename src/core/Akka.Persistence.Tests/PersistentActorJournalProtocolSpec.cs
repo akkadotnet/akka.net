@@ -11,7 +11,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.TestKit;
-using Akka.TestKit.Xunit;
+using Akka.TestKit.Xunit.v3;
 using Xunit;
 
 namespace Akka.Persistence.Tests

@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Akka.Tests.Loggers
 {
-    public class LoggerStartupSpec : TestKit.Xunit.TestKit
+    public class LoggerStartupSpec : TestKit.Xunit.v3.TestKit
     {
         private const int LoggerResponseDelayMs = 1_000;
 

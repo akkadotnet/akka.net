@@ -17,7 +17,7 @@ using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class SampleSpec : Akka.TestKit.Xunit.TestKit
+    public class SampleSpec : Akka.TestKit.Xunit.v3.TestKit
     {
         [Fact]
         public async Task Sample_Stage_should_return_every_Nth_element_in_stream()

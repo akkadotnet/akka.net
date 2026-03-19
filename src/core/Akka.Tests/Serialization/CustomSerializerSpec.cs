@@ -15,7 +15,7 @@ using Akka.Configuration;
 using Akka.Event;
 using Akka.Serialization;
 using Akka.TestKit;
-using Akka.TestKit.Xunit.Internals;
+using Akka.TestKit.Xunit.v3.Internals;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Xunit;

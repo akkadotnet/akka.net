@@ -17,7 +17,7 @@ using Xunit;
 namespace Akka.DistributedData.Tests.Serialization
 {
     [Collection("DistributedDataSpec")]
-    public class ReplicatedDataSerializerSpec : TestKit.Xunit.TestKit
+    public class ReplicatedDataSerializerSpec : TestKit.Xunit.v3.TestKit
     {
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
             akka.actor {

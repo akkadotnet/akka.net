@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit.v3\Akka.TestKit.Xunit.v3.csproj" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
 

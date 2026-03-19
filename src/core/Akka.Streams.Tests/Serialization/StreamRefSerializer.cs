@@ -14,7 +14,7 @@ using static FluentAssertions.FluentActions;
 
 namespace Akka.Streams.Tests.Serialization;
 
-public class StreamRefSerializer: Akka.TestKit.Xunit.TestKit
+public class StreamRefSerializer: Akka.TestKit.Xunit.v3.TestKit
 {
     public StreamRefSerializer(ITestOutputHelper output) 
         : base(ActorMaterializer.DefaultConfig(), nameof(StreamRefSerializer), output)

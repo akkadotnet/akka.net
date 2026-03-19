@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
-using Akka.TestKit.Xunit;
+using Akka.TestKit.Xunit.v3;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;

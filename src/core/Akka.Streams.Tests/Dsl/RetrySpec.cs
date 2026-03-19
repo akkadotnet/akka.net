@@ -18,7 +18,7 @@ using Xunit;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class RetrySpec : Akka.TestKit.Xunit.TestKit
+    public class RetrySpec : Akka.TestKit.Xunit.v3.TestKit
     {
         private static readonly Result<int> FailedElement = Result.Failure<int>(new Exception("cooked failure"));
 

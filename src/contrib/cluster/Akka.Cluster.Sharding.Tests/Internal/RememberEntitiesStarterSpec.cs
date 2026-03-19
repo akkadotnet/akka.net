@@ -15,7 +15,7 @@ using Akka.Cluster.Sharding.Internal;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.TestKit;
-using Akka.TestKit.Xunit.Attributes;
+using Akka.TestKit.Xunit.v3.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;

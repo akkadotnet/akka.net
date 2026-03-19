@@ -16,7 +16,7 @@ using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
-using Akka.TestKit.Xunit.Attributes;
+using Akka.TestKit.Xunit.v3.Attributes;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;

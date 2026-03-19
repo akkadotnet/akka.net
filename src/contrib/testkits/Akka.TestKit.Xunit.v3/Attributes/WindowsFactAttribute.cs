@@ -6,9 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Xunit;
+using System.Runtime.CompilerServices;
+using Xunit.v3;
 
-namespace Akka.TestKit.Xunit2.Attributes
+namespace Akka.TestKit.Xunit.v3.Attributes
 {
     /// <summary>
     /// <para>
@@ -20,14 +21,42 @@ namespace Akka.TestKit.Xunit2.Attributes
     /// set will always be skipped, regardless of the environment variable content.
     /// </para>
     /// </summary>
-    public class WindowsFactAttribute : FactAttribute
+    public class WindowsFactAttribute(
+        [CallerFilePath] string? sourceFilePath = null,
+        [CallerLineNumber] int sourceLineNumber = -1) : Attribute, IFactAttribute
     {
         private string? _skip;
 
-        /// <summary>
-        /// Marks the test so that it will not be run, and gets or sets the skip reason
-        /// </summary>
-        public override string? Skip
+
+        /// <inheritdoc />
+        public string? DisplayName { get; set; }
+
+        /// <inheritdoc/>
+        public bool Explicit { get; set; }
+
+        /// <inheritdoc/>
+        public Type[]? SkipExceptions { get; set; }
+
+        /// <inheritdoc/>
+        public Type? SkipType { get; set; }
+
+        /// <inheritdoc/>
+        public string? SkipUnless { get; set; }
+
+        /// <inheritdoc/>
+        public string? SkipWhen { get; set; }
+
+        /// <inheritdoc/>
+        public string? SourceFilePath { get; } = sourceFilePath;
+        
+        /// <inheritdoc/>
+        public int? SourceLineNumber { get; } = sourceLineNumber < 1 ? null : sourceLineNumber;
+
+        /// <inheritdoc/>
+        public int Timeout { get; set; }
+    
+        /// <inheritdoc/>
+        public string? Skip
         {
             get
             {

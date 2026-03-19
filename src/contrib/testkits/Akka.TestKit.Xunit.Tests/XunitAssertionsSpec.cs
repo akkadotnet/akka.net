@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.TestKit.Xunit;
 using Xunit;
 using Xunit.Sdk;
 

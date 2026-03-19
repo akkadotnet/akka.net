@@ -12,7 +12,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Coordination;
 using Akka.Event;
-using Akka.TestKit.Xunit;
+using Akka.TestKit.Xunit.v3;
 using Akka.Util;
 
 // ReSharper disable once CheckNamespace

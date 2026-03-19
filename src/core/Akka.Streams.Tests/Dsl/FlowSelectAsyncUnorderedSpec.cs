@@ -18,7 +18,7 @@ using Akka.Streams.Supervision;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
-using Akka.TestKit.Xunit.Attributes;
+using Akka.TestKit.Xunit.v3.Attributes;
 using Akka.Util.Internal;
 using Akka.TestKit.Extensions;
 using FluentAssertions;

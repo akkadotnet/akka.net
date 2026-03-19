@@ -131,7 +131,7 @@ namespace Akka.API.Tests
         [Fact]
         public Task ApproveTestKitXunit2()
         {
-            return VerifyAssembly<TestKit.Xunit2.TestKit>();
+            return VerifyAssembly<TestKit.Xunit.TestKit>();
         }
     }
 }

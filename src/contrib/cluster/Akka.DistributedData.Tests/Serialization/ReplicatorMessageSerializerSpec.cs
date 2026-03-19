@@ -23,7 +23,7 @@ using System.Linq;
 namespace Akka.DistributedData.Tests.Serialization
 {
     [Collection("DistributedDataSpec")]
-    public class ReplicatorMessageSerializerSpec : TestKit.Xunit.TestKit
+    public class ReplicatorMessageSerializerSpec : TestKit.Xunit.v3.TestKit
     {
         private static readonly Config BaseConfig = ConfigurationFactory.ParseString(@"
             akka.actor {

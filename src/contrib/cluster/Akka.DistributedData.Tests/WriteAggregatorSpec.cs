@@ -19,7 +19,7 @@ using Xunit;
 namespace Akka.DistributedData.Tests
 {
     [Collection("DistributedDataSpec")]
-    public class WriteAggregatorSpec : Akka.TestKit.Xunit.TestKit
+    public class WriteAggregatorSpec : Akka.TestKit.Xunit.v3.TestKit
     {
         internal class TestWriteAggregator<T> : WriteAggregator where T : IReplicatedData
         {

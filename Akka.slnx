@@ -88,10 +88,10 @@
     </Project>
   </Folder>
   <Folder Name="/Contrib/TestKits/">
+    <Project Path="src/contrib/testkits/Akka.TestKit.Xunit.v3.Tests/Akka.TestKit.Xunit.v3.Tests.csproj" />
+    <Project Path="src/contrib/testkits/Akka.TestKit.Xunit.v3/Akka.TestKit.Xunit.v3.csproj" />
     <Project Path="src/contrib/testkits/Akka.TestKit.Xunit.Tests/Akka.TestKit.Xunit.Tests.csproj" />
-    <Project Path="src/contrib/testkits/Akka.TestKit.Xunit/Akka.TestKit.Xunit.csproj" />
-    <Project Path="src/contrib/testkits/Akka.TestKit.Xunit2.Tests/Akka.TestKit.Xunit2.Tests.csproj" />
-    <Project Path="src/contrib/testkits/Akka.TestKit.Xunit2/Akka.TestKit.Xunit2.csproj">
+    <Project Path="src/contrib/testkits/Akka.TestKit.Xunit/Akka.TestKit.Xunit.csproj">
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>

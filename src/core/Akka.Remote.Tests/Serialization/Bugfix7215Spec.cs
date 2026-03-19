@@ -15,7 +15,7 @@ using static FluentAssertions.FluentActions;
 
 namespace Akka.Remote.Tests.Serialization;
 
-public class Bugfix7215Spec: TestKit.Xunit.TestKit
+public class Bugfix7215Spec: TestKit.Xunit.v3.TestKit
 {
     public Bugfix7215Spec(ITestOutputHelper output) : base(nameof(Bugfix7215Spec), output)
     {

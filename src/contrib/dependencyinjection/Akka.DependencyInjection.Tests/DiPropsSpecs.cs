@@ -22,7 +22,7 @@ public class DiPropsSpecs : IAsyncLifetime
     private readonly IServiceProvider _serviceProvider;
     private readonly AkkaService _akkaService;
     private readonly ITestOutputHelper _output;
-    private TestKit.Xunit.TestKit _testKit;
+    private TestKit.Xunit.v3.TestKit _testKit;
 
     public DiPropsSpecs(ITestOutputHelper output)
     {
@@ -62,7 +62,7 @@ public class DiPropsSpecs : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         await _akkaService.StartAsync(default);
-        _testKit = new TestKit.Xunit.TestKit(_akkaService.ActorSystem, _output);
+        _testKit = new TestKit.Xunit.v3.TestKit(_akkaService.ActorSystem, _output);
     }
 
     public async ValueTask DisposeAsync()

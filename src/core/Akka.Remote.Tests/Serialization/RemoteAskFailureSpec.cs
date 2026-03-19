@@ -18,7 +18,7 @@ using static  FluentAssertions.FluentActions;
 
 namespace Akka.Remote.Tests.Serialization
 {
-    public class RemoteAskFailureSpec: TestKit.Xunit.TestKit
+    public class RemoteAskFailureSpec: TestKit.Xunit.v3.TestKit
     {
         private static Config Config(int port) => @$"
 akka.actor.ask-timeout = 5s

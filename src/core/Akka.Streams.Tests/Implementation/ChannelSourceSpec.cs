@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Akka.Streams.Tests.Implementation
 {
-    public class ChannelSourceSpec : Akka.TestKit.Xunit.TestKit
+    public class ChannelSourceSpec : Akka.TestKit.Xunit.v3.TestKit
     {
         private readonly ActorMaterializer _materializer;
 

@@ -18,7 +18,7 @@ using Xunit;
 
 namespace Akka.Remote.Tests.BugFixes
 {
-    public class BugFix4384Spec : TestKit.Xunit.TestKit
+    public class BugFix4384Spec : TestKit.Xunit.v3.TestKit
     {
         public ActorSystem Sys1 { get; }
         public Address Sys1Address { get; }

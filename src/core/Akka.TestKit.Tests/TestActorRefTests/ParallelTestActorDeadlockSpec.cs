@@ -45,7 +45,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
                 {
                     _output.WriteLine($"[{id}] Creating TestKit...");
                     // Create TestKit synchronously like a normal test would
-                    using var testKit = new Akka.TestKit.Xunit.TestKit($"test-{id}", output: _output);
+                    using var testKit = new Akka.TestKit.Xunit.v3.TestKit($"test-{id}", output: _output);
                     _output.WriteLine($"[{id}] TestKit created");
 
                     // Simulate what happens in Akka.Hosting - actor creation during startup

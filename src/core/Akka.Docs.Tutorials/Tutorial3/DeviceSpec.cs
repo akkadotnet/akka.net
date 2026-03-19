@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit;
 using FluentAssertions;
 using Xunit;
 

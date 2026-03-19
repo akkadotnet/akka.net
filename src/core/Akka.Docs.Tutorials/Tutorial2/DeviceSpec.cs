@@ -5,7 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit;
 using FluentAssertions;
 using Xunit;
 using static Tutorials.Tutorial2.MainDevice;
