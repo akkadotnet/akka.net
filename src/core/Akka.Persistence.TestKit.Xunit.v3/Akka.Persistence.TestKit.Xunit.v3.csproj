@@ -8,15 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+    <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit.v3\Akka.TestKit.Xunit.v3.csproj" />
     <ProjectReference Include="..\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj" />
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\Akka.Persistence.TestKit.Xunit\PersistenceTestKit.cs">
-      <Link>PersistenceTestKit.cs</Link>
-    </Compile>
   </ItemGroup>
 
   <PropertyGroup>

@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Akka.Persistence.TestKit\Akka.Persistence.TestKit.csproj" />
-    <ProjectReference Include="..\Akka.Persistence.TestKit.Xunit\Akka.Persistence.TestKit.Xunit.csproj" />
+    <ProjectReference Include="..\Akka.Persistence.TestKit.Xunit.v3\Akka.Persistence.TestKit.Xunit.v3.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
   </ItemGroup>
 

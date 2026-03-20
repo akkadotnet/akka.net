@@ -146,8 +146,8 @@
     </Project>
     <Project Path="src/core/Akka.Persistence.TCK/Akka.Persistence.TCK.csproj" />
     <Project Path="src/core/Akka.Persistence.TestKit.Tests/Akka.Persistence.TestKit.Tests.csproj" />
+    <Project Path="src/core/Akka.Persistence.TestKit.Xunit.v3/Akka.Persistence.TestKit.Xunit.v3.csproj" />
     <Project Path="src/core/Akka.Persistence.TestKit.Xunit/Akka.Persistence.TestKit.Xunit.csproj" />
-    <Project Path="src/core/Akka.Persistence.TestKit.Xunit2/Akka.Persistence.TestKit.Xunit2.csproj" />
     <Project Path="src/core/Akka.Persistence.TestKit/Akka.Persistence.TestKit.csproj" />
     <Project Path="src/core/Akka.Persistence.Tests/Akka.Persistence.Tests.csproj">
       <Build Solution="*|x64" Project="false" />
