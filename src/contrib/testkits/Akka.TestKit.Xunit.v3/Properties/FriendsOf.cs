@@ -7,4 +7,4 @@
 
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Akka.TestKit.Xunit3.Tests")]
+[assembly: InternalsVisibleTo("Akka.TestKit.Tests")]

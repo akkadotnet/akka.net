@@ -23,5 +23,5 @@ using System.Runtime.InteropServices;
 
 [assembly: InternalsVisibleTo("Akka.Persistence.Tests")]
 [assembly: InternalsVisibleTo("Akka.Persistence.TCK")]
-[assembly: InternalsVisibleTo("Akka.Persistence.TCK.Xunit2")]
+[assembly: InternalsVisibleTo("Akka.Persistence.TCK.v3")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Sharding")]
