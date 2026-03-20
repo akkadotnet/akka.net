@@ -2,7 +2,7 @@
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("a48eb1da-be56-4078-a5f7-29d8e2bcd590")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
-namespace Akka.TestKit.Xunit2.Attributes
+namespace Akka.TestKit.Xunit.Attributes
 {
     public class LocalFactAttribute : Xunit.FactAttribute
     {
@@ -25,7 +25,7 @@ namespace Akka.TestKit.Xunit2.Attributes
         public string? SkipUnix { get; set; }
     }
 }
-namespace Akka.TestKit.Xunit2.Internals
+namespace Akka.TestKit.Xunit.Internals
 {
     public class AkkaAssertEqualityComparer<T> : System.Collections.Generic.IEqualityComparer<T>
     {
@@ -38,14 +38,14 @@ namespace Akka.TestKit.Xunit2.Internals
     {
         protected AkkaEqualException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
         public AkkaEqualException(string format = "", params object[] args) { }
-        public static Akka.TestKit.Xunit2.Internals.AkkaEqualException ForMismatchedValues(object? expected, object? actual, string? format = null, params object[] args) { }
+        public static Akka.TestKit.Xunit.Internals.AkkaEqualException ForMismatchedValues(object? expected, object? actual, string? format = null, params object[] args) { }
     }
     public class TestOutputLogger : Akka.Actor.ReceiveActor
     {
         public TestOutputLogger(Xunit.Abstractions.ITestOutputHelper output) { }
     }
 }
-namespace Akka.TestKit.Xunit2
+namespace Akka.TestKit.Xunit
 {
     public class TestKit : Akka.TestKit.TestKitBase, System.IDisposable
     {
@@ -54,7 +54,7 @@ namespace Akka.TestKit.Xunit2
         public TestKit(string config, Xunit.Abstractions.ITestOutputHelper? output = null) { }
         public TestKit(Akka.Actor.Setup.ActorSystemSetup config, string? actorSystemName = null, Xunit.Abstractions.ITestOutputHelper? output = null) { }
         public TestKit(Akka.Configuration.Config config, string? actorSystemName = null, Xunit.Abstractions.ITestOutputHelper? output = null) { }
-        protected static Akka.TestKit.Xunit2.XunitAssertions Assertions { get; }
+        protected static Akka.TestKit.Xunit.XunitAssertions Assertions { get; }
         public new static Akka.Configuration.Config DefaultConfig { get; }
         public new static Akka.Configuration.Config FullDebugConfig { get; }
         protected virtual void AfterAll() { }
