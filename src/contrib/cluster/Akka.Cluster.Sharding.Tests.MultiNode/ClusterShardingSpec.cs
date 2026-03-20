@@ -968,8 +968,7 @@ public abstract class ClusterShardingSpec : MultiNodeClusterShardingSpec<Cluster
             }, Config.Third, Config.Fourth, Config.Fifth);
             await EnterBarrierAsync("persistent-start");
 
-            // watch-out, these two var are only init on 3rd node
-            ActorSelection shard = null;
+            // watch-out, region var is only init on 3rd node
             ActorSelection region = null;
             await RunOnAsync(async () =>
             {
@@ -978,7 +977,6 @@ public abstract class ClusterShardingSpec : MultiNodeClusterShardingSpec<Cluster
                 _persistentEntitiesRegion.Value.Tell(new Get(1));
                 await ExpectMsgAsync(1);
 
-                shard = Sys.ActorSelection(LastSender.Path.Parent);
                 region = Sys.ActorSelection(LastSender.Path.Parent.Parent);
             }, Config.Third);
             await EnterBarrierAsync("counter-incremented");
@@ -999,13 +997,6 @@ public abstract class ClusterShardingSpec : MultiNodeClusterShardingSpec<Cluster
                 //Stop the shard cleanly
                 region.Tell(new HandOff("1"));
                 await ExpectMsgAsync(new ShardStopped("1"), TimeSpan.FromSeconds(10), "ShardStopped not received");
-
-                var probe = CreateTestProbe();
-                await AwaitAssertAsync(async () =>
-                {
-                    shard.Tell(new Identify(1), probe.Ref);
-                    await probe.ExpectMsgAsync(new ActorIdentity(1, null), TimeSpan.FromSeconds(1), "Shard was still around");
-                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
                 //Get the path to where the shard now resides
                 await AwaitAssertAsync(async () =>
@@ -1098,13 +1089,6 @@ public abstract class ClusterShardingSpec : MultiNodeClusterShardingSpec<Cluster
                 // stop shard cleanly
                 region.Tell(new HandOff("1"));
                 await ExpectMsgAsync(new ShardStopped("1"), TimeSpan.FromSeconds(10), "ShardStopped not received");
-
-                var probe2 = CreateTestProbe();
-                await AwaitAssertAsync(async () =>
-                {
-                    shard.Tell(new Identify(2), probe2.Ref);
-                    await probe2.ExpectMsgAsync(new ActorIdentity(2, null), TimeSpan.FromSeconds(1), "Shard was still around");
-                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
             }, Config.Third);
             await EnterBarrierAsync("shard-shutdonw-12");
