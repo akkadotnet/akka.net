@@ -5,4 +5,5 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+global using Xunit.Abstractions;
 global using XTestKit = Akka.TestKit.Xunit.TestKit;

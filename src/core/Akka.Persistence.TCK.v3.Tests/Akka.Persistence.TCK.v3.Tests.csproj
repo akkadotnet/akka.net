@@ -8,7 +8,7 @@
   </PropertyGroup>
  
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Persistence.TCK\Akka.Persistence.TCK.csproj" />
+    <ProjectReference Include="..\Akka.Persistence.TCK.v3\Akka.Persistence.TCK.v3.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -10,12 +10,66 @@
     <ItemGroup>
         <ProjectReference Include="..\Akka.Persistence.Query\Akka.Persistence.Query.csproj"/>
         <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj"/>
-        <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit.v3\Akka.TestKit.Xunit.v3.csproj"/>
+        <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj"/>
         <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Journal\JournalSpec.cs">
+        <Link>Journal\JournalSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Performance\JournalPerfSpec.cs">
+        <Link>Performance\JournalPerfSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\PluginSpec.cs">
+        <Link>PluginSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Query\AllEventsSpec.cs">
+        <Link>Query\AllEventsSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Query\CurrentAllEventsSpec.cs">
+        <Link>Query\CurrentAllEventsSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Query\CurrentEventsByPersistenceIdSpec.cs">
+        <Link>Query\CurrentEventsByPersistenceIdSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Query\CurrentEventsByTagSpec.cs">
+        <Link>Query\CurrentEventsByTagSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Query\CurrentPersistenceIdsSpec.cs">
+        <Link>Query\CurrentPersistenceIdsSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Query\EventsByPersistenceIdSpec.cs">
+        <Link>Query\EventsByPersistenceIdSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Query\EventsByTagSpec.cs">
+        <Link>Query\EventsByTagSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Query\PersistenceIdsSpec.cs">
+        <Link>Query\PersistenceIdsSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Query\TestActor.cs">
+        <Link>Query\TestActor.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Serialization\JournalSerializationSpec.cs">
+        <Link>Serialization\JournalSerializationSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Serialization\SnapshotStoreSerializationSpec.cs">
+        <Link>Serialization\SnapshotStoreSerializationSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Serialization\TestSerializer.cs">
+        <Link>Serialization\TestSerializer.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Snapshot\SnapshotStoreSaveSnapshotSpec.cs">
+        <Link>Snapshot\SnapshotStoreSaveSnapshotSpec.cs</Link>
+      </Compile>
+      <Compile Include="..\Akka.Persistence.TCK.v3\Snapshot\SnapshotStoreSpec.cs">
+        <Link>Snapshot\SnapshotStoreSpec.cs</Link>
+      </Compile>
     </ItemGroup>
 
 </Project>
