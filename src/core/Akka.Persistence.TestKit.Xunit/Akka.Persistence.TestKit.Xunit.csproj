@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Akka.Persistence.TestKit.Xunit\PersistenceTestKit.cs">
+    <Compile Include="..\Akka.Persistence.TestKit.Xunit.v3\PersistenceTestKit.cs">
       <Link>PersistenceTestKit.cs</Link>
     </Compile>
   </ItemGroup>
