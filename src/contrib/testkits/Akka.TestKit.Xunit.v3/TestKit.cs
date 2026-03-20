@@ -11,10 +11,10 @@ using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.TestKit.Xunit.v3.Internals;
+using Akka.TestKit.Xunit.Internals;
 using Xunit;
 
-namespace Akka.TestKit.Xunit.v3;
+namespace Akka.TestKit.Xunit;
 
 /// <summary>
 /// This class represents an Akka.NET TestKit that uses <a href="https://xunit.github.io/">xUnit</a>

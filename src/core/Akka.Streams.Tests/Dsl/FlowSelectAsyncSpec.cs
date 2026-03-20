@@ -20,7 +20,7 @@ using Akka.Streams.TestKit;
 using Akka.Streams.Tests.TestHelpers;
 using Akka.TestKit;
 using Akka.TestKit.Internal;
-using Akka.TestKit.Xunit.v3.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using Akka.Util;
 using Akka.Util.Internal;
 using FluentAssertions;

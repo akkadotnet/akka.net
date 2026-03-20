@@ -19,7 +19,7 @@ using static Akka.Tests.Delivery.TestConsumer;
 
 namespace Akka.Tests.Delivery;
 
-public class ProducerControllerSpec : TestKit.Xunit.v3.TestKit
+public class ProducerControllerSpec : TestKit.Xunit.TestKit
 {
     private static readonly Config Config = "akka.reliable-delivery.consumer-controller.flow-control-window = 20";
 

@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Cluster.Metrics.Tests.Base;
 using Akka.Cluster.Metrics.Tests.Helpers;
-using Akka.TestKit.Xunit.v3.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;

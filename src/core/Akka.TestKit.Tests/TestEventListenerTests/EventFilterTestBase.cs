@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Akka.TestKit.Tests.TestEventListenerTests
 {
-    public abstract class EventFilterTestBase : TestKit.Xunit.v3.TestKit, IAsyncLifetime
+    public abstract class EventFilterTestBase : TestKit.Xunit.TestKit, IAsyncLifetime
     {
         /// <summary>
         /// Used to signal that the test was successful and that we should ensure no more messages were logged

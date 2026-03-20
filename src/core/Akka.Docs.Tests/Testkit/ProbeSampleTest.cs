@@ -7,7 +7,7 @@
 
 using Akka.Actor;
 using Akka.TestKit;
-using Akka.TestKit.Xunit.v3;
+using Akka.TestKit.Xunit;
 using Xunit;
 
 namespace DocsExamples.Testkit

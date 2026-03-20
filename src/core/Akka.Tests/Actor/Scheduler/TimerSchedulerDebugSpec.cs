@@ -38,7 +38,7 @@ internal sealed class TimerTestActor: UntypedActor, IWithTimers
     public ITimerScheduler Timers { get; set; }
 }
     
-public class TimerSchedulerDebug: TestKit.Xunit.v3.TestKit
+public class TimerSchedulerDebug: TestKit.Xunit.TestKit
 {
     public TimerSchedulerDebug(ITestOutputHelper output) : base("akka.actor.debug.log-timers = true", null, output)
     {
@@ -55,7 +55,7 @@ public class TimerSchedulerDebug: TestKit.Xunit.v3.TestKit
     }
 }
 
-public class TimerSchedulerSuppressDebug: TestKit.Xunit.v3.TestKit
+public class TimerSchedulerSuppressDebug: TestKit.Xunit.TestKit
 {
     public TimerSchedulerSuppressDebug(ITestOutputHelper output) : base("akka.actor.debug.log-timers = false", null, output)
     {

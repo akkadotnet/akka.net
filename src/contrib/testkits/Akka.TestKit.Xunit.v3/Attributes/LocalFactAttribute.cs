@@ -10,7 +10,7 @@ using System.Runtime.CompilerServices;
 using Xunit;
 using Xunit.v3;
 
-namespace Akka.TestKit.Xunit.v3.Attributes;
+namespace Akka.TestKit.Xunit.Attributes;
 
 /// <summary>
 /// <para>

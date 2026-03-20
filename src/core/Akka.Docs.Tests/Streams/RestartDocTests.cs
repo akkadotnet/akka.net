@@ -10,7 +10,7 @@ using System.Linq;
 using System.Net.Http;
 using Akka.Streams;
 using Akka.Streams.Dsl;
-using Akka.TestKit.Xunit.v3;
+using Akka.TestKit.Xunit;
 using Xunit;
 
 namespace DocsExamples.Streams

@@ -5,4 +5,4 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-global using XTestKit = Akka.TestKit.Xunit.v3.TestKit;
+global using XTestKit = Akka.TestKit.Xunit.TestKit;

@@ -17,7 +17,7 @@ using static FluentAssertions.FluentActions;
 
 namespace Akka.Cluster.Tests
 {
-     public class Bugfix5962Spec : TestKit.Xunit.v3.TestKit
+     public class Bugfix5962Spec : TestKit.Xunit.TestKit
     {
         private static readonly Config Config = ConfigurationFactory.ParseString(@"
 akka {

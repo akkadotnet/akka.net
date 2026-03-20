@@ -33,7 +33,7 @@ namespace Akka.Discovery.Tests.Aggregate
         }
     }
 
-    public class AggregateServiceDiscoverySpec : TestKit.Xunit.v3.TestKit
+    public class AggregateServiceDiscoverySpec : TestKit.Xunit.TestKit
     {
         private static Configuration.Config Config => ConfigurationFactory.ParseString(@"
             akka {

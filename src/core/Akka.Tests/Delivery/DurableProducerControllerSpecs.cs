@@ -23,7 +23,7 @@ using static Akka.Tests.Delivery.TestDurableProducerQueue;
 
 namespace Akka.Tests.Delivery;
 
-public class DurableProducerControllerSpecs : TestKit.Xunit.v3.TestKit
+public class DurableProducerControllerSpecs : TestKit.Xunit.TestKit
 {
     private static readonly Config Config = @"akka.reliable-delivery.consumer-controller.flow-control-window = 20
      akka.reliable-delivery.consumer-controller.resend-interval-min = 1s";

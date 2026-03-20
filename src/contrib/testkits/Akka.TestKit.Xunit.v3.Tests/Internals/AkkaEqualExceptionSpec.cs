@@ -5,10 +5,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.TestKit.Xunit.v3.Internals;
+using Akka.TestKit.Xunit.Internals;
 using Xunit;
 
-namespace Akka.TestKit.Xunit.v3.Tests.Internals;
+namespace Akka.TestKit.Xunit.Tests.Internals;
 
 public static class AkkaEqualExceptionSpec
 {

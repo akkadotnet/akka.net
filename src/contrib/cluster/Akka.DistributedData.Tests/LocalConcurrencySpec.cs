@@ -16,7 +16,7 @@ using FluentAssertions;
 namespace Akka.DistributedData.Tests
 {
     [Collection("DistributedDataSpec")]
-    public class LocalConcurrencySpec : Akka.TestKit.Xunit.v3.TestKit
+    public class LocalConcurrencySpec : Akka.TestKit.Xunit.TestKit
     {
         public sealed class Updater : ReceiveActor, IWithUnboundedStash
         {

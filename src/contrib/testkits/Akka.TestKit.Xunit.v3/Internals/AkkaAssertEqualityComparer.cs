@@ -9,7 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Akka.TestKit.Xunit.v3.Internals;
+namespace Akka.TestKit.Xunit.Internals;
 
 internal static class AkkaAssertEqualityComparer
 {

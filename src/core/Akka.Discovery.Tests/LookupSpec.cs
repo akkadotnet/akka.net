@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Akka.Discovery.Tests
 {
-    public class LookupSpec : TestKit.Xunit.v3.TestKit
+    public class LookupSpec : TestKit.Xunit.TestKit
     {
         private readonly List<string> srvWithInvalidDomainNames;
         private readonly List<string> srvWithValidDomainNames;

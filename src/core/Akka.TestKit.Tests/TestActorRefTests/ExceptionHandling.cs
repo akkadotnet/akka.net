@@ -14,7 +14,7 @@ using static FluentAssertions.FluentActions;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
-    public class ExceptionHandling: TestKit.Xunit.v3.TestKit
+    public class ExceptionHandling: TestKit.Xunit.TestKit
     {
         private class GiveError
         { }

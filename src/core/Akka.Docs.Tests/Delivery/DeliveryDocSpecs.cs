@@ -14,7 +14,7 @@ using Akka.Delivery;
 using Akka.Event;
 using Akka.Persistence.Delivery;
 using Akka.TestKit;
-using Akka.TestKit.Xunit.v3;
+using Akka.TestKit.Xunit;
 using Akka.Util;
 using Xunit;
 

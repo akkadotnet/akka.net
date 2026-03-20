@@ -19,7 +19,7 @@ using static Akka.Tests.Delivery.TestConsumer;
 
 namespace Akka.Tests.Delivery;
 
-public class ConsumerControllerSpecs : TestKit.Xunit.v3.TestKit
+public class ConsumerControllerSpecs : TestKit.Xunit.TestKit
 {
     public static readonly Config Config = @"
         akka.reliable-delivery.consumer-controller {

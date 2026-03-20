@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Akka.Tests.Delivery;
 
-public class ReliableDeliveryRandomSpecs : TestKit.Xunit.v3.TestKit
+public class ReliableDeliveryRandomSpecs : TestKit.Xunit.TestKit
 {
     private static readonly Config Config = @"akka.reliable-delivery.consumer-controller{
             flow-control-window = 20

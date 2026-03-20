@@ -22,7 +22,7 @@ using Xunit;
 using Nito.AsyncEx;
 using ThreadLocalRandom = Akka.Util.ThreadLocalRandom;
 using Akka.TestKit.Extensions;
-using Akka.TestKit.Xunit.v3.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions.Extensions;
 
 namespace Akka.Remote.Tests

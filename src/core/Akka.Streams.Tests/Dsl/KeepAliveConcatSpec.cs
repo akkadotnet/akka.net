@@ -18,7 +18,7 @@ using FluentAssertions.Extensions;
 
 namespace Akka.Streams.Tests.Dsl
 {
-    public class KeepAliveConcatSpec : Akka.TestKit.Xunit.v3.TestKit
+    public class KeepAliveConcatSpec : Akka.TestKit.Xunit.TestKit
     {
         public KeepAliveConcatSpec(ITestOutputHelper output)
             : base(output: output)

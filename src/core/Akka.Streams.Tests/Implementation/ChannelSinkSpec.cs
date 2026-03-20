@@ -18,7 +18,7 @@ using Xunit;
 
 namespace Akka.Streams.Tests.Implementation
 {
-    public class ChannelSinkSpec : Akka.TestKit.Xunit.v3.TestKit
+    public class ChannelSinkSpec : Akka.TestKit.Xunit.TestKit
     {
         private readonly ActorMaterializer _materializer;
 

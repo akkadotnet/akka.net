@@ -9,7 +9,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-namespace Akka.TestKit.Xunit.v3.Internals;
+namespace Akka.TestKit.Xunit.Internals;
 
 /// <summary>
 /// A class that wraps <see cref="IEqualityComparer{T}"/> to create <see cref="IEqualityComparer"/>.

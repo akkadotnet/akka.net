@@ -11,7 +11,7 @@ using Akka.Actor;
 using Akka.Coordination;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Xunit.v3;
+using Akka.TestKit.Xunit;
 using FluentAssertions.Extensions;
 using Xunit;
 

@@ -11,7 +11,7 @@ using Akka.Event;
 using Akka.Util;
 using Xunit;
 
-namespace Akka.TestKit.Xunit.v3.Internals;
+namespace Akka.TestKit.Xunit.Internals;
 
 /// <summary>
 /// This class represents an actor that logs output from tests using an <see cref="ITestOutputHelper"/> provider.

@@ -9,7 +9,7 @@ using System;
 using Akka.Actor;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Xunit.v3.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using Xunit;
 
 namespace Akka.Persistence.Tests

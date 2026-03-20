@@ -8,7 +8,7 @@
 using System;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.TestKit.Xunit.v3;
+using Akka.TestKit.Xunit;
 using Xunit;
 
 namespace DocsExamples.Actors

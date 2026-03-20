@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 
 namespace Akka.Streams.Tests.Implementation
 {
-    public class StreamLayoutSpec : Akka.TestKit.Xunit.v3.TestKit
+    public class StreamLayoutSpec : Akka.TestKit.Xunit.TestKit
     {
         #region internal classes
 

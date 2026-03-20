@@ -23,7 +23,7 @@ using static Akka.Tests.Delivery.TestConsumer;
 
 namespace Akka.Cluster.Sharding.Tests.Delivery;
 
-public class ReliableDeliveryShardingSpec : TestKit.Xunit.v3.TestKit
+public class ReliableDeliveryShardingSpec : TestKit.Xunit.TestKit
 {
     public static Config Configuration = @"
         akka.loglevel = DEBUG

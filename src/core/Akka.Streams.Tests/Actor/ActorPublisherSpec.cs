@@ -19,7 +19,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
-using Akka.TestKit.Xunit.v3.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using Xunit;
 using ActorPublisher = Akka.Streams.Actors.ActorPublisher;

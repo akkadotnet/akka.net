@@ -7,10 +7,10 @@
 
 using System;
 using System.Threading.Tasks;
-using Akka.TestKit.Xunit.v3.Internals;
+using Akka.TestKit.Xunit.Internals;
 using Xunit;
 
-namespace Akka.TestKit.Xunit.v3;
+namespace Akka.TestKit.Xunit;
 
 /// <summary>
 /// This class contains several common assert patterns used throughout this testkit.
