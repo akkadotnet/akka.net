@@ -12,7 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit.v3;
+using Akka.Remote.TestKit;
 using Akka.Util;
 using FluentAssertions;
 

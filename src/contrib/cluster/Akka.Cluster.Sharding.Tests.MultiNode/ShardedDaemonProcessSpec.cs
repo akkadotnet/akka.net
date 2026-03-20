@@ -12,7 +12,7 @@ using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit.v3;
+using Akka.Remote.TestKit;
 using FluentAssertions;
 
 namespace Akka.Cluster.Sharding.Tests.MultiNode

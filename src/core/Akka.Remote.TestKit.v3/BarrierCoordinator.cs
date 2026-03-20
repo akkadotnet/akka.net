@@ -12,7 +12,7 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Event;
 
-namespace Akka.Remote.TestKit.v3
+namespace Akka.Remote.TestKit
 {
     /// <summary>
     ///

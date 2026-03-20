@@ -18,7 +18,7 @@ using Akka.Cluster.Routing;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Event;
-using Akka.Remote.TestKit.v3;
+using Akka.Remote.TestKit;
 using Akka.Routing;
 using FluentAssertions;
 using Akka.MultiNode.TestAdapter;

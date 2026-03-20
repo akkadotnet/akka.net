@@ -17,7 +17,7 @@ using Akka.DistributedData;
 using Akka.MultiNode.TestAdapter;
 using Akka.Pattern;
 using Akka.Persistence;
-using Akka.Remote.TestKit.v3;
+using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.TestKit.Internal.StringMatcher;
 using Akka.TestKit.TestEvent;

@@ -26,7 +26,7 @@ using Akka.TestKit;
 using Akka.TestKit.Xunit.v3;
 using Akka.Util.Internal;
 
-namespace Akka.Remote.TestKit.v3;
+namespace Akka.Remote.TestKit;
 
 /// <summary>
 /// Configure the role names and participants of the test, including configuration settings

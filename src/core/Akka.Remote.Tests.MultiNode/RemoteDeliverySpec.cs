@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
-using Akka.Remote.TestKit.v3;
+using Akka.Remote.TestKit;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;

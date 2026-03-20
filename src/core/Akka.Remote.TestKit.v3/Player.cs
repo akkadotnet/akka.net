@@ -22,7 +22,7 @@ using Akka.Util.Internal;
 using DotNetty.Transport.Channels;
 using Akka.Configuration;
 
-namespace Akka.Remote.TestKit.v3;
+namespace Akka.Remote.TestKit;
 
 /// <summary>
 /// The Player is the client component of the

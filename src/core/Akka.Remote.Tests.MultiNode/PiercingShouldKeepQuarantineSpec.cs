@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit.v3;
+using Akka.Remote.TestKit;
 
 namespace Akka.Remote.Tests.MultiNode
 {

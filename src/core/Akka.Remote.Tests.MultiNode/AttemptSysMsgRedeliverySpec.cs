@@ -9,7 +9,7 @@ using System;
 using System.Text.RegularExpressions;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit.v3;
+using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 
 namespace Akka.Remote.Tests.MultiNode

@@ -10,7 +10,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Cluster.Tests.MultiNode;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit.v3;
+using Akka.Remote.TestKit;
 using Akka.TestKit;
 
 namespace Akka.Cluster.TestKit

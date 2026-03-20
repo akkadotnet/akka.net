@@ -9,10 +9,10 @@ using System;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Dispatch;
-using Akka.Remote.TestKit.v3.Internals;
+using Akka.Remote.TestKit.Internals;
 using Akka.Util.Internal;
 
-namespace Akka.Remote.TestKit.v3
+namespace Akka.Remote.TestKit
 {
     /// <summary>
     /// Access to the <see cref="TestConductor"/> extension:

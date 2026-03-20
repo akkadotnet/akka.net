@@ -14,7 +14,7 @@ using Akka.Cluster.Tools.Singleton;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
-using Akka.Remote.TestKit.v3;
+using Akka.Remote.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using FluentAssertions;

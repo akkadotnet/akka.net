@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Akka.Cluster.Metrics.Tests.Helpers;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
-using Akka.Remote.TestKit.v3;
+using Akka.Remote.TestKit;
 using FluentAssertions;
 using Akka.MultiNode.TestAdapter;
 using FluentAssertions.Extensions;

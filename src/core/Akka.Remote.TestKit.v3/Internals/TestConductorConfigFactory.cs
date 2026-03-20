@@ -10,7 +10,7 @@ using System.IO;
 using System.Reflection;
 using Akka.Configuration;
 
-namespace Akka.Remote.TestKit.v3.Internals
+namespace Akka.Remote.TestKit.Internals
 {
     /// <summary>
     /// This class contains methods used to retrieve Multi-Node TestKit configuration options from this assembly's resources

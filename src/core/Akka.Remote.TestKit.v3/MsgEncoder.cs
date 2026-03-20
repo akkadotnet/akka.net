@@ -16,7 +16,7 @@ using DotNetty.Transport.Channels;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 
-namespace Akka.Remote.TestKit.v3
+namespace Akka.Remote.TestKit
 {
     internal class MsgEncoder : MessageToMessageEncoder<object>
     {

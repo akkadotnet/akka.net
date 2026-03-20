@@ -19,14 +19,14 @@ using Akka.Util;
 using DotNetty.Transport.Channels;
 using Akka.Configuration;
 
-namespace Akka.Remote.TestKit.v3
+namespace Akka.Remote.TestKit
 {
     /// <summary>
     /// The conductor is the one orchestrating the test: it governs the
-    /// <see cref="Akka.Remote.TestKit.v3.Controller"/>'s ports to which all
+    /// <see cref="Akka.Remote.TestKit.Controller"/>'s ports to which all
     /// Players connect, it issues commands to their
     /// <see cref="FailureInjectorTransportAdapter"/> and provides support
-    /// for barriers using the <see cref="Akka.Remote.TestKit.v3.BarrierCoordinator"/>.
+    /// for barriers using the <see cref="Akka.Remote.TestKit.BarrierCoordinator"/>.
     /// All of this is bundled inside the <see cref="TestConductor"/>
     /// </summary>
     partial class TestConductor //Conductor trait in JVM version
@@ -94,7 +94,7 @@ namespace Akka.Remote.TestKit.v3
             _controller = _system.ActorOf(Props.Create(() => new Controller(participants, controllerPort)),
                 "controller");
 
-            var node = await _controller.Ask<IPEndPoint>(TestKit.v3.Controller.GetSockAddr.Instance, Settings.QueryTimeout, cancellationToken);
+            var node = await _controller.Ask<IPEndPoint>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout, cancellationToken);
             await StartClient(name, node);
             return node;
         }
@@ -345,7 +345,7 @@ namespace Akka.Remote.TestKit.v3
             var result = await Controller.Ask(new Terminate(node, new Left<bool, int>(abort)), Settings.QueryTimeout, cancellationToken);
             return result switch
             {
-                Done or FSMBase.Failure { Cause: TestKit.v3.Controller.ClientDisconnectedException } => Done.Instance,
+                Done or FSMBase.Failure { Cause: TestKit.Controller.ClientDisconnectedException } => Done.Instance,
                 _ => throw new InvalidOperationException($"Expected Done but received {result}")
             };
         }
@@ -365,7 +365,7 @@ namespace Akka.Remote.TestKit.v3
         /// </summary>
         public Task<IEnumerable<RoleName>> GetNodesAsync(CancellationToken cancellationToken = default)
         {
-            return Controller.Ask<IEnumerable<RoleName>>(TestKit.v3.Controller.GetNodes.Instance, Settings.QueryTimeout, cancellationToken);
+            return Controller.Ask<IEnumerable<RoleName>>(TestKit.Controller.GetNodes.Instance, Settings.QueryTimeout, cancellationToken);
         }
 
         /// <summary>

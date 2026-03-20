@@ -15,7 +15,7 @@ using DotNetty.Transport.Channels;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 
-namespace Akka.Remote.TestKit.v3.Proto
+namespace Akka.Remote.TestKit.Proto
 {
     /// <summary>
     /// Decodes a message from a <see cref="IByteBuffer"/> into a Google protobuff wire format

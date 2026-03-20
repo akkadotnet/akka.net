@@ -11,7 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Akka.Remote.TestKit.v3.Proto;
+using Akka.Remote.TestKit.Proto;
 using Akka.Remote.Transport.DotNetty;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
@@ -23,7 +23,7 @@ using DotNetty.Transport.Channels;
 using DotNetty.Transport.Channels.Sockets;
 using Microsoft.Extensions.Logging;
 
-namespace Akka.Remote.TestKit.v3
+namespace Akka.Remote.TestKit
 {
     /// <summary>
     /// INTERNAL API

@@ -16,7 +16,7 @@ using DotNetty.Common.Internal.Logging;
 using DotNetty.Transport.Channels;
 using Microsoft.Extensions.Logging;
 
-namespace Akka.Remote.TestKit.v3
+namespace Akka.Remote.TestKit
 {
     internal class MsgDecoder : MessageToMessageDecoder<object>
     {

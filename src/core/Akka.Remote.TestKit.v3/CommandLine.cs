@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using Akka.Configuration;
 
-namespace Akka.Remote.TestKit.v3
+namespace Akka.Remote.TestKit
 {   
     //TODO: Needs some work
     /// <summary>
