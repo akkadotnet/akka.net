@@ -44,6 +44,7 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.MultiNodeTestRunner.Shared.Tests")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
 [assembly: InternalsVisibleTo("Akka.Cluster.TestKit")]
+[assembly: InternalsVisibleTo("Akka.Cluster.TestKit.v3")]
 [assembly: InternalsVisibleTo("Akka.Cluster.Tools")]
 [assembly: InternalsVisibleTo("Akka.DistributedData")]
 [assembly: InternalsVisibleTo("Akka.Persistence")]
