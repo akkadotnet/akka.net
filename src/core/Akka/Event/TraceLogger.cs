@@ -31,10 +31,7 @@ namespace Akka.Event
     /// </summary>
     public class TraceLogger : UntypedActor
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="message">TBD</param>
+        /// <inheritdoc/>
         protected override void OnReceive(object message)
         {
             switch (message)

@@ -117,7 +117,7 @@ namespace Akka.Event
         /// Used to start the Unsubscriber actor, responsible for garabage-collecting
         /// all expired subscriptions when the subscribed actor terminates.
         /// </summary>
-        /// <param name="system">TBD</param>
+        /// <param name="system">The actor system that owns this event stream.</param>
         public void StartUnsubscriber(ActorSystemImpl system)
         {
             if (_unsubscriber.Value.IsNobody())
