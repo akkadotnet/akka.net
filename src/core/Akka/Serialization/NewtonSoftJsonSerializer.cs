@@ -145,12 +145,12 @@ namespace Akka.Serialization
         
         private readonly ObjectPool<StringBuilder> _sbPool;
         /// <summary>
-        /// TBD
+        /// The <see cref="JsonSerializerSettings"/> used to configure JSON serialization and deserialization behavior.
         /// </summary>
         public JsonSerializerSettings Settings { get; }
 
         /// <summary>
-        /// TBD
+        /// The underlying <see cref="JsonSerializer"/> instance used to perform JSON conversion.
         /// </summary>
         public object Serializer { get { return _serializer; } }
 
@@ -398,15 +398,16 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// TBD
+        /// A custom <see cref="JsonConverter"/> that handles types implementing <see cref="ISurrogated"/>
+        /// and corrects numeric type conversions (int, float, decimal) during deserialization.
         /// </summary>
         internal class SurrogateConverter : JsonConverter
         {
             private readonly NewtonSoftJsonSerializer _parent;
             /// <summary>
-            /// TBD
+            /// Initializes a new instance of the <see cref="SurrogateConverter"/> class.
             /// </summary>
-            /// <param name="parent">TBD</param>
+            /// <param name="parent">The parent serializer that provides the actor system context for surrogate resolution.</param>
             public SurrogateConverter(NewtonSoftJsonSerializer parent)
             {
                 _parent = parent;

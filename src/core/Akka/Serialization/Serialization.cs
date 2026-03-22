@@ -125,13 +125,15 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// TBD
+        /// Executes <paramref name="action"/> while temporarily setting the
+        /// <see cref="CurrentTransportInformation"/> so that <see cref="IActorRef"/> instances
+        /// are serialized with the correct remote address.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="system">TBD</param>
-        /// <param name="address">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The return type of the <paramref name="action"/> delegate.</typeparam>
+        /// <param name="system">The actor system used for serialization context.</param>
+        /// <param name="address">The remote address to embed in serialized actor references.</param>
+        /// <param name="action">The delegate to execute within the transport context.</param>
+        /// <returns>The value produced by <paramref name="action"/>.</returns>
         [Obsolete("Obsolete. Use the SerializeWithTransport<T>(ExtendedActorSystem) method instead.")]
         public static T WithTransport<T>(ActorSystem system, Address address, Func<T> action)
         {
@@ -376,11 +378,12 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// TBD
+        /// Registers a mapping from <paramref name="type"/> to <paramref name="serializer"/>
+        /// so that instances of that type (and its subtypes) will be handled by the given serializer.
+        /// Logs a warning if an existing mapping for the same type is being overridden.
         /// </summary>
-        /// <param name="type">TBD</param>
-        /// <param name="serializer">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="type">The <see cref="Type"/> to associate with the serializer.</param>
+        /// <param name="serializer">The <see cref="Akka.Serialization.Serializer"/> that will handle the type.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializationMap(Type type, Serializer serializer)
         {
@@ -444,9 +447,9 @@ namespace Akka.Serialization
         /// <summary>
         /// Deserializes the given array of bytes using the specified serializer id, using the optional type hint to the Serializer.
         /// </summary>
-        /// <param name="bytes">TBD</param>
-        /// <param name="serializerId">TBD</param>
-        /// <param name="type">TBD</param>
+        /// <param name="bytes">The serialized byte array to deserialize.</param>
+        /// <param name="serializerId">The identifier of the serializer that produced <paramref name="bytes"/>.</param>
+        /// <param name="type">An optional type hint passed to the serializer to aid deserialization.</param>
         /// <exception cref="SerializationException">
         /// This exception is thrown if the system cannot find the serializer with the given <paramref name="serializerId"/>.
         /// </exception>
@@ -468,9 +471,9 @@ namespace Akka.Serialization
         /// <summary>
         /// Deserializes the given array of bytes using the specified serializer id, using the optional type hint to the Serializer.
         /// </summary>
-        /// <param name="bytes">TBD</param>
-        /// <param name="serializerId">TBD</param>
-        /// <param name="manifest">TBD</param>
+        /// <param name="bytes">The serialized byte array to deserialize.</param>
+        /// <param name="serializerId">The identifier of the serializer that produced <paramref name="bytes"/>.</param>
+        /// <param name="manifest">A string manifest identifying the type, used by <see cref="SerializerWithStringManifest"/> implementations.</param>
         /// <exception cref="SerializationException">
         /// This exception is thrown if the system cannot find the serializer with the given <paramref name="serializerId"/>
         /// or it couldn't find the given <paramref name="manifest"/> with the given <paramref name="serializerId"/>.
@@ -536,7 +539,7 @@ namespace Akka.Serialization
         /// ambiguity it is primarily using the most specific configured class,
         /// and secondly the entry configured first.
         /// </summary>
-        /// <param name="objectType">TBD</param>
+        /// <param name="objectType">The <see cref="Type"/> whose serializer should be resolved.</param>
         /// <param name="defaultSerializerName">The config name of the serializer to use when no specific binding config is present</param>
         /// <exception cref="SerializationException">
         /// This exception is thrown if the serializer of the given <paramref name="objectType"/> could not be found.
