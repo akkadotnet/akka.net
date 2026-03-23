@@ -431,9 +431,13 @@ namespace Akka.Remote
         /// <returns>An updated buffer containing the remaining unacknowledged messages</returns>
         public AckedSendBuffer<T> Acknowledge(Ack ack)
         {
+            // If the ACK references a sequence number higher than anything we've sent,
+            // it's a stale ACK from a previous association. The buffer is empty or has
+            // only messages with lower sequence numbers — there's nothing to acknowledge.
+            // Throwing here would cause an irrecoverable quarantine (see GitHub #6414).
             if (ack.CumulativeAck > MaxSeq)
             {
-                throw new ArgumentException(nameof(ack), $"Highest SEQ so far was {MaxSeq} but cumulative ACK is {ack.CumulativeAck}");
+                return this;
             }
 
             var newNacked = ack.Nacks.Count == 0
