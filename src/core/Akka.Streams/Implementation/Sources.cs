@@ -158,6 +158,7 @@ namespace Akka.Streams.Implementation
                     _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.QueueClosed.Instance);
                     _pendingOffer = null;
                 }
+                _terminating = true;
                 _completion.SetResult(new object());
                 CompleteStage();
             }
@@ -218,6 +219,7 @@ namespace Akka.Streams.Implementation
                             var bufferOverflowException =
                                 new BufferOverflowException($"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
                             offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                            _terminating = true;
                             _completion.SetException(bufferOverflowException);
                             FailStage(bufferOverflowException);
                             break;
@@ -242,6 +244,12 @@ namespace Akka.Streams.Implementation
                     {
                         if (input is Offer<TOut> offer)
                         {
+                            if (_terminating)
+                            {
+                                offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
+                                return;
+                            }
+
                             if (_buffer is not null)
                             {
                                 BufferElement(offer);
@@ -278,6 +286,7 @@ namespace Akka.Streams.Implementation
                                             new BufferOverflowException(
                                                 $"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
                                         offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                                        _terminating = true;
                                         _completion.SetException(bufferOverflowException);
                                         FailStage(bufferOverflowException);
                                         break;
@@ -300,6 +309,7 @@ namespace Akka.Streams.Implementation
 
                         if (input is Failure failure)
                         {
+                            _terminating = true;
                             _completion.SetException(failure.Ex);
                             FailStage(failure.Ex);
                         }
@@ -564,6 +574,7 @@ namespace Akka.Streams.Implementation
         {
             private readonly UnfoldResourceSourceAsync<TOut, TSource> _stage;
             private readonly Lazy<Decider> _decider;
+            private readonly Lazy<IAsyncCallback<Try<TSource>>> _createdCallback;
             private Option<TSource> _state = Option<TSource>.None;
 
             public Logic(UnfoldResourceSourceAsync<TOut, TSource> stage, Attributes inheritedAttributes)
@@ -576,18 +587,21 @@ namespace Akka.Streams.Implementation
                     return strategy != null ? strategy.Decider : Deciders.StoppingDecider;
                 });
 
+                _createdCallback = new Lazy<IAsyncCallback<Try<TSource>>>(() =>
+                    GetTypedAsyncCallback<Try<TSource>>(resource =>
+                    {
+                        if (resource.IsSuccess)
+                        {
+                            _state = resource.Success;
+                            if (IsAvailable(_stage.Out)) OnPull();
+                        }
+                        else FailStage(resource.Failure.Value);
+                    }));
+
                 SetHandler(_stage.Out, this);
             }
 
-            private Action<Try<TSource>> CreatedCallback => GetAsyncCallback<Try<TSource>>(resource =>
-            {
-                if (resource.IsSuccess)
-                {
-                    _state = resource.Success;
-                    if (IsAvailable(_stage.Out)) OnPull();
-                }
-                else FailStage(resource.Failure.Value);
-            });
+            private IAsyncCallback<Try<TSource>> CreatedCallback => _createdCallback.Value;
 
             private void ErrorHandler(Exception ex)
             {
@@ -697,24 +711,31 @@ namespace Akka.Streams.Implementation
             {
                 _stage._create().OnComplete(resource =>
                 {
-                    try
+                    async Task InvokeCallback()
                     {
-                        CreatedCallback(resource);
-                    }
-                    catch (StreamDetachedException)
-                    {
-                        // stream stopped before created callback could be invoked, we need
-                        // to close the resource if it is was opened, to not leak it
-                        if (resource.IsSuccess)
+                        try
                         {
-                            _stage._close(resource.Success.Value);
+                            await CreatedCallback.InvokeWithFeedback(resource);
                         }
-                        else
+                        catch (StreamDetachedException)
                         {
-                            // failed to open but stream is stopped already
-                            throw resource.Failure.Value;
+                            // stream stopped before created callback could be invoked, we need
+                            // to close the resource if it is was opened, to not leak it
+                            if (resource.IsSuccess)
+                            {
+#pragma warning disable CS4014 // Because this call is not awaited - fire-and-forget is intentional for cleanup
+                                _stage._close(resource.Success.Value);
+#pragma warning restore CS4014
+                            }
+                            else
+                            {
+                                // failed to open but stream is stopped already
+                                throw resource.Failure.Value;
+                            }
                         }
                     }
+
+                    _ = InvokeCallback();
                 });
             }
         }
