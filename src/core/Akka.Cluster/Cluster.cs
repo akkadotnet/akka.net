@@ -485,7 +485,7 @@ namespace Akka.Cluster
         ///
         /// Typically used in combination with <see cref="Leave"/> and <see cref="ActorSystem.Terminate"/>.
         /// </summary>
-        /// <param name="callback">The callback that is run whenever the current member achieves a status of <see cref="MemberStatus.Down"/></param>
+        /// <param name="callback">The callback that is run once when the current member achieves a status of <see cref="MemberStatus.Removed"/></param>
         public void RegisterOnMemberRemoved(Action callback)
         {
             if (IsTerminated)
