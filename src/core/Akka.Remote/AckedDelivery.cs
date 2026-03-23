@@ -18,22 +18,8 @@ namespace Akka.Remote
     /// <summary>
     /// Implements a 64-bit sequence number with proper overflow ordering
     /// </summary>
-    internal sealed class SeqNo : IComparable<SeqNo>, IEquatable<SeqNo>
+    internal readonly record struct SeqNo(long RawValue) : IComparable<SeqNo>
     {
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="rawValue">TBD</param>
-        public SeqNo(long rawValue)
-        {
-            RawValue = rawValue;
-        }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public long RawValue { get; private set; }
-
         /// <summary>
         /// Checks if this sequence number is an immediate successor of the provided one.
         /// </summary>
@@ -44,11 +30,9 @@ namespace Akka.Remote
             return RawValue - that.RawValue == 1;
         }
 
-
         /// <summary>
-        /// TBD
+        /// Returns the next sequence number, wrapping around on overflow.
         /// </summary>
-        /// <returns>TBD</returns>
         public SeqNo Inc()
         {
             long nextValue;
@@ -59,25 +43,15 @@ namespace Akka.Remote
             return new SeqNo(nextValue);
         }
 
-        #region IComparable<SeqNo>
-
         /// <inheritdoc/>
         public int CompareTo(SeqNo other)
         {
             return CompareSeq(this, other);
         }
 
-        #endregion
-
-        #region Operators / Equality
-
-
         /// <summary>
         /// Compares two specified sequence numbers to see if the first one is less than the other one.
         /// </summary>
-        /// <param name="left">The first sequence number used for comparison</param>
-        /// <param name="right">The second sequence number used for comparison</param>
-        /// <returns><c>true</c> if the first sequence number is less than the other one; otherwise <c>false</c></returns>
         public static bool operator <(SeqNo left, SeqNo right)
         {
             return left.CompareTo(right) < 0;
@@ -86,50 +60,14 @@ namespace Akka.Remote
         /// <summary>
         /// Compares two specified sequence numbers to see if the first one is less than or equal to the other one.
         /// </summary>
-        /// <param name="left">The first sequence number used for comparison</param>
-        /// <param name="right">The second sequence number used for comparison</param>
-        /// <returns><c>true</c> if the first sequence number is less than or equal to the other one; otherwise <c>false</c></returns>
         public static bool operator <=(SeqNo left, SeqNo right)
         {
             return left.CompareTo(right) <= 0;
         }
 
-        /// <inheritdoc/>
-        public bool Equals(SeqNo other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return RawValue == other.RawValue;
-        }
-
-        /// <summary>
-        /// Compares two specified sequence numbers for equality.
-        /// </summary>
-        /// <param name="left">The first sequence number used for comparison</param>
-        /// <param name="right">The second sequence number used for comparison</param>
-        /// <returns><c>true</c> if both sequence numbers are equal; otherwise <c>false</c></returns>
-        public static bool operator ==(SeqNo left, SeqNo right)
-        {
-            return Equals(left, right);
-        }
-
-        /// <summary>
-        /// Compares two specified sequence numbers for inequality.
-        /// </summary>
-        /// <param name="left">The first sequence number used for comparison</param>
-        /// <param name="right">The second sequence number used for comparison</param>
-        /// <returns><c>true</c> if both sequence numbers are not equal; otherwise <c>false</c></returns>
-        public static bool operator !=(SeqNo left, SeqNo right)
-        {
-            return !Equals(left, right);
-        }
-
         /// <summary>
         /// Compares two specified sequence numbers to see if the first one is greater than the other one.
         /// </summary>
-        /// <param name="left">The first sequence number used for comparison</param>
-        /// <param name="right">The second sequence number used for comparison</param>
-        /// <returns><c>true</c> if the first sequence number is greater than the other one; otherwise <c>false</c></returns>
         public static bool operator >(SeqNo left, SeqNo right)
         {
             return left.CompareTo(right) > 0;
@@ -138,9 +76,6 @@ namespace Akka.Remote
         /// <summary>
         /// Compares two specified sequence numbers to see if the first one is greater than or equal to the other one.
         /// </summary>
-        /// <param name="left">The first sequence number used for comparison</param>
-        /// <param name="right">The second sequence number used for comparison</param>
-        /// <returns><c>true</c> if the first sequence number is greater than or equal to the other one; otherwise <c>false</c></returns>
         public static bool operator >=(SeqNo left, SeqNo right)
         {
             return left.CompareTo(right) >= 0;
@@ -149,8 +84,6 @@ namespace Akka.Remote
         /// <summary>
         /// Performs an implicit conversion from <see cref="System.Int64"/> to <see cref="SeqNo"/>.
         /// </summary>
-        /// <param name="x">The value to convert</param>
-        /// <returns>The result of the conversion</returns>
         public static implicit operator SeqNo(long x)
         {
             return new SeqNo(x);
@@ -159,29 +92,10 @@ namespace Akka.Remote
         /// <summary>
         /// Performs an implicit conversion from <see cref="SeqNo"/> to <see cref="System.Int64"/>.
         /// </summary>
-        /// <param name="seqNo">The sequence number to convert</param>
-        /// <returns>The result of the conversion</returns>
         public static implicit operator long(SeqNo seqNo)
         {
             return seqNo.RawValue;
         }
-
-        /// <inheritdoc/>
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            return obj is SeqNo no && Equals(no);
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            return RawValue.GetHashCode();
-        }
-
-        #endregion
-
 
         /// <inheritdoc/>
         public override string ToString()
@@ -189,12 +103,9 @@ namespace Akka.Remote
             return RawValue.ToString(CultureInfo.InvariantCulture);
         }
 
-        #region Static methods
-
         /// <summary>
         /// Implements wrap-around comparison, in the event of a 64-bit overflow
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
         public class HasSeqNoComparer<T> : IComparer<T> where T : IHasSequenceNumber
         {
             /// <inheritdoc/>
@@ -205,7 +116,7 @@ namespace Akka.Remote
         }
 
         /// <summary>
-        /// TBD
+        /// Comparer that implements wrap-around sequence number ordering.
         /// </summary>
         public class SeqNoComparer : IComparer<SeqNo>, IEqualityComparer<SeqNo>
         {
@@ -232,35 +143,19 @@ namespace Akka.Remote
             }
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
         public static readonly SeqNoComparer Comparer = new();
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="x">TBD</param>
-        /// <param name="y">TBD</param>
-        /// <returns>TBD</returns>
+
         public static int CompareSeq(SeqNo x, SeqNo y)
         {
             return Comparer.Compare(x, y);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="x">TBD</param>
-        /// <param name="y">TBD</param>
-        /// <returns>TBD</returns>
         public static SeqNo Max(SeqNo x, SeqNo y)
         {
             var compare = CompareSeq(x, y);
             if (compare == 0) return x;
             return compare < 0 ? y : x;
         }
-
-        #endregion
     }
 
     /// <summary>
@@ -391,7 +286,7 @@ namespace Akka.Remote
 
         public AckedSendBuffer(int capacity, SeqNo maxSeq, IImmutableList<T> nacked, IImmutableList<T> nonAcked)
         {
-            MaxSeq = maxSeq ?? new SeqNo(-1);
+            MaxSeq = maxSeq;
             Nacked = nacked;
             NonAcked = nonAcked;
             Capacity = capacity;
@@ -475,7 +370,7 @@ namespace Akka.Remote
             return $"[{MaxSeq} [{nonAcked}]]";
         }
 
-        public AckedSendBuffer<T> Copy(IImmutableList<T> nonAcked = null, IImmutableList<T> nacked = null, SeqNo maxSeq = null)
+        public AckedSendBuffer<T> Copy(IImmutableList<T> nonAcked = null, IImmutableList<T> nacked = null, SeqNo? maxSeq = null)
         {
             return new AckedSendBuffer<T>(Capacity, maxSeq ?? MaxSeq, nacked ?? Nacked, nonAcked ?? NonAcked);
         }
@@ -486,7 +381,7 @@ namespace Akka.Remote
     /// Helper class that makes it easier to work with <see cref="AckedReceiveBuffer{T}"/> deliverables.
     /// </summary>
     /// <typeparam name="T">TBD</typeparam>
-    sealed class AckReceiveDeliverable<T> where T : IHasSequenceNumber
+    internal sealed class AckReceiveDeliverable<T> where T : IHasSequenceNumber
     {
         /// <summary>
         /// TBD
@@ -537,8 +432,8 @@ namespace Akka.Remote
         /// <param name="buffer">Buffer of messages that are waiting for delivery.</param>
         public AckedReceiveBuffer(SeqNo lastDelivered, SeqNo cumulativeAck, ImmutableSortedSet<T> buffer)
         {
-            LastDelivered = lastDelivered ?? new SeqNo(-1);
-            CumulativeAck = cumulativeAck ?? new SeqNo(-1);
+            LastDelivered = lastDelivered;
+            CumulativeAck = cumulativeAck;
             Buf = buffer;
         }
 
@@ -636,7 +531,7 @@ namespace Akka.Remote
         /// <param name="cumulativeAck">TBD</param>
         /// <param name="buffer">TBD</param>
         /// <returns>TBD</returns>
-        public AckedReceiveBuffer<T> Copy(SeqNo lastDelivered = null, SeqNo cumulativeAck = null, ImmutableSortedSet<T> buffer = null)
+        public AckedReceiveBuffer<T> Copy(SeqNo? lastDelivered = null, SeqNo? cumulativeAck = null, ImmutableSortedSet<T> buffer = null)
         {
             return new AckedReceiveBuffer<T>(lastDelivered ?? LastDelivered, cumulativeAck ?? CumulativeAck, buffer ?? Buf);
         }
