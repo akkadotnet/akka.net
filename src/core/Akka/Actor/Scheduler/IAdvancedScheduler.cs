@@ -8,7 +8,8 @@
 namespace Akka.Actor
 {
     /// <summary>
-    /// TBD
+    /// Extended scheduler interface that supports scheduling arbitrary <see cref="System.Action"/> delegates.
+    /// Access via <see cref="IScheduler.Advanced"/>.
     /// </summary>
     public interface IAdvancedScheduler : IActionScheduler
     {
