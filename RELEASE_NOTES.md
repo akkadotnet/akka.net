@@ -1,3 +1,28 @@
+#### 1.5.63 March 24th, 2026 ####
+
+Akka.NET v1.5.63 is a maintenance release that includes a **critical Akka.Remote bug fix** along with Akka.Streams fixes and a major migration of all test projects to xUnit 3. 
+**All users running Akka.Remote or Akka.Cluster are strongly encouraged to upgrade.**
+
+* [Fix stale ACK causing irrecoverable quarantine after transient network disruption](https://github.com/akkadotnet/akka.net/pull/8116) - Fixes stale ACK could cause an irrecoverable quarantine.
+* [Fix race condition in QueueSource offer handling](https://github.com/akkadotnet/akka.net/pull/7875) - Fixes a race condition in `QueueSource`.
+* [Fix race condition in UnfoldResourceAsyncSource callback invocation](https://github.com/akkadotnet/akka.net/pull/7859) - Fixes a race condition in `UnfoldResourceAsyncSource`.
+* [Remove FluentAssertions from Akka.Persistence.TCK and Akka.Persistence.TCK.Xunit2](https://github.com/akkadotnet/akka.net/pull/8111) - Removes FluentAssertions dependency from the persistence TCK packages.
+* [Migrate all test projects to xUnit 3](https://github.com/akkadotnet/akka.net/pull/8060) - Complete migration of all Akka.NET test projects to xUnit 3.
+
+**Important Akka.Remote Bug Fix**
+
+Fixes a critical issue where a stale ACK from a previous connection could cause an irrecoverable quarantine state after a transient network disruption, permanently preventing nodes from re-establishing communication.
+In affected scenarios, the only recovery option was a full restart of the quarantined node. This fix ensures that stale ACKs are correctly discarded during reconnection, allowing nodes to recover automatically after network interruptions.
+
+2 contributors since release 1.5.62
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 28      | 4009 | 1637 | Gregorius Soedharmo |
+| 2       | 42   | 21   | Aaron Stannard      |
+
+To see the full set of changes in Akka.NET v1.5.63, [click here](https://github.com/akkadotnet/akka.net/milestone/146?closed=1).
+
 #### 1.5.62 March 3rd, 2026 ####
 
 Akka.NET v1.5.62 is a maintenance release with an important bug fix for logging stability when using third-party logging providers.
