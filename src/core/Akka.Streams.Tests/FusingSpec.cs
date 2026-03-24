@@ -49,7 +49,7 @@ namespace Akka.Streams.Tests
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            await t.ShouldCompleteWithin(3.Seconds());
+            await t.WaitAsync(3.Seconds());
             t.Result.Distinct().OrderBy(i => i).Should().BeEquivalentTo(Enumerable.Range(0, 199).Where(i => i%2 == 0));
         }
 
@@ -71,7 +71,7 @@ namespace Akka.Streams.Tests
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            await t.ShouldCompleteWithin(3.Seconds());
+            await t.WaitAsync(3.Seconds());
             t.Result.Should().BeEquivalentTo(Enumerable.Range(0, 10));
 
             var refs = await ReceiveNAsync(20).Distinct().ToListAsync();
@@ -110,7 +110,7 @@ namespace Akka.Streams.Tests
                 .Grouped(1000)
                 .RunWith(Sink.First<IEnumerable<int>>(), Materializer);
 
-            await t.ShouldCompleteWithin(3.Seconds());
+            await t.WaitAsync(3.Seconds());
             t.Result.Should().BeEquivalentTo(Enumerable.Range(0, 10));
 
             var refs = await ReceiveNAsync(20).Distinct().ToListAsync();

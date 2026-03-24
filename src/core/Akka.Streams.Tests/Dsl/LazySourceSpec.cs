@@ -39,7 +39,7 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() =>
             {
                 var result = Source.Lazily(() => Source.From(new[] { 1, 2, 3 })).RunWith(Sink.Seq<int>(), Materializer);
-                var complete = await result.ShouldCompleteWithin(3.Seconds());
+                var complete = await result.WaitAsync(3.Seconds());
                 complete.Should().BeEquivalentTo(ImmutableList.Create(1, 2, 3));
             }, Materializer);
         }
@@ -72,7 +72,7 @@ namespace Akka.Streams.Tests.Dsl
                     await Source.Lazily(() => Source.From(new[] { 1, 2, 3 }))
                         .ToMaterialized(Sink.Cancelled<int>(), Keep.Left)
                         .Run(Materializer);
-                }).Should().ThrowAsync<Exception>().ShouldCompleteWithin(3.Seconds());
+                }).Should().ThrowAsync<Exception>().WaitAsync(3.Seconds());
             }, Materializer);
         }
 
@@ -180,7 +180,7 @@ namespace Akka.Streams.Tests.Dsl
                     .AddAttributes(Attributes.CreateName("outer"))
                     .RunWith(Sink.First<Attributes>(), Materializer);
 
-                var complete = await first.ShouldCompleteWithin(3.Seconds());
+                var complete = await first.WaitAsync(3.Seconds());
                 var attributes = complete.AttributeList.ToList();
                 var inner = new Attributes.Name("inner");
                 var outer = new Attributes.Name("outer");

@@ -44,8 +44,8 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(_materializer);
 
                 // wait until the underlying task is completed
-                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
-                await sinkMatVal.ShouldCompleteWithin(3.Seconds());
+                await sourceMatVal.WaitAsync(3.Seconds());
+                await sinkMatVal.WaitAsync(3.Seconds());
 
                 // should complete as soon as inner source has been materialized
                 sourceMatVal.Result.Should().Be("foo");
@@ -89,8 +89,8 @@ namespace Akka.Streams.Tests.Dsl
                 sourcePromise.SetResult(Underlying);
 
                 // wait until the underlying task is completed
-                await sourceMatVal.ShouldCompleteWithin(3.Seconds());
-                await sinkMatVal.ShouldCompleteWithin(3.Seconds());
+                await sourceMatVal.WaitAsync(3.Seconds());
+                await sinkMatVal.WaitAsync(3.Seconds());
                 
                 // should complete as soon as inner source has been materialized
                 sourceMatVal.Result.Should().Be("foo");
@@ -124,7 +124,10 @@ namespace Akka.Streams.Tests.Dsl
                 sourcePromise.SetResult(Underlying);
                 
                 // wait until the underlying task is completed
-                var ex = await sourceMatVal.ShouldThrowWithin<StreamDetachedException>(3.Seconds());
+                var task = AssertThrowsAsync<StreamDetachedException>(() => sourceMatVal);
+                await task.WaitAsync(3.Seconds());
+
+                var ex = task.Result;
                 ex.Message.Should().Be("Stream cancelled before Source Task completed");
             }, _materializer);
         }
@@ -142,8 +145,8 @@ namespace Akka.Streams.Tests.Dsl
                     .Run(_materializer);
 
                 // wait until the underlying task is completed
-                await sourceMatVal.ShouldThrowWithin(failure, 3.Seconds());
-                await sinkMatVal.ShouldThrowWithin(failure, 3.Seconds());
+                await AssertThrowsAsync(() => sourceMatVal, failure).WaitAsync(3.Seconds());
+                await AssertThrowsAsync(() => sinkMatVal, failure).WaitAsync(3.Seconds());
             }, _materializer);
         }
 
@@ -170,8 +173,8 @@ namespace Akka.Streams.Tests.Dsl
                 sourcePromise.SetException(failure);
                 
                 // wait until the underlying tasks are completed
-                await sourceMatVal.ShouldThrowWithin(failure, 3.Seconds());
-                await sinkMatVal.ShouldThrowWithin(failure, 3.Seconds());
+                await AssertThrowsAsync(() => sourceMatVal, failure).WaitAsync(3.Seconds());
+                await AssertThrowsAsync(() => sinkMatVal, failure).WaitAsync(3.Seconds());
             }, _materializer);
         }
 
@@ -192,7 +195,7 @@ namespace Akka.Streams.Tests.Dsl
                 sourcePromise.SetException(failure);
                 
                 // wait until the underlying tasks are completed
-                await sourceMatVal.ShouldThrowWithin(failure, 3.Seconds());
+                await AssertThrowsAsync(() => sourceMatVal, failure).WaitAsync(3.Seconds());
             }, _materializer);
         }
 
@@ -212,7 +215,7 @@ namespace Akka.Streams.Tests.Dsl
                 await subscriber.EnsureSubscriptionAsync();
                 sourcePromise.SetResult(Source.FromPublisher(publisher).MapMaterializedValue(_ => "woho"));
 
-                await matVal.ShouldCompleteWithin(3.Seconds());
+                await matVal.WaitAsync(3.Seconds());
                 // materialized value completes but still no demand
                 matVal.Result.Should().Be("woho");
 
@@ -242,7 +245,7 @@ namespace Akka.Streams.Tests.Dsl
                 await subscriber.EnsureSubscriptionAsync();
                 sourcePromise.SetResult(Source.FromPublisher(publisher).MapMaterializedValue(_ => "woho"));
 
-                await matVal.ShouldCompleteWithin(3.Seconds());
+                await matVal.WaitAsync(3.Seconds());
                 // materialized value completes but still no demand
                 matVal.Result.Should().Be("woho");
 
@@ -264,8 +267,8 @@ namespace Akka.Streams.Tests.Dsl
                 var (innerSourceMat, outerSinkMat) = Source.FromTaskSource(inner).ToMaterialized(Sink.Seq<int>(), Keep.Both).Run(_materializer);
 
                 // wait until the underlying tasks are completed
-                await outerSinkMat.ShouldThrowWithin(FailingMatGraphStage.Exception, 3.Seconds());
-                await innerSourceMat.ShouldThrowWithin(FailingMatGraphStage.Exception, 3.Seconds());
+                await AssertThrowsAsync(() => outerSinkMat, FailingMatGraphStage.Exception).WaitAsync(3.Seconds());
+                await AssertThrowsAsync(() => innerSourceMat, FailingMatGraphStage.Exception).WaitAsync(3.Seconds());
             }, _materializer);
         }
 

@@ -146,7 +146,7 @@ namespace Akka.Streams.Tests.Dsl
                 var task = InputSource.RunWith(
                     sum.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.ResumingDecider)),
                     Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Be(Expected - 50);
             }, Materializer);
         }
@@ -167,7 +167,7 @@ namespace Akka.Streams.Tests.Dsl
                 var task = InputSource.RunWith(
                     sum.WithAttributes(ActorAttributes.CreateSupervisionStrategy(Deciders.RestartingDecider)),
                     Materializer);
-                var complete = await task.ShouldCompleteWithin(3.Seconds());
+                var complete = await task.WaitAsync(3.Seconds());
                 complete.Should().Be(Enumerable.Range(51, 50).Sum());
             }, Materializer);
         }

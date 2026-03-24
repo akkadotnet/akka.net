@@ -12,6 +12,10 @@
     <ProjectReference Include="..\Akka.TestKit\Akka.TestKit.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
+    <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
+  </ItemGroup>
+  
   <ItemGroup>
     <EmbeddedResource Include="reference.conf" />
   </ItemGroup>

@@ -67,7 +67,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(1, 2, 4, 5)
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
             }, Materializer);
         }
         
@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(1, 2, 3, 4, 5)
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
             }, Materializer);
         }
 
@@ -99,7 +99,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(1, 2, 3, 4, 5)                                                                             
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
             }, Materializer);
         }
 
@@ -115,7 +115,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(1)
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(100))
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
                 probe.Cancel();
             }, Materializer);
         }
@@ -132,7 +132,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Via(sharedThrottle)
                     .Via(sharedThrottle)
                     .RunWith(Sink.First<int>(), Materializer)
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
                 t.Should().Be(1);
 
                 // It works with a new stream, too
@@ -140,7 +140,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Via(sharedThrottle)
                     .Via(sharedThrottle)
                     .RunWith(Sink.First<int>(), Materializer)
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
                 t.Should().Be(2);
             }, Materializer);
         }
@@ -224,7 +224,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(150))
                     .ExpectNext(4)
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
                 probe.Cancel();
                 // assertion may take longer then the throttle and therefore the next assertion fails
                 result.Should().BeEquivalentTo(new[] { new OnNext(1), new OnNext(2) });
@@ -323,7 +323,7 @@ namespace Akka.Streams.Tests.Dsl
                 var t1 = await Source.From(Enumerable.Range(1, 5))
                     .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Enforcing)
                     .RunWith(Sink.Seq<int>(), Materializer) // Burst is 5 so this will not fail
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
                 t1.Should().BeEquivalentTo(Enumerable.Range(1, 5));
 
                 await Awaiting(async () =>
@@ -332,7 +332,7 @@ namespace Akka.Streams.Tests.Dsl
                             .Throttle(1, TimeSpan.FromMilliseconds(200), 5, ThrottleMode.Enforcing)
                             .RunWith(Sink.Ignore<int>(), Materializer);
                     }).Should().ThrowAsync<OverflowException>()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
             }, Materializer);
         }
 
@@ -350,7 +350,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(1, 2, 3, 4, 5)                                                                             
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
             }, Materializer);
         }
 
@@ -366,7 +366,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(1, 2, 3, 4, 5)                                                                             
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
             }, Materializer);
         }
 
@@ -390,7 +390,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(list[3])
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
             }, Materializer);
         }
 
@@ -449,7 +449,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNoMsg(TimeSpan.FromMilliseconds(100))
                     .ExpectNext(4)
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
                 probe.Cancel();
                 
                 // assertion may take longer then the throttle and therefore the next assertion fails
@@ -547,7 +547,7 @@ namespace Akka.Streams.Tests.Dsl
                 var t1 = await Source.From(Enumerable.Range(1, 4))
                     .Throttle(2, TimeSpan.FromMilliseconds(200), 10, x => x, ThrottleMode.Enforcing)
                     .RunWith(Sink.Seq<int>(), Materializer)
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
                 t1.Should().BeEquivalentTo(Enumerable.Range(1, 4)); // Burst is 10 so this will not fail
 
                 await Awaiting(async () =>
@@ -556,7 +556,7 @@ namespace Akka.Streams.Tests.Dsl
                             .Throttle(2, TimeSpan.FromMilliseconds(200), 5, x => x, ThrottleMode.Enforcing)
                             .RunWith(Sink.Ignore<int>(), Materializer);
                     }).Should().ThrowAsync<OverflowException>()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
             }, Materializer);
         }
 
@@ -573,7 +573,7 @@ namespace Akka.Streams.Tests.Dsl
                     .ExpectNext(1, 2, 3, 4, 5)
                     .ExpectComplete()
                     .ExecuteAsync()
-                    .ShouldCompleteWithin(RemainingOrDefault);
+                    .WaitAsync(RemainingOrDefault);
             }, Materializer);
         }
 

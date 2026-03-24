@@ -53,7 +53,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            var complete = await result.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new []
             {
                 @"{ ""name"" : ""john"" }",
@@ -79,7 +79,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            var complete = await result.WaitAsync(3.Seconds());
             complete.Should().HaveCount(1).And.Subject.Should().Contain(@"{ ""name"" : ""john"" }");
         }
 
@@ -100,7 +100,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            var complete = await result.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
@@ -123,7 +123,7 @@ namespace Akka.Streams.Tests.Dsl
                     return list;
                 }, Materializer);
 
-            var complete = await result.ShouldCompleteWithin(3.Seconds());
+            var complete = await result.WaitAsync(3.Seconds());
             complete.Should().BeEquivalentTo(new[]
             {
                 @"{ ""name"" : ""john"" }",
@@ -149,7 +149,7 @@ namespace Akka.Streams.Tests.Dsl
                     list.Add(s.ToString());
                     return list;
                 }, Materializer)
-                .ShouldCompleteWithin(3.Seconds()); ;
+                .WaitAsync(3.Seconds()); ;
 
 
             result.Should().BeEquivalentTo(new[]

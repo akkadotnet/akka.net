@@ -87,7 +87,7 @@ namespace Akka.Streams.Tests.Dsl
                     Thread.Sleep(10);
                 return i;
             }).RunAggregate(0, (i, i1) => i + i1, Materializer);
-            var result = await task.ShouldCompleteWithin(10.Seconds());
+            var result = await task.WaitAsync(10.Seconds());
             result.Should().Be(500500);
         }
 
