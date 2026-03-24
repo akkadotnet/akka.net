@@ -268,6 +268,7 @@ namespace Akka.IO
                     _acceptCount++;
                     var accepted = saea.AcceptSocket!;
                     saea.AcceptSocket = null; // ready for re‑use
+                    accepted.Blocking = true; // NetworkStream requires blocking mode
                     var acceptedStream = new NetworkStream(accepted, ownsSocket: true);
                     var incomingConnection = Context.ActorOf(Props
                         .Create<TcpIncomingConnection>(_bind.TcpSettings ?? _tcp.Settings, accepted, _bind.Handler, _bind.Options, _bind.PullMode, acceptedStream)

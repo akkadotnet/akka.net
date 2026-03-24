@@ -61,8 +61,9 @@ namespace Akka.IO
 
         protected override Stream GetStream()
         {
-            // Create a NetworkStream wrapping the connected socket
-            // The socket is already connected at this point (via ConnectAsync)
+            // NetworkStream requires a blocking socket; the socket was created
+            // non-blocking for the SAEA connect phase — switch to blocking now.
+            Socket.Blocking = true;
             _connectedStream ??= new NetworkStream(Socket, ownsSocket: false);
             return _connectedStream;
         }

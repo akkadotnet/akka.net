@@ -74,6 +74,15 @@ namespace Akka.IO
         }
 
         /// <summary>
+        /// Self-tell: PipeReader.ReadAsync completed with data.
+        /// </summary>
+        private sealed class PipeReadCompleted
+        {
+            public ReadResult Result { get; }
+            public PipeReadCompleted(ReadResult result) { Result = result; }
+        }
+
+        /// <summary>
         /// Self-tell: all pending writes have been flushed (write channel completed + drained).
         /// </summary>
         private sealed class WritesFlushed
@@ -123,9 +132,8 @@ namespace Akka.IO
         // Write channel
         private Channel<WriteCommand>? _writeChannel;
 
-        // Background tasks
+        // Background tasks (pipe reading is actor-driven, not a background task)
         private Task? _readFromStreamTask;
-        private Task? _readFromPipeTask;
         private Task? _writeToStreamTask;
 
         // CTS for background task cancellation
@@ -137,9 +145,10 @@ namespace Akka.IO
         // Stream for network I/O (set by subclass via StartIoTasks)
         private Stream? _stream;
 
-        // Reading gate - controls whether ReadFromPipe emits Tcp.Received
-        private readonly SemaphoreSlim _readGate = new(0, 1);
-        private volatile bool _readingAllowed;
+        // Reading flow control — all state managed in actor thread, no synchronization needed
+        private PipeReader? _pipeReader;
+        private bool _readingAllowed;
+        private bool _readPending; // true when a PipeReader.ReadAsync is in flight
 
         // Actor references
         private IActorRef? _commander;
@@ -192,8 +201,6 @@ namespace Akka.IO
 
             if (Socket.Connected) AbortSocket();
             else CloseSocket();
-
-            _readGate.Dispose();
 
             if (_closeInformation != null)
             {
@@ -256,6 +263,7 @@ namespace Akka.IO
                 useSynchronizationContext: false);
 
             _pipe = new Pipe(pipeOptions);
+            _pipeReader = _pipe.Reader;
 
             // Bounded write channel
             var channelOptions = new BoundedChannelOptions(256)
@@ -266,14 +274,13 @@ namespace Akka.IO
             };
             _writeChannel = Channel.CreateBounded<WriteCommand>(channelOptions);
 
-            // Start background tasks
+            // Start background tasks (pipe reading is actor-driven via PipeTo)
             _readFromStreamTask = ReadFromStreamAsync(_stream, _pipe.Writer, ct);
-            _readFromPipeTask = ReadFromPipeAsync(_pipe.Reader, ct);
             _writeToStreamTask = WriteToStreamAsync(_stream, _writeChannel.Reader, ct);
 
-            // Track all tasks - self-tell on completion
+            // Track background tasks - self-tell on completion
             var self = Self;
-            Task.WhenAll(_readFromStreamTask, _readFromPipeTask, _writeToStreamTask)
+            Task.WhenAll(_readFromStreamTask, _writeToStreamTask)
                 .ContinueWith(t =>
                 {
                     if (t.IsFaulted && t.Exception != null)
@@ -360,6 +367,7 @@ namespace Akka.IO
         {
             Receive<Tcp.WriteCommand>(HandleWrite);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
+            Receive<PipeReadCompleted>(HandlePipeRead);
             SuspendResumeHandlers();
             Receive<StreamEof>(_ => HandleStreamEof());
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
@@ -379,6 +387,7 @@ namespace Akka.IO
             // Peer closed their write side, but we can still write
             Receive<Tcp.WriteCommand>(HandleWrite);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
+            Receive<PipeReadCompleted>(HandlePipeRead);
             SuspendResumeHandlers();
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
             Receive<IoTasksCompleted>(_ =>
@@ -406,6 +415,7 @@ namespace Akka.IO
                     Log.Debug("[TcpConnection] EOF received during closing - connection fully closed");
                 DoCloseConnection(closeSender, closeEvent is ConfirmedClosed ? closeEvent : ConfirmedClosed.Instance);
             });
+            Receive<PipeReadCompleted>(HandlePipeRead);
             Receive<WritesFlushed>(_ =>
             {
                 if (_traceLogging)
@@ -451,26 +461,95 @@ namespace Akka.IO
         }
 
         /* ================================================================= */
-        /*  Read flow control                                                */
+        /*  Read flow control — actor-driven pipe reads, no synchronization  */
         /* ================================================================= */
 
         private void AllowReading()
         {
-            if (!_readingAllowed)
-            {
-                _readingAllowed = true;
-                // Release the gate if it's currently blocking
-                if (_readGate.CurrentCount == 0)
-                {
-                    try { _readGate.Release(); } catch (SemaphoreFullException) { /* already released */ }
-                }
-            }
+            _readingAllowed = true;
+            RequestPipeRead();
         }
 
         private void SuspendReadingInternal()
         {
             _readingAllowed = false;
-            // The read-from-pipe task will check _readingAllowed and wait on the gate
+            // Current in-flight read (if any) will still complete and deliver,
+            // but no further reads will be requested until ResumeReading.
+        }
+
+        /// <summary>
+        /// Kicks off a PipeReader.ReadAsync and pipes the result back to Self.
+        /// No-op if a read is already in flight or the pipe isn't initialized.
+        /// </summary>
+        private void RequestPipeRead()
+        {
+            if (_readPending || _pipeReader == null || _cts == null) return;
+            _readPending = true;
+
+            if (_traceLogging) Log.Debug("[TcpConnection] RequestPipeRead: kicking off pipe read");
+
+            var self = Self;
+            var reader = _pipeReader;
+            var ct = _cts.Token;
+
+            var valueTask = reader.ReadAsync(ct);
+            if (valueTask.IsCompletedSuccessfully)
+            {
+                // Fast path: data already available in the pipe
+                self.Tell(new PipeReadCompleted(valueTask.Result));
+            }
+            else
+            {
+                valueTask.AsTask().ContinueWith(task =>
+                {
+                    if (task.IsCompletedSuccessfully)
+                        self.Tell(new PipeReadCompleted(task.Result));
+                    else if (task.IsFaulted)
+                        self.Tell(new IoTaskFailed(task.Exception!.InnerException ?? task.Exception));
+                    // Cancelled → actor is stopping, no message needed
+                }, TaskContinuationOptions.ExecuteSynchronously);
+            }
+        }
+
+        /// <summary>
+        /// Actor handles a completed pipe read: copy data, deliver to handler,
+        /// advance the reader, and optionally request the next read.
+        /// </summary>
+        private void HandlePipeRead(PipeReadCompleted msg)
+        {
+            _readPending = false;
+            var result = msg.Result;
+            var buffer = result.Buffer;
+
+            if (buffer.Length > 0)
+            {
+                var data = new byte[buffer.Length];
+                buffer.CopyTo(data);
+
+                _handler!.Tell(new Received(data));
+
+                if (_traceLogging)
+                    Log.Debug("[TcpConnection] Delivered {0} bytes to handler", data.Length);
+            }
+
+            _pipeReader!.AdvanceTo(buffer.End);
+
+            if (result.IsCompleted)
+            {
+                // Pipe writer completed (stream EOF or error).
+                // All buffered data has been delivered above — now signal EOF.
+                if (_traceLogging)
+                    Log.Debug("[TcpConnection] Pipe completed — signaling EOF");
+                Self.Tell(StreamEof.Instance);
+                return;
+            }
+
+            // In pull mode: wait for next ResumeReading before reading again.
+            // In non-pull mode: keep reading as long as not suspended.
+            if (!_pullMode && _readingAllowed)
+            {
+                RequestPipeRead();
+            }
         }
 
         /* ================================================================= */
@@ -558,12 +637,11 @@ namespace Akka.IO
 
                     if (bytesRead == 0)
                     {
-                        // EOF - peer closed their send side
+                        // EOF - peer closed their send side.
+                        // Don't self-tell StreamEof here — let the PipeReader detect
+                        // completion via IsCompleted so all buffered data is delivered first.
                         if (_traceLogging)
                             Log.Debug("[TcpConnection] ReadFromStream: EOF received (0 bytes read)");
-
-                        // Self-tell before completing writer to maintain ordering
-                        Self.Tell(StreamEof.Instance);
                         break;
                     }
 
@@ -597,107 +675,6 @@ namespace Akka.IO
             finally
             {
                 await writer.CompleteAsync().ConfigureAwait(false);
-            }
-        }
-
-        /// <summary>
-        /// Background task: reads from the Pipe reader, copies to pooled buffers, emits Tcp.Received.
-        /// </summary>
-        private async Task ReadFromPipeAsync(PipeReader reader, CancellationToken ct)
-        {
-            try
-            {
-                while (!ct.IsCancellationRequested)
-                {
-                    // Check the reading gate - wait if suspended
-                    if (!_readingAllowed)
-                    {
-                        try
-                        {
-                            await _readGate.WaitAsync(ct).ConfigureAwait(false);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            break;
-                        }
-                    }
-
-                    ReadResult result;
-                    try
-                    {
-                        result = await reader.ReadAsync(ct).ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
-
-                    var buffer = result.Buffer;
-
-                    if (buffer.Length > 0)
-                    {
-                        // Process each segment - copy to pooled buffer and emit Tcp.Received
-                        foreach (var segment in buffer)
-                        {
-                            if (segment.Length == 0) continue;
-
-                            // Copy to a new byte array for immutable delivery
-                            // (MemoryPool<byte>.Shared.Rent would return IMemoryOwner which
-                            // requires disposal - since actor messages have unbounded lifetime,
-                            // we use a simple byte array copy)
-                            var data = new byte[segment.Length];
-                            segment.Span.CopyTo(data);
-
-                            // Tell the handler
-                            _handler!.Tell(new Received(data));
-
-                            if (_traceLogging)
-                                Log.Debug("[TcpConnection] ReadFromPipe: emitted {0} bytes to handler", segment.Length);
-
-                            // In pull mode, auto-suspend after each delivery
-                            if (_pullMode)
-                            {
-                                _readingAllowed = false;
-                                // We need to wait for the next ResumeReading before continuing
-                                // But first advance the reader past what we've consumed so far
-                            }
-                        }
-                    }
-
-                    reader.AdvanceTo(buffer.End);
-
-                    if (result.IsCompleted)
-                    {
-                        if (_traceLogging)
-                            Log.Debug("[TcpConnection] ReadFromPipe: pipe completed");
-                        break;
-                    }
-
-                    // In pull mode, if we emitted data, wait for next ResumeReading
-                    if (_pullMode && buffer.Length > 0 && !_readingAllowed)
-                    {
-                        try
-                        {
-                            await _readGate.WaitAsync(ct).ConfigureAwait(false);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                // Normal cancellation
-            }
-            catch (Exception ex)
-            {
-                Self.Tell(new IoTaskFailed(ex));
-            }
-            finally
-            {
-                await reader.CompleteAsync().ConfigureAwait(false);
             }
         }
 
