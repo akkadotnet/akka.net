@@ -10,7 +10,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.IO;
 
@@ -80,10 +79,11 @@ namespace Akka.Streams.Implementation.IO
                 case OnNext next:
                     try
                     {
-                        var bytes = (ByteString)next.Element;
+                        var memory = (ReadOnlyMemory<byte>)next.Element;
                         //blocking write
-                        _outputStream.Write(bytes.ToArray(), 0, bytes.Count);
-                        _bytesWritten += bytes.Count;
+                        var arr = memory.ToArray();
+                        _outputStream.Write(arr, 0, memory.Length);
+                        _bytesWritten += memory.Length;
                         if (_autoFlush)
                             _outputStream.Flush();
                     }

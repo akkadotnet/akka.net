@@ -9,7 +9,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.IO;
@@ -22,7 +21,7 @@ namespace Akka.Streams.Implementation.IO
     /// Creates simple synchronous Sink which writes all incoming elements to the given file
     /// (creating it before hand if necessary).
     /// </summary>
-    internal sealed class FileSink : SinkModule<ByteString, Task<IOResult>>
+    internal sealed class FileSink : SinkModule<ReadOnlyMemory<byte>, Task<IOResult>>
     {
         private readonly FileInfo _f;
         private readonly long _startPosition;
@@ -40,7 +39,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="shape">TBD</param>
         /// <param name="autoFlush"></param>
         /// <param name="flushSignaler"></param>
-        public FileSink(FileInfo f, long startPosition, FileMode fileMode, Attributes attributes, SinkShape<ByteString> shape, bool autoFlush, FlushSignaler flushSignaler) : base(shape)
+        public FileSink(FileInfo f, long startPosition, FileMode fileMode, Attributes attributes, SinkShape<ReadOnlyMemory<byte>> shape, bool autoFlush, FlushSignaler flushSignaler) : base(shape)
         {
             _f = f;
             _startPosition = startPosition;
@@ -76,7 +75,7 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
-        protected override SinkModule<ByteString, Task<IOResult>> NewInstance(SinkShape<ByteString> shape)
+        protected override SinkModule<ReadOnlyMemory<byte>, Task<IOResult>> NewInstance(SinkShape<ReadOnlyMemory<byte>> shape)
             => new FileSink(_f, _startPosition, _fileMode, Attributes, shape, _autoFlush, _flushSignaler);
 
         /// <summary>
@@ -100,7 +99,7 @@ namespace Akka.Streams.Implementation.IO
                     .GetMandatoryAttribute<ActorAttributes.Dispatcher>()
                     .Name));
             materializer = ioResultPromise.Task;
-            return new ActorSubscriberImpl<ByteString>(actorRef);
+            return new ActorSubscriberImpl<ReadOnlyMemory<byte>>(actorRef);
         }
     }
 
@@ -109,7 +108,7 @@ namespace Akka.Streams.Implementation.IO
     /// Creates simple synchronous  Sink which writes all incoming elements to the given file
     /// (creating it before hand if necessary).
     /// </summary>
-    internal sealed class OutputStreamSink : SinkModule<ByteString, Task<IOResult>>
+    internal sealed class OutputStreamSink : SinkModule<ReadOnlyMemory<byte>, Task<IOResult>>
     {
         private readonly Func<Stream> _createOutput;
         private readonly bool _autoFlush;
@@ -121,7 +120,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="attributes">TBD</param>
         /// <param name="shape">TBD</param>
         /// <param name="autoFlush">TBD</param>
-        public OutputStreamSink(Func<Stream> createOutput, Attributes attributes, SinkShape<ByteString> shape, bool autoFlush) : base(shape)
+        public OutputStreamSink(Func<Stream> createOutput, Attributes attributes, SinkShape<ReadOnlyMemory<byte>> shape, bool autoFlush) : base(shape)
         {
             _createOutput = createOutput;
             Attributes = attributes;
@@ -146,7 +145,7 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
-        protected override SinkModule<ByteString, Task<IOResult>> NewInstance(SinkShape<ByteString> shape)
+        protected override SinkModule<ReadOnlyMemory<byte>, Task<IOResult>> NewInstance(SinkShape<ReadOnlyMemory<byte>> shape)
             => new OutputStreamSink(_createOutput, Attributes, shape, _autoFlush);
 
         /// <summary>
@@ -175,7 +174,7 @@ namespace Akka.Streams.Implementation.IO
             var actorRef = mat.ActorOf(context, props);
 
             materializer = ioResultPromise.Task;
-            return new ActorSubscriberImpl<ByteString>(actorRef);
+            return new ActorSubscriberImpl<ReadOnlyMemory<byte>>(actorRef);
         }
     }
 }

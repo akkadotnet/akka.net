@@ -42,19 +42,19 @@
 
 ## 5. Akka.Streams ByteString Migration
 
-- [ ] 5.1 Replace all `ByteString` references in `src/core/Akka.Streams/Dsl/` with `ReadOnlyMemory<byte>`
-- [ ] 5.2 Update `TcpStages.cs` (`IncomingConnectionStage`, `OutgoingConnectionStage`, `ConnectionSourceStage`) to use `ReadOnlyMemory<byte>` elements
-- [ ] 5.3 Update `StreamConverters`, `IOSources`, `IOSinks` and any other Streams I/O stages for ByteString removal
-- [ ] 5.4 Update Akka.Streams Framing stages (length-field framing, delimiter framing) for `ReadOnlyMemory<byte>`
-- [ ] 5.5 Fix all remaining compilation errors in `src/core/Akka.Streams/`
+- [x] 5.1 Replace all `ByteString` references in `src/core/Akka.Streams/Dsl/` with `ReadOnlyMemory<byte>`
+- [x] 5.2 Update `TcpStages.cs` (`IncomingConnectionStage`, `OutgoingConnectionStage`, `ConnectionSourceStage`) to use `ReadOnlyMemory<byte>` elements
+- [x] 5.3 Update `StreamConverters`, `IOSources`, `IOSinks` and any other Streams I/O stages for ByteString removal
+- [x] 5.4 Update Akka.Streams Framing stages (length-field framing, delimiter framing) for `ReadOnlyMemory<byte>`
+- [x] 5.5 Fix all remaining compilation errors in `src/core/Akka.Streams/`
 
 ## 6. Akka.Remote and Cluster ByteString Migration
 
-- [ ] 6.1 Update `MessageSerializer.cs` to work with `ReadOnlyMemory<byte>` instead of `ByteString`
-- [ ] 6.2 Update `AkkaPduCodec.cs` for `ReadOnlyMemory<byte>`
-- [ ] 6.3 Fix all compilation errors in `src/core/Akka.Remote/`
-- [ ] 6.4 Fix all compilation errors in `src/core/Akka.Cluster/`
-- [ ] 6.5 Fix all compilation errors in `src/contrib/` (Cluster.Sharding, Cluster.Tools, DistributedData, etc.)
+- [x] 6.1 Update `MessageSerializer.cs` to work with `ReadOnlyMemory<byte>` instead of `ByteString`
+- [x] 6.2 Update `AkkaPduCodec.cs` for `ReadOnlyMemory<byte>`
+- [x] 6.3 Fix all compilation errors in `src/core/Akka.Remote/`
+- [x] 6.4 Fix all compilation errors in `src/core/Akka.Cluster/`
+- [x] 6.5 Fix all compilation errors in `src/contrib/` (Cluster.Sharding, Cluster.Tools, DistributedData, etc.)
 
 ## 7. Test Suite Migration
 

@@ -8,7 +8,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using Akka.IO;
 using Akka.Pattern;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
@@ -19,7 +18,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ByteString>, Stream>
+    internal sealed class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ReadOnlyMemory<byte>>, Stream>
     {
         #region internal classes
 
@@ -77,13 +76,13 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly ByteString Bytes;
+            public readonly ReadOnlyMemory<byte> Bytes;
 
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="bytes">TBD</param>
-            public Data(ByteString bytes)
+            public Data(ReadOnlyMemory<byte> bytes)
             {
                 Bytes = bytes;
             }
@@ -221,7 +220,7 @@ namespace Akka.Streams.Implementation.IO
 
         #endregion
 
-        private readonly Inlet<ByteString> _in = new("InputStreamSink.in");
+        private readonly Inlet<ReadOnlyMemory<byte>> _in = new("InputStreamSink.in");
         private readonly TimeSpan _readTimeout;
         private BlockingCollection<IStreamToAdapterMessage> _dataQueue;
 
@@ -232,7 +231,7 @@ namespace Akka.Streams.Implementation.IO
         public InputStreamSinkStage(TimeSpan readTimeout)
         {
             _readTimeout = readTimeout;
-            Shape = new SinkShape<ByteString>(_in);
+            Shape = new SinkShape<ReadOnlyMemory<byte>>(_in);
         }
 
         /// <summary>
@@ -243,7 +242,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public override SinkShape<ByteString> Shape { get; }
+        public override SinkShape<ReadOnlyMemory<byte>> Shape { get; }
 
         /// <summary>
         /// TBD
@@ -338,7 +337,7 @@ namespace Akka.Streams.Implementation.IO
         private bool _isActive = true;
         private bool _isStageAlive = true;
         private bool _isInitialized;
-        private ByteString _detachedChunk;
+        private ReadOnlyMemory<byte>? _detachedChunk;
 
         /// <summary>
         /// TBD
@@ -424,7 +423,7 @@ namespace Akka.Streams.Implementation.IO
                 if (!_isStageAlive)
                     return 0;
 
-                if (_detachedChunk != null)
+                if (_detachedChunk.HasValue)
                     return ReadBytes(buffer, offset, count);
 
                 var success = _sharedBuffer.TryTake(out var msg, _readTimeout);
@@ -479,10 +478,10 @@ namespace Akka.Streams.Implementation.IO
 
         private int ReadBytes(byte[] buffer, int offset, int count)
         {
-            if (_detachedChunk == null || _detachedChunk.IsEmpty)
+            if (!_detachedChunk.HasValue || _detachedChunk.Value.IsEmpty)
                 throw new InvalidOperationException("Chunk must be pulled from shared buffer");
 
-            var availableInChunk = _detachedChunk.Count;
+            var availableInChunk = _detachedChunk.Value.Length;
             var readBytes = GetData(buffer, offset, count, 0);
 
             if (readBytes >= availableInChunk)
@@ -494,13 +493,14 @@ namespace Akka.Streams.Implementation.IO
         private int GetData(byte[] buffer, int offset, int count, int gotBytes)
         {
             var chunk = GrabDataChunk();
-            if (chunk == null)
+            if (!chunk.HasValue)
                 return gotBytes;
 
-            var size = chunk.Count;
+            var chunkValue = chunk.Value;
+            var size = chunkValue.Length;
             if (size <= count)
             {
-                Array.Copy(chunk.ToArray(), 0, buffer, offset, size);
+                chunkValue.Span.CopyTo(buffer.AsSpan(offset, size));
                 _detachedChunk = null;
                 if (size == count)
                     return gotBytes + size;
@@ -508,14 +508,14 @@ namespace Akka.Streams.Implementation.IO
                 return GetData(buffer, offset + size, count - size, gotBytes + size);
             }
 
-            Array.Copy(chunk.ToArray(), 0, buffer, offset, count);
-            _detachedChunk = chunk.Slice(count);
+            chunkValue.Slice(0, count).Span.CopyTo(buffer.AsSpan(offset, count));
+            _detachedChunk = chunkValue.Slice(count);
             return gotBytes + count;
         }
 
-        private ByteString GrabDataChunk()
+        private ReadOnlyMemory<byte>? GrabDataChunk()
         {
-            if (_detachedChunk != null)
+            if (_detachedChunk.HasValue)
                 return _detachedChunk;
 
             var chunk = _sharedBuffer.Take();

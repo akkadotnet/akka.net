@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="JsonObjectParser.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -8,7 +8,6 @@
 using System;
 using System.Linq;
 using Akka.Annotations;
-using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Util;
 using Akka.Util;
@@ -17,11 +16,11 @@ namespace Akka.Streams.Implementation
 {
     /// <summary>
     /// INTERNAL API: Use <see cref="JsonFraming"/> instead
-    /// 
-    /// **Mutable** framing implementation that given any number of <see cref="ByteString"/> chunks, can emit JSON objects contained within them.
+    ///
+    /// **Mutable** framing implementation that given any number of <see cref="ReadOnlyMemory{T}"/> chunks, can emit JSON objects contained within them.
     /// Typically JSON objects are separated by new-lines or commas, however a top-level JSON Array can also be understood and chunked up
     /// into valid JSON objects by this framing implementation.
-    /// 
+    ///
     /// Leading whitespace between elements will be trimmed.
     /// </summary>
     [InternalApi]
@@ -45,7 +44,7 @@ namespace Akka.Streams.Implementation
         private static bool IsWhitespace(byte input) => Whitespace.Contains(input);
 
         private readonly int _maximumObjectLength;
-        private ByteString _buffer = ByteString.Empty;
+        private ReadOnlyMemory<byte> _buffer = ReadOnlyMemory<byte>.Empty;
         private int _pos; // latest position of pointer while scanning for json object end
         private int _trimFront;
         private int _depth;
@@ -68,11 +67,24 @@ namespace Akka.Streams.Implementation
         private bool InsideObject => !OutsideObject;
 
         /// <summary>
-        /// Appends input ByteString to internal byte string buffer.
+        /// Appends input to internal buffer.
         /// Use <see cref="Poll"/> to extract contained JSON objects.
         /// </summary>
         /// <param name="input">TBD</param>
-        public void Offer(ByteString input) => _buffer += input;
+        public void Offer(ReadOnlyMemory<byte> input)
+        {
+            if (input.IsEmpty) return;
+            if (_buffer.IsEmpty)
+            {
+                _buffer = input;
+                return;
+            }
+            // Concatenate buffers
+            var combined = new byte[_buffer.Length + input.Length];
+            _buffer.Span.CopyTo(combined);
+            input.Span.CopyTo(combined.AsSpan(_buffer.Length));
+            _buffer = new ReadOnlyMemory<byte>(combined);
+        }
 
         /// <summary>
         /// TBD
@@ -80,20 +92,22 @@ namespace Akka.Streams.Implementation
         public bool IsEmpty => _buffer.IsEmpty;
 
         /// <summary>
-        /// Attempt to locate next complete JSON object in buffered <see cref="ByteString"/> and returns it if found.
+        /// Attempt to locate next complete JSON object in buffered data and returns it if found.
         /// May throw a <see cref="Framing.FramingException"/> if the contained JSON is invalid or max object size is exceeded.
         /// </summary>
         /// <exception cref="Framing.FramingException">TBD</exception>
         /// <returns>TBD</returns>
-        public Option<ByteString> Poll()
+        public Option<ReadOnlyMemory<byte>> Poll()
         {
             var foundObject = SeekObject();
             if(!foundObject || _pos == -1 || _pos == 0)
-                return Option<ByteString>.None;
+                return Option<ReadOnlyMemory<byte>>.None;
 
             var emit = _buffer.Slice(0, _pos);
             var buffer = _buffer.Slice(_pos);
-            _buffer = buffer.Compact();
+            // compact: copy to own array
+            var bufArr = buffer.ToArray();
+            _buffer = new ReadOnlyMemory<byte>(bufArr);
             _pos = 0;
 
             var trimFront = _trimFront;
@@ -103,7 +117,7 @@ namespace Akka.Streams.Implementation
                 return emit;
 
             var trimmed = emit.Slice(trimFront);
-            return trimmed.IsEmpty ? Option<ByteString>.None : trimmed;
+            return trimmed.IsEmpty ? Option<ReadOnlyMemory<byte>>.None : trimmed;
         }
 
         /// <summary>
@@ -112,9 +126,9 @@ namespace Akka.Streams.Implementation
         private bool SeekObject()
         {
             _completedObject = false;
-            var bufferSize = _buffer.Count;
+            var bufferSize = _buffer.Length;
             while (_pos != -1 && (_pos < bufferSize && _pos < _maximumObjectLength) && !_completedObject)
-                Proceed(_buffer[_pos]);
+                Proceed(_buffer.Span[_pos]);
 
             if (_pos >= _maximumObjectLength)
                 throw new Framing.FramingException(
@@ -180,7 +194,7 @@ namespace Akka.Streams.Implementation
                 _pos++;
             }
             else
-                throw new Framing.FramingException($"Invalid JSON encountered at position {_pos} of {_buffer}");
+                throw new Framing.FramingException($"Invalid JSON encountered at position {_pos} of buffer");
 
             _lastInput = input;
         }

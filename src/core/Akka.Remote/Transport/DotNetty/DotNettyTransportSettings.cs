@@ -18,6 +18,7 @@ using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;
+using ByteOrder = DotNetty.Buffers.ByteOrder;
 
 #nullable enable
 namespace Akka.Remote.Transport.DotNetty

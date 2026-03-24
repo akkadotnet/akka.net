@@ -321,7 +321,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
     {
         if (seqMsg.IsChunk)
         {
-            var chunk = new ChunkedMessage(IO.ByteString.CopyFrom(seqMsg.Message.Message.ToByteArray()),
+            var chunk = new ChunkedMessage(seqMsg.Message.Message.ToByteArray().AsMemory(),
                 seqMsg.FirstChunk,
                 seqMsg.LastChunk, seqMsg.Message.SerializerId, seqMsg.Message.MessageManifest.IsEmpty ? "" : seqMsg.Message.MessageManifest.ToStringUtf8());
             return ConsumerController.SequencedMessage<T>.FromChunkedMessage(seqMsg.ProducerId, seqMsg.SeqNr, chunk,
@@ -378,7 +378,7 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
     {
         if (messageSent.IsChunk)
         {
-            var chunk = new ChunkedMessage(IO.ByteString.CopyFrom(messageSent.Message.Message.ToByteArray()),
+            var chunk = new ChunkedMessage(messageSent.Message.Message.ToByteArray().AsMemory(),
                 messageSent.FirstChunk,
                 messageSent.LastChunk, messageSent.Message.SerializerId,
                 messageSent.Message.MessageManifest.IsEmpty ? "" : messageSent.Message.MessageManifest.ToStringUtf8()!);
