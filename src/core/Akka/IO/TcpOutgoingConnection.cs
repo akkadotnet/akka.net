@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -24,13 +25,15 @@ namespace Akka.IO
     {
         private readonly IActorRef _commander;
         private readonly Tcp.Connect _connect;
+        private readonly IStreamProvider _streamProvider;
 
         private SocketAsyncEventArgs _connectArgs;
 
         private readonly ConnectException _finishConnectNeverReturnedTrueException =
             new("Could not establish connection because finishConnect never returned true");
 
-        public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
+        public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect,
+            IStreamProvider? streamProvider = null)
             : base(
                 (connect.TcpSettings ?? tcp.Settings),
                 (connect.TcpSettings ?? tcp.Settings).OutgoingSocketForceIpv4
@@ -39,6 +42,7 @@ namespace Akka.IO
         {
             _commander = commander;
             _connect = connect;
+            _streamProvider = streamProvider ?? new TcpStreamProvider();
 
             foreach (var option in connect.Options)
             {

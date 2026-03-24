@@ -18,11 +18,11 @@
 
 ## 3. IStreamProvider and TcpStreamProvider
 
-- [ ] 3.1 Create `IStreamProvider` interface in `src/core/Akka/IO/` with `ConnectAsync` and `Close` methods
-- [ ] 3.2 Create `TcpStreamProvider` implementation returning `NetworkStream` from connected `Socket`
-- [ ] 3.3 Update `TcpOutgoingConnection` to accept `IStreamProvider` and use it for connection establishment
-- [ ] 3.4 Update `TcpListener` to wrap accepted sockets in `NetworkStream` and pass `Stream` to `TcpIncomingConnection`
-- [ ] 3.5 Update `TcpIncomingConnection` to accept a `Stream` parameter
+- [x] 3.1 Create `IStreamProvider` interface in `src/core/Akka/IO/` with `ConnectAsync` and `Close` methods
+- [x] 3.2 Create `TcpStreamProvider` implementation returning `NetworkStream` from connected `Socket`
+- [x] 3.3 Update `TcpOutgoingConnection` to accept `IStreamProvider` and use it for connection establishment
+- [x] 3.4 Update `TcpListener` to wrap accepted sockets in `NetworkStream` and pass `Stream` to `TcpIncomingConnection`
+- [x] 3.5 Update `TcpIncomingConnection` to accept a `Stream` parameter
 
 ## 4. TcpConnection Internal Rewrite (Stream + Pipe)
 

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
 using Akka.Actor;
 using System;
@@ -20,16 +21,19 @@ namespace Akka.IO
     {
         private readonly IActorRef _bindHandler;
         private readonly IEnumerable<Inet.SocketOption> _options;
-        
-        public TcpIncomingConnection(TcpSettings settings, 
-                                     Socket socket, 
+        private readonly Stream _stream;
+
+        public TcpIncomingConnection(TcpSettings settings,
+                                     Socket socket,
                                      IActorRef bindHandler,
-                                     IEnumerable<Inet.SocketOption> options, 
-                                     bool readThrottling)
+                                     IEnumerable<Inet.SocketOption> options,
+                                     bool readThrottling,
+                                     Stream? stream = null)
             : base(settings, socket, readThrottling)
         {
             _bindHandler = bindHandler;
             _options = options;
+            _stream = stream ?? new NetworkStream(socket, ownsSocket: false);
 
             Context.Watch(bindHandler); // sign death pact
         }
