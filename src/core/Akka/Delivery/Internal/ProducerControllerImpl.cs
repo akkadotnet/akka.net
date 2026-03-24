@@ -13,7 +13,6 @@ using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Event;
-using Akka.IO;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Extensions;
@@ -712,11 +711,11 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         {
             if (chunkedMessages.Count == 1)
                 _log.Debug("No chunking of SeqNo [{0}], size [{1}] bytes", CurrentState.CurrentSeqNr,
-                    chunkedMessages.First().SerializedMessage.Count);
+                    chunkedMessages.First().SerializedMessage.Length);
             else
                 _log.Debug("Chunking SeqNo [{0}] into [{1}] chunks, total size [{2}] bytes",
                     CurrentState.CurrentSeqNr, chunkedMessages.Count,
-                    chunkedMessages.Sum(x => x.SerializedMessage.Count));
+                    chunkedMessages.Sum(x => x.SerializedMessage.Length));
         }
 
         var i = 0;
@@ -748,7 +747,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         var bytes = serialization.Serialize(msg);
         if (bytes.Length <= chunkSize)
         {
-            var chunkedMessage = new ChunkedMessage(ByteString.FromBytes(bytes), true, true, serializerId, manifest);
+            var chunkedMessage = new ChunkedMessage(bytes.AsMemory(), true, true, serializerId, manifest);
             yield return chunkedMessage;
         }
         else
@@ -759,7 +758,7 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             {
                 var isLast = i == chunkCount - 1;
                 var nextChunk = Math.Min(chunkSize, bytes.Length - i * chunkSize); // needs to be the next chunkSize or remaining bytes, whichever is smaller.
-                var chunkedMessage = new ChunkedMessage(ByteString.FromBytes(bytes, i * chunkSize, nextChunk), first,
+                var chunkedMessage = new ChunkedMessage(bytes.AsMemory(i * chunkSize, nextChunk), first,
                     isLast, serializerId, manifest);
 
                 first = false;

@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
@@ -51,23 +52,20 @@ namespace Akka.IO
 
     /// <summary>
     /// INTERNAL API: Base class for TcpIncomingConnection and TcpOutgoingConnection.
-    /// 
-    /// TcpConnection is an actor abstraction over single connection between TCP server and client. 
-    /// Since actors are processing messages in synchronous fashion, they are way to provide thread 
+    ///
+    /// TcpConnection is an actor abstraction over single connection between TCP server and client.
+    /// Since actors are processing messages in synchronous fashion, they are way to provide thread
     /// safety over sockets and <see cref="SocketAsyncEventArgs"/>.
-    /// 
+    ///
     /// Every TcpConnection gets assigned a single socket fields and pair of <see cref="SocketAsyncEventArgs"/>,
     /// allocated once per lifetime of the connection actor:
-    /// 
-    /// - <see cref="_receiveArgs"/> used only for receiving data. It has assigned buffer, rent from 
-    ///   <see cref="TcpExt"/> once and recycled back upon actor termination. Once data has been received, it's 
-    ///   copied to a separate <see cref="ByteString"/> object (so it's NOT a zero-copy operation).
-    /// - <see cref="_sendArgs"/> used only for sending data. Unlike receive args, it doesn't have any buffer 
-    ///   assigned. Instead it uses treats incoming data as a buffer (it's safe due to immutable nature of
-    ///   <see cref="ByteString"/> object). Therefore writes don't allocate any byte buffers.
-    /// 
-    /// Similar approach can be found on other networking libraries (i.e. System.IO.Pipelines and EventStore).
-    /// Both buffers and <see cref="SocketAsyncEventArgs"/> are pooled to reduce GC pressure.
+    ///
+    /// - <see cref="_receiveArgs"/> used only for receiving data. It has an assigned buffer, rented once and
+    ///   recycled back upon actor termination. Once data has been received, it is copied to a
+    ///   <see cref="ReadOnlyMemory{T}"/> backed by a new byte array (so it is NOT a zero-copy operation).
+    /// - <see cref="_sendArgs"/> used only for sending data. It uses the <see cref="ArraySegment{T}"/> from
+    ///   the incoming <see cref="ReadOnlyMemory{T}"/> data when possible, falling back to a copy when the
+    ///   memory is not array-backed.
     /// </summary>
     internal abstract class TcpConnection : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
@@ -259,7 +257,7 @@ namespace Akka.IO
 
             _commander = commander;
             Context.WatchWith(_commander, CommanderDied.Instance);
-            commander.Tell(new Connected(Socket.RemoteEndPoint, Socket.LocalEndPoint));
+            commander.Tell(new Connected(Socket.RemoteEndPoint!, Socket.LocalEndPoint!));
 
             Context.SetReceiveTimeout(Settings.RegisterTimeout);
             _commander = commander;
@@ -423,7 +421,10 @@ namespace Akka.IO
                         _totalReceivedBytes);
                 }
 
-                _handler!.Tell(new Received(ByteString.CopyFrom(_receiveBuffer, 0, ea.BytesTransferred)));
+                // Copy received bytes into a new array-backed ReadOnlyMemory<byte> for immutable delivery.
+                var receivedBytes = new byte[ea.BytesTransferred];
+                _receiveBuffer.AsSpan(0, ea.BytesTransferred).CopyTo(receivedBytes);
+                _handler!.Tell(new Received(receivedBytes));
 
                 if (_pullMode)
                 {
@@ -558,7 +559,7 @@ namespace Akka.IO
             if (!_state.CanSend) return;
             if (_state.IsSending || _pendingWrites.Count == 0) return;
 
-            var segs = new List<ByteBuffer>(8);
+            var segs = new List<ArraySegment<byte>>(8);
             var batchBytes = 0;
 
             while (_pendingWrites.Count > 0 && batchBytes < Settings.MaxFrameSizeBytes)
@@ -567,13 +568,13 @@ namespace Akka.IO
 
                 var data = w.Data;
                 var offset = _partialWriteOffset ?? 0;
-                var remaining = data.Count - offset;
+                var remaining = data.Length - offset;
 
                 // Handle empty writes immediately
                 if (remaining == 0)
                 {
                     _pendingWrites.Dequeue();
-                    _state = _state with { QueuedBytes = _state.QueuedBytes - w.Data.Count };
+                    _state = _state with { QueuedBytes = _state.QueuedBytes - (int)w.Bytes };
                     _partialWriteOffset = null;
                     if (w.WantsAck) snd.Tell(w.Ack); // message was already sent - ACK right away
                     if (_traceLogging)
@@ -586,16 +587,26 @@ namespace Akka.IO
                 if (_traceLogging)
                     Log.Debug($"[TcpConnection] TrySend batching: offset={offset}, remaining={remaining}, toSend={toSend}, batchBytes={batchBytes}");
 
-                // non-copying operation - just creates a new ArraySegment without copying any bytes
-                var chunk = data.Slice(offset, toSend);
-                segs.AddRange(chunk.Buffers);
+                // Slice the relevant portion and convert to ArraySegment<byte> for the socket.
+                // If the underlying memory is array-backed we get a zero-copy ArraySegment;
+                // otherwise we copy into a rented buffer.
+                var slice = data.Slice(offset, toSend);
+                if (MemoryMarshal.TryGetArray(slice, out var seg))
+                {
+                    segs.Add(seg);
+                }
+                else
+                {
+                    var copy = slice.ToArray();
+                    segs.Add(new ArraySegment<byte>(copy));
+                }
                 batchBytes += toSend;
 
                 if (toSend == remaining)
                 {
                     // Full write completed
                     _pendingWrites.Dequeue();
-                    _state = _state with { QueuedBytes = _state.QueuedBytes - w.Data.Count };
+                    _state = _state with { QueuedBytes = _state.QueuedBytes - (int)w.Bytes };
                     _partialWriteOffset = null;
                     if (w.WantsAck) _sendArgs.PendingAcks.Add((snd, w.Ack));
                     if (_traceLogging)

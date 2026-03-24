@@ -599,7 +599,7 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
 
     private SequencedMessage<T> AssembleChunks(ImmutableList<SequencedMessage<T>> collectedChunks)
     {
-        var bufferSize = collectedChunks.Sum(chunk => chunk.Message.Chunk!.Value.SerializedMessage.Count);
+        var bufferSize = collectedChunks.Sum(chunk => chunk.Message.Chunk!.Value.SerializedMessage.Length);
         byte[] bytes;
         using (var mem = MemoryPool<byte>.Shared.Rent(bufferSize))
         {
@@ -607,8 +607,8 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
             var memory = mem.Memory;
             foreach (var b in collectedChunks.Select(c => c.Message.Chunk!.Value.SerializedMessage))
             {
-                b.CopyTo(ref memory, curIndex, b.Count);
-                curIndex += b.Count;
+                b.CopyTo(memory.Slice(curIndex));
+                curIndex += b.Length;
             }
 
             // have to slice the buffer here since the memory pool may have allocated more than we needed

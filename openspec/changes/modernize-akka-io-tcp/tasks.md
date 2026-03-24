@@ -8,13 +8,13 @@
 
 ## 2. ByteString Deletion and Akka.IO Message Type Changes
 
-- [ ] 2.1 Change `Tcp.Write.Data` from `ByteString` to `ReadOnlyMemory<byte>` in `src/core/Akka/IO/Tcp.cs`
-- [ ] 2.2 Change `Tcp.Received.Data` from `ByteString` to `ReadOnlyMemory<byte>` in `src/core/Akka/IO/Tcp.cs`
-- [ ] 2.3 Update `Tcp.CompoundWrite` and `Tcp.SimpleWriteCommand` to use `ReadOnlyMemory<byte>`
-- [ ] 2.4 Update all `Write.Create()` factory method overloads
-- [ ] 2.5 Delete `src/core/Akka/Util/ByteString.cs`
-- [ ] 2.6 Fix all compilation errors in `src/core/Akka/IO/` resulting from ByteString removal
-- [ ] 2.7 Fix all compilation errors in `src/core/Akka/` (non-IO) resulting from ByteString removal
+- [x] 2.1 Change `Tcp.Write.Data` from `ByteString` to `ReadOnlyMemory<byte>` in `src/core/Akka/IO/Tcp.cs`
+- [x] 2.2 Change `Tcp.Received.Data` from `ByteString` to `ReadOnlyMemory<byte>` in `src/core/Akka/IO/Tcp.cs`
+- [x] 2.3 Update `Tcp.CompoundWrite` and `Tcp.SimpleWriteCommand` to use `ReadOnlyMemory<byte>`
+- [x] 2.4 Update all `Write.Create()` factory method overloads
+- [x] 2.5 Delete `src/core/Akka/Util/ByteString.cs`
+- [x] 2.6 Fix all compilation errors in `src/core/Akka/IO/` resulting from ByteString removal
+- [x] 2.7 Fix all compilation errors in `src/core/Akka/` (non-IO) resulting from ByteString removal
 
 ## 3. IStreamProvider and TcpStreamProvider
 

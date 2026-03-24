@@ -9,7 +9,6 @@
 using System;
 using System.Collections.Generic;
 using Akka.Annotations;
-using Akka.IO;
 
 namespace Akka.Delivery.Internal;
 
@@ -101,7 +100,7 @@ public readonly struct MessageOrChunk<T> : IEquatable<MessageOrChunk<T>>
 [InternalApi]
 public readonly struct ChunkedMessage
 {
-    public ChunkedMessage(ByteString serializedMessage, bool firstChunk, bool lastChunk, int serializerId,
+    public ChunkedMessage(ReadOnlyMemory<byte> serializedMessage, bool firstChunk, bool lastChunk, int serializerId,
         string manifest)
     {
         SerializedMessage = serializedMessage;
@@ -111,7 +110,7 @@ public readonly struct ChunkedMessage
         Manifest = manifest;
     }
 
-    public ByteString SerializedMessage { get; }
+    public ReadOnlyMemory<byte> SerializedMessage { get; }
 
     public bool FirstChunk { get; }
 
@@ -123,6 +122,6 @@ public readonly struct ChunkedMessage
 
     public override string ToString()
     {
-        return $"ChunkedMessage({SerializedMessage.Count}, {FirstChunk}, {LastChunk}, {SerializerId}, {Manifest})";
+        return $"ChunkedMessage({SerializedMessage.Length}, {FirstChunk}, {LastChunk}, {SerializerId}, {Manifest})";
     }
 }
