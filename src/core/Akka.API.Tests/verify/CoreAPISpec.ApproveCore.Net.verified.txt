@@ -22,6 +22,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.TestKit.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.TestKit.Xunit2.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Streams")]
