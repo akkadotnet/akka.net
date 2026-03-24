@@ -26,19 +26,19 @@
 
 ## 4. TcpConnection Internal Rewrite (Stream + Pipe)
 
-- [ ] 4.1 Add `System.IO.Pipelines` package reference to `Akka.csproj`
-- [ ] 4.2 Replace SAEA receive infrastructure with Pipe-based read loop in `TcpConnection.cs`: background task reads from `Stream` into `Pipe.Writer`
-- [ ] 4.3 Implement read-from-pipe task: reads from `Pipe.Reader`, copies to `MemoryPool<byte>.Shared.Rent()` buffer, emits `Tcp.Received` via actor Tell
-- [ ] 4.4 Replace SAEA send infrastructure with Stream-based write loop: dequeue pending writes, call `stream.WriteAsync(ReadOnlyMemory<byte>)`, deliver ACKs
-- [ ] 4.5 Implement `SuspendReading` / `ResumeReading` flow control on the read-from-pipe task
-- [ ] 4.6 Implement pull-mode support (each `Tcp.Received` requires preceding `ResumeReading`)
-- [ ] 4.7 Implement background task lifecycle coordination: `Task.WhenAll` tracking, self-tell on completion, `Interlocked.CompareExchange` CTS guard
-- [ ] 4.8 Implement `Tcp.Close` shutdown sequence: complete write channel → flush → cancel read CTS → await tasks → close Stream → emit `Tcp.Closed`
-- [ ] 4.9 Implement `Tcp.Abort` shutdown: immediate CTS cancel → await tasks → close Stream → emit `Tcp.Aborted`
-- [ ] 4.10 Implement `Tcp.ConfirmedClose` half-close: send FIN, await peer FIN, emit `Tcp.ConfirmedClosed`
-- [ ] 4.11 Implement graceful EOF handling: `stream.ReadAsync()` returns 0 → complete PipeWriter → emit `Tcp.PeerClosed`
-- [ ] 4.12 Implement error handling: I/O exceptions → emit `Tcp.ErrorClosed` with cause message
-- [ ] 4.13 Remove all `SocketAsyncEventArgs` usage and the `Buffers/` directory if no longer needed
+- [x] 4.1 Add `System.IO.Pipelines` package reference to `Akka.csproj` — not needed, `System.IO.Pipelines` is included in the net10.0 shared framework
+- [x] 4.2 Replace SAEA receive infrastructure with Pipe-based read loop in `TcpConnection.cs`: background task reads from `Stream` into `Pipe.Writer`
+- [x] 4.3 Implement read-from-pipe task: reads from `Pipe.Reader`, copies to `MemoryPool<byte>.Shared.Rent()` buffer, emits `Tcp.Received` via actor Tell
+- [x] 4.4 Replace SAEA send infrastructure with Stream-based write loop: dequeue pending writes, call `stream.WriteAsync(ReadOnlyMemory<byte>)`, deliver ACKs
+- [x] 4.5 Implement `SuspendReading` / `ResumeReading` flow control on the read-from-pipe task
+- [x] 4.6 Implement pull-mode support (each `Tcp.Received` requires preceding `ResumeReading`)
+- [x] 4.7 Implement background task lifecycle coordination: `Task.WhenAll` tracking, self-tell on completion, `Interlocked.CompareExchange` CTS guard
+- [x] 4.8 Implement `Tcp.Close` shutdown sequence: complete write channel → flush → cancel read CTS → await tasks → close Stream → emit `Tcp.Closed`
+- [x] 4.9 Implement `Tcp.Abort` shutdown: immediate CTS cancel → await tasks → close Stream → emit `Tcp.Aborted`
+- [x] 4.10 Implement `Tcp.ConfirmedClose` half-close: send FIN, await peer FIN, emit `Tcp.ConfirmedClosed`
+- [x] 4.11 Implement graceful EOF handling: `stream.ReadAsync()` returns 0 → complete PipeWriter → emit `Tcp.PeerClosed`
+- [x] 4.12 Implement error handling: I/O exceptions → emit `Tcp.ErrorClosed` with cause message
+- [x] 4.13 Remove all `SocketAsyncEventArgs` usage from TcpConnection — `Buffers/` directory and `SocketEventArgsPool.cs` retained (still used by UDP)
 
 ## 5. Akka.Streams ByteString Migration
 

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TcpIncomingConnection.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -9,8 +9,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
 using Akka.Actor;
-using System;
-using Akka.Util;
+
+#nullable enable
 
 namespace Akka.IO
 {
@@ -36,6 +36,11 @@ namespace Akka.IO
             _stream = stream ?? new NetworkStream(socket, ownsSocket: false);
 
             Context.Watch(bindHandler); // sign death pact
+        }
+
+        protected override Stream GetStream()
+        {
+            return _stream;
         }
 
         protected override void PreStart()
