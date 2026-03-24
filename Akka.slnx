@@ -127,6 +127,10 @@
     <Project Path="src/core/Akka.Docs.Tutorials/Akka.Docs.Tutorials.csproj" />
     <Project Path="src/core/Akka.FSharp.Tests/Akka.FSharp.Tests.fsproj" />
     <Project Path="src/core/Akka.FSharp/Akka.FSharp.fsproj" />
+    <Project Path="src/core/Akka.MultiNode.RemoteHost/Akka.MultiNode.RemoteHost.csproj" />
+    <Project Path="src/core/Akka.MultiNode.SampleMultiNodeTests/Akka.MultiNode.SampleMultiNodeTests.csproj" />
+    <Project Path="src/core/Akka.MultiNode.TestAdapter.Tests/Akka.MultiNode.TestAdapter.Tests.csproj" />
+    <Project Path="src/core/Akka.MultiNode.TestAdapter/Akka.MultiNode.TestAdapter.csproj" />
     <Project Path="src/core/Akka.Persistence.FSharp/Akka.Persistence.FSharp.fsproj" />
     <Project Path="src/core/Akka.Persistence.Query.Tests/Akka.Persistence.Query.Tests.csproj">
       <Build Solution="*|x64" Project="false" />
