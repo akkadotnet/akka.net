@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

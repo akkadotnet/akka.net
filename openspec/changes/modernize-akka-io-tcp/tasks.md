@@ -1,9 +1,10 @@
 ## 1. Target Framework Migration
 
-- [ ] 1.1 Update `Directory.Build.props`: change `NetStandardLibVersion` from `netstandard2.0` to `netstandard2.1`
-- [ ] 1.2 Remove `Polyfill` package reference from `src/core/Akka/Akka.csproj` (no longer needed for Span/Memory polyfills)
-- [ ] 1.3 Update `NetTestVersion` and any test framework TFM references as needed
-- [ ] 1.4 Verify solution builds with `dotnet build` on new TFMs — fix any immediate breaks from TFM change alone
+- [x] 1.1 Update `Directory.Build.props`: replace `NetStandardLibVersion` value with `net10.0`, remove `NetLibVersion` (or set both to `net10.0`). All library projects will target `net10.0` only.
+- [x] 1.2 Remove `Polyfill` package references from all csproj files (no longer needed — net10.0 has all APIs natively)
+- [x] 1.3 Remove all netstandard-conditional `<ItemGroup>` blocks from csproj files (no more multi-TFM conditionals)
+- [x] 1.4 Update any csproj files that reference `$(NetStandardLibVersion)` or `$(NetLibVersion)` to use a single `net10.0` target
+- [x] 1.5 Verify solution builds with `dotnet build` — fix any immediate breaks from TFM change alone
 
 ## 2. ByteString Deletion and Akka.IO Message Type Changes
 

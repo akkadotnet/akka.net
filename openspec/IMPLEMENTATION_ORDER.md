@@ -35,7 +35,7 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 **Implementation strategy**: Dark period approach. Delete ByteString, use compiler errors as todo list, fix module by module until `dotnet build` succeeds. Then replace SAEA with Stream+Pipe and get tests passing.
 
 **Completion criteria**:
-- `dotnet build -warnaserror` passes on netstandard2.1 + net6.0
+- `dotnet build -warnaserror` passes on net10.0
 - `dotnet test -c Release --framework net10.0` — all Akka.IO TCP tests pass
 - `dotnet test -c Release --framework net10.0` — all Akka.Streams TCP tests pass
 - `dotnet test -c Release --framework net10.0` — all Akka.Remote tests pass (with DotNetty still present but ByteString removed)

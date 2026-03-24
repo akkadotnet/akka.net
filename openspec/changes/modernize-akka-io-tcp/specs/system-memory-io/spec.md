@@ -34,15 +34,15 @@ The `Akka.Util.ByteString` class SHALL be deleted from the codebase. All referen
 - **THEN** they SHALL work with `ReadOnlyMemory<byte>` or `ReadOnlySequence<byte>` instead of `ByteString`
 
 ### Requirement: Target frameworks updated
-All Akka.NET library projects SHALL target `netstandard2.1` and `net6.0` as minimum. The `netstandard2.0` target SHALL be removed.
+All Akka.NET library projects SHALL target `net10.0` only. The `netstandard2.0` and `net6.0` targets SHALL be removed. No version of .NET Framework supports netstandard2.1+, so .NET Framework compatibility is lost regardless of whether the target is netstandard2.1 or net10.0. Targeting net10.0 directly eliminates conditional compilation and polyfill complexity.
 
-#### Scenario: Build with netstandard2.1 APIs
+#### Scenario: Build with net10.0 APIs
 - **WHEN** the solution is built
-- **THEN** all projects SHALL compile against `netstandard2.1` and `net6.0` without polyfill packages for `Span<T>`, `Memory<T>`, or `IBufferWriter<T>`
+- **THEN** all projects SHALL compile against `net10.0` without polyfill packages for `Span<T>`, `Memory<T>`, or `IBufferWriter<T>`
 
-#### Scenario: Socket APIs available on all targets
+#### Scenario: Socket APIs available without conditionals
 - **WHEN** Akka.IO TCP code calls `Stream.ReadAsync(Memory<byte>)` or `Stream.WriteAsync(ReadOnlyMemory<byte>)`
-- **THEN** these APIs SHALL be available without conditional compilation on all target frameworks
+- **THEN** these APIs SHALL be available without conditional compilation (single TFM)
 
 ### Requirement: Akka.IO TCP messaging protocol preserved
 All Akka.IO TCP message types other than `Tcp.Write` and `Tcp.Received` payload types SHALL remain unchanged. The actor interaction patterns SHALL remain identical.

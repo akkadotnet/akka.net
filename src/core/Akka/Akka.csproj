@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <Description>Canonical actor model implementation for .NET with local + distributed actors in C# and F#.</Description>
     <PackageTags>$(AkkaPackageTags)</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -15,18 +15,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.ObjectPool" Version="$(MsExtVersion)" />
     <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-    <PackageReference Include="System.Collections.Immutable" Version="$(MicrosoftLibVersion)" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
+<PackageReference Include="System.Configuration.ConfigurationManager" Version="$(ConfigurationManagerVersion)"/>
   </ItemGroup>
 
-  <!-- Packages only for NetStandard -->
-  <ItemGroup Condition="'$(TargetFramework)' == '$(NetStandardLibVersion)'">
-    <PackageReference Include="Polyfill" Version="1.28.0" PrivateAssets="all" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="$(MicrosoftLibVersion)" />
-    <PackageReference Include="System.Reflection.Emit" Version="4.7.0" />
-    <PackageReference Include="System.Threading.Channels" Version="$(MicrosoftLibVersion)" />
-  </ItemGroup>
-  
   <ItemGroup Label="PublicAnalyzers">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" />
   </ItemGroup>

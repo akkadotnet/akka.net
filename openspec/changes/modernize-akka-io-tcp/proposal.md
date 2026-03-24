@@ -7,7 +7,7 @@ Akka.NET's TCP I/O layer uses two legacy primitives that block the 1.6 transport
 - **BREAKING**: `Tcp.Write.Data` changes from `ByteString` to `ReadOnlyMemory<byte>`
 - **BREAKING**: `Tcp.Received.Data` changes from `ByteString` to `ReadOnlyMemory<byte>`
 - **BREAKING**: `ByteString` class hard-deleted from `Akka.Util` and all Akka.Streams usage replaced with `ReadOnlyMemory<byte>` / `Memory<byte>`
-- **BREAKING**: Drop `netstandard2.0` target. New minimum: `netstandard2.1` + `net6.0`. Required for `Stream.ReadAsync(Memory<byte>)` and `Socket.SendAsync(Memory<byte>)`. Drops .NET Framework 4.8 support.
+- **BREAKING**: Drop `netstandard2.0` and `net6.0` targets. All library projects target `net10.0` only. Required for `Stream.ReadAsync(Memory<byte>)` and `Socket.SendAsync(Memory<byte>)`. Drops .NET Framework 4.8 and older .NET support. No version of .NET Framework supports netstandard2.1+, so .NET Framework compat is lost regardless.
 - Replace `SocketAsyncEventArgs`-based I/O in `TcpConnection.cs` with `Stream` + `System.IO.Pipelines` (`Pipe`)
 - Add `IStreamProvider` abstraction to `TcpOutgoingConnection` and `TcpIncomingConnection` (proven in TurboMQTT)
 - `TcpStreamProvider` returns `NetworkStream` for plaintext connections

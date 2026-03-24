@@ -32,7 +32,7 @@ namespace Akka.TestKit.Xunit2.Internals
         }
 
         /// <inheritdoc/>
-        #if NETSTANDARD2_0
+        #if NETSTANDARD2_0 || NETSTANDARD2_1
         public new bool Equals(object x, object y) => _innerComparer.Equals((T)x, (T)y);
         #else
         public new bool Equals(object? x, object? y) => _innerComparer.Equals((T?)x, (T?)y);

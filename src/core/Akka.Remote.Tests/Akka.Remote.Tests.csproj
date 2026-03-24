@@ -1,15 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\xunitSettings.props" />
 
-  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+  <PropertyGroup>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-  </PropertyGroup>
-
-  <!-- disable .NET Framework on Linux-->
-  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
-    <TargetFramework>$(NetTestVersion)</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -52,8 +47,5 @@
     <PackageReference Include="FsCheck.Xunit.v3" Version="$(FsCheck3Version)" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <DefineConstants>$(DefineConstants);HELIOS</DefineConstants>
-  </PropertyGroup>
 
 </Project>

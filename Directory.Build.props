@@ -13,7 +13,7 @@
     <!-- 
       xUnit1051 is to suppress xUnit oppinionated cancellation token warning. 
     -->
-    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051;SYSLIB0050;SYSLIB0051;CS0672;CA2022</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <!-- Set the language version for C# if we're not inside an F# project -->
@@ -34,9 +34,7 @@
     <BenchmarkDotNetVersion>0.15.8</BenchmarkDotNetVersion>
     <NetTestVersion>net10.0</NetTestVersion>
     <FsharpVersion>6.0.5</FsharpVersion>
-    <NetFrameworkTestVersion>net48</NetFrameworkTestVersion>
-    <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
-    <NetLibVersion>net6.0</NetLibVersion>
+    <NetStandardLibVersion>net10.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <FsCheckVersion>2.16.6</FsCheckVersion>

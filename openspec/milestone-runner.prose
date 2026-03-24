@@ -134,10 +134,14 @@ loop until **all tasks are checked off AND dotnet build succeeds AND dotnet test
           IMPORTANT:
           - Read the design.md and spec files if you need architectural context
           - Check off each task as you complete it in openspec/changes/{milestone}/tasks.md
-          - Commit your changes with a clear message after completing the task group
           - If something is unclear or you hit a blocker, say so in your output
+          - Do NOT commit — the orchestrator commits after verifying your work
         """
         context: [plan, orders]
+
+      # Commit after each completed task group
+      session: setup
+        prompt: "Run: git add -A && git commit -m 'task group complete: {orders.TARGET}'"
 
     option "fix_build_errors":
       session: worker
@@ -150,10 +154,14 @@ loop until **all tasks are checked off AND dotnet build succeeds AND dotnet test
           IMPORTANT:
           - Focus ONLY on fixing the compilation errors described above
           - Do not make unrelated changes
-          - Commit fixes with message describing what was fixed
           - Run dotnet build after your fixes to verify progress
+          - Do NOT commit — the orchestrator commits after verifying your work
         """
         context: [plan, orders]
+
+      # Commit after build fixes
+      session: setup
+        prompt: "Run: git add -A && git commit -m 'fix build errors: {orders.TARGET}'"
 
     option "run_tests":
       let test_results = resume: captain
@@ -177,10 +185,14 @@ loop until **all tasks are checked off AND dotnet build succeeds AND dotnet test
           IMPORTANT:
           - Focus ONLY on fixing the described test failures
           - Do not change test assertions unless the behavior intentionally changed
-          - Commit fixes with message describing what was fixed
           - Run the failing tests after your fixes to verify
+          - Do NOT commit — the orchestrator commits after verifying your work
         """
         context: [plan, orders]
+
+      # Commit after test fixes
+      session: setup
+        prompt: "Run: git add -A && git commit -m 'fix test failures: {orders.TARGET}'"
 
     option "milestone_complete":
       session: setup

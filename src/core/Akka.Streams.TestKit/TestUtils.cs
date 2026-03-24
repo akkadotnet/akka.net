@@ -5,10 +5,13 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Akka.Streams.TestKit
 {
@@ -32,4 +35,40 @@ namespace Akka.Streams.TestKit
             return Enumerable.Range(0, numberOfAddresses).Select(_ => TemporaryServerAddress(hostName, udp));
         }
     }
+
+#if NETSTANDARD2_1
+    /// <summary>
+    /// INTERNAL API: Polyfills for <c>Task.WaitAsync</c> overloads on netstandard2.1.
+    /// </summary>
+    internal static class TaskWaitAsyncPolyfill
+    {
+        public static async Task WaitAsync(this Task task, TimeSpan timeout, CancellationToken cancellationToken = default)
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var delay = Task.Delay(timeout, linked.Token);
+            var completed = await Task.WhenAny(task, delay).ConfigureAwait(false);
+            if (completed == delay)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                throw new TimeoutException();
+            }
+            linked.Cancel();
+            await task.ConfigureAwait(false);
+        }
+
+        public static async Task<T> WaitAsync<T>(this Task<T> task, TimeSpan timeout, CancellationToken cancellationToken = default)
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var delay = Task.Delay(timeout, linked.Token);
+            var completed = await Task.WhenAny(task, delay).ConfigureAwait(false);
+            if (completed == delay)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                throw new TimeoutException();
+            }
+            linked.Cancel();
+            return await task.ConfigureAwait(false);
+        }
+    }
+#endif
 }

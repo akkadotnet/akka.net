@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>Testkit for Persistence actor support for Akka.NET</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <PackageTags>$(AkkaPackageTags);persistence;eventsource;tck</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>

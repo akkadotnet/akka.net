@@ -56,11 +56,11 @@ Current target frameworks are `netstandard2.0` + `net6.0`. The `netstandard2.0` 
 
 **Rationale:** The actor model has no mechanism to signal when a consumer is done with a message's data. `Tcp.Received` data could be stored in actor state indefinitely, forwarded to other actors, or parsed into strings. The read buffer cannot be returned to a pool because its lifetime is unbounded. Writes have bounded lifecycle — the buffer is consumed by `Stream.WriteAsync` and can be released immediately after the call completes.
 
-### 4. Drop netstandard2.0 → netstandard2.1 + net6.0
+### 4. Drop netstandard2.0 + net6.0 → net10.0 only
 
-**Decision:** Remove `netstandard2.0` from all target framework specifications. New minimum is `netstandard2.1`.
+**Decision:** Remove `netstandard2.0` and `net6.0` from all target framework specifications. All library projects target `net10.0` only.
 
-**Rationale:** `netstandard2.0` lacks `Stream.ReadAsync(Memory<byte>)`, `Socket.SendAsync(Memory<byte>)`, `Span<T>` APIs, and `System.IO.Pipelines` support. These are foundational for the Stream+Pipe pattern. Dropping `netstandard2.0` means dropping .NET Framework 4.8 support, which is acceptable for a major Akka.NET 1.6 milestone.
+**Rationale:** `netstandard2.0` lacks `Stream.ReadAsync(Memory<byte>)`, `Socket.SendAsync(Memory<byte>)`, `Span<T>` APIs, and `System.IO.Pipelines` support. The spec originally proposed `netstandard2.1` as the replacement, but no version of .NET Framework supports `netstandard2.1` — so .NET Framework compatibility is lost either way. `netstandard2.1` as a target buys almost nothing over `net10.0` (only .NET Core 3.x and Mono/Xamarin, which are EOL). Targeting `net10.0` (current LTS) directly eliminates all conditional compilation, polyfill packages, and multi-TFM complexity. Tests already target `net10.0`.
 
 ### 5. Hard-delete ByteString
 
