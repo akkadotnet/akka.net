@@ -90,15 +90,8 @@ let plan = session: captain
     - Key architectural decisions that workers need to know
   """
 
-# Create implementation branch
-session: setup
-  prompt: """
-    Run this git command to create the implementation branch:
-    git checkout -b feature/spec1-{milestone}
-
-    If the branch already exists, just check it out:
-    git checkout feature/spec1-{milestone}
-  """
+# NOTE: Create the implementation branch BEFORE running this program.
+# git checkout -b feature/spec1-{milestone}
 
 # --- Main Execution Loop ---
 
