@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Akka.IO;
+using System.Text;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -177,11 +177,11 @@ namespace Akka.Streams.Tests.IO
         public async Task InputStreamSource_must_read_bytes_from_InputStream()
         {
             await this.AssertAllStagesStoppedAsync(() => {
-                var f = StreamConverters.FromInputStream(() => new ListInputStream(new[] { "a", "b", "c" }))                                                                             
-                .RunWith(Sink.First<ByteString>(), _materializer);
+                var f = StreamConverters.FromInputStream(() => new ListInputStream(new[] { "a", "b", "c" }))
+                .RunWith(Sink.First<ReadOnlyMemory<byte>>(), _materializer);
 
                 f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                f.Result.Should().BeEquivalentTo(ByteString.FromString("abc"));
+                f.Result.ToArray().Should().Equal(Encoding.UTF8.GetBytes("abc"));
                 return Task.CompletedTask;
             }, _materializer);
         }
@@ -192,10 +192,10 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(() => {
                 var latch = new TestLatch(1);
                 var probe = StreamConverters.FromInputStream(() => new EmittedInputStream(latch), chunkSize: 1)
-                    .RunWith(this.SinkProbe<ByteString>(), _materializer);
+                    .RunWith(this.SinkProbe<ReadOnlyMemory<byte>>(), _materializer);
 
                 probe.Request(4);
-                probe.ExpectNext(ByteString.FromString("M"));
+                probe.ExpectNext<ReadOnlyMemory<byte>>(m => m.Span.SequenceEqual(Encoding.UTF8.GetBytes("M")));
                 latch.CountDown();
                 probe.ExpectComplete();
                 return Task.CompletedTask;

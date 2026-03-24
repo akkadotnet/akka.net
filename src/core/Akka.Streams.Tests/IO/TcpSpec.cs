@@ -6,9 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -36,12 +38,23 @@ namespace Akka.Streams.Tests.IO
         {
         }
 
+        // Helper to concatenate two ReadOnlyMemory<byte> segments
+        private static ReadOnlyMemory<byte> Concat(ReadOnlyMemory<byte> a, ReadOnlyMemory<byte> b)
+        {
+            if (a.IsEmpty) return b;
+            if (b.IsEmpty) return a;
+            var result = new byte[a.Length + b.Length];
+            a.Span.CopyTo(result);
+            b.Span.CopyTo(result.AsSpan(a.Length));
+            return result;
+        }
+
         [Fact]
         public async Task Outgoing_TCP_stream_must_work_in_the_happy_case()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
+                var testData = (ReadOnlyMemory<byte>)new byte[] { 1, 2, 3, 4, 5 };
 
                 var server = await new Server(this).InitializeAsync();
                 var tcpReadProbe = new TcpReadProbe(this);
@@ -55,7 +68,7 @@ namespace Akka.Streams.Tests.IO
 
                 await ValidateServerClientCommunicationAsync(testData, serverConnection, tcpReadProbe,
                     tcpWriteProbe);
-                
+
                 await tcpWriteProbe.CloseAsync();
                 await tcpReadProbe.CloseAsync();
                 server.Close();
@@ -66,38 +79,38 @@ namespace Akka.Streams.Tests.IO
         public async Task Outgoing_TCP_stream_must_be_able_to_write_a_sequence_of_ByteStrings()
         {
             var server = await new Server(this).InitializeAsync();
-            var testInput = Enumerable.Range(0, 256).Select(i => ByteString.FromBytes([Convert.ToByte(i)]));
-            var expectedOutput = ByteString.FromBytes(Enumerable.Range(0, 256).Select(Convert.ToByte).ToArray());
+            var testInput = Enumerable.Range(0, 256).Select(i => (ReadOnlyMemory<byte>)new byte[] { Convert.ToByte(i) }).ToList();
+            var expectedOutput = (ReadOnlyMemory<byte>)Enumerable.Range(0, 256).Select(Convert.ToByte).ToArray();
 
             Source.From(testInput)
                 .Via(Sys.TcpStream().OutgoingConnection(server.Address))
-                .To(Sink.Ignore<ByteString>())
+                .To(Sink.Ignore<ReadOnlyMemory<byte>>())
                 .Run(Materializer);
 
             var serverConnection = await server.WaitAcceptAsync();
             serverConnection.Read(256);
-            (await serverConnection.WaitReadAsync()).Should().BeEquivalentTo(expectedOutput);
+            (await serverConnection.WaitReadAsync()).Span.SequenceEqual(expectedOutput.Span).Should().BeTrue();
         }
-        
+
         [Fact]
         public async Task Outgoing_TCP_stream_must_be_able_to_read_a_sequence_of_ByteStrings()
         {
             var server = await new Server(this).InitializeAsync();
-            var testInput = new ByteString[255];
+            var testInput = new ReadOnlyMemory<byte>[255];
             var testOutput = new byte[255];
             for (byte i = 0; i < 255; i++)
             {
-                testInput[i] = ByteString.FromBytes([i]);
+                testInput[i] = new byte[] { i };
                 testOutput[i] = i;
             }
 
-            var expectedOutput = ByteString.FromBytes(testOutput);
+            var expectedOutput = (ReadOnlyMemory<byte>)testOutput;
             var idle = new TcpWriteProbe(this); //Just register an idle upstream
 
             var resultFuture =
                 Source.FromPublisher(idle.PublisherProbe)
                     .Via(Sys.TcpStream().OutgoingConnection(server.Address))
-                    .RunAggregate(ByteString.Empty, (acc, input) => acc + input, Materializer);
+                    .RunAggregate(ReadOnlyMemory<byte>.Empty, (acc, input) => Concat(acc, input), Materializer);
             var serverConnection = await server.WaitAcceptAsync();
 
             foreach (var input in testInput)
@@ -106,7 +119,7 @@ namespace Akka.Streams.Tests.IO
             serverConnection.ConfirmedClose();
             // Reduced timeout - otherwise we're just waiting longer for the failure
             var result = await resultFuture.WaitAsync(3.Seconds());
-            result.ShouldBe(expectedOutput);
+            result.Span.SequenceEqual(expectedOutput.Span).Should().BeTrue();
         }
 
         [Fact]
@@ -121,7 +134,7 @@ namespace Akka.Streams.Tests.IO
                             Sys.TcpStream()
                                 .OutgoingConnection(new IPEndPoint(IPAddress.Parse("192.0.2.1"), 666),
                                     connectionTimeout: TimeSpan.FromSeconds(1)), Keep.Right)
-                        .ToMaterialized(Sink.Ignore<ByteString>(), Keep.Left)
+                        .ToMaterialized(Sink.Ignore<ReadOnlyMemory<byte>>(), Keep.Left)
                         .Run(Materializer);
 
                 await Awaiting(() => task.WaitAsync(3.Seconds()))
@@ -134,7 +147,7 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
+                var testData = (ReadOnlyMemory<byte>)new byte[] { 1, 2, 3, 4, 5 };
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -149,7 +162,7 @@ namespace Akka.Streams.Tests.IO
                 // Client can still write
                 await tcpWriteProbe.WriteAsync(testData);
                 serverConnection.Read(5);
-                (await serverConnection.WaitReadAsync()).Should().BeEquivalentTo(testData);
+                (await serverConnection.WaitReadAsync()).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 // Close client side write
                 await tcpWriteProbe.CloseAsync();
@@ -157,7 +170,7 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                (await tcpReadProbe.ReadAsync(5)).Should().BeEquivalentTo(testData);
+                (await tcpReadProbe.ReadAsync(5)).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 // Close server side write
                 serverConnection.ConfirmedClose();
@@ -173,7 +186,7 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] {1, 2, 3, 4, 5});
+                var testData = (ReadOnlyMemory<byte>)new byte[] { 1, 2, 3, 4, 5 };
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -186,7 +199,7 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                (await tcpReadProbe.ReadAsync(5)).Should().BeEquivalentTo(testData);
+                (await tcpReadProbe.ReadAsync(5)).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 // Close server side write
                 serverConnection.ConfirmedClose();
@@ -195,7 +208,7 @@ namespace Akka.Streams.Tests.IO
                 // Client can still write
                 await tcpWriteProbe.WriteAsync(testData);
                 serverConnection.Read(5);
-                (await serverConnection.WaitReadAsync()).Should().BeEquivalentTo(testData);
+                (await serverConnection.WaitReadAsync()).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 // Close client side write
                 await tcpWriteProbe.CloseAsync();
@@ -209,10 +222,10 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
+                var testData = (ReadOnlyMemory<byte>)new byte[] { 1, 2, 3, 4, 5 };
                 var server = await new Server(this).InitializeAsync();
 
-                var tcpWriteProbe =new TcpWriteProbe(this);
+                var tcpWriteProbe = new TcpWriteProbe(this);
                 var tcpReadProbe = new TcpReadProbe(this);
                 Source.FromPublisher(tcpWriteProbe.PublisherProbe)
                     .Via(Sys.TcpStream().OutgoingConnection(server.Address))
@@ -222,7 +235,7 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                (await tcpReadProbe.ReadAsync(5)).Should().BeEquivalentTo(testData);
+                (await tcpReadProbe.ReadAsync(5)).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 // Close client side read
                 (await tcpReadProbe.TcpReadSubscription()).Cancel();
@@ -230,7 +243,7 @@ namespace Akka.Streams.Tests.IO
                 // Client can still write
                 await tcpWriteProbe.WriteAsync(testData);
                 serverConnection.Read(5);
-                (await serverConnection.WaitReadAsync()).Should().BeEquivalentTo(testData);
+                (await serverConnection.WaitReadAsync()).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 // Close client side write
                 await tcpWriteProbe.CloseAsync();
@@ -251,7 +264,7 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
+                var testData = (ReadOnlyMemory<byte>)new byte[] { 1, 2, 3, 4, 5 };
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -264,7 +277,7 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                (await tcpReadProbe.ReadAsync(5)).Should().BeEquivalentTo(testData);
+                (await tcpReadProbe.ReadAsync(5)).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 // Close client side read
                 (await tcpReadProbe.TcpReadSubscription()).Cancel();
@@ -272,7 +285,7 @@ namespace Akka.Streams.Tests.IO
                 // Client can still write
                 await tcpWriteProbe.WriteAsync(testData);
                 serverConnection.Read(5);
-                (await serverConnection.WaitReadAsync()).Should().BeEquivalentTo(testData);
+                (await serverConnection.WaitReadAsync()).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 serverConnection.ConfirmedClose();
 
@@ -288,7 +301,7 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes([1, 2, 3, 4, 5]);
+                var testData = (ReadOnlyMemory<byte>)new byte[] { 1, 2, 3, 4, 5 };
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -301,12 +314,12 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                (await tcpReadProbe.ReadAsync(5)).Should().BeEquivalentTo(testData);
-                
+                (await tcpReadProbe.ReadAsync(5)).Span.SequenceEqual(testData.Span).Should().BeTrue();
+
                 // Client can still write
                 await tcpWriteProbe.WriteAsync(testData);
                 serverConnection.Read(5);
-                (await serverConnection.WaitReadAsync()).Should().BeEquivalentTo(testData);
+                (await serverConnection.WaitReadAsync()).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 // Cause error
                 var subscription = await tcpWriteProbe.TcpWriteSubscription();
@@ -323,7 +336,7 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var testData = ByteString.FromBytes(new byte[] { 1, 2, 3, 4, 5 });
+                var testData = (ReadOnlyMemory<byte>)new byte[] { 1, 2, 3, 4, 5 };
                 var server = await new Server(this).InitializeAsync();
 
                 var tcpWriteProbe = new TcpWriteProbe(this);
@@ -336,7 +349,7 @@ namespace Akka.Streams.Tests.IO
 
                 // Server can still write
                 serverConnection.Write(testData);
-                (await tcpReadProbe.ReadAsync(5)).Should().BeEquivalentTo(testData);
+                (await tcpReadProbe.ReadAsync(5)).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 // Close remote side write
                 serverConnection.ConfirmedClose();
@@ -345,11 +358,11 @@ namespace Akka.Streams.Tests.IO
                 // Client can still write
                 await tcpWriteProbe.WriteAsync(testData);
                 serverConnection.Read(5);
-                (await serverConnection.WaitReadAsync()).Should().BeEquivalentTo(testData);
+                (await serverConnection.WaitReadAsync()).Span.SequenceEqual(testData.Span).Should().BeTrue();
 
                 var subscription = await tcpWriteProbe.TcpWriteSubscription();
                 subscription.SendError(new IllegalStateException("test"));
-                
+
                 await serverConnection.ExpectClosedAsync(c => c.IsErrorClosed);
                 await serverConnection.ExpectTerminatedAsync();
             }, Materializer);
@@ -371,10 +384,10 @@ namespace Akka.Streams.Tests.IO
                     .ViaMaterialized(Sys.TcpStream().OutgoingConnection(server.Address), Keep.Right)
                     .To(Sink.FromSubscriber(tcpReadProbe.SubscriberProbe))
                     .Run(Materializer);
-                    
+
                 var serverConnection = await server.WaitAcceptAsync();
                 var clientConnection = await connectionTask;
-                
+
                 // Start active reading to ensure Linux can detect TCP RST
                 var readSub = await tcpReadProbe.SubscriberProbe.ExpectSubscriptionAsync();
                 readSub.Request(1);
@@ -391,7 +404,7 @@ namespace Akka.Streams.Tests.IO
         [Fact]
         public async Task Outgoing_TCP_stream_must_materialize_correctly_when_used_in_multiple_flows()
         {
-            var testData = ByteString.FromBytes(new byte[] {1, 2, 3, 4, 5});
+            var testData = (ReadOnlyMemory<byte>)new byte[] { 1, 2, 3, 4, 5 };
             var server = await new Server(this).InitializeAsync();
 
             var tcpWriteProbe1 = new TcpWriteProbe(this);
@@ -414,7 +427,7 @@ namespace Akka.Streams.Tests.IO
 
             await ValidateServerClientCommunicationAsync(testData, serverConnection1, tcpReadProbe1, tcpWriteProbe1);
             await ValidateServerClientCommunicationAsync(testData, serverConnection2, tcpReadProbe2, tcpWriteProbe2);
-            
+
             var conn1 = await conn1F;
             var conn2 = await conn2F;
 
@@ -435,10 +448,11 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var serverAddress = TestUtils.TemporaryServerAddress();
-                var writeButIgnoreRead = Flow.FromSinkAndSource(Sink.Ignore<ByteString>(),
-                    Source.Single(ByteString.FromString("Early response")), Keep.Right);
+                var earlyResponse = (ReadOnlyMemory<byte>)Encoding.ASCII.GetBytes("Early response");
+                var writeButIgnoreRead = Flow.FromSinkAndSource(Sink.Ignore<ReadOnlyMemory<byte>>(),
+                    Source.Single(earlyResponse), Keep.Right);
 
-                var task = 
+                var task =
                     Sys.TcpStream()
                         .Bind(serverAddress.Address.ToString(), serverAddress.Port, halfClose: false)
                         .ToMaterialized(
@@ -448,13 +462,13 @@ namespace Akka.Streams.Tests.IO
                 await task.WaitAsync(3.Seconds());
                 var binding = task.Result;
 
-                var (promise, result) = Source.Maybe<ByteString>()
+                var (promise, result) = Source.Maybe<ReadOnlyMemory<byte>>()
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress.Address.ToString(), serverAddress.Port))
-                    .ToMaterialized(Sink.Aggregate<ByteString, ByteString>(ByteString.Empty, (s, s1) => s + s1), Keep.Both)
+                    .ToMaterialized(Sink.Aggregate<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>(ReadOnlyMemory<byte>.Empty, (s, s1) => Concat(s, s1)), Keep.Both)
                     .Run(Materializer);
 
                 await result.WaitAsync(5.Seconds());
-                result.Result.Should().BeEquivalentTo(ByteString.FromString("Early response"));
+                result.Result.Span.SequenceEqual(earlyResponse.Span).Should().BeTrue();
 
                 promise.SetResult(null); // close client upstream, no more data
                 await binding.Unbind().WaitAsync(3.Seconds());
@@ -470,15 +484,15 @@ namespace Akka.Streams.Tests.IO
             var binding = await Sys.TcpStream()
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                     .ToMaterialized(
-                        Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(Flow.Create<ByteString>()).Run(Materializer)),
+                        Sink.ForEach<Tcp.IncomingConnection>(conn => conn.Flow.Join(Flow.Create<ReadOnlyMemory<byte>>()).Run(Materializer)),
                         Keep.Left)
                     .Run(Materializer);
 
             var result = await Source.From(Enumerable.Repeat(0, 1000)
-                .Select(i => ByteString.FromBytes([Convert.ToByte(i)])))
+                .Select(i => (ReadOnlyMemory<byte>)new byte[] { Convert.ToByte(i) }))
                 .Via(Sys.TcpStream().OutgoingConnection(serverAddress, halfClose: true))
-                .RunAggregate(0, (i, s) => i + s.Count, Materializer).WaitAsync(10.Seconds());
-            
+                .RunAggregate(0, (i, s) => i + s.Length, Materializer).WaitAsync(10.Seconds());
+
             result.Should().Be(1000);
 
             await binding.Unbind();
@@ -495,22 +509,22 @@ namespace Akka.Streams.Tests.IO
 
                 var serverAddress = TestUtils.TemporaryServerAddress();
                 var binding = system2.TcpStream()
-                    .BindAndHandle(Flow.Create<ByteString>(), mat2, serverAddress.Address.ToString(), serverAddress.Port);
+                    .BindAndHandle(Flow.Create<ReadOnlyMemory<byte>>(), mat2, serverAddress.Address.ToString(), serverAddress.Port);
 
                 // Ensure server is bound before creating client connection
                 await binding.WaitAsync(TimeSpan.FromSeconds(3));
 
                 // Build a client stream with a controllable upstream and an echo gate to ensure full registration
-                var tapped = Source.Queue<ByteString>(16, OverflowStrategy.Backpressure)
+                var tapped = Source.Queue<ReadOnlyMemory<byte>>(16, OverflowStrategy.Backpressure)
                     .Via(system2.TcpStream().OutgoingConnection(serverAddress))
-                    .AlsoToMaterialized(Sink.First<ByteString>(), Keep.Both);
+                    .AlsoToMaterialized(Sink.First<ReadOnlyMemory<byte>>(), Keep.Both);
 
                 var ((queue, firstEcho), result) = tapped
-                    .ToMaterialized(Sink.Aggregate<ByteString, int>(0, (i, s) => i + s.Count), Keep.Both)
+                    .ToMaterialized(Sink.Aggregate<ReadOnlyMemory<byte>, int>(0, (i, s) => i + s.Length), Keep.Both)
                     .Run(mat2);
 
                 // Send a ping and wait for the echo to guarantee Connected+Registered+Watched state
-                (await queue.OfferAsync(ByteString.FromString("ping"))).Should().BeOfType<QueueOfferResult.Enqueued>();
+                (await queue.OfferAsync((ReadOnlyMemory<byte>)Encoding.ASCII.GetBytes("ping"))).Should().BeOfType<QueueOfferResult.Enqueued>();
                 await firstEcho.WaitAsync(5.Seconds());
 
                 // Resolve the actual connection actor reference and watch it
@@ -559,13 +573,13 @@ namespace Akka.Streams.Tests.IO
                 var mat2 = sys2.Materializer();
                 var address = TestUtils.TemporaryServerAddress();
                 var binding = await sys2.TcpStream()
-                    .BindAndHandle(Flow.Create<ByteString>(), mat2, address.Address.ToString(), address.Port);
+                    .BindAndHandle(Flow.Create<ReadOnlyMemory<byte>>(), mat2, address.Address.ToString(), address.Port);
 
                 // Ensure server is running
-                // and is possible to communicate with 
-                await Source.Single(ByteString.FromString(""))
+                // and is possible to communicate with
+                await Source.Single(ReadOnlyMemory<byte>.Empty)
                     .Via(sys2.TcpStream().OutgoingConnection(address))
-                    .RunWith(Sink.Ignore<ByteString>(), mat2).WaitAsync(10.Seconds());
+                    .RunWith(Sink.Ignore<ReadOnlyMemory<byte>>(), mat2).WaitAsync(10.Seconds());
 
                 await sys2.Terminate().WaitAsync(10.Seconds());
                 await binding.Unbind().WaitAsync(10.Seconds());
@@ -576,17 +590,17 @@ namespace Akka.Streams.Tests.IO
             }
         }
 
-        private async Task ValidateServerClientCommunicationAsync(ByteString testData, ServerConnection serverConnection, TcpReadProbe readProbe, TcpWriteProbe writeProbe)
+        private async Task ValidateServerClientCommunicationAsync(ReadOnlyMemory<byte> testData, ServerConnection serverConnection, TcpReadProbe readProbe, TcpWriteProbe writeProbe)
         {
             serverConnection.Write(testData);
             serverConnection.Read(5);
-            (await readProbe.ReadAsync(5)).Should().BeEquivalentTo(testData);
+            (await readProbe.ReadAsync(5)).Span.SequenceEqual(testData.Span).Should().BeTrue();
             await writeProbe.WriteAsync(testData);
-            (await serverConnection.WaitReadAsync()).Should().BeEquivalentTo(testData);
+            (await serverConnection.WaitReadAsync()).Span.SequenceEqual(testData.Span).Should().BeTrue();
         }
-        
+
         private Sink<Tcp.IncomingConnection, Task<Done>> EchoHandler() =>
-            Sink.ForEach<Tcp.IncomingConnection>(c => c.Flow.Join(Flow.Create<ByteString>()).Run(Materializer));
+            Sink.ForEach<Tcp.IncomingConnection>(c => c.Flow.Join(Flow.Create<ReadOnlyMemory<byte>>()).Run(Materializer));
 
         [Fact]
         public async Task Tcp_listen_stream_must_be_able_to_implement_echo()
@@ -601,17 +615,17 @@ namespace Akka.Streams.Tests.IO
             var binding = await bindTask.WaitAsync(3.Seconds());
 
             var testInput = Enumerable.Range(0, 255)
-                .Select(i => ByteString.FromBytes([Convert.ToByte(i)]))
+                .Select(i => (ReadOnlyMemory<byte>)new byte[] { Convert.ToByte(i) })
                 .ToList();
 
-            var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
+            var expectedOutput = (ReadOnlyMemory<byte>)Enumerable.Range(0, 255).Select(i => Convert.ToByte(i)).ToArray();
 
             var result = await Source.From(testInput)
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
-                    .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer)
+                    .RunAggregate(ReadOnlyMemory<byte>.Empty, (agg, b) => Concat(agg, b), Materializer)
                     .WaitAsync(10.Seconds());
-            
-            result.Should().BeEquivalentTo(expectedOutput);
+
+            result.Span.SequenceEqual(expectedOutput.Span).Should().BeTrue();
             await binding.Unbind().WaitAsync(3.Seconds());
             await echoServerFinish.WaitAsync(3.Seconds());
         }
@@ -631,20 +645,20 @@ namespace Akka.Streams.Tests.IO
             var echoConnection = Sys.TcpStream().OutgoingConnection(serverAddress);
 
             var testInput = Enumerable.Range(0, 255)
-                .Select(i => ByteString.FromBytes([Convert.ToByte(i)]))
+                .Select(i => (ReadOnlyMemory<byte>)new byte[] { Convert.ToByte(i) })
                 .ToList();
 
-            var expectedOutput = testInput.Aggregate(ByteString.Empty, (agg, b) => agg.Concat(b));
+            var expectedOutput = (ReadOnlyMemory<byte>)Enumerable.Range(0, 255).Select(i => Convert.ToByte(i)).ToArray();
 
             var result = await Source.From(testInput)
                 .Via(echoConnection) // The echoConnection is reusable
                 .Via(echoConnection)
                 .Via(echoConnection)
                 .Via(echoConnection)
-                .RunAggregate(ByteString.Empty, (agg, b) => agg.Concat(b), Materializer)
+                .RunAggregate(ReadOnlyMemory<byte>.Empty, (agg, b) => Concat(agg, b), Materializer)
                 .WaitAsync(10.Seconds());
-            
-            result.Should().BeEquivalentTo(expectedOutput);
+
+            result.Span.SequenceEqual(expectedOutput.Span).Should().BeTrue();
             await binding.Unbind().WaitAsync(3.Seconds());
             await echoServerFinish.WaitAsync(3.Seconds());
         }
@@ -670,7 +684,7 @@ namespace Akka.Streams.Tests.IO
                 binding.Unbind(),
                 binding.Unbind())
                 .WaitAsync(3.Seconds());
-            
+
             await echoServerFinish.WaitAsync(3.Seconds());
         }
 
@@ -702,7 +716,7 @@ namespace Akka.Streams.Tests.IO
                     .Should().ThrowAsync<BindFailedException>();
                 await Awaiting(() => binding3F.WaitAsync(3.Seconds()))
                     .Should().ThrowAsync<BindFailedException>();
-                
+
                 // Now unbind first
                 await binding1.Unbind().WaitAsync(3.Seconds());
                 probe1.ExpectComplete();
@@ -723,7 +737,7 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var thousandByteStrings = Enumerable.Range(0, 1000)
-                    .Select(_ => ByteString.FromBytes(new byte[] { 0 }))
+                    .Select(_ => (ReadOnlyMemory<byte>)new byte[] { 0 })
                     .ToArray();
 
                 var serverAddress = TestUtils.TemporaryServerAddress();
@@ -733,7 +747,7 @@ namespace Akka.Streams.Tests.IO
                     .ToMaterialized(Sink.ForEachAsync<Tcp.IncomingConnection>(1, async tcp =>
                     {
                         await Task.Delay(1000); // we're testing here to see if it survives such race
-                        tcp.Flow.Join(Flow.Create<ByteString>()).Run(Materializer);
+                        tcp.Flow.Join(Flow.Create<ReadOnlyMemory<byte>>()).Run(Materializer);
                     }), Keep.Both)
                     .Run(Materializer);
 
@@ -744,7 +758,7 @@ namespace Akka.Streams.Tests.IO
                 // then connect, should trigger a block and then
                 var total = Source.From(thousandByteStrings)
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
-                    .RunAggregate(0, (i, s) => i + s.Count, Materializer);
+                    .RunAggregate(0, (i, s) => i + s.Length, Materializer);
 
                 (await total.WaitAsync(5.Seconds())).Should().Be(1000);
             }, Materializer);
@@ -766,11 +780,11 @@ namespace Akka.Streams.Tests.IO
                 var task = Sys.TcpStream()
                     .Bind(serverAddress.Address.ToString(), serverAddress.Port)
                     .Via(takeTwoAndDropSecond)
-                    .RunForeach(c => c.Flow.Join(Flow.Create<ByteString>()).Run(Materializer), Materializer);
+                    .RunForeach(c => c.Flow.Join(Flow.Create<ReadOnlyMemory<byte>>()).Run(Materializer), Materializer);
 
-                var folder = Source.From(Enumerable.Range(0, 100).Select(_ => ByteString.FromBytes(new byte[] {0})))
+                var folder = Source.From(Enumerable.Range(0, 100).Select(_ => (ReadOnlyMemory<byte>)new byte[] { 0 }))
                     .Via(Sys.TcpStream().OutgoingConnection(serverAddress))
-                    .Aggregate(0, (i, s) => i + s.Count)
+                    .Aggregate(0, (i, s) => i + s.Length)
                     .ToMaterialized(Sink.First<int>(), Keep.Right);
 
                 var total = folder.Run(Materializer);
@@ -779,10 +793,9 @@ namespace Akka.Streams.Tests.IO
                 var rejected = folder.Run(Materializer);
 
                 (await total.WaitAsync(10.Seconds())).Should().Be(100);
-                
+
                 await AssertThrowsAsync<StreamTcpException>(() => rejected).WaitAsync(3.Seconds());
             }, Materializer);
         }
     }
 }
-

@@ -288,34 +288,37 @@ namespace Akka.Benchmarks
         private sealed class Framer
         {
             private readonly int _messageSize;
-            private ByteString _partialRead = ByteString.Empty;
+            private ReadOnlyMemory<byte> _partialRead = ReadOnlyMemory<byte>.Empty;
 
             public Framer(int messageSize)
             {
                 _messageSize = messageSize;
             }
 
-            public IEnumerable<ByteString> Deframe(ByteString data)
+            public IEnumerable<ReadOnlyMemory<byte>> Deframe(ReadOnlyMemory<byte> data)
             {
                 // Prepend any partial read from last time
-                if (_partialRead.Count > 0)
+                if (_partialRead.Length > 0)
                 {
-                    data = _partialRead.Concat(data);
-                    _partialRead = ByteString.Empty;
+                    var combined = new byte[_partialRead.Length + data.Length];
+                    _partialRead.Span.CopyTo(combined);
+                    data.Span.CopyTo(combined.AsSpan(_partialRead.Length));
+                    data = combined;
+                    _partialRead = ReadOnlyMemory<byte>.Empty;
                 }
 
-                var msgs = new List<ByteString>();
+                var msgs = new List<ReadOnlyMemory<byte>>();
                 int offset = 0;
-                while (offset + _messageSize <= data.Count)
+                while (offset + _messageSize <= data.Length)
                 {
                     msgs.Add(data.Slice(offset, _messageSize));
                     offset += _messageSize;
                 }
 
                 // Buffer any remaining bytes for next time
-                if (offset < data.Count)
+                if (offset < data.Length)
                 {
-                    _partialRead = data.Slice(offset, data.Count - offset);
+                    _partialRead = data.Slice(offset, data.Length - offset);
                 }
 
                 return msgs;
@@ -346,7 +349,7 @@ namespace Akka.Benchmarks
                 _framer = new Framer(message.Length);
                 var write =
                     // create the write only once
-                    Tcp.Write.Create(ByteString.FromBytes(message));
+                    Tcp.Write.Create(message.AsMemory());
                 
                 DoConnect(endpoint);
                 Receive<Tcp.Connected>(_ =>

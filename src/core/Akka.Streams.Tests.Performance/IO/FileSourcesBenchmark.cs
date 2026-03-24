@@ -11,7 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.IO;
+using System.Text;
 using Akka.Streams.Dsl;
 using Akka.Streams.IO;
 using NBench;
@@ -24,9 +24,9 @@ namespace Akka.Streams.Tests.Performance.IO
         private ActorSystem _actorSystem;
         private ActorMaterializer _materializer;
         private FileInfo _file;
-        private Source<ByteString, Task<IOResult>> _fileChannelSource;
-        private Source<ByteString, Task<IOResult>> _fileInputStreamSource;
-        private Source<ByteString, NotUsed> _ioSourceLinesIterator;
+        private Source<ReadOnlyMemory<byte>, Task<IOResult>> _fileChannelSource;
+        private Source<ReadOnlyMemory<byte>, Task<IOResult>> _fileInputStreamSource;
+        private Source<ReadOnlyMemory<byte>, NotUsed> _ioSourceLinesIterator;
 
         [PerfSetup]
         public void Setup(BenchmarkContext context)
@@ -38,7 +38,7 @@ namespace Akka.Streams.Tests.Performance.IO
 
             _fileChannelSource = FileIO.FromFile(_file, BufferSize);
             _fileInputStreamSource = StreamConverters.FromInputStream(() => File.OpenRead(_file.FullName), BufferSize);
-            _ioSourceLinesIterator = Source.FromEnumerator(() => File.ReadLines(_file.FullName).Select(ByteString.FromString).GetEnumerator());
+            _ioSourceLinesIterator = Source.FromEnumerator(() => File.ReadLines(_file.FullName).Select(s => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(s)).GetEnumerator());
         }
 
         private FileInfo CreateFile()
@@ -72,7 +72,7 @@ namespace Akka.Streams.Tests.Performance.IO
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 2500)]
         public void FileChannel()
-            => _fileChannelSource.To(Sink.Ignore<ByteString>())
+            => _fileChannelSource.To(Sink.Ignore<ReadOnlyMemory<byte>>())
                 .Run(_materializer)
                 .Wait(TimeSpan.FromMinutes(1));
 
@@ -83,7 +83,7 @@ namespace Akka.Streams.Tests.Performance.IO
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 2000)]
         public void FileChannel_without_read_ahead()
             => _fileChannelSource.WithAttributes(Attributes.CreateInputBuffer(1, 1))
-                .To(Sink.Ignore<ByteString>())
+                .To(Sink.Ignore<ReadOnlyMemory<byte>>())
                 .Run(_materializer)
                 .Wait(TimeSpan.FromMinutes(1));
 
@@ -93,7 +93,7 @@ namespace Akka.Streams.Tests.Performance.IO
         [TimingMeasurement]
         [ElapsedTimeAssertion(MaxTimeMilliseconds = 2000)]
         public void FileStream()
-            => _fileInputStreamSource.To(Sink.Ignore<ByteString>())
+            => _fileInputStreamSource.To(Sink.Ignore<ReadOnlyMemory<byte>>())
                 .Run(_materializer)
                 .Wait(TimeSpan.FromMinutes(1));
 
@@ -106,7 +106,7 @@ namespace Akka.Streams.Tests.Performance.IO
         {
             var c = new TaskCompletionSource<int>();
 
-            _ioSourceLinesIterator.To(Sink.OnComplete<ByteString>(() => c.SetResult(-1), _ => { })).Run(_materializer);
+            _ioSourceLinesIterator.To(Sink.OnComplete<ReadOnlyMemory<byte>>(() => c.SetResult(-1), _ => { })).Run(_materializer);
 
             c.Task.Wait(TimeSpan.FromMinutes(1));
         }

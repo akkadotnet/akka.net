@@ -25,7 +25,7 @@ namespace DocsExamples.Networking.IO
         {
             if (message is Tcp.Received received)
             {
-                if (received.Data[0] == 'x')
+                if (received.Data.Span[0] == 'x')
                     Context.Stop(Self);
                 else
                     _connection.Tell(Tcp.Write.Create(received.Data));

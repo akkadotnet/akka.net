@@ -5,7 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.IO;
+using System;
+using System.Text;
 using Akka.Streams.Implementation;
 using NBench;
 
@@ -23,7 +24,7 @@ namespace Akka.Streams.Tests.Performance
              {""fname"":""Bob"",""name"":""Smith"",""age"":42,""id"":1337,""boardMember"":false},
              {""fname"":""Hank"",""name"":""Smith"",""age"":42,""id"":1337,""boardMember"":false}";
 
-        private static readonly ByteString Json = ByteString.FromString(Input);
+        private static readonly ReadOnlyMemory<byte> Json = Encoding.UTF8.GetBytes(Input);
         
         private Counter _bracketThroughputCounter;
 

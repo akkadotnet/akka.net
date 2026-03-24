@@ -5,21 +5,21 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.IO;
-using Akka.IO;
 using Akka.Streams.Dsl;
 using Reactive.Streams;
 
 namespace Akka.Streams.Tests.TCK
 {
-    class InputStreamSourceTest : AkkaPublisherVerification<ByteString>
+    class InputStreamSourceTest : AkkaPublisherVerification<ReadOnlyMemory<byte>>
     {
-        public override IPublisher<ByteString> CreatePublisher(long elements)
+        public override IPublisher<ReadOnlyMemory<byte>> CreatePublisher(long elements)
         {
             return StreamConverters.FromInputStream(() => new InputStream())
                 .WithAttributes(ActorAttributes.CreateDispatcher("akka.test.stream-dispatcher"))
                 .Take(elements)
-                .RunWith(Sink.AsPublisher<ByteString>(false), Materializer);
+                .RunWith(Sink.AsPublisher<ReadOnlyMemory<byte>>(false), Materializer);
         }
 
         private sealed class InputStream : Stream

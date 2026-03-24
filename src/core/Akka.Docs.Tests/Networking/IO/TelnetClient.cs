@@ -51,7 +51,7 @@ namespace DocsExamples.Networking.IO
                 }
                 else if (message is string s)   // data received from console
                 {
-                    connection.Tell(Tcp.Write.Create(ByteString.FromString(s + "\n")));
+                    connection.Tell(Tcp.Write.Create(Encoding.ASCII.GetBytes(s + "\n").AsMemory()));
                     ReadConsoleAsync();
                 }
                 else if (message is Tcp.PeerClosed)

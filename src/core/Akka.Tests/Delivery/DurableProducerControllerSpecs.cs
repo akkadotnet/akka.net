@@ -8,12 +8,12 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Delivery;
 using Akka.Delivery.Internal;
-using Akka.IO;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
@@ -228,13 +228,13 @@ public class DurableProducerControllerSpecs : TestKit.Xunit.TestKit
                 ConfirmedSeqNr: ImmutableDictionary<string, (long, long)>.Empty.Add(NoQualifier, (2L, TestTimestamp)),
                 Unconfirmed: ImmutableList<MessageSent<Job>>.Empty
                     .Add(MessageSent<Job>.FromChunked(3,
-                        new ChunkedMessage(ByteString.FromString("abc"), true, true, 20, ""), false, NoQualifier,
+                        new ChunkedMessage(Encoding.UTF8.GetBytes("abc").AsMemory(), true, true, 20, ""), false, NoQualifier,
                         TestTimestamp))
                     .Add(MessageSent<Job>.FromChunked(4,
-                        new ChunkedMessage(ByteString.FromString("d"), true, false, 20, ""), false, NoQualifier,
+                        new ChunkedMessage(Encoding.UTF8.GetBytes("d").AsMemory(), true, false, 20, ""), false, NoQualifier,
                         TestTimestamp))
                     .Add(MessageSent<Job>.FromChunked(5,
-                        new ChunkedMessage(ByteString.FromString("e"), false, false, 20, ""), false, NoQualifier,
+                        new ChunkedMessage(Encoding.UTF8.GetBytes("e").AsMemory(), false, false, 20, ""), false, NoQualifier,
                         TestTimestamp)))
             // missing last chunk
             , _ => false);

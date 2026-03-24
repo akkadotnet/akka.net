@@ -8,13 +8,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Text;
 using Akka.Actor;
 using Akka.Cluster.Configuration;
 using Akka.Cluster.Serialization;
 using Akka.Delivery;
 using Akka.Delivery.Internal;
 using Akka.Event;
-using Akka.IO;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
@@ -102,17 +102,17 @@ public class ReliableDeliverySerializerSpecs : AkkaSpec
         yield return new object[]
         {
             "SequencedMessage-chunked-1",
-            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L, new ChunkedMessage(ByteString.FromString("abc"), true, true, 20, ""), true, true, ActorRefs.Nobody)
+            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L, new ChunkedMessage(Encoding.UTF8.GetBytes("abc").AsMemory(), true, true, 20, ""), true, true, ActorRefs.Nobody)
         };
         yield return new object[]
         {
             "SequencedMessage-chunked-2",
-            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L, new ChunkedMessage(ByteString.FromBytes(new byte[]{ 1,2,3 }), true, false, 123456, "A"), false, false, ActorRefs.Nobody)
+            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L, new ChunkedMessage(new byte[]{ 1,2,3 }.AsMemory(), true, false, 123456, "A"), false, false, ActorRefs.Nobody)
         };
         yield return new object[]
         {
             "DurableProducerQueue.MessageSent-chunked",
-            DurableProducerQueue.MessageSent<string>.FromChunked(3L, new ChunkedMessage(ByteString.FromString("abc"), true, true, 20, ""), false, "", Timestamp)
+            DurableProducerQueue.MessageSent<string>.FromChunked(3L, new ChunkedMessage(Encoding.UTF8.GetBytes("abc").AsMemory(), true, true, 20, ""), false, "", Timestamp)
         };
     }
 
