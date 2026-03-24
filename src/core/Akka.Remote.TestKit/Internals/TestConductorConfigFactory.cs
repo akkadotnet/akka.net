@@ -12,6 +12,8 @@ using Akka.Configuration;
 
 namespace Akka.Remote.TestKit.Internals
 {
+    internal sealed class AssemblyLocator;
+    
     /// <summary>
     /// This class contains methods used to retrieve Multi-Node TestKit configuration options from this assembly's resources
     /// and injects them in relevant tests.
@@ -26,7 +28,7 @@ namespace Akka.Remote.TestKit.Internals
         /// <returns>The configuration that contains default values for all Multi-Node TestKit options.</returns>
         public static Config Default()
         {
-            return FromResource("Akka.Remote.TestKit.Internals.Reference.conf");
+            return FromResource($"{typeof(AssemblyLocator).Assembly.GetName().Name}.Internals.Reference.conf");
         }
 
         /// <summary>
