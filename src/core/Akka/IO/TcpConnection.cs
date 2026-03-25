@@ -38,7 +38,8 @@ namespace Akka.IO
     ///
     /// - ReadFromStream: reads from the network stream into the Pipe writer
     /// - ReadFromPipe: reads from the Pipe reader, copies to pooled buffers, emits Tcp.Received
-    /// - WriteToStream: dequeues write commands, calls stream.WriteAsync, delivers ACKs
+    /// - WriteToStream: dequeues write commands, batches outbound writes opportunistically,
+    ///   calls stream.WriteAsync, delivers ACKs
     ///
     /// All shutdown and error handling flows through the actor mailbox for thread safety.
     /// </summary>
@@ -49,7 +50,7 @@ namespace Akka.IO
         /// <summary>
         /// Self-tell: all background I/O tasks have completed.
         /// </summary>
-        private sealed class IoTasksCompleted
+        private sealed class IoTasksCompleted : INoSerializationVerificationNeeded
         {
             public static readonly IoTasksCompleted Instance = new();
             private IoTasksCompleted() { }
@@ -58,7 +59,7 @@ namespace Akka.IO
         /// <summary>
         /// Self-tell: a background task failed with an exception.
         /// </summary>
-        private sealed class IoTaskFailed
+        private sealed class IoTaskFailed : INoSerializationVerificationNeeded
         {
             public Exception Cause { get; }
             public IoTaskFailed(Exception cause) { Cause = cause; }
@@ -67,7 +68,7 @@ namespace Akka.IO
         /// <summary>
         /// Self-tell: the read-from-stream task observed EOF (0 bytes).
         /// </summary>
-        private sealed class StreamEof
+        private sealed class StreamEof : INoSerializationVerificationNeeded
         {
             public static readonly StreamEof Instance = new();
             private StreamEof() { }
@@ -76,16 +77,36 @@ namespace Akka.IO
         /// <summary>
         /// Self-tell: PipeReader.ReadAsync completed with data.
         /// </summary>
-        private sealed class PipeReadCompleted
+        private sealed class PipeReadCompleted : INoSerializationVerificationNeeded
         {
-            public ReadResult Result { get; }
-            public PipeReadCompleted(ReadResult result) { Result = result; }
+            public ReadOnlyMemory<byte> Data { get; }
+            public bool IsCompleted { get; }
+            public bool IsCanceled { get; }
+
+            public PipeReadCompleted(ReadOnlyMemory<byte> data, bool isCompleted, bool isCanceled)
+            {
+                Data = data;
+                IsCompleted = isCompleted;
+                IsCanceled = isCanceled;
+            }
+        }
+
+        private sealed class PipeReadCanceled : INoSerializationVerificationNeeded
+        {
+            public static readonly PipeReadCanceled Instance = new();
+            private PipeReadCanceled() { }
+        }
+
+        private sealed class ReadStreamCompleted : INoSerializationVerificationNeeded
+        {
+            public static readonly ReadStreamCompleted Instance = new();
+            private ReadStreamCompleted() { }
         }
 
         /// <summary>
         /// Self-tell: all pending writes have been flushed (write channel completed + drained).
         /// </summary>
-        private sealed class WritesFlushed
+        private sealed class WritesFlushed : INoSerializationVerificationNeeded
         {
             public static readonly WritesFlushed Instance = new();
             private WritesFlushed() { }
@@ -96,19 +117,19 @@ namespace Akka.IO
         /// Distinct from IoTaskFailed because this carries the error that caused pipe completion
         /// and must be processed BEFORE PipeReadCompleted to distinguish error-EOF from normal EOF.
         /// </summary>
-        private sealed class StreamReadFailed
+        private sealed class StreamReadFailed : INoSerializationVerificationNeeded
         {
             public Exception Cause { get; }
             public StreamReadFailed(Exception cause) { Cause = cause; }
         }
 
-        private sealed class CommanderDied : IDeadLetterSuppression
+        private sealed class CommanderDied : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public static readonly CommanderDied Instance = new();
             private CommanderDied() { }
         }
 
-        private sealed class HandlerDied : IDeadLetterSuppression
+        private sealed class HandlerDied : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public static readonly HandlerDied Instance = new();
             private HandlerDied() { }
@@ -133,9 +154,12 @@ namespace Akka.IO
         protected readonly Socket Socket;
         protected ILoggingAdapter Log { get; } = Context.GetLogger();
 
+        private const int MaxWriteCommandsPerBatch = 128;
+
         private readonly bool _traceLogging;
         private readonly bool _pullMode;
         private readonly int _maxQueuedBytes;
+        private readonly int _writeBatchSizeBytes;
 
         // Pipe for read buffering
         private Pipe? _pipe;
@@ -174,7 +198,8 @@ namespace Akka.IO
         private bool _outputShutdown;
         private bool _keepOpenOnPeerClosed;
         private bool _closingGracefully;
-        private bool _ioTasksCompleted;
+        private bool _readStreamCompleted;
+        private bool _writesFlushed;
 
         // Tracks error from ReadFromStream so HandlePipeRead can distinguish error-EOF from normal EOF.
         // _readStreamError is set from the actor thread when StreamReadFailed is processed.
@@ -200,6 +225,7 @@ namespace Akka.IO
         {
             Settings = settings;
             _maxQueuedBytes = settings.WriteCommandsQueueMaxSize;
+            _writeBatchSizeBytes = settings.MaxFrameSizeBytes;
             _pullMode = pullMode;
             _traceLogging = Settings.TraceLogging;
             Socket = socket ?? throw new ArgumentNullException(nameof(socket));
@@ -299,20 +325,21 @@ namespace Akka.IO
             _writeToStreamTask = WriteToStreamAsync(_stream, _writeChannel.Reader, ct);
 
             // Track background tasks - self-tell on completion
-            var self = Self;
-            Task.WhenAll(_readFromStreamTask, _writeToStreamTask)
-                .ContinueWith(t =>
+            _ = NotifyWhenIoTasksCompleteAsync();
+
+            async Task NotifyWhenIoTasksCompleteAsync()
+            {
+                try
                 {
-                    if (t.IsFaulted && t.Exception != null)
-                    {
-                        var innerEx = t.Exception.InnerExceptions.FirstOrDefault() ?? t.Exception;
-                        self.Tell(new IoTaskFailed(innerEx));
-                    }
-                    else
-                    {
-                        self.Tell(IoTasksCompleted.Instance);
-                    }
-                }, TaskContinuationOptions.ExecuteSynchronously);
+                    await Task.WhenAll(_readFromStreamTask, _writeToStreamTask).ConfigureAwait(false);
+                    Self.Tell(IoTasksCompleted.Instance);
+                }
+                catch (Exception ex)
+                {
+                    var aggregate = ex as AggregateException;
+                    Self.Tell(new IoTaskFailed(aggregate?.InnerExceptions.FirstOrDefault() ?? ex));
+                }
+            }
         }
 
         /// <summary>
@@ -388,13 +415,14 @@ namespace Akka.IO
             Receive<Tcp.WriteCommand>(HandleWrite);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             Receive<StreamReadFailed>(msg => HandleStreamReadFailed(msg));
+            Receive<ReadStreamCompleted>(_ => HandleReadStreamCompleted());
             Receive<PipeReadCompleted>(HandlePipeRead);
+            Receive<PipeReadCanceled>(_ => HandlePipeReadCanceled());
             SuspendResumeHandlers();
             Receive<StreamEof>(_ => HandleStreamEof());
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
             Receive<IoTasksCompleted>(_ =>
             {
-                _ioTasksCompleted = true;
                 if (_traceLogging) Log.Debug("[TcpConnection] All I/O tasks completed");
             });
             Receive<HandlerDied>(_ =>
@@ -410,7 +438,9 @@ namespace Akka.IO
             Receive<Tcp.WriteCommand>(HandleWrite);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             Receive<StreamReadFailed>(msg => HandleStreamReadFailed(msg));
+            Receive<ReadStreamCompleted>(_ => HandleReadStreamCompleted());
             Receive<PipeReadCompleted>(HandlePipeRead);
+            Receive<PipeReadCanceled>(_ => HandlePipeReadCanceled());
             Receive<StreamEof>(_ =>
             {
                 // Already in PeerSentEof state — this is a duplicate notification, ignore
@@ -420,7 +450,6 @@ namespace Akka.IO
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
             Receive<IoTasksCompleted>(_ =>
             {
-                _ioTasksCompleted = true;
                 if (_traceLogging) Log.Debug("[TcpConnection] All I/O tasks completed (peer EOF)");
             });
             Receive<HandlerDied>(_ =>
@@ -439,15 +468,34 @@ namespace Akka.IO
             });
             Receive<Abort>(c => HandleClose(Sender, c.Event));
             Receive<StreamReadFailed>(msg => HandleStreamReadFailed(msg));
+            Receive<ReadStreamCompleted>(_ =>
+            {
+                HandleReadStreamCompleted();
+                TryFinishClose(closeSender, closeEvent);
+            });
             Receive<StreamEof>(_ =>
             {
+                _peerClosed = true;
+
+                if (closeEvent is ConfirmedClosed)
+                {
+                    if (_traceLogging)
+                        Log.Debug("[TcpConnection] Peer FIN received during ConfirmedClose - connection fully closed");
+                    DoCloseConnection(closeSender, ConfirmedClosed.Instance);
+                    return;
+                }
+
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] EOF received during closing - connection fully closed");
-                DoCloseConnection(closeSender, closeEvent is ConfirmedClosed ? closeEvent : ConfirmedClosed.Instance);
+                    Log.Debug("[TcpConnection] EOF received during close - waiting for writes/tasks to finish");
+
+                TryFinishClose(closeSender, closeEvent);
             });
             Receive<PipeReadCompleted>(HandlePipeRead);
+            Receive<PipeReadCanceled>(_ => HandlePipeReadCanceled());
             Receive<WritesFlushed>(_ =>
             {
+                _writesFlushed = true;
+
                 if (_traceLogging)
                     Log.Debug("[TcpConnection] Writes flushed during close");
 
@@ -475,7 +523,6 @@ namespace Akka.IO
             });
             Receive<IoTasksCompleted>(_ =>
             {
-                _ioTasksCompleted = true;
                 if (_traceLogging)
                     Log.Debug("[TcpConnection] All I/O tasks completed during close");
                 TryFinishClose(closeSender, closeEvent);
@@ -511,8 +558,9 @@ namespace Akka.IO
                 return;
             }
 
-            // For regular Close: once I/O tasks are done, close
-            if (_ioTasksCompleted)
+            // For regular Close: once outbound writes are flushed and the read stream
+            // has completed or been cancelled, the actor can finish closing.
+            if (_writesFlushed && _readStreamCompleted)
                 DoCloseConnection(closeSender, closeEvent);
         }
 
@@ -549,6 +597,14 @@ namespace Akka.IO
                 Log.Debug("[TcpConnection] Stream read failed: {0}", msg.Cause.Message);
         }
 
+        private void HandleReadStreamCompleted()
+        {
+            _readStreamCompleted = true;
+
+            if (_traceLogging)
+                Log.Debug("[TcpConnection] Read stream completed");
+        }
+
         /* ================================================================= */
         /*  Read flow control — actor-driven pipe reads, no synchronization  */
         /* ================================================================= */
@@ -581,31 +637,23 @@ namespace Akka.IO
             var reader = _pipeReader;
             var ct = _cts.Token;
 
-            try
+            _ = AwaitPipeReadAsync();
+
+            async Task AwaitPipeReadAsync()
             {
-                var valueTask = reader.ReadAsync(ct);
-                if (valueTask.IsCompletedSuccessfully)
+                try
                 {
-                    // Fast path: data already available in the pipe
-                    self.Tell(new PipeReadCompleted(valueTask.Result));
+                    var result = await ReadPipeChunkAsync(reader, ct).ConfigureAwait(false);
+                    self.Tell(result);
                 }
-                else
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
-                    valueTask.AsTask().ContinueWith(task =>
-                    {
-                        if (task.IsCompletedSuccessfully)
-                            self.Tell(new PipeReadCompleted(task.Result));
-                        else if (task.IsFaulted)
-                            self.Tell(new IoTaskFailed(task.Exception!.InnerException ?? task.Exception));
-                        else if (task.IsCanceled)
-                            self.Tell(new IoTaskFailed(new OperationCanceledException("Pipe read cancelled")));
-                    }, TaskContinuationOptions.ExecuteSynchronously);
+                    self.Tell(PipeReadCanceled.Instance);
                 }
-            }
-            catch (Exception ex)
-            {
-                _readPending = false;
-                self.Tell(new IoTaskFailed(ex));
+                catch (Exception ex)
+                {
+                    self.Tell(new IoTaskFailed(ex));
+                }
             }
         }
 
@@ -616,23 +664,17 @@ namespace Akka.IO
         private void HandlePipeRead(PipeReadCompleted msg)
         {
             _readPending = false;
-            var result = msg.Result;
-            var buffer = result.Buffer;
+            var data = msg.Data;
 
-            if (buffer.Length > 0)
+            if (data.Length > 0)
             {
-                var data = new byte[buffer.Length];
-                buffer.CopyTo(data);
-
                 _handler!.Tell(new Received(data));
 
                 if (_traceLogging)
                     Log.Debug("[TcpConnection] Delivered {0} bytes to handler", data.Length);
             }
 
-            _pipeReader!.AdvanceTo(buffer.End);
-
-            if (result.IsCompleted || result.IsCanceled)
+            if (msg.IsCompleted || msg.IsCanceled)
             {
                 // When the completed/canceled read also carried data, do one more
                 // non-demand-driven drain read before signaling EOF.  The pipe
@@ -642,7 +684,7 @@ namespace Akka.IO
                 // inside CompleteAsync is not yet visible.  The extra read is
                 // guaranteed to be very cheap (synchronous, empty buffer) in the
                 // common case and ensures no bytes are silently dropped.
-                if (buffer.Length > 0)
+                if (data.Length > 0)
                 {
                     if (_traceLogging)
                         Log.Debug("[TcpConnection] Pipe completed with data — requesting drain read");
@@ -679,6 +721,39 @@ namespace Akka.IO
             if (!_pullMode && _readingAllowed)
             {
                 RequestPipeRead();
+            }
+        }
+
+        private void HandlePipeReadCanceled()
+        {
+            _readPending = false;
+
+            if (_traceLogging)
+                Log.Debug("[TcpConnection] Pipe read cancelled");
+        }
+
+        private static async ValueTask<PipeReadCompleted> ReadPipeChunkAsync(PipeReader reader, CancellationToken ct)
+        {
+            while (true)
+            {
+                var result = await reader.ReadAsync(ct).ConfigureAwait(false);
+                var buffer = result.Buffer;
+                byte[] data;
+
+                if (buffer.Length > 0)
+                {
+                    data = new byte[checked((int)buffer.Length)];
+                    buffer.CopyTo(data);
+                }
+                else
+                {
+                    data = Array.Empty<byte>();
+                }
+
+                reader.AdvanceTo(buffer.End);
+
+                if (data.Length > 0 || result.IsCompleted || result.IsCanceled)
+                    return new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled);
             }
         }
 
@@ -757,6 +832,7 @@ namespace Akka.IO
         /// </summary>
         private async Task ReadFromStreamAsync(Stream stream, PipeWriter writer, CancellationToken ct)
         {
+            var self = Self;
             var minimumBufferSize = Settings.MaxFrameSizeBytes;
             Exception? streamError = null;
             try
@@ -823,6 +899,7 @@ namespace Akka.IO
                 // synchronously, bypassing the actor's message loop. The error is already
                 // communicated via StreamReadFailed self-tell and _readStreamError field.
                 await writer.CompleteAsync().ConfigureAwait(false);
+                self.Tell(ReadStreamCompleted.Instance);
             }
         }
 
@@ -832,47 +909,76 @@ namespace Akka.IO
         private async Task WriteToStreamAsync(Stream stream, ChannelReader<WriteCommand> reader, CancellationToken ct)
         {
             var self = Self;
+            var batch = new List<WriteCommand>(8);
+            var hasPending = false;
+            WriteCommand pending = default;
+
             try
             {
-                await foreach (var cmd in reader.ReadAllAsync(ct).ConfigureAwait(false))
+                while (true)
                 {
-                    var write = cmd.Cmd;
-                    var sender = cmd.Sender;
+                    batch.Clear();
+                    var batchBytes = 0;
+
+                    if (hasPending)
+                    {
+                        batch.Add(pending);
+                        batchBytes = (int)pending.Cmd.Bytes;
+                        hasPending = false;
+                    }
+                    else
+                    {
+                        if (!await reader.WaitToReadAsync(ct).ConfigureAwait(false))
+                            break;
+
+                        if (!reader.TryRead(out pending))
+                            continue;
+
+                        batch.Add(pending);
+                        batchBytes = (int)pending.Cmd.Bytes;
+                    }
+
+                    while (batch.Count < MaxWriteCommandsPerBatch
+                           && batchBytes < _writeBatchSizeBytes
+                           && reader.TryRead(out var next))
+                    {
+                        var nextBytes = (int)next.Cmd.Bytes;
+                        if (batchBytes > 0 && batchBytes + nextBytes > _writeBatchSizeBytes)
+                        {
+                            pending = next;
+                            hasPending = true;
+                            break;
+                        }
+
+                        batch.Add(next);
+                        batchBytes += nextBytes;
+                    }
 
                     try
                     {
-                        var data = write.Data;
-                        if (data.Length > 0)
-                        {
-                            await stream.WriteAsync(data, ct).ConfigureAwait(false);
-                        }
+                        await WriteBatchToStreamAsync(stream, batch, batchBytes, ct).ConfigureAwait(false);
 
-                        // Decrement queued bytes
-                        Interlocked.Add(ref _queuedBytes, -(int)write.Bytes);
+                        Interlocked.Add(ref _queuedBytes, -batchBytes);
 
                         if (_traceLogging)
                         {
-                            Interlocked.Add(ref _totalSentBytes, data.Length);
-                            Log.Debug("[TcpConnection] WriteToStream: wrote {0} bytes [{1} total sent]",
-                                data.Length, Interlocked.Read(ref _totalSentBytes));
+                            Interlocked.Add(ref _totalSentBytes, batchBytes);
+                            Log.Debug("[TcpConnection] WriteToStream: wrote {0} bytes in {1} command(s) [{2} total sent]",
+                                batchBytes, batch.Count, Interlocked.Read(ref _totalSentBytes));
                         }
 
-                        // ACK: self-tell before caller-tell for ordering
-                        if (write.WantsAck)
-                        {
-                            sender.Tell(write.Ack);
-                        }
+                        AckBatch(batch);
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested)
                     {
-                        // Cancelled during write - send failure for this write
-                        sender.Tell(write.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
+                        FailBatch(batch, DroppingWriteBecauseClosingException);
+                        FailPendingWrites(reader, hasPending ? pending : null, DroppingWriteBecauseClosingException);
                         break;
                     }
                     catch (Exception ex) when (ex is IOException or SocketException)
                     {
-                        // Write failed - notify sender and actor
-                        sender.Tell(write.FailureMessage.WithCause(ex));
+                        FailBatch(batch, ex);
+                        FailPendingWrites(reader, hasPending ? pending : null, ex);
                         self.Tell(new IoTaskFailed(ex));
                         break;
                     }
@@ -894,6 +1000,65 @@ namespace Akka.IO
             {
                 // Signal that writes are flushed
                 self.Tell(WritesFlushed.Instance);
+            }
+        }
+
+        private async Task WriteBatchToStreamAsync(Stream stream, IReadOnlyList<WriteCommand> batch, int batchBytes,
+            CancellationToken ct)
+        {
+            if (batch.Count == 1)
+            {
+                var data = batch[0].Cmd.Data;
+                if (data.Length > 0)
+                    await stream.WriteAsync(data, ct).ConfigureAwait(false);
+
+                return;
+            }
+
+            var rented = ArrayPool<byte>.Shared.Rent(batchBytes);
+            try
+            {
+                var offset = 0;
+                foreach (var item in batch)
+                {
+                    var data = item.Cmd.Data;
+                    data.Span.CopyTo(rented.AsSpan(offset, data.Length));
+                    offset += data.Length;
+                }
+
+                await stream.WriteAsync(rented.AsMemory(0, batchBytes), ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(rented);
+            }
+        }
+
+        private static void AckBatch(IReadOnlyList<WriteCommand> batch)
+        {
+            foreach (var item in batch)
+            {
+                if (item.Cmd.WantsAck)
+                    item.Sender.Tell(item.Cmd.Ack);
+            }
+        }
+
+        private static void FailBatch(IReadOnlyList<WriteCommand> batch, Exception cause)
+        {
+            foreach (var item in batch)
+            {
+                item.Sender.Tell(item.Cmd.FailureMessage.WithCause(cause));
+            }
+        }
+
+        private static void FailPendingWrites(ChannelReader<WriteCommand> reader, WriteCommand? pending, Exception cause)
+        {
+            if (pending.HasValue)
+                pending.Value.Sender.Tell(pending.Value.Cmd.FailureMessage.WithCause(cause));
+
+            while (reader.TryRead(out var write))
+            {
+                write.Sender.Tell(write.Cmd.FailureMessage.WithCause(cause));
             }
         }
 
