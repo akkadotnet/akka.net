@@ -159,8 +159,8 @@ namespace Akka.IO
             IPAddress address = Socket.AddressFamily switch
             {
                 AddressFamily.InterNetwork when resolved.Ipv4.Any() => resolved.Ipv4.First(),
-                AddressFamily.InterNetworkV6 when resolved.Ipv4.Any() => resolved.Ipv4.First(),
                 AddressFamily.InterNetworkV6 when resolved.Ipv6.Any() => resolved.Ipv6.First(),
+                AddressFamily.InterNetworkV6 when resolved.Ipv4.Any() => resolved.Ipv4.First().MapToIPv6(),
                 _ => resolved.Addr
             };
 
