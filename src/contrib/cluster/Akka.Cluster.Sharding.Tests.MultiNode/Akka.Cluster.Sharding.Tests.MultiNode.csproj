@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\core\Akka.MultiNode.TestAdapter\Akka.MultiNode.TestAdapter.csproj" />
     <ProjectReference Include="..\..\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
     <ProjectReference Include="..\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
@@ -13,7 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-      <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
       <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
       <PackageReference Include="xunit" Version="$(XunitVersion)"/>
