@@ -119,16 +119,12 @@ namespace Akka.IO
             {
                 if (_connect.RemoteAddress is DnsEndPoint remoteAddress)
                 {
-                    Log.Debug("Resolving {0} before connecting", remoteAddress.Host);
-
-                    // Always resolve DNS via Akka's async DNS resolver for consistent
-                    // cross-platform behavior. Socket.ConnectAsync(DnsEndPoint) has
-                    // platform-specific DNS timeout behavior that can be very slow on Windows.
-                    var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
-                    if (resolved == null)
-                        Become(() => Resolving(remoteAddress));
-                    else
-                        Register(CreateEndpoint(resolved, remoteAddress.Port));
+                    // Pass DnsEndPoint directly to Socket.ConnectAsync — the runtime
+                    // resolves DNS and tries all addresses (IPv4 + IPv6) until one connects.
+                    // This is the only correct approach for dual-stack sockets where we
+                    // don't know what address family the server is bound to.
+                    Log.Debug("Connecting to DNS endpoint [{0}]", remoteAddress);
+                    RegisterEndPoint(remoteAddress);
                 }
                 else if (_connect.RemoteAddress is IPEndPoint point)
                 {
@@ -144,29 +140,6 @@ namespace Akka.IO
         {
             ReleaseConnectionSocketArgs();
             base.PostStop();
-        }
-
-        private void Resolving(DnsEndPoint remoteAddress)
-        {
-            Receive<Dns.Resolved>(resolved =>
-            {
-                ReportConnectFailure(() => Register(CreateEndpoint(resolved, remoteAddress.Port)));
-            });
-        }
-
-        private IPEndPoint CreateEndpoint(Dns.Resolved resolved, int port)
-        {
-            IPAddress address = Socket.AddressFamily switch
-            {
-                AddressFamily.InterNetwork when resolved.Ipv4.Any() => resolved.Ipv4.First(),
-                // Dual-stack: prefer IPv4 mapped to IPv6 (most servers bind to IPv4 loopback).
-                // This matches dev behavior and lets dual-stack sockets reach IPv4 listeners.
-                AddressFamily.InterNetworkV6 when resolved.Ipv4.Any() => resolved.Ipv4.First().MapToIPv6(),
-                AddressFamily.InterNetworkV6 when resolved.Ipv6.Any() => resolved.Ipv6.First(),
-                _ => resolved.Addr
-            };
-
-            return new IPEndPoint(address, port);
         }
 
         private static SocketAsyncEventArgs CreateSocketEventArgs(IActorRef onCompleteNotificationsReceiver)

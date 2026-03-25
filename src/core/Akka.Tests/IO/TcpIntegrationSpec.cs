@@ -165,12 +165,25 @@ namespace Akka.Tests.IO
             });
         }
 
-        [Fact]
-        public async Task The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints()
+        [InlineData(AddressFamily.InterNetwork)]
+        [InlineData(AddressFamily.InterNetworkV6)]
+        [Theory]
+        public async Task The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints(AddressFamily family)
         {
+            if (family == AddressFamily.InterNetworkV6)
+            {
+                // Skip if "localhost" doesn't resolve to an IPv6 address on this system.
+                // Socket.ConnectAsync(DnsEndPoint) only tries addresses returned by DNS —
+                // if DNS doesn't return ::1, we can't reach an IPv6-only server via "localhost".
+                var addresses = await System.Net.Dns.GetHostAddressesAsync("localhost");
+                if (!addresses.Any(a => a.AddressFamily == AddressFamily.InterNetworkV6))
+                    return;
+            }
+
             var serverHandler = CreateTestProbe();
             var bindCommander = CreateTestProbe();
-            bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0)));
+            var loopback = family == AddressFamily.InterNetwork ? IPAddress.Loopback : IPAddress.IPv6Loopback;
+            bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(loopback, 0)));
             var boundMsg = await bindCommander.ExpectMsgAsync<Tcp.Bound>();
 
             // setup client to connect
@@ -492,11 +505,12 @@ namespace Akka.Tests.IO
         {
             var probe = CreateTestProbe();
             var endpoint = new DnsEndPoint("fake", 1000);
-            Sys.Tcp().Tell(new Tcp.Connect(endpoint), probe.Ref);
+            // Use a connect timeout so we don't depend on platform-specific DNS timeout behavior.
+            // Windows DNS can take 10+ seconds to fail for unresolvable hosts.
+            Sys.Tcp().Tell(new Tcp.Connect(endpoint, timeout: TimeSpan.FromSeconds(3)), probe.Ref);
 
-            // expecting CommandFailed or no reply (within timeout)
-            var replies = await probe.ReceiveWhileAsync(TimeSpan.FromSeconds(5), x => x as Tcp.CommandFailed).ToListAsync();
-            replies.Count.ShouldBe(1);
+            var reply = await probe.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+            reply.Should().NotBeNull();
         }
 
         [Fact]
