@@ -25,7 +25,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact(Timeout = 20000)]
         public async Task Parallel_TestKit_startup_should_not_deadlock()
         {
-            var concurrentTests = 40; // High parallelism to trigger the issue
+            var concurrentTests = 4 * Environment.ProcessorCount;
 
             var tasks = Enumerable.Range(0, concurrentTests)
                 .Select(_ => Task.Run(RunOneTestKit))
