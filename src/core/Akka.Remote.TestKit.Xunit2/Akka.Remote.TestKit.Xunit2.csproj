@@ -8,7 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Internals\Reference.conf" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit2\Akka.TestKit.Xunit2.csproj" />
   </ItemGroup>
@@ -48,11 +47,17 @@
     <Compile Include="..\Akka.Remote.TestKit\Extension.cs">
       <Link>Extension.cs</Link>
     </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\Internals\TestConductorConfigFactory.cs">
+      <Link>Internals\TestConductorConfigFactory.cs</Link>
+    </Compile>
     <Compile Include="..\Akka.Remote.TestKit\MsgDecoder.cs">
       <Link>MsgDecoder.cs</Link>
     </Compile>
     <Compile Include="..\Akka.Remote.TestKit\MsgEncoder.cs">
       <Link>MsgEncoder.cs</Link>
+    </Compile>
+    <Compile Include="..\Akka.Remote.TestKit\MultiNodeSpec.cs">
+      <Link>MultiNodeSpec.cs</Link>
     </Compile>
     <Compile Include="..\Akka.Remote.TestKit\Player.cs">
       <Link>Player.cs</Link>
@@ -66,6 +71,12 @@
     <Compile Include="..\Akka.Remote.TestKit\RemoteConnection.cs">
       <Link>RemoteConnection.cs</Link>
     </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\Akka.Remote.TestKit\Internals\Reference.conf">
+      <Link>Internals\Reference.conf</Link>
+    </EmbeddedResource>
   </ItemGroup>
   
 </Project>

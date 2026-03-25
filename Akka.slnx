@@ -283,6 +283,10 @@
   <Folder Name="/Examples/TcpEchoServer/">
     <Project Path="src/examples/TcpEchoService.Server/TcpEchoService.Server.csproj" />
   </Folder>
+  <Folder Name="/Examples/Testing/" />
+  <Folder Name="/Examples/Testing/Xunit2/">
+    <Project Path="src/examples/Testing/Xunit2/Akka.Remote.TestKit.Xunit2.Tests/Akka.Remote.TestKit.Xunit2.Tests.csproj" />
+  </Folder>
   <Folder Name="/Examples/WIndowsService/">
     <Project Path="src/examples/WindowsService/AkkaWindowsService/AkkaWindowsService.csproj" />
   </Folder>
