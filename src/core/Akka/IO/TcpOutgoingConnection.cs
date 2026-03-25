@@ -159,8 +159,10 @@ namespace Akka.IO
             IPAddress address = Socket.AddressFamily switch
             {
                 AddressFamily.InterNetwork when resolved.Ipv4.Any() => resolved.Ipv4.First(),
-                AddressFamily.InterNetworkV6 when resolved.Ipv6.Any() => resolved.Ipv6.First(),
+                // Dual-stack: prefer IPv4 mapped to IPv6 (most servers bind to IPv4 loopback).
+                // This matches dev behavior and lets dual-stack sockets reach IPv4 listeners.
                 AddressFamily.InterNetworkV6 when resolved.Ipv4.Any() => resolved.Ipv4.First().MapToIPv6(),
+                AddressFamily.InterNetworkV6 when resolved.Ipv6.Any() => resolved.Ipv6.First(),
                 _ => resolved.Addr
             };
 

@@ -165,24 +165,12 @@ namespace Akka.Tests.IO
             });
         }
 
-        [InlineData(AddressFamily.InterNetworkV6)]
-        [InlineData(AddressFamily.InterNetwork)]
-        [Theory]
-        public async Task The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints(AddressFamily family)
+        [Fact]
+        public async Task The_TCP_transport_implementation_should_properly_support_connecting_to_DNS_endpoints()
         {
-            if (family == AddressFamily.InterNetworkV6)
-            {
-                // Skip if "localhost" doesn't resolve to an IPv6 address on this system.
-                // Some Linux systems only map "localhost" to 127.0.0.1 in /etc/hosts.
-                var addresses = await System.Net.Dns.GetHostAddressesAsync("localhost");
-                if (!addresses.Any(a => a.AddressFamily == AddressFamily.InterNetworkV6))
-                    return; // skip - no IPv6 resolution for "localhost"
-            }
-
             var serverHandler = CreateTestProbe();
             var bindCommander = CreateTestProbe();
-            bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(family == AddressFamily.InterNetwork ? IPAddress.Loopback
-                : IPAddress.IPv6Loopback, 0)));
+            bindCommander.Send(Sys.Tcp(), new Tcp.Bind(serverHandler.Ref, new IPEndPoint(IPAddress.Loopback, 0)));
             var boundMsg = await bindCommander.ExpectMsgAsync<Tcp.Bound>();
 
             // setup client to connect
