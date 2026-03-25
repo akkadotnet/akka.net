@@ -2996,7 +2996,7 @@ namespace Akka.Cluster
         /// <param name="targetStatus">TBD</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="targetStatus"/> is invalid.
-        /// Acceptable values are: <see cref="MemberStatus.Up"/> | <see cref="MemberStatus.Down"/>.
+        /// Acceptable values are: <see cref="MemberStatus.Up"/> | <see cref="MemberStatus.Removed"/>.
         /// </exception>
         public OnMemberStatusChangedListener(Cluster cluster, Action callback, MemberStatus targetStatus)
         {
@@ -3025,7 +3025,7 @@ namespace Akka.Cluster
 
         /// <inheritdoc cref="ActorBase.PreStart"/>
         /// <exception cref="ArgumentException">
-        /// This exception is thrown when the current status neither <see cref="MemberStatus.Up"/> or <see cref="MemberStatus.Down"/>.
+        /// This exception is thrown when the current status neither <see cref="MemberStatus.Up"/> or <see cref="MemberStatus.Removed"/>.
         /// </exception>
         protected override void PreStart()
         {
@@ -3033,9 +3033,6 @@ namespace Akka.Cluster
         }
 
         /// <inheritdoc cref="ActorBase.PostStop"/>
-        /// <exception cref="ArgumentException">
-        /// This exception is thrown when the current status neither <see cref="MemberStatus.Up"/> or <see cref="MemberStatus.Down"/>.
-        /// </exception>
         protected override void PostStop()
         {
             // execute MemberRemoved hooks if we are shutting down
