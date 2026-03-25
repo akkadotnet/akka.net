@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.IO;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -27,10 +27,8 @@ namespace Akka.IO
     {
         private readonly IActorRef _commander;
         private readonly Tcp.Connect _connect;
-        private readonly IStreamProvider _streamProvider;
 
         private SocketAsyncEventArgs? _connectArgs;
-        private Stream? _connectedStream;
 
         private readonly ConnectException _finishConnectNeverReturnedTrueException =
             new("Could not establish connection because finishConnect never returned true");
@@ -45,7 +43,6 @@ namespace Akka.IO
         {
             _commander = commander;
             _connect = connect;
-            _streamProvider = streamProvider ?? new TcpStreamProvider();
 
             foreach (var option in connect.Options)
             {
@@ -59,13 +56,18 @@ namespace Akka.IO
                 Context.SetReceiveTimeout(connect.Timeout.Value);
         }
 
-        protected override Stream GetStream()
+        protected override ITransportConnection CreateTransport()
         {
             // NetworkStream requires a blocking socket; the socket was created
             // non-blocking for the SAEA connect phase — switch to blocking now.
             Socket.Blocking = true;
-            _connectedStream ??= new NetworkStream(Socket, ownsSocket: false);
-            return _connectedStream;
+
+            var inputPipeOptions = new PipeOptions(
+                pauseWriterThreshold: Settings.ReceiveBufferSize * 2,
+                resumeWriterThreshold: Settings.ReceiveBufferSize,
+                useSynchronizationContext: false);
+
+            return new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions);
         }
 
         private void ReleaseConnectionSocketArgs()

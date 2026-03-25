@@ -7,6 +7,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Pipelines;
 using System.Net.Sockets;
 using Akka.Actor;
 
@@ -21,26 +22,47 @@ namespace Akka.IO
     {
         private readonly IActorRef _bindHandler;
         private readonly IEnumerable<Inet.SocketOption> _options;
-        private readonly Stream _stream;
+        private readonly Stream? _stream;
+
+        public TcpIncomingConnection(TcpSettings settings,
+                                     Socket socket,
+                                     IActorRef bindHandler,
+                                     IEnumerable<Inet.SocketOption> options,
+                                     bool readThrottling)
+            : this(settings, socket, bindHandler, options, readThrottling, stream: null)
+        {
+        }
 
         public TcpIncomingConnection(TcpSettings settings,
                                      Socket socket,
                                      IActorRef bindHandler,
                                      IEnumerable<Inet.SocketOption> options,
                                      bool readThrottling,
-                                     Stream? stream = null)
+                                     Stream? stream)
             : base(settings, socket, readThrottling)
         {
             _bindHandler = bindHandler;
             _options = options;
-            _stream = stream ?? new NetworkStream(socket, ownsSocket: false);
+            _stream = stream;
 
             Context.Watch(bindHandler); // sign death pact
         }
 
-        protected override Stream GetStream()
+        protected override ITransportConnection CreateTransport()
         {
-            return _stream;
+            var inputPipeOptions = new PipeOptions(
+                pauseWriterThreshold: Settings.ReceiveBufferSize * 2,
+                resumeWriterThreshold: Settings.ReceiveBufferSize,
+                useSynchronizationContext: false);
+
+            if (_stream != null)
+            {
+                // Use the provided stream (for TLS or testing)
+                return new TcpTransportConnection(Socket, _stream, inputPipeOptions: inputPipeOptions);
+            }
+
+            // Default: plaintext TCP using the socket directly
+            return new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions);
         }
 
         protected override void PreStart()

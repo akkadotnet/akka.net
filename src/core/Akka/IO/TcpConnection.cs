@@ -14,7 +14,6 @@ using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
@@ -30,31 +29,20 @@ namespace Akka.IO
     /// <summary>
     /// INTERNAL API: Base class for TcpIncomingConnection and TcpOutgoingConnection.
     ///
-    /// TcpConnection is an actor abstraction over a single TCP connection using
-    /// <see cref="System.IO.Pipelines.Pipe"/> for read buffering and
-    /// <see cref="System.Threading.Channels.Channel{T}"/> for write command queuing.
+    /// TcpConnection is an actor abstraction over a single TCP connection.
+    /// It delegates all I/O machinery (pipes, pump loops, buffer management) to an
+    /// <see cref="ITransportConnection"/> implementation.
     ///
-    /// Three background tasks coordinate through actor mailbox (self-tell on completion/error):
-    ///
-    /// - ReadFromStream: reads from the network stream into the Pipe writer
-    /// - ReadFromPipe: reads from the Pipe reader, copies to pooled buffers, emits Tcp.Received
-    /// - WriteToStream: dequeues write commands, batches outbound writes opportunistically,
-    ///   calls stream.WriteAsync, delivers ACKs
+    /// Two actor-driven coordination paths:
+    /// - ReadFromPipe: reads from <see cref="ITransportConnection.Input"/>, copies to pooled buffers,
+    ///   emits <see cref="Tcp.Received"/>
+    /// - Write: writes directly to the transport via <see cref="ITransportConnection.WriteAsync(ReadOnlySequence{byte}, CancellationToken)"/>
     ///
     /// All shutdown and error handling flows through the actor mailbox for thread safety.
     /// </summary>
     internal abstract class TcpConnection : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
         #region Internal messages
-
-        /// <summary>
-        /// Self-tell: all background I/O tasks have completed.
-        /// </summary>
-        private sealed class IoTasksCompleted : INoSerializationVerificationNeeded
-        {
-            public static readonly IoTasksCompleted Instance = new();
-            private IoTasksCompleted() { }
-        }
 
         /// <summary>
         /// Self-tell: a background task failed with an exception.
@@ -97,30 +85,40 @@ namespace Akka.IO
             private PipeReadCanceled() { }
         }
 
-        private sealed class ReadStreamCompleted : INoSerializationVerificationNeeded
+        /// <summary>
+        /// Self-tell: the transport's read pump has completed (check IsFaulted for errors).
+        /// </summary>
+        private sealed class ReadPumpCompleted : INoSerializationVerificationNeeded
         {
-            public static readonly ReadStreamCompleted Instance = new();
-            private ReadStreamCompleted() { }
+            public static readonly ReadPumpCompleted Instance = new();
+            private ReadPumpCompleted() { }
         }
 
         /// <summary>
-        /// Self-tell: all pending writes have been flushed (write channel completed + drained).
+        /// Self-tell: the transport's read pump failed with an I/O error.
         /// </summary>
-        private sealed class WritesFlushed : INoSerializationVerificationNeeded
-        {
-            public static readonly WritesFlushed Instance = new();
-            private WritesFlushed() { }
-        }
-
-        /// <summary>
-        /// Self-tell: the read-from-stream task encountered an I/O error.
-        /// Distinct from IoTaskFailed because this carries the error that caused pipe completion
-        /// and must be processed BEFORE PipeReadCompleted to distinguish error-EOF from normal EOF.
-        /// </summary>
-        private sealed class StreamReadFailed : INoSerializationVerificationNeeded
+        private sealed class ReadPumpFailed : INoSerializationVerificationNeeded
         {
             public Exception Cause { get; }
-            public StreamReadFailed(Exception cause) { Cause = cause; }
+            public ReadPumpFailed(Exception cause) { Cause = cause; }
+        }
+
+        /// <summary>
+        /// Self-tell: transport shutdown/close operation completed successfully.
+        /// </summary>
+        private sealed class TransportOperationCompleted : INoSerializationVerificationNeeded
+        {
+            public static readonly TransportOperationCompleted Instance = new();
+            private TransportOperationCompleted() { }
+        }
+
+        /// <summary>
+        /// Self-tell: transport shutdown/close operation failed.
+        /// </summary>
+        private sealed class TransportOperationFailed : INoSerializationVerificationNeeded
+        {
+            public Exception Cause { get; }
+            public TransportOperationFailed(Exception cause) { Cause = cause; }
         }
 
         private sealed class CommanderDied : INoSerializationVerificationNeeded, IDeadLetterSuppression
@@ -154,34 +152,20 @@ namespace Akka.IO
         protected readonly Socket Socket;
         protected ILoggingAdapter Log { get; } = Context.GetLogger();
 
-        private const int MaxWriteCommandsPerBatch = 128;
-
         private readonly bool _traceLogging;
         private readonly bool _pullMode;
         private readonly int _maxQueuedBytes;
-        private readonly int _writeBatchSizeBytes;
 
-        // Pipe for read buffering
-        private Pipe? _pipe;
+        // Transport connection — owns pipes, pump loops, stream
+        private ITransportConnection? _transport;
 
-        // Write channel
-        private Channel<WriteCommand>? _writeChannel;
-
-        // Background tasks (pipe reading is actor-driven, not a background task)
-        private Task? _readFromStreamTask;
-        private Task? _writeToStreamTask;
-
-        // CTS for background task cancellation
+        // CTS for pipe read cancellation
         private CancellationTokenSource? _cts;
 
         // Shutdown guard - ensures only one shutdown path executes
         private int _shutdownState = ShutdownNone;
 
-        // Stream for network I/O (set by subclass via StartIoTasks)
-        private Stream? _stream;
-
         // Reading flow control — all state managed in actor thread, no synchronization needed
-        private PipeReader? _pipeReader;
         private bool _readingAllowed;
         private bool _readPending; // true when a PipeReader.ReadAsync is in flight
 
@@ -190,8 +174,6 @@ namespace Akka.IO
         private IActorRef? _handler;
         private CloseInformation? _closeInformation;
 
-        // Queued bytes tracking for write backpressure
-        private int _queuedBytes;
         private int _pendingRegistrationBytes;
 
         private readonly Queue<WriteCommand> _pendingRegistrationWrites = new();
@@ -201,19 +183,9 @@ namespace Akka.IO
         private bool _outputShutdown;
         private bool _keepOpenOnPeerClosed;
         private bool _closingGracefully;
-        private bool _readStreamCompleted;
-        private bool _writesFlushed;
-
-        // Tracks error from ReadFromStream so HandlePipeRead can distinguish error-EOF from normal EOF.
-        // _readStreamError is set from the actor thread when StreamReadFailed is processed.
-        // _readStreamErrorVolatile is set from the background thread when the error occurs,
-        // BEFORE the pipe writer is completed. This ensures HandlePipeRead can always detect
-        // the error even if the StreamReadFailed message hasn't been processed yet.
-        private Exception? _readStreamError;
-        private volatile bool _readStreamHasError;
-
-        private long _totalSentBytes;
-        private long _totalReceivedBytes;
+        private bool _readPumpCompleted;
+        private bool _readPumpHasError;
+        private Exception? _readPumpError;
 
         private static readonly IOException DroppingWriteBecauseClosingException =
             new("Dropping write because the connection is closing");
@@ -228,7 +200,6 @@ namespace Akka.IO
         {
             Settings = settings;
             _maxQueuedBytes = settings.WriteCommandsQueueMaxSize;
-            _writeBatchSizeBytes = settings.MaxFrameSizeBytes;
             _pullMode = pullMode;
             _traceLogging = Settings.TraceLogging;
             Socket = socket ?? throw new ArgumentNullException(nameof(socket));
@@ -240,19 +211,27 @@ namespace Akka.IO
 
         protected override void PostStop()
         {
-            // Best-effort cleanup - cancel everything and close
+            // Best-effort cleanup - cancel everything and close.
+            // Do NOT synchronously wait for DisposeAsync — the pump tasks may be
+            // blocked on stream I/O that can only be unblocked by closing the socket,
+            // which would deadlock if we Wait() first.
             TryCancelCts();
 
-            var closedEvent = _closeInformation?.ClosedEvent;
-            if (closedEvent is Aborted or ErrorClosed)
-                AbortSocket();
+            if (_transport != null)
+            {
+                // Abort cancels the CTS, sets linger=0, closes the socket.
+                // This unblocks any pending stream.ReadAsync/WriteAsync in the pump tasks.
+                // The pump tasks will exit with OperationCanceledException or IOException.
+                try { _transport.Abort(); }
+                catch { /* best effort */ }
+            }
             else
-                CloseSocket();
-
-            DisposeStream(_stream);
-            CompletePipeWriter(_pipe?.Writer);
-            CompletePipeReader(_pipe?.Reader);
-            _writeChannel?.Writer.TryComplete();
+            {
+                // Transport was never created (e.g. PoisonPill before Register).
+                // Close the socket directly since no transport owns it.
+                try { Socket.Close(); }
+                catch { /* best effort */ }
+            }
 
             while (_pendingRegistrationWrites.Count > 0)
             {
@@ -268,58 +247,6 @@ namespace Akka.IO
 
                 foreach (var sub in _closeInformation.NotificationsTo)
                     sub.Tell(_closeInformation.ClosedEvent);
-            }
-        }
-
-        private static bool DisposeStream(Stream? stream)
-        {
-            if (stream is null)
-                return false;
-
-            try
-            {
-                stream.Dispose();
-                return true;
-            }
-            catch (ObjectDisposedException)
-            {
-                return false;
-            }
-            catch (IOException)
-            {
-                return false;
-            }
-        }
-
-        private static bool CompletePipeWriter(PipeWriter? writer)
-        {
-            if (writer is null)
-                return false;
-
-            try
-            {
-                writer.Complete();
-                return true;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
-            }
-        }
-
-        private static bool CompletePipeReader(PipeReader? reader)
-        {
-            if (reader is null)
-                return false;
-
-            try
-            {
-                reader.Complete();
-                return true;
-            }
-            catch (InvalidOperationException)
-            {
-                return false;
             }
         }
 
@@ -357,62 +284,38 @@ namespace Akka.IO
         }
 
         /// <summary>
-        /// Starts the background I/O tasks using the provided stream.
+        /// Starts the transport connection and monitors its read pump.
         /// Called after registration is complete.
         /// </summary>
-        protected void StartIoTasks(Stream stream)
+        protected void StartTransport(ITransportConnection transport)
         {
-            _stream = stream;
+            _transport = transport;
             _cts = new CancellationTokenSource();
-            var ct = _cts.Token;
 
-            // Configure pipe with backpressure thresholds
-            var pipeOptions = new PipeOptions(
-                pauseWriterThreshold: Settings.ReceiveBufferSize * 2,
-                resumeWriterThreshold: Settings.ReceiveBufferSize,
-                useSynchronizationContext: false);
-
-            _pipe = new Pipe(pipeOptions);
-            _pipeReader = _pipe.Reader;
-
-            // Bounded write channel
-            var channelOptions = new BoundedChannelOptions(256)
-            {
-                SingleReader = true,
-                SingleWriter = false,
-                FullMode = BoundedChannelFullMode.Wait
-            };
-            _writeChannel = Channel.CreateBounded<WriteCommand>(channelOptions);
-
-            // Start background tasks (pipe reading is actor-driven via PipeTo)
-            _readFromStreamTask = ReadFromStreamAsync(_stream, _pipe.Writer, ct);
-            _writeToStreamTask = WriteToStreamAsync(_stream, _writeChannel.Reader, ct);
-
-            // Track background tasks - self-tell on completion
+            // Monitor the read pump for completion/errors
             var self = Self;
-            _ = NotifyWhenIoTasksCompleteAsync();
+            _ = MonitorReadPumpAsync();
 
-            async Task NotifyWhenIoTasksCompleteAsync()
+            async Task MonitorReadPumpAsync()
             {
                 try
                 {
-                    await Task.WhenAll(_readFromStreamTask, _writeToStreamTask).ConfigureAwait(false);
-                    self.Tell(IoTasksCompleted.Instance);
+                    await transport.ReadCompleted.ConfigureAwait(false);
+                    self.Tell(ReadPumpCompleted.Instance);
                 }
                 catch (Exception ex)
                 {
-                    var aggregate = ex as AggregateException;
-                    self.Tell(new IoTaskFailed(aggregate?.InnerExceptions.FirstOrDefault() ?? ex));
+                    self.Tell(new ReadPumpFailed(ex));
                 }
             }
         }
 
         /// <summary>
-        /// Provides the Stream for I/O - subclasses must supply this.
-        /// For incoming connections, it's the NetworkStream wrapping the accepted socket.
-        /// For outgoing connections, it's the stream from IStreamProvider or a NetworkStream.
+        /// Creates the transport connection. Subclasses must supply this.
+        /// For incoming connections, wraps the accepted socket.
+        /// For outgoing connections, wraps the connected socket (possibly with TLS).
         /// </summary>
-        protected abstract Stream GetStream();
+        protected abstract ITransportConnection CreateTransport();
 
         /* ================================================================= */
         /*  Close-notification tracking                                      */
@@ -445,9 +348,9 @@ namespace Akka.IO
                 _closeInformation = CloseInformation.Single(_handler, Aborted.Instance);
                 Context.SetReceiveTimeout(null);
 
-                // Start the I/O tasks now that we have a handler
-                var stream = GetStream();
-                StartIoTasks(stream);
+                // Create and start the transport now that we have a handler
+                var transport = CreateTransport();
+                StartTransport(transport);
 
                 // Allow reading unless pull mode
                 if (!_pullMode)
@@ -475,17 +378,13 @@ namespace Akka.IO
         {
             Receive<Tcp.WriteCommand>(HandleWrite);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
-            Receive<StreamReadFailed>(msg => HandleStreamReadFailed(msg));
-            Receive<ReadStreamCompleted>(_ => HandleReadStreamCompleted());
+            Receive<ReadPumpFailed>(msg => HandleReadPumpFailed(msg));
+            Receive<ReadPumpCompleted>(_ => HandleReadPumpCompleted());
             Receive<PipeReadCompleted>(HandlePipeRead);
             Receive<PipeReadCanceled>(_ => HandlePipeReadCanceled());
             SuspendResumeHandlers();
             Receive<StreamEof>(_ => HandleStreamEof());
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
-            Receive<IoTasksCompleted>(_ =>
-            {
-                if (_traceLogging) Log.Debug("[TcpConnection] All I/O tasks completed");
-            });
             Receive<HandlerDied>(_ =>
             {
                 Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
@@ -498,8 +397,8 @@ namespace Akka.IO
             // Peer closed their write side, but we can still write
             Receive<Tcp.WriteCommand>(HandleWrite);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
-            Receive<StreamReadFailed>(msg => HandleStreamReadFailed(msg));
-            Receive<ReadStreamCompleted>(_ => HandleReadStreamCompleted());
+            Receive<ReadPumpFailed>(msg => HandleReadPumpFailed(msg));
+            Receive<ReadPumpCompleted>(_ => HandleReadPumpCompleted());
             Receive<PipeReadCompleted>(HandlePipeRead);
             Receive<PipeReadCanceled>(_ => HandlePipeReadCanceled());
             Receive<StreamEof>(_ =>
@@ -509,10 +408,6 @@ namespace Akka.IO
             });
             SuspendResumeHandlers();
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
-            Receive<IoTasksCompleted>(_ =>
-            {
-                if (_traceLogging) Log.Debug("[TcpConnection] All I/O tasks completed (peer EOF)");
-            });
             Receive<HandlerDied>(_ =>
             {
                 Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
@@ -522,16 +417,20 @@ namespace Akka.IO
 
         private void ClosingBehaviour(IActorRef closeSender, ConnectionClosed closeEvent)
         {
-            // We're shutting down - reject new writes, wait for tasks to complete
+            // We're shutting down - reject new writes, wait for transport operations
             Receive<Tcp.WriteCommand>(w =>
             {
                 Sender.Tell(w.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
             });
             Receive<Abort>(c => HandleClose(Sender, c.Event));
-            Receive<StreamReadFailed>(msg => HandleStreamReadFailed(msg));
-            Receive<ReadStreamCompleted>(_ =>
+            Receive<ReadPumpFailed>(msg =>
             {
-                HandleReadStreamCompleted();
+                HandleReadPumpFailed(msg);
+                TryFinishClose(closeSender, closeEvent);
+            });
+            Receive<ReadPumpCompleted>(_ =>
+            {
+                HandleReadPumpCompleted();
                 TryFinishClose(closeSender, closeEvent);
             });
             Receive<StreamEof>(_ =>
@@ -547,46 +446,38 @@ namespace Akka.IO
                 }
 
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] EOF received during close - waiting for writes/tasks to finish");
+                    Log.Debug("[TcpConnection] EOF received during close - waiting for transport to finish");
 
                 TryFinishClose(closeSender, closeEvent);
             });
             Receive<PipeReadCompleted>(HandlePipeRead);
             Receive<PipeReadCanceled>(_ => HandlePipeReadCanceled());
-            Receive<WritesFlushed>(_ =>
+            Receive<TransportOperationCompleted>(_ =>
             {
-                _writesFlushed = true;
-
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] Writes flushed during close");
+                    Log.Debug("[TcpConnection] Transport operation completed during close");
 
                 if (closeEvent is ConfirmedClosed)
                 {
-                    // For ConfirmedClose (half-close), all writes are flushed.
-                    // Now send FIN, then keep reading until peer sends their FIN (StreamEof).
-                    // Do NOT cancel the CTS — reading must continue.
-                    if (!_outputShutdown)
-                        ShutdownOutput();
+                    // For ConfirmedClose (half-close), transport has flushed writes and sent FIN.
+                    // Now keep reading until peer sends their FIN (StreamEof).
+                    _outputShutdown = true;
 
                     if (_traceLogging)
                         Log.Debug("[TcpConnection] ConfirmedClose: FIN sent, waiting for peer FIN");
                 }
                 else
                 {
-                    // For regular Close, shut down the output and cancel reads
-                    if (!_outputShutdown)
-                        ShutdownOutput();
-                    TryCancelCts();
-
-                    // If I/O tasks already completed, close now
+                    // For regular Close, transport is fully closed
+                    _outputShutdown = true;
                     TryFinishClose(closeSender, closeEvent);
                 }
             });
-            Receive<IoTasksCompleted>(_ =>
+            Receive<TransportOperationFailed>(msg =>
             {
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] All I/O tasks completed during close");
-                TryFinishClose(closeSender, closeEvent);
+                    Log.Debug("[TcpConnection] Transport operation failed during close: {0}", msg.Cause.Message);
+                DoCloseConnection(closeSender, closeEvent);
             });
             Receive<IoTaskFailed>(msg =>
             {
@@ -601,14 +492,14 @@ namespace Akka.IO
                 Context.Stop(Self);
             });
 
-            // If I/O tasks already completed before we entered ClosingBehaviour, try to close now
+            // If read pump already completed before we entered ClosingBehaviour, try to close now
             TryFinishClose(closeSender, closeEvent);
         }
 
         /// <summary>
         /// Checks whether all conditions are met to finalize the connection close.
         /// For ConfirmedClose, the StreamEof handler manages closing directly (waiting for peer FIN).
-        /// For regular Close, we close once I/O tasks are done.
+        /// For regular Close, we close once the read pump has completed and transport is done.
         /// </summary>
         private void TryFinishClose(IActorRef closeSender, ConnectionClosed closeEvent)
         {
@@ -619,9 +510,8 @@ namespace Akka.IO
                 return;
             }
 
-            // For regular Close: once outbound writes are flushed and the read stream
-            // has completed or been cancelled, the actor can finish closing.
-            if (_writesFlushed && _readStreamCompleted)
+            // For regular Close: once read pump has completed and output is shutdown
+            if (_outputShutdown && _readPumpCompleted)
                 DoCloseConnection(closeSender, closeEvent);
         }
 
@@ -637,33 +527,35 @@ namespace Akka.IO
             });
             Receive<ResumeWriting>(_ =>
             {
-                // Resume writing is handled by the channel - no special action needed
+                // No special action needed — transport handles write buffering
                 if (_traceLogging) Log.Debug("[TcpConnection] ResumeWriting received");
             });
         }
 
         /* ================================================================= */
-        /*  Stream error tracking                                           */
+        /*  Read pump monitoring                                             */
         /* ================================================================= */
 
         /// <summary>
-        /// Called when ReadFromStream encounters an I/O error. Records the error
-        /// so that subsequent HandlePipeRead with IsCompleted can propagate it
-        /// as an ErrorClosed instead of treating it as normal EOF.
+        /// Called when the transport's read pump encounters an I/O error.
+        /// Records the error so that subsequent HandlePipeRead with IsCompleted
+        /// can propagate it as an ErrorClosed instead of treating it as normal EOF.
         /// </summary>
-        private void HandleStreamReadFailed(StreamReadFailed msg)
+        private void HandleReadPumpFailed(ReadPumpFailed msg)
         {
-            _readStreamError = msg.Cause;
+            _readPumpCompleted = true;
+            _readPumpHasError = true;
+            _readPumpError = msg.Cause;
             if (_traceLogging)
-                Log.Debug("[TcpConnection] Stream read failed: {0}", msg.Cause.Message);
+                Log.Debug("[TcpConnection] Read pump failed: {0}", msg.Cause.Message);
         }
 
-        private void HandleReadStreamCompleted()
+        private void HandleReadPumpCompleted()
         {
-            _readStreamCompleted = true;
+            _readPumpCompleted = true;
 
             if (_traceLogging)
-                Log.Debug("[TcpConnection] Read stream completed");
+                Log.Debug("[TcpConnection] Read pump completed");
         }
 
         /* ================================================================= */
@@ -685,17 +577,17 @@ namespace Akka.IO
 
         /// <summary>
         /// Kicks off a PipeReader.ReadAsync and pipes the result back to Self.
-        /// No-op if a read is already in flight or the pipe isn't initialized.
+        /// No-op if a read is already in flight or the transport isn't initialized.
         /// </summary>
         private void RequestPipeRead()
         {
-            if (_readPending || _pipeReader == null || _cts == null) return;
+            if (_readPending || _transport == null || _cts == null) return;
             _readPending = true;
 
             if (_traceLogging) Log.Debug("[TcpConnection] RequestPipeRead: kicking off pipe read");
 
             var self = Self;
-            var reader = _pipeReader;
+            var reader = _transport.Input;
             var ct = _cts.Token;
 
             _ = AwaitPipeReadAsync();
@@ -753,16 +645,16 @@ namespace Akka.IO
                     return;
                 }
 
-                // Check for stream read error. _readStreamError is set by the actor thread
-                // when StreamReadFailed is processed. _readStreamHasError is a volatile flag
-                // set by the background thread BEFORE the pipe writer is completed, ensuring
-                // it's visible here even if the StreamReadFailed message hasn't been processed yet.
-                if (_readStreamError != null || _readStreamHasError)
+                // Check for read pump error. Two paths can set this:
+                // 1. _readPumpHasError — set by the actor thread when ReadPumpFailed is processed
+                // 2. _transport.HasReadError — set by the read pump thread BEFORE completing
+                //    the pipe writer, ensuring it's visible here even if the ReadPumpFailed
+                //    message hasn't been processed yet
+                if (_readPumpHasError || _transport!.HasReadError)
                 {
-                    // The stream read failed with an I/O error (connection reset, etc.).
+                    // The read pump failed with an I/O error (connection reset, etc.).
                     // Propagate as an I/O error, not as normal EOF.
-                    // Use _readStreamError if available, otherwise create a generic error.
-                    var error = _readStreamError ?? new IOException("Connection reset by peer");
+                    var error = _readPumpError ?? _transport!.ReadError ?? new IOException("Connection reset by peer");
                     if (_traceLogging)
                         Log.Debug("[TcpConnection] Pipe completed with error — signaling I/O error: {0}",
                             error.Message);
@@ -885,7 +777,7 @@ namespace Akka.IO
         {
             var byteCount = (int)write.Bytes;
 
-            if (_maxQueuedBytes >= 0 && _queuedBytes + _pendingRegistrationBytes + byteCount > _maxQueuedBytes)
+            if (_maxQueuedBytes >= 0 && _pendingRegistrationBytes + byteCount > _maxQueuedBytes)
             {
                 sender.Tell(write.FailureMessage.WithCause(DroppingWriteBecauseQueueIsFullException));
                 return;
@@ -918,8 +810,10 @@ namespace Akka.IO
         {
             var byteCount = (int)write.Bytes;
 
-            // Check queue size limit
-            if (_maxQueuedBytes >= 0 && _queuedBytes + byteCount > _maxQueuedBytes)
+            // Check message size limit — reject writes that exceed the configured maximum.
+            // With pipe-based transport, the pipe's pauseWriterThreshold handles flow control.
+            // This check prevents a single oversized write from overwhelming the pipe buffer.
+            if (_maxQueuedBytes >= 0 && byteCount > _maxQueuedBytes)
             {
                 sender.Tell(write.FailureMessage.WithCause(DroppingWriteBecauseQueueIsFullException));
                 return;
@@ -932,270 +826,12 @@ namespace Akka.IO
                 return;
             }
 
-            if (_writeChannel != null && _writeChannel.Writer.TryWrite(new WriteCommand(write, sender)))
-            {
-                _queuedBytes += byteCount;
-            }
-            else
-            {
-                sender.Tell(write.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
-            }
-        }
+            // Write directly to transport — pipe handles buffering and batching.
+            // The pipe absorbs writes into its internal buffer (memcpy, not syscall).
+            // The write pump flushes the buffer to the socket asynchronously.
+            _transport!.WriteAsync(write.Data, _cts!.Token);
 
-        /* ================================================================= */
-        /*  Background I/O tasks                                             */
-        /* ================================================================= */
-
-        /// <summary>
-        /// Background task: reads from the network stream into the Pipe writer.
-        /// </summary>
-        private async Task ReadFromStreamAsync(Stream stream, PipeWriter writer, CancellationToken ct)
-        {
-            var self = Self;
-            var minimumBufferSize = Settings.MaxFrameSizeBytes;
-            Exception? streamError = null;
-            try
-            {
-                while (!ct.IsCancellationRequested)
-                {
-                    var memory = writer.GetMemory(minimumBufferSize);
-                    var bytesRead = await stream.ReadAsync(memory, ct).ConfigureAwait(false);
-
-                    if (bytesRead == 0)
-                    {
-                        // EOF - peer closed their send side.
-                        // Don't self-tell StreamEof here — let the PipeReader detect
-                        // completion via IsCompleted so all buffered data is delivered first.
-                        if (_traceLogging)
-                            Log.Debug("[TcpConnection] ReadFromStream: EOF received (0 bytes read)");
-                        break;
-                    }
-
-                    writer.Advance(bytesRead);
-
-                    if (_traceLogging)
-                    {
-                        Interlocked.Add(ref _totalReceivedBytes, bytesRead);
-                        Log.Debug("[TcpConnection] ReadFromStream: read {0} bytes [{1} total]",
-                            bytesRead, Interlocked.Read(ref _totalReceivedBytes));
-                    }
-
-                    var flushResult = await writer.FlushAsync(ct).ConfigureAwait(false);
-                    if (flushResult.IsCompleted || flushResult.IsCanceled)
-                        break;
-                }
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                // Normal cancellation - expected during shutdown
-                if (_traceLogging)
-                    Log.Debug("[TcpConnection] ReadFromStream: cancelled");
-                return;
-            }
-            catch (Exception ex) when (ex is IOException or SocketException)
-            {
-                // I/O error - notify the actor before pipe completes so error state is set.
-                // Set _readStreamHasError BEFORE Self.Tell and BEFORE CompleteAsync (in finally)
-                // so that HandlePipeRead can detect the error even if PipeReadCompleted
-                // is processed before StreamReadFailed.
-                if (_traceLogging)
-                    Log.Debug("[TcpConnection] ReadFromStream: I/O error {0}: {1}", ex.GetType().Name, ex.Message);
-                streamError = ex;
-                _readStreamHasError = true;
-                self.Tell(new StreamReadFailed(ex));
-            }
-            catch (Exception ex)
-            {
-                if (_traceLogging)
-                    Log.Debug("[TcpConnection] ReadFromStream: unexpected error {0}: {1}", ex.GetType().Name, ex.Message);
-                streamError = ex;
-                _readStreamHasError = true;
-                self.Tell(new StreamReadFailed(ex));
-            }
-            finally
-            {
-                // Complete the pipe writer without passing the exception.
-                // PipeWriter.CompleteAsync(exception) causes PipeReader.ReadAsync() to throw
-                // synchronously, bypassing the actor's message loop. The error is already
-                // communicated via StreamReadFailed self-tell and _readStreamError field.
-                await writer.CompleteAsync().ConfigureAwait(false);
-                self.Tell(ReadStreamCompleted.Instance);
-            }
-        }
-
-        /// <summary>
-        /// Background task: dequeues write commands and writes them to the stream.
-        /// </summary>
-        private async Task WriteToStreamAsync(Stream stream, ChannelReader<WriteCommand> reader, CancellationToken ct)
-        {
-            var self = Self;
-            var batch = new List<WriteCommand>(8);
-            var hasPending = false;
-            WriteCommand pending = default;
-
-            try
-            {
-                while (true)
-                {
-                    batch.Clear();
-                    var batchBytes = 0;
-
-                    if (hasPending)
-                    {
-                        batch.Add(pending);
-                        batchBytes = (int)pending.Cmd.Bytes;
-                        hasPending = false;
-                    }
-                    else
-                    {
-                        if (!await reader.WaitToReadAsync(ct).ConfigureAwait(false))
-                            break;
-
-                        if (!reader.TryRead(out pending))
-                            continue;
-
-                        batch.Add(pending);
-                        batchBytes = (int)pending.Cmd.Bytes;
-                    }
-
-                    while (batch.Count < MaxWriteCommandsPerBatch
-                           && batchBytes < _writeBatchSizeBytes
-                           && reader.TryRead(out var next))
-                    {
-                        var nextBytes = (int)next.Cmd.Bytes;
-                        if (batchBytes > 0 && batchBytes + nextBytes > _writeBatchSizeBytes)
-                        {
-                            pending = next;
-                            hasPending = true;
-                            break;
-                        }
-
-                        batch.Add(next);
-                        batchBytes += nextBytes;
-                    }
-
-                    try
-                    {
-                        await WriteBatchToStreamAsync(stream, batch, batchBytes, ct).ConfigureAwait(false);
-
-                        Interlocked.Add(ref _queuedBytes, -batchBytes);
-
-                        if (_traceLogging)
-                        {
-                            Interlocked.Add(ref _totalSentBytes, batchBytes);
-                            Log.Debug("[TcpConnection] WriteToStream: wrote {0} bytes in {1} command(s) [{2} total sent]",
-                                batchBytes, batch.Count, Interlocked.Read(ref _totalSentBytes));
-                        }
-
-                        AckBatch(batch);
-                    }
-                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                    {
-                        FailBatch(batch, DroppingWriteBecauseClosingException);
-                        FailPendingWrites(reader, hasPending ? pending : null, DroppingWriteBecauseClosingException);
-                        break;
-                    }
-                    catch (Exception ex) when (ex is IOException or SocketException)
-                    {
-                        FailBatch(batch, ex);
-                        FailPendingWrites(reader, hasPending ? pending : null, ex);
-                        self.Tell(new IoTaskFailed(ex));
-                        break;
-                    }
-                }
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                // Normal cancellation
-                return;
-            }
-            catch (ChannelClosedException)
-            {
-                // Channel was completed - normal shutdown
-                return;
-            }
-            catch (Exception ex)
-            {
-                self.Tell(new IoTaskFailed(ex));
-            }
-            finally
-            {
-                // Signal that writes are flushed
-                self.Tell(WritesFlushed.Instance);
-            }
-        }
-
-        private async Task WriteBatchToStreamAsync(Stream stream, IReadOnlyList<WriteCommand> batch, int batchBytes,
-            CancellationToken ct)
-        {
-            if (batch.Count == 1)
-            {
-                var data = batch[0].Cmd.Data;
-                if (data.Length > 0)
-                {
-                    if (data.IsSingleSegment)
-                    {
-                        await stream.WriteAsync(data.First, ct).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        foreach (var segment in data)
-                        {
-                            await stream.WriteAsync(segment, ct).ConfigureAwait(false);
-                        }
-                    }
-                }
-
-                return;
-            }
-
-            var rented = ArrayPool<byte>.Shared.Rent(batchBytes);
-            try
-            {
-                var offset = 0;
-                foreach (var item in batch)
-                {
-                    foreach (var segment in item.Cmd.Data)
-                    {
-                        segment.Span.CopyTo(rented.AsSpan(offset, segment.Length));
-                        offset += segment.Length;
-                    }
-                }
-
-                await stream.WriteAsync(rented.AsMemory(0, batchBytes), ct).ConfigureAwait(false);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(rented);
-            }
-        }
-
-        private static void AckBatch(IReadOnlyList<WriteCommand> batch)
-        {
-            foreach (var item in batch)
-            {
-                if (item.Cmd.WantsAck)
-                    item.Sender.Tell(item.Cmd.Ack);
-            }
-        }
-
-        private static void FailBatch(IReadOnlyList<WriteCommand> batch, Exception cause)
-        {
-            foreach (var item in batch)
-            {
-                item.Sender.Tell(item.Cmd.FailureMessage.WithCause(cause));
-            }
-        }
-
-        private static void FailPendingWrites(ChannelReader<WriteCommand> reader, WriteCommand? pending, Exception cause)
-        {
-            if (pending.HasValue)
-                pending.Value.Sender.Tell(pending.Value.Cmd.FailureMessage.WithCause(cause));
-
-            while (reader.TryRead(out var write))
-            {
-                write.Sender.Tell(write.Cmd.FailureMessage.WithCause(cause));
-            }
+            if (write.WantsAck) sender.Tell(write.Ack);
         }
 
         /* ================================================================= */
@@ -1243,11 +879,18 @@ namespace Akka.IO
         {
             _closingGracefully = true;
 
-            // Complete the write channel - no more writes accepted
-            _writeChannel?.Writer.TryComplete();
+            // Ask the transport to close (flushes writes, closes connection)
+            if (_transport != null)
+            {
+                _transport.CloseAsync().ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        return (object)new TransportOperationFailed(t.Exception!.InnerException ?? t.Exception);
+                    return TransportOperationCompleted.Instance;
+                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(Self);
+            }
 
-            // Transition to closing behaviour - will wait for writes to flush,
-            // then cancel reads, then close
+            // Transition to closing behaviour
             Become(() => ClosingBehaviour(closeSender, closeEvent));
         }
 
@@ -1258,14 +901,12 @@ namespace Akka.IO
         {
             _closingGracefully = true;
 
-            // Cancel CTS immediately - no flush
+            // Cancel CTS immediately
             TryCancelCts();
 
-            // Complete the write channel
-            _writeChannel?.Writer.TryComplete();
-
-            // Abort the socket (send RST)
-            AbortSocket();
+            // Abort the transport (sends RST)
+            try { _transport?.Abort(); }
+            catch { /* best effort */ }
 
             StopWith(new CloseInformation(ImmutableHashSet<IActorRef>.Empty.Add(closeSender), Aborted.Instance));
         }
@@ -1278,17 +919,23 @@ namespace Akka.IO
         {
             _closingGracefully = true;
 
-            // Complete the write channel (no more writes accepted)
-            _writeChannel?.Writer.TryComplete();
+            // Ask the transport to shutdown (flush writes, send FIN, keep reading)
+            if (_transport != null)
+            {
+                _transport.ShutdownAsync().ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        return (object)new TransportOperationFailed(t.Exception!.InnerException ?? t.Exception);
+                    return TransportOperationCompleted.Instance;
+                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(Self);
+            }
 
-            // Always enter ClosingBehaviour to wait for WritesFlushed,
-            // even if peer already closed. This ensures proper sequencing:
-            // flush writes -> shutdown output (FIN) -> wait for peer FIN (StreamEof).
+            // Enter ClosingBehaviour to wait for transport shutdown, then peer FIN
             Become(() => ClosingBehaviour(closeSender, ConfirmedClosed.Instance));
         }
 
         /// <summary>
-        /// Handle EOF from the stream read task.
+        /// Handle EOF from the pipe read (transport's input pipe completed normally).
         /// </summary>
         private void HandleStreamEof()
         {
@@ -1326,7 +973,6 @@ namespace Akka.IO
 
             // Cancel everything
             TryCancelCts();
-            _writeChannel?.Writer.TryComplete();
 
             if (_closeInformation != null)
             {
@@ -1359,20 +1005,6 @@ namespace Akka.IO
             }
         }
 
-        private bool ShutdownOutput()
-        {
-            try
-            {
-                Socket.Shutdown(SocketShutdown.Send);
-                _outputShutdown = true;
-                return true;
-            }
-            catch (SocketException)
-            {
-                return false;
-            }
-        }
-
         private void DoCloseConnection(IActorRef closeSender, ConnectionClosed closedEvent)
         {
             TryCancelCts();
@@ -1380,42 +1012,15 @@ namespace Akka.IO
             switch (closedEvent)
             {
                 case Aborted:
-                    AbortSocket();
+                    try { _transport?.Abort(); }
+                    catch { /* best effort */ }
                     break;
                 default:
-                    try
-                    {
-                        Socket.Shutdown(SocketShutdown.Both);
-                    }
-                    catch (SocketException e)
-                    {
-                        Log.Error(e, "Graceful socket shutdown failed");
-                    }
-                    CloseSocket();
+                    // Transport handles socket shutdown via CloseAsync/ShutdownAsync
                     break;
             }
 
             StopWith(new CloseInformation(ImmutableHashSet<IActorRef>.Empty.Add(closeSender), closedEvent));
-        }
-
-        private void CloseSocket()
-        {
-            Socket.Dispose();
-            _outputShutdown = true;
-        }
-
-        private void AbortSocket()
-        {
-            try
-            {
-                Socket.LingerState = new LingerOption(true, 0);
-            }
-            catch (Exception e)
-            {
-                if (_traceLogging) Log.Debug("setSoLinger(true, 0) failed with [{0}]", e);
-            }
-
-            CloseSocket();
         }
 
         protected sealed record CloseInformation(ImmutableHashSet<IActorRef> NotificationsTo, Tcp.Event ClosedEvent)

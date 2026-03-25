@@ -7,7 +7,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net.Sockets;
 using Akka.Actor;
 using Akka.Dispatch;
@@ -268,10 +267,9 @@ namespace Akka.IO
                     _acceptCount++;
                     var accepted = saea.AcceptSocket!;
                     saea.AcceptSocket = null; // ready for re‑use
-                    accepted.Blocking = true; // NetworkStream requires blocking mode
-                    var acceptedStream = new NetworkStream(accepted, ownsSocket: true);
+                    accepted.Blocking = true; // Transport's NetworkStream requires blocking mode
                     var incomingConnection = Context.ActorOf(Props
-                        .Create<TcpIncomingConnection>(_bind.TcpSettings ?? _tcp.Settings, accepted, _bind.Handler, _bind.Options, _bind.PullMode, acceptedStream)
+                        .Create<TcpIncomingConnection>(_bind.TcpSettings ?? _tcp.Settings, accepted, _bind.Handler, _bind.Options, _bind.PullMode)
                         .WithDeploy(Deploy.Local));
 
                     // set up the watch for monitoring purposes
