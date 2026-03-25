@@ -120,11 +120,22 @@ namespace Akka.IO
                 if (_connect.RemoteAddress is DnsEndPoint remoteAddress)
                 {
                     Log.Debug("Resolving {0} before connecting", remoteAddress.Host);
-                    var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
-                    if (resolved == null)
-                        Become(() => Resolving(remoteAddress));
+
+                    if (Socket.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        // IPv4-only socket: resolve DNS to get an IPv4 address
+                        var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
+                        if (resolved == null)
+                            Become(() => Resolving(remoteAddress));
+                        else
+                            Register(CreateEndpoint(resolved, remoteAddress.Port));
+                    }
                     else
-                        Register(CreateEndpoint(resolved, remoteAddress.Port));
+                    {
+                        // Dual-stack socket: pass DnsEndPoint directly to ConnectAsync
+                        // so the runtime can try all resolved addresses (both IPv4 and IPv6)
+                        RegisterEndPoint(remoteAddress);
+                    }
                 }
                 else if (_connect.RemoteAddress is IPEndPoint point)
                 {
@@ -155,6 +166,7 @@ namespace Akka.IO
             IPAddress address = Socket.AddressFamily switch
             {
                 AddressFamily.InterNetwork when resolved.Ipv4.Any() => resolved.Ipv4.First(),
+                AddressFamily.InterNetworkV6 when resolved.Ipv4.Any() => resolved.Ipv4.First(),
                 AddressFamily.InterNetworkV6 when resolved.Ipv6.Any() => resolved.Ipv6.First(),
                 _ => resolved.Addr
             };
@@ -185,7 +197,7 @@ namespace Akka.IO
             }
         }
 
-        private void Register(IPEndPoint address)
+        private void RegisterEndPoint(EndPoint address)
         {
             ReportConnectFailure(() =>
             {
@@ -198,6 +210,11 @@ namespace Akka.IO
 
                 Become(() => Connecting(Settings.FinishConnectRetries, _connectArgs));
             });
+        }
+
+        private void Register(IPEndPoint address)
+        {
+            RegisterEndPoint(address);
         }
 
         private void Connecting(int remainingFinishConnectRetries, SocketAsyncEventArgs args)

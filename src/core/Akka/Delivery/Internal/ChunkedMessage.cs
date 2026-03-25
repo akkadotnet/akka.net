@@ -98,7 +98,7 @@ public readonly struct MessageOrChunk<T> : IEquatable<MessageOrChunk<T>>
 ///     Used for segments of large messages during point-to-point delivery.
 /// </summary>
 [InternalApi]
-public readonly struct ChunkedMessage
+public readonly struct ChunkedMessage : IEquatable<ChunkedMessage>
 {
     public ChunkedMessage(ReadOnlyMemory<byte> serializedMessage, bool firstChunk, bool lastChunk, int serializerId,
         string manifest)
@@ -119,6 +119,36 @@ public readonly struct ChunkedMessage
     public int SerializerId { get; }
 
     public string Manifest { get; }
+
+    public bool Equals(ChunkedMessage other)
+    {
+        return SerializedMessage.Span.SequenceEqual(other.SerializedMessage.Span)
+               && FirstChunk == other.FirstChunk
+               && LastChunk == other.LastChunk
+               && SerializerId == other.SerializerId
+               && Manifest == other.Manifest;
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is ChunkedMessage other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            var hash = FirstChunk.GetHashCode();
+            hash = (hash * 397) ^ LastChunk.GetHashCode();
+            hash = (hash * 397) ^ SerializerId;
+            hash = (hash * 397) ^ (Manifest?.GetHashCode() ?? 0);
+            hash = (hash * 397) ^ SerializedMessage.Length;
+            return hash;
+        }
+    }
+
+    public static bool operator ==(ChunkedMessage left, ChunkedMessage right) => left.Equals(right);
+    public static bool operator !=(ChunkedMessage left, ChunkedMessage right) => !left.Equals(right);
 
     public override string ToString()
     {

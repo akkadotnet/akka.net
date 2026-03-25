@@ -70,8 +70,10 @@ namespace Akka.DistributedData
                 else
                 {
                     var i = (int)(_deltaNodeRoundRobinCounter % all.Length);
-                    slice = all.Slice(i, sliceSize).ToImmutableArray();
-                
+                    var remainingFromI = all.Length - i;
+                    var takeFromI = Math.Min(sliceSize, remainingFromI);
+                    slice = all.Slice(i, takeFromI).ToImmutableArray();
+
                     if (slice.Length != sliceSize)
                         slice = slice.AddRange(all.Take(sliceSize - slice.Length));
                 }
