@@ -14,7 +14,7 @@
     <PackageReference Include="TeamCity.ServiceMessages" Version="4.1.1" />
     <PackageReference Include="System.CodeDom" Version="9.0.8" />
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
-    <PackageReference Include="xunit.runner.utility" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.utility" Version="$(XunitVersion)" />
   </ItemGroup>
 
   <ItemGroup>
