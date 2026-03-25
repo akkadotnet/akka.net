@@ -223,8 +223,8 @@ namespace Akka.Tests.IO
 
             public void Dispose()
             {
-                try { Client.Dispose(); } catch { }
-                try { Server.Dispose(); } catch { }
+                Client.Dispose();
+                Server.Dispose();
             }
         }
     }

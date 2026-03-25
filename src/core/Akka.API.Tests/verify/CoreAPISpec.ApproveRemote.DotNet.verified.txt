@@ -18,7 +18,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("78986bdb-73f7-4532-8e03-1c9ccbe8148e")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Remote
 {
     public class AddressUid : Akka.Actor.IExtension

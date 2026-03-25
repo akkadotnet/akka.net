@@ -1,5 +1,5 @@
 ﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Persistence.Query.InMemory
 {
     public class InMemoryReadJournal : Akka.Persistence.Query.IAllEventsQuery, Akka.Persistence.Query.ICurrentAllEventsQuery, Akka.Persistence.Query.ICurrentEventsByPersistenceIdQuery, Akka.Persistence.Query.ICurrentEventsByTagQuery, Akka.Persistence.Query.ICurrentPersistenceIdsQuery, Akka.Persistence.Query.IEventsByPersistenceIdQuery, Akka.Persistence.Query.IEventsByTagQuery, Akka.Persistence.Query.IPersistenceIdsQuery, Akka.Persistence.Query.IReadJournal

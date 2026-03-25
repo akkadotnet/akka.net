@@ -249,10 +249,10 @@ namespace Akka.IO
             else
                 CloseSocket();
 
-            try { _stream?.Dispose(); } catch { /* ignore */ }
-            try { _pipe?.Writer.Complete(); } catch { /* ignore */ }
-            try { _pipe?.Reader.Complete(); } catch { /* ignore */ }
-            try { _writeChannel?.Writer.TryComplete(); } catch { /* ignore */ }
+            DisposeStream(_stream);
+            CompletePipeWriter(_pipe?.Writer);
+            CompletePipeReader(_pipe?.Reader);
+            _writeChannel?.Writer.TryComplete();
 
             while (_pendingRegistrationWrites.Count > 0)
             {
@@ -268,6 +268,58 @@ namespace Akka.IO
 
                 foreach (var sub in _closeInformation.NotificationsTo)
                     sub.Tell(_closeInformation.ClosedEvent);
+            }
+        }
+
+        private static bool DisposeStream(Stream? stream)
+        {
+            if (stream is null)
+                return false;
+
+            try
+            {
+                stream.Dispose();
+                return true;
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+        }
+
+        private static bool CompletePipeWriter(PipeWriter? writer)
+        {
+            if (writer is null)
+                return false;
+
+            try
+            {
+                writer.Complete();
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
+
+        private static bool CompletePipeReader(PipeReader? reader)
+        {
+            if (reader is null)
+                return false;
+
+            try
+            {
+                reader.Complete();
+                return true;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
             }
         }
 
@@ -938,6 +990,7 @@ namespace Akka.IO
                 // Normal cancellation - expected during shutdown
                 if (_traceLogging)
                     Log.Debug("[TcpConnection] ReadFromStream: cancelled");
+                return;
             }
             catch (Exception ex) when (ex is IOException or SocketException)
             {
@@ -1054,10 +1107,12 @@ namespace Akka.IO
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 // Normal cancellation
+                return;
             }
             catch (ChannelClosedException)
             {
                 // Channel was completed - normal shutdown
+                return;
             }
             catch (Exception ex)
             {
@@ -1275,13 +1330,17 @@ namespace Akka.IO
         {
             if (Interlocked.CompareExchange(ref _shutdownState, ShutdownInitiated, ShutdownNone) == ShutdownNone)
             {
+                var cts = _cts;
+                if (cts is null)
+                    return;
+
                 try
                 {
-                    _cts?.Cancel();
+                    cts.Cancel();
                 }
                 catch (ObjectDisposedException)
                 {
-                    // Already disposed
+                    return;
                 }
             }
         }
@@ -1327,8 +1386,7 @@ namespace Akka.IO
 
         private void CloseSocket()
         {
-            try { Socket.Close(); } catch { /* ignore */ }
-            try { Socket.Dispose(); } catch { /* ignore */ }
+            Socket.Dispose();
             _outputShutdown = true;
         }
 

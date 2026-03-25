@@ -7,7 +7,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DistributedData.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("f22db348-9ab3-4c6a-b1e8-9b835308d367")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.DistributedData
 {
     [System.Serializable]

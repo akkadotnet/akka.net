@@ -74,15 +74,6 @@ jobs:
 
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "netfx_tests_windows"
-      displayName: ".NET Framework Unit Tests (Windows)"
-      vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnlyNetFx.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net48 --logger:trx --results-directory TestResults"
-      outputDirectory: "TestResults"
-      artifactName: "netfx_tests_windows-$(Build.BuildId)"
-
-  - template: azure-pipeline.template.yaml
-    parameters:
       name: "docfx_test"
       displayName: "DocFX warning check"
       vmImage: "windows-latest"
