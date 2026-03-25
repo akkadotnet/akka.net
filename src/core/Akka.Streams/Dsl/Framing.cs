@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Akka.Streams.Implementation.Fusing;
@@ -168,38 +169,24 @@ namespace Akka.Streams.Dsl
             protected FramingException(SerializationInfo info, StreamingContext context) : base(info, context) { }
         }
 
-        private static readonly Func<IEnumerator<byte>, int, int> BigEndianDecoder = (enumerator, length) =>
-        {
-            var count = length;
-            var decoded = 0;
-            while (count > 0)
-            {
-                decoded <<= 8;
-                if (!enumerator.MoveNext()) throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte string");
-                decoded |= enumerator.Current & 0xFF;
-                count--;
-            }
+        private delegate int IntDecoder(ReadOnlySpan<byte> span, int length);
 
-            return decoded;
+        private static int BigEndianDecode(ReadOnlySpan<byte> span, int length) => length switch
+        {
+            1 => span[0],
+            2 => BinaryPrimitives.ReadUInt16BigEndian(span),
+            3 => (span[0] << 16) | BinaryPrimitives.ReadUInt16BigEndian(span.Slice(1)),
+            4 => BinaryPrimitives.ReadInt32BigEndian(span),
+            _ => throw new ArgumentOutOfRangeException(nameof(length), length, "Length field length must be 1, 2, 3, or 4")
         };
 
-        private static readonly Func<IEnumerator<byte>, int, int> LittleEndianDecoder = (enumerator, length) =>
+        private static int LittleEndianDecode(ReadOnlySpan<byte> span, int length) => length switch
         {
-            var highestOcted = (length - 1) << 3;
-            var mask = (int) (1L << (length << 3)) - 1;
-            var count = length;
-            var decoded = 0;
-
-            while (count > 0)
-            {
-                // decoded >>>= 8 on the jvm
-                decoded = (int) ((uint) decoded >> 8);
-                if (!enumerator.MoveNext()) throw new IndexOutOfRangeException("LittleEndianDecoder reached end of byte string");
-                decoded += (enumerator.Current & 0xFF) << highestOcted;
-                count--;
-            }
-
-            return decoded & mask;
+            1 => span[0],
+            2 => BinaryPrimitives.ReadUInt16LittleEndian(span),
+            3 => span[0] | (BinaryPrimitives.ReadUInt16LittleEndian(span.Slice(1)) << 8),
+            4 => BinaryPrimitives.ReadInt32LittleEndian(span),
+            _ => throw new ArgumentOutOfRangeException(nameof(length), length, "Length field length must be 1, 2, 3, or 4")
         };
 
         /// <summary>
@@ -240,13 +227,8 @@ namespace Akka.Streams.Dsl
                             $"Maximum allowed message size is {_stage._maximumMessageLength} but tried to send {messageSize} bytes"));
                     else
                     {
-                        var header = new byte[]
-                        {
-                            Convert.ToByte((messageSize >> 24) & 0xFF),
-                            Convert.ToByte((messageSize >> 16) & 0xFF),
-                            Convert.ToByte((messageSize >> 8) & 0xFF),
-                            Convert.ToByte(messageSize & 0xFF)
-                        };
+                        var header = new byte[4];
+                        BinaryPrimitives.WriteInt32BigEndian(header, (int)messageSize);
                         Push(_stage.Outlet, Concat(new ReadOnlyMemory<byte>(header), message));
                     }
 
@@ -484,9 +466,8 @@ namespace Akka.Streams.Dsl
                         PushFrame();
                     else if (bufferSize >= _stage._minimumChunkSize)
                     {
-                        var lengthFieldSlice = _buffer.Slice(_stage._lengthFieldOffset);
-                        var iterator = ((IEnumerable<byte>)lengthFieldSlice.ToArray()).GetEnumerator();
-                        var parsedLength = _stage._intDecoder(iterator, _stage._lengthFieldLength);
+                        var lengthFieldSpan = _buffer.Slice(_stage._lengthFieldOffset).Span;
+                        var parsedLength = _stage._intDecoder(lengthFieldSpan, _stage._lengthFieldLength);
 
                         _frameSize = _stage._computeFrameSize.HasValue
                             ? _stage._computeFrameSize.Value(_buffer.Slice(0, _stage._lengthFieldOffset).ToArray(), parsedLength)
@@ -525,7 +506,7 @@ namespace Akka.Streams.Dsl
             private readonly int _maximumFramelength;
             private readonly int _lengthFieldOffset;
             private readonly int _minimumChunkSize;
-            private readonly Func<IEnumerator<byte>, int, int> _intDecoder;
+            private readonly IntDecoder _intDecoder;
             private readonly Option<Func<IReadOnlyList<byte>, int, int>> _computeFrameSize;
 
             // For the sake of binary compatibility
@@ -549,7 +530,7 @@ namespace Akka.Streams.Dsl
                 _lengthFieldOffset = lengthFieldOffset;
                 _minimumChunkSize = lengthFieldOffset + lengthFieldLength;
                 _computeFrameSize = computeFrameSize;
-                _intDecoder = byteOrder == ByteOrder.BigEndian ? BigEndianDecoder : LittleEndianDecoder;
+                _intDecoder = byteOrder == ByteOrder.BigEndian ? BigEndianDecode : LittleEndianDecode;
             }
 
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);

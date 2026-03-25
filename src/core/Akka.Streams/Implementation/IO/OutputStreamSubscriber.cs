@@ -80,9 +80,7 @@ namespace Akka.Streams.Implementation.IO
                     try
                     {
                         var memory = (ReadOnlyMemory<byte>)next.Element;
-                        //blocking write
-                        var arr = memory.ToArray();
-                        _outputStream.Write(arr, 0, memory.Length);
+                        _outputStream.Write(memory.Span);
                         _bytesWritten += memory.Length;
                         if (_autoFlush)
                             _outputStream.Flush();

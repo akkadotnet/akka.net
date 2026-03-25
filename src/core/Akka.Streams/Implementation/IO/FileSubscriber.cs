@@ -130,9 +130,8 @@ namespace Akka.Streams.Implementation.IO
                     try
                     {
                         var memory = (ReadOnlyMemory<byte>)next.Element;
-                        var bytes = memory.ToArray();
-                        _chan.Write(bytes, 0, bytes.Length);
-                        _bytesWritten += bytes.Length;
+                        _chan.Write(memory.Span);
+                        _bytesWritten += memory.Length;
                         if (_autoFlush)
                             _chan.Flush(true);
                     }
