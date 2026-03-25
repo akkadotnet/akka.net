@@ -192,6 +192,9 @@ namespace Akka.IO
 
         // Queued bytes tracking for write backpressure
         private int _queuedBytes;
+        private int _pendingRegistrationBytes;
+
+        private readonly Queue<WriteCommand> _pendingRegistrationWrites = new();
 
         // State flags
         private bool _peerClosed;
@@ -240,13 +243,22 @@ namespace Akka.IO
             // Best-effort cleanup - cancel everything and close
             TryCancelCts();
 
+            var closedEvent = _closeInformation?.ClosedEvent;
+            if (closedEvent is Aborted or ErrorClosed)
+                AbortSocket();
+            else
+                CloseSocket();
+
             try { _stream?.Dispose(); } catch { /* ignore */ }
             try { _pipe?.Writer.Complete(); } catch { /* ignore */ }
             try { _pipe?.Reader.Complete(); } catch { /* ignore */ }
             try { _writeChannel?.Writer.TryComplete(); } catch { /* ignore */ }
 
-            if (Socket.Connected) AbortSocket();
-            else CloseSocket();
+            while (_pendingRegistrationWrites.Count > 0)
+            {
+                var write = _pendingRegistrationWrites.Dequeue();
+                write.Sender.Tell(write.Cmd.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
+            }
 
             if (_closeInformation != null)
             {
@@ -325,6 +337,7 @@ namespace Akka.IO
             _writeToStreamTask = WriteToStreamAsync(_stream, _writeChannel.Reader, ct);
 
             // Track background tasks - self-tell on completion
+            var self = Self;
             _ = NotifyWhenIoTasksCompleteAsync();
 
             async Task NotifyWhenIoTasksCompleteAsync()
@@ -332,12 +345,12 @@ namespace Akka.IO
                 try
                 {
                     await Task.WhenAll(_readFromStreamTask, _writeToStreamTask).ConfigureAwait(false);
-                    Self.Tell(IoTasksCompleted.Instance);
+                    self.Tell(IoTasksCompleted.Instance);
                 }
                 catch (Exception ex)
                 {
                     var aggregate = ex as AggregateException;
-                    Self.Tell(new IoTaskFailed(aggregate?.InnerExceptions.FirstOrDefault() ?? ex));
+                    self.Tell(new IoTaskFailed(aggregate?.InnerExceptions.FirstOrDefault() ?? ex));
                 }
             }
         }
@@ -390,15 +403,11 @@ namespace Akka.IO
                     AllowReading();
                 }
 
+                FlushPendingRegistrationWrites();
+
                 Become(OpenBehaviour);
             });
-            Receive<Tcp.WriteCommand>(w =>
-            {
-                Log.Warning("Received Write command before Register command. " +
-                            "It will be buffered until Register will be received (buffered write size is {0} bytes)", w.Bytes);
-                // We can't enqueue writes yet - no write channel
-                Sender.Tell(w.FailureMessage.WithCause(new InvalidOperationException("Connection not yet registered")));
-            });
+            Receive<Tcp.WriteCommand>(w => BufferWriteBeforeRegister(w, Sender));
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             Receive<SuspendReading>(_ => { /* no-op before registration */ });
             Receive<ResumeReading>(_ => { /* no-op before registration */ });
@@ -792,6 +801,64 @@ namespace Akka.IO
                     Sender.Tell(cmd.FailureMessage.WithCause(
                         new InvalidOperationException($"Cannot enqueue {cmd} - only valid classes are Write and CompoundWrite")));
                     break;
+            }
+        }
+
+        private void BufferWriteBeforeRegister(Tcp.WriteCommand cmd, IActorRef sender)
+        {
+            switch (cmd)
+            {
+                case Write w:
+                    BufferSingleWriteBeforeRegister(w, sender);
+                    break;
+                case CompoundWrite compoundWrite:
+                    foreach (var part in compoundWrite)
+                    {
+                        if (part is Write write)
+                            BufferSingleWriteBeforeRegister(write, sender);
+                        else
+                            sender.Tell(part.FailureMessage.WithCause(new InvalidOperationException(
+                                $"Cannot buffer {part} before registration - only valid classes are Write and CompoundWrite")));
+                    }
+
+                    break;
+                default:
+                    sender.Tell(cmd.FailureMessage.WithCause(new InvalidOperationException(
+                        $"Cannot buffer {cmd} before registration - only valid classes are Write and CompoundWrite")));
+                    break;
+            }
+        }
+
+        private void BufferSingleWriteBeforeRegister(Write write, IActorRef sender)
+        {
+            var byteCount = (int)write.Bytes;
+
+            if (_maxQueuedBytes >= 0 && _queuedBytes + _pendingRegistrationBytes + byteCount > _maxQueuedBytes)
+            {
+                sender.Tell(write.FailureMessage.WithCause(DroppingWriteBecauseQueueIsFullException));
+                return;
+            }
+
+            if (byteCount == 0)
+            {
+                if (write.WantsAck) sender.Tell(write.Ack);
+                return;
+            }
+
+            Log.Warning("Received Write command before Register command. It will be buffered until Register will be received (buffered write size is {0} bytes)",
+                write.Bytes);
+
+            _pendingRegistrationWrites.Enqueue(new WriteCommand(write, sender));
+            _pendingRegistrationBytes += byteCount;
+        }
+
+        private void FlushPendingRegistrationWrites()
+        {
+            while (_pendingRegistrationWrites.Count > 0)
+            {
+                var write = _pendingRegistrationWrites.Dequeue();
+                _pendingRegistrationBytes -= (int)write.Cmd.Bytes;
+                EnqueueWrite(write.Cmd, write.Sender);
             }
         }
 
