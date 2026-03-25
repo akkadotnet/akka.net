@@ -36,7 +36,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Tests.Performance")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("1a5cab08-b032-49ca-8db3-9428c5a9db14")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Actor
 {
     public abstract class ActorBase : Akka.Actor.IInternalActor
@@ -2311,26 +2311,12 @@ namespace Akka.Configuration
         public static Akka.Configuration.Config FromResource(string resourceName, System.Reflection.Assembly assembly) { }
         public static Akka.Configuration.Config FromResource(string resourceName, object instanceInAssembly) { }
         public static Akka.Configuration.Config FromResource<TAssembly>(string resourceName) { }
-        public static Akka.Configuration.Config Load() { }
         public static Akka.Configuration.Config ParseString(string hocon) { }
         public static Akka.Configuration.Config ParseString(string hocon, System.Func<string, Akka.Configuration.Hocon.HoconRoot> includeCallback) { }
     }
 }
 namespace Akka.Configuration.Hocon
 {
-    public class AkkaConfigurationSection : System.Configuration.ConfigurationSection
-    {
-        public AkkaConfigurationSection() { }
-        public Akka.Configuration.Config AkkaConfig { get; }
-        [System.Configuration.ConfigurationProperty("hocon", IsRequired=true)]
-        public Akka.Configuration.Hocon.HoconConfigurationElement Hocon { get; set; }
-    }
-    public abstract class CDataConfigurationElement : System.Configuration.ConfigurationElement
-    {
-        protected const string ContentPropertyName = "content";
-        protected CDataConfigurationElement() { }
-        protected override void DeserializeElement(System.Xml.XmlReader reader, bool serializeCollectionKey) { }
-    }
     public class HoconArray : System.Collections.Generic.List<Akka.Configuration.Hocon.HoconValue>, Akka.Configuration.Hocon.IHoconElement
     {
         public HoconArray() { }
@@ -2339,12 +2325,6 @@ namespace Akka.Configuration.Hocon
         public bool IsArray() { }
         public bool IsString() { }
         public override string ToString() { }
-    }
-    public class HoconConfigurationElement : Akka.Configuration.Hocon.CDataConfigurationElement
-    {
-        public HoconConfigurationElement() { }
-        [System.Configuration.ConfigurationProperty("content", IsKey=true, IsRequired=true)]
-        public string Content { get; set; }
     }
     public class HoconLiteral : Akka.Configuration.Hocon.IHoconElement
     {
@@ -2698,15 +2678,20 @@ namespace Akka.Delivery
 namespace Akka.Delivery.Internal
 {
     [Akka.Annotations.InternalApi]
-    public readonly struct ChunkedMessage
+    public readonly struct ChunkedMessage : System.IEquatable<Akka.Delivery.Internal.ChunkedMessage>
     {
-        public ChunkedMessage(Akka.IO.ByteString serializedMessage, bool firstChunk, bool lastChunk, int serializerId, string manifest) { }
+        public ChunkedMessage(System.ReadOnlyMemory<byte> serializedMessage, bool firstChunk, bool lastChunk, int serializerId, string manifest) { }
         public bool FirstChunk { get; }
         public bool LastChunk { get; }
         public string Manifest { get; }
-        public Akka.IO.ByteString SerializedMessage { get; }
+        public System.ReadOnlyMemory<byte> SerializedMessage { get; }
         public int SerializerId { get; }
+        public bool Equals(Akka.Delivery.Internal.ChunkedMessage other) { }
+        public override bool Equals(object? obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
+        public static bool operator !=(Akka.Delivery.Internal.ChunkedMessage left, Akka.Delivery.Internal.ChunkedMessage right) { }
+        public static bool operator ==(Akka.Delivery.Internal.ChunkedMessage left, Akka.Delivery.Internal.ChunkedMessage right) { }
     }
     [Akka.Annotations.InternalApi]
     public interface IDeliverySerializable { }
@@ -2730,14 +2715,16 @@ namespace Akka.Delivery.Internal
 }
 namespace Akka.Dispatch
 {
-    public sealed class ActionRunnable : Akka.Dispatch.IRunnable
+    public sealed class ActionRunnable : Akka.Dispatch.IRunnable, System.Threading.IThreadPoolWorkItem
     {
         public ActionRunnable(System.Action action) { }
+        public void Execute() { }
         public void Run() { }
     }
-    public sealed class ActionWithStateRunnable : Akka.Dispatch.IRunnable
+    public sealed class ActionWithStateRunnable : Akka.Dispatch.IRunnable, System.Threading.IThreadPoolWorkItem
     {
         public ActionWithStateRunnable(System.Action<object> actionWithState, object state) { }
+        public void Execute() { }
         public void Run() { }
     }
     public class ActorTaskScheduler : System.Threading.Tasks.TaskScheduler
@@ -2877,19 +2864,20 @@ namespace Akka.Dispatch
     }
     public interface IRequiresMessageQueue<T>
         where T : Akka.Dispatch.ISemantics { }
-    public interface IRunnable
+    public interface IRunnable : System.Threading.IThreadPoolWorkItem
     {
         void Run();
     }
     public interface ISemantics { }
     public interface IUnboundedDequeBasedMessageQueueSemantics : Akka.Dispatch.IDequeBasedMessageQueueSemantics, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics { }
     public interface IUnboundedMessageQueueSemantics : Akka.Dispatch.ISemantics { }
-    public class Mailbox : Akka.Dispatch.IRunnable
+    public class Mailbox : Akka.Dispatch.IRunnable, System.Threading.IThreadPoolWorkItem
     {
         public Mailbox(Akka.Dispatch.MessageQueues.IMessageQueue messageQueue) { }
         public Akka.Dispatch.MessageDispatcher Dispatcher { get; }
         public Akka.Dispatch.MessageQueues.IMessageQueue MessageQueue { get; }
         public virtual void CleanUp() { }
+        public void Execute() { }
         public void Run() { }
         public virtual void SetActor(Akka.Actor.ActorCell actorCell) { }
         [System.Diagnostics.Conditional("MAILBOXDEBUG")]
@@ -3689,61 +3677,6 @@ namespace Akka.IO.Buffers
 }
 namespace Akka.IO
 {
-    public enum ByteOrder
-    {
-        BigEndian = 0,
-        LittleEndian = 1,
-    }
-    [System.Diagnostics.DebuggerDisplay("(Count = {_count}, Buffers = {_buffers})")]
-    public sealed class ByteString : System.Collections.Generic.IEnumerable<byte>, System.Collections.IEnumerable, System.IEquatable<Akka.IO.ByteString>
-    {
-        public int Count { get; }
-        public bool IsCompact { get; }
-        public bool IsEmpty { get; }
-        public byte this[int index] { get; }
-        public static Akka.IO.ByteString Empty { get; }
-        public Akka.IO.ByteString Compact() { }
-        public Akka.IO.ByteString Concat(Akka.IO.ByteString other) { }
-        public int CopyTo(ref System.Memory<byte> buffer) { }
-        public int CopyTo(ref System.Span<byte> buffer) { }
-        public int CopyTo(ref System.Memory<byte> buffer, int index, int count) { }
-        public int CopyTo(ref System.Span<byte> buffer, int index, int count) { }
-        public int CopyTo(byte[] buffer, int index, int count) { }
-        public bool Equals(Akka.IO.ByteString other) { }
-        public override bool Equals(object obj) { }
-        public System.Collections.Generic.IEnumerator<byte> GetEnumerator() { }
-        public override int GetHashCode() { }
-        public bool HasSubstring(Akka.IO.ByteString other, int index) { }
-        public int IndexOf(byte b) { }
-        public int IndexOf(byte b, int from) { }
-        public Akka.IO.ByteString Slice(int index) { }
-        public Akka.IO.ByteString Slice(int index, int count) { }
-        public byte[] ToArray() { }
-        public System.ReadOnlySpan<byte> ToReadOnlySpan() { }
-        public override string ToString() { }
-        public string ToString(System.Text.Encoding encoding) { }
-        public void WriteTo(System.IO.Stream stream) { }
-        public System.Threading.Tasks.Task WriteToAsync(System.IO.Stream stream) { }
-        public static Akka.IO.ByteString CopyFrom(System.ArraySegment<byte> buffer) { }
-        public static Akka.IO.ByteString CopyFrom(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buffers) { }
-        public static Akka.IO.ByteString CopyFrom(System.Memory<byte> memory) { }
-        public static Akka.IO.ByteString CopyFrom(System.Span<byte> span) { }
-        public static Akka.IO.ByteString CopyFrom(byte[] array) { }
-        public static Akka.IO.ByteString CopyFrom(System.Memory<byte> memory, int offset, int count) { }
-        public static Akka.IO.ByteString CopyFrom(System.Span<byte> span, int offset, int count) { }
-        public static Akka.IO.ByteString CopyFrom(byte[] array, int offset, int count) { }
-        public static Akka.IO.ByteString FromBytes(System.ArraySegment<byte> buffer) { }
-        public static Akka.IO.ByteString FromBytes(System.Collections.Generic.IEnumerable<System.ArraySegment<byte>> buffers) { }
-        public static Akka.IO.ByteString FromBytes(byte[] array) { }
-        public static Akka.IO.ByteString FromBytes(byte[] array, int offset, int count) { }
-        public static Akka.IO.ByteString FromString(string str) { }
-        public static Akka.IO.ByteString FromString(string str, System.Text.Encoding encoding) { }
-        public static byte[] op_Explicit(Akka.IO.ByteString byteString) { }
-        public static Akka.IO.ByteString op_Explicit(byte[] bytes) { }
-        public static bool operator !=(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
-        public static Akka.IO.ByteString operator +(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
-        public static bool operator ==(Akka.IO.ByteString x, Akka.IO.ByteString y) { }
-    }
     [Akka.Annotations.InternalApi]
     public class ConnectException : System.Exception
     {
@@ -3818,6 +3751,11 @@ namespace Akka.IO
         Akka.IO.Buffers.BufferPoolInfo BufferPoolInfo { get; }
         System.Net.Sockets.SocketAsyncEventArgs Acquire(Akka.Actor.IActorRef actor);
         void Release(System.Net.Sockets.SocketAsyncEventArgs e);
+    }
+    public interface IStreamProvider
+    {
+        void Close();
+        System.Threading.Tasks.Task<System.IO.Stream> ConnectAsync(string host, int port, System.Threading.CancellationToken ct);
     }
     public class Inet
     {
@@ -3923,7 +3861,7 @@ namespace Akka.IO
         }
         public class Bind : Akka.IO.Tcp.Command
         {
-            public Bind(Akka.Actor.IActorRef handler, System.Net.EndPoint localAddress, int backlog = 1024, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options = null, bool pullMode = false) { }
+            public Bind(Akka.Actor.IActorRef handler, System.Net.EndPoint localAddress, int backlog = 1024, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption>? options = null, bool pullMode = false) { }
             public int Backlog { get; }
             public Akka.Actor.IActorRef Handler { get; }
             public System.Net.EndPoint LocalAddress { get; }
@@ -3990,8 +3928,8 @@ namespace Akka.IO
         }
         public sealed class Connect : Akka.IO.Tcp.Command
         {
-            public Connect(System.Net.EndPoint remoteAddress, System.Net.EndPoint localAddress = null, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options = null, System.TimeSpan? timeout = default, bool pullMode = false) { }
-            public System.Net.EndPoint LocalAddress { get; }
+            public Connect(System.Net.EndPoint remoteAddress, System.Net.EndPoint? localAddress = null, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption>? options = null, System.TimeSpan? timeout = default, bool pullMode = false) { }
+            public System.Net.EndPoint? LocalAddress { get; }
             public System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> Options { get; }
             public bool PullMode { get; }
             public System.Net.EndPoint RemoteAddress { get; }
@@ -4034,8 +3972,8 @@ namespace Akka.IO
         public class NoAck : Akka.IO.Tcp.Event
         {
             public static readonly Akka.IO.Tcp.NoAck Instance;
-            public NoAck(object token) { }
-            public object Token { get; }
+            public NoAck(object? token) { }
+            public object? Token { get; }
             public override string ToString() { }
         }
         public sealed class PeerClosed : Akka.IO.Tcp.ConnectionClosed
@@ -4045,8 +3983,8 @@ namespace Akka.IO
         }
         public sealed class Received : Akka.IO.Tcp.Event
         {
-            public Received(Akka.IO.ByteString data) { }
-            public Akka.IO.ByteString Data { get; }
+            public Received(System.ReadOnlyMemory<byte> data) { }
+            public System.ReadOnlyMemory<byte> Data { get; }
             public override string ToString() { }
         }
         public class Register : Akka.IO.Tcp.Command
@@ -4113,10 +4051,12 @@ namespace Akka.IO
             public static readonly Akka.IO.Tcp.Write Empty;
             public override Akka.IO.Tcp.Event Ack { get; }
             public override long Bytes { get; }
-            public Akka.IO.ByteString Data { get; }
+            public System.ReadOnlyMemory<byte> Data { get; }
             public override string ToString() { }
-            public static Akka.IO.Tcp.Write Create(Akka.IO.ByteString data) { }
-            public static Akka.IO.Tcp.Write Create(Akka.IO.ByteString data, Akka.IO.Tcp.Event ack) { }
+            public static Akka.IO.Tcp.Write Create(System.ReadOnlyMemory<byte> data) { }
+            public static Akka.IO.Tcp.Write Create(byte[] data) { }
+            public static Akka.IO.Tcp.Write Create(System.ReadOnlyMemory<byte> data, Akka.IO.Tcp.Event ack) { }
+            public static Akka.IO.Tcp.Write Create(byte[] data, Akka.IO.Tcp.Event ack) { }
         }
         public abstract class WriteCommand : Akka.IO.Tcp.Command
         {
@@ -4151,14 +4091,15 @@ namespace Akka.IO
         public static Akka.IO.Tcp.Command ConfirmedClose() { }
         public static Akka.IO.Tcp.Command Connect(System.Net.EndPoint remoteAddress) { }
         public static Akka.IO.Tcp.Command Connect(System.Net.EndPoint remoteAddress, System.Net.EndPoint? localAddress, System.Collections.Generic.IEnumerable<Akka.IO.Inet.SocketOption> options, System.TimeSpan? timeout, bool pullMode) { }
-        public static Akka.IO.Tcp.NoAck NoAck(object token = null) { }
+        public static Akka.IO.Tcp.NoAck NoAck(object? token = null) { }
         public static Akka.IO.Tcp.Command Register(Akka.Actor.IActorRef handler, bool keepOpenOnPeerClosed = false, bool useResumeWriting = true) { }
         public static Akka.IO.Tcp.Command ResumeAccepting(int batchSize) { }
         public static Akka.IO.Tcp.Command ResumeReading() { }
         public static Akka.IO.Tcp.Command ResumeWriting() { }
         public static Akka.IO.Tcp.Command SuspendReading() { }
         public static Akka.IO.Tcp.Command Unbind() { }
-        public static Akka.IO.Tcp.Command Write(Akka.IO.ByteString data, Akka.IO.Tcp.Event ack = null) { }
+        public static Akka.IO.Tcp.Command Write(System.ReadOnlyMemory<byte> data, Akka.IO.Tcp.Event? ack = null) { }
+        public static Akka.IO.Tcp.Command Write(byte[] data, Akka.IO.Tcp.Event? ack = null) { }
     }
     public sealed class TcpSettings : System.IEquatable<Akka.IO.TcpSettings>
     {
@@ -4187,6 +4128,12 @@ namespace Akka.IO
         public int WriteCommandsQueueMaxSize { get; init; }
         public static Akka.IO.TcpSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.IO.TcpSettings Create(Akka.Configuration.Config config) { }
+    }
+    public sealed class TcpStreamProvider : Akka.IO.IStreamProvider
+    {
+        public TcpStreamProvider() { }
+        public void Close() { }
+        public System.Threading.Tasks.Task<System.IO.Stream> ConnectAsync(string host, int port, System.Threading.CancellationToken ct) { }
     }
     public class Udp : Akka.Actor.ExtensionIdProvider<Akka.IO.UdpExt>
     {
@@ -4236,8 +4183,8 @@ namespace Akka.IO
         }
         public sealed class Received : Akka.IO.Udp.Event
         {
-            public Received(Akka.IO.ByteString data, System.Net.EndPoint sender) { }
-            public Akka.IO.ByteString Data { get; }
+            public Received(System.ReadOnlyMemory<byte> data, System.Net.EndPoint sender) { }
+            public System.ReadOnlyMemory<byte> Data { get; }
             public System.Net.EndPoint Sender { get; }
             public override string ToString() { }
         }
@@ -4257,13 +4204,13 @@ namespace Akka.IO
         }
         public sealed class Send : Akka.IO.Udp.Command
         {
-            public Send(Akka.IO.ByteString payload, System.Net.EndPoint target, Akka.IO.Udp.Event ack) { }
+            public Send(System.ReadOnlyMemory<byte> payload, System.Net.EndPoint target, Akka.IO.Udp.Event ack) { }
             public Akka.IO.Udp.Event Ack { get; }
-            public Akka.IO.ByteString Payload { get; }
+            public System.ReadOnlyMemory<byte> Payload { get; }
             public System.Net.EndPoint Target { get; }
             public bool WantsAck { get; }
             public override string ToString() { }
-            public static Akka.IO.Udp.Send Create(Akka.IO.ByteString data, System.Net.EndPoint target) { }
+            public static Akka.IO.Udp.Send Create(System.ReadOnlyMemory<byte> data, System.Net.EndPoint target) { }
         }
         public sealed class SimpleSender : Akka.IO.Udp.Command
         {
@@ -4339,8 +4286,8 @@ namespace Akka.IO
         }
         public sealed class Received : Akka.IO.UdpConnected.Event
         {
-            public Received(Akka.IO.ByteString data) { }
-            public Akka.IO.ByteString Data { get; }
+            public Received(System.ReadOnlyMemory<byte> data) { }
+            public System.ReadOnlyMemory<byte> Data { get; }
         }
         public class ResumeReading : Akka.IO.UdpConnected.Command
         {
@@ -4348,11 +4295,11 @@ namespace Akka.IO
         }
         public sealed class Send : Akka.IO.UdpConnected.Command
         {
-            public Send(Akka.IO.ByteString payload, object ack) { }
+            public Send(System.ReadOnlyMemory<byte> payload, object ack) { }
             public object Ack { get; }
-            public Akka.IO.ByteString Payload { get; }
+            public System.ReadOnlyMemory<byte> Payload { get; }
             public bool WantsAck { get; }
-            public static Akka.IO.UdpConnected.Send Create(Akka.IO.ByteString payload) { }
+            public static Akka.IO.UdpConnected.Send Create(System.ReadOnlyMemory<byte> payload) { }
         }
         public class SuspendReading : Akka.IO.UdpConnected.Command
         {
@@ -5336,7 +5283,12 @@ namespace Akka.Util
     }
     public static class ByteHelpers
     {
-        public static byte[] PutInt(this byte[] target, int x, int offset = 0, Akka.IO.ByteOrder order = 0) { }
+        public static byte[] PutInt(this byte[] target, int x, int offset = 0, Akka.Util.ByteOrder order = 0) { }
+    }
+    public enum ByteOrder
+    {
+        BigEndian = 0,
+        LittleEndian = 1,
     }
     public class ConcurrentSet<T> : System.Collections.Generic.ICollection<T>, System.Collections.Generic.IEnumerable<T>, System.Collections.IEnumerable
     {

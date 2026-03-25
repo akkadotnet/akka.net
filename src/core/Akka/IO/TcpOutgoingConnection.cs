@@ -121,21 +121,14 @@ namespace Akka.IO
                 {
                     Log.Debug("Resolving {0} before connecting", remoteAddress.Host);
 
-                    if (Socket.AddressFamily == AddressFamily.InterNetwork)
-                    {
-                        // IPv4-only socket: resolve DNS to get an IPv4 address
-                        var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
-                        if (resolved == null)
-                            Become(() => Resolving(remoteAddress));
-                        else
-                            Register(CreateEndpoint(resolved, remoteAddress.Port));
-                    }
+                    // Always resolve DNS via Akka's async DNS resolver for consistent
+                    // cross-platform behavior. Socket.ConnectAsync(DnsEndPoint) has
+                    // platform-specific DNS timeout behavior that can be very slow on Windows.
+                    var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
+                    if (resolved == null)
+                        Become(() => Resolving(remoteAddress));
                     else
-                    {
-                        // Dual-stack socket: pass DnsEndPoint directly to ConnectAsync
-                        // so the runtime can try all resolved addresses (both IPv4 and IPv6)
-                        RegisterEndPoint(remoteAddress);
-                    }
+                        Register(CreateEndpoint(resolved, remoteAddress.Port));
                 }
                 else if (_connect.RemoteAddress is IPEndPoint point)
                 {

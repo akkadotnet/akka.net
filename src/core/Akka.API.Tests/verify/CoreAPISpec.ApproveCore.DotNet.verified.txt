@@ -2678,7 +2678,7 @@ namespace Akka.Delivery
 namespace Akka.Delivery.Internal
 {
     [Akka.Annotations.InternalApi]
-    public readonly struct ChunkedMessage
+    public readonly struct ChunkedMessage : System.IEquatable<Akka.Delivery.Internal.ChunkedMessage>
     {
         public ChunkedMessage(System.ReadOnlyMemory<byte> serializedMessage, bool firstChunk, bool lastChunk, int serializerId, string manifest) { }
         public bool FirstChunk { get; }
@@ -2686,7 +2686,12 @@ namespace Akka.Delivery.Internal
         public string Manifest { get; }
         public System.ReadOnlyMemory<byte> SerializedMessage { get; }
         public int SerializerId { get; }
+        public bool Equals(Akka.Delivery.Internal.ChunkedMessage other) { }
+        public override bool Equals(object? obj) { }
+        public override int GetHashCode() { }
         public override string ToString() { }
+        public static bool operator !=(Akka.Delivery.Internal.ChunkedMessage left, Akka.Delivery.Internal.ChunkedMessage right) { }
+        public static bool operator ==(Akka.Delivery.Internal.ChunkedMessage left, Akka.Delivery.Internal.ChunkedMessage right) { }
     }
     [Akka.Annotations.InternalApi]
     public interface IDeliverySerializable { }
