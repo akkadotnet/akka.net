@@ -91,6 +91,17 @@ namespace Akka.IO
             private WritesFlushed() { }
         }
 
+        /// <summary>
+        /// Self-tell: the read-from-stream task encountered an I/O error.
+        /// Distinct from IoTaskFailed because this carries the error that caused pipe completion
+        /// and must be processed BEFORE PipeReadCompleted to distinguish error-EOF from normal EOF.
+        /// </summary>
+        private sealed class StreamReadFailed
+        {
+            public Exception Cause { get; }
+            public StreamReadFailed(Exception cause) { Cause = cause; }
+        }
+
         private sealed class CommanderDied : IDeadLetterSuppression
         {
             public static readonly CommanderDied Instance = new();
@@ -163,6 +174,15 @@ namespace Akka.IO
         private bool _outputShutdown;
         private bool _keepOpenOnPeerClosed;
         private bool _closingGracefully;
+        private bool _ioTasksCompleted;
+
+        // Tracks error from ReadFromStream so HandlePipeRead can distinguish error-EOF from normal EOF.
+        // _readStreamError is set from the actor thread when StreamReadFailed is processed.
+        // _readStreamErrorVolatile is set from the background thread when the error occurs,
+        // BEFORE the pipe writer is completed. This ensures HandlePipeRead can always detect
+        // the error even if the StreamReadFailed message hasn't been processed yet.
+        private Exception? _readStreamError;
+        private volatile bool _readStreamHasError;
 
         private long _totalSentBytes;
         private long _totalReceivedBytes;
@@ -367,12 +387,14 @@ namespace Akka.IO
         {
             Receive<Tcp.WriteCommand>(HandleWrite);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
+            Receive<StreamReadFailed>(msg => HandleStreamReadFailed(msg));
             Receive<PipeReadCompleted>(HandlePipeRead);
             SuspendResumeHandlers();
             Receive<StreamEof>(_ => HandleStreamEof());
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
             Receive<IoTasksCompleted>(_ =>
             {
+                _ioTasksCompleted = true;
                 if (_traceLogging) Log.Debug("[TcpConnection] All I/O tasks completed");
             });
             Receive<HandlerDied>(_ =>
@@ -387,11 +409,18 @@ namespace Akka.IO
             // Peer closed their write side, but we can still write
             Receive<Tcp.WriteCommand>(HandleWrite);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
+            Receive<StreamReadFailed>(msg => HandleStreamReadFailed(msg));
             Receive<PipeReadCompleted>(HandlePipeRead);
+            Receive<StreamEof>(_ =>
+            {
+                // Already in PeerSentEof state — this is a duplicate notification, ignore
+                if (_traceLogging) Log.Debug("[TcpConnection] StreamEof in PeerSentEofBehaviour (no-op)");
+            });
             SuspendResumeHandlers();
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
             Receive<IoTasksCompleted>(_ =>
             {
+                _ioTasksCompleted = true;
                 if (_traceLogging) Log.Debug("[TcpConnection] All I/O tasks completed (peer EOF)");
             });
             Receive<HandlerDied>(_ =>
@@ -409,6 +438,7 @@ namespace Akka.IO
                 Sender.Tell(w.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
             });
             Receive<Abort>(c => HandleClose(Sender, c.Event));
+            Receive<StreamReadFailed>(msg => HandleStreamReadFailed(msg));
             Receive<StreamEof>(_ =>
             {
                 if (_traceLogging)
@@ -420,14 +450,35 @@ namespace Akka.IO
             {
                 if (_traceLogging)
                     Log.Debug("[TcpConnection] Writes flushed during close");
-                // Now cancel the read side
-                TryCancelCts();
+
+                if (closeEvent is ConfirmedClosed)
+                {
+                    // For ConfirmedClose (half-close), all writes are flushed.
+                    // Now send FIN, then keep reading until peer sends their FIN (StreamEof).
+                    // Do NOT cancel the CTS — reading must continue.
+                    if (!_outputShutdown)
+                        ShutdownOutput();
+
+                    if (_traceLogging)
+                        Log.Debug("[TcpConnection] ConfirmedClose: FIN sent, waiting for peer FIN");
+                }
+                else
+                {
+                    // For regular Close, shut down the output and cancel reads
+                    if (!_outputShutdown)
+                        ShutdownOutput();
+                    TryCancelCts();
+
+                    // If I/O tasks already completed, close now
+                    TryFinishClose(closeSender, closeEvent);
+                }
             });
             Receive<IoTasksCompleted>(_ =>
             {
+                _ioTasksCompleted = true;
                 if (_traceLogging)
                     Log.Debug("[TcpConnection] All I/O tasks completed during close");
-                DoCloseConnection(closeSender, closeEvent);
+                TryFinishClose(closeSender, closeEvent);
             });
             Receive<IoTaskFailed>(msg =>
             {
@@ -441,6 +492,28 @@ namespace Akka.IO
                 Log.Debug("Handler [{0}] died during close, stopping connection actor", _handler);
                 Context.Stop(Self);
             });
+
+            // If I/O tasks already completed before we entered ClosingBehaviour, try to close now
+            TryFinishClose(closeSender, closeEvent);
+        }
+
+        /// <summary>
+        /// Checks whether all conditions are met to finalize the connection close.
+        /// For ConfirmedClose, the StreamEof handler manages closing directly (waiting for peer FIN).
+        /// For regular Close, we close once I/O tasks are done.
+        /// </summary>
+        private void TryFinishClose(IActorRef closeSender, ConnectionClosed closeEvent)
+        {
+            if (closeEvent is ConfirmedClosed)
+            {
+                // For ConfirmedClose, we need to wait for peer FIN (StreamEof).
+                // The StreamEof handler calls DoCloseConnection directly.
+                return;
+            }
+
+            // For regular Close: once I/O tasks are done, close
+            if (_ioTasksCompleted)
+                DoCloseConnection(closeSender, closeEvent);
         }
 
         private void SuspendResumeHandlers()
@@ -458,6 +531,22 @@ namespace Akka.IO
                 // Resume writing is handled by the channel - no special action needed
                 if (_traceLogging) Log.Debug("[TcpConnection] ResumeWriting received");
             });
+        }
+
+        /* ================================================================= */
+        /*  Stream error tracking                                           */
+        /* ================================================================= */
+
+        /// <summary>
+        /// Called when ReadFromStream encounters an I/O error. Records the error
+        /// so that subsequent HandlePipeRead with IsCompleted can propagate it
+        /// as an ErrorClosed instead of treating it as normal EOF.
+        /// </summary>
+        private void HandleStreamReadFailed(StreamReadFailed msg)
+        {
+            _readStreamError = msg.Cause;
+            if (_traceLogging)
+                Log.Debug("[TcpConnection] Stream read failed: {0}", msg.Cause.Message);
         }
 
         /* ================================================================= */
@@ -492,22 +581,31 @@ namespace Akka.IO
             var reader = _pipeReader;
             var ct = _cts.Token;
 
-            var valueTask = reader.ReadAsync(ct);
-            if (valueTask.IsCompletedSuccessfully)
+            try
             {
-                // Fast path: data already available in the pipe
-                self.Tell(new PipeReadCompleted(valueTask.Result));
-            }
-            else
-            {
-                valueTask.AsTask().ContinueWith(task =>
+                var valueTask = reader.ReadAsync(ct);
+                if (valueTask.IsCompletedSuccessfully)
                 {
-                    if (task.IsCompletedSuccessfully)
-                        self.Tell(new PipeReadCompleted(task.Result));
-                    else if (task.IsFaulted)
-                        self.Tell(new IoTaskFailed(task.Exception!.InnerException ?? task.Exception));
-                    // Cancelled → actor is stopping, no message needed
-                }, TaskContinuationOptions.ExecuteSynchronously);
+                    // Fast path: data already available in the pipe
+                    self.Tell(new PipeReadCompleted(valueTask.Result));
+                }
+                else
+                {
+                    valueTask.AsTask().ContinueWith(task =>
+                    {
+                        if (task.IsCompletedSuccessfully)
+                            self.Tell(new PipeReadCompleted(task.Result));
+                        else if (task.IsFaulted)
+                            self.Tell(new IoTaskFailed(task.Exception!.InnerException ?? task.Exception));
+                        else if (task.IsCanceled)
+                            self.Tell(new IoTaskFailed(new OperationCanceledException("Pipe read cancelled")));
+                    }, TaskContinuationOptions.ExecuteSynchronously);
+                }
+            }
+            catch (Exception ex)
+            {
+                _readPending = false;
+                self.Tell(new IoTaskFailed(ex));
             }
         }
 
@@ -534,10 +632,42 @@ namespace Akka.IO
 
             _pipeReader!.AdvanceTo(buffer.End);
 
-            if (result.IsCompleted)
+            if (result.IsCompleted || result.IsCanceled)
             {
-                // Pipe writer completed (stream EOF or error).
-                // All buffered data has been delivered above — now signal EOF.
+                // When the completed/canceled read also carried data, do one more
+                // non-demand-driven drain read before signaling EOF.  The pipe
+                // writer's CompleteAsync flushes any Advance'd-but-not-Flush'd
+                // bytes, but PipeReader.ReadAsync may return the previous flush's
+                // segment with IsCompleted while a final segment from the flush
+                // inside CompleteAsync is not yet visible.  The extra read is
+                // guaranteed to be very cheap (synchronous, empty buffer) in the
+                // common case and ensures no bytes are silently dropped.
+                if (buffer.Length > 0)
+                {
+                    if (_traceLogging)
+                        Log.Debug("[TcpConnection] Pipe completed with data — requesting drain read");
+                    RequestPipeRead();
+                    return;
+                }
+
+                // Check for stream read error. _readStreamError is set by the actor thread
+                // when StreamReadFailed is processed. _readStreamHasError is a volatile flag
+                // set by the background thread BEFORE the pipe writer is completed, ensuring
+                // it's visible here even if the StreamReadFailed message hasn't been processed yet.
+                if (_readStreamError != null || _readStreamHasError)
+                {
+                    // The stream read failed with an I/O error (connection reset, etc.).
+                    // Propagate as an I/O error, not as normal EOF.
+                    // Use _readStreamError if available, otherwise create a generic error.
+                    var error = _readStreamError ?? new IOException("Connection reset by peer");
+                    if (_traceLogging)
+                        Log.Debug("[TcpConnection] Pipe completed with error — signaling I/O error: {0}",
+                            error.Message);
+                    HandleIoError(error);
+                    return;
+                }
+
+                // Normal EOF — peer closed their write side cleanly.
                 if (_traceLogging)
                     Log.Debug("[TcpConnection] Pipe completed — signaling EOF");
                 Self.Tell(StreamEof.Instance);
@@ -628,6 +758,7 @@ namespace Akka.IO
         private async Task ReadFromStreamAsync(Stream stream, PipeWriter writer, CancellationToken ct)
         {
             var minimumBufferSize = Settings.MaxFrameSizeBytes;
+            Exception? streamError = null;
             try
             {
                 while (!ct.IsCancellationRequested)
@@ -662,18 +793,35 @@ namespace Akka.IO
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 // Normal cancellation - expected during shutdown
+                if (_traceLogging)
+                    Log.Debug("[TcpConnection] ReadFromStream: cancelled");
             }
             catch (Exception ex) when (ex is IOException or SocketException)
             {
-                // I/O error - notify the actor
-                Self.Tell(new IoTaskFailed(ex));
+                // I/O error - notify the actor before pipe completes so error state is set.
+                // Set _readStreamHasError BEFORE Self.Tell and BEFORE CompleteAsync (in finally)
+                // so that HandlePipeRead can detect the error even if PipeReadCompleted
+                // is processed before StreamReadFailed.
+                if (_traceLogging)
+                    Log.Debug("[TcpConnection] ReadFromStream: I/O error {0}: {1}", ex.GetType().Name, ex.Message);
+                streamError = ex;
+                _readStreamHasError = true;
+                Self.Tell(new StreamReadFailed(ex));
             }
             catch (Exception ex)
             {
-                Self.Tell(new IoTaskFailed(ex));
+                if (_traceLogging)
+                    Log.Debug("[TcpConnection] ReadFromStream: unexpected error {0}: {1}", ex.GetType().Name, ex.Message);
+                streamError = ex;
+                _readStreamHasError = true;
+                Self.Tell(new StreamReadFailed(ex));
             }
             finally
             {
+                // Complete the pipe writer without passing the exception.
+                // PipeWriter.CompleteAsync(exception) causes PipeReader.ReadAsync() to throw
+                // synchronously, bypassing the actor's message loop. The error is already
+                // communicated via StreamReadFailed self-tell and _readStreamError field.
                 await writer.CompleteAsync().ConfigureAwait(false);
             }
         }
@@ -823,25 +971,19 @@ namespace Akka.IO
 
         /// <summary>
         /// Tcp.ConfirmedClose: half-close (send FIN), wait for peer FIN.
+        /// The sequence is: flush writes -> shutdown output (FIN) -> wait for peer FIN (StreamEof).
         /// </summary>
         private void HandleConfirmedClose(IActorRef closeSender)
         {
             _closingGracefully = true;
 
-            // Complete the write channel
+            // Complete the write channel (no more writes accepted)
             _writeChannel?.Writer.TryComplete();
 
-            // Send FIN
-            if (_peerClosed || !ShutdownOutput())
-            {
-                // Peer already closed or shutdown failed - close immediately
-                DoCloseConnection(closeSender, ConfirmedClosed.Instance);
-            }
-            else
-            {
-                // Wait for peer FIN (StreamEof) - the ClosingBehaviour will handle it
-                Become(() => ClosingBehaviour(closeSender, ConfirmedClosed.Instance));
-            }
+            // Always enter ClosingBehaviour to wait for WritesFlushed,
+            // even if peer already closed. This ensures proper sequencing:
+            // flush writes -> shutdown output (FIN) -> wait for peer FIN (StreamEof).
+            Become(() => ClosingBehaviour(closeSender, ConfirmedClosed.Instance));
         }
 
         /// <summary>
@@ -849,6 +991,16 @@ namespace Akka.IO
         /// </summary>
         private void HandleStreamEof()
         {
+            if (_peerClosed)
+            {
+                // Duplicate EOF — already handled, ignore
+                if (_traceLogging)
+                    Log.Debug("[TcpConnection] HandleStreamEof: duplicate EOF, ignoring");
+                return;
+            }
+
+            _peerClosed = true;
+
             if (_traceLogging)
                 Log.Debug("[TcpConnection] HandleStreamEof: peer closed");
 
@@ -859,7 +1011,6 @@ namespace Akka.IO
             }
             else
             {
-                _peerClosed = true;
                 HandleClose(_handler ?? _commander!, PeerClosed.Instance);
             }
         }
