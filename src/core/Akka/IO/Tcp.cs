@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -460,19 +461,19 @@ namespace Akka.IO
             /// <summary>
             /// Write with no data and <see cref="NoAck"/>
             /// </summary>
-            public static readonly Write Empty = new(ReadOnlyMemory<byte>.Empty, NoAck.Instance);
+            public static readonly Write Empty = new(ReadOnlySequence<byte>.Empty, NoAck.Instance);
 
             /// <summary>
             /// The data we are going to write.
             /// </summary>
-            public ReadOnlyMemory<byte> Data { get; }
+            public ReadOnlySequence<byte> Data { get; }
 
             /// <summary>
             /// The optional acknowledgment event which will be sent to the sender of this command.
             /// </summary>
             public override Event Ack { get; }
 
-            private Write(ReadOnlyMemory<byte> data, Event ack)
+            private Write(ReadOnlySequence<byte> data, Event ack)
             {
                 Ack = ack ?? NoAck.Instance;
                 Data = data;
@@ -482,12 +483,31 @@ namespace Akka.IO
                 $"Write(bytes: {Data.Length}, ack: {Ack})";
 
             /// <summary>
+            /// Creates a write from a <see cref="ReadOnlySequence{T}"/> of bytes.
+            /// </summary>
+            /// <param name="data">The data to write.</param>
+            public static Write Create(ReadOnlySequence<byte> data)
+            {
+                return data.IsEmpty ? Empty : new Write(data, NoAck.Instance);
+            }
+
+            /// <summary>
+            /// Creates a write from a <see cref="ReadOnlySequence{T}"/> of bytes.
+            /// </summary>
+            /// <param name="data">The data to write.</param>
+            /// <param name="ack">The acknowledgement message we'll receive once this write is complete.</param>
+            public static Write Create(ReadOnlySequence<byte> data, Event ack)
+            {
+                return new Write(data, ack);
+            }
+
+            /// <summary>
             /// Creates a write from a <see cref="ReadOnlyMemory{T}"/> of bytes.
             /// </summary>
             /// <param name="data">The data to write.</param>
             public static Write Create(ReadOnlyMemory<byte> data)
             {
-                return data.IsEmpty ? Empty : new Write(data, NoAck.Instance);
+                return data.IsEmpty ? Empty : new Write(new ReadOnlySequence<byte>(data), NoAck.Instance);
             }
 
             /// <summary>
@@ -497,7 +517,7 @@ namespace Akka.IO
             /// <param name="ack">The acknowledgement message we'll receive once this write is complete.</param>
             public static Write Create(ReadOnlyMemory<byte> data, Event ack)
             {
-                return new Write(data, ack);
+                return new Write(new ReadOnlySequence<byte>(data), ack);
             }
 
             /// <summary>
@@ -506,7 +526,7 @@ namespace Akka.IO
             /// <param name="data">The data to write.</param>
             public static Write Create(byte[] data)
             {
-                return data.Length == 0 ? Empty : new Write(data, NoAck.Instance);
+                return data.Length == 0 ? Empty : new Write(new ReadOnlySequence<byte>(data), NoAck.Instance);
             }
 
             /// <summary>
@@ -516,7 +536,7 @@ namespace Akka.IO
             /// <param name="ack">The acknowledgement message we'll receive once this write is complete.</param>
             public static Write Create(byte[] data, Event ack)
             {
-                return new Write(data, ack);
+                return new Write(new ReadOnlySequence<byte>(data), ack);
             }
 
             public override long Bytes => Data.Length;

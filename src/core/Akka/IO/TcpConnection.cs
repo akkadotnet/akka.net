@@ -1132,7 +1132,19 @@ namespace Akka.IO
             {
                 var data = batch[0].Cmd.Data;
                 if (data.Length > 0)
-                    await stream.WriteAsync(data, ct).ConfigureAwait(false);
+                {
+                    if (data.IsSingleSegment)
+                    {
+                        await stream.WriteAsync(data.First, ct).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        foreach (var segment in data)
+                        {
+                            await stream.WriteAsync(segment, ct).ConfigureAwait(false);
+                        }
+                    }
+                }
 
                 return;
             }
@@ -1143,9 +1155,11 @@ namespace Akka.IO
                 var offset = 0;
                 foreach (var item in batch)
                 {
-                    var data = item.Cmd.Data;
-                    data.Span.CopyTo(rented.AsSpan(offset, data.Length));
-                    offset += data.Length;
+                    foreach (var segment in item.Cmd.Data)
+                    {
+                        segment.Span.CopyTo(rented.AsSpan(offset, segment.Length));
+                        offset += segment.Length;
+                    }
                 }
 
                 await stream.WriteAsync(rented.AsMemory(0, batchBytes), ct).ConfigureAwait(false);

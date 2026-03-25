@@ -4051,10 +4051,12 @@ namespace Akka.IO
             public static readonly Akka.IO.Tcp.Write Empty;
             public override Akka.IO.Tcp.Event Ack { get; }
             public override long Bytes { get; }
-            public System.ReadOnlyMemory<byte> Data { get; }
+            public System.Buffers.ReadOnlySequence<byte> Data { get; }
             public override string ToString() { }
+            public static Akka.IO.Tcp.Write Create(System.Buffers.ReadOnlySequence<byte> data) { }
             public static Akka.IO.Tcp.Write Create(System.ReadOnlyMemory<byte> data) { }
             public static Akka.IO.Tcp.Write Create(byte[] data) { }
+            public static Akka.IO.Tcp.Write Create(System.Buffers.ReadOnlySequence<byte> data, Akka.IO.Tcp.Event ack) { }
             public static Akka.IO.Tcp.Write Create(System.ReadOnlyMemory<byte> data, Akka.IO.Tcp.Event ack) { }
             public static Akka.IO.Tcp.Write Create(byte[] data, Akka.IO.Tcp.Event ack) { }
         }
