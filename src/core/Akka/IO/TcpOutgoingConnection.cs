@@ -123,15 +123,12 @@ namespace Akka.IO
                     var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
                     if (resolved == null)
                         Become(() => Resolving(remoteAddress));
-                    else if (resolved.Ipv4.Any() && resolved.Ipv6.Any())
-                        Register(new IPEndPoint(resolved.Ipv4.First(), remoteAddress.Port),
-                            new IPEndPoint(resolved.Ipv6.First(), remoteAddress.Port));
                     else
-                        Register(new IPEndPoint(resolved.Addr, remoteAddress.Port), null);
+                        Register(CreateEndpoint(resolved, remoteAddress.Port));
                 }
                 else if (_connect.RemoteAddress is IPEndPoint point)
                 {
-                    Register(point, null);
+                    Register(point);
                 }
                 else
                     throw new NotSupportedException(
@@ -149,19 +146,20 @@ namespace Akka.IO
         {
             Receive<Dns.Resolved>(resolved =>
             {
-                if (resolved.Ipv4.Any() && resolved.Ipv6.Any())
-                {
-                    ReportConnectFailure(() => Register(
-                        new IPEndPoint(resolved.Ipv4.First(), remoteAddress.Port),
-                        new IPEndPoint(resolved.Ipv6.First(), remoteAddress.Port)));
-                }
-                else
-                {
-                    ReportConnectFailure(() => Register(
-                        new IPEndPoint(resolved.Addr, remoteAddress.Port),
-                        null));
-                }
+                ReportConnectFailure(() => Register(CreateEndpoint(resolved, remoteAddress.Port)));
             });
+        }
+
+        private IPEndPoint CreateEndpoint(Dns.Resolved resolved, int port)
+        {
+            IPAddress address = Socket.AddressFamily switch
+            {
+                AddressFamily.InterNetwork when resolved.Ipv4.Any() => resolved.Ipv4.First(),
+                AddressFamily.InterNetworkV6 when resolved.Ipv6.Any() => resolved.Ipv6.First(),
+                _ => resolved.Addr
+            };
+
+            return new IPEndPoint(address, port);
         }
 
         private static SocketAsyncEventArgs CreateSocketEventArgs(IActorRef onCompleteNotificationsReceiver)
@@ -187,7 +185,7 @@ namespace Akka.IO
             }
         }
 
-        private void Register(IPEndPoint address, IPEndPoint? fallbackAddress)
+        private void Register(IPEndPoint address)
         {
             ReportConnectFailure(() =>
             {
@@ -198,12 +196,11 @@ namespace Akka.IO
                 if (!Socket.ConnectAsync(_connectArgs))
                     Self.Tell(IO.Tcp.SocketConnected.Instance);
 
-                Become(() => Connecting(Settings.FinishConnectRetries, _connectArgs, fallbackAddress));
+                Become(() => Connecting(Settings.FinishConnectRetries, _connectArgs));
             });
         }
 
-        private void Connecting(int remainingFinishConnectRetries, SocketAsyncEventArgs args,
-            IPEndPoint? fallbackAddress)
+        private void Connecting(int remainingFinishConnectRetries, SocketAsyncEventArgs args)
         {
             Receive<Tcp.SocketConnected>(_ =>
             {
@@ -219,19 +216,6 @@ namespace Akka.IO
                 else
                     switch (remainingFinishConnectRetries)
                     {
-                        case > 0 when fallbackAddress != null:
-                        {
-                            var self = Self;
-                            var previousAddress = (IPEndPoint)args.RemoteEndPoint!;
-                            args.RemoteEndPoint = fallbackAddress;
-                            Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
-                            {
-                                if (!Socket.ConnectAsync(args))
-                                    self.Tell(IO.Tcp.SocketConnected.Instance);
-                            });
-                            Become(() => Connecting(remainingFinishConnectRetries - 1, args, previousAddress));
-                            break;
-                        }
                         case > 0:
                         {
                             var self = Self;
@@ -240,7 +224,7 @@ namespace Akka.IO
                                 if (!Socket.ConnectAsync(args))
                                     self.Tell(IO.Tcp.SocketConnected.Instance);
                             });
-                            Become(() => Connecting(remainingFinishConnectRetries - 1, args, null));
+                            Become(() => Connecting(remainingFinishConnectRetries - 1, args));
                             break;
                         }
                         default:

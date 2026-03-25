@@ -949,7 +949,7 @@ namespace Akka.IO
                     Log.Debug("[TcpConnection] ReadFromStream: I/O error {0}: {1}", ex.GetType().Name, ex.Message);
                 streamError = ex;
                 _readStreamHasError = true;
-                Self.Tell(new StreamReadFailed(ex));
+                self.Tell(new StreamReadFailed(ex));
             }
             catch (Exception ex)
             {
@@ -957,7 +957,7 @@ namespace Akka.IO
                     Log.Debug("[TcpConnection] ReadFromStream: unexpected error {0}: {1}", ex.GetType().Name, ex.Message);
                 streamError = ex;
                 _readStreamHasError = true;
-                Self.Tell(new StreamReadFailed(ex));
+                self.Tell(new StreamReadFailed(ex));
             }
             finally
             {
