@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Visual Studio 2017 15.9+ Test Explorer runner for the Akka.NET MultiNode tests</Description>
-    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <TargetFrameworks>$(NetStandardLibVersion);$(NetFrameworkTestVersion)</TargetFrameworks>
     <IncludeSource>true</IncludeSource>
     <IncludeSymbols>true</IncludeSymbols>
   </PropertyGroup>

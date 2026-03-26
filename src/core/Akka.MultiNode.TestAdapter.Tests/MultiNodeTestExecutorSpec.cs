@@ -8,7 +8,6 @@ using Akka.MultiNode.TestAdapter.SampleTests.Metadata;
 using Akka.MultiNode.TestAdapter.Tests.Helpers;
 using Akka.Remote.TestKit;
 using FluentAssertions;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Xunit;
 using Xunit.Sdk;
 
