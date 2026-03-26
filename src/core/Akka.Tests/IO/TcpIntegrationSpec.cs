@@ -506,10 +506,11 @@ namespace Akka.Tests.IO
             var probe = CreateTestProbe();
             var endpoint = new DnsEndPoint("fake", 1000);
             // Use a connect timeout so we don't depend on platform-specific DNS timeout behavior.
-            // Windows DNS can take 10+ seconds to fail for unresolvable hosts.
-            Sys.Tcp().Tell(new Tcp.Connect(endpoint, timeout: TimeSpan.FromSeconds(3)), probe.Ref);
+            // Windows DNS resolver can take 10-15+ seconds to fail for unresolvable hosts,
+            // so we need a generous ExpectMsg timeout beyond the connect timeout.
+            Sys.Tcp().Tell(new Tcp.Connect(endpoint, timeout: TimeSpan.FromSeconds(5)), probe.Ref);
 
-            var reply = await probe.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+            var reply = await probe.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(30));
             reply.Should().NotBeNull();
         }
 

@@ -166,15 +166,18 @@ namespace Akka.Tests.IO
             handler.Send(connection, Tcp.Write.Create(new byte[32].AsMemory(), new WriteAck(3)));
             handler.Send(connection, Tcp.Write.Create(new byte[32].AsMemory(), new WriteAck(4)));
 
-            await handler.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
-
-            stream.ReleaseFirstWrite();
-
+            // With the pipe-based ITransportConnection, acks fire when bytes enter the pipe
+            // buffer (memcpy), not when the stream write completes. All acks arrive immediately.
             (await handler.ExpectMsgAsync<WriteAck>()).Id.Should().Be(1);
             (await handler.ExpectMsgAsync<WriteAck>()).Id.Should().Be(2);
             (await handler.ExpectMsgAsync<WriteAck>()).Id.Should().Be(3);
             (await handler.ExpectMsgAsync<WriteAck>()).Id.Should().Be(4);
 
+            stream.ReleaseFirstWrite();
+
+            // The write pump still batches at the stream level: the first write (32 bytes)
+            // was already in-flight when writes #2-4 arrived, so those accumulate in the
+            // pipe buffer and get flushed as a single 96-byte write to the stream.
             await AwaitAssertAsync(() =>
             {
                 stream.WriteSizes.Should().Equal(32, 96);
