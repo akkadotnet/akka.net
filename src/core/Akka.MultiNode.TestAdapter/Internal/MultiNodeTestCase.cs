@@ -72,7 +72,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
             catch (Exception e)
             {
                 SkipReason = e.ToString();
-                //InitializationException = e;
+                InitializationException = e;
                 DisplayName = $"{BaseDisplayName}(???)";
             }
         }
