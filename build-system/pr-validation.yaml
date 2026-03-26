@@ -59,7 +59,7 @@ jobs:
       name: "netfx_tests_windows"
       displayName: ".NET Framework Unit Tests (Windows)"
       vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net48 --logger:trx --results-directory TestResults"
+      command: "dotnet incrementalist run --config .incrementalist/testsOnlyNetFx.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net48 --logger:trx --results-directory TestResults"
       outputDirectory: "TestResults"
       artifactName: "netfx_tests_windows-$(Build.BuildId)"
 

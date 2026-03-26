@@ -5,13 +5,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-         <!-- <ProjectReference Include="..\Akka.Cluster.Metrics.Tests\Akka.Cluster.Metrics.Tests.csproj" /> -->
+        <ProjectReference Include="..\..\..\core\Akka.MultiNode.TestAdapter\Akka.MultiNode.TestAdapter.csproj" />
         <ProjectReference Include="..\Akka.Cluster.Metrics\Akka.Cluster.Metrics.csproj" />
         <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
         <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
         <PackageReference Include="xunit" Version="$(XunitVersion)"/>
