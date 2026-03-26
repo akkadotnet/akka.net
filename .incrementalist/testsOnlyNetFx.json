@@ -1,0 +1,19 @@
+{
+  "outputFile": "bin/output/incrementalist.txt",
+  "gitBranch": "dev",
+  "verbose": false,
+  "timeoutMinutes": 20,
+  "continueOnError": true,
+  "runInParallel": false,
+  "failOnNoProjects": false,
+  "skip": [
+    "**/.Tests.MultiNode.csproj",
+    "**/Akka.MultiNode.TestAdapter.Tests.csproj",
+    "src/examples/**"
+  ],
+  "target": [
+    "**/*.Tests.csproj",
+    "**/**/Akka.Streams.Tests.TCK.csproj",
+    "**/.Tests.fsproj"
+  ]
+}
