@@ -110,15 +110,13 @@ namespace Akka.IO
             // Wait for write pump to finish flushing
             await WriteCompleted.ConfigureAwait(false);
 
-            // Half-close the socket (send FIN)
+            // Half-close the socket (send FIN).
+            // SocketException is expected if the peer already reset the connection.
             try
             {
                 _socket.Shutdown(SocketShutdown.Send);
             }
-            catch (SocketException)
-            {
-                // Socket may already be closed
-            }
+            catch (SocketException) { } // slopwatch-ignore: SW003 socket may already be closed by peer or abort
         }
 
         public async Task CloseAsync()
@@ -132,9 +130,10 @@ namespace Akka.IO
             // Cancel to unblock the read pump (which may be blocked on stream.ReadAsync)
             _cts.Cancel();
 
-            // Wait for read pump to exit
+            // Wait for read pump to exit — it may throw OperationCanceledException (from CTS cancel)
+            // or IOException/SocketException (from stream close). Both are expected during shutdown.
             try { await ReadCompleted.ConfigureAwait(false); }
-            catch { /* read pump may throw OperationCanceledException or I/O error */ }
+            catch (Exception) when (_cts.IsCancellationRequested) { } // slopwatch-ignore: SW003 expected cancellation or I/O error during shutdown
 
             // Close the stream and socket
             await _stream.DisposeAsync().ConfigureAwait(false);
@@ -146,23 +145,22 @@ namespace Akka.IO
             // Cancel pumps immediately
             _cts.Cancel();
 
-            // Complete pipes to unblock any pending reads/writes on them
-            try { _outputPipe.Writer.Complete(); } catch { }
-            try { _inputPipe.Writer.Complete(); } catch { }
+            // Complete pipes to unblock any pending reads/writes on them.
+            // InvalidOperationException if already completed — safe to ignore.
+            try { _outputPipe.Writer.Complete(); } catch (InvalidOperationException) { } // slopwatch-ignore: SW003 pipe may already be completed
+            try { _inputPipe.Writer.Complete(); } catch (InvalidOperationException) { } // slopwatch-ignore: SW003 pipe may already be completed
 
-            // RST the socket
+            // RST the socket — SocketException/ObjectDisposedException if already closed.
             try
             {
                 _socket.LingerState = new LingerOption(true, 0);
                 _socket.Close();
             }
-            catch
-            {
-                // Best effort
-            }
+            catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
+            catch (SocketException) { } // slopwatch-ignore: SW003 socket may already be closed
 
-            // Dispose the stream
-            try { _stream.Dispose(); } catch { }
+            // Dispose the stream — ObjectDisposedException if already disposed.
+            try { _stream.Dispose(); } catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 stream may already be disposed
         }
 
         public async ValueTask DisposeAsync()
@@ -172,14 +170,12 @@ namespace Akka.IO
             await _outputPipe.Writer.CompleteAsync().ConfigureAwait(false);
             await _inputPipe.Writer.CompleteAsync().ConfigureAwait(false);
 
+            // Wait for pump tasks — they may throw OperationCanceledException or I/O errors during shutdown.
             try
             {
                 await Task.WhenAll(ReadCompleted, WriteCompleted).ConfigureAwait(false);
             }
-            catch
-            {
-                // Pumps may throw on cancellation
-            }
+            catch (Exception) when (_cts.IsCancellationRequested) { } // slopwatch-ignore: SW003 expected errors during disposal
 
             await _stream.DisposeAsync().ConfigureAwait(false);
             _socket.Dispose();
@@ -212,10 +208,7 @@ namespace Akka.IO
                         break; // Reader (actor) is done
                 }
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                // Normal shutdown
-            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { } // slopwatch-ignore: SW003 normal CTS-driven shutdown
             catch (Exception ex)
             {
                 error = ex;
@@ -278,10 +271,7 @@ namespace Akka.IO
                         break; // Writer (actor) completed the pipe
                 }
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                // Normal shutdown
-            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { } // slopwatch-ignore: SW003 normal CTS-driven shutdown
             catch (Exception ex)
             {
                 error = ex;

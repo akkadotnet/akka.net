@@ -223,14 +223,14 @@ namespace Akka.IO
                 // This unblocks any pending stream.ReadAsync/WriteAsync in the pump tasks.
                 // The pump tasks will exit with OperationCanceledException or IOException.
                 try { _transport.Abort(); }
-                catch { /* best effort */ }
+                catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
             }
             else
             {
                 // Transport was never created (e.g. PoisonPill before Register).
                 // Close the socket directly since no transport owns it.
                 try { Socket.Close(); }
-                catch { /* best effort */ }
+                catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
             }
 
             while (_pendingRegistrationWrites.Count > 0)
@@ -906,7 +906,7 @@ namespace Akka.IO
 
             // Abort the transport (sends RST)
             try { _transport?.Abort(); }
-            catch { /* best effort */ }
+            catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
 
             StopWith(new CloseInformation(ImmutableHashSet<IActorRef>.Empty.Add(closeSender), Aborted.Instance));
         }
@@ -1013,7 +1013,7 @@ namespace Akka.IO
             {
                 case Aborted:
                     try { _transport?.Abort(); }
-                    catch { /* best effort */ }
+                    catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
                     break;
                 default:
                     // Transport handles socket shutdown via CloseAsync/ShutdownAsync
