@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+        <TargetFramework>$(NetTestVersion)</TargetFramework>
         <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
@@ -12,10 +12,6 @@
         </PackageReference>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
         <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
-        <PackageReference Include="xunit" Version="$(XunitVersion)" />
-        <PackageReference Include="xunit.extensibility.execution" Version="$(XunitVersion)">
-          <IncludeAssets>all</IncludeAssets>
-        </PackageReference>
         <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)" >
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
