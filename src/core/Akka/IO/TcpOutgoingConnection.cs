@@ -33,8 +33,7 @@ namespace Akka.IO
         private readonly ConnectException _finishConnectNeverReturnedTrueException =
             new("Could not establish connection because finishConnect never returned true");
 
-        public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect,
-            IStreamProvider? streamProvider = null)
+        public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
             : base(
                 (connect.TcpSettings ?? tcp.Settings),
                 (connect.TcpSettings ?? tcp.Settings).OutgoingSocketForceIpv4

@@ -3752,10 +3752,19 @@ namespace Akka.IO
         System.Net.Sockets.SocketAsyncEventArgs Acquire(Akka.Actor.IActorRef actor);
         void Release(System.Net.Sockets.SocketAsyncEventArgs e);
     }
-    public interface IStreamProvider
+    public interface ITransportConnection : System.IAsyncDisposable
     {
-        void Close();
-        System.Threading.Tasks.Task<System.IO.Stream> ConnectAsync(string host, int port, System.Threading.CancellationToken ct);
+        bool HasReadError { get; }
+        System.IO.Pipelines.PipeReader Input { get; }
+        System.Threading.Tasks.Task ReadCompleted { get; }
+        System.Exception? ReadError { get; }
+        System.Threading.Tasks.Task WriteCompleted { get; }
+        void Abort();
+        System.Threading.Tasks.Task CloseAsync();
+        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task ShutdownAsync();
+        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.Buffers.ReadOnlySequence<byte> data, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken ct = default);
     }
     public class Inet
     {
@@ -4131,11 +4140,22 @@ namespace Akka.IO
         public static Akka.IO.TcpSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.IO.TcpSettings Create(Akka.Configuration.Config config) { }
     }
-    public sealed class TcpStreamProvider : Akka.IO.IStreamProvider
+    public sealed class TcpTransportConnection : Akka.IO.ITransportConnection, System.IAsyncDisposable
     {
-        public TcpStreamProvider() { }
-        public void Close() { }
-        public System.Threading.Tasks.Task<System.IO.Stream> ConnectAsync(string host, int port, System.Threading.CancellationToken ct) { }
+        public TcpTransportConnection(System.Net.Sockets.Socket socket, System.IO.Pipelines.PipeOptions? inputPipeOptions = null, System.IO.Pipelines.PipeOptions? outputPipeOptions = null) { }
+        public TcpTransportConnection(System.Net.Sockets.Socket socket, System.IO.Stream stream, System.IO.Pipelines.PipeOptions? inputPipeOptions = null, System.IO.Pipelines.PipeOptions? outputPipeOptions = null) { }
+        public bool HasReadError { get; }
+        public System.IO.Pipelines.PipeReader Input { get; }
+        public System.Threading.Tasks.Task ReadCompleted { get; }
+        public System.Exception? ReadError { get; }
+        public System.Threading.Tasks.Task WriteCompleted { get; }
+        public void Abort() { }
+        public System.Threading.Tasks.Task CloseAsync() { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.Task ShutdownAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.Buffers.ReadOnlySequence<byte> data, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken ct = default) { }
     }
     public class Udp : Akka.Actor.ExtensionIdProvider<Akka.IO.UdpExt>
     {
