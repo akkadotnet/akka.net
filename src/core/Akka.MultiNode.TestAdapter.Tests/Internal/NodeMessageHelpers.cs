@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="NodeMessageHelpers.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -8,14 +8,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter.Internal;
 using Akka.MultiNode.TestAdapter.Internal.Reporting;
 using Akka.MultiNode.TestAdapter.Tests.Internal.Utils;
-using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace Akka.MultiNode.TestAdapter.Tests.Internal
 {
@@ -92,7 +88,7 @@ namespace Akka.MultiNode.TestAdapter.Tests.Internal
             foreach (var i in Enumerable.Range(0, count))
             {
                 messages.Add(new MultiNodeLogMessage(
-                    GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)), 
+                    GetTimeStamp(startTime, startTime + TimeSpan.FromSeconds(20)),
                     String.Format("Message {0}", i), nodeIndex, DummyRoleFor + nodeIndex,
                     "/foo", LogLevel.InfoLevel));
             }
@@ -189,44 +185,39 @@ namespace Akka.MultiNode.TestAdapter.Tests.Internal
             return Random.Next(min, max);
         }
         #endregion
-        
+
+        /// <summary>
+        /// Mock MultiNodeTestCase for testing purposes. Does not require a real test method.
+        /// </summary>
         internal class MockMultiNodeTestCase : MultiNodeTestCase
         {
 #pragma warning disable CS0618 // Type or member is obsolete
             public MockMultiNodeTestCase() { }
-            
+
             public MockMultiNodeTestCase(IEnumerable<int> nodeIndices)
             {
                 _indices = nodeIndices;
-                MethodName = AlphaNumericString();
-                TypeName = AlphaNumericString();
+                _methodName = AlphaNumericString();
+                _typeName = AlphaNumericString();
                 AssemblyPath = AlphaNumericString();
+                InternalNodes = LoadDetails();
             }
 #pragma warning restore CS0618 // Type or member is obsolete
 
             private readonly IEnumerable<int> _indices;
-            
-            public override string MethodName { get; }
-            public override string TypeName { get; }
-            public override string AssemblyPath { get; protected set; }
+            private readonly string _methodName;
+            private readonly string _typeName;
 
-            protected override void Initialize()
-            {
-                InternalNodes = LoadDetails();
-            }
+            public override string MethodName => _methodName ?? "";
+            public override string TypeName => _typeName ?? "";
+            public override string AssemblyPath { get; protected set; }
 
             protected override List<NodeTest> LoadDetails()
             {
+                if (_indices == null)
+                    return new List<NodeTest>();
                 return _indices.Select(i => new NodeTest(this, i, DummyRoleFor + i)).ToList();
             }
-
-            public override Task<RunSummary> RunAsync(IMessageSink diagnosticMessageSink, IMessageBus messageBus, object[] constructorArguments,
-                ExceptionAggregator aggregator, CancellationTokenSource cancellationTokenSource)
-            {
-                return Task.FromResult(new RunSummary());
-            }
         }
-        
     }
 }
-

@@ -1,5 +1,5 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="ConsoleMessageSinkActor.cs" company="Akka.NET Project">
+//-----------------------------------------------------------------------
+// <copyright file="DiagnosticMessageSinkActor.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -9,24 +9,18 @@ using System;
 using System.Linq;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter.Internal.Reporting;
-using DiagnosticMessage = Xunit.DiagnosticMessage;
 
 namespace Akka.MultiNode.TestAdapter.Internal.Sinks
 {
     /// <summary>
-    /// <see cref="MessageSinkActor"/> implementation that logs all of its output directly to the <see cref="Console"/>.
-    /// 
+    /// <see cref="MessageSinkActor"/> implementation that logs diagnostic output to the console.
+    ///
     /// Has no persistence capabilities. Can optionally use a <see cref="TestRunCoordinator"/> to provide total "end of test" reporting.
     /// </summary>
     internal class DiagnosticMessageSinkActor : TestCoordinatorEnabledMessageSink
     {
-        private readonly Xunit.Abstractions.IMessageSink _diagnosticSink;
-        
-        public DiagnosticMessageSinkActor(
-            Xunit.Abstractions.IMessageSink diagnosticSink, 
-            bool useTestCoordinator) : base(useTestCoordinator)
+        public DiagnosticMessageSinkActor(bool useTestCoordinator) : base(useTestCoordinator)
         {
-            _diagnosticSink = diagnosticSink;
         }
 
         #region Message handling
@@ -140,69 +134,49 @@ namespace Akka.MultiNode.TestAdapter.Internal.Sinks
 
         #region Diagnostic output methods
 
-        /// <summary>
-        /// Used to print a spec status message (spec starting, finishing, failed, etc...)
-        /// </summary>
         private void WriteSpecMessage(string message)
         {
-            _diagnosticSink?.OnMessage(new DiagnosticMessage(
-                "[RUNNER][{0}]: {1}", DateTime.UtcNow.ToShortTimeString(),
-                message));
+            Console.WriteLine("[RUNNER][{0}]: {1}", DateTime.UtcNow.ToShortTimeString(), message);
         }
 
         private void WriteSpecPass(int nodeIndex, string nodeRole, string message)
         {
-            _diagnosticSink?.OnMessage(new DiagnosticMessage(
-                "[NODE #{0}({1})][{2}]: SPEC PASSED: {3}", 
-                nodeIndex,
-                nodeRole,
-                DateTime.UtcNow.ToShortTimeString(),
-                message));
+            Console.WriteLine("[NODE #{0}({1})][{2}]: SPEC PASSED: {3}",
+                nodeIndex, nodeRole, DateTime.UtcNow.ToShortTimeString(), message);
         }
 
         private void WriteSpecFail(int nodeIndex, string nodeRole, string message)
         {
-            _diagnosticSink?.OnMessage(new DiagnosticMessage(
-                "[NODE{0}:{1}][{2}]: SPEC FAILED: {3}", 
-                nodeIndex,
-                nodeRole,
-                DateTime.UtcNow.ToShortTimeString(),
-                message
-            ));
+            Console.WriteLine("[NODE{0}:{1}][{2}]: SPEC FAILED: {3}",
+                nodeIndex, nodeRole, DateTime.UtcNow.ToShortTimeString(), message);
         }
 
         private void WriteRunnerMessage(LogMessageForTestRunner nodeMessage)
         {
-            _diagnosticSink?.OnMessage(new DiagnosticMessage(nodeMessage.ToString()));
+            Console.WriteLine(nodeMessage.ToString());
         }
 
         private void WriteNodeMessage(LogMessageFragmentForNode nodeMessage)
         {
-            _diagnosticSink?.OnMessage(new DiagnosticMessage(nodeMessage.ToString()));
+            Console.WriteLine(nodeMessage.ToString());
         }
         #endregion
     }
 
     /// <summary>
-    /// <see cref="IMessageSink"/> implementation that writes directly to the console.
+    /// <see cref="IMessageSink"/> implementation that writes diagnostic output to the console.
     /// </summary>
     internal class DiagnosticMessageSink : MessageSink
     {
-        private readonly Xunit.Abstractions.IMessageSink _diagnosticSink;
-        
-        public DiagnosticMessageSink(
-            Xunit.Abstractions.IMessageSink diagnosticSink)
-            : base(Props.Create(() => new DiagnosticMessageSinkActor(diagnosticSink, true)))
+        public DiagnosticMessageSink()
+            : base(Props.Create(() => new DiagnosticMessageSinkActor(true)))
         {
-            _diagnosticSink = diagnosticSink;
         }
 
         protected override void HandleUnknownMessageType(string message)
         {
-            _diagnosticSink?.OnMessage(new DiagnosticMessage(
-                "[RUNNER][{0}]: Unknown message: {1}", 
-                DateTime.UtcNow.ToShortTimeString(),
-                message));
+            Console.WriteLine("[RUNNER][{0}]: Unknown message: {1}",
+                DateTime.UtcNow.ToShortTimeString(), message);
         }
     }
 }

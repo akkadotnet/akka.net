@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Akka.MultiNode.TestAdapter.Tests.Internal
 {
-    public class NodeDataActorSpec : TestKit.Xunit2.TestKit
+    public class NodeDataActorSpec : TestKit.Xunit.TestKit
     {
         [Fact]
         public void NodeData_should_maintain_events_in_time_order() 

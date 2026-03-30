@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="MultiNodeTestRunner.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2021 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2021 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -18,12 +18,7 @@ using Akka.MultiNode.TestAdapter.Configuration;
 using Akka.MultiNode.TestAdapter.Internal.Sinks;
 using Akka.MultiNode.TestAdapter.NodeRunner;
 using Xunit.Sdk;
-using TestFailed = Xunit.Sdk.TestFailed;
-using TestFinished = Xunit.Sdk.TestFinished;
-using TestPassed = Xunit.Sdk.TestPassed;
-using TestResultMessage = Xunit.Sdk.TestResultMessage;
-using TestSkipped = Xunit.Sdk.TestSkipped;
-using TestStarting = Xunit.Sdk.TestStarting;
+using Xunit.v3;
 
 namespace Akka.MultiNode.TestAdapter.Internal
 {
@@ -38,7 +33,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
             IActorRef sinkCoordinator,
             IActorRef timelineCollector,
             MultiNodeTestRunnerOptions options,
-            CancellationTokenSource cancellationTokenSource) 
+            CancellationTokenSource cancellationTokenSource)
         {
             _test = test;
             _messageBus = messageBus;
@@ -49,47 +44,20 @@ namespace Akka.MultiNode.TestAdapter.Internal
             _options = options;
             _cancellationTokenSource = cancellationTokenSource;
             _skipReason = skipReason;
+            _ids = TestMessageIds.From(test.TestCase);
         }
 
         private readonly MultiNodeTestRunnerOptions _options;
         private readonly IActorRef _sinkCoordinator;
         private readonly IActorRef _timelineCollector;
-
         private readonly string _skipReason;
-        
-        /// <summary>
-        /// Gets or sets the exception aggregator used to run code and collect exceptions.
-        /// </summary>
         private readonly ExceptionAggregator _aggregator;
-
-        /// <summary>
-        /// Gets or sets the task cancellation token source, used to cancel the test run.
-        /// </summary>
         private readonly CancellationTokenSource _cancellationTokenSource;
-
-        /// <summary>
-        /// Gets or sets the constructor arguments used to construct the test class.
-        /// </summary>
         private readonly string[] _remoteArguments;
-
-        /// <summary>
-        /// Gets or sets the display name of the invoked test.
-        /// </summary>
-        private string DisplayName => _test.DisplayName;
-
-        /// <summary>
-        /// Gets or sets the message bus to report run status to.
-        /// </summary>
         private readonly IMessageBus _messageBus;
-
-        /// <summary>
-        /// Gets or sets the test to be run.
-        /// </summary>
         private readonly NodeTest _test;
+        private readonly TestMessageIds _ids;
 
-        /// <summary>
-        /// Gets the test case to be run.
-        /// </summary>
         private MultiNodeTestCase TestCase => _test.TestCase;
 
         private readonly StringBuilder _outputBuilder = new StringBuilder();
@@ -98,7 +66,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
         private readonly List<string> _exceptionType = new List<string>();
         private readonly List<string> _exceptionMessage = new List<string>();
         private readonly List<string> _exceptionStacktrace = new List<string>();
-        
+
         /// <summary>
         /// Runs the test.
         /// </summary>
@@ -107,8 +75,22 @@ namespace Akka.MultiNode.TestAdapter.Internal
         {
             var summary = new RunSummary { Total = 1 };
 
-            _messageBus.QueueMessage(new TestStarting(_test));
-            var aggregator = new ExceptionAggregator(_aggregator);
+            _messageBus.QueueMessage(new TestStarting
+            {
+                AssemblyUniqueID = _ids.AssemblyUniqueID,
+                TestCollectionUniqueID = _ids.TestCollectionUniqueID,
+                TestClassUniqueID = _ids.TestClassUniqueID,
+                TestMethodUniqueID = _ids.TestMethodUniqueID,
+                TestCaseUniqueID = _ids.TestCaseUniqueID,
+                TestUniqueID = _test.UniqueID,
+                TestDisplayName = _test.DisplayName,
+                Explicit = false,
+                StartTime = DateTimeOffset.UtcNow,
+                Timeout = 0,
+                Traits = new Dictionary<string, IReadOnlyCollection<string>>()
+            });
+
+            var aggregator = _aggregator.Clone();
             var returnCode = -1;
 
             if (!aggregator.HasExceptions)
@@ -128,37 +110,81 @@ namespace Akka.MultiNode.TestAdapter.Internal
                 });
             }
 
-            TestResultMessage testResult;
             var exception = aggregator.ToException();
             if (exception == null)
             {
                 switch (returnCode)
                 {
                     case 0:
-                        testResult = new TestPassed(_test, summary.Time, Output);
+                        _messageBus.QueueMessage(new TestPassed
+                        {
+                            AssemblyUniqueID = _ids.AssemblyUniqueID,
+                            TestCollectionUniqueID = _ids.TestCollectionUniqueID,
+                            TestClassUniqueID = _ids.TestClassUniqueID,
+                            TestMethodUniqueID = _ids.TestMethodUniqueID,
+                            TestCaseUniqueID = _ids.TestCaseUniqueID,
+                            TestUniqueID = _test.UniqueID,
+                            ExecutionTime = summary.Time,
+                            FinishTime = DateTimeOffset.UtcNow,
+                            Output = Output,
+                            Warnings = null
+                        });
                         break;
                     default:
                         summary.Failed++;
-                        
-                        testResult = new TestFailed(
-                            test: _test,
-                            executionTime: summary.Time,
-                            output: Output, 
-                            exceptionTypes: _exceptionType.ToArray(),
-                            messages: _exceptionMessage.ToArray(),
-                            stackTraces: _exceptionStacktrace.ToArray(),
-                            exceptionParentIndices: Enumerable.Range(0, _exceptionType.Count).ToArray());
+
+                        _messageBus.QueueMessage(new TestFailed
+                        {
+                            AssemblyUniqueID = _ids.AssemblyUniqueID,
+                            TestCollectionUniqueID = _ids.TestCollectionUniqueID,
+                            TestClassUniqueID = _ids.TestClassUniqueID,
+                            TestMethodUniqueID = _ids.TestMethodUniqueID,
+                            TestCaseUniqueID = _ids.TestCaseUniqueID,
+                            TestUniqueID = _test.UniqueID,
+                            Cause = FailureCause.Assertion,
+                            ExceptionTypes = _exceptionType.Count > 0
+                                ? _exceptionType.ToArray()
+                                : new[] { "Akka.MultiNode.TestAdapter.Internal.TestFailedException" },
+                            Messages = _exceptionMessage.Count > 0
+                                ? _exceptionMessage.ToArray()
+                                : new[] { $"Node {_test.Node} [{_test.Role}] failed with exit code {returnCode}" },
+                            StackTraces = _exceptionStacktrace.Count > 0
+                                ? _exceptionStacktrace.ToArray()
+                                : new[] { "" },
+                            ExceptionParentIndices = Enumerable.Range(0, Math.Max(_exceptionType.Count, 1))
+                                .Select(_ => -1).ToArray(),
+                            ExecutionTime = summary.Time,
+                            FinishTime = DateTimeOffset.UtcNow,
+                            Output = Output,
+                            Warnings = null
+                        });
                         break;
                 }
             }
             else
             {
-                testResult = new TestFailed(_test, summary.Time, Output, exception);
+                _messageBus.QueueMessage(new TestFailed
+                {
+                    AssemblyUniqueID = _ids.AssemblyUniqueID,
+                    TestCollectionUniqueID = _ids.TestCollectionUniqueID,
+                    TestClassUniqueID = _ids.TestClassUniqueID,
+                    TestMethodUniqueID = _ids.TestMethodUniqueID,
+                    TestCaseUniqueID = _ids.TestCaseUniqueID,
+                    TestUniqueID = _test.UniqueID,
+                    Cause = FailureCause.Exception,
+                    ExceptionTypes = new[] { exception.GetType().FullName },
+                    Messages = new[] { exception.Message },
+                    StackTraces = new[] { exception.StackTrace },
+                    ExceptionParentIndices = new[] { -1 },
+                    ExecutionTime = summary.Time,
+                    FinishTime = DateTimeOffset.UtcNow,
+                    Output = Output,
+                    Warnings = null
+                });
                 summary.Failed++;
             }
 
-            _messageBus.QueueMessage(testResult);
-            var specFolder = Directory.CreateDirectory(Path.Combine(_options.OutputDirectory, TestCase.DisplayName));
+            var specFolder = Directory.CreateDirectory(Path.Combine(_options.OutputDirectory, TestCase.TestCaseDisplayName));
             var logFilePath = Path.GetFullPath(Path.Combine(specFolder.FullName, $"node{_test.Node}__{_test.Role}__{_options.Platform}.txt"));
             bool dumpSuccess;
             do
@@ -167,7 +193,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
                 {
                     if(!_options.AppendLogOutput && File.Exists(logFilePath))
                         File.Delete(logFilePath);
-                    
+
                     File.AppendAllText(logFilePath, Output);
                     dumpSuccess = true;
                 }
@@ -177,8 +203,21 @@ namespace Akka.MultiNode.TestAdapter.Internal
                 }
             } while (!dumpSuccess);
 
-            _messageBus.QueueMessage(new TestFinished(_test, summary.Time, Output));
-            
+            _messageBus.QueueMessage(new TestFinished
+            {
+                AssemblyUniqueID = _ids.AssemblyUniqueID,
+                TestCollectionUniqueID = _ids.TestCollectionUniqueID,
+                TestClassUniqueID = _ids.TestClassUniqueID,
+                TestMethodUniqueID = _ids.TestMethodUniqueID,
+                TestCaseUniqueID = _ids.TestCaseUniqueID,
+                TestUniqueID = _test.UniqueID,
+                ExecutionTime = summary.Time,
+                FinishTime = DateTimeOffset.UtcNow,
+                Output = Output,
+                Warnings = null,
+                Attachments = new Dictionary<string, TestAttachment>()
+            });
+
             return summary;
         }
 
@@ -189,36 +228,45 @@ namespace Akka.MultiNode.TestAdapter.Internal
                 var index = data.IndexOf("[FAIL-EXCEPTION] Type: ", StringComparison.OrdinalIgnoreCase);
                 if(index != -1)
                 {
-                    _exceptionType.Add(data.Substring(index + 23)); 
+                    _exceptionType.Add(data.Substring(index + 23));
                     return;
-                } 
-                
+                }
+
                 index = data.IndexOf("[FAIL-EXCEPTION] Message: ", StringComparison.OrdinalIgnoreCase);
                 if(index != -1)
                 {
                     _exceptionMessage.Add(data.Substring(index + 26));
                     return;
-                } 
-                        
-                index = data.IndexOf("[FAIL-EXCEPTION] StackTrace: ", StringComparison.OrdinalIgnoreCase); 
+                }
+
+                index = data.IndexOf("[FAIL-EXCEPTION] StackTrace: ", StringComparison.OrdinalIgnoreCase);
                 if(index != -1)
                 {
                     _exceptionStacktrace.Add(data.Substring(index + 29));
-                } 
+                }
             }
         }
 
         private async Task<int> RunNode()
         {
-            var nodeInfo = new TimelineLogCollectorActor.NodeInfo(_test.Node, _test.Role, _options.Platform, TestCase.DisplayName);
-            
+            var nodeInfo = new TimelineLogCollectorActor.NodeInfo(_test.Node, _test.Role, _options.Platform, TestCase.TestCaseDisplayName);
+
             void OutputHandler(object sender, DataReceivedEventArgs eventArgs)
             {
                 if (eventArgs?.Data != null)
                 {
                     var data = eventArgs.Data;
                     _outputBuilder.AppendLine(data);
-                    _messageBus.QueueMessage(new TestOutput(_test, data + Environment.NewLine));
+                    _messageBus.QueueMessage(new TestOutput
+                    {
+                        AssemblyUniqueID = _ids.AssemblyUniqueID,
+                        TestCollectionUniqueID = _ids.TestCollectionUniqueID,
+                        TestClassUniqueID = _ids.TestClassUniqueID,
+                        TestMethodUniqueID = _ids.TestMethodUniqueID,
+                        TestCaseUniqueID = _ids.TestCaseUniqueID,
+                        TestUniqueID = _test.UniqueID,
+                        Output = data + Environment.NewLine
+                    });
                     _timelineCollector.Tell(new TimelineLogCollectorActor.LogMessage(nodeInfo, data));
 
                     ExtractExceptionData(data);
@@ -243,9 +291,9 @@ namespace Akka.MultiNode.TestAdapter.Internal
                 opt.OutputDataReceived = OutputHandler;
                 opt.ErrorDataReceived = OutputHandler;
             }, _cancellationTokenSource.Token);
-            
+
             _sinkCoordinator.Tell(new SinkCoordinator.RunnerMessage($"Started node {_test.Node} : {_test.Role} on pid {process.Id}"));
-            
+
             await task;
             return exitCode;
         }

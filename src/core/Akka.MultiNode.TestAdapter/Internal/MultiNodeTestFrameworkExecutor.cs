@@ -1,25 +1,26 @@
-﻿using System.Collections.Generic;
-using System.Reflection;
-using Xunit.Abstractions;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Akka.MultiNode.TestAdapter.Internal
 {
     internal class MultiNodeTestFrameworkExecutor : XunitTestFrameworkExecutor
     {
-        public MultiNodeTestFrameworkExecutor(
-            AssemblyName assemblyName,
-            ISourceInformationProvider sourceInformationProvider,
-            IMessageSink diagnosticMessageSink) 
-            : base(assemblyName, sourceInformationProvider, diagnosticMessageSink)
+        public MultiNodeTestFrameworkExecutor(IXunitTestAssembly testAssembly)
+            : base(testAssembly)
         {
         }
 
-        protected override async void RunTestCases(IEnumerable<IXunitTestCase> testCases, IMessageSink executionMessageSink,
-            ITestFrameworkExecutionOptions executionOptions)
+        public override async ValueTask RunTestCases(
+            IReadOnlyCollection<IXunitTestCase> testCases,
+            IMessageSink executionMessageSink,
+            ITestFrameworkExecutionOptions executionOptions,
+            CancellationToken cancellationToken)
         {
-            using (var assemblyRunner = new MultiNodeTestAssemblyRunner(TestAssembly, testCases, DiagnosticMessageSink, executionMessageSink, executionOptions))
-                await assemblyRunner.RunAsync();
+            await MultiNodeTestAssemblyRunner.Instance.Run(
+                TestAssembly, testCases, executionMessageSink, executionOptions, cancellationToken);
         }
     }
 }

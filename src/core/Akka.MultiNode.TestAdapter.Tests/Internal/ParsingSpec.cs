@@ -18,7 +18,7 @@ namespace Akka.MultiNode.TestAdapter.Tests.Internal
     /// <summary>
     /// Used to test the <see cref="MessageSink"/>'s ability to parse 
     /// </summary>
-    public class ParsingSpec : TestKit.Xunit2.TestKit
+    public class ParsingSpec : TestKit.Xunit.TestKit
     {
         public ParsingSpec()
             : base(ConfigurationFactory.ParseString(@"

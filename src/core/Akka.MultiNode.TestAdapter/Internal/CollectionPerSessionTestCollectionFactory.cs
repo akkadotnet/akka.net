@@ -1,27 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.IO;
-using Xunit.Abstractions;
-using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Akka.MultiNode.TestAdapter.Internal
 {
     internal class CollectionPerSessionTestCollectionFactory : IXunitTestCollectionFactory
     {
-        private readonly Dictionary<IAssemblyInfo, TestCollection> _collectionCache =
-            new Dictionary<IAssemblyInfo, TestCollection>();
+        private readonly IXunitTestAssembly _testAssembly;
+        private IXunitTestCollection? _collection;
 
-        public ITestCollection Get(ITypeInfo testClass)
+        public CollectionPerSessionTestCollectionFactory(IXunitTestAssembly testAssembly)
         {
-            if (_collectionCache.TryGetValue(testClass.Assembly, out var collection))
-                return collection;
-            
-            collection = new TestCollection(
-                new TestAssembly(testClass.Assembly),
-                null,
-                $"MultiNode test collection for {Path.GetFileName(testClass.Assembly.AssemblyPath)}");
-            _collectionCache[testClass.Assembly] = collection;
-            return collection;
+            _testAssembly = testAssembly;
+        }
+
+        public IXunitTestCollection Get(Type testClass)
+        {
+            return _collection ??= new XunitTestCollection(
+                _testAssembly,
+                collectionDefinition: null,
+                disableParallelization: true,
+                displayName: $"MultiNode test collection for {Path.GetFileName(_testAssembly.Assembly.Location)}");
         }
 
         public string DisplayName => "collection-per-session";

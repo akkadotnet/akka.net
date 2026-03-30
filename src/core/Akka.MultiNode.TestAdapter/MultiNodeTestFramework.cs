@@ -1,29 +1,25 @@
-﻿using System;
 using System.Reflection;
 using Akka.MultiNode.TestAdapter.Internal;
-using Xunit.Abstractions;
-using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Akka.MultiNode.TestAdapter
 {
     public class MultiNodeTestFramework : TestFramework
     {
-        public MultiNodeTestFramework(IMessageSink diagnosticMessageSink) : base(diagnosticMessageSink)
-        {
-        }
+        public override string TestFrameworkDisplayName => "Akka.NET Multi-Node Test Framework";
 
-        protected override ITestFrameworkDiscoverer CreateDiscoverer(IAssemblyInfo assemblyInfo)
+        protected override ITestFrameworkDiscoverer CreateDiscoverer(Assembly assembly)
         {
+            var testAssembly = new XunitTestAssembly(assembly);
             return new XunitTestFrameworkDiscoverer(
-                assemblyInfo: assemblyInfo,
-                sourceProvider: SourceInformationProvider,
-                diagnosticMessageSink: DiagnosticMessageSink,
-                collectionFactory: new CollectionPerSessionTestCollectionFactory());
+                testAssembly,
+                new CollectionPerSessionTestCollectionFactory(testAssembly));
         }
 
-        protected override ITestFrameworkExecutor CreateExecutor(AssemblyName assemblyName)
+        protected override ITestFrameworkExecutor CreateExecutor(Assembly assembly)
         {
-            return new MultiNodeTestFrameworkExecutor(assemblyName, SourceInformationProvider, DiagnosticMessageSink);
+            var testAssembly = new XunitTestAssembly(assembly);
+            return new MultiNodeTestFrameworkExecutor(testAssembly);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Program.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -6,9 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.IO;
@@ -16,10 +19,56 @@ using Akka.MultiNode.TestAdapter.Internal;
 using Akka.MultiNode.TestAdapter.Internal.Sinks;
 using Akka.Remote.TestKit;
 using Xunit;
+using Xunit.Sdk;
+using Xunit.v3;
 using Dns = System.Net.Dns;
 
 namespace Akka.MultiNode.TestAdapter.NodeRunner
 {
+    /// <summary>
+    /// Simple implementation of <see cref="ITestFrameworkDiscoveryOptions"/> for in-process discovery.
+    /// </summary>
+    internal class SimpleDiscoveryOptions : ITestFrameworkDiscoveryOptions
+    {
+        private readonly Dictionary<string, object> _values = new Dictionary<string, object>();
+
+        public TValue? GetValue<TValue>(string name)
+        {
+            if (_values.TryGetValue(name, out var value))
+                return (TValue)value;
+            return default;
+        }
+
+        public void SetValue<TValue>(string name, TValue value)
+        {
+            _values[name] = value;
+        }
+
+        public string ToJson() => "{}";
+    }
+
+    /// <summary>
+    /// Simple implementation of <see cref="ITestFrameworkExecutionOptions"/> for in-process execution.
+    /// </summary>
+    internal class SimpleExecutionOptions : ITestFrameworkExecutionOptions
+    {
+        private readonly Dictionary<string, object> _values = new Dictionary<string, object>();
+
+        public TValue? GetValue<TValue>(string name)
+        {
+            if (_values.TryGetValue(name, out var value))
+                return (TValue)value;
+            return default;
+        }
+
+        public void SetValue<TValue>(string name, TValue value)
+        {
+            _values[name] = value;
+        }
+
+        public string ToJson() => "{}";
+    }
+
     internal class Executor
     {
         /// <summary>
@@ -34,7 +83,7 @@ namespace Akka.MultiNode.TestAdapter.NodeRunner
             try
             {
                 CommandLine.Initialize(args);
-                
+
                 var nodeIndex = CommandLine.GetInt32("multinode.index");
                 var nodeRole = CommandLine.GetProperty("multinode.role");
                 var assemblyFileName = CommandLine.GetProperty("multinode.test-assembly");
@@ -48,51 +97,72 @@ namespace Akka.MultiNode.TestAdapter.NodeRunner
 
                 try
                 {
+                    // Initialize xUnit v3 TestContext - required before any pipeline operations
+                    TestContext.SetForInitialization(diagnosticMessageSink: null,
+                        diagnosticMessages: false, internalDiagnosticMessages: false);
+
                     var system = ActorSystem.Create("NodeTestRunner-" + nodeIndex);
                     logger = system.ActorOf<RunnerTcpClient>();
                     system.Tcp().Tell(new Tcp.Connect(listenEndpoint), logger);
 
-                    using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyFileName))
+                    // In-process discovery and execution using xUnit v3 framework API
+                    var assembly = Assembly.LoadFrom(assemblyFileName);
+                    var testAssembly = new XunitTestAssembly(assembly);
+
+                    /* need to pass in just the assembly name to Discovery, not the full path
+                     * i.e. "Akka.Cluster.Tests.MultiNode.dll"
+                     * not "bin/Release/Akka.Cluster.Tests.MultiNode.dll" - this will cause
+                     * the Discovery class to actually not find any individual specs to run
+                     */
+                    var assemblyName = Path.GetFileName(assemblyFileName);
+                    Console.WriteLine("Running specs for {0} [{1}] ", assemblyName, assemblyFileName);
+
+                    // Discover tests using callback-based API
+                    var discoverer = new XunitTestFrameworkDiscoverer(
+                        testAssembly,
+                        new CollectionPerSessionTestCollectionFactory(testAssembly));
+
+                    var discoveredTests = new List<IXunitTestCase>();
+                    await discoverer.Find(async testCase =>
                     {
-                        /* need to pass in just the assembly name to Discovery, not the full path
-                         * i.e. "Akka.Cluster.Tests.MultiNode.dll"
-                         * not "bin/Release/Akka.Cluster.Tests.MultiNode.dll" - this will cause
-                         * the Discovery class to actually not find any individual specs to run
-                         */
-                        var assemblyName = Path.GetFileName(assemblyFileName);
-                        Console.WriteLine("Running specs for {0} [{1}] ", assemblyName, assemblyFileName);
-                        
-                        using (var discovery = new Discovery(assemblyName))
+                        if (testCase is MultiNodeTestCase mnTestCase &&
+                            mnTestCase.MethodName == testName &&
+                            mnTestCase.TypeName == typeName)
                         {
-                            using (var sink = new ExecutorSink(nodeIndex, nodeRole, logger))
-                            {
-                                controller.Find(true, discovery, TestFrameworkOptions.ForDiscovery());
-                                discovery.Finished.WaitOne();
-                                var tests = discovery.TestCases
-                                    .Where(t => t.TestMethod.Method.Name == testName && t.TestMethod.TestClass.Class.Name == typeName).ToList();
-                                Assert.Single(tests);
-                                tests[0].InExecutionMode = true;
-                                
-                                controller.RunTests(tests, sink, TestFrameworkOptions.ForExecution());
-
-                                var timedOut = false;
-                                if (!sink.Finished.WaitOne(maxProcessWaitTimeout)) //timed out
-                                {
-                                    var line =
-                                        $"Timed out while waiting for test to complete after {maxProcessWaitTimeout} ms";
-                                    logger.Tell(line);
-                                    Console.WriteLine(line);
-                                    timedOut = true;
-                                }
-
-                                await FlushLogMessages();
-
-                                var shutdown = CoordinatedShutdown.Get(system);
-                                await shutdown.Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
-
-                                return sink.Passed && !timedOut ? 0 : 1;
-                            }
+                            mnTestCase.InExecutionMode = true;
+                            discoveredTests.Add(mnTestCase);
                         }
+                        return true; // continue discovery
+                    }, new SimpleDiscoveryOptions());
+
+                    Assert.Single(discoveredTests);
+
+                    // Execute using the full xUnit v3 pipeline
+                    using (var sink = new ExecutorSink(nodeIndex, nodeRole, logger))
+                    {
+                        var executor = new MultiNodeTestFrameworkExecutor(testAssembly);
+                        await executor.RunTestCases(
+                            discoveredTests,
+                            sink,
+                            new SimpleExecutionOptions(),
+                            CancellationToken.None);
+
+                        var timedOut = false;
+                        if (!sink.Finished.WaitOne(maxProcessWaitTimeout)) //timed out
+                        {
+                            var line =
+                                $"Timed out while waiting for test to complete after {maxProcessWaitTimeout} ms";
+                            logger.Tell(line);
+                            Console.WriteLine(line);
+                            timedOut = true;
+                        }
+
+                        await FlushLogMessages();
+
+                        var shutdown = CoordinatedShutdown.Get(system);
+                        await shutdown.Run(CoordinatedShutdown.ActorSystemTerminateReason.Instance);
+
+                        return sink.Passed && !timedOut ? 0 : 1;
                     }
                 }
                 catch (AggregateException ex)
@@ -143,7 +213,7 @@ namespace Akka.MultiNode.TestAdapter.NodeRunner
                 Console.WriteLine($"Unexpected FATAL exception: {ex}");
                 return 1;
             }
-            
+
             async Task FlushLogMessages()
             {
                 try
@@ -162,7 +232,7 @@ namespace Akka.MultiNode.TestAdapter.NodeRunner
     class RunnerTcpClient : ReceiveActor, IWithUnboundedStash
     {
         private IActorRef _connection;
-        
+
         public RunnerTcpClient()
         {
             Become(WaitingForConnection);
@@ -177,7 +247,7 @@ namespace Akka.MultiNode.TestAdapter.NodeRunner
                 _connection.Ask<Tcp.Closed>(Tcp.Close.Instance, TimeSpan.FromSeconds(1)).Wait();
             }
             catch { /* well... at least we have tried */ }
-            
+
             base.PostStop();
         }
 
@@ -208,4 +278,3 @@ namespace Akka.MultiNode.TestAdapter.NodeRunner
         public IStash Stash { get; set; }
     }
 }
-

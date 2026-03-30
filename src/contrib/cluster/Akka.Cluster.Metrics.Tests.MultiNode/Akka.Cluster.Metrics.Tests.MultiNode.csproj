@@ -7,14 +7,14 @@
     <ItemGroup>
         <ProjectReference Include="..\..\..\core\Akka.MultiNode.TestAdapter\Akka.MultiNode.TestAdapter.csproj" />
         <ProjectReference Include="..\Akka.Cluster.Metrics\Akka.Cluster.Metrics.csproj" />
-        <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit.Xunit2\Akka.Cluster.TestKit.Xunit2.csproj" />
+        <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
         <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
-        <PackageReference Include="xunit" Version="$(XunitVersion)"/>
-        <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)">
+        <PackageReference Include="xunit.v3" Version="$(Xunit3Version)"/>
+        <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>

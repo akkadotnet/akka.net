@@ -12,7 +12,8 @@
         </PackageReference>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
         <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)" >
+        <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" >
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>

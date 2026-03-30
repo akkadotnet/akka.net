@@ -47,7 +47,7 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 akka.cluster.auto-down-unreachable-after = 0s
                 akka.cluster.testkit.auto-down-unreachable-after = 0s
                 test-lease {
-                    lease-class = ""Akka.TestKit.TestLeaseActorClient, Akka.Tests.Shared.Internals""
+                    lease-class = ""Akka.TestKit.TestLeaseActorClient, Akka.Tests.Shared.Internals.Xunit3""
                     heartbeat-interval = 1s
                     heartbeat-timeout = 120s
                     lease-operation-timeout = 3s

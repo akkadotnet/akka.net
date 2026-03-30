@@ -11,11 +11,10 @@ using Akka.Actor;
 using Akka.MultiNode.TestAdapter.Internal.Reporting;
 using Akka.MultiNode.TestAdapter.Internal.Sinks;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.MultiNode.TestAdapter.Tests.Internal
 {
-    public class TestRunCoordinatorSpec : TestKit.Xunit2.TestKit
+    public class TestRunCoordinatorSpec : TestKit.Xunit.TestKit
     {
         public TestRunCoordinatorSpec(ITestOutputHelper output) : base((ActorSystem)null, output)
         {}

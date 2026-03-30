@@ -14,7 +14,7 @@ using Xunit;
 
 namespace Akka.MultiNode.TestAdapter.Tests.Internal
 {
-    public class SpecRunCoordinatorSpec : TestKit.Xunit2.TestKit
+    public class SpecRunCoordinatorSpec : TestKit.Xunit.TestKit
     {
         [Fact]
         public void SpecRunCoordinator_should_log_TestRunner_messages()
