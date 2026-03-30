@@ -22,19 +22,37 @@
     <ProjectReference Include="..\Akka.MultiNode.RemoteHost\Akka.MultiNode.RemoteHost.csproj" PrivateAssets="All" />
   </ItemGroup>
 
+  <!-- Shared source files linked from Akka.MultiNode.TestAdapter (xUnit-version-independent code) -->
   <ItemGroup>
-    <None Update="Internal\Persistence\VisualizerRuntimeTemplate.tt">
-      <Generator>TextTemplatingFilePreprocessor</Generator>
-      <LastGenOutput>VisualizerRuntimeTemplate.cs</LastGenOutput>
-    </None>
-  </ItemGroup>
+    <!-- Entire shared folders -->
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Configuration\**\*.cs" LinkBase="Configuration" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Helpers\**\*.cs" LinkBase="Helpers" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Extensions\**\*.cs" LinkBase="Internal\Extensions" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Persistence\**\*.cs" LinkBase="Internal\Persistence" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Reporting\**\*.cs" LinkBase="Internal\Reporting" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\TrxReporter\**\*.cs" LinkBase="Internal\TrxReporter" />
+    <Content Include="..\Akka.MultiNode.TestAdapter\Internal\Persistence\VisualizerRuntimeTemplate.tt" LinkBase="Internal\Persistence" />
 
-  <ItemGroup>
-    <Compile Update="Internal\Persistence\VisualizerRuntimeTemplate.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>VisualizerRuntimeTemplate.tt</DependentUpon>
-    </Compile>
+    <!-- Individual shared files from Internal/ root -->
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Constants.cs" Link="Constants.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\CompilerErrorCollection.cs" Link="Internal\CompilerErrorCollection.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Exceptions.cs" Link="Internal\Exceptions.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\ExitCodeContainer.cs" Link="Internal\ExitCodeContainer.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\TcpLoggingServer.cs" Link="Internal\TcpLoggingServer.cs" />
+
+    <!-- Individual shared files from Internal/Sinks/ (DiagnosticMessageSinkActor.cs differs between v2/v3) -->
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\IMessageSink.cs" Link="Internal\Sinks\IMessageSink.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\MessageSink.cs" Link="Internal\Sinks\MessageSink.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\MessageSinkActor.cs" Link="Internal\Sinks\MessageSinkActor.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\Messages.cs" Link="Internal\Sinks\Messages.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\SinkCoordinator.cs" Link="Internal\Sinks\SinkCoordinator.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\Spec.cs" Link="Internal\Sinks\Spec.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\SpecLog.cs" Link="Internal\Sinks\SpecLog.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\ConsoleMessageSinkActor.cs" Link="Internal\Sinks\ConsoleMessageSinkActor.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\FileSystemMessageSinkActor.cs" Link="Internal\Sinks\FileSystemMessageSinkActor.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\TeamCityMessageSinkActor.cs" Link="Internal\Sinks\TeamCityMessageSinkActor.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\TestCoordinatorEnabledMessageSink.cs" Link="Internal\Sinks\TestCoordinatorEnabledMessageSink.cs" />
+    <Compile Include="..\Akka.MultiNode.TestAdapter\Internal\Sinks\TimelineLogCollectorActor.cs" Link="Internal\Sinks\TimelineLogCollectorActor.cs" />
   </ItemGroup>
 
   <PropertyGroup>
