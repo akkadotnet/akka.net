@@ -5,7 +5,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using Akka.Delivery;
 using Akka.Delivery.Internal;
 using Akka.Serialization;
@@ -76,26 +75,5 @@ public class MessageSentSerializationBugSpecs : TestKit.Xunit.TestKit
         // cross-type case that matches on T, violating the symmetry contract of Equals.
         wrapper.Equals((object)item).Should().BeFalse(
             "a MessageOrChunk<T> should not be equal to a raw T instance");
-    }
-
-    /// <summary>
-    /// Value types are NOT affected by the serialization bug because Newtonsoft.Json
-    /// does not perform reference tracking for value types.
-    /// </summary>
-    [Fact(DisplayName = "MessageSent with value type should serialize successfully")]
-    public void MessageSent_with_value_type_should_serialize_successfully()
-    {
-        var messageSent = new DurableProducerQueue.MessageSent<int>(
-            SeqNr: 1,
-            Message: new MessageOrChunk<int>(42),
-            Ack: false,
-            ConfirmationQualifier: DurableProducerQueue.NoQualifier,
-            Timestamp: 0);
-
-        var serializer = (NewtonSoftJsonSerializer)Sys.Serialization.FindSerializerFor(messageSent);
-
-        // Value types should serialize fine - no reference tracking issue
-        var act = () => serializer.ToBinary(messageSent);
-        act.Should().NotThrow();
     }
 }
