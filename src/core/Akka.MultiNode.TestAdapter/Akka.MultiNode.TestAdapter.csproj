@@ -53,8 +53,6 @@
     <ItemGroup>
       <!-- Add file to package with consideration of sub folder. If empty, the root folder is chosen. -->
       <BuildOutputInPackage Include="@(_ReferenceCopyLocalPaths)" TargetPath="%(_ReferenceCopyLocalPaths.DestinationSubDirectory)" />
-      <!-- Include xunit.v3 core dll in package -->
-      <BuildOutputInPackage Include="$(OutputPath)xunit.v3.core.dll" />
     </ItemGroup>
   </Target>
 </Project>
