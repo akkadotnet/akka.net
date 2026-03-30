@@ -67,20 +67,7 @@ public readonly struct MessageOrChunk<T> : IEquatable<MessageOrChunk<T>>
 
     public override bool Equals(object? obj)
     {
-        if (obj is null)
-            return false;
-
-        switch (obj)
-        {
-            case MessageOrChunk<T> other:
-                return Equals(other);
-            case T msg when IsMessage:
-                return EqualityComparer<T>.Default.Equals(Message!, msg);
-            case ChunkedMessage chunk when !IsMessage:
-                return Chunk!.Equals(chunk);
-            default:
-                return false;
-        }
+        return obj is MessageOrChunk<T> other && Equals(other);
     }
 
     public override int GetHashCode()
