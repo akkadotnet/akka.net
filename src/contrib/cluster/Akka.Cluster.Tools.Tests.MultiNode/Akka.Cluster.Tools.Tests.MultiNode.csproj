@@ -7,7 +7,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\Akka.MultiNode.TestAdapter\Akka.MultiNode.TestAdapter.csproj" />
     <ProjectReference Include="..\Akka.Cluster.Tools\Akka.Cluster.Tools.csproj" />
-    <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
+    <ProjectReference Include="..\..\..\core\Akka.Cluster.TestKit.Xunit2\Akka.Cluster.TestKit.Xunit2.csproj" />
     <ProjectReference Include="..\..\..\core\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
   </ItemGroup>
 

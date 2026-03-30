@@ -9,7 +9,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
+      <ProjectReference Include="..\Akka.Cluster.TestKit.Xunit2\Akka.Cluster.TestKit.Xunit2.csproj" />
       <ProjectReference Include="..\Akka.MultiNode.TestAdapter\Akka.MultiNode.TestAdapter.csproj" />
     </ItemGroup>
 

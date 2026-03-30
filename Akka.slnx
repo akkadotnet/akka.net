@@ -102,6 +102,7 @@
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
+    <Project Path="src/core/Akka.Cluster.TestKit.Xunit2/Akka.Cluster.TestKit.Xunit2.csproj" />
     <Project Path="src/core/Akka.Cluster.TestKit/Akka.Cluster.TestKit.csproj">
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
