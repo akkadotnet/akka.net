@@ -1,0 +1,1 @@
+﻿global using XTestKit = Akka.TestKit.Xunit.TestKit;
