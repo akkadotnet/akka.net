@@ -67,7 +67,7 @@ namespace Akka.Cluster.Tests.MultiNode.SBR
                 }
 
                 test-lease {
-                    lease-class = ""Akka.TestKit.TestLease, Akka.Tests.Shared.Internals""
+                    lease-class = ""Akka.TestKit.TestLease, Akka.Tests.Shared.Internals.Xunit3""
                     heartbeat-interval = 1s
                     heartbeat-timeout = 120s
                     lease-operation-timeout = 3s

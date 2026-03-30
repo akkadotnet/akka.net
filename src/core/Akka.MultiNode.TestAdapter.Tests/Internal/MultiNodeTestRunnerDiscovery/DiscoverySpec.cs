@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="DiscoverySpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2019 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2019 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -9,27 +9,30 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Akka.MultiNode.TestAdapter.Internal;
+using Akka.MultiNode.TestAdapter.NodeRunner;
 using FluentAssertions;
 using Xunit;
+using Xunit.v3;
 
 namespace Akka.MultiNode.TestAdapter.Tests.Internal.MultiNodeTestRunnerDiscovery
 {
     public class DiscoverySpec
     {
         [Fact(DisplayName = "Abstract classes are not discoverable")]
-        public void No_abstract_classes()
+        public async Task No_abstract_classes()
         {
-            var discoveredSpecs = DiscoverSpecs();
+            var discoveredSpecs = await DiscoverSpecs();
             Assert.False(discoveredSpecs.ContainsKey(KeyFromSpecName(nameof(DiscoveryCases.NoAbstractClassesSpec))));
         }
 
         [Fact(DisplayName = "Deeply inherited classes are discoverable")]
-        public void Deeply_inherited_are_ok()
+        public async Task Deeply_inherited_are_ok()
         {
-            var discoveredSpecs = DiscoverSpecs();
+            var discoveredSpecs = await DiscoverSpecs();
             Assert.Equal(
-                "DeeplyInheritedChildRole", 
+                "DeeplyInheritedChildRole",
                 discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.DeeplyInheritedChildSpec))].First().Role);
         }
 
@@ -47,36 +50,37 @@ namespace Akka.MultiNode.TestAdapter.Tests.Internal.MultiNodeTestRunnerDiscovery
         }
 
         [Fact(DisplayName = "One test case per RoleName per Spec declaration with MultiNodeFact")]
-        public void Discovered_count_equals_number_of_roles_mult_specs()
+        public async Task Discovered_count_equals_number_of_roles_mult_specs()
         {
-            var discoveredSpecs = DiscoverSpecs();
+            var discoveredSpecs = await DiscoverSpecs();
             Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec1))].Count);
             Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec2))].Count);
             Assert.Equal(5, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.FloodyChildSpec3))].Count);
         }
 
         [Fact(DisplayName = "Only the MultiNodeConfig.Roles property is used to compute the number of Roles in MultiNodeFact")]
-        public void Only_MultiNodeConfig_role_count_used()
+        public async Task Only_MultiNodeConfig_role_count_used()
         {
-            var discoveredSpecs = DiscoverSpecs();
+            var discoveredSpecs = await DiscoverSpecs();
             Assert.Equal(10, discoveredSpecs[KeyFromSpecName(nameof(DiscoveryCases.NoReflectionSpec))].Select(c => c.Role).Count());
         }
-        
-        private static Dictionary<string, List<NodeTest>> DiscoverSpecs()
+
+        private static async Task<Dictionary<string, List<NodeTest>>> DiscoverSpecs()
         {
-            var assemblyPath = new Uri(typeof(DiscoveryCases).GetTypeInfo().Assembly.Location).LocalPath; 
-            
-            using (var controller = new XunitFrontController(AppDomainSupport.IfAvailable, assemblyPath))
+            var assembly = typeof(DiscoveryCases).Assembly;
+            var testAssembly = new XunitTestAssembly(assembly);
+            var collectionFactory = new CollectionPerSessionTestCollectionFactory(testAssembly);
+            var discoverer = new XunitTestFrameworkDiscoverer(testAssembly, collectionFactory);
+
+            var testCases = new List<MultiNodeTestCase>();
+            await discoverer.Find(async testCase =>
             {
-                using (var discovery = new Discovery(assemblyPath))
-                {
-                    controller.Find(false, discovery, TestFrameworkOptions.ForDiscovery());
-                    discovery.Finished.WaitOne();
-                    return discovery
-                        .TestCases
-                        .ToDictionary(t => t.TypeName, t => t.Nodes);
-                }
-            }
+                if (testCase is MultiNodeTestCase mnTestCase && !mnTestCase.TestMethod.TestClass.Class.IsAbstract)
+                    testCases.Add(mnTestCase);
+                return true;
+            }, new SimpleDiscoveryOptions());
+
+            return testCases.ToDictionary(t => t.TypeName, t => t.Nodes);
         }
 
         private string KeyFromSpecName(string specName)

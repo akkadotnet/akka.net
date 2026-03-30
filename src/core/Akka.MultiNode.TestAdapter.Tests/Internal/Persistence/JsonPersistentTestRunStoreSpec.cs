@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Akka.MultiNode.TestAdapter.Tests.Internal.Persistence
 {
-    public class JsonPersistentTestRunStoreSpec : TestKit.Xunit2.TestKit
+    public class JsonPersistentTestRunStoreSpec : TestKit.Xunit.TestKit
     {
         [Fact]
         public void Should_save_TestRunTree_as_JSON()

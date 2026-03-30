@@ -5,67 +5,38 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using Xunit.Abstractions;
+using System.Threading.Tasks;
 using Xunit.Sdk;
-using LongLivedMarshalByRefObject = Xunit.LongLivedMarshalByRefObject;
+using Xunit.v3;
 
 namespace Akka.MultiNode.TestAdapter.Internal
 {
-    internal class Discovery : LongLivedMarshalByRefObject, IMessageSink, IDisposable
+    /// <summary>
+    /// Collects <see cref="MultiNodeTestCase"/> instances during test discovery.
+    /// Used as a callback target for <see cref="ITestFrameworkDiscoverer.Find"/>.
+    /// </summary>
+    internal class Discovery
     {
         // There can be multiple fact attributes in a single class, but our convention
         // limits them to 1 fact attribute per test class
-        public List<MultiNodeTestCase> TestCases { get; }
-        public List<ErrorMessage> Errors { get; } = new List<ErrorMessage>();
-        public bool WasSuccessful => Errors.Count == 0;
+        public List<MultiNodeTestCase> TestCases { get; } = new List<MultiNodeTestCase>();
 
-        private readonly string _assemblyPath;
-        
         /// <summary>
-        /// Initializes a new instance of the <see cref="Discovery"/> class.
+        /// Callback for the v3 discovery API. Filters for <see cref="MultiNodeTestCase"/> and skips abstract types.
         /// </summary>
-        public Discovery(string assemblyPath)
+        public ValueTask<bool> OnTestCaseDiscovered(ITestCase testCase)
         {
-            _assemblyPath = assemblyPath;
-            TestCases = new List<MultiNodeTestCase>();
-            Finished = new ManualResetEvent(false);
-        }
-
-        public ManualResetEvent Finished { get; }
-
-        public virtual bool OnMessage(IMessageSinkMessage message)
-        {
-            switch (message)
+            if (testCase is MultiNodeTestCase mnTestCase)
             {
-                case ITestCaseDiscoveryMessage discovery:
-                    var testClass = discovery.TestClass.Class;
-                    if (testClass.IsAbstract) 
-                        break;
-                    
-                    foreach (var c in discovery.TestCases.Where(t => t is MultiNodeTestCase).Cast<MultiNodeTestCase>())
-                    {
-                        TestCases.Add(c);
-                    }
-                    break;
-                case IDiscoveryCompleteMessage _:
-                    Finished.Set();
-                    break;
-                case ErrorMessage err:
-                    Errors.Add(err);
-                    break;
+                // Skip abstract classes
+                if (!mnTestCase.TestMethod.TestClass.Class.IsAbstract)
+                {
+                    TestCases.Add(mnTestCase);
+                }
             }
 
-            return true;
-        }
-
-        /// <inheritdoc/>
-        public void Dispose()
-        {
-            Finished.Dispose();
+            return new ValueTask<bool>(true); // continue discovery
         }
     }
 }

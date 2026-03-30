@@ -21,62 +21,53 @@ using Akka.MultiNode.TestAdapter.Internal.Sinks;
 using Akka.MultiNode.TestAdapter.Internal.TrxReporter;
 using Akka.MultiNode.TestAdapter.Configuration;
 using Akka.MultiNode.TestAdapter.Helpers;
-using Xunit.Abstractions;
 using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Akka.MultiNode.TestAdapter.Internal
 {
     /// <summary>
     /// Entry point for the MultiNodeTestRunner
     /// </summary>
-    internal class MultiNodeTestCaseRunner : TestCaseRunner<MultiNodeTestCase>
+    internal class MultiNodeTestCaseRunner
     {
         // Fixed TCP buffer size
         public const int TcpBufferSize = 10240;
-        
+
         private ActorSystem TestRunSystem { get; set; }
         private IActorRef SinkCoordinator { get; set; }
         private MultiNodeTestRunnerOptions Options { get; }
-        
-        /// <summary>
-        /// Gets or sets the display name of the test case
-        /// </summary>
-        private string DisplayName { get; }
 
-        /// <summary>
-        /// Gets or sets the skip reason for the test, if set.
-        /// </summary>
-        private string SkipReason { get; }
+        private readonly MultiNodeTestCase _testCase;
+        private readonly string _displayName;
+        private readonly string _skipReason;
+        private readonly IMessageBus _messageBus;
+        private readonly ExceptionAggregator _aggregator;
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly TestMessageIds _ids;
 
-        /// <summary>
-        /// Gets or sets the runtime type for the test class that the test method belongs to.
-        /// </summary>
         private Type TestClass { get; }
-
-        /// <summary>
-        /// Gets of sets the runtime method for the test method that the test case belongs to.
-        /// </summary>
         private MethodInfo TestMethod { get; }
-
-        private readonly Xunit.Abstractions.IMessageSink _diagnosticSink;
 
         public MultiNodeTestCaseRunner(
             MultiNodeTestCase testCase,
             string displayName,
             string skipReason,
             IMessageBus messageBus,
-            Xunit.Abstractions.IMessageSink diagnosticSink,
             ExceptionAggregator aggregator,
-            CancellationTokenSource cancellationTokenSource) 
-            : base(testCase, messageBus, aggregator, cancellationTokenSource)
+            CancellationTokenSource cancellationTokenSource)
         {
-            _diagnosticSink = diagnosticSink;
-            DisplayName = displayName;
-            SkipReason = skipReason;
+            _testCase = testCase;
+            _displayName = displayName;
+            _skipReason = skipReason;
+            _messageBus = messageBus;
+            _aggregator = aggregator;
+            _cancellationTokenSource = cancellationTokenSource;
+            _ids = TestMessageIds.From(testCase);
 
-            TestClass = TestCase.TestMethod.TestClass.Class.ToRuntimeType();
-            TestMethod = TestCase.Method.ToRuntimeMethod();
-            
+            TestClass = testCase.TestMethod.TestClass.Class;
+            TestMethod = testCase.TestMethod.Method;
+
             var assembly = TestClass.Assembly;
             var attr = assembly.GetCustomAttribute<TargetFrameworkAttribute>();
             var frameworkParts = attr.FrameworkName.Split(',');
@@ -84,46 +75,46 @@ namespace Akka.MultiNode.TestAdapter.Internal
             var platformName = (frameworkParts[0].Replace(".", "") + versionParts[1].Replace("v", "").Replace(".", "_")).ToLowerInvariant();
             Options = OptionsReader.Load(testCase.AssemblyPath);
             Options.Platform = platformName;
-            
+
             if (Options.ListenPort == 0)
                 Options.ListenPort = SocketUtil.TemporaryTcpAddress(Options.ListenIpAddress).Port;
         }
 
-        protected override async Task<RunSummary> RunTestAsync()
+        public async ValueTask<RunSummary> RunAsync()
         {
             // Shortcut the spec if it is skipped
-            if (!string.IsNullOrEmpty(SkipReason))
+            if (!string.IsNullOrEmpty(_skipReason))
             {
-                foreach (var test in TestCase.Nodes)
+                foreach (var test in _testCase.Nodes)
                 {
-                    MessageBus.QueueMessage(new TestStarting(test));
-                    MessageBus.QueueMessage(new TestSkipped(test, SkipReason));
+                    _messageBus.QueueMessage(CreateTestStarting(test));
+                    _messageBus.QueueMessage(CreateTestSkipped(test, _skipReason));
                 }
 
                 return new RunSummary
                 {
-                    Total = TestCase.Nodes.Count,
-                    Skipped = TestCase.Nodes.Count
+                    Total = _testCase.Nodes.Count,
+                    Skipped = _testCase.Nodes.Count
                 };
             }
 
             // Shortcut the spec if it already failed
-            if (Aggregator.HasExceptions)
+            if (_aggregator.HasExceptions)
             {
-                var exception = Aggregator.ToException();
-                foreach (var test in TestCase.Nodes)
+                var exception = _aggregator.ToException();
+                foreach (var test in _testCase.Nodes)
                 {
-                    MessageBus.QueueMessage(new TestStarting(test));
-                    MessageBus.QueueMessage(new TestFailed(test, 0, "Test failed before being executed", exception));
+                    _messageBus.QueueMessage(CreateTestStarting(test));
+                    _messageBus.QueueMessage(CreateTestFailed(test, 0, "Test failed before being executed", exception));
                 }
 
                 return new RunSummary
                 {
-                    Total = TestCase.Nodes.Count,
-                    Failed = TestCase.Nodes.Count
+                    Total = _testCase.Nodes.Count,
+                    Failed = _testCase.Nodes.Count
                 };
             }
-            
+
             // Run the actual spec
             var config = ConfigurationFactory.ParseString($@"
 akka.io.tcp {{
@@ -135,35 +126,35 @@ akka.io.tcp {{
 
             var sinks = new List<MessageSink>
             {
-                new DiagnosticMessageSink(_diagnosticSink)
+                new DiagnosticMessageSink()
             };
             if(Options.UseBuiltInTrxReporter)
-                sinks.Add(new TrxMessageSink(DisplayName, Options));
-            
+                sinks.Add(new TrxMessageSink(_displayName, Options));
+
             SinkCoordinator = TestRunSystem.ActorOf(Props.Create(()
                 => new SinkCoordinator(sinks)), "sinkCoordinator");
 
             await SinkCoordinator.Ask<SinkCoordinator.Ready>(Sinks.SinkCoordinator.Ready.Instance);
-            
+
             var tcpLogger = TestRunSystem.ActorOf(Props.Create(() => new TcpLoggingServer(SinkCoordinator)), "TcpLogger");
             var listenEndpoint = new IPEndPoint(IPAddress.Parse(Options.ListenAddress), Options.ListenPort);
             TestRunSystem.Tcp().Tell(new Tcp.Bind(tcpLogger, listenEndpoint), sender: tcpLogger);
 
             StartNewSpec();
-            PublishRunnerMessage($"Starting test {TestCase.DisplayName}");
+            PublishRunnerMessage($"Starting test {_testCase.TestCaseDisplayName}");
 
             var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor(Options.AppendLogOutput)));
-            
+
             var tasks = new List<Task<RunSummary>>();
             var serverPort = SocketUtil.TemporaryTcpAddress("localhost").Port;
-            foreach (var nodeTest in TestCase.Nodes)
+            foreach (var nodeTest in _testCase.Nodes)
             {
                 //Loop through each test, work out number of nodes to run on and kick off process
                 var args = new []
                     {
                         $@"-Dmultinode.test-class=""{nodeTest.TestCase.TypeName}""",
                         $@"-Dmultinode.test-method=""{nodeTest.TestCase.MethodName}""",
-                        $@"-Dmultinode.max-nodes={TestCase.Nodes.Count}",
+                        $@"-Dmultinode.max-nodes={_testCase.Nodes.Count}",
                         $@"-Dmultinode.server-host=""{"localhost"}""",
                         $@"-Dmultinode.server-port={serverPort}",
                         $@"-Dmultinode.host=""{"localhost"}""",
@@ -171,14 +162,14 @@ akka.io.tcp {{
                         $@"-Dmultinode.role=""{nodeTest.Role}""",
                         $@"-Dmultinode.listen-address={Options.ListenAddress}",
                         $@"-Dmultinode.listen-port={Options.ListenPort}",
-                        $@"-Dmultinode.test-assembly=""{TestCase.AssemblyPath}"""
+                        $@"-Dmultinode.test-assembly=""{_testCase.AssemblyPath}"""
                     };
 
                 // Start process for node
                 var runner = new MultiNodeTestRunner(
-                    nodeTest, MessageBus, args, SkipReason, Aggregator, SinkCoordinator,
-                    timelineCollector, Options, CancellationTokenSource);
-                
+                    nodeTest, _messageBus, args, _skipReason, _aggregator, SinkCoordinator,
+                    timelineCollector, Options, _cancellationTokenSource);
+
                 tasks.Add(runner.RunAsync());
             }
 
@@ -186,27 +177,26 @@ akka.io.tcp {{
             // Wait for all nodes to finish and collect results
             while (tasks.Count > 0)
             {
-                // TODO: might be a bug source if await throws
                 var finished = await Task.WhenAny(tasks);
                 tasks.Remove(finished);
                 summary.Aggregate(finished.Result);
             }
-            
+
             try
             {
-                // Limit TCP logger unbind to 10 seconds, abort the test if failed. 
+                // Limit TCP logger unbind to 10 seconds, abort the test if failed.
                 await tcpLogger.Ask<TcpLoggingServer.ListenerStopped>(
                     new TcpLoggingServer.StopListener(),
                     TimeSpan.FromSeconds(10));
             }
             catch
             {
-                CancellationTokenSource.Cancel();
+                _cancellationTokenSource.Cancel();
             }
 
             // Save timelined logs to file system
             await DumpAggregatedSpecLogs(summary, timelineCollector);
-            
+
             await FinishSpec(timelineCollector);
 
             SinkCoordinator.Tell(new SinkCoordinator.CloseAllSinks());
@@ -222,52 +212,114 @@ akka.io.tcp {{
                 if(task != timeoutTask)
                     cts2.Cancel();
                 else
-                    CancellationTokenSource.Cancel();
+                    _cancellationTokenSource.Cancel();
             }
             finally
             {
                 cts2.Dispose();
             }
-            
+
             return summary;
         }
 
+        #region Message factory methods
+
+        internal TestStarting CreateTestStarting(NodeTest test)
+        {
+            return new TestStarting
+            {
+                AssemblyUniqueID = _ids.AssemblyUniqueID,
+                TestCollectionUniqueID = _ids.TestCollectionUniqueID,
+                TestClassUniqueID = _ids.TestClassUniqueID,
+                TestMethodUniqueID = _ids.TestMethodUniqueID,
+                TestCaseUniqueID = _ids.TestCaseUniqueID,
+                TestUniqueID = test.UniqueID,
+                TestDisplayName = test.DisplayName,
+                Explicit = false,
+                StartTime = DateTimeOffset.UtcNow,
+                Timeout = 0,
+                Traits = new Dictionary<string, IReadOnlyCollection<string>>()
+            };
+        }
+
+        internal TestSkipped CreateTestSkipped(NodeTest test, string reason)
+        {
+            return new TestSkipped
+            {
+                AssemblyUniqueID = _ids.AssemblyUniqueID,
+                TestCollectionUniqueID = _ids.TestCollectionUniqueID,
+                TestClassUniqueID = _ids.TestClassUniqueID,
+                TestMethodUniqueID = _ids.TestMethodUniqueID,
+                TestCaseUniqueID = _ids.TestCaseUniqueID,
+                TestUniqueID = test.UniqueID,
+                Reason = reason,
+                ExecutionTime = 0m,
+                FinishTime = DateTimeOffset.UtcNow,
+                Output = "",
+                Warnings = null
+            };
+        }
+
+        internal TestFailed CreateTestFailed(NodeTest test, decimal executionTime, string output, Exception exception)
+        {
+            return new TestFailed
+            {
+                AssemblyUniqueID = _ids.AssemblyUniqueID,
+                TestCollectionUniqueID = _ids.TestCollectionUniqueID,
+                TestClassUniqueID = _ids.TestClassUniqueID,
+                TestMethodUniqueID = _ids.TestMethodUniqueID,
+                TestCaseUniqueID = _ids.TestCaseUniqueID,
+                TestUniqueID = test.UniqueID,
+                Cause = FailureCause.Exception,
+                ExceptionTypes = new[] { exception.GetType().FullName },
+                Messages = new[] { exception.Message },
+                StackTraces = new[] { exception.StackTrace },
+                ExceptionParentIndices = new[] { -1 },
+                ExecutionTime = executionTime,
+                FinishTime = DateTimeOffset.UtcNow,
+                Output = output,
+                Warnings = null
+            };
+        }
+
+        #endregion
+
         private async Task DumpAggregatedSpecLogs(RunSummary summary, IActorRef timelineCollector)
         {
-            var dumpFolder = Path.GetFullPath(Path.Combine(Options.OutputDirectory, TestCase.DisplayName)); 
+            var dumpFolder = Path.GetFullPath(Path.Combine(Options.OutputDirectory, _testCase.TestCaseDisplayName));
             var dumpPath = Path.Combine(dumpFolder, "aggregated.txt");
-            
-            Directory.CreateDirectory(dumpFolder);                
+
+            Directory.CreateDirectory(dumpFolder);
             if (!Options.AppendLogOutput && File.Exists(dumpPath))
                 File.Delete(dumpPath);
 
             var logLines = await timelineCollector.Ask<string[]>(new TimelineLogCollectorActor.GetLog());
-            
+
             // Dump aggregated timeline to file for this test
             File.AppendAllLines(dumpPath, logLines);
 
             if (summary.Failed > 0)
             {
                 var failedSpecFolder = Path.GetFullPath(Path.Combine(Options.OutputDirectory, Options.FailedSpecsDirectory));
-                var failedSpecPath = Path.Combine(failedSpecFolder, $"{TestCase.DisplayName}.txt");
-                
+                var failedSpecPath = Path.Combine(failedSpecFolder, $"{_testCase.TestCaseDisplayName}.txt");
+
                 Directory.CreateDirectory(failedSpecFolder);
                 if(!Options.AppendLogOutput && File.Exists(failedSpecPath))
                     File.Delete(failedSpecPath);
-                
+
                 File.AppendAllLines(failedSpecPath, logLines);
             }
         }
 
         private void StartNewSpec()
         {
-            SinkCoordinator.Tell(TestCase);
+            SinkCoordinator.Tell(_testCase);
         }
 
         private async Task FinishSpec(IActorRef timelineCollector)
         {
             var log = await timelineCollector.Ask<SpecLog>(new TimelineLogCollectorActor.GetSpecLog(), TimeSpan.FromMinutes(1));
-            SinkCoordinator.Tell(new EndSpec(TestCase, log));
+            SinkCoordinator.Tell(new EndSpec(_testCase, log));
         }
 
         private void PublishRunnerMessage(string message)

@@ -1,32 +1,33 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
-using Xunit.Abstractions;
-using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Akka.MultiNode.TestAdapter.Internal
 {
     internal class MultiNodeTestAssemblyRunner : XunitTestAssemblyRunner
     {
-        public MultiNodeTestAssemblyRunner(
-            ITestAssembly testAssembly,
-            IEnumerable<IXunitTestCase> testCases,
-            IMessageSink diagnosticMessageSink,
-            IMessageSink executionMessageSink,
-            ITestFrameworkExecutionOptions executionOptions) 
-            : base(testAssembly, testCases, diagnosticMessageSink, executionMessageSink, executionOptions)
-        {
-        }
+        public new static MultiNodeTestAssemblyRunner Instance { get; } = new();
 
-        protected override async Task<RunSummary> RunTestCollectionsAsync(IMessageBus messageBus, CancellationTokenSource cancellationTokenSource)
+        protected MultiNodeTestAssemblyRunner() { }
+
+        /// <summary>
+        /// Override to enforce sequential test collection execution (no parallelism for multi-node tests).
+        /// </summary>
+        protected override async ValueTask<RunSummary> RunTestCollections(
+            XunitTestAssemblyRunnerContext ctxt,
+            Exception? exception)
         {
             var summary = new RunSummary();
 
-            foreach (var (testCollection, testCases) in OrderTestCollections())
+            foreach (var (testCollection, testCases) in OrderTestCollections(ctxt))
             {
-                summary.Aggregate(await RunTestCollectionAsync(messageBus, testCollection, testCases, cancellationTokenSource));
-                if (cancellationTokenSource.IsCancellationRequested)
+                if (exception != null)
+                    summary.Aggregate(await FailTestCollection(ctxt, testCollection, testCases, exception));
+                else
+                    summary.Aggregate(await RunTestCollection(ctxt, testCollection, testCases));
+
+                if (ctxt.CancellationTokenSource.IsCancellationRequested)
                     break;
             }
 

@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "createdAt": "2026-03-25T14:09:31.5934528+00:00",
-  "updatedAt": "2026-03-25T14:09:31.5956824+00:00",
-  "description": "Initial baseline created by 'slopwatch init' on 2026-03-25 14:09:31 UTC",
+  "createdAt": "2026-03-30T17:14:57.3127037+00:00",
+  "updatedAt": "2026-03-30T17:14:57.3150802+00:00",
+  "description": "Initial baseline created by 'slopwatch init' on 2026-03-30 17:14:57 UTC",
   "entries": [
     {
       "hash": "51a77db094a515e7",
@@ -11,7 +11,7 @@
       "lineNumber": 16,
       "codeSnippet": "<NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051</NoWarn>",
       "message": "Adding warnings to NoWarn: CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051",
-      "baselinedAt": "2026-03-25T14:09:31.5954649+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.314837+00:00"
     },
     {
       "hash": "573cc6dd28e7382e",
@@ -20,7 +20,7 @@
       "lineNumber": 12,
       "codeSnippet": "#pragma warning disable 1998 //async method lacks an await",
       "message": "#pragma warning disable for warnings 1998 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5955137+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3148943+00:00"
     },
     {
       "hash": "5c346f8d07ea6c1d",
@@ -29,7 +29,7 @@
       "lineNumber": 13,
       "codeSnippet": "#pragma warning disable AK1003 // ReceiveAsync lacks an await",
       "message": "#pragma warning disable for warnings AK1003 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5955172+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.314898+00:00"
     },
     {
       "hash": "f61b8f3283ee0922",
@@ -38,7 +38,7 @@
       "lineNumber": 89,
       "codeSnippet": "catch (Exception)\r\n                {\r\n                    // MaxWorkingSet may throw on some platforms (e.g., Linux/Mono)\r\n                    // Ignore and continue without this metric\r\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.595525+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149057+00:00"
     },
     {
       "hash": "dfaea02bf2c86baf",
@@ -47,7 +47,7 @@
       "lineNumber": 1072,
       "codeSnippet": "catch\r\n            {\r\n                // no-op, we're shutting down anyway.\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955298+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149112+00:00"
     },
     {
       "hash": "1ea9daaa12cb519b",
@@ -56,7 +56,7 @@
       "lineNumber": 198,
       "codeSnippet": "catch (Exception)\r\n            {\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955321+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149137+00:00"
     },
     {
       "hash": "c277e2108b358daa",
@@ -65,7 +65,7 @@
       "lineNumber": 74,
       "codeSnippet": "catch (InvalidActorNameException ex) when (ex.Message.EndsWith(\"is not unique!\"))\r\n                {\r\n                    // This is fine. We just wanted to make sure it is running and it already is\r\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955346+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149167+00:00"
     },
     {
       "hash": "845a9df7b790d887",
@@ -74,7 +74,7 @@
       "lineNumber": 390,
       "codeSnippet": "catch\r\n            {\r\n                //TODO: Hmmm?\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955372+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149197+00:00"
     },
     {
       "hash": "4178214ea8948200",
@@ -83,7 +83,7 @@
       "lineNumber": 475,
       "codeSnippet": "catch\r\n            {\r\n                //TODO: Hmmm?\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955392+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149217+00:00"
     },
     {
       "hash": "ce7efe5072243fc9",
@@ -92,7 +92,7 @@
       "lineNumber": 79,
       "codeSnippet": "catch\r\n            {\r\n                // we don't do error handling for this - we do not care\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955419+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149251+00:00"
     },
     {
       "hash": "bd149108a88e3e51",
@@ -101,7 +101,7 @@
       "lineNumber": 1182,
       "codeSnippet": "catch (Exception) { }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955439+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149268+00:00"
     },
     {
       "hash": "c5f9337f769c1e9d",
@@ -110,7 +110,7 @@
       "lineNumber": 179,
       "codeSnippet": "catch (Exception)\r\n            {\r\n                // swallow any exceptions\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955459+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149296+00:00"
     },
     {
       "hash": "e19886191172e32e",
@@ -119,7 +119,7 @@
       "lineNumber": 239,
       "codeSnippet": "catch\r\n                    {\r\n                        // ignored\r\n                    }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955479+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149316+00:00"
     },
     {
       "hash": "d6fa4922660bdbd4",
@@ -128,7 +128,7 @@
       "lineNumber": 522,
       "codeSnippet": "catch (SchedulerException)\r\n                    {\r\n                        // ignore, this is from terminated actors\r\n                    }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955535+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149396+00:00"
     },
     {
       "hash": "0b95a01799e7e19c",
@@ -137,7 +137,7 @@
       "lineNumber": 782,
       "codeSnippet": "catch\r\n                                {\r\n                                    // suppress any errors thrown during logging\r\n                                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955557+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149415+00:00"
     },
     {
       "hash": "63ddf742f71dea2d",
@@ -146,7 +146,7 @@
       "lineNumber": 324,
       "codeSnippet": "catch\r\n            {\r\n                //ignore error\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955575+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149439+00:00"
     },
     {
       "hash": "8f246a0e213ae0d5",
@@ -155,7 +155,7 @@
       "lineNumber": 167,
       "codeSnippet": "catch\r\n            {\r\n                // suppress exceptions\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955596+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149462+00:00"
     },
     {
       "hash": "136828c217cc3915",
@@ -164,7 +164,7 @@
       "lineNumber": 898,
       "codeSnippet": "catch (Exception) { }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955615+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149483+00:00"
     },
     {
       "hash": "412124630e61d3c7",
@@ -173,7 +173,7 @@
       "lineNumber": 741,
       "codeSnippet": "catch\r\n            {\r\n                /* ignore */\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955634+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149505+00:00"
     },
     {
       "hash": "0c7c28bc324a7a7b",
@@ -182,7 +182,7 @@
       "lineNumber": 68,
       "codeSnippet": "catch (InvalidOperationException)\r\n                {\r\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955668+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149537+00:00"
     },
     {
       "hash": "30b2a94386c0da0f",
@@ -191,7 +191,7 @@
       "lineNumber": 20,
       "codeSnippet": "#pragma warning disable xUnit1028",
       "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5955687+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149564+00:00"
     },
     {
       "hash": "5a60d012890f5d94",
@@ -200,7 +200,7 @@
       "lineNumber": 14,
       "codeSnippet": "#pragma warning disable CS0414 // Field is assigned but its value is never used. This is for documentation purposes, its fine. ",
       "message": "#pragma warning disable for warnings CS0414 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5955709+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149585+00:00"
     },
     {
       "hash": "9d0193b3ead7f0de",
@@ -209,7 +209,7 @@
       "lineNumber": 50,
       "codeSnippet": "catch{}",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955724+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149601+00:00"
     },
     {
       "hash": "dc281fe084e8fc9a",
@@ -218,7 +218,16 @@
       "lineNumber": 9,
       "codeSnippet": "Fact(Skip = \"This test should be ignored by MNTR\")",
       "message": "Test method 'Ignored_test' is disabled: This test should be ignored by MNTR",
-      "baselinedAt": "2026-03-25T14:09:31.5955739+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149617+00:00"
+    },
+    {
+      "hash": "3f7e6de7190ea9ee",
+      "ruleId": "SW001",
+      "filePath": "src/core/Akka.MultiNode.SampleMultiNodeTests.Xunit2/IgnoredXunitTest.cs",
+      "lineNumber": 9,
+      "codeSnippet": "Fact(Skip = \"This test should be ignored by MNTR\")",
+      "message": "Test method 'Ignored_test' is disabled: This test should be ignored by MNTR",
+      "baselinedAt": "2026-03-30T17:14:57.3149633+00:00"
     },
     {
       "hash": "c128afaabd09216e",
@@ -227,7 +236,7 @@
       "lineNumber": 36,
       "codeSnippet": "catch\r\n            { }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955757+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149653+00:00"
     },
     {
       "hash": "161c46d53af3a81f",
@@ -236,16 +245,25 @@
       "lineNumber": 80,
       "codeSnippet": "catch { }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955773+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149673+00:00"
     },
     {
       "hash": "efd03e5f2d3f8292",
       "ruleId": "SW003",
       "filePath": "src/core/Akka.MultiNode.TestAdapter/NodeRunner/Executor.cs",
+      "lineNumber": 249,
+      "codeSnippet": "catch { /* well... at least we have tried */ }",
+      "message": "Empty catch block swallows exceptions without handling",
+      "baselinedAt": "2026-03-30T17:14:57.3149731+00:00"
+    },
+    {
+      "hash": "015763b4024443fa",
+      "ruleId": "SW003",
+      "filePath": "src/core/Akka.MultiNode.TestAdapter.Xunit2/NodeRunner/Executor.cs",
       "lineNumber": 179,
       "codeSnippet": "catch { /* well... at least we have tried */ }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955798+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149753+00:00"
     },
     {
       "hash": "68261c2dc0a451fa",
@@ -254,7 +272,7 @@
       "lineNumber": 97,
       "codeSnippet": "catch (OperationCanceledException)\r\n            {\r\n                // no-op\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955858+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149776+00:00"
     },
     {
       "hash": "0a2630229d63ab46",
@@ -263,7 +281,7 @@
       "lineNumber": 101,
       "codeSnippet": "catch (TimeoutException)\r\n            {\r\n                // no-op\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955875+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149796+00:00"
     },
     {
       "hash": "13dbfd621fcd7591",
@@ -272,7 +290,7 @@
       "lineNumber": 127,
       "codeSnippet": "catch (OperationCanceledException)\r\n                {\r\n                    // no-op\r\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.59559+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149815+00:00"
     },
     {
       "hash": "61fd6e63e6d74c52",
@@ -281,7 +299,7 @@
       "lineNumber": 131,
       "codeSnippet": "catch (TimeoutException)\r\n                {\r\n                    // no-op\r\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955917+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149832+00:00"
     },
     {
       "hash": "3ebe4f00788a15eb",
@@ -290,7 +308,7 @@
       "lineNumber": 98,
       "codeSnippet": "catch (OperationCanceledException)\r\n                {\r\n                    // no-op\r\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955936+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149854+00:00"
     },
     {
       "hash": "0dc21eb186747457",
@@ -299,7 +317,7 @@
       "lineNumber": 102,
       "codeSnippet": "catch (TimeoutException)\r\n                {\r\n                    // no-op\r\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955955+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149872+00:00"
     },
     {
       "hash": "13f21bca41231e30",
@@ -308,7 +326,7 @@
       "lineNumber": 121,
       "codeSnippet": "catch (IOException) { }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5955971+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149889+00:00"
     },
     {
       "hash": "daf1343e8543ba73",
@@ -317,7 +335,7 @@
       "lineNumber": 615,
       "codeSnippet": "catch (Exception)\r\n                    {\r\n                    }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.595599+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149912+00:00"
     },
     {
       "hash": "1bf7bf24c01f18dc",
@@ -326,7 +344,7 @@
       "lineNumber": 66,
       "codeSnippet": "catch { }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956004+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149931+00:00"
     },
     {
       "hash": "3a24c8bc72c2bdfe",
@@ -335,7 +353,7 @@
       "lineNumber": 7,
       "codeSnippet": "#pragma warning disable AK1004",
       "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.595602+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.314995+00:00"
     },
     {
       "hash": "032823f713deea61",
@@ -344,7 +362,7 @@
       "lineNumber": 7,
       "codeSnippet": "#pragma warning disable AK1004",
       "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5956039+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3149964+00:00"
     },
     {
       "hash": "8e6754b39cbbbef5",
@@ -353,7 +371,7 @@
       "lineNumber": 7,
       "codeSnippet": "#pragma warning disable AK1004",
       "message": "#pragma warning disable for warnings AK1004 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5956054+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.314998+00:00"
     },
     {
       "hash": "3f30d9efd91f5ae6",
@@ -362,7 +380,7 @@
       "lineNumber": 234,
       "codeSnippet": "catch\r\n                {\r\n                    // ignore errors occurring during shutdown\r\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956074+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150002+00:00"
     },
     {
       "hash": "6d6dfc7c835742e6",
@@ -371,7 +389,7 @@
       "lineNumber": 101,
       "codeSnippet": "catch { /* ignore */ }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956089+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.315002+00:00"
     },
     {
       "hash": "dc73244806271cf5",
@@ -380,7 +398,7 @@
       "lineNumber": 103,
       "codeSnippet": "catch { /* ignore */ }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956106+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150034+00:00"
     },
     {
       "hash": "28b142cc54b1eaf9",
@@ -389,7 +407,7 @@
       "lineNumber": 187,
       "codeSnippet": "catch\r\n                {\r\n                    // Connection might be closed by server, that's expected\r\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956129+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150054+00:00"
     },
     {
       "hash": "7ddd220c868e2611",
@@ -398,7 +416,7 @@
       "lineNumber": 16,
       "codeSnippet": "#pragma warning disable 628",
       "message": "#pragma warning disable for warnings 628 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5956142+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150071+00:00"
     },
     {
       "hash": "26b2f4088086abac",
@@ -407,7 +425,7 @@
       "lineNumber": 731,
       "codeSnippet": "catch\r\n                                    {\r\n                                        // no-op\r\n                                    }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956161+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150096+00:00"
     },
     {
       "hash": "2b5b2f6cdd1a6ff8",
@@ -416,7 +434,7 @@
       "lineNumber": 269,
       "codeSnippet": "catch (Exception exception)\r\n                when (exception is ISpecViolation)\r\n            {\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956184+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150116+00:00"
     },
     {
       "hash": "5ad3e20bef0c50f0",
@@ -425,7 +443,7 @@
       "lineNumber": 40,
       "codeSnippet": "catch (Exception e)\r\n                when (e is ISpecViolation)\r\n            {\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956206+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150142+00:00"
     },
     {
       "hash": "055953950152623a",
@@ -434,7 +452,7 @@
       "lineNumber": 357,
       "codeSnippet": "catch (Exception) { /* swallow? */ }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956253+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.315021+00:00"
     },
     {
       "hash": "c94c0f36e7b14586",
@@ -443,7 +461,7 @@
       "lineNumber": 532,
       "codeSnippet": "SuppressMessage(\"ReSharper\", \"MethodSupportsCancellation\")",
       "message": "SuppressMessage attribute suppressing ReSharper:MethodSupportsCancellation",
-      "baselinedAt": "2026-03-25T14:09:31.5956285+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150229+00:00"
     },
     {
       "hash": "6c216acbb6961bb6",
@@ -452,7 +470,7 @@
       "lineNumber": 19,
       "codeSnippet": "#pragma warning disable 1587",
       "message": "#pragma warning disable for warnings 1587 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5956301+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150248+00:00"
     },
     {
       "hash": "2367574532adc0be",
@@ -461,7 +479,7 @@
       "lineNumber": 291,
       "codeSnippet": "catch (AggregateException) { }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956315+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150266+00:00"
     },
     {
       "hash": "150b8b26fb03a8b3",
@@ -470,7 +488,7 @@
       "lineNumber": 34,
       "codeSnippet": "#pragma warning disable 162",
       "message": "#pragma warning disable for warnings 162 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5956332+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150282+00:00"
     },
     {
       "hash": "fcb317c47a611f54",
@@ -479,7 +497,7 @@
       "lineNumber": 29,
       "codeSnippet": "#pragma warning disable 162",
       "message": "#pragma warning disable for warnings 162 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5956349+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150302+00:00"
     },
     {
       "hash": "3624807874bb4d89",
@@ -488,7 +506,7 @@
       "lineNumber": 205,
       "codeSnippet": "catch (AggregateException) { }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956363+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150318+00:00"
     },
     {
       "hash": "af2a82b4dcd11067",
@@ -497,7 +515,7 @@
       "lineNumber": 208,
       "codeSnippet": "catch (AggregateException) { }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956376+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150333+00:00"
     },
     {
       "hash": "59f8995ddd6c2ef9",
@@ -506,7 +524,7 @@
       "lineNumber": 549,
       "codeSnippet": "catch\r\n            {\r\n                // Expected: at least one should fail\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956396+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150356+00:00"
     },
     {
       "hash": "7400d07d2a8a42a0",
@@ -515,7 +533,7 @@
       "lineNumber": 304,
       "codeSnippet": "catch { }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956411+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150374+00:00"
     },
     {
       "hash": "a609db5f57106cbd",
@@ -524,7 +542,7 @@
       "lineNumber": 75,
       "codeSnippet": "Task.Delay(t, cancellationToken)",
       "message": "Test uses Task.Delay(t) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956428+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150389+00:00"
     },
     {
       "hash": "d5c9710b9beb8ed9",
@@ -533,7 +551,7 @@
       "lineNumber": 314,
       "codeSnippet": "Task.Delay(sleepDuration, cancellationToken)",
       "message": "Test uses Task.Delay(sleepDuration) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956453+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150415+00:00"
     },
     {
       "hash": "84080843d9d3bd4e",
@@ -542,7 +560,7 @@
       "lineNumber": 426,
       "codeSnippet": "Task.Delay(maxDuration, cancellationToken)",
       "message": "Test uses Task.Delay(maxDuration) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956468+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150434+00:00"
     },
     {
       "hash": "5923f4149699d248",
@@ -551,7 +569,7 @@
       "lineNumber": 309,
       "codeSnippet": "Task.Delay(max + TimeSpan.FromMilliseconds(200), cts.Token)",
       "message": "Test uses Task.Delay(max + TimeSpan.FromMilliseconds(200)) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956482+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150449+00:00"
     },
     {
       "hash": "ec95e3aaf5589b04",
@@ -560,7 +578,7 @@
       "lineNumber": 128,
       "codeSnippet": "catch\r\n            {\r\n            }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956497+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150467+00:00"
     },
     {
       "hash": "a9d628c17aff3ff6",
@@ -569,7 +587,7 @@
       "lineNumber": 63,
       "codeSnippet": "Task.Delay(100)",
       "message": "Test uses Task.Delay(100) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956515+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150483+00:00"
     },
     {
       "hash": "54434ed7e0a9b021",
@@ -578,7 +596,7 @@
       "lineNumber": 130,
       "codeSnippet": "Task.Delay(TimeSpan.FromSeconds(1))",
       "message": "Test uses Task.Delay(TimeSpan.FromSeconds(1)) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956527+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150497+00:00"
     },
     {
       "hash": "2965783b3d651c63",
@@ -587,7 +605,7 @@
       "lineNumber": 236,
       "codeSnippet": "#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed",
       "message": "#pragma warning disable for warnings CS4014 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5956546+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.315052+00:00"
     },
     {
       "hash": "4322712ce7ce9c41",
@@ -596,7 +614,7 @@
       "lineNumber": 154,
       "codeSnippet": "Task.Delay(halfMax)",
       "message": "Test uses Task.Delay(halfMax) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.595656+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150535+00:00"
     },
     {
       "hash": "c419aab74e2bc6b8",
@@ -605,7 +623,7 @@
       "lineNumber": 158,
       "codeSnippet": "Task.Delay(doubleMax)",
       "message": "Test uses Task.Delay(doubleMax) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956585+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150556+00:00"
     },
     {
       "hash": "c92171bee5deb8c7",
@@ -614,7 +632,7 @@
       "lineNumber": 96,
       "codeSnippet": "catch (System.Threading.Tasks.TaskCanceledException)\r\n                {\r\n                    // This is expected if the test completes in time\r\n                }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956605+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150582+00:00"
     },
     {
       "hash": "adf89ad86f045ca3",
@@ -623,7 +641,7 @@
       "lineNumber": 92,
       "codeSnippet": "Task.Delay(shortTimeout.Add(300.Milliseconds()), timerCts.Token)",
       "message": "Test uses Task.Delay(shortTimeout.Add(300.Milliseconds())) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956616+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150594+00:00"
     },
     {
       "hash": "1a628586626eddde",
@@ -632,7 +650,7 @@
       "lineNumber": 18,
       "codeSnippet": "#pragma warning disable xUnit1028",
       "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5956636+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.315061+00:00"
     },
     {
       "hash": "0b85d5bcb03a7024",
@@ -641,7 +659,7 @@
       "lineNumber": 293,
       "codeSnippet": "Task.Delay(200)",
       "message": "Test uses Task.Delay(200) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956653+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150627+00:00"
     },
     {
       "hash": "83f4deffa6900e17",
@@ -650,7 +668,7 @@
       "lineNumber": 748,
       "codeSnippet": "Fact(Skip = \"we currently do not make any distinction between quoted and unquoted strings once parsed\")",
       "message": "Test method 'Can_assign_quoted_null_string_to_field' is disabled: we currently do not make any distinction between quoted and unquoted strings once parsed",
-      "baselinedAt": "2026-03-25T14:09:31.595667+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150645+00:00"
     },
     {
       "hash": "c14f9352e155f981",
@@ -659,7 +677,7 @@
       "lineNumber": 836,
       "codeSnippet": "Fact(Skip = \"Not allowed according to current HOCON spec\")",
       "message": "Test method 'Can_parse_unquoted_ipv6' is disabled: Not allowed according to current HOCON spec",
-      "baselinedAt": "2026-03-25T14:09:31.5956682+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150661+00:00"
     },
     {
       "hash": "87a59931dbccfe59",
@@ -668,7 +686,7 @@
       "lineNumber": 883,
       "codeSnippet": "Fact(Skip = \"not working yet\")",
       "message": "Test method 'Can_substitute_with_concated_string' is disabled: not working yet",
-      "baselinedAt": "2026-03-25T14:09:31.5956693+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150673+00:00"
     },
     {
       "hash": "50fb53e8b912daf7",
@@ -677,7 +695,7 @@
       "lineNumber": 407,
       "codeSnippet": "catch (Exception)\r\n                    {\r\n                    }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956713+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150692+00:00"
     },
     {
       "hash": "642c86e03d34588a",
@@ -686,7 +704,7 @@
       "lineNumber": 167,
       "codeSnippet": "catch\r\n        {\r\n            // no-op\r\n        }",
       "message": "Empty catch block swallows exceptions without handling",
-      "baselinedAt": "2026-03-25T14:09:31.5956731+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150711+00:00"
     },
     {
       "hash": "f4cc61a6d1e94d1f",
@@ -695,7 +713,7 @@
       "lineNumber": 16,
       "codeSnippet": "#pragma warning disable xUnit1028",
       "message": "#pragma warning disable for warnings xUnit1028 without matching restore in same scope",
-      "baselinedAt": "2026-03-25T14:09:31.5956762+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150742+00:00"
     },
     {
       "hash": "50cf9910b71e3945",
@@ -704,7 +722,7 @@
       "lineNumber": 221,
       "codeSnippet": "SuppressMessage(\"ReSharper\", \"ConditionIsAlwaysTrueOrFalse\")",
       "message": "SuppressMessage attribute suppressing ReSharper:ConditionIsAlwaysTrueOrFalse",
-      "baselinedAt": "2026-03-25T14:09:31.5956779+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150758+00:00"
     },
     {
       "hash": "e17f013523d0b47f",
@@ -713,7 +731,7 @@
       "lineNumber": 61,
       "codeSnippet": "Thread.Sleep(40)",
       "message": "Test uses Thread.Sleep(40) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956796+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150776+00:00"
     },
     {
       "hash": "069247e6789d6acc",
@@ -722,7 +740,7 @@
       "lineNumber": 77,
       "codeSnippet": "Task.Delay(RunTime).Wait()",
       "message": "Test uses Task.Delay(?) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956811+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150789+00:00"
     },
     {
       "hash": "ca00c698db9401b2",
@@ -731,7 +749,7 @@
       "lineNumber": 77,
       "codeSnippet": "Task.Delay(RunTime)",
       "message": "Test uses Task.Delay(RunTime) which may indicate a timing-dependent test",
-      "baselinedAt": "2026-03-25T14:09:31.5956823+00:00"
+      "baselinedAt": "2026-03-30T17:14:57.3150801+00:00"
     }
   ]
 }

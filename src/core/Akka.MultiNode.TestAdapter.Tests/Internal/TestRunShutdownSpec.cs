@@ -16,7 +16,7 @@ namespace Akka.MultiNode.TestAdapter.Tests.Internal
     /// <summary>
     /// Used to validate that we can get final reporting on shutdown
     /// </summary>
-    public class TestRunShutdownSpec : TestKit.Xunit2.TestKit
+    public class TestRunShutdownSpec : TestKit.Xunit.TestKit
     {
         [Fact]
         public void TestCoordinatorEnabledMessageSink_should_receive_TestRunTree_when_EndTestRun_is_received()

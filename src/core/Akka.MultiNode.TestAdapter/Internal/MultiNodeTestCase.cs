@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -7,39 +7,55 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Remote.TestKit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
-using TestMethodDisplay = Xunit.Sdk.TestMethodDisplay;
-using TestMethodDisplayOptions = Xunit.Sdk.TestMethodDisplayOptions;
+using Xunit.v3;
 
 #nullable enable
 namespace Akka.MultiNode.TestAdapter.Internal
 {
-    public class MultiNodeTestCase : XunitTestCase
+    public class MultiNodeTestCase : XunitTestCase, ISelfExecutingXunitTestCase
     {
         [EditorBrowsable(EditorBrowsableState.Never)]
         [Obsolete("Called by the de-serializer; should only be called by deriving classes for de-serialization purposes")]
         public MultiNodeTestCase() { }
 
         public MultiNodeTestCase(
-            IMessageSink diagnosticMessageSink,
-            TestMethodDisplay defaultMethodDisplay,
-            TestMethodDisplayOptions defaultMethodDisplayOptions,
-            ITestMethod testMethod,
-            object[]? testMethodArguments = null)
+            IXunitTestMethod testMethod,
+            string testCaseDisplayName,
+            string uniqueID,
+            bool @explicit,
+            string? skipReason = null,
+            Type[]? skipExceptions = null,
+            Type? skipType = null,
+            string? skipUnless = null,
+            string? skipWhen = null,
+            string? sourceFilePath = null,
+            int? sourceLineNumber = null,
+            int? timeout = null)
             : base(
-                diagnosticMessageSink,
-                defaultMethodDisplay,
-                defaultMethodDisplayOptions,
                 testMethod,
-                testMethodArguments)
+                testCaseDisplayName,
+                uniqueID,
+                @explicit,
+                skipExceptions,
+                skipReason,
+                skipType,
+                skipUnless,
+                skipWhen,
+                traits: null,
+                testMethodArguments: null,
+                sourceFilePath: sourceFilePath,
+                sourceLineNumber: sourceLineNumber,
+                timeout: timeout)
         { }
-        
+
         public virtual string? AssemblyPath { get; protected set; }
-        public virtual string TypeName => TestMethod.TestClass.Class.Name;
+        public virtual string TypeName => TestMethod.TestClass.Class.FullName!;
         public virtual string MethodName => TestMethod.Method.Name;
 
         protected List<NodeTest>? InternalNodes;
+
+        public Exception? InitializationException { get; protected set; }
 
         /// <exception cref="TestBaseTypeException">Spec did not inherit from <see cref="MultiNodeSpec"/></exception>
         /// <exception cref="TestConfigurationException">Invalid configuration class</exception>
@@ -47,7 +63,8 @@ namespace Akka.MultiNode.TestAdapter.Internal
         {
             get
             {
-                EnsureInitialized();
+                if (InternalNodes == null)
+                    Load();
                 return InternalNodes ?? new List<NodeTest>();
             }
         }
@@ -58,64 +75,70 @@ namespace Akka.MultiNode.TestAdapter.Internal
             get => _skipReason ?? base.SkipReason;
             set => _skipReason = value;
         }
-        
+
         public bool InExecutionMode { get; set; }
 
-        protected override void Initialize()
+        internal void Load()
         {
-            base.Initialize();
             try
             {
-                AssemblyPath = Path.GetFullPath(TestMethod.TestClass.Class.Assembly.AssemblyPath);
+                AssemblyPath = Path.GetFullPath(TestMethod.TestClass.Class.Assembly.Location);
                 InternalNodes = LoadDetails();
             }
             catch (Exception e)
             {
                 SkipReason = e.ToString();
                 InitializationException = e;
-                DisplayName = $"{BaseDisplayName}(???)";
             }
         }
 
-        internal void Load()
-        {
-            EnsureInitialized();
-        }
-
-        public override Task<RunSummary> RunAsync(
-            IMessageSink diagnosticMessageSink,
+        public ValueTask<RunSummary> Run(
+            ExplicitOption explicitOption,
             IMessageBus messageBus,
-            object[] constructorArguments,
+            object?[] constructorArguments,
             ExceptionAggregator aggregator,
             CancellationTokenSource cancellationTokenSource)
         {
             if (!InExecutionMode)
             {
-                return new MultiNodeTestCaseRunner(this, DisplayName, SkipReason, messageBus, diagnosticMessageSink, 
+                return new MultiNodeTestCaseRunner(
+                    this, TestCaseDisplayName, SkipReason, messageBus,
                     aggregator, cancellationTokenSource).RunAsync();
             }
-            return new XunitTestCaseRunner(this, DisplayName, SkipReason, constructorArguments, TestMethodArguments, messageBus, aggregator, cancellationTokenSource).RunAsync();
+
+            // In execution mode (node process), delegate to standard xUnit runner
+            var tests = CreateTests().GetAwaiter().GetResult();
+            return XunitTestCaseRunner.Instance.Run(
+                this,
+                tests,
+                messageBus,
+                aggregator,
+                cancellationTokenSource,
+                TestCaseDisplayName,
+                SkipReason,
+                explicitOption,
+                constructorArguments);
         }
 
-        public override void Serialize(IXunitSerializationInfo data)
+        protected override void Serialize(IXunitSerializationInfo info)
         {
-            base.Serialize(data);
-            data.AddValue(nameof(AssemblyPath), AssemblyPath);
-            data.AddValue(nameof(_skipReason), _skipReason);
+            base.Serialize(info);
+            info.AddValue(nameof(AssemblyPath), AssemblyPath);
+            info.AddValue(nameof(_skipReason), _skipReason);
         }
 
-        public override void Deserialize(IXunitSerializationInfo data)
+        protected override void Deserialize(IXunitSerializationInfo info)
         {
-            base.Deserialize(data);
-            AssemblyPath = data.GetValue<string>(nameof(AssemblyPath));
-            _skipReason = data.GetValue<string>(nameof(_skipReason));
+            base.Deserialize(info);
+            AssemblyPath = info.GetValue<string>(nameof(AssemblyPath));
+            _skipReason = info.GetValue<string>(nameof(_skipReason));
         }
 
         /// <exception cref="TestBaseTypeException">Spec did not inherit from <see cref="MultiNodeSpec"/></exception>
         /// <exception cref="TestConfigurationException">Invalid configuration class</exception>
         protected virtual List<NodeTest> LoadDetails()
         {
-            var specType = TestMethod.TestClass.Class.Assembly.GetType(TypeName).ToRuntimeType();
+            var specType = TestMethod.TestClass.Class;
             if (!typeof(MultiNodeSpec).IsAssignableFrom(specType))
             {
                 throw new TestBaseTypeException();
@@ -135,7 +158,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
                 };
             }
         }
-        
+
         private IEnumerable<RoleName> RoleNames(Type specType)
         {
             var ctorWithConfig = FindConfigConstructor(specType);
@@ -151,7 +174,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
                 throw new TestConfigurationConstructorException(specType, e);
             }
         }
-        
+
         internal static ConstructorInfo FindConfigConstructor(Type configUser)
         {
             var baseConfigType = typeof(MultiNodeConfig);
@@ -161,7 +184,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
                 var ctorWithConfig = current
                     .GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)
                     .FirstOrDefault(c => null != c.GetParameters().FirstOrDefault(p => p.ParameterType.GetTypeInfo().IsSubclassOf(baseConfigType)));
-            
+
                 current = current.GetTypeInfo().BaseType;
                 if (ctorWithConfig != null) return ctorWithConfig;
             }

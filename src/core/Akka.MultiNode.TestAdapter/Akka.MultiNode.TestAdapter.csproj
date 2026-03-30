@@ -14,11 +14,11 @@
     <PackageReference Include="TeamCity.ServiceMessages" Version="4.1.1" />
     <PackageReference Include="System.CodeDom" Version="9.0.8" />
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
-    <PackageReference Include="xunit.runner.utility" Version="$(XunitVersion)" />
+    <PackageReference Include="xunit.v3.extensibility.core" Version="$(Xunit3Version)" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Akka.Cluster.TestKit.Xunit2\Akka.Cluster.TestKit.Xunit2.csproj" />
+    <ProjectReference Include="..\Akka.Cluster.TestKit\Akka.Cluster.TestKit.csproj" />
     <ProjectReference Include="..\Akka.MultiNode.RemoteHost\Akka.MultiNode.RemoteHost.csproj" PrivateAssets="All" />
   </ItemGroup>
 
@@ -53,8 +53,6 @@
     <ItemGroup>
       <!-- Add file to package with consideration of sub folder. If empty, the root folder is chosen. -->
       <BuildOutputInPackage Include="@(_ReferenceCopyLocalPaths)" TargetPath="%(_ReferenceCopyLocalPaths.DestinationSubDirectory)" />
-      <!-- Special case: netstandard15 dll never get restored in netcoreapp projects, but is needed in runtime -->
-      <BuildOutputInPackage Include="$(OutputPath)xunit.runner.utility.netstandard15.dll" />
     </ItemGroup>
   </Target>
 </Project>
