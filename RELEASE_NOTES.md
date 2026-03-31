@@ -4,7 +4,7 @@ Akka.NET v1.5.64 is a maintenance release focused on completing the xUnit 3 migr
 
 **FluentAssertions Removal**
 
-Due to the recent [commercialization of FluentAssertions](https://github.com/fluentassertions/fluentassertions/issues/2595), we have completed the removal of the FluentAssertions transitive dependency from **all** `Akka.TestKit.*` packages. If your tests relied on the transitive FluentAssertions dependency provided by Akka.NET TestKit packages, you will need to add a direct reference to FluentAssertions in your own project.
+Due to the recent [commercialization of FluentAssertions](https://fluentassertions.com/releases/#800), we have completed the removal of the FluentAssertions transitive dependency from **all** `Akka.TestKit.*` packages. If your tests relied on the transitive FluentAssertions dependency provided by Akka.NET TestKit packages, you will need to add a direct reference to FluentAssertions in your own project.
 
 **TestKit Package Naming Convention**
 
