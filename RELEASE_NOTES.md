@@ -1,3 +1,28 @@
+#### 1.5.64 March 31st, 2026 ####
+
+Akka.NET v1.5.64 is a maintenance release focused on completing the xUnit 3 migration for TestKit packages, removing the FluentAssertions transitive dependency, and merging the Multi-Node Test Runner back into the core repository.
+
+**FluentAssertions Removal**
+
+Due to the recent [commercialization of FluentAssertions](https://github.com/fluentassertions/fluentassertions/issues/2595), we have completed the removal of the FluentAssertions transitive dependency from **all** `Akka.TestKit.*` packages. If your tests relied on the transitive FluentAssertions dependency provided by Akka.NET TestKit packages, you will need to add a direct reference to FluentAssertions in your own project.
+
+**TestKit Package Naming Convention**
+
+As part of the ongoing xUnit 3 migration, TestKit packages now follow a naming convention: packages with the `.Xunit` postfix provide xUnit 3 support, while packages with the `.Xunit2` postfix provide xUnit 2 support.
+
+* [Remove FluentAssertions dependency from all TestKit](https://github.com/akkadotnet/akka.net/pull/8130) - Removes the FluentAssertions transitive dependency from all `Akka.TestKit.*` packages.
+* [Merge MNTR back to core](https://github.com/akkadotnet/akka.net/pull/8134) - Merges the Akka.NET Multi-Node Test Runner (MNTR) back into the core repository to simplify future Akka.NET development.
+* [[xUnit 3] Convert Akka.Cluster.TestKit](https://github.com/akkadotnet/akka.net/pull/8137) - Converts `Akka.Cluster.TestKit` to xUnit 3.
+* [[xUnit 3] Convert Akka.MultiNode.TestAdapter](https://github.com/akkadotnet/akka.net/pull/8138) - Converts `Akka.MultiNode.TestAdapter` to xUnit 3.
+
+1 contributor since release 1.5.63
+
+| COMMITS | LOC+ | LOC- | AUTHOR              |
+|---------|------|------|---------------------|
+| 5       | 17427| 3874 | Gregorius Soedharmo |
+
+To see the full set of changes in Akka.NET v1.5.64, [click here](https://github.com/akkadotnet/akka.net/milestone/147?closed=1).
+
 #### 1.5.63 March 24th, 2026 ####
 
 Akka.NET v1.5.63 is a maintenance release that includes a **critical Akka.Remote bug fix** along with Akka.Streams fixes and a major migration of all test projects to xUnit 3. 
