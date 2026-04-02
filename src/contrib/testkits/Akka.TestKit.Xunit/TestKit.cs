@@ -140,6 +140,44 @@ public class TestKit : TestKitBase, IDisposable
     }
 
     /// <summary>
+    /// Ensures the implicit sender (<see cref="InternalCurrentActorCellKeeper.Current"/>) is set
+    /// on the current thread. This is needed because the <c>[ThreadStatic]</c> value can be lost
+    /// when <c>IAsyncLifetime.InitializeAsync</c> contains an <c>await</c> that causes a thread switch.
+    /// Called automatically when accessing <see cref="Sys"/> or <see cref="TestActor"/>.
+    /// </summary>
+    private void EnsureImplicitSender()
+    {
+        if (this is not INoImplicitSender)
+            InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)base.TestActor).Underlying;
+    }
+
+    /// <summary>
+    /// The <see cref="ActorSystem"/> used for testing. Accessing this property ensures the
+    /// implicit sender is set on the current thread.
+    /// </summary>
+    public new ActorSystem Sys
+    {
+        get
+        {
+            EnsureImplicitSender();
+            return base.Sys;
+        }
+    }
+
+    /// <summary>
+    /// The default test actor. Accessing this property ensures the implicit sender
+    /// is set on the current thread.
+    /// </summary>
+    public new IActorRef TestActor
+    {
+        get
+        {
+            EnsureImplicitSender();
+            return base.TestActor;
+        }
+    }
+
+    /// <summary>
     /// A configuration that has just the default log settings enabled. The default settings can be found in
     /// <a href="https://github.com/akkadotnet/akka.net/blob/master/src/core/Akka.TestKit/Internal/Reference.conf">Akka.TestKit.Internal.Reference.conf</a>.
     /// </summary>
