@@ -147,7 +147,10 @@ public class TestKit : TestKitBase, IDisposable
     /// </summary>
     private void EnsureImplicitSender()
     {
-        if (this is not INoImplicitSender)
+        // Only set the implicit sender if Current is not already set.
+        // During actor message processing, Mailbox.Run() sets Current to the actor's cell.
+        // Overwriting it here would corrupt the actor context for the rest of that mailbox run.
+        if (this is not INoImplicitSender && InternalCurrentActorCellKeeper.Current == null)
             InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)base.TestActor).Underlying;
     }
 
