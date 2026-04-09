@@ -1,0 +1,8 @@
+{
+  "outputDirectory": "TestResults",
+  "failedSpecsDirectory": "FAILED_SPECS_LOGS",
+  "listenAddress": "127.0.0.1",
+  "listenPort":  0,
+  "clearOutputDirectory": false,
+  "useBuiltInTrxReporter": false
+}

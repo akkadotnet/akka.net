@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Akka.MultiNode.TestAdapter</id>
+    <version>@version@</version>
+    <title>Akka.MultiNode.TestAdapter</title>
+    <authors>Akka.NET Team</authors>
+    <owners>Akka.NET Team</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/akkadotnet/akka.net/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/akkadotnet/akka.net</projectUrl>
+    <iconUrl>http://getakka.net/images/AkkaNetLogo.Normal.png</iconUrl>
+    <description>Akka.NET Multi-node Test Adapter; used for executing tests written with Akka.Remote.TestKit</description>
+    <copyright>Copyright � 2013-2023 .NET Foundation</copyright>
+    <tags>akka actors actor model Akka concurrency</tags>
+  </metadata>
+  <files>
+    <file src="bin\Release\netstandard2.0\publish\*.*" target="lib\netstandard2.0\" exclude="**\*.exe"/>
+  </files>
+</package>

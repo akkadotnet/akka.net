@@ -23,7 +23,6 @@ using Akka.Configuration;
 using Akka.Configuration.Hocon;
 using Akka.Event;
 using Akka.TestKit;
-using Akka.TestKit.Xunit;
 using Akka.Util.Internal;
 
 namespace Akka.Remote.TestKit;
