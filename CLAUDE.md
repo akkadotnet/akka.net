@@ -83,6 +83,7 @@ dotnet docfx build ./docs/docfx.json --warningsAsErrors
 - Use `EventFilter` for asserting log messages
 - Pass `ITestOutputHelper output` to test constructors for debugging
 - Multi-node tests use separate projects (*.Tests.MultiNode.csproj)
+- **Always use async TestKit methods** (e.g. `ExpectMsgAsync`, `AwaitAssertAsync`, `ResolveOne`) — never use synchronous variants like `ExpectMsg`, `AwaitAssert`, `.Result`, or `.Wait()`
 
 ## Code Style and Conventions
 
