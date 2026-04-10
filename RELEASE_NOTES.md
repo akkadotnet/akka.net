@@ -1,3 +1,30 @@
+#### 1.5.65 April 10th, 2026 ####
+
+Akka.NET v1.5.65 is a maintenance release with important bug fixes for Akka.Cluster.Sharding, Akka.Core configuration, and Akka.TestKit.
+
+**Akka.Cluster.Sharding Bug Fixes**
+
+* [Fix cluster sharding lease coordination bugs](https://github.com/akkadotnet/akka.net/pull/8150) - Fixes three chained bugs that cause shard unavailability (~6 minutes) during rolling restarts when using distributed lease coordination (e.g. Kubernetes leases):
+  * [#8146](https://github.com/akkadotnet/akka.net/issues/8146): The backup `ShardStopped` safety net from #8055 fires spuriously after every successful rebalance, causing the same shard to be allocated to 2+ nodes simultaneously.
+  * [#8147](https://github.com/akkadotnet/akka.net/issues/8147): `AwaitingLease` stashes `HandOff` messages indefinitely, preventing the coordinator from reclaiming stuck shards.
+  * [#8148](https://github.com/akkadotnet/akka.net/issues/8148): `StartShardRebalanceIfNeeded` silently skips shards during graceful shutdown when a rebalance is already in progress.
+
+**Akka.Core Bug Fixes**
+
+* [Fix Settings.InjectTopLevelFallback race condition bug](https://github.com/akkadotnet/akka.net/pull/8156) - Fixes a race condition in `Settings.InjectTopLevelFallback` that could cause configuration corruption under concurrent access.
+
+**Akka.TestKit Bug Fixes**
+
+* [Fix broken xUnit 3 explicit sender (IAsyncLifetime)](https://github.com/akkadotnet/akka.net/pull/8149) - Fixes broken xUnit 3 explicit sender support when using `IAsyncLifetime`.
+
+1 contributor since release 1.5.64
+
+| COMMITS | LOC+ | LOC- | AUTHOR         |
+|---------|------|------|----------------|
+| 3       | 263  | 19   | Aaron Stannard |
+
+To see the full set of changes in Akka.NET v1.5.65, [click here](https://github.com/akkadotnet/akka.net/milestone/148?closed=1).
+
 #### 1.5.64 March 31st, 2026 ####
 
 Akka.NET v1.5.64 is a maintenance release focused on completing the xUnit 3 migration for TestKit packages, removing the FluentAssertions transitive dependency, and merging the Multi-Node Test Runner back into the core repository.
