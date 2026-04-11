@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -14,6 +15,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
+using Akka.Streams.Implementation;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
 using Akka.Util;
@@ -278,6 +280,17 @@ namespace Akka.Streams.Implementation.Fusing
             /// * A cancellation cause, is elem is an instance of <see cref="Cancelled"/>
             /// </summary>
             public object Slot { get; set; } = Empty.Instance;
+
+            /// <summary>
+            /// The OpenTelemetry trace context associated with the element currently in <see cref="Slot"/>,
+            /// if any. Captured by <c>GraphStageLogic.Push</c> from <c>Activity.Current</c> at push time,
+            /// and cleared by <c>GraphStageLogic.Grab</c> alongside the element. Used by
+            /// <c>GraphInterpreter.ProcessPush</c> to start a stage-scoped <c>Activity</c> with this
+            /// context as parent before invoking the downstream stage's handler, so that trace context
+            /// flows end-to-end through a stream even across dispatcher boundaries where
+            /// <c>AsyncLocal</c> would be lost.
+            /// </summary>
+            public ActivityContext? SlotContext { get; set; }
 
             /// <summary>
             /// TBD
@@ -902,6 +915,36 @@ namespace Akka.Streams.Implementation.Fusing
             //if (IsDebug) Console.WriteLine($"{Name} PUSH {OutOwnerName(connection)} -> {InOwnerName(connection)},  {connection.Slot} ({connection.InHandler}) [{InLogicName(connection)}]");
             ActiveStage = connection.InOwner;
             connection.PortState ^= PushEndFlip;
+
+            // Trace-context carry: if the upstream Push captured an ActivityContext, start a
+            // stage-scoped Activity with it as parent so the downstream stage's handler (and any
+            // child spans it creates, e.g. OpenTelemetry.Instrumentation.SqlClient) correctly
+            // parents back to the producer's trace. If the source has no listeners or the element
+            // has no captured context, StartActivity returns null and this path allocates nothing.
+            var slotContext = connection.SlotContext;
+            if (slotContext.HasValue)
+            {
+                var stage = connection.InOwner;
+                var stageName = StreamsDiagnostics.GetStageName(stage);
+                var stageActivity = StreamsDiagnostics.ActivitySource.StartActivity(
+                    $"akka.stream.stage {stageName}",
+                    ActivityKind.Internal,
+                    slotContext.Value);
+                if (stageActivity != null)
+                {
+                    stageActivity.SetTag("stream.stage.type", stageName);
+                    try
+                    {
+                        connection.InHandler.OnPush();
+                    }
+                    finally
+                    {
+                        stageActivity.Dispose();
+                    }
+                    return;
+                }
+            }
+
             connection.InHandler.OnPush();
         }
 
