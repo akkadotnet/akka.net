@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
@@ -1396,6 +1397,7 @@ namespace Akka.Streams.Stage
             {
                 // fast path
                 connection.Slot = Empty.Instance;
+                connection.SlotContext = null;
                 return (T)element;
             }
 
@@ -1408,12 +1410,14 @@ namespace Akka.Streams.Stage
                 // failed
                 var failed = (GraphInterpreter.Failed)element;
                 connection.Slot = new GraphInterpreter.Failed(failed.Reason, Empty.Instance);
+                // keep SlotContext — caller still needs it for the retry path
                 return (T)failed.PreviousElement;
             }
 
             // Completed
             var elem = (T)connection.Slot;
             connection.Slot = Empty.Instance;
+            connection.SlotContext = null;
             return elem;
         }
 
@@ -1533,6 +1537,10 @@ namespace Akka.Streams.Stage
             if ((portState & (OutReady | OutClosed | InClosed)) == OutReady && element != null)
             {
                 connection.Slot = element;
+                // Capture the current Activity context so downstream stages can restore it when
+                // invoking their handlers. If Activity.Current is null (no trace in progress),
+                // SlotContext stays null and the downstream ProcessPush path becomes a no-op.
+                connection.SlotContext = Activity.Current?.Context;
                 Interpreter.ChasePush(connection);
             }
             else
