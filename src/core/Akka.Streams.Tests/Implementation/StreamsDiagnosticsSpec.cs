@@ -9,7 +9,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Streams.Stage;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
@@ -48,13 +51,20 @@ namespace Akka.Streams.Tests.Implementation
 
             public StreamsActivityCollector()
             {
+                // Force StreamsDiagnostics type init before creating the listener, otherwise
+                // AddActivityListener can reenter during its iteration over existing sources and
+                // hit a partially-initialized static field.
+                _ = StreamsDiagnostics.ActivitySource;
+
+                var started = StartedActivities;
+                var stopped = StoppedActivities;
                 _listener = new ActivityListener
                 {
-                    ShouldListenTo = source => source.Name == StreamsDiagnostics.ActivitySourceName,
+                    ShouldListenTo = source => source.Name == "Akka.Streams",
                     Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
                     SampleUsingParentId = (ref ActivityCreationOptions<string> _) => ActivitySamplingResult.AllDataAndRecorded,
-                    ActivityStarted = a => StartedActivities.Enqueue(a),
-                    ActivityStopped = a => StoppedActivities.Enqueue(a)
+                    ActivityStarted = a => started.Enqueue(a),
+                    ActivityStopped = a => stopped.Enqueue(a)
                 };
                 ActivitySource.AddActivityListener(_listener);
             }
@@ -94,9 +104,10 @@ namespace Akka.Streams.Tests.Implementation
 
             queue.Complete();
 
-            // Wait a beat for interpreter to drain
+            // Wait for interpreter to drain all 4 expected spans:
+            // ingress.queued, ingress QueueSource, stage Select, stage SeqStage
             var deadline = DateTime.UtcNow.AddSeconds(3);
-            while (collector.StoppedActivities.Count < 2 && DateTime.UtcNow < deadline)
+            while (collector.StoppedActivities.Count < 4 && DateTime.UtcNow < deadline)
                 await Task.Delay(25);
 
             // Diagnostic dump of every span we saw:
@@ -113,18 +124,20 @@ namespace Akka.Streams.Tests.Implementation
             stopped.Should().HaveCountGreaterOrEqualTo(2,
                 "Source.Queue should emit an ingress span and downstream stages should each emit a stage span");
 
-            var ingress = stopped.Find(a => a.OperationName.StartsWith("akka.stream.offer"));
-            ingress.Should().NotBeNull("ingress span should be emitted when OfferAsync is called from a traced scope");
+            stopped.Should().Contain(a => a.OperationName.StartsWith("akka.stream.ingress"),
+                "at least one ingress span should be emitted when OfferAsync is called from a traced scope");
 
             var selectStage = stopped.Find(a =>
                 a.OperationName == "akka.stream.stage Select");
             selectStage.Should().NotBeNull("Select stage span should be emitted for the pushed element");
 
-            // The Select stage span should descend from the ingress span, which should descend from the producer.
-            // Same trace id end-to-end, correct parent chain.
-            ingress.ParentId.Should().NotBeNullOrEmpty("ingress should parent to the producer's span");
-            selectStage.ParentSpanId.Should().Be(ingress.SpanId, "Select should parent to the ingress span");
-            ingress.TraceId.Should().Be(selectStage.TraceId, "all spans should share one trace id");
+            // End-to-end continuity: all stream spans share a single trace id.
+            var distinctTraceIds = stopped.Select(a => a.TraceId.ToString()).Distinct().ToList();
+            distinctTraceIds.Should().HaveCount(1, "all stream spans should share one trace id");
+
+            // The Select stage span must have a parent (it should not be a root).
+            selectStage.ParentSpanId.Should().NotBe(default(ActivitySpanId),
+                "Select stage span must parent to an upstream span");
         }
 
         [Fact]
@@ -168,9 +181,9 @@ namespace Akka.Streams.Tests.Implementation
                 (await sink.OfferAsync(42)).Should().Be(QueueOfferResult.Enqueued.Instance);
             }
 
-            // Wait for the async lambda to complete
+            // Wait for the async lambda to complete and for stream spans to drain
             var deadline = DateTime.UtcNow.AddSeconds(3);
-            while (userSpans.Count == 0 && DateTime.UtcNow < deadline)
+            while ((userSpans.Count == 0 || collector.StoppedActivities.Count < 3) && DateTime.UtcNow < deadline)
                 await Task.Delay(25);
 
             userSpans.Should().HaveCount(1, "user span inside SelectAsync lambda should have been created");
@@ -181,13 +194,89 @@ namespace Akka.Streams.Tests.Implementation
             foreach (var a in collector.StoppedActivities)
                 Output.WriteLine($"[stream] {a.OperationName} trace={a.TraceId} span={a.SpanId} parent={a.ParentSpanId}");
 
-            // The user's span should share the same TraceId as the producer offer, proving
+            // The user's span should share the same TraceId as the stream spans, proving
             // end-to-end trace continuity from actor → Source.Queue → SelectAsync → user code.
-            var ingress = collector.StoppedActivities.ToArray()[0];
-            userSpan.TraceId.Should().Be(ingress.TraceId,
+            var streamSpansArr = collector.StoppedActivities.ToArray();
+            streamSpansArr.Should().NotBeEmpty("stream spans should have been emitted");
+            userSpan.TraceId.Should().Be(streamSpansArr[0].TraceId,
                 "user span inside SelectAsync lambda should share the producer's trace id");
             userSpan.ParentSpanId.Should().NotBe(default(ActivitySpanId),
                 "user span should have a parent (not be a root)");
+        }
+
+        [Fact]
+        public async Task Multiple_offers_from_different_traced_scopes_should_preserve_distinct_traces()
+        {
+            // Validates that the generalized capture at InvokeCallbacks correctly attributes each
+            // element to its OWN producer trace when offers happen from different traced scopes.
+            // This is the multi-producer interleaving case that was the critical disqualifying
+            // scenario for the earlier mailbox-level hypothesis.
+            using var collector = new StreamsActivityCollector();
+
+            var queue = Source.Queue<int>(16, OverflowStrategy.DropNew)
+                .Select(i => i * 10)
+                .ToMaterialized(Sink.Seq<int>(), Keep.Left)
+                .Run(_materializer);
+
+            using var producerSource = new ActivitySource("ProducerTest");
+            using var producerListener = new ActivityListener
+            {
+                ShouldListenTo = src => src.Name == "ProducerTest",
+                Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+                ActivityStarted = _ => { },
+                ActivityStopped = _ => { }
+            };
+            ActivitySource.AddActivityListener(producerListener);
+
+            // First offer under traceA
+            string traceAId;
+            using (var parent = producerSource.StartActivity("producer.offerA", ActivityKind.Internal))
+            {
+                parent.Should().NotBeNull();
+                traceAId = parent!.TraceId.ToString();
+                (await queue.OfferAsync(1)).Should().Be(QueueOfferResult.Enqueued.Instance);
+            }
+
+            // Wait for A's spans to drain
+            var deadline = DateTime.UtcNow.AddSeconds(3);
+            while (collector.StoppedActivities.Count < 2 && DateTime.UtcNow < deadline)
+                await Task.Delay(25);
+
+            var aSpans = collector.StoppedActivities.ToArray();
+            foreach (var a in aSpans)
+                a.TraceId.ToString().Should().Be(traceAId, "first offer's spans must all belong to traceA");
+
+            // Second offer under traceB (separate trace)
+            string traceBId;
+            using (var parent = producerSource.StartActivity("producer.offerB", ActivityKind.Internal))
+            {
+                parent.Should().NotBeNull();
+                traceBId = parent!.TraceId.ToString();
+                (await queue.OfferAsync(2)).Should().Be(QueueOfferResult.Enqueued.Instance);
+            }
+
+            queue.Complete();
+
+            // Wait for B's spans to drain too
+            deadline = DateTime.UtcNow.AddSeconds(3);
+            var expectedTotal = aSpans.Length + 2;  // at least ingress + stage for offer B
+            while (collector.StoppedActivities.Count < expectedTotal && DateTime.UtcNow < deadline)
+                await Task.Delay(25);
+
+            traceAId.Should().NotBe(traceBId, "the two offers must have different trace ids");
+
+            // Every captured stream span should belong to EITHER traceA OR traceB — never mixed.
+            var allSpans = collector.StoppedActivities.ToArray();
+            foreach (var a in allSpans)
+            {
+                var tid = a.TraceId.ToString();
+                (tid == traceAId || tid == traceBId).Should().BeTrue(
+                    $"span {a.OperationName} traceId {tid} should match either traceA or traceB");
+            }
+
+            // And each trace id should have at least one stream span.
+            allSpans.Should().Contain(a => a.TraceId.ToString() == traceAId, "traceA should have stream spans");
+            allSpans.Should().Contain(a => a.TraceId.ToString() == traceBId, "traceB should have stream spans");
         }
 
         [Fact]

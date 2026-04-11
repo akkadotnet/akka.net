@@ -46,12 +46,10 @@ namespace Akka.Streams.Implementation
             /// </summary>
             /// <param name="element">TBD</param>
             /// <param name="completionSource">TBD</param>
-            /// <param name="ingressContext">Trace context captured from Activity.Current on the producer thread at OfferAsync time; null if no trace was active.</param>
-            public Offer(T element, TaskCompletionSource<IQueueOfferResult> completionSource, ActivityContext? ingressContext = null)
+            public Offer(T element, TaskCompletionSource<IQueueOfferResult> completionSource)
             {
                 Element = element;
                 CompletionSource = completionSource;
-                IngressContext = ingressContext;
             }
 
             /// <summary>
@@ -63,11 +61,6 @@ namespace Akka.Streams.Implementation
             /// TBD
             /// </summary>
             public TaskCompletionSource<IQueueOfferResult> CompletionSource { get; }
-
-            /// <summary>
-            /// Producer-thread trace context captured at <see cref="Materialized.OfferAsync"/> time.
-            /// </summary>
-            public ActivityContext? IngressContext { get; }
         }
 
         /// <summary>
@@ -257,72 +250,49 @@ namespace Akka.Streams.Implementation
                                 return;
                             }
 
-                            // If the producer had a live trace context at OfferAsync time, start an
-                            // ingress span with that context as parent. Setting Activity.Current here
-                            // means any Push() we call below will capture this span's context into
-                            // Connection.SlotContext, carrying the trace forward to the next stage.
-                            // StartActivity returns null when the "Akka.Streams" source has no
-                            // listeners, in which case this path allocates nothing.
-                            Activity? ingressActivity = null;
-                            if (offer.IngressContext.HasValue)
+                            if (_buffer is not null)
                             {
-                                ingressActivity = StreamsDiagnostics.ActivitySource.StartActivity(
-                                    "akka.stream.offer Source.Queue",
-                                    ActivityKind.Internal,
-                                    offer.IngressContext.Value);
-                                ingressActivity?.SetTag("stream.element.type", typeof(TOut).Name);
+                                BufferElement(offer);
+                                if (IsAvailable(_stage.Out))
+                                    Push(_stage.Out, _buffer.Dequeue());
                             }
-
-                            try
+                            else if (IsAvailable(_stage.Out))
                             {
-                                if (_buffer is not null)
-                                {
-                                    BufferElement(offer);
-                                    if (IsAvailable(_stage.Out))
-                                        Push(_stage.Out, _buffer.Dequeue());
-                                }
-                                else if (IsAvailable(_stage.Out))
-                                {
-                                    Push(_stage.Out, offer.Element);
-                                    offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
-                                }
-                                else if (_pendingOffer == null)
-                                    _pendingOffer = offer;
-                                else
-                                {
-                                    switch (_stage._overflowStrategy)
-                                    {
-                                        case OverflowStrategy.DropHead:
-                                        case OverflowStrategy.DropBuffer:
-                                            _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
-                                            _pendingOffer = offer;
-                                            break;
-                                        case OverflowStrategy.DropTail:
-                                        case OverflowStrategy.DropNew:
-                                            offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
-                                            break;
-                                        case OverflowStrategy.Backpressure:
-                                            offer.CompletionSource.NonBlockingTrySetException(
-                                                new IllegalStateException(
-                                                    "You have to wait for previous offer to be resolved to send another request"));
-                                            break;
-                                        case OverflowStrategy.Fail:
-                                            var bufferOverflowException =
-                                                new BufferOverflowException(
-                                                    $"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
-                                            offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
-                                            _terminating = true;
-                                            _completion.SetException(bufferOverflowException);
-                                            FailStage(bufferOverflowException);
-                                            break;
-                                        default:
-                                            throw new ArgumentOutOfRangeException();
-                                    }
-                                }
+                                Push(_stage.Out, offer.Element);
+                                offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Enqueued.Instance);
                             }
-                            finally
+                            else if (_pendingOffer == null)
+                                _pendingOffer = offer;
+                            else
                             {
-                                ingressActivity?.Dispose();
+                                switch (_stage._overflowStrategy)
+                                {
+                                    case OverflowStrategy.DropHead:
+                                    case OverflowStrategy.DropBuffer:
+                                        _pendingOffer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
+                                        _pendingOffer = offer;
+                                        break;
+                                    case OverflowStrategy.DropTail:
+                                    case OverflowStrategy.DropNew:
+                                        offer.CompletionSource.NonBlockingTrySetResult(QueueOfferResult.Dropped.Instance);
+                                        break;
+                                    case OverflowStrategy.Backpressure:
+                                        offer.CompletionSource.NonBlockingTrySetException(
+                                            new IllegalStateException(
+                                                "You have to wait for previous offer to be resolved to send another request"));
+                                        break;
+                                    case OverflowStrategy.Fail:
+                                        var bufferOverflowException =
+                                            new BufferOverflowException(
+                                                $"Buffer overflow (max capacity was: {_stage._maxBuffer})!");
+                                        offer.CompletionSource.NonBlockingTrySetResult(new QueueOfferResult.Failure(bufferOverflowException));
+                                        _terminating = true;
+                                        _completion.SetException(bufferOverflowException);
+                                        FailStage(bufferOverflowException);
+                                        break;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
                             }
                         }
 
@@ -376,9 +346,7 @@ namespace Akka.Streams.Implementation
             public Task<IQueueOfferResult> OfferAsync(TOut element)
             {
                 var promise = TaskEx.NonBlockingTaskCompletionSource<IQueueOfferResult>(); // new TaskCompletionSource<IQueueOfferResult>();
-                // Capture the producer thread's Activity.Current context before the async handoff,
-                // so the source logic can restore it when pushing the element downstream.
-                _invokeLogic(new Offer<TOut>(element, promise, Activity.Current?.Context));
+                _invokeLogic(new Offer<TOut>(element, promise));
                 return promise.Task;
             }
 
