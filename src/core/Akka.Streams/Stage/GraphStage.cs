@@ -825,9 +825,14 @@ namespace Akka.Streams.Stage
             public interface IState<TE>;
 
             /// <summary>
-            /// Event with feedback promise.
+            /// Event with feedback promise and optional producer-thread trace context.
+            /// <paramref name="IngressContext"/> is captured from <see cref="Activity.Current"/>
+            /// at <see cref="ConcurrentAsyncCallback{T}.InvokeWithPromise"/> time on whatever
+            /// external thread is dispatching into the interpreter. When non-null, the interpreter
+            /// wraps the handler invocation in an "akka.stream.ingress" Activity so downstream
+            /// stages can parent to the producer's trace.
             /// </summary>
-            public sealed record Event<TE>(TE Evt, TaskCompletionSource<Done> HandlingPromise);
+            public sealed record Event<TE>(TE Evt, TaskCompletionSource<Done> HandlingPromise, ActivityContext? IngressContext = null);
 
             /// <summary>
             /// Waiting for materialization completion or during dispatching of internally queued events
@@ -916,9 +921,9 @@ namespace Akka.Streams.Stage
                         case ConcurrentAsyncCallbackState.Pending<T> pending:
                             if (pending.PendingEvents.Count > 0)
                             {
-                                foreach (var (evt, promise) in pending.PendingEvents)
+                                foreach (var ev in pending.PendingEvents)
                                 {
-                                    OnAsyncInput(evt, promise);
+                                    OnAsyncInput(ev.Evt, ev.HandlingPromise, ev.IngressContext);
                                 }
                             }
 
@@ -936,9 +941,36 @@ namespace Akka.Streams.Stage
                 }
             }
 
-            private void OnAsyncInput(T e, TaskCompletionSource<Done> promise)
+            private void OnAsyncInput(T e, TaskCompletionSource<Done> promise, ActivityContext? ingressContext)
             {
-                _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, _wrappedHandler);
+                if (!ingressContext.HasValue)
+                {
+                    // Fast path: no producer trace context captured — dispatch without wrapping.
+                    _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, _wrappedHandler);
+                    return;
+                }
+
+                // Wrap the handler so that, on the interpreter thread, we start an ingress Activity
+                // with the captured producer context as parent. Setting Activity.Current for the
+                // duration of the real handler call means any Push it does will capture the ingress
+                // span's context into Connection.SlotContext, carrying the producer's trace forward
+                // to downstream stages transparently.
+                //
+                // StartActivity returns null when the "Akka.Streams" ActivitySource has no listeners,
+                // in which case the wrapper degrades to just calling the original handler.
+                var capturedContext = ingressContext.Value;
+                var owner = _ownedStage;
+                var realHandler = _wrappedHandler;
+                Action<object> contextAwareHandler = obj =>
+                {
+                    var stageName = StreamsDiagnostics.GetStageName(owner);
+                    using var ingress = StreamsDiagnostics.ActivitySource.StartActivity(
+                        $"akka.stream.ingress {stageName}",
+                        ActivityKind.Internal,
+                        capturedContext);
+                    realHandler(obj);
+                };
+                _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, contextAwareHandler);
             }
 
             // External call
@@ -986,6 +1018,12 @@ namespace Akka.Streams.Stage
 
             private void InvokeWithPromise(T evt, TaskCompletionSource<Done> promise)
             {
+                // Capture the producer thread's trace context BEFORE the async handoff so we can
+                // restore it on the interpreter thread. AsyncLocal does not flow across the stream
+                // actor boundary, so this is the one place we can observe Activity.Current from the
+                // external caller's perspective.
+                var ingressContext = Activity.Current?.Context;
+
                 while (true)
                 {
                     var state = _state.Value;
@@ -993,13 +1031,13 @@ namespace Akka.Streams.Stage
                     {
                         case ConcurrentAsyncCallbackState.Initialized<T>:
                             // started - can just dispatch async message to interpreter
-                            OnAsyncInput(evt, promise);
+                            OnAsyncInput(evt, promise, ingressContext);
                             break;
 
                         case ConcurrentAsyncCallbackState.Pending<T> list:
                         {
-                            // not started yet - queue the event
-                            var e = new ConcurrentAsyncCallbackState.Event<T>(evt, promise);
+                            // not started yet - queue the event with its captured ingress context
+                            var e = new ConcurrentAsyncCallbackState.Event<T>(evt, promise, ingressContext);
                             var newList = list.PendingEvents.Add(e);
                             if (!_state.CompareAndSet(list, new ConcurrentAsyncCallbackState.Pending<T>(newList))) continue;
                             break;
@@ -2987,11 +3025,29 @@ namespace Akka.Streams.Stage
         {
         }
 
+        /// <summary>
+        /// Args queued before <see cref="InitCallback"/> was called. Each entry carries the
+        /// arg itself plus the producer thread's <see cref="ActivityContext"/> captured at
+        /// <see cref="InvokeCallbacks"/> time. This is the only place we can observe
+        /// <see cref="Activity.Current"/> from the external caller, because by the time
+        /// <see cref="InitCallback"/> drains the queue we are on the interpreter thread.
+        /// </summary>
+        private sealed class QueuedArg
+        {
+            public T Arg { get; }
+            public ActivityContext? IngressContext { get; }
+            public QueuedArg(T arg, ActivityContext? ingressContext)
+            {
+                Arg = arg;
+                IngressContext = ingressContext;
+            }
+        }
+
         private sealed class NotInitialized : ICallbackState
         {
-            public IList<T> Args { get; }
+            public IList<QueuedArg> Args { get; }
 
-            public NotInitialized(IList<T> args) => Args = args;
+            public NotInitialized(IList<QueuedArg> args) => Args = args;
         }
 
         private sealed class Initialized : ICallbackState
@@ -3008,7 +3064,7 @@ namespace Akka.Streams.Stage
             public Stopped(Action<T> callback) => Callback = callback;
         }
 
-        private readonly AtomicReference<ICallbackState> _callbackState = new(new NotInitialized(new List<T>()));
+        private readonly AtomicReference<ICallbackState> _callbackState = new(new NotInitialized(new List<QueuedArg>()));
 
         /// <summary>
         /// TBD
@@ -3040,7 +3096,27 @@ namespace Akka.Streams.Stage
         protected void InitCallback(Action<T> callback) => Locked(() =>
         {
             var state = _callbackState.GetAndSet(new Initialized(callback));
-            (state as NotInitialized)?.Args.ForEach(callback);
+            if (state is NotInitialized notInitialized)
+            {
+                // Drain any args that were queued before the interpreter started, restoring
+                // the producer thread's trace context around each callback invocation so
+                // downstream stages see Activity.Current as it was at the original caller's side.
+                foreach (var queued in notInitialized.Args)
+                {
+                    if (queued.IngressContext.HasValue)
+                    {
+                        using var restored = StreamsDiagnostics.ActivitySource.StartActivity(
+                            "akka.stream.ingress.queued",
+                            ActivityKind.Internal,
+                            queued.IngressContext.Value);
+                        callback(queued.Arg);
+                    }
+                    else
+                    {
+                        callback(queued.Arg);
+                    }
+                }
+            }
         });
 
         /// <summary>
@@ -3049,11 +3125,17 @@ namespace Akka.Streams.Stage
         /// <param name="arg">TBD</param>
         protected void InvokeCallbacks(T arg) => Locked(() =>
         {
+            // Capture the producer thread's trace context now, before any potential handoff.
+            // If we end up queueing the arg because the interpreter hasn't started yet, the
+            // captured context rides along with the arg so it can be restored when the queue
+            // is drained on the interpreter thread.
+            var ingressContext = Activity.Current?.Context;
+
             var state = _callbackState.Value;
             if (state is Initialized initialized)
                 initialized.Callback(arg);
             else if (state is NotInitialized notInitialized)
-                notInitialized.Args.Add(arg);
+                notInitialized.Args.Add(new QueuedArg(arg, ingressContext));
             else if (state is Stopped stopped)
                 stopped.Callback(arg);
         });
