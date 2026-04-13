@@ -2741,6 +2741,7 @@ namespace Akka.Dispatch
     }
     public class ActorTaskScheduler : System.Threading.Tasks.TaskScheduler
     {
+        protected ActorTaskScheduler(Akka.Actor.ActorCell actorCell) { }
         public object CurrentMessage { get; }
         public override int MaximumConcurrencyLevel { get; }
         protected override System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task> GetScheduledTasks() { }
