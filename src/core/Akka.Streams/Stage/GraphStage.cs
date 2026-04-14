@@ -1022,7 +1022,7 @@ namespace Akka.Streams.Stage
                 // restore it on the interpreter thread. AsyncLocal does not flow across the stream
                 // actor boundary, so this is the one place we can observe Activity.Current from the
                 // external caller's perspective.
-                var ingressContext = Activity.Current?.Context;
+                ActivityContext? ingressContext = Activity.Current?.Context;
 
                 while (true)
                 {
@@ -1436,6 +1436,7 @@ namespace Akka.Streams.Stage
                 // fast path
                 connection.Slot = Empty.Instance;
                 connection.SlotContext = null;
+                connection.SlotLinks = null;
                 return (T)element;
             }
 
@@ -1448,7 +1449,7 @@ namespace Akka.Streams.Stage
                 // failed
                 var failed = (GraphInterpreter.Failed)element;
                 connection.Slot = new GraphInterpreter.Failed(failed.Reason, Empty.Instance);
-                // keep SlotContext — caller still needs it for the retry path
+                // keep SlotContext / SlotLinks — caller still needs them for the retry path
                 return (T)failed.PreviousElement;
             }
 
@@ -1456,6 +1457,7 @@ namespace Akka.Streams.Stage
             var elem = (T)connection.Slot;
             connection.Slot = Empty.Instance;
             connection.SlotContext = null;
+            connection.SlotLinks = null;
             return elem;
         }
 
@@ -1576,9 +1578,23 @@ namespace Akka.Streams.Stage
             {
                 connection.Slot = element;
                 // Capture the current Activity context so downstream stages can restore it when
-                // invoking their handlers. If Activity.Current is null (no trace in progress),
-                // SlotContext stays null and the downstream ProcessPush path becomes a no-op.
-                connection.SlotContext = Activity.Current?.Context;
+                // invoking their handlers. Fan-in stages (Batch, GroupedWithin, Merge, ...) call
+                // SetFanInTraceContext just before this Push to override the default capture
+                // with the FIRST input element's context as the primary parent and the rest as
+                // ActivityLinks. When that override is present, consume it; otherwise fall back
+                // to Activity.Current (the normal per-stage path).
+                if (connection.PendingPushPrimaryContext.HasValue)
+                {
+                    connection.SlotContext = connection.PendingPushPrimaryContext;
+                    connection.SlotLinks = connection.PendingPushLinks;
+                    connection.PendingPushPrimaryContext = null;
+                    connection.PendingPushLinks = null;
+                }
+                else
+                {
+                    connection.SlotContext = Activity.Current?.Context;
+                    connection.SlotLinks = null;
+                }
                 Interpreter.ChasePush(connection);
             }
             else
@@ -1593,6 +1609,48 @@ namespace Akka.Streams.Stage
 
                 // No error, just InClosed caused the actual pull to be ignored, but the status flag still needs to be flipped
                 connection.PortState = portState ^ PushStartFlip;
+            }
+        }
+
+        /// <summary>
+        /// Reads the trace context that the upstream stage attached to the next element waiting
+        /// at <paramref name="inlet"/>. Returns <c>null</c> if no element is pending or if the
+        /// upstream Push happened outside any traced scope. Designed to be called from inside
+        /// <c>OnPush</c> BEFORE <c>Grab</c> — fan-in stages use it to remember which producer
+        /// trace each input element came from so that a later flushed batch can link back to
+        /// all of them via <see cref="ActivityLink"/>s.
+        /// </summary>
+        protected internal ActivityContext? CurrentInletTraceContext<T>(Inlet<T> inlet)
+            => GetConnection(inlet).SlotContext;
+
+        /// <summary>
+        /// Marks the next <c>Push</c> on <paramref name="outlet"/> as a fan-in flush — it will
+        /// carry <paramref name="primary"/> as its primary trace parent and the entries in
+        /// <paramref name="links"/> as additional <see cref="ActivityLink"/>s on the downstream
+        /// stage span. Used by <c>BatchWeighted</c>, <c>GroupedWithin</c>, <c>Merge</c>, and
+        /// other fan-in stages so that one flushed output element preserves trace continuity
+        /// with all N input elements that contributed to it.
+        ///
+        /// The override is consumed (and cleared) by the very next <c>Push</c> on the outlet.
+        /// If the next <c>Push</c> never happens (e.g. stage failure), the override is harmless
+        /// and is replaced on the next call.
+        /// </summary>
+        protected internal void SetFanInTraceContext<T>(
+            Outlet<T> outlet,
+            ActivityContext primary,
+            IReadOnlyList<ActivityContext> links)
+        {
+            var connection = GetConnection(outlet);
+            connection.PendingPushPrimaryContext = primary;
+            if (links == null || links.Count == 0)
+            {
+                connection.PendingPushLinks = null;
+            }
+            else
+            {
+                var arr = new ActivityContext[links.Count];
+                for (int i = 0; i < links.Count; i++) arr[i] = links[i];
+                connection.PendingPushLinks = arr;
             }
         }
 

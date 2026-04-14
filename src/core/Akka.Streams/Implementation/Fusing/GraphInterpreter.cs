@@ -293,6 +293,33 @@ namespace Akka.Streams.Implementation.Fusing
             public ActivityContext? SlotContext { get; set; }
 
             /// <summary>
+            /// Additional trace contexts (beyond <see cref="SlotContext"/>) that should be attached
+            /// as <see cref="ActivityLink"/>s to the downstream stage span when this slot is processed.
+            /// Set by fan-in stages such as <c>BatchWeighted</c>, <c>GroupedWithin</c>, and <c>Merge</c>
+            /// when a single output element represents the merged work of N upstream input elements.
+            /// The first input's context becomes <see cref="SlotContext"/> (primary parent); the
+            /// remaining N-1 contexts go here as forward references.
+            /// </summary>
+            public ActivityContext[] SlotLinks { get; set; }
+
+            /// <summary>
+            /// Override for the primary trace context that the next <c>Push</c> on this connection's
+            /// outlet should attach to <see cref="SlotContext"/>. Set by fan-in stages just before
+            /// they call <c>Push</c> so that the merged output element carries the FIRST input's
+            /// trace context as its primary parent — instead of <c>Activity.Current</c>, which would
+            /// otherwise be the stage span of whichever input triggered the flush. Consumed and
+            /// cleared by <c>GraphStageLogic.Push</c>.
+            /// </summary>
+            public ActivityContext? PendingPushPrimaryContext { get; set; }
+
+            /// <summary>
+            /// Companion to <see cref="PendingPushPrimaryContext"/>. Holds the additional trace
+            /// contexts (links) that the next <c>Push</c> should attach to <see cref="SlotLinks"/>.
+            /// Consumed and cleared by <c>GraphStageLogic.Push</c>.
+            /// </summary>
+            public ActivityContext[] PendingPushLinks { get; set; }
+
+            /// <summary>
             /// TBD
             /// </summary>
             /// <returns>TBD</returns>
@@ -921,18 +948,34 @@ namespace Akka.Streams.Implementation.Fusing
             // child spans it creates, e.g. OpenTelemetry.Instrumentation.SqlClient) correctly
             // parents back to the producer's trace. If the source has no listeners or the element
             // has no captured context, StartActivity returns null and this path allocates nothing.
+            //
+            // Fan-in stages may attach additional ActivityContexts as SlotLinks — those become
+            // ActivityLinks on the downstream stage span, preserving trace continuity for every
+            // input element that contributed to a single merged output. See SetFanInTraceContext.
             var slotContext = connection.SlotContext;
+            var slotLinks = connection.SlotLinks;
             if (slotContext.HasValue)
             {
                 var stage = connection.InOwner;
                 var stageName = StreamsDiagnostics.GetStageName(stage);
+                ActivityLink[] activityLinks = null;
+                if (slotLinks != null && slotLinks.Length > 0)
+                {
+                    activityLinks = new ActivityLink[slotLinks.Length];
+                    for (int i = 0; i < slotLinks.Length; i++)
+                        activityLinks[i] = new ActivityLink(slotLinks[i]);
+                }
                 var stageActivity = StreamsDiagnostics.ActivitySource.StartActivity(
                     $"akka.stream.stage {stageName}",
                     ActivityKind.Internal,
-                    slotContext.Value);
+                    slotContext.Value,
+                    tags: null,
+                    links: activityLinks);
                 if (stageActivity != null)
                 {
                     stageActivity.SetTag("stream.stage.type", stageName);
+                    if (activityLinks != null)
+                        stageActivity.SetTag("stream.fan_in.links", activityLinks.Length);
                     try
                     {
                         connection.InHandler.OnPush();
