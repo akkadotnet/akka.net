@@ -3162,8 +3162,12 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly GroupedWeightedWithin<T> _stage;
 
             private readonly List<T> _buffer = new();
+            // Per-element trace contexts paralleling _buffer — captured from the upstream slot
+            // before Grab clears it, used to emit fan-in ActivityLinks on the flushed group.
+            private readonly List<System.Diagnostics.ActivityContext> _bufferContexts = new();
             private T _pending = default;
             private long _pendingWeight = 0L;
+            private System.Diagnostics.ActivityContext? _pendingContext;
             // True if:
             // - buf is nonEmpty
             //       AND
@@ -3196,7 +3200,7 @@ namespace Akka.Streams.Implementation.Fusing
                 Pull(_stage._in);
             }
 
-            private void NextElement(T element)
+            private void NextElement(T element, System.Diagnostics.ActivityContext? elementContext)
             {
                 _groupEmitted = false;
                 var cost = _stage._costFn(element);
@@ -3209,11 +3213,12 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_totalWeight + cost <= _stage._maxWeight && _totalNumber + 1 <= _stage._maxNumber)
                     {
                         _buffer.Add(element);
+                        if (elementContext.HasValue) _bufferContexts.Add(elementContext.Value);
                         _totalWeight += cost;
                         _totalNumber += 1;
 
                         // if potentially there is a place (both weight and number) for one more element in the current group
-                        if (_totalWeight < _stage._maxWeight && _totalNumber < _stage._maxNumber) 
+                        if (_totalWeight < _stage._maxWeight && _totalNumber < _stage._maxNumber)
                             Pull(_stage._in);
                         else
                         {
@@ -3240,6 +3245,7 @@ namespace Akka.Streams.Implementation.Fusing
                         if (_totalWeight == 0L && _totalNumber == 0)
                         {
                             _buffer.Add(element);
+                            if (elementContext.HasValue) _bufferContexts.Add(elementContext.Value);
                             _totalWeight += cost;
                             _totalNumber += 1;
                             _pushEagerly = true;
@@ -3248,6 +3254,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             _pending = element;
                             _pendingWeight = cost;
+                            _pendingContext = elementContext;
                         }
                         ScheduleRepeatedly(GroupedWeightedWithinTimer, _stage._interval);
                         TryCloseGroup();
@@ -3264,14 +3271,35 @@ namespace Akka.Streams.Implementation.Fusing
             private void EmitGroup()
             {
                 _groupEmitted = true;
+                EmitBufferContextsAsFanInLinks();
                 Push(_stage._out, _buffer.ToList());
                 _buffer.Clear();
-                if (!_finished) 
+                _bufferContexts.Clear();
+                if (!_finished)
                     StartNewGroup();
-                else if (!EqualityComparer<T>.Default.Equals(_pending, default)) 
-                    Emit(_stage._out, new List<T> { _pending }, () => CompleteStage());
-                else 
+                else if (!EqualityComparer<T>.Default.Equals(_pending, default))
+                {
+                    // The trailing pending element also needs to carry its trace context forward
+                    // so the downstream sink sees a single-element group with the right parent.
+                    if (_pendingContext.HasValue)
+                        SetFanInTraceContext(_stage._out, _pendingContext.Value, null);
+                    var trailing = _pending;
+                    _pending = default;
+                    _pendingContext = null;
+                    Emit(_stage._out, new List<T> { trailing }, () => CompleteStage());
+                }
+                else
                     CompleteStage();
+            }
+
+            private void EmitBufferContextsAsFanInLinks()
+            {
+                if (_bufferContexts.Count == 0) return;
+                var primary = _bufferContexts[0];
+                IReadOnlyList<System.Diagnostics.ActivityContext> rest = _bufferContexts.Count > 1
+                    ? _bufferContexts.GetRange(1, _bufferContexts.Count - 1)
+                    : null;
+                SetFanInTraceContext(_stage._out, primary, rest);
             }
 
             private void StartNewGroup()
@@ -3282,7 +3310,9 @@ namespace Akka.Streams.Implementation.Fusing
                     _totalNumber = 1;
                     _pendingWeight = 0L;
                     _buffer.Add(_pending);
+                    if (_pendingContext.HasValue) _bufferContexts.Add(_pendingContext.Value);
                     _pending = default;
+                    _pendingContext = null;
                     _groupEmitted = false;
                 }
                 else
@@ -3292,14 +3322,21 @@ namespace Akka.Streams.Implementation.Fusing
                     _hasElements = false;
                 }
                 _pushEagerly = false;
-                if (IsAvailable(_stage._in)) NextElement(Grab(_stage._in));
+                if (IsAvailable(_stage._in))
+                {
+                    var ctx = CurrentInletTraceContext(_stage._in);
+                    NextElement(Grab(_stage._in), ctx);
+                }
                 else if (!HasBeenPulled(_stage._in)) Pull(_stage._in);
             }
 
             public void OnPush()
             {
                 if (EqualityComparer<T>.Default.Equals(_pending, default))
-                    NextElement(Grab(_stage._in)); // otherwise keep the element for next round
+                {
+                    var ctx = CurrentInletTraceContext(_stage._in);
+                    NextElement(Grab(_stage._in), ctx); // otherwise keep the element for next round
+                }
             }
 
             public void OnPull()

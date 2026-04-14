@@ -58,9 +58,17 @@ namespace Akka.Streams.Dsl
                     {
                         if (IsAvailable(outlet))
                         {
-                            // isAvailable(out) implies !pending
-                            // -> grab and push immediately
-                            Push(outlet, Grab(inlet));
+                            // isAvailable(out) implies !pending.
+                            // Read the upstream trace context off the inlet before Grab clears
+                            // it, and stage it as the primary parent for the downstream Push.
+                            // This makes Merge transparent to trace continuity even when the
+                            // fast-path optimization applies (where Activity.Current would be
+                            // the Merge stage span itself — which works, but is slightly less
+                            // precise than propagating the upstream's original context).
+                            var ctx = CurrentInletTraceContext(inlet);
+                            var element = Grab(inlet);
+                            if (ctx.HasValue) SetFanInTraceContext(outlet, ctx.Value, null);
+                            Push(outlet, element);
                             TryPull(inlet);
                         }
                         else _pendingQueue.Enqueue(inlet);
@@ -111,7 +119,15 @@ namespace Akka.Streams.Dsl
                 }
                 else if (IsAvailable(inlet))
                 {
-                    Push(_stage.Out, Grab(inlet));
+                    // Slow-path dispatch: OnPull fired and we're emitting a previously-queued
+                    // element. The upstream trace context is still on the inlet's connection
+                    // (Grab hasn't been called yet), so read it and stage it as the downstream
+                    // Push's primary parent — otherwise Activity.Current is null on this
+                    // interpreter-thread OnPull path and the trace continuity would be lost.
+                    var ctx = CurrentInletTraceContext(inlet);
+                    var element = Grab(inlet);
+                    if (ctx.HasValue) SetFanInTraceContext(_stage.Out, ctx.Value, null);
+                    Push(_stage.Out, element);
                     if(AreUpstreamsClosed && !IsPending)
                         CompleteStage();
                     else
@@ -312,7 +328,12 @@ namespace Akka.Streams.Dsl
                              /* blocked */
                         }
                         else
-                            Emit(_stage.Out, Grab(port), pullPort);
+                        {
+                            var ctx = CurrentInletTraceContext(port);
+                            var element = Grab(port);
+                            if (ctx.HasValue) SetFanInTraceContext(_stage.Out, ctx.Value, null);
+                            Emit(_stage.Out, element, pullPort);
+                        }
                     },
                     onUpstreamFinish: OnComplete);
                 }
@@ -339,7 +360,10 @@ namespace Akka.Streams.Dsl
             private void EmitPreferred()
             {
                 _preferredEmitting++;
-                Emit(_stage.Out, Grab(_stage.Preferred), Emitted);
+                var ctx = CurrentInletTraceContext(_stage.Preferred);
+                var element = Grab(_stage.Preferred);
+                if (ctx.HasValue) SetFanInTraceContext(_stage.Out, ctx.Value, null);
+                Emit(_stage.Out, element, Emitted);
                 TryPull(_stage.Preferred);
             }
 
@@ -355,7 +379,13 @@ namespace Akka.Streams.Dsl
                 for (int i = 0; i < _stage._secondaryPorts; i++)
                 {
                     var port = _stage.In(i);
-                    if (IsAvailable(port)) Emit(_stage.Out, Grab(port), _pullMe[i]);
+                    if (IsAvailable(port))
+                    {
+                        var ctx = CurrentInletTraceContext(port);
+                        var element = Grab(port);
+                        if (ctx.HasValue) SetFanInTraceContext(_stage.Out, ctx.Value, null);
+                        Emit(_stage.Out, element, _pullMe[i]);
+                    }
                 }
             }
 
@@ -1729,7 +1759,13 @@ namespace Akka.Streams.Dsl
                     var i = inEnumerator.Current;
                     var idx = iidx;
                     SetHandler(i,
-                        onPush: () => Push(stage.Out, Grab(i)),
+                        onPush: () =>
+                        {
+                            var ctx = CurrentInletTraceContext(i);
+                            var element = Grab(i);
+                            if (ctx.HasValue) SetFanInTraceContext(stage.Out, ctx.Value, null);
+                            Push(stage.Out, element);
+                        },
                         onUpstreamFinish: () =>
                         {
                             if (idx == _activeStream)
