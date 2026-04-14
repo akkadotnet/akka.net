@@ -5,6 +5,12 @@
         <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags);reactive;stream</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- Local experimental build for end-to-end trace continuity validation. Pinned to
+             1.5.99.3 so it sorts above upstream stable while keeping AssemblyVersion at
+             1.5.60.0 for binary compat with the stable Akka 1.5.60 package. -->
+        <Version>1.5.99.3</Version>
+        <AssemblyVersion>1.5.60.0</AssemblyVersion>
+        <FileVersion>1.5.99.3</FileVersion>
     </PropertyGroup>
     <ItemGroup>
         <EmbeddedResource Include="reference.conf" />
