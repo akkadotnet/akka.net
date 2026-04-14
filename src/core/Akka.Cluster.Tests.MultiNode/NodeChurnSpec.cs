@@ -33,6 +33,7 @@ namespace Akka.Cluster.Tests.MultiNode
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
                   akka.cluster.auto-down-unreachable-after = 1s
+                  akka.cluster.run-coordinated-shutdown-when-down = on
                   akka.remote.log-frame-size-exceeding = 2000b
                   akka.remote.dot-netty.tcp.batching.enabled = false # disable batching
                 "))

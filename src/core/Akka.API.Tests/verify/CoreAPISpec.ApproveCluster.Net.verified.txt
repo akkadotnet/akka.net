@@ -6,6 +6,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.TestKit")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.TestKit.Xunit2")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests.Performance")]

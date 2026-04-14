@@ -102,6 +102,7 @@
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
+    <Project Path="src/core/Akka.Cluster.TestKit.Xunit2/Akka.Cluster.TestKit.Xunit2.csproj" />
     <Project Path="src/core/Akka.Cluster.TestKit/Akka.Cluster.TestKit.csproj">
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
@@ -127,6 +128,13 @@
     <Project Path="src/core/Akka.Docs.Tutorials/Akka.Docs.Tutorials.csproj" />
     <Project Path="src/core/Akka.FSharp.Tests/Akka.FSharp.Tests.fsproj" />
     <Project Path="src/core/Akka.FSharp/Akka.FSharp.fsproj" />
+    <Project Path="src/core/Akka.MultiNode.RemoteHost/Akka.MultiNode.RemoteHost.csproj" />
+    <Project Path="src/core/Akka.MultiNode.SampleMultiNodeTests.Xunit2/Akka.MultiNode.SampleMultiNodeTests.Xunit2.csproj" />
+    <Project Path="src/core/Akka.MultiNode.SampleMultiNodeTests/Akka.MultiNode.SampleMultiNodeTests.csproj" />
+    <Project Path="src/core/Akka.MultiNode.TestAdapter.Tests/Akka.MultiNode.TestAdapter.Tests.csproj" />
+    <Project Path="src/core/Akka.MultiNode.TestAdapter.Xunit2.Tests/Akka.MultiNode.TestAdapter.Xunit2.Tests.csproj" />
+    <Project Path="src/core/Akka.MultiNode.TestAdapter.Xunit2/Akka.MultiNode.TestAdapter.Xunit2.csproj" />
+    <Project Path="src/core/Akka.MultiNode.TestAdapter/Akka.MultiNode.TestAdapter.csproj" />
     <Project Path="src/core/Akka.Persistence.FSharp/Akka.Persistence.FSharp.fsproj" />
     <Project Path="src/core/Akka.Persistence.Query.Tests/Akka.Persistence.Query.Tests.csproj">
       <Build Solution="*|x64" Project="false" />
@@ -282,6 +290,10 @@
   </Folder>
   <Folder Name="/Examples/TcpEchoServer/">
     <Project Path="src/examples/TcpEchoService.Server/TcpEchoService.Server.csproj" />
+  </Folder>
+  <Folder Name="/Examples/Testing/" />
+  <Folder Name="/Examples/Testing/Xunit2/">
+    <Project Path="src/examples/Testing/Xunit2/Akka.Remote.TestKit.Xunit2.Tests/Akka.Remote.TestKit.Xunit2.Tests.csproj" />
   </Folder>
   <Folder Name="/Examples/WIndowsService/">
     <Project Path="src/examples/WindowsService/AkkaWindowsService/AkkaWindowsService.csproj" />

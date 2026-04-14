@@ -1801,17 +1801,31 @@ namespace Akka.Cluster.Sharding
                     // Safety net: if no rebalance is in progress for this shard (RebalanceWorker
                     // already timed out), deallocate the shard so it can be reallocated elsewhere.
                     // This prevents the shard from being endlessly recreated via GetShardHome/ShardHome.
-                    if (!_rebalanceInProgress.ContainsKey(m.Shard) && State.Shards.ContainsKey(m.Shard))
+                    if (!_rebalanceInProgress.ContainsKey(m.Shard)
+                        && State.Shards.TryGetValue(m.Shard, out var currentOwner))
                     {
-                        Log.Info("{0}: Shard [{1}] stopped - performing late deallocation (rebalance worker timed out).",
-                            TypeName, m.Shard);
-                        Update(new ShardHomeDeallocated(m.Shard), evt =>
+                        // #8146: only deallocate if the sender is the current owner (legitimate
+                        // late arrival after RebalanceWorker timeout). Ignore stale backups from
+                        // an old region after the shard was successfully reallocated elsewhere.
+                        if (currentOwner.Equals(_context.Sender))
                         {
-                            State = State.Updated(evt);
-                            Log.Debug("{0}: Shard [{1}] deallocated (late)", TypeName, m.Shard);
-                            AllocateShardHomesForRememberEntities();
-                            _context.Self.Tell(new GetShardHome(m.Shard), _ignoreRef);
-                        });
+                            Log.Info("{0}: Shard [{1}] stopped - performing late deallocation " +
+                                     "(rebalance worker timed out). Sender [{2}] matches current owner.",
+                                TypeName, m.Shard, _context.Sender);
+                            Update(new ShardHomeDeallocated(m.Shard), evt =>
+                            {
+                                State = State.Updated(evt);
+                                Log.Debug("{0}: Shard [{1}] deallocated (late)", TypeName, m.Shard);
+                                AllocateShardHomesForRememberEntities();
+                                _context.Self.Tell(new GetShardHome(m.Shard), _ignoreRef);
+                            });
+                        }
+                        else
+                        {
+                            Log.Debug("{0}: Ignoring stale ShardStopped for shard [{1}] from [{2}] - " +
+                                      "shard is now allocated to [{3}].",
+                                TypeName, m.Shard, _context.Sender, currentOwner);
+                        }
                     }
                     return true;
 
@@ -2294,6 +2308,16 @@ namespace Akka.Cluster.Sharding
                         State.Regions.Keys.Union(State.RegionProxies),
                         isRebalance: isRebalance)
                     .WithDispatcher(_context.Props.Dispatcher)));
+            }
+            else if (!isRebalance)
+            {
+                // Graceful shutdown requested for a shard that is already being rebalanced (#8148).
+                // The existing RebalanceWorker will continue; the shutdown intent is deferred
+                // until the current rebalance completes.
+                Log.Info(
+                    "{0}: Graceful shutdown handoff for shard [{1}] from [{2}] skipped - " +
+                    "rebalance already in progress. The existing rebalance worker will complete first.",
+                    TypeName, shard, from);
             }
         }
 
