@@ -19,6 +19,21 @@ namespace Akka.Streams.Tests.Implementation
     /// </summary>
     internal sealed class StreamsActivityCollector : IDisposable
     {
+        static StreamsActivityCollector()
+        {
+            // On .NET Framework 4.8 the default Activity.DefaultIdFormat is Hierarchical.
+            // With that default, Activity.Current?.Context comes back as default(ActivityContext)
+            // (all-zero TraceId / SpanId) because Hierarchical activities don't populate the
+            // W3C context struct. That makes every cross-span TraceId comparison in these
+            // tests fail — not because the framework's context-carry logic is wrong, but
+            // because there is no valid context to carry. Forcing W3C format at the test
+            // process level makes the netfx test runner behave the same as the modern
+            // runtimes where W3C is the default. This is a test-only concern: the
+            // Akka.Streams library code works correctly under either format.
+            Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+            Activity.ForceDefaultIdFormat = true;
+        }
+
         private readonly ActivityListener _listener;
         public ConcurrentQueue<Activity> StartedActivities { get; } = new();
         public ConcurrentQueue<Activity> StoppedActivities { get; } = new();
@@ -53,6 +68,14 @@ namespace Akka.Streams.Tests.Implementation
     /// </summary>
     internal sealed class ProducerActivityScope : IDisposable
     {
+        static ProducerActivityScope()
+        {
+            // Same reason as StreamsActivityCollector.cctor — ensure W3C IDs on .NET Framework.
+            // Duplicate-setting is a no-op, so we don't care which type's static ctor runs first.
+            Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+            Activity.ForceDefaultIdFormat = true;
+        }
+
         public ActivitySource Source { get; }
         private readonly ActivityListener _listener;
 
