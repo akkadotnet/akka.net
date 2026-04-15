@@ -33,6 +33,12 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public const string ActivitySourceName = "Akka.Streams";
 
+        internal const string OperationStage = "akka.stream.stage";
+        internal const string OperationIngress = "akka.stream.ingress";
+        internal const string OperationIngressQueued = "akka.stream.ingress.queued";
+        internal const string TagStageType = "stream.stage.type";
+        internal const string TagFanInLinks = "stream.fan_in.links";
+
         private static readonly string Version =
             typeof(StreamsDiagnostics).Assembly.GetName().Version?.ToString() ?? "0.0.0";
 

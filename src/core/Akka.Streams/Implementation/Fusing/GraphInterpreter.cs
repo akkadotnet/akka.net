@@ -953,9 +953,9 @@ namespace Akka.Streams.Implementation.Fusing
             // ActivityLinks on the downstream stage span, preserving trace continuity for every
             // input element that contributed to a single merged output. See SetFanInTraceContext.
             var slotContext = connection.SlotContext;
-            var slotLinks = connection.SlotLinks;
-            if (slotContext.HasValue)
+            if (slotContext.HasValue && StreamsDiagnostics.ActivitySource.HasListeners())
             {
+                var slotLinks = connection.SlotLinks;
                 var stage = connection.InOwner;
                 var stageName = StreamsDiagnostics.GetStageName(stage);
                 ActivityLink[] activityLinks = null;
@@ -966,16 +966,16 @@ namespace Akka.Streams.Implementation.Fusing
                         activityLinks[i] = new ActivityLink(slotLinks[i]);
                 }
                 var stageActivity = StreamsDiagnostics.ActivitySource.StartActivity(
-                    $"akka.stream.stage {stageName}",
+                    $"{StreamsDiagnostics.OperationStage} {stageName}",
                     ActivityKind.Internal,
                     slotContext.Value,
                     tags: null,
                     links: activityLinks);
                 if (stageActivity != null)
                 {
-                    stageActivity.SetTag("stream.stage.type", stageName);
+                    stageActivity.SetTag(StreamsDiagnostics.TagStageType, stageName);
                     if (activityLinks != null)
-                        stageActivity.SetTag("stream.fan_in.links", activityLinks.Length);
+                        stageActivity.SetTag(StreamsDiagnostics.TagFanInLinks, activityLinks.Length);
                     try
                     {
                         connection.InHandler.OnPush();

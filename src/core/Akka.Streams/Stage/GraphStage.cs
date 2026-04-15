@@ -965,7 +965,7 @@ namespace Akka.Streams.Stage
                 {
                     var stageName = StreamsDiagnostics.GetStageName(owner);
                     using var ingress = StreamsDiagnostics.ActivitySource.StartActivity(
-                        $"akka.stream.ingress {stageName}",
+                        $"{StreamsDiagnostics.OperationIngress} {stageName}",
                         ActivityKind.Internal,
                         capturedContext);
                     realHandler(obj);
@@ -1021,8 +1021,12 @@ namespace Akka.Streams.Stage
                 // Capture the producer thread's trace context BEFORE the async handoff so we can
                 // restore it on the interpreter thread. AsyncLocal does not flow across the stream
                 // actor boundary, so this is the one place we can observe Activity.Current from the
-                // external caller's perspective.
-                ActivityContext? ingressContext = Activity.Current?.Context;
+                // external caller's perspective. Skip entirely when no one is listening to the
+                // "Akka.Streams" ActivitySource — avoids a per-invoke Activity.Current property
+                // access on the non-traced fast path.
+                ActivityContext? ingressContext = StreamsDiagnostics.ActivitySource.HasListeners()
+                    ? Activity.Current?.Context
+                    : null;
 
                 while (true)
                 {
@@ -1577,12 +1581,12 @@ namespace Akka.Streams.Stage
             if ((portState & (OutReady | OutClosed | InClosed)) == OutReady && element != null)
             {
                 connection.Slot = element;
-                // Capture the current Activity context so downstream stages can restore it when
-                // invoking their handlers. Fan-in stages (Batch, GroupedWithin, Merge, ...) call
-                // SetFanInTraceContext just before this Push to override the default capture
-                // with the FIRST input element's context as the primary parent and the rest as
-                // ActivityLinks. When that override is present, consume it; otherwise fall back
-                // to Activity.Current (the normal per-stage path).
+                // Fan-in stages (Batch, GroupedWithin, Merge, ...) call SetFanInTraceContext
+                // just before Push to override the default capture with the FIRST input element's
+                // context as the primary parent and the rest as ActivityLinks. Consume that override
+                // when present; otherwise capture Activity.Current so downstream stages can parent
+                // their own spans correctly. Skipped entirely when nobody is listening to the
+                // "Akka.Streams" ActivitySource — zero cost on the hot path for non-traced streams.
                 if (connection.PendingPushPrimaryContext.HasValue)
                 {
                     connection.SlotContext = connection.PendingPushPrimaryContext;
@@ -1592,7 +1596,9 @@ namespace Akka.Streams.Stage
                 }
                 else
                 {
-                    connection.SlotContext = Activity.Current?.Context;
+                    connection.SlotContext = StreamsDiagnostics.ActivitySource.HasListeners()
+                        ? Activity.Current?.Context
+                        : null;
                     connection.SlotLinks = null;
                 }
                 Interpreter.ChasePush(connection);
@@ -1652,6 +1658,24 @@ namespace Akka.Streams.Stage
                 for (int i = 0; i < links.Count; i++) arr[i] = links[i];
                 connection.PendingPushLinks = arr;
             }
+        }
+
+        /// <summary>
+        /// Pass-through fan-in helper for 1-to-1 merge stages (<c>Merge</c>, <c>MergePreferred</c>,
+        /// <c>Concat</c>, etc.): reads the upstream context off <paramref name="inlet"/>, grabs the
+        /// element, stages the upstream context as the primary parent for the next push on
+        /// <paramref name="outlet"/>, and pushes. Used so that multi-producer merge stages preserve
+        /// each element's originating TraceId across the slow-path <c>OnPull</c> boundary where
+        /// <c>Activity.Current</c> would otherwise be null. Single-source stages that don't cross
+        /// an interpreter dispatcher hop between <c>Grab</c> and <c>Push</c> don't need this — plain
+        /// <c>Push(outlet, Grab(inlet))</c> captures <c>Activity.Current</c> correctly.
+        /// </summary>
+        internal void GrabAndPushFanIn<TIn, TOut>(Inlet<TIn> inlet, Outlet<TOut> outlet) where TIn : TOut
+        {
+            var ctx = CurrentInletTraceContext(inlet);
+            var element = Grab(inlet);
+            if (ctx.HasValue) SetFanInTraceContext(outlet, ctx.Value, null);
+            Push(outlet, element);
         }
 
         /// <summary>
@@ -3164,7 +3188,7 @@ namespace Akka.Streams.Stage
                     if (queued.IngressContext.HasValue)
                     {
                         using var restored = StreamsDiagnostics.ActivitySource.StartActivity(
-                            "akka.stream.ingress.queued",
+                            StreamsDiagnostics.OperationIngressQueued,
                             ActivityKind.Internal,
                             queued.IngressContext.Value);
                         callback(queued.Arg);
@@ -3183,19 +3207,25 @@ namespace Akka.Streams.Stage
         /// <param name="arg">TBD</param>
         protected void InvokeCallbacks(T arg) => Locked(() =>
         {
-            // Capture the producer thread's trace context now, before any potential handoff.
-            // If we end up queueing the arg because the interpreter hasn't started yet, the
-            // captured context rides along with the arg so it can be restored when the queue
-            // is drained on the interpreter thread.
-            var ingressContext = Activity.Current?.Context;
-
             var state = _callbackState.Value;
             if (state is Initialized initialized)
+            {
                 initialized.Callback(arg);
+            }
             else if (state is NotInitialized notInitialized)
+            {
+                // Only capture the producer thread's trace context when we're actually going
+                // to queue the arg — Initialized and Stopped paths don't need it, so there's
+                // no reason to touch Activity.Current on those hot paths.
+                var ingressContext = StreamsDiagnostics.ActivitySource.HasListeners()
+                    ? Activity.Current?.Context
+                    : null;
                 notInitialized.Args.Add(new QueuedArg(arg, ingressContext));
+            }
             else if (state is Stopped stopped)
+            {
                 stopped.Callback(arg);
+            }
         });
 
         private void Locked(Action body)

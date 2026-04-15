@@ -58,17 +58,12 @@ namespace Akka.Streams.Dsl
                     {
                         if (IsAvailable(outlet))
                         {
-                            // isAvailable(out) implies !pending.
-                            // Read the upstream trace context off the inlet before Grab clears
-                            // it, and stage it as the primary parent for the downstream Push.
-                            // This makes Merge transparent to trace continuity even when the
-                            // fast-path optimization applies (where Activity.Current would be
-                            // the Merge stage span itself — which works, but is slightly less
-                            // precise than propagating the upstream's original context).
-                            var ctx = CurrentInletTraceContext(inlet);
-                            var element = Grab(inlet);
-                            if (ctx.HasValue) SetFanInTraceContext(outlet, ctx.Value, null);
-                            Push(outlet, element);
+                            // isAvailable(out) implies !pending — grab the element and push it
+                            // through with the upstream trace context staged as the downstream
+                            // span's primary parent, so Merge becomes transparent to trace
+                            // continuity instead of defaulting to Activity.Current (which would
+                            // be the Merge stage span itself on fast path, or null on slow path).
+                            GrabAndPushFanIn(inlet, outlet);
                             TryPull(inlet);
                         }
                         else _pendingQueue.Enqueue(inlet);
@@ -120,14 +115,10 @@ namespace Akka.Streams.Dsl
                 else if (IsAvailable(inlet))
                 {
                     // Slow-path dispatch: OnPull fired and we're emitting a previously-queued
-                    // element. The upstream trace context is still on the inlet's connection
-                    // (Grab hasn't been called yet), so read it and stage it as the downstream
-                    // Push's primary parent — otherwise Activity.Current is null on this
-                    // interpreter-thread OnPull path and the trace continuity would be lost.
-                    var ctx = CurrentInletTraceContext(inlet);
-                    var element = Grab(inlet);
-                    if (ctx.HasValue) SetFanInTraceContext(_stage.Out, ctx.Value, null);
-                    Push(_stage.Out, element);
+                    // element. Interpreter-thread OnPull has Activity.Current = null, so the
+                    // fan-in helper reads the upstream context off the inlet directly and
+                    // stages it as the downstream Push's primary parent.
+                    GrabAndPushFanIn(inlet, _stage.Out);
                     if(AreUpstreamsClosed && !IsPending)
                         CompleteStage();
                     else
@@ -1759,13 +1750,7 @@ namespace Akka.Streams.Dsl
                     var i = inEnumerator.Current;
                     var idx = iidx;
                     SetHandler(i,
-                        onPush: () =>
-                        {
-                            var ctx = CurrentInletTraceContext(i);
-                            var element = Grab(i);
-                            if (ctx.HasValue) SetFanInTraceContext(stage.Out, ctx.Value, null);
-                            Push(stage.Out, element);
-                        },
+                        onPush: () => GrabAndPushFanIn(i, stage.Out),
                         onUpstreamFinish: () =>
                         {
                             if (idx == _activeStream)
