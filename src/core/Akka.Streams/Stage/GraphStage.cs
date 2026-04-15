@@ -1620,7 +1620,7 @@ namespace Akka.Streams.Stage
         /// trace each input element came from so that a later flushed batch can link back to
         /// all of them via <see cref="ActivityLink"/>s.
         /// </summary>
-        protected internal ActivityContext? CurrentInletTraceContext<T>(Inlet<T> inlet)
+        internal ActivityContext? CurrentInletTraceContext<T>(Inlet<T> inlet)
             => GetConnection(inlet).SlotContext;
 
         /// <summary>
@@ -1635,7 +1635,7 @@ namespace Akka.Streams.Stage
         /// If the next <c>Push</c> never happens (e.g. stage failure), the override is harmless
         /// and is replaced on the next call.
         /// </summary>
-        protected internal void SetFanInTraceContext<T>(
+        internal void SetFanInTraceContext<T>(
             Outlet<T> outlet,
             ActivityContext primary,
             IReadOnlyList<ActivityContext> links)

@@ -4247,12 +4247,8 @@ namespace Akka.Streams.Implementation.Fusing
             public Akka.Streams.Stage.IOutHandler OutHandler { get; set; }
             public Akka.Streams.Stage.GraphStageLogic OutOwner { get; }
             public int OutOwnerId { get; }
-            public System.Diagnostics.ActivityContext[] PendingPushLinks { get; set; }
-            public System.Diagnostics.ActivityContext? PendingPushPrimaryContext { get; set; }
             public int PortState { get; set; }
             public object Slot { get; set; }
-            public System.Diagnostics.ActivityContext? SlotContext { get; set; }
-            public System.Diagnostics.ActivityContext[] SlotLinks { get; set; }
             public override string ToString() { }
         }
         public abstract class DownstreamBoundaryStageLogic : Akka.Streams.Stage.GraphStageLogic
@@ -4899,7 +4895,6 @@ namespace Akka.Streams.Stage
         protected void Complete<T>(Akka.Streams.Outlet<T> outlet) { }
         public void CompleteStage() { }
         protected Akka.Streams.Stage.GraphStageLogic.SubSinkInlet<T> CreateSubSinkInlet<T>(string name) { }
-        protected System.Diagnostics.ActivityContext? CurrentInletTraceContext<T>(Akka.Streams.Inlet<T> inlet) { }
         protected void Emit<T>(Akka.Streams.Outlet<T> outlet, T element) { }
         protected void Emit<T>(Akka.Streams.Outlet<T> outlet, T element, System.Action andThen) { }
         protected void EmitMultiple<T>(Akka.Streams.Outlet<T> outlet, System.Collections.Generic.IEnumerable<T> elements) { }
@@ -4931,7 +4926,6 @@ namespace Akka.Streams.Stage
         protected void Push<T>(Akka.Streams.Outlet<T> outlet, T element) { }
         protected void Read<T>(Akka.Streams.Inlet<T> inlet, System.Action<T> andThen, System.Action onClose) { }
         protected void ReadMany<T>(Akka.Streams.Inlet<T> inlet, int n, System.Action<System.Collections.Generic.IEnumerable<T>> andThen, System.Action<System.Collections.Generic.IEnumerable<T>> onComplete) { }
-        protected void SetFanInTraceContext<T>(Akka.Streams.Outlet<T> outlet, System.Diagnostics.ActivityContext primary, System.Collections.Generic.IReadOnlyList<System.Diagnostics.ActivityContext> links) { }
         protected void SetHandler<T>(Akka.Streams.Inlet<T> inlet, Akka.Streams.Stage.IInHandler handler) { }
         protected void SetHandler<T>(Akka.Streams.Outlet<T> outlet, Akka.Streams.Stage.IOutHandler handler) { }
         protected void SetHandler<T>(Akka.Streams.Outlet<T> outlet, System.Action onPull, System.Action<System.Exception> onDownstreamFinish = null) { }

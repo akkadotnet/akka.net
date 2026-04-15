@@ -290,7 +290,7 @@ namespace Akka.Streams.Implementation.Fusing
             /// flows end-to-end through a stream even across dispatcher boundaries where
             /// <c>AsyncLocal</c> would be lost.
             /// </summary>
-            public ActivityContext? SlotContext { get; set; }
+            internal ActivityContext? SlotContext { get; set; }
 
             /// <summary>
             /// Additional trace contexts (beyond <see cref="SlotContext"/>) that should be attached
@@ -300,7 +300,7 @@ namespace Akka.Streams.Implementation.Fusing
             /// The first input's context becomes <see cref="SlotContext"/> (primary parent); the
             /// remaining N-1 contexts go here as forward references.
             /// </summary>
-            public ActivityContext[] SlotLinks { get; set; }
+            internal ActivityContext[] SlotLinks { get; set; }
 
             /// <summary>
             /// Override for the primary trace context that the next <c>Push</c> on this connection's
@@ -310,14 +310,14 @@ namespace Akka.Streams.Implementation.Fusing
             /// otherwise be the stage span of whichever input triggered the flush. Consumed and
             /// cleared by <c>GraphStageLogic.Push</c>.
             /// </summary>
-            public ActivityContext? PendingPushPrimaryContext { get; set; }
+            internal ActivityContext? PendingPushPrimaryContext { get; set; }
 
             /// <summary>
             /// Companion to <see cref="PendingPushPrimaryContext"/>. Holds the additional trace
             /// contexts (links) that the next <c>Push</c> should attach to <see cref="SlotLinks"/>.
             /// Consumed and cleared by <c>GraphStageLogic.Push</c>.
             /// </summary>
-            public ActivityContext[] PendingPushLinks { get; set; }
+            internal ActivityContext[] PendingPushLinks { get; set; }
 
             /// <summary>
             /// TBD
