@@ -156,7 +156,7 @@ namespace Akka.Remote
             /// <param name="recipient">TBD</param>
             /// <param name="senderOption">TBD</param>
             /// <param name="seqOpt">TBD</param>
-            public Send(object message, RemoteActorRef recipient, IActorRef senderOption = null, SeqNo seqOpt = null)
+            public Send(object message, RemoteActorRef recipient, IActorRef senderOption = null, SeqNo? seqOpt = null)
             {
                 Recipient = recipient;
                 SenderOption = senderOption;
@@ -188,25 +188,20 @@ namespace Akka.Remote
                 return string.Format("Remote message {0} -> {1}", SenderOption, Recipient);
             }
 
-            private readonly SeqNo _seq;
+            private readonly SeqNo? _seq;
 
             /// <summary>
-            /// TBD
+            /// The optional sequence number for reliable delivery. Null when reliable delivery is not used.
             /// </summary>
-            public SeqNo Seq
-            {
-                get
-                {
-                    return _seq;
-                }
-            }
+            public SeqNo? Seq => _seq;
+
+            /// <inheritdoc/>
+            SeqNo IHasSequenceNumber.Seq => _seq!.Value;
 
             /// <summary>
-            /// TBD
+            /// Creates a copy of this Send with the specified sequence number.
             /// </summary>
-            /// <param name="opt">TBD</param>
-            /// <returns>TBD</returns>
-            public Send Copy(SeqNo opt)
+            public Send Copy(SeqNo? opt)
             {
                 return new Send(Message, Recipient, SenderOption, opt);
             }

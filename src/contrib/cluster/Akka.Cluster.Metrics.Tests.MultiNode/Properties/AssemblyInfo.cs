@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Akka.MultiNode.TestAdapter;
 using Xunit;
 
-[assembly: TestFramework("Akka.MultiNode.TestAdapter.MultiNodeTestFramework", "Akka.MultiNode.TestAdapter")]
+[assembly: TestFramework(typeof(MultiNodeTestFramework))]

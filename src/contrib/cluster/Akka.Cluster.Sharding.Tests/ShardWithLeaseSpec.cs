@@ -225,5 +225,79 @@ namespace Akka.Cluster.Sharding.Tests
                 probe.ExpectNoMsg(shortDuration);
             });
         }
+
+        /// <summary>
+        /// Reproduces https://github.com/akkadotnet/akka.net/issues/8147
+        /// When a shard is in AwaitingLease state, HandOff messages should be handled
+        /// immediately (not stashed) since the shard has no active entities.
+        /// </summary>
+        [Fact]
+        public async Task Lease_handling_in_sharding_should_respond_to_HandOff_while_awaiting_lease()
+        {
+            var setup = new Setup(this);
+            var probe = CreateTestProbe();
+
+            // Send a message to trigger shard creation - shard enters AwaitingLease
+            setup.Sharding.Tell(new EntityEnvelope(1, "hello"), probe.Ref);
+
+            // Wait for the shard to start and enter AwaitingLease (don't resolve the lease)
+            setup.LeaseFor("1");
+
+            // Verify shard is blocked on lease
+            await probe.ExpectNoMsgAsync(shortDuration);
+
+            // Send HandOff to the ShardRegion - it should forward to the shard via Forward
+            var handOffProbe = CreateTestProbe();
+            setup.Sharding.Tell(new ShardCoordinator.HandOff("1"), handOffProbe.Ref);
+
+            // The shard should respond with ShardStopped immediately since it has no entities.
+            // BUG: Currently fails because AwaitingLease stashes HandOff indefinitely.
+            await handOffProbe.ExpectMsgAsync<ShardCoordinator.ShardStopped>(TimeSpan.FromSeconds(3));
+        }
+
+        /// <summary>
+        /// Reproduces https://github.com/akkadotnet/akka.net/issues/8146
+        /// When a ShardStopped is received from a region that is NOT the current owner
+        /// of the shard, the coordinator should ignore it (stale backup from completed rebalance).
+        /// </summary>
+        [Fact]
+        public async Task Coordinator_should_ignore_stale_ShardStopped_from_non_owner_region()
+        {
+            var setup = new Setup(this);
+            var probe = CreateTestProbe();
+
+            // Create shard and acquire lease
+            setup.Sharding.Tell(new EntityEnvelope(1, "hello"), probe.Ref);
+            var lease = setup.LeaseFor("1");
+            lease.InitialPromise.SetResult(true);
+            await probe.ExpectMsgAsync("ack hello");
+
+            // Resolve the coordinator actor
+            var encName = Uri.EscapeDataString(setup.TypeName);
+            var coordinatorPath = $"/system/sharding/{encName}Coordinator/singleton/coordinator";
+            IActorRef coordinator = null;
+            await AwaitAssertAsync(async () =>
+            {
+                coordinator = await Sys.ActorSelection(coordinatorPath).ResolveOne(TimeSpan.FromSeconds(1));
+            });
+
+            // Send ShardStopped from a TestProbe (simulating a stale backup from a
+            // dead/old region that no longer owns the shard)
+            var staleRegionProbe = CreateTestProbe();
+
+            // The coordinator should ignore ShardStopped from a non-owner sender.
+            // Use Identify as a FIFO mailbox barrier to prove the coordinator has
+            // processed the ShardStopped before we check for the log message.
+            await EventFilter.Info(contains: "late deallocation").ExpectAsync(0, async () =>
+            {
+                coordinator.Tell(new ShardCoordinator.ShardStopped("1"), staleRegionProbe.Ref);
+                coordinator.Tell(new Identify("flush"), probe.Ref);
+                await probe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(3));
+            });
+
+            // Shard should still be functioning without any disruption
+            setup.Sharding.Tell(new EntityEnvelope(1, "hello2"), probe.Ref);
+            await probe.ExpectMsgAsync("ack hello2", TimeSpan.FromSeconds(3));
+        }
     }
 }
