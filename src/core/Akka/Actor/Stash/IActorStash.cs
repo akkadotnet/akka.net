@@ -27,15 +27,16 @@ namespace Akka.Actor
     }
 
     /// <summary>
-    /// TBD
+    /// An <see cref="ActorProducerPluginBase"/> that automatically initializes and manages the
+    /// <see cref="IStash"/> for actors implementing <see cref="IActorStash"/>.
     /// </summary>
     public class ActorStashPlugin : ActorProducerPluginBase
     {
         /// <summary>
         /// Stash plugin is applied to all actors implementing <see cref="IActorStash"/> interface.
         /// </summary>
-        /// <param name="actorType">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="actorType">The actor <see cref="Type"/> to check.</param>
+        /// <returns><see langword="true"/> if <paramref name="actorType"/> implements <see cref="IActorStash"/>; otherwise <see langword="false"/>.</returns>
         public override bool CanBeAppliedTo(Type actorType)
         {
             return typeof (IActorStash).IsAssignableFrom(actorType);
@@ -44,8 +45,8 @@ namespace Akka.Actor
         /// <summary>
         /// Creates a new stash for specified <paramref name="actor"/> if it has not been initialized already.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="actor">The actor instance being created.</param>
+        /// <param name="context">The context of the actor being created.</param>
         public override void AfterIncarnated(ActorBase actor, IActorContext context)
         {
             if (actor is IActorStash stashed && stashed.Stash == null)
@@ -57,8 +58,8 @@ namespace Akka.Actor
         /// <summary>
         /// Ensures, that all stashed messages inside <paramref name="actor"/> stash have been unstashed.
         /// </summary>
-        /// <param name="actor">TBD</param>
-        /// <param name="context">TBD</param>
+        /// <param name="actor">The actor instance being recycled.</param>
+        /// <param name="context">The context of the actor being recycled.</param>
         public override void BeforeIncarnated(ActorBase actor, IActorContext context)
         {
             if (actor is IActorStash actorStash)

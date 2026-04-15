@@ -13,7 +13,7 @@ using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.Remote.Transport;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2;
+using Akka.TestKit.Xunit;
 using Akka.Util;
 using Akka.Util.Internal;
 
