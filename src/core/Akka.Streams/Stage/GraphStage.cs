@@ -495,7 +495,7 @@ namespace Akka.Streams.Stage
 
         static GraphStageLogic()
         {
-            NoPromise = new TaskCompletionSource<Done>();
+            NoPromise = TaskEx.NonBlockingTaskCompletionSource<Done>();
             NoPromise.SetResult(Done.Instance);
         }
         
@@ -949,7 +949,7 @@ namespace Akka.Streams.Stage
             // External call
             public Task<Done> InvokeWithFeedback(T input)
             {
-                var promise = new TaskCompletionSource<Done>();
+                var promise = TaskEx.NonBlockingTaskCompletionSource<Done>();
 
                 if (AddToWaiting())
                 {
