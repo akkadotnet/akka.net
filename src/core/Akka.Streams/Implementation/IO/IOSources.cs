@@ -12,6 +12,7 @@ using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.IO;
+using Akka.Util.Internal;
 using Reactive.Streams;
 
 namespace Akka.Streams.Implementation.IO
@@ -89,7 +90,7 @@ namespace Akka.Streams.Implementation.IO
             var materializer = ActorMaterializerHelper.Downcast(context.Materializer);
             var settings = materializer.EffectiveSettings(context.EffectiveAttributes);
 
-            var ioResultPromise = new TaskCompletionSource<IOResult>();
+            var ioResultPromise = TaskEx.NonBlockingTaskCompletionSource<IOResult>();
             var props = FilePublisher.Props(_f, ioResultPromise, _chunkSize, _startPosition, settings.InitialInputBufferSize, settings.MaxInputBufferSize);
             var dispatcher = context.EffectiveAttributes.GetAttribute(DefaultAttributes.IODispatcher.GetAttribute<ActorAttributes.Dispatcher>());
             var actorRef = materializer.ActorOf(context, props.WithDispatcher(dispatcher.Name));
@@ -153,7 +154,7 @@ namespace Akka.Streams.Implementation.IO
         public override IPublisher<ByteString> Create(MaterializationContext context, out Task<IOResult> task)
         {
             var materializer = ActorMaterializerHelper.Downcast(context.Materializer);
-            var ioResultPromise = new TaskCompletionSource<IOResult>();
+            var ioResultPromise = TaskEx.NonBlockingTaskCompletionSource<IOResult>();
             IPublisher<ByteString> pub;
             
             try
