@@ -21,6 +21,7 @@ using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Util;
 using Akka.Util;
 using Akka.Util.Extensions;
+using Akka.Util.Internal;
 using Reactive.Streams;
 // ReSharper disable UnusedMember.Global
 
@@ -704,7 +705,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <typeparam name="T">TBD</typeparam>
         /// <returns>TBD</returns>
-        public static Source<T, NotUsed> Never<T>() => FromTask(new TaskCompletionSource<T>().Task).WithAttributes(DefaultAttributes.NeverSource);
+        public static Source<T, NotUsed> Never<T>() => FromTask(TaskEx.NonBlockingTaskCompletionSource<T>().Task).WithAttributes(DefaultAttributes.NeverSource);
 
         /// <summary>
         /// Streams the elements of the given future source once it successfully completes.
