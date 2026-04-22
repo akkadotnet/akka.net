@@ -16,7 +16,7 @@ using BenchmarkDotNet.Attributes;
 
 namespace Akka.Benchmarks.Streams
 {
-    [Config(typeof(MicroBenchmarkConfig))]
+    [Config(typeof(ThroughputBenchmarkConfig))]
     public class StreamThroughputBenchmarks
     {
         private const int ElementCount = 100_000;
