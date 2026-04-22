@@ -8,7 +8,7 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Threading;
+
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.Sharding.Internal;
@@ -621,36 +621,36 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_NoResponse()
+        public async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_NoResponse()
         {
-            Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new NoResponse());
+            await Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new NoResponse());
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_CrashStore()
+        public async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_CrashStore()
         {
-            Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new CrashStore());
+            await Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new CrashStore());
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_StopStore()
+        public async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_StopStore()
         {
-            Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new StopStore());
+            await Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new StopStore());
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_Delay_500()
+        public async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_Delay_500()
         {
-            Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new Delay(TimeSpan.FromMilliseconds(500)));
+            await Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new Delay(TimeSpan.FromMilliseconds(500)));
         }
 
         [Fact]
-        public void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_Delay_1000()
+        public async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails_Delay_1000()
         {
-            Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new Delay(TimeSpan.FromSeconds(1)));
+            await Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(new Delay(TimeSpan.FromSeconds(1)));
         }
 
-        private void Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(IFail wayToFail)
+        private async Task Remember_entities_handling_in_sharding_must_recover_on_graceful_entity_stop_when_storing_a_stop_event_fails(IFail wayToFail)
         {
             var storeProbe = CreateTestProbe();
             Sys.EventStream.Subscribe(storeProbe.Ref, typeof(ShardStoreCreated));
@@ -667,29 +667,34 @@ namespace Akka.Cluster.Sharding.Tests
 
             // trigger shard start and store creation
             sharding.Tell(new EntityEnvelope(1, "hello-1"), probe.Ref);
-            var shard1Store = storeProbe.ExpectMsg<ShardStoreCreated>().Store;
-            probe.ExpectMsg("hello-1");
+            var shard1Store = (await storeProbe.ExpectMsgAsync<ShardStoreCreated>()).Store;
+            await probe.ExpectMsgAsync("hello-1");
 
             // fail it when stopping
             shard1Store.Tell(new FakeShardStoreActor.FailUpdateEntity(wayToFail), storeProbe.Ref);
-            storeProbe.ExpectMsg<Done>();
+            await storeProbe.ExpectMsgAsync<Done>();
 
             sharding.Tell(new EntityEnvelope(1, "graceful-stop"));
 
-            if (!(wayToFail is CrashStore) && !(wayToFail is StopStore))
+            if (wayToFail is StopStore or CrashStore)
             {
-                // race, give the shard some time to see the passivation before restoring the fake shard store
-                Thread.Sleep(250);
-                shard1Store.Tell(new FakeShardStoreActor.ClearFail(), probe.Ref);
-                probe.ExpectMsg<Done>();
+                shard1Store = (await storeProbe.ExpectMsgAsync<ShardStoreCreated>()).Store;
             }
 
-            // it takes a while?
-            AwaitAssert(() =>
+            if (wayToFail is NoResponse or Delay or CrashStore)
+            {
+                shard1Store = (await storeProbe.ExpectMsgAsync<ShardStoreCreated>()).Store;
+            }
+
+            shard1Store.Tell(new FakeShardStoreActor.ClearFail(), probe.Ref);
+            await probe.ExpectMsgAsync<Done>();
+
+            // it takes a while - timeout hits and then backoff
+            await AwaitAssertAsync(async () =>
             {
                 sharding.Tell(new EntityEnvelope(1, "hello-2"), probe.Ref);
-                probe.ExpectMsg("hello-2");
-            }, TimeSpan.FromSeconds(5));
+                await probe.ExpectMsgAsync("hello-2");
+            }, TimeSpan.FromSeconds(10));
             Sys.Stop(sharding);
         }
 
