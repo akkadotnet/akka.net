@@ -32,14 +32,14 @@ So a `SqlClient.ExecuteAsync` or `HttpClient.SendAsync` inside a `SelectAsync` b
 
 ### What gets traced
 
-- Linear pipelines: `Source.Queue` → `Select` → `SelectAsync` → `Sink` — each stage becomes a span in a parent-child chain.
-- Fan-in stages (`Merge`, `Concat`, `BatchWeighted`, `GroupedWithin`): the first input element's trace becomes the primary parent; additional inputs are attached as `ActivityLink`s so trace viewers can navigate between contributing traces.
-- Fan-out stages (`Broadcast`, `Balance`): the upstream trace context propagates to every downstream branch.
+* Linear pipelines: `Source.Queue` → `Select` → `SelectAsync` → `Sink` — each stage becomes a span in a parent-child chain.
+* Fan-in stages (`Merge`, `Concat`, `BatchWeighted`, `GroupedWithin`): the first input element's trace becomes the primary parent; additional inputs are attached as `ActivityLink`s so trace viewers can navigate between contributing traces.
+* Fan-out stages (`Broadcast`, `Balance`): the upstream trace context propagates to every downstream branch.
 
 ### What does NOT get traced
 
-- Background streams with no producer context: a `Source.Tick` or `Source.From` pipeline with no external traced caller emits zero spans. This prevents long-lived background streams from accumulating unbounded orphan spans.
-- StreamRef hops: trace context does not currently cross `SourceRef`/`SinkRef` network boundaries. Local-node traces work; cross-node traces stop at the wire boundary.
+* Background streams with no producer context: a `Source.Tick` or `Source.From` pipeline with no external traced caller emits zero spans. This prevents long-lived background streams from accumulating unbounded orphan spans.
+* StreamRef hops: trace context does not currently cross `SourceRef`/`SinkRef` network boundaries. Local-node traces work; cross-node traces stop at the wire boundary.
 
 ## Example: batched fan-in pipeline
 
@@ -76,9 +76,9 @@ The resulting trace in Jaeger shows every stage as its own span, parented correc
 
 Things to notice:
 
-- The span tree is one trace from ingress through `Select`, `Batch`, `SelectAsync`, and out to the `HttpClient POST`.
-- The `stream.fan_in.links` tag shows how many cross-trace links the span carries.
-- The References section shows `CHILD_OF` pointing to the local `Batch` span (normal parent/child), plus `FOLLOWS_FROM` entries pointing to spans in other traces. Jaeger renders OpenTelemetry `ActivityLink` as `FOLLOWS_FROM`.
+* The span tree is one trace from ingress through `Select`, `Batch`, `SelectAsync`, and out to the `HttpClient POST`.
+* The `stream.fan_in.links` tag shows how many cross-trace links the span carries.
+* The References section shows `CHILD_OF` pointing to the local `Batch` span (normal parent/child), plus `FOLLOWS_FROM` entries pointing to spans in other traces. Jaeger renders OpenTelemetry `ActivityLink` as `FOLLOWS_FROM`.
 
 ### Full span tree
 
@@ -96,8 +96,8 @@ A request whose element got batched into the flush above. Its own trace stops at
 
 When multiple traced inputs merge into a single output element (e.g., `BatchWeighted` aggregating N elements into one batch), the framework uses first-wins semantics:
 
-- The first input element's `ActivityContext` becomes the primary parent of the downstream stage span.
-- All subsequent input elements' contexts are attached as `ActivityLink`s on that span.
+* The first input element's `ActivityContext` becomes the primary parent of the downstream stage span.
+* All subsequent input elements' contexts are attached as `ActivityLink`s on that span.
 
 This prevents trace explosion from N:1 merges without losing observability. Any trace viewer that supports `ActivityLink` (Jaeger, Zipkin, Azure Monitor) can navigate from any contributing producer's trace to the shared downstream work.
 
@@ -107,8 +107,8 @@ For 1-to-1 pass-through fan-in stages like `Merge` and `Concat`, each output ele
 
 [Phobos](https://phobos.petabridge.com/) is Petabridge's commercial observability product for Akka.NET. When used with stream tracing, Phobos adds two things:
 
-- Actor-to-stream trace continuity: Phobos propagates trace context across the actor mailbox boundary, so traces that start in an actor's `OnReceive` handler flow into any stream materialized within that actor.
-- Automatic instrumentation of actor message handling, persistence operations, and cluster communications. Stream tracing extends that coverage into streaming pipelines.
+* Actor-to-stream trace continuity: Phobos propagates trace context across the actor mailbox boundary, so traces that start in an actor's `OnReceive` handler flow into any stream materialized within that actor.
+* Automatic instrumentation of actor message handling, persistence operations, and cluster communications. Stream tracing extends that coverage into streaming pipelines.
 
 Stream tracing works independently of Phobos. Any code that sets `Activity.Current` before calling into a stream ingress point (ASP.NET Core controllers, `BackgroundService` workers, user-owned `ActivitySource` scopes) will produce correctly parented traces on its own.
 
