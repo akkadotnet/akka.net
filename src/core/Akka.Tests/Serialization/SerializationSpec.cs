@@ -770,5 +770,66 @@ namespace Akka.Tests.Serialization
             public object MyObject { get; set; }
         }
     }
+
+    public class DisallowUnregisteredTypesSpec : AkkaSpec
+    {
+        private static readonly Config StrictConfig = ConfigurationFactory.ParseString(@"
+            akka.actor.serialization-settings.allow-unregistered-types = false
+        ");
+
+        public DisallowUnregisteredTypesSpec() : base(StrictConfig) { }
+
+        [Fact(DisplayName = "Should throw for unregistered type when fallback disabled")]
+        public void Should_throw_for_unregistered_type_when_fallback_disabled()
+        {
+            var serialization = Sys.Serialization;
+            var unregisteredType = new UnregisteredMessage("test");
+
+            var ex = Assert.Throws<SerializationException>(() =>
+                serialization.FindSerializerFor(unregisteredType));
+
+            ex.Message.Should().Contain("No serializer binding found");
+            ex.Message.Should().Contain("allow-unregistered-types");
+        }
+
+        [Fact(DisplayName = "Should still work for explicitly bound types when fallback disabled")]
+        public void Should_still_work_for_explicitly_bound_types_when_fallback_disabled()
+        {
+            var serialization = Sys.Serialization;
+            // byte[] is explicitly bound in default config
+            var serializer = serialization.FindSerializerFor(new byte[] { 1, 2, 3 });
+            serializer.Should().BeOfType<ByteArraySerializer>();
+        }
+
+        private sealed class UnregisteredMessage
+        {
+            public string Value { get; }
+            public UnregisteredMessage(string value) => Value = value;
+        }
+    }
+
+    public class AllowUnregisteredTypesSpec : AkkaSpec
+    {
+        [Fact(DisplayName = "Should have allow-unregistered-types enabled by default")]
+        public void Should_have_allow_unregistered_types_enabled_by_default()
+        {
+            var config = Sys.Settings.Config;
+            var allowUnregisteredTypes = config.GetBoolean("akka.actor.serialization-settings.allow-unregistered-types");
+            allowUnregisteredTypes.Should().BeTrue();
+        }
+
+        [Fact(DisplayName = "Should use object fallback by default")]
+        public void Should_use_object_fallback_by_default()
+        {
+            var serialization = Sys.Serialization;
+            var unregisteredType = new SomeRandomType();
+
+            // Should not throw, should return json serializer
+            var serializer = serialization.FindSerializerFor(unregisteredType);
+            serializer.Should().BeOfType<NewtonSoftJsonSerializer>();
+        }
+
+        private sealed class SomeRandomType { }
+    }
 }
 
