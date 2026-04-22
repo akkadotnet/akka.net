@@ -810,6 +810,14 @@ namespace Akka.Tests.Serialization
 
     public class AllowUnregisteredTypesSpec : AkkaSpec
     {
+        [Fact(DisplayName = "Should have allow-unregistered-types enabled by default")]
+        public void Should_have_allow_unregistered_types_enabled_by_default()
+        {
+            var config = Sys.Settings.Config;
+            var allowUnregisteredTypes = config.GetBoolean("akka.actor.serialization-settings.allow-unregistered-types");
+            allowUnregisteredTypes.Should().BeTrue();
+        }
+
         [Fact(DisplayName = "Should use object fallback by default")]
         public void Should_use_object_fallback_by_default()
         {
