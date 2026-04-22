@@ -1433,8 +1433,11 @@ namespace Akka.Streams.Stage
             {
                 // fast path
                 connection.Slot = Empty.Instance;
-                connection.SlotContext = null;
-                connection.SlotLinks = null;
+                if (connection.SlotContext.HasValue)
+                {
+                    connection.SlotContext = null;
+                    connection.SlotLinks = null;
+                }
                 return (T)element;
             }
 
@@ -1454,8 +1457,11 @@ namespace Akka.Streams.Stage
             // Completed
             var elem = (T)connection.Slot;
             connection.Slot = Empty.Instance;
-            connection.SlotContext = null;
-            connection.SlotLinks = null;
+            if (connection.SlotContext.HasValue)
+            {
+                connection.SlotContext = null;
+                connection.SlotLinks = null;
+            }
             return elem;
         }
 
@@ -1575,20 +1581,20 @@ namespace Akka.Streams.Stage
             if ((portState & (OutReady | OutClosed | InClosed)) == OutReady && element != null)
             {
                 connection.Slot = element;
-                // Consume fan-in override if present; otherwise capture Activity.Current.
-                if (connection.PendingPushPrimaryContext.HasValue)
+                if (StreamsDiagnostics.ActivitySource.HasListeners())
                 {
-                    connection.SlotContext = connection.PendingPushPrimaryContext;
-                    connection.SlotLinks = connection.PendingPushLinks;
-                    connection.PendingPushPrimaryContext = null;
-                    connection.PendingPushLinks = null;
-                }
-                else
-                {
-                    connection.SlotContext = StreamsDiagnostics.ActivitySource.HasListeners()
-                        ? Activity.Current?.Context
-                        : null;
-                    connection.SlotLinks = null;
+                    if (connection.PendingPushPrimaryContext.HasValue)
+                    {
+                        connection.SlotContext = connection.PendingPushPrimaryContext;
+                        connection.SlotLinks = connection.PendingPushLinks;
+                        connection.PendingPushPrimaryContext = null;
+                        connection.PendingPushLinks = null;
+                    }
+                    else
+                    {
+                        connection.SlotContext = Activity.Current?.Context;
+                        connection.SlotLinks = null;
+                    }
                 }
                 Interpreter.ChasePush(connection);
             }

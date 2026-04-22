@@ -952,9 +952,9 @@ namespace Akka.Streams.Implementation.Fusing
             // Fan-in stages may attach additional ActivityContexts as SlotLinks — those become
             // ActivityLinks on the downstream stage span, preserving trace continuity for every
             // input element that contributed to a single merged output. See SetFanInTraceContext.
-            var slotContext = connection.SlotContext;
-            if (slotContext.HasValue && StreamsDiagnostics.ActivitySource.HasListeners())
+            if (connection.SlotContext.HasValue && StreamsDiagnostics.ActivitySource.HasListeners())
             {
+                var slotContext = connection.SlotContext.Value;
                 var slotLinks = connection.SlotLinks;
                 var stage = connection.InOwner;
                 ActivityLink[] activityLinks = null;
@@ -967,7 +967,7 @@ namespace Akka.Streams.Implementation.Fusing
                 var stageActivity = StreamsDiagnostics.ActivitySource.StartActivity(
                     StreamsDiagnostics.GetStageOperationName(stage),
                     ActivityKind.Internal,
-                    slotContext.Value,
+                    slotContext,
                     tags: null,
                     links: activityLinks);
                 if (stageActivity != null)
