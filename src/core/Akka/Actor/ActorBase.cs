@@ -162,7 +162,12 @@ namespace Akka.Actor
         {
             get
             {
-                var context = InternalCurrentActorCellKeeper.Current;
+                // Hybrid: dispatcher cell first, then fall back to the test
+                // kit's ambient cell if set (so test code accessing Context
+                // outside a message handler continues to work, matching the
+                // pre-AsyncLocal behavior where TestKit wrote the TestActor
+                // cell directly to Current).
+                var context = InternalCurrentActorCellKeeper.CurrentOrAmbient;
                 if (context == null)
                     throw new NotSupportedException(
                         "There is no active ActorContext, this is most likely due to use of async operations from within this actor.");

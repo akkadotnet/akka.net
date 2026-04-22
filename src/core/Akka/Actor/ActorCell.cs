@@ -123,11 +123,19 @@ namespace Akka.Actor
         }
         
         /// <summary>
-        /// A static reference to the current actor cell.
+        /// A static reference to the current actor cell. Resolves to the
+        /// dispatcher-owned cell first (i.e. the actor currently processing a
+        /// message on this thread); if that is null, falls back to the test
+        /// kit's ambient cell (flows across awaits via AsyncLocal).
+        ///
+        /// Save/restore sites must NOT round-trip through this property —
+        /// writing back a hybrid read would pollute the ThreadStatic slot
+        /// with an ambient value. Use <c>InternalCurrentActorCellKeeper.Current</c>
+        /// directly for that pattern.
         /// </summary>
         internal static ActorCell? Current
         {
-            get { return InternalCurrentActorCellKeeper.Current; }
+            get { return InternalCurrentActorCellKeeper.CurrentOrAmbient; }
         }
 
         /// <summary>
@@ -557,7 +565,11 @@ namespace Akka.Actor
         /// <returns>TBD</returns>
         public static IActorRef? GetCurrentSelfOrNoSender()
         {
-            var current = Current;
+            // Use the hybrid accessor: dispatcher's cell if we're inside a
+            // message handler, otherwise fall back to the test kit's ambient
+            // cell (flows across awaits via AsyncLocal). Must NOT use this
+            // in save/restore contexts — see InternalCurrentActorCellKeeper.
+            var current = InternalCurrentActorCellKeeper.CurrentOrAmbient;
             return current != null ? current.Self : ActorRefs.NoSender;
         }
 

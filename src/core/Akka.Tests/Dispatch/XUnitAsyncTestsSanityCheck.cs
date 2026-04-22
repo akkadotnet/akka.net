@@ -22,7 +22,14 @@ namespace Akka.Tests.Dispatch
 		[Fact]
 		public async Task Async_tests_should_not_lose_ambient_context()
 		{
-			var ambientContext = InternalCurrentActorCellKeeper.Current;
+			// Read through CurrentOrAmbient (dispatcher [ThreadStatic] OR the
+			// test kit's AsyncLocal AmbientResolver). Reading the raw Current
+			// [ThreadStatic] slot is no longer sufficient for the "tests can
+			// access ambient context across awaits" intent — TestKitBase now
+			// installs the ambient cell via AsyncLocal rather than pinning a
+			// ThreadStatic on the init thread (which would cross-pollute under
+			// xUnit v3 parallel-class execution).
+			var ambientContext = InternalCurrentActorCellKeeper.CurrentOrAmbient;
 			var backgroundOps = new List<Task>();
 			for (var c = 0; c < 50; c++)
 			{
@@ -34,7 +41,7 @@ namespace Akka.Tests.Dispatch
 			}
 			for (var t = 0; t < 1000; t++)
 			{
-				Assert.Equal(ambientContext, InternalCurrentActorCellKeeper.Current);
+				Assert.Equal(ambientContext, InternalCurrentActorCellKeeper.CurrentOrAmbient);
 				await Task.Delay(1);
 			}
 			await Task.WhenAll(backgroundOps);

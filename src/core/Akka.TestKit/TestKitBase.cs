@@ -181,18 +181,53 @@ namespace Akka.TestKit
             // The TestActor property getter will ensure it's ready when first accessed
             _testState.TestActor = testActor;
 
+            // Two flow mechanisms run alongside each other:
+            //
+            //   1. AsyncLocal AmbientResolver — flows with ExecutionContext, so
+            //      test code that awaits across ThreadPool threads (including
+            //      xUnit v3 parallel-class scheduling where continuations can
+            //      resume on a thread previously used by a sibling test) reads
+            //      the correct cell via InternalCurrentActorCellKeeper.CurrentOrAmbient.
+            //
+            //   2. ActorCellKeepingSynchronizationContext — historical. Every
+            //      test-body await Posts through it, the Post wrapper saves the
+            //      current [ThreadStatic] slot, sets it to this test's cell,
+            //      runs the continuation, then restores. Many long-standing
+            //      net48-era tests rely on this SyncContext being the active
+            //      one during awaits; removing the install regresses them.
+            //
+            // The two mechanisms are compatible. Save/restore inside the
+            // SyncContext reads/writes the [ThreadStatic] slot only (never the
+            // AsyncLocal), so it can't leak an ambient value into the
+            // ThreadStatic — the xUnit v3 parallel leak pattern is still
+            // prevented by the AsyncLocal path alone.
             if (this is not INoImplicitSender)
             {
-                InternalCurrentActorCellKeeper.Current = (ActorCell)((ActorRefWithCell)testActor).Underlying;
+                var cell = (ActorCell)((ActorRefWithCell)testActor).Underlying;
+                InternalCurrentActorCellKeeper.AmbientResolver = () => cell;
             }
             else if (this is not TestProbe)
-            //HACK: we need to clear the current context when running a No Implicit Sender test as sender from an async test may leak
-            //but we should not clear the current context when creating a testprobe from a test
+            //HACK: we need to clear the ambient context when running a No Implicit Sender test as sender from an async test may leak
+            //but we should not clear the ambient context when creating a testprobe from a test
             {
-                InternalCurrentActorCellKeeper.Current = null;
+                InternalCurrentActorCellKeeper.AmbientResolver = null;
             }
+            // Do NOT write InternalCurrentActorCellKeeper.Current (ThreadStatic)
+            // here: under xUnit v3 parallel-class execution, sibling TestKits
+            // running on different ThreadPool workers would each pin THEIR cell
+            // on THEIR init thread, and a later continuation resuming on a
+            // polluted thread would read a foreign cell. The AsyncLocal
+            // AmbientResolver above flows the correct cell with ExecutionContext
+            // instead, and is isolated per-test.
+            //
+            // The legacy ActorCellKeepingSynchronizationContext is kept because
+            // many long-standing tests rely on its Post wrapper re-establishing
+            // the ThreadStatic slot on each continuation. Its save/restore
+            // reads/writes the ThreadStatic slot only (via the setter), which
+            // writes only to the ThreadStatic — it cannot pull an ambient value
+            // into the ThreadStatic and leak across tests.
             SynchronizationContext.SetSynchronizationContext(
-                new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.Current));
+                new ActorCellKeepingSynchronizationContext(InternalCurrentActorCellKeeper.CurrentOrAmbient));
         }
         
         /// <summary>

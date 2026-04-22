@@ -2130,7 +2130,9 @@ namespace Akka.Actor.Internal
     }
     public static class InternalCurrentActorCellKeeper
     {
+        public static System.Func<Akka.Actor.ActorCell?>? AmbientResolver { get; set; }
         public static Akka.Actor.ActorCell? Current { get; set; }
+        public static Akka.Actor.ActorCell? CurrentOrAmbient { get; }
     }
     public class NormalChildrenContainer : Akka.Actor.Internal.ChildrenContainerBase
     {
