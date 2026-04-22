@@ -71,6 +71,21 @@ namespace Akka.Benchmarks.Configurations
     }
 
     /// <summary>
+    /// BenchmarkDotNet configuration for throughput benchmarks.
+    /// Includes requests/sec column for easier comparison.
+    /// </summary>
+    public class ThroughputBenchmarkConfig : ManualConfig
+    {
+        public ThroughputBenchmarkConfig()
+        {
+            AddDiagnoser(MemoryDiagnoser.Default);
+            AddExporter(MarkdownExporter.GitHub);
+            AddLogger(ConsoleLogger.Default);
+            AddColumn(new RequestsPerSecondColumn());
+        }
+    }
+
+    /// <summary>
     /// BenchmarkDotNet configuration used for monitored jobs (not for microbenchmarks).
     /// </summary>
     public class MonitoringConfig : ManualConfig
