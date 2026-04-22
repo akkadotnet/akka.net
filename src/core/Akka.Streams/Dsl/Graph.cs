@@ -58,11 +58,6 @@ namespace Akka.Streams.Dsl
                     {
                         if (IsAvailable(outlet))
                         {
-                            // isAvailable(out) implies !pending — grab the element and push it
-                            // through with the upstream trace context staged as the downstream
-                            // span's primary parent, so Merge becomes transparent to trace
-                            // continuity instead of defaulting to Activity.Current (which would
-                            // be the Merge stage span itself on fast path, or null on slow path).
                             GrabAndPushFanIn(inlet, outlet);
                             TryPull(inlet);
                         }
@@ -114,10 +109,6 @@ namespace Akka.Streams.Dsl
                 }
                 else if (IsAvailable(inlet))
                 {
-                    // Slow-path dispatch: OnPull fired and we're emitting a previously-queued
-                    // element. Interpreter-thread OnPull has Activity.Current = null, so the
-                    // fan-in helper reads the upstream context off the inlet directly and
-                    // stages it as the downstream Push's primary parent.
                     GrabAndPushFanIn(inlet, _stage.Out);
                     if(AreUpstreamsClosed && !IsPending)
                         CompleteStage();
@@ -319,12 +310,7 @@ namespace Akka.Streams.Dsl
                              /* blocked */
                         }
                         else
-                        {
-                            var ctx = CurrentInletTraceContext(port);
-                            var element = Grab(port);
-                            if (ctx.HasValue) SetFanInTraceContext(_stage.Out, ctx.Value, null);
-                            Emit(_stage.Out, element, pullPort);
-                        }
+                            GrabAndEmitFanIn(port, _stage.Out, pullPort);
                     },
                     onUpstreamFinish: OnComplete);
                 }
@@ -351,10 +337,7 @@ namespace Akka.Streams.Dsl
             private void EmitPreferred()
             {
                 _preferredEmitting++;
-                var ctx = CurrentInletTraceContext(_stage.Preferred);
-                var element = Grab(_stage.Preferred);
-                if (ctx.HasValue) SetFanInTraceContext(_stage.Out, ctx.Value, null);
-                Emit(_stage.Out, element, Emitted);
+                GrabAndEmitFanIn(_stage.Preferred, _stage.Out, Emitted);
                 TryPull(_stage.Preferred);
             }
 
@@ -371,12 +354,7 @@ namespace Akka.Streams.Dsl
                 {
                     var port = _stage.In(i);
                     if (IsAvailable(port))
-                    {
-                        var ctx = CurrentInletTraceContext(port);
-                        var element = Grab(port);
-                        if (ctx.HasValue) SetFanInTraceContext(_stage.Out, ctx.Value, null);
-                        Emit(_stage.Out, element, _pullMe[i]);
-                    }
+                        GrabAndEmitFanIn(port, _stage.Out, _pullMe[i]);
                 }
             }
 

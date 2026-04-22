@@ -3157,9 +3157,7 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly GroupedWeightedWithin<T> _stage;
 
             private readonly List<T> _buffer = new();
-            // Per-element trace contexts paralleling _buffer — captured from the upstream slot
-            // before Grab clears it, used to emit fan-in ActivityLinks on the flushed group.
-            private readonly List<System.Diagnostics.ActivityContext> _bufferContexts = new();
+            private List<System.Diagnostics.ActivityContext> _bufferContexts;
             private T _pending = default;
             private long _pendingWeight = 0L;
             private System.Diagnostics.ActivityContext? _pendingContext;
@@ -3208,7 +3206,7 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_totalWeight + cost <= _stage._maxWeight && _totalNumber + 1 <= _stage._maxNumber)
                     {
                         _buffer.Add(element);
-                        if (elementContext.HasValue) _bufferContexts.Add(elementContext.Value);
+                        if (elementContext.HasValue) (_bufferContexts ??= new List<System.Diagnostics.ActivityContext>()).Add(elementContext.Value);
                         _totalWeight += cost;
                         _totalNumber += 1;
 
@@ -3240,7 +3238,7 @@ namespace Akka.Streams.Implementation.Fusing
                         if (_totalWeight == 0L && _totalNumber == 0)
                         {
                             _buffer.Add(element);
-                            if (elementContext.HasValue) _bufferContexts.Add(elementContext.Value);
+                            if (elementContext.HasValue) (_bufferContexts ??= new List<System.Diagnostics.ActivityContext>()).Add(elementContext.Value);
                             _totalWeight += cost;
                             _totalNumber += 1;
                             _pushEagerly = true;
@@ -3269,7 +3267,7 @@ namespace Akka.Streams.Implementation.Fusing
                 EmitBufferContextsAsFanInLinks();
                 Push(_stage._out, _buffer.ToList());
                 _buffer.Clear();
-                _bufferContexts.Clear();
+                _bufferContexts?.Clear();
                 if (!_finished)
                     StartNewGroup();
                 else if (!EqualityComparer<T>.Default.Equals(_pending, default))
@@ -3300,7 +3298,7 @@ namespace Akka.Streams.Implementation.Fusing
                     _totalNumber = 1;
                     _pendingWeight = 0L;
                     _buffer.Add(_pending);
-                    if (_pendingContext.HasValue) _bufferContexts.Add(_pendingContext.Value);
+                    if (_pendingContext.HasValue) (_bufferContexts ??= new List<System.Diagnostics.ActivityContext>()).Add(_pendingContext.Value);
                     _pending = default;
                     _pendingContext = null;
                     _groupEmitted = false;

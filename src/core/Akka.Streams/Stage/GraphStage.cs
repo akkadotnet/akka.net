@@ -950,14 +950,8 @@ namespace Akka.Streams.Stage
                     return;
                 }
 
-                // Wrap the handler so that, on the interpreter thread, we start an ingress Activity
-                // with the captured producer context as parent. Setting Activity.Current for the
-                // duration of the real handler call means any Push it does will capture the ingress
-                // span's context into Connection.SlotContext, carrying the producer's trace forward
-                // to downstream stages transparently.
-                //
-                // StartActivity returns null when the "Akka.Streams" ActivitySource has no listeners,
-                // in which case the wrapper degrades to just calling the original handler.
+                // Start an ingress Activity on the interpreter thread so Push captures
+                // the producer's trace into Connection.SlotContext.
                 var capturedContext = ingressContext.Value;
                 var owner = _ownedStage;
                 var realHandler = _wrappedHandler;
@@ -1581,12 +1575,7 @@ namespace Akka.Streams.Stage
             if ((portState & (OutReady | OutClosed | InClosed)) == OutReady && element != null)
             {
                 connection.Slot = element;
-                // Fan-in stages (Batch, GroupedWithin, Merge, ...) call SetFanInTraceContext
-                // just before Push to override the default capture with the FIRST input element's
-                // context as the primary parent and the rest as ActivityLinks. Consume that override
-                // when present; otherwise capture Activity.Current so downstream stages can parent
-                // their own spans correctly. Skipped entirely when nobody is listening to the
-                // "Akka.Streams" ActivitySource — zero cost on the hot path for non-traced streams.
+                // Consume fan-in override if present; otherwise capture Activity.Current.
                 if (connection.PendingPushPrimaryContext.HasValue)
                 {
                     connection.SlotContext = connection.PendingPushPrimaryContext;
@@ -1676,6 +1665,21 @@ namespace Akka.Streams.Stage
             var element = Grab(inlet);
             if (ctx.HasValue) SetFanInTraceContext(outlet, ctx.Value, null);
             Push(outlet, element);
+        }
+
+        /// <summary>
+        /// Like <see cref="GrabAndPushFanIn{TIn,TOut}"/> but uses <see cref="Emit{T}(Outlet{T},T,Action)"/>
+        /// instead of <c>Push</c>, for fan-in stages that need the deferred-pull callback overload.
+        /// </summary>
+        internal void GrabAndEmitFanIn<TIn, TOut>(Inlet<TIn> inlet, Outlet<TOut> outlet, Action andThen = null) where TIn : TOut
+        {
+            var ctx = CurrentInletTraceContext(inlet);
+            var element = Grab(inlet);
+            if (ctx.HasValue) SetFanInTraceContext(outlet, ctx.Value, null);
+            if (andThen != null)
+                Emit(outlet, element, andThen);
+            else
+                Emit(outlet, element);
         }
 
         /// <summary>
