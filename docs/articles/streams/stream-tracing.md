@@ -3,11 +3,11 @@ uid: streams-tracing
 title: Stream Tracing with OpenTelemetry
 ---
 
-# Stream tracing with OpenTelemetry
+# Stream Tracing with OpenTelemetry
 
 Akka.Streams can propagate [OpenTelemetry](https://opentelemetry.io/) trace context through stream pipelines. When enabled, each stage in a graph emits a `System.Diagnostics.Activity` span parented to the producer's trace. This works across fan-in merges, fan-out broadcasts, and async stage boundaries where `AsyncLocal<Activity>` would normally be lost.
 
-## Enabling stream tracing
+## Enabling Stream Tracing
 
 Stream tracing is opt-in. Register the `"Akka.Streams"` `ActivitySource` with your OpenTelemetry `TracerProvider`:
 
@@ -24,24 +24,24 @@ var tracerProvider = Sdk.CreateTracerProviderBuilder()
 
 When no listener is registered, the instrumentation is a no-op: zero allocations, zero overhead. You can ship this in production and pay nothing unless you wire up a listener.
 
-## How it works
+## How It Works
 
 Trace context is captured per-element at the stream boundary (when external code calls `OfferAsync`, `Tell`, or any `GetAsyncCallback`-based ingress) and carried alongside each element through the `GraphInterpreter`. As each element flows through a stage, the interpreter starts a stage-scoped `Activity` with the captured context as parent, so downstream stages and any user code running inside them parent their own spans correctly.
 
 So a `SqlClient.ExecuteAsync` or `HttpClient.SendAsync` inside a `SelectAsync` body will produce spans that are children of the `SelectAsync` stage span, which is itself a child of the producer's trace. The entire chain shares one TraceId.
 
-### What gets traced
+### What Gets Traced
 
 * Linear pipelines: `Source.Queue` → `Select` → `SelectAsync` → `Sink` — each stage becomes a span in a parent-child chain.
 * Fan-in stages (`Merge`, `Concat`, `BatchWeighted`, `GroupedWithin`): the first input element's trace becomes the primary parent; additional inputs are attached as `ActivityLink`s so trace viewers can navigate between contributing traces.
 * Fan-out stages (`Broadcast`, `Balance`): the upstream trace context propagates to every downstream branch.
 
-### What does NOT get traced
+### What Does NOT Get Traced
 
 * Background streams with no producer context: a `Source.Tick` or `Source.From` pipeline with no external traced caller emits zero spans. This prevents long-lived background streams from accumulating unbounded orphan spans.
 * StreamRef hops: trace context does not currently cross `SourceRef`/`SinkRef` network boundaries. Local-node traces work; cross-node traces stop at the wire boundary.
 
-## Example: batched fan-in pipeline
+## Example: Batched Fan-in Pipeline
 
 Below is a pipeline where twelve concurrent producers offer orders into a `Source.Queue`. `BatchWeighted` merges groups of five into a single outbound HTTP POST:
 
@@ -80,19 +80,19 @@ Things to notice:
 * The `stream.fan_in.links` tag shows how many cross-trace links the span carries.
 * The References section shows `CHILD_OF` pointing to the local `Batch` span (normal parent/child), plus `FOLLOWS_FROM` entries pointing to spans in other traces. Jaeger renders OpenTelemetry `ActivityLink` as `FOLLOWS_FROM`.
 
-### Full span tree
+### Full Span Tree
 
 The complete span tree without the detail panel expanded:
 
 ![Full span tree in Jaeger](~/images/streams-tracing-jaeger-full-tree.png)
 
-### Single contributing trace
+### Single Contributing Trace
 
 A request whose element got batched into the flush above. Its own trace stops at the ingress. The downstream `Select` / `Batch` / `SelectAsync` work lives on the merged-batch trace, reachable via the `FOLLOWS_FROM` link:
 
 ![Single contributing trace in Jaeger](~/images/streams-tracing-jaeger-single-trace.png)
 
-## Fan-in semantics
+## Fan-in Semantics
 
 When multiple traced inputs merge into a single output element (e.g., `BatchWeighted` aggregating N elements into one batch), the framework uses first-wins semantics:
 
