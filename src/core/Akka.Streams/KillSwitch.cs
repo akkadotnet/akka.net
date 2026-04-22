@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Stage;
+using Akka.Util.Internal;
 
 namespace Akka.Streams
 {
@@ -222,7 +223,7 @@ namespace Akka.Streams
             public override ILogicAndMaterializedValue<UniqueKillSwitch> CreateLogicAndMaterializedValue(
                 Attributes inheritedAttributes)
             {
-                var promise = new TaskCompletionSource<NotUsed>();
+                var promise = TaskEx.NonBlockingTaskCompletionSource<NotUsed>();
                 var killSwitch = new UniqueKillSwitch(promise);
                 return new LogicAndMaterializedValue<UniqueKillSwitch>(new Logic(promise.Task, this), killSwitch);
             }
@@ -288,7 +289,7 @@ namespace Akka.Streams
                 
             public override ILogicAndMaterializedValue<UniqueKillSwitch> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
             {
-                var promise = new TaskCompletionSource<NotUsed>();
+                var promise = TaskEx.NonBlockingTaskCompletionSource<NotUsed>();
                 var killSwitch = new UniqueKillSwitch(promise);
                 var logic = new Logic(promise.Task, this);
 
@@ -442,7 +443,7 @@ namespace Akka.Streams
 
         #endregion
 
-        private readonly TaskCompletionSource<NotUsed> _shutdownPromise = new();
+        private readonly TaskCompletionSource<NotUsed> _shutdownPromise = TaskEx.NonBlockingTaskCompletionSource<NotUsed>();
         private readonly string _name;
 
         /// <summary>
