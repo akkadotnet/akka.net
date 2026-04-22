@@ -2290,13 +2290,8 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void EmitAggregateContextsIfAny()
             {
-                if (_aggregateContexts == null || _aggregateContexts.Count == 0) return;
-                var primary = _aggregateContexts[0];
-                IReadOnlyList<System.Diagnostics.ActivityContext> rest = _aggregateContexts.Count > 1
-                    ? _aggregateContexts.GetRange(1, _aggregateContexts.Count - 1)
-                    : null;
-                SetFanInTraceContext(_shape.Outlet, primary, rest);
-                _aggregateContexts.Clear();
+                StreamsDiagnostics.EmitFanInTraceContexts(this, _shape.Outlet, _aggregateContexts);
+                _aggregateContexts?.Clear();
             }
 
             public override void OnUpstreamFinish()
@@ -3294,12 +3289,7 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void EmitBufferContextsAsFanInLinks()
             {
-                if (_bufferContexts.Count == 0) return;
-                var primary = _bufferContexts[0];
-                IReadOnlyList<System.Diagnostics.ActivityContext> rest = _bufferContexts.Count > 1
-                    ? _bufferContexts.GetRange(1, _bufferContexts.Count - 1)
-                    : null;
-                SetFanInTraceContext(_stage._out, primary, rest);
+                StreamsDiagnostics.EmitFanInTraceContexts(this, _stage._out, _bufferContexts);
             }
 
             private void StartNewGroup()

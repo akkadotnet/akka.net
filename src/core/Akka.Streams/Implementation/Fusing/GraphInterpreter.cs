@@ -957,7 +957,6 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 var slotLinks = connection.SlotLinks;
                 var stage = connection.InOwner;
-                var stageName = StreamsDiagnostics.GetStageName(stage);
                 ActivityLink[] activityLinks = null;
                 if (slotLinks != null && slotLinks.Length > 0)
                 {
@@ -966,14 +965,14 @@ namespace Akka.Streams.Implementation.Fusing
                         activityLinks[i] = new ActivityLink(slotLinks[i]);
                 }
                 var stageActivity = StreamsDiagnostics.ActivitySource.StartActivity(
-                    $"{StreamsDiagnostics.OperationStage} {stageName}",
+                    StreamsDiagnostics.GetStageOperationName(stage),
                     ActivityKind.Internal,
                     slotContext.Value,
                     tags: null,
                     links: activityLinks);
                 if (stageActivity != null)
                 {
-                    stageActivity.SetTag(StreamsDiagnostics.TagStageType, stageName);
+                    stageActivity.SetTag(StreamsDiagnostics.TagStageType, StreamsDiagnostics.GetStageName(stage));
                     if (activityLinks != null)
                         stageActivity.SetTag(StreamsDiagnostics.TagFanInLinks, activityLinks.Length);
                     try

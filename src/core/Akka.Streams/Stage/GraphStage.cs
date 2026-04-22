@@ -961,11 +961,11 @@ namespace Akka.Streams.Stage
                 var capturedContext = ingressContext.Value;
                 var owner = _ownedStage;
                 var realHandler = _wrappedHandler;
+                var ingressOpName = StreamsDiagnostics.GetIngressOperationName(owner);
                 Action<object> contextAwareHandler = obj =>
                 {
-                    var stageName = StreamsDiagnostics.GetStageName(owner);
                     using var ingress = StreamsDiagnostics.ActivitySource.StartActivity(
-                        $"{StreamsDiagnostics.OperationIngress} {stageName}",
+                        ingressOpName,
                         ActivityKind.Internal,
                         capturedContext);
                     realHandler(obj);

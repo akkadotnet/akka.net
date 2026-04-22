@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using Akka.Annotations;
@@ -48,20 +50,64 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public static readonly ActivitySource ActivitySource = new(ActivitySourceName, Version);
 
+        // Caches stage name and pre-formatted operation names per concrete GraphStageLogic type,
+        // so the hot path never does reflection or string interpolation after the first element.
+        private static readonly ConcurrentDictionary<Type, StageNameEntry> StageNameCache = new();
+
         /// <summary>
         /// Returns a short, human-readable name for a stage logic suitable for use as an
         /// <see cref="Activity"/> operation name. Prefers the declaring outer stage type name
         /// (e.g. "Select") over the nested Logic class name, and strips generic-arity backticks.
+        /// Results are cached per concrete type.
         /// </summary>
         public static string GetStageName(GraphStageLogic stage)
+            => GetStageNameEntry(stage).StageName;
+
+        internal static string GetStageOperationName(GraphStageLogic stage)
+            => GetStageNameEntry(stage).StageOperationName;
+
+        internal static string GetIngressOperationName(GraphStageLogic stage)
+            => GetStageNameEntry(stage).IngressOperationName;
+
+        private static StageNameEntry GetStageNameEntry(GraphStageLogic stage)
+            => StageNameCache.GetOrAdd(stage.GetType(), static t =>
+            {
+                var outerType = t.DeclaringType ?? t;
+                var name = outerType.Name;
+                var tick = name.IndexOf('`');
+                var stageName = tick > 0 ? name.Substring(0, tick) : name;
+                return new StageNameEntry(stageName);
+            });
+
+        /// <summary>
+        /// Emits fan-in trace context for a list of collected <see cref="ActivityContext"/>s:
+        /// the first entry becomes the primary parent, the remainder become <see cref="ActivityLink"/>s.
+        /// </summary>
+        internal static void EmitFanInTraceContexts<T>(
+            GraphStageLogic logic,
+            Outlet<T> outlet,
+            List<ActivityContext> contexts)
         {
-            var logicType = stage.GetType();
-            // GraphStageLogic is typically a nested class ("Logic") inside the outer stage
-            // (e.g. Select<TIn,TOut>), so walking up DeclaringType gives us the user-facing name.
-            var outerType = logicType.DeclaringType ?? logicType;
-            var name = outerType.Name;
-            var tick = name.IndexOf('`');
-            return tick > 0 ? name.Substring(0, tick) : name;
+            if (contexts == null || contexts.Count == 0) return;
+            var primary = contexts[0];
+            IReadOnlyList<ActivityContext> rest = contexts.Count > 1
+                ? contexts.GetRange(1, contexts.Count - 1)
+                : null;
+            logic.SetFanInTraceContext(outlet, primary, rest);
+        }
+
+        private sealed class StageNameEntry
+        {
+            public string StageName { get; }
+            public string StageOperationName { get; }
+            public string IngressOperationName { get; }
+
+            public StageNameEntry(string stageName)
+            {
+                StageName = stageName;
+                StageOperationName = string.Concat(OperationStage, " ", stageName);
+                IngressOperationName = string.Concat(OperationIngress, " ", stageName);
+            }
         }
     }
 }
