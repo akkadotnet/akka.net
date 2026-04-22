@@ -5,16 +5,21 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Akka.MultiNode.TestAdapter\Akka.MultiNode.TestAdapter.csproj" />
     <ProjectReference Include="..\Akka.Remote.TestKit\Akka.Remote.TestKit.csproj" />
-    <ProjectReference Include="..\Akka.Tests.Shared.Internals\Akka.Tests.Shared.Internals.csproj" />
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
+  </ItemGroup>
+
+  <!-- NOTE: Remove this after MNTR have been updated -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jhpv-4q4f-43g5" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Akka.MultiNode.TestAdapter" Version="$(MultiNodeAdapterVersion)" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
-    <PackageReference Include="xunit" Version="$(XunitVersion)"/>
-    <PackageReference Include="xunit.runner.visualstudio" Version="$(XunitRunnerVersion)">
+    <PackageReference Include="xunit.v3" Version="$(Xunit3Version)"/>
+    <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

@@ -17,14 +17,12 @@ using Akka.Streams;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Akka.Util.Internal;
-using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.TCK.Query
 {
-    public abstract class PersistenceIdsSpec : Akka.TestKit.Xunit2.TestKit
+    public abstract class PersistenceIdsSpec : XTestKit
     {
         protected ActorMaterializer Materializer { get; }
 
@@ -81,7 +79,7 @@ namespace Akka.Persistence.TCK.Query
             var expected = new List<string> { "h", "i", "j" };
             probe.Within(TimeSpan.FromSeconds(10), () =>
             {
-                expected.Remove(probe.Request(1).ExpectNext()).Should().BeTrue();
+                Assert.True(expected.Remove(probe.Request(1).ExpectNext()));
                 return probe.ExpectNoMsg(TimeSpan.FromMilliseconds(500));
             });
 

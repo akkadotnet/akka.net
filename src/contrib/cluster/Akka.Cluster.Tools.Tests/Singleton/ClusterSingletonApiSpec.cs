@@ -14,7 +14,6 @@ using Akka.TestKit;
 using Akka.TestKit.Configs;
 using Akka.TestKit.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Tools.Tests.Singleton
 {

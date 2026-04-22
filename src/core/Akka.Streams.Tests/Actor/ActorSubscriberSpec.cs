@@ -18,7 +18,6 @@ using Akka.TestKit;
 using FluentAssertions;
 using Reactive.Streams;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Actor
 {

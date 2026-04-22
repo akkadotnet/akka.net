@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Akka.Actor;
 
 namespace Akka.Event
@@ -76,7 +77,7 @@ namespace Akka.Event
         {
             return logLevel switch
             {
-                LogLevel.DebugLevel => new Debug(cause, LogSource, LogClass, message),
+                LogLevel.DebugLevel => (LogEvent)new Debug(cause, LogSource, LogClass, message),
                 LogLevel.InfoLevel => new Info(cause, LogSource, LogClass, message),
                 LogLevel.WarningLevel => new Warning(cause, LogSource, LogClass, message),
                 LogLevel.ErrorLevel => new Error(cause, LogSource, LogClass, message),
@@ -87,6 +88,13 @@ namespace Akka.Event
         protected override void NotifyLog(LogLevel logLevel, object message, Exception cause = null)
         {
             var logEvent = CreateLogEvent(logLevel, message, cause);
+            Bus.Publish(logEvent);
+        }
+
+        internal void LogWithContext(LogLevel logLevel, Exception cause, object message, KeyValuePair<string, object>[] contextProperties)
+        {
+            var logEvent = CreateLogEvent(logLevel, message, cause);
+            logEvent.SetContextProperties(new LogContextProperties(contextProperties));
             Bus.Publish(logEvent);
         }
     }

@@ -21,7 +21,6 @@ using Akka.TestKit.Extensions;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using Tcp = Akka.Streams.Dsl.Tcp;
 using static FluentAssertions.FluentActions;
 

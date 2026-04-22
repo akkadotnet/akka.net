@@ -6,6 +6,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Sharding.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.TestKit")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.TestKit.Xunit2")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tools")]
@@ -17,10 +18,12 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Sql.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.TCK.Xunit2")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.TestKit")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.TestKit.Tests")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.TestKit.Xunit2.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Streams")]
@@ -427,37 +430,37 @@ namespace Akka.Actor
     public sealed class Address : Akka.Util.ISurrogated, System.ICloneable, System.IComparable, System.IComparable<Akka.Actor.Address>, System.IEquatable<Akka.Actor.Address>
     {
         public static readonly Akka.Actor.Address AllSystems;
-        public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address> Comparer;
-        public Address(string protocol, string system, string host = null, int? port = default) { }
+        public static readonly System.Collections.Generic.IComparer<Akka.Actor.Address?> Comparer;
+        public Address(string protocol, string system, string? host = null, int? port = default) { }
         public bool HasGlobalScope { get; }
         public bool HasLocalScope { get; }
-        public string Host { get; }
+        public string? Host { get; }
         public int? Port { get; }
         public string Protocol { get; }
         public string System { get; }
         public object Clone() { }
-        public int CompareTo(Akka.Actor.Address other) { }
-        public bool Equals(Akka.Actor.Address other) { }
-        public override bool Equals(object obj) { }
+        public int CompareTo(Akka.Actor.Address? other) { }
+        public bool Equals(Akka.Actor.Address? other) { }
+        public override bool Equals(object? obj) { }
         public override int GetHashCode() { }
         public string HostPort() { }
         public override string ToString() { }
         public Akka.Util.ISurrogate ToSurrogate(Akka.Actor.ActorSystem system) { }
-        public Akka.Actor.Address WithHost(string host = null) { }
+        public Akka.Actor.Address WithHost(string? host = null) { }
         public Akka.Actor.Address WithPort(int? port = default) { }
         public Akka.Actor.Address WithProtocol(string protocol) { }
         public Akka.Actor.Address WithSystem(string system) { }
         public static Akka.Actor.Address Parse(string address) { }
-        public static bool TryParse(System.ReadOnlySpan<char> span, out Akka.Actor.Address address) { }
-        public static bool TryParse(string path, out Akka.Actor.Address address) { }
-        public static bool TryParse(System.ReadOnlySpan<char> span, out Akka.Actor.Address address, out System.ReadOnlySpan<char> absolutUri) { }
-        public static bool TryParse(string path, out Akka.Actor.Address address, out string absolutUri) { }
-        public static bool operator !=(Akka.Actor.Address left, Akka.Actor.Address right) { }
-        public static bool operator ==(Akka.Actor.Address left, Akka.Actor.Address right) { }
+        public static bool TryParse(System.ReadOnlySpan<char> span, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Akka.Actor.Address? address) { }
+        public static bool TryParse(string path, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Akka.Actor.Address? address) { }
+        public static bool TryParse(System.ReadOnlySpan<char> span, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Akka.Actor.Address? address, out System.ReadOnlySpan<char> absolutUri) { }
+        public static bool TryParse(string path, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Akka.Actor.Address? address, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? absolutUri) { }
+        public static bool operator !=(Akka.Actor.Address? left, Akka.Actor.Address? right) { }
+        public static bool operator ==(Akka.Actor.Address? left, Akka.Actor.Address? right) { }
         public sealed class AddressSurrogate : Akka.Util.ISurrogate
         {
             public AddressSurrogate() { }
-            public string Host { get; set; }
+            public string? Host { get; set; }
             public int? Port { get; set; }
             public string Protocol { get; set; }
             public string System { get; set; }
@@ -538,7 +541,7 @@ namespace Akka.Actor
     }
     public static class CancelableExtensions
     {
-        public static void CancelIfNotNull(this Akka.Actor.ICancelable cancelable) { }
+        public static void CancelIfNotNull(this Akka.Actor.ICancelable? cancelable) { }
     }
     public sealed class ChildActorPath : Akka.Actor.ActorPath
     {
@@ -1576,7 +1579,7 @@ namespace Akka.Actor
     }
     public static class RelativeActorPath
     {
-        public static System.Collections.Generic.IEnumerable<string> Unapply(string addr) { }
+        public static System.Collections.Generic.IEnumerable<string>? Unapply(string addr) { }
     }
     public class RemoteScope : Akka.Actor.Scope, System.IEquatable<Akka.Actor.RemoteScope>
     {
@@ -1928,12 +1931,12 @@ namespace Akka.Actor.Dsl
     {
         public Act(System.Action<Akka.Actor.Dsl.IActorDsl> config) { }
         public Act(System.Action<Akka.Actor.Dsl.IActorDsl, Akka.Actor.IActorContext> config) { }
-        public System.Action<System.Exception, Akka.Actor.IActorContext> OnPostRestart { get; set; }
-        public System.Action<Akka.Actor.IActorContext> OnPostStop { get; set; }
-        public System.Action<System.Exception, object, Akka.Actor.IActorContext> OnPreRestart { get; set; }
-        public System.Action<Akka.Actor.IActorContext> OnPreStart { get; set; }
-        public Akka.Actor.SupervisorStrategy Strategy { get; set; }
-        public Akka.Actor.IActorRef ActorOf(System.Action<Akka.Actor.Dsl.IActorDsl> config, string name = null) { }
+        public System.Action<System.Exception, Akka.Actor.IActorContext>? OnPostRestart { get; set; }
+        public System.Action<Akka.Actor.IActorContext>? OnPostStop { get; set; }
+        public System.Action<System.Exception, object, Akka.Actor.IActorContext>? OnPreRestart { get; set; }
+        public System.Action<Akka.Actor.IActorContext>? OnPreStart { get; set; }
+        public Akka.Actor.SupervisorStrategy? Strategy { get; set; }
+        public Akka.Actor.IActorRef ActorOf(System.Action<Akka.Actor.Dsl.IActorDsl> config, string? name = null) { }
         public void Become(System.Action<object, Akka.Actor.IActorContext> handler) { }
         public void BecomeStacked(System.Action<object, Akka.Actor.IActorContext> handler) { }
         public void DefaultPostRestart(System.Exception reason) { }
@@ -1949,23 +1952,23 @@ namespace Akka.Actor.Dsl
         public void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T, Akka.Actor.IActorContext> handler) { }
         public void ReceiveAny(System.Action<object, Akka.Actor.IActorContext> handler) { }
         public void ReceiveAnyAsync(System.Func<object, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler) { }
-        public void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null) { }
+        public void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T>? shouldHandle = null) { }
         public void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler) { }
         protected override Akka.Actor.SupervisorStrategy SupervisorStrategy() { }
     }
     public static class ActExtensions
     {
-        public static Akka.Actor.IActorRef ActorOf(this Akka.Actor.IActorRefFactory factory, System.Action<Akka.Actor.Dsl.IActorDsl> config, string name = null) { }
-        public static Akka.Actor.IActorRef ActorOf(this Akka.Actor.IActorRefFactory factory, System.Action<Akka.Actor.Dsl.IActorDsl, Akka.Actor.IActorContext> config, string name = null) { }
+        public static Akka.Actor.IActorRef ActorOf(this Akka.Actor.IActorRefFactory factory, System.Action<Akka.Actor.Dsl.IActorDsl> config, string? name = null) { }
+        public static Akka.Actor.IActorRef ActorOf(this Akka.Actor.IActorRefFactory factory, System.Action<Akka.Actor.Dsl.IActorDsl, Akka.Actor.IActorContext> config, string? name = null) { }
     }
     public interface IActorDsl
     {
-        System.Action<System.Exception, Akka.Actor.IActorContext> OnPostRestart { get; set; }
-        System.Action<Akka.Actor.IActorContext> OnPostStop { get; set; }
-        System.Action<System.Exception, object, Akka.Actor.IActorContext> OnPreRestart { get; set; }
-        System.Action<Akka.Actor.IActorContext> OnPreStart { get; set; }
-        Akka.Actor.SupervisorStrategy Strategy { get; set; }
-        Akka.Actor.IActorRef ActorOf(System.Action<Akka.Actor.Dsl.IActorDsl> config, string name = null);
+        System.Action<System.Exception, Akka.Actor.IActorContext>? OnPostRestart { get; set; }
+        System.Action<Akka.Actor.IActorContext>? OnPostStop { get; set; }
+        System.Action<System.Exception, object, Akka.Actor.IActorContext>? OnPreRestart { get; set; }
+        System.Action<Akka.Actor.IActorContext>? OnPreStart { get; set; }
+        Akka.Actor.SupervisorStrategy? Strategy { get; set; }
+        Akka.Actor.IActorRef ActorOf(System.Action<Akka.Actor.Dsl.IActorDsl> config, string? name = null);
         void Become(System.Action<object, Akka.Actor.IActorContext> handler);
         void BecomeStacked(System.Action<object, Akka.Actor.IActorContext> handler);
         void DefaultPostRestart(System.Exception reason);
@@ -1977,7 +1980,7 @@ namespace Akka.Actor.Dsl
         void Receive<T>(System.Predicate<T> shouldHandle, System.Action<T, Akka.Actor.IActorContext> handler);
         void ReceiveAny(System.Action<object, Akka.Actor.IActorContext> handler);
         void ReceiveAnyAsync(System.Func<object, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler);
-        void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T> shouldHandle = null);
+        void ReceiveAsync<T>(System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler, System.Predicate<T>? shouldHandle = null);
         void ReceiveAsync<T>(System.Predicate<T> shouldHandle, System.Func<T, Akka.Actor.IActorContext, System.Threading.Tasks.Task> handler);
         void UnbecomeStacked();
     }
@@ -2741,6 +2744,7 @@ namespace Akka.Dispatch
     }
     public class ActorTaskScheduler : System.Threading.Tasks.TaskScheduler
     {
+        protected ActorTaskScheduler(Akka.Actor.ActorCell actorCell) { }
         public object CurrentMessage { get; }
         public override int MaximumConcurrencyLevel { get; }
         protected override System.Collections.Generic.IEnumerable<System.Threading.Tasks.Task> GetScheduledTasks() { }
@@ -3220,9 +3224,9 @@ namespace Akka
     public sealed class NotUsed : System.IComparable<Akka.NotUsed>, System.IEquatable<Akka.NotUsed>
     {
         public static readonly Akka.NotUsed Instance;
-        public int CompareTo(Akka.NotUsed other) { }
-        public bool Equals(Akka.NotUsed other) { }
-        public override bool Equals(object obj) { }
+        public int CompareTo(Akka.NotUsed? other) { }
+        public bool Equals(Akka.NotUsed? other) { }
+        public override bool Equals(object? obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
@@ -3350,6 +3354,10 @@ namespace Akka.Event
         void Log(Akka.Event.LogLevel logLevel, System.Exception cause, Akka.Event.LogMessage message);
         void Log(Akka.Event.LogLevel logLevel, System.Exception cause, string format);
     }
+    public interface ILoggingAdapterScope : System.IDisposable
+    {
+        Akka.Event.ILoggingAdapter Log { get; }
+    }
     public class Info : Akka.Event.LogEvent
     {
         public Info(string logSource, System.Type logClass, object message) { }
@@ -3364,6 +3372,7 @@ namespace Akka.Event
     public abstract class LogEvent : Akka.Actor.INoSerializationVerificationNeeded
     {
         protected LogEvent() { }
+        public System.Diagnostics.ActivityContext? ActivityContext { get; }
         public System.Exception Cause { get; protected set; }
         public System.Type LogClass { get; protected set; }
         public string LogSource { get; protected set; }
@@ -3504,6 +3513,7 @@ namespace Akka.Event
     }
     public static class LoggingExtensions
     {
+        public static Akka.Event.ILoggingAdapterScope BeginScope(this Akka.Event.ILoggingAdapter log, string name, object value) { }
         public static void Debug(this Akka.Event.ILoggingAdapter log, string format) { }
         public static void Debug(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format) { }
         public static void Debug(this Akka.Event.ILoggingAdapter log, string format, object[] args) { }
@@ -3577,6 +3587,7 @@ namespace Akka.Event
         public static void Warning<T1, T2, T3, T4, T5>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) { }
         public static void Warning<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
         public static void Warning<T1, T2, T3, T4, T5, T6>(this Akka.Event.ILoggingAdapter log, System.Exception cause, string format, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) { }
+        public static Akka.Event.ILoggingAdapter WithContext(this Akka.Event.ILoggingAdapter log, string name, object value) { }
     }
     public abstract class MinimalLogger : Akka.Actor.MinimalActorRef
     {
@@ -4536,7 +4547,7 @@ namespace Akka.Pattern
         public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts) { }
         public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.Func<int, Akka.Util.Option<System.TimeSpan>> delayFunction, Akka.Actor.IScheduler scheduler) { }
         public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.TimeSpan delay, Akka.Actor.IScheduler scheduler) { }
-        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, int randomFactor, Akka.Actor.IScheduler scheduler) { }
+        public static System.Threading.Tasks.Task<T> Retry<T>(System.Func<System.Threading.Tasks.Task<T>> attempt, int attempts, System.TimeSpan minBackoff, System.TimeSpan maxBackoff, double randomFactor, Akka.Actor.IScheduler scheduler) { }
     }
     public class UserCalledFailException : Akka.Actor.AkkaException
     {

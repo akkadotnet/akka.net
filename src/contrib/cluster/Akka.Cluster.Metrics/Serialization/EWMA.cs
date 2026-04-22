@@ -93,14 +93,14 @@ namespace Akka.Cluster.Metrics.Serialization
                     return 1 - Math.Exp(-decayRate * collectInterval.TotalMilliseconds);
                 }
 
-                public bool Equals(EWMA other)
+                public bool Equals(EWMA? other)
                 {
                     if (ReferenceEquals(null, other)) return false;
                     if (ReferenceEquals(this, other)) return true;
                     return Value.Equals(other.Value) && Alpha.Equals(other.Alpha);
                 }
 
-                public override bool Equals(object obj)
+                public override bool Equals(object? obj)
                 {
                     return ReferenceEquals(this, obj) || obj is EWMA other && Equals(other);
                 }

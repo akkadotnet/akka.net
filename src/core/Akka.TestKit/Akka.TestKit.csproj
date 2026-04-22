@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>You need a Akka.TestKit.* package! Add the one appropriate for the test framework you use instead. For example: Akka.TestKit.Xunit or Akka.TestKit.VsTest. This package only contains base functionality for writing tests for the Akka.NET framework.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion);$(NetTestVersion)</TargetFrameworks>
         <PackageTags>$(AkkaPackageTags)</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
@@ -25,9 +25,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftLibVersion)" />
         <PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
         <PackageReference Include="Nito.AsyncEx.Context" Version="5.1.2" />
+    </ItemGroup>
+
+    <!-- System.Linq.Async and Microsoft.Bcl.AsyncInterfaces are only needed for pre-.NET 10 targets -->
+    <!-- .NET 10+ includes System.Linq.AsyncEnumerable and IAsyncEnumerable in the BCL -->
+    <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))">
+        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftLibVersion)" />
         <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     </ItemGroup>
 

@@ -201,8 +201,8 @@ namespace Akka.Streams.Implementation.StreamRef
                 if ((string)timerKey == SubscriptionTimeoutKey)
                 {
                     // we know the future has been competed by now, since it is in preStart
-                    var ex = new StreamRefSubscriptionTimeoutException($"[{StageActorName}] Remote side did not subscribe (materialize) handed out Sink reference [${_promise.Task.Result}], " +
-                                                                       $"within subscription timeout: ${SubscriptionTimeout.Timeout}!");
+                    var ex = new StreamRefSubscriptionTimeoutException($"[{StageActorName}] Remote side did not subscribe (materialize) handed out Sink reference [{_promise.Task.Result}], " +
+                                                                       $"within subscription timeout: {SubscriptionTimeout.Timeout}!");
 
                     throw ex; // this will also log the exception, unlike failStage; this should fail rarely, but would be good to have it "loud"
                 }

@@ -100,6 +100,24 @@ akka.persistence.journal.inmem {
         }
 
         [Fact]
+        public void EventAdapters_should_fail_with_useful_message_when_binding_type_cannot_be_resolved()
+        {
+            var badConfig = ConfigurationFactory.ParseString(@"
+akka.persistence.journal.inmem {
+  event-adapters {
+    example  = """ + typeof(ExampleEventAdapter).FullName + @", Akka.Persistence.Tests""
+  }
+  event-adapter-bindings {
+    ""Some.NonExistent.Type, NoSuchAssembly"" = example
+  }
+}");
+            var combinedConfig = badConfig.GetConfig("akka.persistence.journal.inmem");
+
+            var ex = Assert.Throws<ConfigurationException>(() => EventAdapters.Create(_extendedActorSystem, combinedConfig));
+            ex.Message.Should().Contain("Some.NonExistent.Type, NoSuchAssembly");
+        }
+
+        [Fact]
         public void EventAdapters_should_allow_implementing_only_the_read_side_IReadEventAdapter()
         {
             var adapters = EventAdapters.Create(_extendedActorSystem, _memoryConfig);

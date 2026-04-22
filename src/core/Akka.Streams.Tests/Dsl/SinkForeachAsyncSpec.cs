@@ -19,7 +19,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using Nito.AsyncEx;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Streams.Tests.Dsl
 {

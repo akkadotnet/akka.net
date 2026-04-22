@@ -32,6 +32,13 @@ namespace Akka.Event
     ///   <item><description>Destructuring operators: <c>{@Object}</c>, <c>{$Object}</c> (Serilog-specific)</description></item>
     ///   <item><description>Empty property names: <c>{:N2}</c> (invalid per spec)</description></item>
     /// </list>
+    /// <para><b>Null handling:</b> Named templates (e.g., <c>{PropertyName}</c>) render <c>null</c> values
+    /// as the literal string <c>"null"</c>. This is consistent with the Message Templates specification
+    /// and matches the behavior of Serilog, NLog, and other structured logging frameworks.
+    /// In contrast, positional templates (e.g., <c>{0}</c>) delegate to <see cref="string.Format(string, object[])"/>,
+    /// which renders <c>null</c> as an empty string <c>""</c>. This asymmetry is by design:
+    /// positional templates preserve backward compatibility with <see cref="DefaultLogMessageFormatter"/>,
+    /// while named templates follow the Message Templates spec.</para>
     /// </remarks>
     public sealed class SemanticLogMessageFormatter : ILogMessageFormatter
     {
@@ -93,9 +100,14 @@ namespace Akka.Event
                     for (int i = 0; i < readOnlyList.Count; i++)
                         argArray[i] = readOnlyList[i];
 
-                    // For positional templates, use string.Format directly without catching FormatException
-                    // to maintain backward compatibility with DefaultLogMessageFormatter behavior
-                    return string.Format(format, argArray);
+                    try
+                    {
+                        return string.Format(format, argArray);
+                    }
+                    catch (FormatException)
+                    {
+                        return FormatDiagnostic(format, argArray);
+                    }
                 }
                 else
                 {
@@ -121,15 +133,29 @@ namespace Akka.Event
 
             if (isPositional2)
             {
-                // For positional templates, use string.Format directly without catching FormatException
-                // to maintain backward compatibility with DefaultLogMessageFormatter behavior
-                return string.Format(format, argArray);
+                try
+                {
+                    return string.Format(format, argArray);
+                }
+                catch (FormatException)
+                {
+                    return FormatDiagnostic(format, argArray);
+                }
             }
             else
             {
                 // Named template - do semantic substitution
                 return FormatNamedTemplate(format, propertyNames2, argArray);
             }
+        }
+
+        /// <summary>
+        /// Produces a diagnostic string when string.Format fails due to mismatched format/args.
+        /// </summary>
+        private static string FormatDiagnostic(string format, object[] args)
+        {
+            return $"[INVALID LOG FORMAT] str=[{format}], args=[{string.Join(", ", args)}]. " +
+                   "Please fix the format string in the logging call site.";
         }
 
         /// <summary>

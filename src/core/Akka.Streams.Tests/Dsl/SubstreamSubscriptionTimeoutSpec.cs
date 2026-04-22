@@ -12,10 +12,9 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 // ReSharper disable InvokeAsExtensionMethod
 
 namespace Akka.Streams.Tests.Dsl

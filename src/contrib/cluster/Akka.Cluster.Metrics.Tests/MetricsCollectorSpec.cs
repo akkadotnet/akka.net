@@ -11,11 +11,10 @@ using System.Threading.Tasks;
 using Akka.Cluster.Metrics.Serialization;
 using Akka.Cluster.Metrics.Tests.Base;
 using Akka.Cluster.Metrics.Tests.Helpers;
-using Akka.TestKit.Xunit2.Attributes;
+using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Cluster.Metrics.Tests
 {

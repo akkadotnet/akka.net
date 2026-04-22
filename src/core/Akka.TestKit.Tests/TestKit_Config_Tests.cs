@@ -14,7 +14,7 @@ using Xunit;
 namespace Akka.TestKit.Tests.Xunit2
 {
     // ReSharper disable once InconsistentNaming
-    public class TestKit_Config_Tests : TestKit.Xunit2.TestKit
+    public class TestKit_Config_Tests : TestKit.Xunit.TestKit
     {
         [Fact]
         public void DefaultValues_should_be_correct()
@@ -33,7 +33,7 @@ namespace Akka.TestKit.Tests.Xunit2
         }
     }
     
-    public class TestKitCustomConfigTests : TestKit.Xunit2.TestKit
+    public class TestKitCustomConfigTests : TestKit.Xunit.TestKit
     {
         private static readonly Config Config = """
         akka.test {

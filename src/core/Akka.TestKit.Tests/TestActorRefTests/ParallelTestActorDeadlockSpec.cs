@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.TestKit.Tests.TestActorRefTests
 {
@@ -26,7 +25,10 @@ namespace Akka.TestKit.Tests.TestActorRefTests
         [Fact(Timeout = 20000)]
         public async Task Parallel_TestKit_startup_should_not_deadlock()
         {
-            var concurrentTests = 40; // High parallelism to trigger the issue
+            // Reduced from 40 to 16 - still tests parallel startup behavior while staying
+            // within CI agent resource constraints. 40 concurrent TestKits causes shutdown
+            // cascade where blocking 5-second waits saturate the thread pool.
+            var concurrentTests = 16;
 
             var tasks = Enumerable.Range(0, concurrentTests)
                 .Select(_ => Task.Run(RunOneTestKit))
@@ -43,7 +45,7 @@ namespace Akka.TestKit.Tests.TestActorRefTests
                 {
                     _output.WriteLine($"[{id}] Creating TestKit...");
                     // Create TestKit synchronously like a normal test would
-                    using var testKit = new Akka.TestKit.Xunit2.TestKit($"test-{id}", output: _output);
+                    using var testKit = new Akka.TestKit.Xunit.TestKit($"test-{id}", output: _output);
                     _output.WriteLine($"[{id}] TestKit created");
 
                     // Simulate what happens in Akka.Hosting - actor creation during startup

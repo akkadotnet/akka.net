@@ -367,7 +367,11 @@ namespace Akka.Remote.Transport.DotNetty
                 RemoteCertificateValidationCallback validationCallback = (sender, cert, chain, errors) =>
                 {
                     // Convert X509Certificate to X509Certificate2 if needed
+#if NET10_0_OR_GREATER
+                    var x509Cert = cert as X509Certificate2 ?? (cert != null ? X509CertificateLoader.LoadCertificate(cert.GetRawCertData()) : null);
+#else
                     var x509Cert = cert as X509Certificate2 ?? (cert != null ? new X509Certificate2(cert) : null);
+#endif
                     return validator(x509Cert, chain, remoteAddress.ToString(), errors, Log);
                 };
 
@@ -432,7 +436,11 @@ namespace Akka.Remote.Transport.DotNetty
                         // Extract client address from channel
                         var remoteAddress = channel.RemoteAddress?.ToString() ?? "unknown";
                         // Convert X509Certificate to X509Certificate2 if needed
+#if NET10_0_OR_GREATER
+                        var x509Cert = certificate as X509Certificate2 ?? X509CertificateLoader.LoadCertificate(certificate.GetRawCertData());
+#else
                         var x509Cert = certificate as X509Certificate2 ?? new X509Certificate2(certificate);
+#endif
                         return validator(x509Cert, chain, remoteAddress, errors, Log);
                     };
 
@@ -553,7 +561,8 @@ namespace Akka.Remote.Transport.DotNetty
 
         public static EndPoint ToEndpoint(Address address)
         {
-            if (!address.Port.HasValue) throw new ArgumentNullException(nameof(address), $"Address port must not be null: {address}");
+            if (string.IsNullOrWhiteSpace(address.Host)) throw new ArgumentNullException(nameof(address), $"Address host must not be null or empty: {address}");
+            if (address.Port is null) throw new ArgumentNullException(nameof(address), $"Address port must not be null: {address}");
 
             return IPAddress.TryParse(address.Host, out var ip)
                 ? (EndPoint)new IPEndPoint(ip, address.Port.Value)
@@ -568,7 +577,9 @@ namespace Akka.Remote.Transport.DotNetty
         /// <returns><see cref="IPEndPoint"/> for IP-based addresses, <see cref="DnsEndPoint"/> for named addresses.</returns>
         public static EndPoint AddressToSocketAddress(Address address)
         {
-            if (address.Port == null) throw new ArgumentException($"address port must not be null: {address}");
+            if (string.IsNullOrWhiteSpace(address.Host)) throw new ArgumentNullException(nameof(address), $"Address host must not be null or empty: {address}");
+            if (address.Port is null) throw new ArgumentException($"Address port must not be null: {address}");
+            
             EndPoint listenAddress;
             if (IPAddress.TryParse(address.Host, out var ip))
             {

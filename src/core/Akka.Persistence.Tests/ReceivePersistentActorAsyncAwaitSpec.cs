@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.TestKit;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Akka.Persistence.Tests
 {
@@ -93,6 +92,16 @@ namespace Akka.Persistence.Tests
 
     public class AsyncAwaitActor : ReceivePersistentActor
     {
+        /// <summary>
+        /// Marker class for testing - sending this will get a synchronous "pong" reply.
+        /// Use this to verify the actor has completed recovery before testing async handlers.
+        /// </summary>
+        public sealed class Ping
+        {
+            public static readonly Ping Instance = new();
+            private Ping() { }
+        }
+
         public override string PersistenceId { get; }
 
         public AsyncAwaitActor(string persistenceId)
@@ -100,6 +109,9 @@ namespace Akka.Persistence.Tests
             PersistenceId = persistenceId;
 
             RecoverAny(_ => { });
+
+            // Synchronous handler for verifying actor is ready
+            Command<Ping>(_ => Sender.Tell("pong"));
 
             CommandAsync<string>(async _ =>
             {
@@ -360,6 +372,102 @@ namespace Akka.Persistence.Tests
         public RestartMessage(object message)
         {
             Message = message;
+        }
+    }
+
+    /// <summary>
+    /// Test actor that uses DeferAsync with an async handler inside CommandAsync.
+    /// This reproduces the bug where DeferAsync throws "RunTask calls cannot be nested"
+    /// when called from within a CommandAsync handler after an await, with no pending persist operations.
+    /// See: https://github.com/akkadotnet/akka.net/issues/7998
+    /// </summary>
+    public sealed class DeferAsyncFromCommandAsyncActor : ReceivePersistentActor
+    {
+        public override string PersistenceId { get; }
+
+        public DeferAsyncFromCommandAsyncActor(string persistenceId)
+        {
+            PersistenceId = persistenceId;
+
+            RecoverAny(_ => { });
+
+            // This pattern triggers the bug: CommandAsync -> await -> DeferAsync(async handler)
+            // with no prior Persist/PersistAsync calls
+            CommandAsync<string>(async msg =>
+            {
+                // Any await causes us to be in a RunTask context
+                await Task.Delay(10);
+
+                // DeferAsync with async handler, no pending persist operations
+                // BUG: This throws "RunTask calls cannot be nested" because
+                // _pendingInvocations.Count == 0 triggers immediate RunTask execution
+                DeferAsync(msg, async evt =>
+                {
+                    await Task.CompletedTask;
+                    Sender.Tell("deferred-" + evt);
+                });
+            });
+        }
+    }
+
+    /// <summary>
+    /// Test actor that uses DeferAsync with a sync handler inside CommandAsync.
+    /// This should work correctly (sync handler doesn't use RunTask).
+    /// </summary>
+    public sealed class DeferAsyncSyncHandlerFromCommandAsyncActor : ReceivePersistentActor
+    {
+        public override string PersistenceId { get; }
+
+        public DeferAsyncSyncHandlerFromCommandAsyncActor(string persistenceId)
+        {
+            PersistenceId = persistenceId;
+
+            RecoverAny(_ => { });
+
+            CommandAsync<string>(async msg =>
+            {
+                await Task.Delay(10);
+
+                // DeferAsync with sync handler - this should work
+                DeferAsync(msg, evt =>
+                {
+                    Sender.Tell("deferred-" + evt);
+                });
+            });
+        }
+    }
+
+    /// <summary>
+    /// Test actor that uses DeferAsync with an async handler after PersistAsync.
+    /// This should work because _pendingInvocations.Count > 0.
+    /// </summary>
+    public sealed class DeferAsyncAfterPersistAsyncActor : ReceivePersistentActor
+    {
+        public override string PersistenceId { get; }
+
+        public DeferAsyncAfterPersistAsyncActor(string persistenceId)
+        {
+            PersistenceId = persistenceId;
+
+            RecoverAny(_ => { });
+
+            CommandAsync<string>(async msg =>
+            {
+                await Task.Delay(10);
+
+                // PersistAsync first - this populates _pendingInvocations
+                PersistAsync(msg, evt =>
+                {
+                    Sender.Tell("persisted-" + evt);
+                });
+
+                // DeferAsync with async handler - should queue and work
+                DeferAsync(msg, async evt =>
+                {
+                    await Task.CompletedTask;
+                    Sender.Tell("deferred-" + evt);
+                });
+            });
         }
     }
 
@@ -639,17 +747,76 @@ namespace Akka.Persistence.Tests
         [Fact]
         public Task Actor_receiveasync_overloads_should_work()
         {
-            var actor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor("pid")));
+            // Use unique persistence ID to avoid any potential interference from
+            // previous test runs or parallel tests sharing static journal state
+            var persistenceId = $"async-overloads-{Guid.NewGuid():N}";
+            var actor = Sys.ActorOf(Props.Create(() => new AsyncAwaitActor(persistenceId)));
+
+            // Wait for recovery to complete before testing async handlers.
+            // Under CI load, recovery can take time and messages sent before recovery
+            // completes are stashed, adding variable delay to the first response.
+            actor.Tell(AsyncAwaitActor.Ping.Instance);
+            ExpectMsg<string>(m => "pong".Equals(m), TimeSpan.FromSeconds(10),
+                "Actor should respond to Ping after recovery completes");
 
             actor.Tell(11);
-            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000));
+            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000),
+                "Expected 'handled' for int > 10 via CommandAsync<int>");
 
             actor.Tell(9);
-            ExpectMsg<string>(m => "receiveany".Equals(m), TimeSpan.FromMilliseconds(1000));
+            ExpectMsg<string>(m => "receiveany".Equals(m), TimeSpan.FromMilliseconds(1000),
+                "Expected 'receiveany' for int <= 10 via CommandAnyAsync");
 
             actor.Tell(1.0);
-            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000));
+            ExpectMsg<string>(m => "handled".Equals(m), TimeSpan.FromMilliseconds(1000),
+                "Expected 'handled' for double via CommandAsync(typeof(double))");
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Regression test for https://github.com/akkadotnet/akka.net/issues/7998
+        /// DeferAsync with async handler should work when called from CommandAsync,
+        /// even without prior Persist/PersistAsync calls.
+        /// </summary>
+        [Fact(DisplayName = "DeferAsync with async handler should work from CommandAsync without prior persist calls")]
+        public async Task DeferAsync_with_async_handler_should_work_from_CommandAsync_without_prior_persist_calls()
+        {
+            var actor = Sys.ActorOf(Props.Create(() => new DeferAsyncFromCommandAsyncActor("defer-async-pid")));
+
+            actor.Tell("hello");
+            var response = await ExpectMsgAsync<string>(TimeSpan.FromSeconds(5));
+            response.ShouldBe("deferred-hello");
+        }
+
+        /// <summary>
+        /// Verify that DeferAsync with sync handler still works from CommandAsync.
+        /// </summary>
+        [Fact(DisplayName = "DeferAsync with sync handler should work from CommandAsync")]
+        public async Task DeferAsync_with_sync_handler_should_work_from_CommandAsync()
+        {
+            var actor = Sys.ActorOf(Props.Create(() => new DeferAsyncSyncHandlerFromCommandAsyncActor("defer-sync-pid")));
+
+            actor.Tell("world");
+            var response = await ExpectMsgAsync<string>(TimeSpan.FromSeconds(5));
+            response.ShouldBe("deferred-world");
+        }
+
+        /// <summary>
+        /// Verify that DeferAsync with async handler works after PersistAsync
+        /// (this path was already working since _pendingInvocations.Count > 0).
+        /// </summary>
+        [Fact(DisplayName = "DeferAsync with async handler should work after PersistAsync")]
+        public async Task DeferAsync_with_async_handler_should_work_after_PersistAsync()
+        {
+            var actor = Sys.ActorOf(Props.Create(() => new DeferAsyncAfterPersistAsyncActor("defer-after-persist-pid")));
+
+            actor.Tell("test");
+            // Should receive both persist and defer responses in order
+            var first = await ExpectMsgAsync<string>(TimeSpan.FromSeconds(5));
+            first.ShouldBe("persisted-test");
+
+            var second = await ExpectMsgAsync<string>(TimeSpan.FromSeconds(5));
+            second.ShouldBe("deferred-test");
         }
     }
 }

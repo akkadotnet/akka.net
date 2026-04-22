@@ -8,7 +8,7 @@
 using System;
 using Akka.Configuration;
 using Akka.Persistence.TCK.Query;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Persistence.Query.InMemory.Tests
 {
@@ -21,6 +21,8 @@ namespace Akka.Persistence.Query.InMemory.Tests
 
         public InMemoryPersistenceIdsSpec(ITestOutputHelper output) : base(Config(), nameof(InMemoryPersistenceIdsSpec), output)
         {
+            InMemoryPersistenceSpecConfig.EnsureThreadPoolWarmed();
+            Persistence.Instance.Get(Sys); // Initialize persistence immediately
             ReadJournal = Sys.ReadJournalFor<InMemoryReadJournal>(InMemoryReadJournal.Identifier);
         }
     }

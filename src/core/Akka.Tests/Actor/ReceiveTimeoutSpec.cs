@@ -16,7 +16,6 @@ using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 
 namespace Akka.Tests.Actor
@@ -280,7 +279,7 @@ namespace Akka.Tests.Actor
             Watch(timeoutActor);
 
             // wait for first ReceiveTimeout message, in which the latch is opened
-            timeoutLatch.Ready(TimeSpan.FromSeconds(2));
+            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
 
             //Stop and wait for the actor to terminate
             Sys.Stop(timeoutActor);

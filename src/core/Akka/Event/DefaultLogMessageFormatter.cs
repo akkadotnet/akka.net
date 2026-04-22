@@ -5,6 +5,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -17,15 +18,32 @@ namespace Akka.Event
     {
         public static readonly DefaultLogMessageFormatter Instance = new();
         private DefaultLogMessageFormatter(){}
-        
+
         public string Format(string format, params object[] args)
         {
-            return string.Format(format, args);
+            try
+            {
+                return string.Format(format, args);
+            }
+            catch (FormatException)
+            {
+                return $"[INVALID LOG FORMAT] str=[{format}], args=[{string.Join(", ", args)}]. " +
+                       "Please fix the format string in the logging call site.";
+            }
         }
 
         public string Format(string format, IEnumerable<object> args)
         {
-            return string.Format(format, args.ToArray());
+            var argsArray = args.ToArray();
+            try
+            {
+                return string.Format(format, argsArray);
+            }
+            catch (FormatException)
+            {
+                return $"[INVALID LOG FORMAT] str=[{format}], args=[{string.Join(", ", argsArray)}]. " +
+                       "Please fix the format string in the logging call site.";
+            }
         }
     }
 }

@@ -11,7 +11,6 @@ using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 using RequestOne = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.RequestOne;
 using OnNext = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.OnNext;
 using OnComplete = Akka.Streams.Tests.Implementation.Fusing.GraphInterpreterSpecKit.TestSetup.OnComplete;

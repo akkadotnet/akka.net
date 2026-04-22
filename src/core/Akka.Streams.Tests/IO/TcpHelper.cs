@@ -16,7 +16,7 @@ using Akka.IO;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using Reactive.Streams;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Akka.Streams.Tests.IO
 {

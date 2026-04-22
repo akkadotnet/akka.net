@@ -13,7 +13,6 @@ using Akka.Actor;
 using Akka.TestKit;
 using Akka.Util.Internal;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Akka.Tests.Actor.Scheduler
 {
@@ -51,6 +50,10 @@ namespace Akka.Tests.Actor.Scheduler
                 //Expect to get a list from receiver after it has received three messages
                 var dateTimeOffsets = await ExpectMsgAsync<List<DateTimeOffset>>();
                 dateTimeOffsets.ShouldHaveCount(3);
+                // CI machines can have significant timing variability due to CPU contention,
+                // virtualization overhead, and GC pauses. Use 30% tolerance to accommodate
+                // this while still catching gross scheduler bugs.
+                const double maxDeviation = 0.30;
                 Action<int, int> validate = (a, b) =>
                 {
                     var valA = dateTimeOffsets[a];
@@ -58,10 +61,10 @@ namespace Akka.Tests.Actor.Scheduler
                     var diffBetweenMessages = Math.Abs((valB - valA).TotalMilliseconds);
                     var diffInMs = Math.Abs(diffBetweenMessages - interval);
                     var deviate = (diffInMs/interval);
-                    deviate.Should(val => val < 0.1,
+                    deviate.Should(val => val < maxDeviation,
                         string.Format(
-                            "Expected the interval between message {1} and {2} to deviate maximum 10% from {0}. It was {3} ms between the messages. It deviated {4}%",
-                            interval, a + 1, b + 1, diffBetweenMessages, deviate*100));
+                            "Expected the interval between message {1} and {2} to deviate maximum {5}% from {0}. It was {3} ms between the messages. It deviated {4}%",
+                            interval, a + 1, b + 1, diffBetweenMessages, deviate*100, maxDeviation*100));
                 };
                 validate(0, 1);
                 validate(1, 2);

@@ -30,12 +30,27 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         [Fact]
         public async Task Unhandled_message_should_produce_info_message()
         {
-            await EventFilter
-                .Info()
-                .ExpectOneAsync(() => {
-                    _unhandledMessageActor.Tell("whatever");
-                    return Task.CompletedTask;
-                });
+            // Use a dedicated probe (not TestActor) to avoid mailbox collision:
+            // ForwardAllEventsTestEventListener forwards ALL log events to TestActor,
+            // so mixing EventStream.Subscribe(TestActor, ...) with ExpectMsgAsync<UnhandledMessage>()
+            // causes type mismatches when Warning/Debug log events arrive first.
+            var probe = CreateTestProbe();
+            Sys.EventStream.Subscribe(probe, typeof(UnhandledMessage));
+            try
+            {
+                await EventFilter
+                    .Info()
+                    .ExpectOneAsync(async () => {
+                        _unhandledMessageActor.Tell("whatever");
+                        // Wait on the isolated probe - guarantees message was processed
+                        // and the Info log has been published before the filter checks.
+                        await probe.ExpectMsgAsync<UnhandledMessage>();
+                    });
+            }
+            finally
+            {
+                Sys.EventStream.Unsubscribe(probe, typeof(UnhandledMessage));
+            }
         }
         
         [Fact]

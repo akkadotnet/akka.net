@@ -1007,7 +1007,7 @@ namespace Akka.Cluster.Sharding
             var failOnInvalidStateTransition =
                 Context.System.Settings.Config.GetBoolean(
                     "akka.cluster.sharding.fail-on-invalid-entity-state-transition");
-            _entities = new Entities(Log, settings.RememberEntities, _verboseDebug, failOnInvalidStateTransition);
+            _entities = new Entities(Log, _rememberEntities, _verboseDebug, failOnInvalidStateTransition);
 
             var idleInterval = TimeSpan.FromTicks(_settings.PassivateIdleEntityAfter.Ticks / 2);
             _passivateIdleTask = _settings.ShouldPassivateIdleEntities
@@ -1128,6 +1128,20 @@ namespace Akka.Cluster.Sharding
 
                 case LeaseLost ll:
                     ReceiveLeaseLost(ll);
+                    return true;
+
+                // #8147: safe to stop immediately — no entities started before lease acquisition
+                case HandOff ho when ho.Shard == _shardId:
+                    Log.Info("{0}: HandOff shard [{1}] received while awaiting lease. " +
+                             "No active entities, replying ShardStopped immediately.",
+                        _typeName, _shardId);
+                    Sender.Tell(new ShardStopped(_shardId));
+                    Context.Stop(Self);
+                    return true;
+
+                case HandOff ho:
+                    Log.Warning("{0}: Shard [{1}] can not hand off for another Shard [{2}]",
+                        _typeName, _shardId, ho.Shard);
                     return true;
             }
 
