@@ -350,7 +350,30 @@ akka {
 }
 ```
 
-## Danger of Polymorphic Serializer
+## Serialization Security
+
+### Disabling the Default Serializer Fallback
+
+> [!IMPORTANT]
+> Available in Akka.NET v1.5.66 and later.
+
+By default, Akka.NET falls back to the `System.Object` serializer (Newtonsoft.Json) when no explicit serializer binding exists for a type. This can be a security risk in applications that handle untrusted input, as it allows arbitrary types to be deserialized.
+
+For security-sensitive applications, we recommend disabling this fallback:
+
+```hocon
+akka.actor.serialization-settings.allow-unregistered-types = false
+```
+
+When disabled, `FindSerializerForType` will throw a `SerializationException` if no explicit serializer binding exists for a type. This ensures:
+
+1. **Security**: Only explicitly registered types can be serialized/deserialized
+2. **Schema safety**: Missing serializer registrations are caught at development time rather than silently falling back to JSON
+3. **Explicit contracts**: All persisted/remoted messages go through intentionally configured serializers
+
+When you enable this setting and attempt to serialize an unregistered type, you'll receive a helpful error message guiding you to either add a serialization binding or re-enable the fallback.
+
+### Danger of Polymorphic Serializer
 
 One of the danger of polymorphic serializers is the danger of unsafe object type injection into
 the serialization/de-serialization chain. This issue applies to any type of polymorphic serializer,
