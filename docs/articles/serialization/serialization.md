@@ -423,7 +423,7 @@ akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
 > This feature is turned on as default since Akka.NET v1.4.24
 
 > [!WARNING]
-> Hyperion is __NOT__ designed as a safe serializer to be used in an open network as a client-server
+> Hyperion is **NOT** designed as a safe serializer to be used in an open network as a client-server
 > communication protocol, instead it is designed to be used as a server-server communication protocol,
 > preferably inside a closed network system.
 <!-- markdownlint-enable MD028 -->
