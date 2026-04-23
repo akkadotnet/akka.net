@@ -534,6 +534,10 @@ namespace Akka.Remote.Transport.DotNetty
                 Log.Debug("Filtered {0} link-local address(es) from DNS results for '{1}'",
                     resolved.AddressList.Length - filtered.Length, address.Host);
 
+            // Important detail here: if your network is relying on APIPA addresses, then this patch preserves that.
+            // If 100% of resolved DNS addresses are link-local, and therefore 100% of them get filtered out,
+            // then we use the originally resolved list instead.
+            // In scenarios where you have a mix of APIPA and routable addresses, routable addresses win.
             var selected = filtered.FirstOrDefault() ?? resolved.AddressList.LastOrDefault();
             return new IPEndPoint(selected!, address.Port);
         }
@@ -552,6 +556,10 @@ namespace Akka.Remote.Transport.DotNetty
                 Log.Debug("Filtered {0} link-local address(es) from DNS results for '{1}' with address family '{2}'",
                     matching.Length - filtered.Length, address.Host, addressFamily);
 
+            // Important detail here: if your network is relying on APIPA addresses, then this patch preserves that.
+            // If 100% of resolved DNS addresses are link-local, and therefore 100% of them get filtered out,
+            // then we use the originally resolved list instead.
+            // In scenarios where you have a mix of APIPA and routable addresses, routable addresses win.
             var found = filtered.FirstOrDefault() ?? matching.FirstOrDefault();
 
             if (found == null)
