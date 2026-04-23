@@ -4,6 +4,13 @@
 [assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.TestKit
 {
+    [Akka.Annotations.InternalApi]
+    public class ActorCellKeepingSynchronizationContext : System.Threading.SynchronizationContext
+    {
+        public ActorCellKeepingSynchronizationContext(Akka.Actor.ActorCell cell) { }
+        public override void Post(System.Threading.SendOrPostCallback d, object state) { }
+        public override void Send(System.Threading.SendOrPostCallback d, object state) { }
+    }
     public abstract class AutoPilot
     {
         protected AutoPilot() { }
