@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 using Akka.Streams.Implementation;
 
 namespace Akka.Streams.Tests.Implementation
@@ -69,6 +71,25 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         public void Dispose() => _listener.Dispose();
+
+        public async Task WaitForSpansAsync(
+            int atLeast,
+            int timeoutSeconds = 5,
+            Func<Activity[], bool> predicate = null)
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+            while (DateTime.UtcNow < deadline)
+            {
+                var snap = StoppedActivities.ToArray();
+                if (snap.Length >= atLeast && (predicate == null || predicate(snap)))
+                    return;
+                await Task.Delay(25);
+            }
+        }
+
+        public Task WaitForLinkedSpanAsync(int timeoutSeconds = 5)
+            => WaitForSpansAsync(1, timeoutSeconds,
+                snap => snap.Any(a => (a.Links?.Count() ?? 0) > 0));
     }
 
     /// <summary>

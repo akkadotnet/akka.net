@@ -69,11 +69,7 @@ namespace Akka.Streams.Tests.Implementation
 
             queue.Complete();
 
-            // Wait for interpreter to drain all 4 expected spans:
-            // ingress.queued, ingress QueueSource, stage Select, stage SeqStage
-            var deadline = DateTime.UtcNow.AddSeconds(3);
-            while (collector.StoppedActivities.Count < 4 && DateTime.UtcNow < deadline)
-                await Task.Delay(25);
+            await collector.WaitForSpansAsync(atLeast: 4, timeoutSeconds: 3);
 
             // Diagnostic dump of every span we saw:
             var stopped = new List<Activity>(collector.StoppedActivities);
@@ -147,10 +143,8 @@ namespace Akka.Streams.Tests.Implementation
                 (await sink.OfferAsync(42)).Should().Be(QueueOfferResult.Enqueued.Instance);
             }
 
-            // Wait for the async lambda to complete and for stream spans to drain
-            var deadline = DateTime.UtcNow.AddSeconds(3);
-            while ((userSpans.Count == 0 || collector.StoppedActivities.Count < 3) && DateTime.UtcNow < deadline)
-                await Task.Delay(25);
+            await collector.WaitForSpansAsync(atLeast: 3, timeoutSeconds: 3,
+                predicate: _ => userSpans.Count > 0);
 
             userSpans.Should().HaveCount(1, "user span inside SelectAsync lambda should have been created");
             var userSpan = userSpans[0];
@@ -203,10 +197,7 @@ namespace Akka.Streams.Tests.Implementation
                 (await queue.OfferAsync(1)).Should().Be(QueueOfferResult.Enqueued.Instance);
             }
 
-            // Wait for A's spans to drain
-            var deadline = DateTime.UtcNow.AddSeconds(3);
-            while (collector.StoppedActivities.Count < 2 && DateTime.UtcNow < deadline)
-                await Task.Delay(25);
+            await collector.WaitForSpansAsync(atLeast: 2, timeoutSeconds: 3);
 
             var aSpans = collector.StoppedActivities.ToArray();
             foreach (var a in aSpans)
@@ -223,11 +214,8 @@ namespace Akka.Streams.Tests.Implementation
 
             queue.Complete();
 
-            // Wait for B's spans to drain too
-            deadline = DateTime.UtcNow.AddSeconds(3);
             var expectedTotal = aSpans.Length + 2;  // at least ingress + stage for offer B
-            while (collector.StoppedActivities.Count < expectedTotal && DateTime.UtcNow < deadline)
-                await Task.Delay(25);
+            await collector.WaitForSpansAsync(atLeast: expectedTotal, timeoutSeconds: 3);
 
             traceAId.Should().NotBe(traceBId, "the two offers must have different trace ids");
 

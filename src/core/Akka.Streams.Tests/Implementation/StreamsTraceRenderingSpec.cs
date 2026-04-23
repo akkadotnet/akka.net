@@ -59,7 +59,7 @@ namespace Akka.Streams.Tests.Implementation
             }
             queue.Complete();
 
-            await WaitForSpanCount(collector, atLeast: 3, timeoutSeconds: 3);
+            await collector.WaitForSpansAsync(atLeast: 3, timeoutSeconds: 3);
 
             RenderAndSave(
                 scenario: "linear-chain",
@@ -109,7 +109,7 @@ namespace Akka.Streams.Tests.Implementation
             {
                 (await sink.OfferAsync(42)).Should().Be(QueueOfferResult.Enqueued.Instance);
             }
-            await WaitForSpanCount(collector, atLeast: 3, timeoutSeconds: 3);
+            await collector.WaitForSpansAsync(atLeast: 3, timeoutSeconds: 3);
 
             // Merge the user spans into the capture so the rendering shows the
             // downstream user.work span nested inside SelectAsync.
@@ -167,7 +167,7 @@ namespace Akka.Streams.Tests.Implementation
             release.SetResult(true);
             queue.Complete();
 
-            await WaitForLinkedSpan(collector, timeoutSeconds: 5);
+            await collector.WaitForLinkedSpanAsync();
 
             RenderAndSave(
                 scenario: "batchweighted-fan-in",
@@ -207,7 +207,7 @@ namespace Akka.Streams.Tests.Implementation
             qA.Complete();
             qB.Complete();
 
-            await WaitForSpanCount(collector, atLeast: 4, timeoutSeconds: 5);
+            await collector.WaitForSpansAsync(atLeast: 4, timeoutSeconds: 5);
 
             RenderAndSave(
                 scenario: "merge-two-sources",
@@ -248,7 +248,7 @@ namespace Akka.Streams.Tests.Implementation
                 (await queue.OfferAsync(1)).Should().Be(QueueOfferResult.Enqueued.Instance);
             queue.Complete();
 
-            await WaitForSpanCount(collector, atLeast: 5, timeoutSeconds: 5,
+            await collector.WaitForSpansAsync(atLeast: 5, timeoutSeconds: 5,
                 predicate: snap => snap.Count(a => a.OperationName == "akka.stream.stage Select") >= 2);
 
             RenderAndSave(
@@ -293,34 +293,6 @@ namespace Akka.Streams.Tests.Implementation
         // --------------------------------------------------------------------
         // helpers
         // --------------------------------------------------------------------
-
-        private static async Task WaitForSpanCount(
-            StreamsActivityCollector collector,
-            int atLeast,
-            int timeoutSeconds,
-            Func<Activity[], bool> predicate = null)
-        {
-            var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
-            while (DateTime.UtcNow < deadline)
-            {
-                var snap = collector.StoppedActivities.ToArray();
-                if (snap.Length >= atLeast && (predicate == null || predicate(snap)))
-                    return;
-                await Task.Delay(25);
-            }
-        }
-
-        private static async Task WaitForLinkedSpan(StreamsActivityCollector collector, int timeoutSeconds)
-        {
-            var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
-            while (DateTime.UtcNow < deadline)
-            {
-                var snap = collector.StoppedActivities.ToArray();
-                if (snap.Any(a => (a.Links?.Count() ?? 0) > 0))
-                    return;
-                await Task.Delay(25);
-            }
-        }
 
         /// <summary>
         /// Builds an ASCII span-tree rendering of the captured activities and writes

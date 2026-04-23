@@ -89,15 +89,7 @@ namespace Akka.Streams.Tests.Implementation
             releaseProcessing.SetResult(true);
             queue.Complete();
 
-            // Wait until we see the flushed downstream span with fan-in links.
-            var deadline = DateTime.UtcNow.AddSeconds(5);
-            while (DateTime.UtcNow < deadline)
-            {
-                var snap = collector.StoppedActivities.ToArray();
-                if (snap.Any(a => (a.Links?.Count() ?? 0) > 0))
-                    break;
-                await Task.Delay(50);
-            }
+            await collector.WaitForLinkedSpanAsync();
 
             return (producerTraceIds, collector);
         }
@@ -169,13 +161,7 @@ namespace Akka.Streams.Tests.Implementation
             releaseProcessing.SetResult(true);
             queue.Complete();
 
-            var deadline = DateTime.UtcNow.AddSeconds(5);
-            while (DateTime.UtcNow < deadline)
-            {
-                if (collector.StoppedActivities.Any(a => (a.Links?.Count() ?? 0) > 0))
-                    break;
-                await Task.Delay(50);
-            }
+            await collector.WaitForLinkedSpanAsync();
 
             var stopped = new List<Activity>(collector.StoppedActivities);
             var flushed = stopped.FirstOrDefault(a => (a.Links?.Count() ?? 0) > 0);
@@ -221,14 +207,8 @@ namespace Akka.Streams.Tests.Implementation
             queueA.Complete();
             queueB.Complete();
 
-            var deadline = DateTime.UtcNow.AddSeconds(5);
-            while (DateTime.UtcNow < deadline)
-            {
-                var snap = collector.StoppedActivities.ToArray();
-                if (snap.Count(a => a.OperationName == "akka.stream.stage Select") >= 2)
-                    break;
-                await Task.Delay(50);
-            }
+            await collector.WaitForSpansAsync(atLeast: 2, timeoutSeconds: 5,
+                predicate: snap => snap.Count(a => a.OperationName == "akka.stream.stage Select") >= 2);
 
             var stopped = new List<Activity>(collector.StoppedActivities);
             foreach (var a in stopped)
@@ -278,13 +258,8 @@ namespace Akka.Streams.Tests.Implementation
             }
             q2.Complete();
 
-            var deadline = DateTime.UtcNow.AddSeconds(5);
-            while (DateTime.UtcNow < deadline)
-            {
-                if (collector.StoppedActivities.Count(a => a.OperationName == "akka.stream.stage Select") >= 2)
-                    break;
-                await Task.Delay(50);
-            }
+            await collector.WaitForSpansAsync(atLeast: 2, timeoutSeconds: 5,
+                predicate: snap => snap.Count(a => a.OperationName == "akka.stream.stage Select") >= 2);
 
             var selectSpans = collector.StoppedActivities
                 .Where(a => a.OperationName == "akka.stream.stage Select")
