@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
@@ -824,9 +825,14 @@ namespace Akka.Streams.Stage
             public interface IState<TE>;
 
             /// <summary>
-            /// Event with feedback promise.
+            /// Event with feedback promise and optional producer-thread trace context.
+            /// <paramref name="IngressContext"/> is captured from <see cref="Activity.Current"/>
+            /// at <see cref="ConcurrentAsyncCallback{T}.InvokeWithPromise"/> time on whatever
+            /// external thread is dispatching into the interpreter. When non-null, the interpreter
+            /// wraps the handler invocation in an "akka.stream.ingress" Activity so downstream
+            /// stages can parent to the producer's trace.
             /// </summary>
-            public sealed record Event<TE>(TE Evt, TaskCompletionSource<Done> HandlingPromise);
+            public sealed record Event<TE>(TE Evt, TaskCompletionSource<Done> HandlingPromise, ActivityContext? IngressContext = null);
 
             /// <summary>
             /// Waiting for materialization completion or during dispatching of internally queued events
@@ -915,9 +921,9 @@ namespace Akka.Streams.Stage
                         case ConcurrentAsyncCallbackState.Pending<T> pending:
                             if (pending.PendingEvents.Count > 0)
                             {
-                                foreach (var (evt, promise) in pending.PendingEvents)
+                                foreach (var ev in pending.PendingEvents)
                                 {
-                                    OnAsyncInput(evt, promise);
+                                    OnAsyncInput(ev.Evt, ev.HandlingPromise, ev.IngressContext);
                                 }
                             }
 
@@ -935,9 +941,30 @@ namespace Akka.Streams.Stage
                 }
             }
 
-            private void OnAsyncInput(T e, TaskCompletionSource<Done> promise)
+            private void OnAsyncInput(T e, TaskCompletionSource<Done> promise, ActivityContext? ingressContext)
             {
-                _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, _wrappedHandler);
+                if (!ingressContext.HasValue)
+                {
+                    // Fast path: no producer trace context captured — dispatch without wrapping.
+                    _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, _wrappedHandler);
+                    return;
+                }
+
+                // Start an ingress Activity on the interpreter thread so Push captures
+                // the producer's trace into Connection.SlotContext.
+                var capturedContext = ingressContext.Value;
+                var owner = _ownedStage;
+                var realHandler = _wrappedHandler;
+                var ingressOpName = StreamsDiagnostics.GetIngressOperationName(owner);
+                Action<object> contextAwareHandler = obj =>
+                {
+                    using var ingress = StreamsDiagnostics.ActivitySource.StartActivity(
+                        ingressOpName,
+                        ActivityKind.Internal,
+                        capturedContext);
+                    realHandler(obj);
+                };
+                _ownedStage.Interpreter.OnAsyncInput(_ownedStage, e, promise, contextAwareHandler);
             }
 
             // External call
@@ -985,6 +1012,16 @@ namespace Akka.Streams.Stage
 
             private void InvokeWithPromise(T evt, TaskCompletionSource<Done> promise)
             {
+                // Capture the producer thread's trace context BEFORE the async handoff so we can
+                // restore it on the interpreter thread. AsyncLocal does not flow across the stream
+                // actor boundary, so this is the one place we can observe Activity.Current from the
+                // external caller's perspective. Skip entirely when no one is listening to the
+                // "Akka.Streams" ActivitySource — avoids a per-invoke Activity.Current property
+                // access on the non-traced fast path.
+                ActivityContext? ingressContext = StreamsDiagnostics.ActivitySource.HasListeners()
+                    ? Activity.Current?.Context
+                    : null;
+
                 while (true)
                 {
                     var state = _state.Value;
@@ -992,13 +1029,13 @@ namespace Akka.Streams.Stage
                     {
                         case ConcurrentAsyncCallbackState.Initialized<T>:
                             // started - can just dispatch async message to interpreter
-                            OnAsyncInput(evt, promise);
+                            OnAsyncInput(evt, promise, ingressContext);
                             break;
 
                         case ConcurrentAsyncCallbackState.Pending<T> list:
                         {
-                            // not started yet - queue the event
-                            var e = new ConcurrentAsyncCallbackState.Event<T>(evt, promise);
+                            // not started yet - queue the event with its captured ingress context
+                            var e = new ConcurrentAsyncCallbackState.Event<T>(evt, promise, ingressContext);
                             var newList = list.PendingEvents.Add(e);
                             if (!_state.CompareAndSet(list, new ConcurrentAsyncCallbackState.Pending<T>(newList))) continue;
                             break;
@@ -1396,6 +1433,11 @@ namespace Akka.Streams.Stage
             {
                 // fast path
                 connection.Slot = Empty.Instance;
+                if (connection.SlotContext.HasValue)
+                {
+                    connection.SlotContext = null;
+                    connection.SlotLinks = null;
+                }
                 return (T)element;
             }
 
@@ -1408,12 +1450,18 @@ namespace Akka.Streams.Stage
                 // failed
                 var failed = (GraphInterpreter.Failed)element;
                 connection.Slot = new GraphInterpreter.Failed(failed.Reason, Empty.Instance);
+                // keep SlotContext / SlotLinks — caller still needs them for the retry path
                 return (T)failed.PreviousElement;
             }
 
             // Completed
             var elem = (T)connection.Slot;
             connection.Slot = Empty.Instance;
+            if (connection.SlotContext.HasValue)
+            {
+                connection.SlotContext = null;
+                connection.SlotLinks = null;
+            }
             return elem;
         }
 
@@ -1533,6 +1581,21 @@ namespace Akka.Streams.Stage
             if ((portState & (OutReady | OutClosed | InClosed)) == OutReady && element != null)
             {
                 connection.Slot = element;
+                if (StreamsDiagnostics.ActivitySource.HasListeners())
+                {
+                    if (connection.PendingPushPrimaryContext.HasValue)
+                    {
+                        connection.SlotContext = connection.PendingPushPrimaryContext;
+                        connection.SlotLinks = connection.PendingPushLinks;
+                        connection.PendingPushPrimaryContext = null;
+                        connection.PendingPushLinks = null;
+                    }
+                    else
+                    {
+                        connection.SlotContext = Activity.Current?.Context;
+                        connection.SlotLinks = null;
+                    }
+                }
                 Interpreter.ChasePush(connection);
             }
             else
@@ -1548,6 +1611,81 @@ namespace Akka.Streams.Stage
                 // No error, just InClosed caused the actual pull to be ignored, but the status flag still needs to be flipped
                 connection.PortState = portState ^ PushStartFlip;
             }
+        }
+
+        /// <summary>
+        /// Reads the trace context that the upstream stage attached to the next element waiting
+        /// at <paramref name="inlet"/>. Returns <c>null</c> if no element is pending or if the
+        /// upstream Push happened outside any traced scope. Designed to be called from inside
+        /// <c>OnPush</c> BEFORE <c>Grab</c> — fan-in stages use it to remember which producer
+        /// trace each input element came from so that a later flushed batch can link back to
+        /// all of them via <see cref="ActivityLink"/>s.
+        /// </summary>
+        internal ActivityContext? CurrentInletTraceContext<T>(Inlet<T> inlet)
+            => GetConnection(inlet).SlotContext;
+
+        /// <summary>
+        /// Marks the next <c>Push</c> on <paramref name="outlet"/> as a fan-in flush — it will
+        /// carry <paramref name="primary"/> as its primary trace parent and the entries in
+        /// <paramref name="links"/> as additional <see cref="ActivityLink"/>s on the downstream
+        /// stage span. Used by <c>BatchWeighted</c>, <c>GroupedWithin</c>, <c>Merge</c>, and
+        /// other fan-in stages so that one flushed output element preserves trace continuity
+        /// with all N input elements that contributed to it.
+        ///
+        /// The override is consumed (and cleared) by the very next <c>Push</c> on the outlet.
+        /// If the next <c>Push</c> never happens (e.g. stage failure), the override is harmless
+        /// and is replaced on the next call.
+        /// </summary>
+        internal void SetFanInTraceContext<T>(
+            Outlet<T> outlet,
+            ActivityContext primary,
+            IReadOnlyList<ActivityContext> links)
+        {
+            var connection = GetConnection(outlet);
+            connection.PendingPushPrimaryContext = primary;
+            if (links == null || links.Count == 0)
+            {
+                connection.PendingPushLinks = null;
+            }
+            else
+            {
+                var arr = new ActivityContext[links.Count];
+                for (int i = 0; i < links.Count; i++) arr[i] = links[i];
+                connection.PendingPushLinks = arr;
+            }
+        }
+
+        /// <summary>
+        /// Pass-through fan-in helper for 1-to-1 merge stages (<c>Merge</c>, <c>MergePreferred</c>,
+        /// <c>Concat</c>, etc.): reads the upstream context off <paramref name="inlet"/>, grabs the
+        /// element, stages the upstream context as the primary parent for the next push on
+        /// <paramref name="outlet"/>, and pushes. Used so that multi-producer merge stages preserve
+        /// each element's originating TraceId across the slow-path <c>OnPull</c> boundary where
+        /// <c>Activity.Current</c> would otherwise be null. Single-source stages that don't cross
+        /// an interpreter dispatcher hop between <c>Grab</c> and <c>Push</c> don't need this — plain
+        /// <c>Push(outlet, Grab(inlet))</c> captures <c>Activity.Current</c> correctly.
+        /// </summary>
+        internal void GrabAndPushFanIn<TIn, TOut>(Inlet<TIn> inlet, Outlet<TOut> outlet) where TIn : TOut
+        {
+            var ctx = CurrentInletTraceContext(inlet);
+            var element = Grab(inlet);
+            if (ctx.HasValue) SetFanInTraceContext(outlet, ctx.Value, null);
+            Push(outlet, element);
+        }
+
+        /// <summary>
+        /// Like <see cref="GrabAndPushFanIn{TIn,TOut}"/> but uses <see cref="Emit{T}(Outlet{T},T,Action)"/>
+        /// instead of <c>Push</c>, for fan-in stages that need the deferred-pull callback overload.
+        /// </summary>
+        internal void GrabAndEmitFanIn<TIn, TOut>(Inlet<TIn> inlet, Outlet<TOut> outlet, Action andThen = null) where TIn : TOut
+        {
+            var ctx = CurrentInletTraceContext(inlet);
+            var element = Grab(inlet);
+            if (ctx.HasValue) SetFanInTraceContext(outlet, ctx.Value, null);
+            if (andThen != null)
+                Emit(outlet, element, andThen);
+            else
+                Emit(outlet, element);
         }
 
         /// <summary>
@@ -2979,11 +3117,29 @@ namespace Akka.Streams.Stage
         {
         }
 
+        /// <summary>
+        /// Args queued before <see cref="InitCallback"/> was called. Each entry carries the
+        /// arg itself plus the producer thread's <see cref="ActivityContext"/> captured at
+        /// <see cref="InvokeCallbacks"/> time. This is the only place we can observe
+        /// <see cref="Activity.Current"/> from the external caller, because by the time
+        /// <see cref="InitCallback"/> drains the queue we are on the interpreter thread.
+        /// </summary>
+        private sealed class QueuedArg
+        {
+            public T Arg { get; }
+            public ActivityContext? IngressContext { get; }
+            public QueuedArg(T arg, ActivityContext? ingressContext)
+            {
+                Arg = arg;
+                IngressContext = ingressContext;
+            }
+        }
+
         private sealed class NotInitialized : ICallbackState
         {
-            public IList<T> Args { get; }
+            public IList<QueuedArg> Args { get; }
 
-            public NotInitialized(IList<T> args) => Args = args;
+            public NotInitialized(IList<QueuedArg> args) => Args = args;
         }
 
         private sealed class Initialized : ICallbackState
@@ -3000,7 +3156,7 @@ namespace Akka.Streams.Stage
             public Stopped(Action<T> callback) => Callback = callback;
         }
 
-        private readonly AtomicReference<ICallbackState> _callbackState = new(new NotInitialized(new List<T>()));
+        private readonly AtomicReference<ICallbackState> _callbackState = new(new NotInitialized(new List<QueuedArg>()));
 
         /// <summary>
         /// TBD
@@ -3032,7 +3188,27 @@ namespace Akka.Streams.Stage
         protected void InitCallback(Action<T> callback) => Locked(() =>
         {
             var state = _callbackState.GetAndSet(new Initialized(callback));
-            (state as NotInitialized)?.Args.ForEach(callback);
+            if (state is NotInitialized notInitialized)
+            {
+                // Drain any args that were queued before the interpreter started, restoring
+                // the producer thread's trace context around each callback invocation so
+                // downstream stages see Activity.Current as it was at the original caller's side.
+                foreach (var queued in notInitialized.Args)
+                {
+                    if (queued.IngressContext.HasValue)
+                    {
+                        using var restored = StreamsDiagnostics.ActivitySource.StartActivity(
+                            StreamsDiagnostics.OperationIngressQueued,
+                            ActivityKind.Internal,
+                            queued.IngressContext.Value);
+                        callback(queued.Arg);
+                    }
+                    else
+                    {
+                        callback(queued.Arg);
+                    }
+                }
+            }
         });
 
         /// <summary>
@@ -3043,11 +3219,23 @@ namespace Akka.Streams.Stage
         {
             var state = _callbackState.Value;
             if (state is Initialized initialized)
+            {
                 initialized.Callback(arg);
+            }
             else if (state is NotInitialized notInitialized)
-                notInitialized.Args.Add(arg);
+            {
+                // Only capture the producer thread's trace context when we're actually going
+                // to queue the arg — Initialized and Stopped paths don't need it, so there's
+                // no reason to touch Activity.Current on those hot paths.
+                var ingressContext = StreamsDiagnostics.ActivitySource.HasListeners()
+                    ? Activity.Current?.Context
+                    : null;
+                notInitialized.Args.Add(new QueuedArg(arg, ingressContext));
+            }
             else if (state is Stopped stopped)
+            {
                 stopped.Callback(arg);
+            }
         });
 
         private void Locked(Action body)

@@ -2196,6 +2196,14 @@ namespace Akka.Streams.Implementation.Fusing
             private long _left;
             private Option<TIn> _pending;
 
+            // Trace contexts of the elements currently aggregated in _aggregate. The first entry
+            // becomes the primary trace parent of the flushed output; the rest are attached as
+            // ActivityLinks so the merged downstream span links back to every input element.
+            private List<System.Diagnostics.ActivityContext> _aggregateContexts;
+            // Trace context of _pending (the element that arrived after the batch was full and is
+            // waiting to seed the next aggregation). One element, at most.
+            private System.Diagnostics.ActivityContext? _pendingContext;
+
             public Logic(Attributes inheritedAttributes, Batch<TIn, TOut> stage) : base(stage.Shape)
             {
                 _shape = stage.Shape;
@@ -2209,6 +2217,9 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnPush()
             {
+                // Read the upstream trace context BEFORE Grab clears it. Captured per-element so
+                // that a later flush can link back to every contributing producer trace.
+                var elementContext = CurrentInletTraceContext(_shape.Inlet);
                 var element = Grab(_shape.Inlet);
                 var cost = _stage._costFunc(element);
                 if (!_aggregate.HasValue)
@@ -2217,6 +2228,7 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         _aggregate = _stage._seed(element);
                         _left -= cost;
+                        AddAggregateContext(elementContext);
                     }
                     catch (Exception ex)
                     {
@@ -2234,13 +2246,17 @@ namespace Akka.Streams.Implementation.Fusing
                     }
                 }
                 else if (_left < cost)
+                {
                     _pending = element;
+                    _pendingContext = elementContext;
+                }
                 else
                 {
                     try
                     {
                         _aggregate = _stage._aggregate(_aggregate.Value, element);
                         _left -= cost;
+                        AddAggregateContext(elementContext);
                     }
                     catch (Exception ex)
                     {
@@ -2264,6 +2280,20 @@ namespace Akka.Streams.Implementation.Fusing
                     Pull(_shape.Inlet);
             }
 
+            private void AddAggregateContext(System.Diagnostics.ActivityContext? ctx)
+            {
+                if (!ctx.HasValue) return;
+                if (_aggregateContexts == null)
+                    _aggregateContexts = new List<System.Diagnostics.ActivityContext>();
+                _aggregateContexts.Add(ctx.Value);
+            }
+
+            private void EmitAggregateContextsIfAny()
+            {
+                StreamsDiagnostics.EmitFanInTraceContexts(this, _shape.Outlet, _aggregateContexts);
+                _aggregateContexts?.Clear();
+            }
+
             public override void OnUpstreamFinish()
             {
                 if (!_aggregate.HasValue)
@@ -2281,6 +2311,7 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 else if (IsClosed(_shape.Inlet))
                 {
+                    EmitAggregateContextsIfAny();
                     Push(_shape.Outlet, _aggregate.Value);
                     if (!_pending.HasValue)
                         CompleteStage();
@@ -2289,6 +2320,7 @@ namespace Akka.Streams.Implementation.Fusing
                         try
                         {
                             _aggregate = _stage._seed(_pending.Value);
+                            AddAggregateContext(_pendingContext);
                         }
                         catch (Exception ex)
                         {
@@ -2306,6 +2338,7 @@ namespace Akka.Streams.Implementation.Fusing
                             }
                         }
                         _pending = Option<TIn>.None;
+                        _pendingContext = null;
                     }
                 }
                 else
@@ -2320,6 +2353,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 if (_aggregate.HasValue)
                 {
+                    EmitAggregateContextsIfAny();
                     Push(_shape.Outlet, _aggregate.Value);
                     _left = _stage._max;
                 }
@@ -2329,7 +2363,9 @@ namespace Akka.Streams.Implementation.Fusing
                     {
                         _aggregate = _stage._seed(_pending.Value);
                         _left -= _stage._costFunc(_pending.Value);
+                        AddAggregateContext(_pendingContext);
                         _pending = Option<TIn>.None;
+                        _pendingContext = null;
                     }
                     catch (Exception ex)
                     {
@@ -2343,6 +2379,7 @@ namespace Akka.Streams.Implementation.Fusing
                                 break;
                             case Directive.Resume:
                                 _pending = Option<TIn>.None;
+                                _pendingContext = null;
                                 break;
                         }
                     }
@@ -2358,6 +2395,8 @@ namespace Akka.Streams.Implementation.Fusing
                 _aggregate = Option<TOut>.None;
                 _left = _stage._max;
                 _pending = Option<TIn>.None;
+                _pendingContext = null;
+                _aggregateContexts?.Clear();
             }
         }
 
@@ -3118,8 +3157,10 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly GroupedWeightedWithin<T> _stage;
 
             private readonly List<T> _buffer = new();
+            private List<System.Diagnostics.ActivityContext> _bufferContexts;
             private T _pending = default;
             private long _pendingWeight = 0L;
+            private System.Diagnostics.ActivityContext? _pendingContext;
             // True if:
             // - buf is nonEmpty
             //       AND
@@ -3152,7 +3193,7 @@ namespace Akka.Streams.Implementation.Fusing
                 Pull(_stage._in);
             }
 
-            private void NextElement(T element)
+            private void NextElement(T element, System.Diagnostics.ActivityContext? elementContext)
             {
                 _groupEmitted = false;
                 var cost = _stage._costFn(element);
@@ -3165,11 +3206,12 @@ namespace Akka.Streams.Implementation.Fusing
                     if (_totalWeight + cost <= _stage._maxWeight && _totalNumber + 1 <= _stage._maxNumber)
                     {
                         _buffer.Add(element);
+                        if (elementContext.HasValue) (_bufferContexts ??= new List<System.Diagnostics.ActivityContext>()).Add(elementContext.Value);
                         _totalWeight += cost;
                         _totalNumber += 1;
 
                         // if potentially there is a place (both weight and number) for one more element in the current group
-                        if (_totalWeight < _stage._maxWeight && _totalNumber < _stage._maxNumber) 
+                        if (_totalWeight < _stage._maxWeight && _totalNumber < _stage._maxNumber)
                             Pull(_stage._in);
                         else
                         {
@@ -3196,6 +3238,7 @@ namespace Akka.Streams.Implementation.Fusing
                         if (_totalWeight == 0L && _totalNumber == 0)
                         {
                             _buffer.Add(element);
+                            if (elementContext.HasValue) (_bufferContexts ??= new List<System.Diagnostics.ActivityContext>()).Add(elementContext.Value);
                             _totalWeight += cost;
                             _totalNumber += 1;
                             _pushEagerly = true;
@@ -3204,6 +3247,7 @@ namespace Akka.Streams.Implementation.Fusing
                         {
                             _pending = element;
                             _pendingWeight = cost;
+                            _pendingContext = elementContext;
                         }
                         ScheduleRepeatedly(GroupedWeightedWithinTimer, _stage._interval);
                         TryCloseGroup();
@@ -3220,14 +3264,30 @@ namespace Akka.Streams.Implementation.Fusing
             private void EmitGroup()
             {
                 _groupEmitted = true;
+                EmitBufferContextsAsFanInLinks();
                 Push(_stage._out, _buffer.ToList());
                 _buffer.Clear();
-                if (!_finished) 
+                _bufferContexts?.Clear();
+                if (!_finished)
                     StartNewGroup();
-                else if (!EqualityComparer<T>.Default.Equals(_pending, default)) 
-                    Emit(_stage._out, new List<T> { _pending }, () => CompleteStage());
-                else 
+                else if (!EqualityComparer<T>.Default.Equals(_pending, default))
+                {
+                    // The trailing pending element also needs to carry its trace context forward
+                    // so the downstream sink sees a single-element group with the right parent.
+                    if (_pendingContext.HasValue)
+                        SetFanInTraceContext(_stage._out, _pendingContext.Value, null);
+                    var trailing = _pending;
+                    _pending = default;
+                    _pendingContext = null;
+                    Emit(_stage._out, new List<T> { trailing }, () => CompleteStage());
+                }
+                else
                     CompleteStage();
+            }
+
+            private void EmitBufferContextsAsFanInLinks()
+            {
+                StreamsDiagnostics.EmitFanInTraceContexts(this, _stage._out, _bufferContexts);
             }
 
             private void StartNewGroup()
@@ -3238,7 +3298,9 @@ namespace Akka.Streams.Implementation.Fusing
                     _totalNumber = 1;
                     _pendingWeight = 0L;
                     _buffer.Add(_pending);
+                    if (_pendingContext.HasValue) (_bufferContexts ??= new List<System.Diagnostics.ActivityContext>()).Add(_pendingContext.Value);
                     _pending = default;
+                    _pendingContext = null;
                     _groupEmitted = false;
                 }
                 else
@@ -3248,14 +3310,21 @@ namespace Akka.Streams.Implementation.Fusing
                     _hasElements = false;
                 }
                 _pushEagerly = false;
-                if (IsAvailable(_stage._in)) NextElement(Grab(_stage._in));
+                if (IsAvailable(_stage._in))
+                {
+                    var ctx = CurrentInletTraceContext(_stage._in);
+                    NextElement(Grab(_stage._in), ctx);
+                }
                 else if (!HasBeenPulled(_stage._in)) Pull(_stage._in);
             }
 
             public void OnPush()
             {
                 if (EqualityComparer<T>.Default.Equals(_pending, default))
-                    NextElement(Grab(_stage._in)); // otherwise keep the element for next round
+                {
+                    var ctx = CurrentInletTraceContext(_stage._in);
+                    NextElement(Grab(_stage._in), ctx); // otherwise keep the element for next round
+                }
             }
 
             public void OnPull()
