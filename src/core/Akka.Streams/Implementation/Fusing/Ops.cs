@@ -4416,7 +4416,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Task<Option<TMat>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var promise = new TaskCompletionSource<Option<TMat>>();
+            var promise = TaskEx.NonBlockingTaskCompletionSource<Option<TMat>>();
             var stageLogic = new Logic(this, promise);
             return new LogicAndMaterializedValue<Task<Option<TMat>>>(stageLogic, promise.Task);
         }
