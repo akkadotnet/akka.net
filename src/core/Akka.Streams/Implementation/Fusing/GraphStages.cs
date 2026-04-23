@@ -16,6 +16,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.Fusing
 {
@@ -376,7 +377,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Task<Done>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var finishPromise = new TaskCompletionSource<Done>();
+            var finishPromise = TaskEx.NonBlockingTaskCompletionSource<Done>();
             return new LogicAndMaterializedValue<Task<Done>>(new Logic(this, finishPromise), finishPromise.Task);
         }
 
@@ -708,7 +709,7 @@ namespace Akka.Streams.Implementation.Fusing
         /// </summary>
         public readonly Outlet<T> Outlet;
 
-        private readonly TaskCompletionSource<T> _promise = new();
+        private readonly TaskCompletionSource<T> _promise = TaskEx.NonBlockingTaskCompletionSource<T>();
 
         /// <summary>
         /// TBD
@@ -932,7 +933,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override ILogicAndMaterializedValue<Task<M>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var materialized = new TaskCompletionSource<M>();
+            var materialized = TaskEx.NonBlockingTaskCompletionSource<M>();
             return new LogicAndMaterializedValue<Task<M>>(new Logic(this, materialized), materialized.Task);
         }
 
@@ -1065,7 +1066,7 @@ namespace Akka.Streams.Implementation.Fusing
 
         public override ILogicAndMaterializedValue<Task<Done>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var completion = new TaskCompletionSource<Done>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<Done>();
             var logic = new Logic(this, completion);
             return new LogicAndMaterializedValue<Task<Done>>(logic, completion.Task);
         }
