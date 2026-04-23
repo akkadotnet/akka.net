@@ -526,10 +526,15 @@ namespace Akka.Remote.Transport.DotNetty
             var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
             //NOTE: for some reason while Helios takes first element from resolved address list
             // on the DotNetty side we need to take the last one in order to be compatible.
-            // We filter link-local addresses first, but fallback to the original list if filtering 
+            // We filter link-local addresses first, but fallback to the original list if filtering
             // eliminates everything, preserving backward compatibility.
-            var candidates = FilterLinkLocalAddresses(resolved.AddressList);
-            var selected = candidates.FirstOrDefault() ?? resolved.AddressList.LastOrDefault();
+            var filtered = FilterLinkLocalAddresses(resolved.AddressList).ToArray();
+
+            if (Log.IsDebugEnabled && filtered.Length < resolved.AddressList.Length)
+                Log.Debug("Filtered {0} link-local address(es) from DNS results for '{1}'",
+                    resolved.AddressList.Length - filtered.Length, address.Host);
+
+            var selected = filtered.FirstOrDefault() ?? resolved.AddressList.LastOrDefault();
             return new IPEndPoint(selected!, address.Port);
         }
 
@@ -537,13 +542,18 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
             var matching = resolved.AddressList.Where(a => a.AddressFamily == addressFamily).ToArray();
-            
-            // Filter out link-local addresses (169.254.0.0/16, fe80::/10) which break cluster formation 
+
+            // Filter out link-local addresses (169.254.0.0/16, fe80::/10) which break cluster formation
             // on multi-NIC hosts where APIPA addresses appear in DNS results.
             // Fallback to unfiltered list to preserve backward compatibility if filtering eliminates all candidates.
-            var filtered = FilterLinkLocalAddresses(matching);
+            var filtered = FilterLinkLocalAddresses(matching).ToArray();
+
+            if (Log.IsDebugEnabled && filtered.Length < matching.Length)
+                Log.Debug("Filtered {0} link-local address(es) from DNS results for '{1}' with address family '{2}'",
+                    matching.Length - filtered.Length, address.Host, addressFamily);
+
             var found = filtered.FirstOrDefault() ?? matching.FirstOrDefault();
-            
+
             if (found == null)
             {
                 throw new KeyNotFoundException($"Couldn't resolve IP endpoint from provided DNS name '{address}' with address family of '{addressFamily}'");
@@ -554,12 +564,12 @@ namespace Akka.Remote.Transport.DotNetty
 
         /// <summary>
         /// Filters out IPv4 link-local (169.254.0.0/16) and IPv6 link-local (fe80::/10) addresses.
-        /// These addresses are not routable and can break cluster formation on multi-NIC hosts 
+        /// These addresses are not routable and can break cluster formation on multi-NIC hosts
         /// where APIPA addresses appear in DNS results.
         /// </summary>
-        internal static IPAddress[] FilterLinkLocalAddresses(IPAddress[] addresses)
+        internal static IEnumerable<IPAddress> FilterLinkLocalAddresses(IEnumerable<IPAddress> addresses)
         {
-            return addresses.Where(a => !IsIPv4LinkLocal(a) && !IsIPv6LinkLocal(a)).ToArray();
+            return addresses.Where(a => !IsIPv4LinkLocal(a) && !IsIPv6LinkLocal(a));
         }
 
         private static bool IsIPv4LinkLocal(IPAddress ip)
