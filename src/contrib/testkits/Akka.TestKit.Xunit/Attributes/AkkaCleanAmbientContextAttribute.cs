@@ -53,20 +53,7 @@ public sealed class AkkaCleanAmbientContextAttribute : BeforeAfterTestAttribute
 
     private static ActorCell? TryGetCell(TestKitBase testKit)
     {
-        // TestActor access may throw NRE if the TestKit was constructed
-        // without a live TestActor (e.g., ctor failed or system already
-        // shut down).
-        IActorRef testActor;
-        try
-        {
-            testActor = testKit.TestActor;
-        }
-        catch (NullReferenceException)
-        {
-            return null;
-        }
-
-        return testActor is ActorRefWithCell withCell
+        return testKit.TestActor is ActorRefWithCell withCell
             ? withCell.Underlying as ActorCell
             : null;
     }
