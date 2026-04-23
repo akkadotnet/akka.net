@@ -18,29 +18,30 @@ title: Network Security
 
 For many deployments, TLS is not strictly necessary:
 
-* **Internal networks only** - If your cluster runs entirely within a trusted network boundary
-* **Development/staging environments** - Where data sensitivity is low
-* **Kubernetes with network policies** - Where the container network provides isolation
+* Your cluster runs entirely within a trusted network boundary
+* Development or staging environments where data sensitivity is low
+* Kubernetes with network policies providing container-level isolation
 
 ### When TLS Is Recommended
 
-You should enable TLS when:
+Enable TLS when:
 
-* **Crossing network boundaries** - Communication between data centers or cloud regions
-* **Public internet transit** - Any traffic over public networks (even with VPN)
-* **Compliance requirements** - PCI-DSS, HIPAA, or other regulatory needs
-* **Defense-in-depth** - Additional security layer even on private networks
-* **Multi-tenant environments** - Shared infrastructure with other applications
+* Communicating between data centers or cloud regions
+* Any traffic crosses public networks, even with a VPN underneath
+* Compliance requirements apply (PCI-DSS, HIPAA, etc.)
+* You want defense-in-depth on a private network
+* Running on shared infrastructure alongside other applications
 
 ## Security Layers
 
-Akka.Remote security operates on three complementary layers:
+Akka.Remote security operates on four complementary layers:
 
 1. **Network Isolation** - Using VPNs or private networks to restrict which machines can reach your actor systems
 2. **Transport Encryption** - Using TLS to encrypt all communication between nodes
 3. **Authentication** - Using mutual TLS to verify the identity of all connecting nodes
+4. **Serialization Safety** - Restricting which types can be serialized/deserialized to prevent arbitrary type injection via remote messages
 
-You should use **all three layers** in production for defense-in-depth security.
+In production, you want all four. Skipping any of them leaves a gap the other three can't fully cover.
 
 ## TLS (Transport Layer Security) Overview
 
@@ -60,7 +61,7 @@ TLS encryption was introduced in Akka.NET v1.2 with the DotNetty transport. It p
 
 ## Certificate Validation: Independent Control
 
-**New in Akka.NET v1.5.52+:** Certificate validation is now split into two independent settings for greater flexibility.
+**New in Akka.NET v1.5.52+:** Certificate validation is split into two independent settings.
 
 ### Two Types of Validation
 
@@ -335,17 +336,17 @@ akka.remote.dot-netty.tcp {
 
 ## Programmatic Certificate Validation (v1.5.55+)
 
-**New in Akka.NET v1.5.55:** Certificate validation can now be configured programmatically using `DotNettySslSetup` with custom validators. This provides fine-grained control over validation logic while maintaining full backward compatibility with HOCON configuration.
+**New in Akka.NET v1.5.55:** Certificate validation can be configured programmatically via `DotNettySslSetup` and custom validators. HOCON config still works — programmatic setup just takes precedence when both are present.
 
 ### When to Use Programmatic Configuration
 
 Use programmatic setup when you need:
 
-* **Custom validation logic** - Implement domain-specific validation rules
-* **Certificate pinning** - Accept only specific certificates by thumbprint
-* **Subject/Issuer validation** - Verify certificate attributes
-* **Dynamic configuration** - Load validation rules from runtime sources
-* **Composable validators** - Combine multiple validation strategies
+* Domain-specific certificate validation rules
+* Certificate pinning by thumbprint
+* Subject or issuer attribute checks
+* Validation rules loaded at runtime
+* Multiple validators composed together
 
 ### CertificateValidation Helper Factory
 
@@ -405,7 +406,7 @@ var sslSetup = new DotNettySslSetup(
 );
 ```
 
-This ensures programmatic validation logic always takes priority for explicit security requirements.
+If a custom validator is set, it wins regardless of what `suppress-validation` says in HOCON.
 
 ## Startup Certificate Validation (v1.5.52+)
 
@@ -420,7 +421,7 @@ The startup validation verifies:
 * Application has permissions to access the private key
 * Private key is accessible for both RSA and ECDSA algorithms
 
-This fail-fast validation prevents runtime TLS handshake failures by detecting certificate configuration problems during system initialization.
+Better to catch a bad certificate at startup than mid-handshake on a live connection.
 
 ### Common Private Key Permission Issues
 
@@ -484,41 +485,33 @@ sequenceDiagram
 
 ### When to Enable Mutual TLS
 
-**Enable mutual TLS (`require-mutual-authentication = true`) when:**
+Enable it (`require-mutual-authentication = true`) when:
 
-* All nodes are under your control (typical Akka.NET cluster) ✓ **Recommended**
-* You need defense-in-depth security
+* All nodes are under your control — this is the typical Akka.NET cluster setup, and the recommendation
 * Compliance requires bidirectional authentication (PCI-DSS, HIPAA, etc.)
-* You want to prevent misconfigured nodes from joining
+* You want to prevent misconfigured nodes from joining the cluster
 
-**Disable mutual TLS (`require-mutual-authentication = false`) when:**
+Disable it (`require-mutual-authentication = false`) when:
 
-* Clients cannot provide certificates (rare in Akka.NET)
-* You're using client-server architecture where clients are untrusted
-* Backward compatibility with older clients required
+* Clients can't provide certificates (rare in Akka.NET)
+* You're running a client-server architecture where clients are untrusted
+* Backward compatibility with older clients is required
 
-**Default is TRUE for security-by-default posture** (since v1.5.52).
+The default is `true` since v1.5.52.
 
 ### Security Benefits of Mutual TLS
 
-1. **Prevents Asymmetric Connectivity Issues**
-   * Without mTLS: A node with broken certificate can connect OUT to cluster (client TLS succeeds)
-   * With mTLS: Node cannot connect without working certificate (enforced both ways)
+**Asymmetric connectivity protection.** Without mTLS, a node with a broken certificate can still connect *out* to the cluster (client TLS succeeds even if the server cert is bad). With mTLS, it can't connect at all.
 
-2. **Defense-in-Depth**
-   * Startup validation prevents broken servers
-   * Mutual TLS prevents broken clients
-   * Both together provide complete protection
+**Defense-in-depth.** Startup validation catches broken server configs; mTLS catches broken clients. Together they cover both directions.
 
-3. **Identity Verification**
-   * Every node must prove it owns the certificate
-   * Prevents certificate theft attacks (attacker needs private key)
+**Real identity verification.** Every node must prove it holds the private key — not just that it has a copy of the certificate. An attacker who steals a cert file but not the private key gets nothing.
 
 For configuration examples in both HOCON and programmatic styles, see [Validation Strategies](#validation-strategies-hocon-vs-programmatic-v1552) and [Programmatic Certificate Validation](#programmatic-certificate-validation-v1555) sections above.
 
 ## Configuration Examples and Security Analysis
 
-This section provides concrete examples of different security configurations and their tradeoffs.
+Concrete examples with security tradeoffs for each configuration level.
 
 ### HOCON Configuration Security Levels
 
@@ -592,9 +585,24 @@ akka.remote {
 
 **Note:** This does NOT replace TLS encryption. Use both together.
 
+## Serialization Security
+
+Every message Akka.Remote sends goes through serialization. When a type has no explicit serializer binding, Akka.NET silently falls back to the `System.Object` serializer (Newtonsoft.Json). On an open network that's a problem: an attacker who can reach your endpoint can send messages that cause arbitrary types to be deserialized.
+
+Disable the fallback in v1.5.66+:
+
+```hocon
+akka.actor.serialization-settings.allow-unregistered-types = false
+```
+
+With this set, Akka.NET throws a `SerializationException` for any unregistered type instead of silently falling back to JSON. Turn it on in production.
+
+> [!NOTE]
+> Full details — including Hyperion's built-in dangerous-type blacklist and schema-based serialization recommendations — are covered in [Serialization Security](xref:serialization#serialization-security).
+
 ## Virtual Private Networks (VPNs)
 
-The best practice for network security is to make the network itself secure. Run Akka.Remote on private networks that require VPN access.
+The most reliable security measure is a network that attackers can't reach in the first place. Run Akka.Remote on private networks that require VPN access.
 
 **Why VPNs matter:**
 
@@ -796,4 +804,4 @@ Recommendations:
 
 * [Akka.Remote Configuration](xref:akka-remote-configuration)
 * [DotNetty Transport](https://github.com/Azure/DotNetty)
-* [Serialization Security](xref:serialization#serialization-security) - Disable the default serializer fallback to prevent arbitrary type deserialization (v1.5.66+)
+* [Serialization Security](xref:serialization#serialization-security) - Controlling which types can be serialized/deserialized over the wire

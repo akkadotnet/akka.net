@@ -365,25 +365,18 @@ For security-sensitive applications, we recommend disabling this fallback:
 akka.actor.serialization-settings.allow-unregistered-types = false
 ```
 
-When disabled, `FindSerializerForType` will throw a `SerializationException` if no explicit serializer binding exists for a type. This ensures:
+When disabled, `FindSerializerForType` throws a `SerializationException` for any type with no explicit binding. Only registered types can be serialized, missing bindings blow up at development time rather than silently in production, and all your persisted/remoted messages go through the serializers you actually configured.
 
-1. **Security**: Only explicitly registered types can be serialized/deserialized
-2. **Schema safety**: Missing serializer registrations are caught at development time rather than silently falling back to JSON
-3. **Explicit contracts**: All persisted/remoted messages go through intentionally configured serializers
-
-When you enable this setting and attempt to serialize an unregistered type, you'll receive a helpful error message guiding you to either add a serialization binding or re-enable the fallback.
+When you hit this exception, the error message tells you exactly which type is unregistered and what to do about it.
 
 ### Danger of Polymorphic Serializer
 
-One of the danger of polymorphic serializers is the danger of unsafe object type injection into
-the serialization/de-serialization chain. This issue applies to any type of polymorphic serializer,
-including JSON, BinaryFormatter, etc. In Akka, this issue primarily affects developers who allow third parties to pass messages directly
-to unsecured Akka.Remote endpoints, a [practice that we do not encourage](https://getakka.net/articles/remoting/security.html#akkaremote-with-virtual-private-networks).
+Polymorphic serializers — JSON, BinaryFormatter, Hyperion, and others — are vulnerable to object type injection through the deserialization chain. In Akka, this mainly bites developers who allow third parties to pass messages directly to an unsecured Akka.Remote endpoint, a [practice that we do not encourage](xref:network-security#serialization-security).
 
-Generally, there are two approaches you can take to alleviate this problem:
+There are two ways to address this:
 
-1. Implement a schema-based serialization that are contract bound, which is more expensive to setup at first but fundamentally faster and more secure.
-2. Implement a filtering or blacklist to block dangerous types.
+1. Use schema-based serialization (contract-bound) — more setup upfront, but faster and fundamentally more secure.
+2. Maintain a blocklist of dangerous types.
 
 An example of using a schema-based serialization in Akka can be read under the title "Using Google
 Protocol Buffers to Version State and Messages" in [this documentation](https://petabridge.com/cluster/lesson3)
@@ -412,8 +405,7 @@ from being deserialized:
 * `System.Diagnostics.Process`
 * `System.Management.IWbemClassObjectFreeThreaded`
 
-Be warned that these class can be used as a man in the middle and arbitrary code injection attack vector, but if you need
-to serialize one of these class, you can turn off this feature using this inside your HOCON settings:
+Each of these is a known code execution vector. If you genuinely need to serialize one of them, you can disable the block in HOCON:
 
 ```hocon
 akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
