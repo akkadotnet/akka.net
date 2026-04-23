@@ -151,6 +151,7 @@ namespace Akka.Serialization
         private readonly MinimalLogger _initializationLogger;
 
         private readonly bool _logSerializerOverrideOnStart;
+        private readonly bool _allowUnregisteredTypes;
 
         /// <summary>
         /// Serialization module. Contains methods for serialization and deserialization as well as
@@ -173,6 +174,7 @@ namespace Akka.Serialization
             var serializersConfig = system.Settings.Config.GetConfig("akka.actor.serializers").AsEnumerable().ToList();
             var serializerBindingConfig = system.Settings.Config.GetConfig("akka.actor.serialization-bindings").AsEnumerable().ToList();
             var serializerSettingsConfig = system.Settings.Config.GetConfig("akka.actor.serialization-settings");
+            _allowUnregisteredTypes = serializerSettingsConfig.GetBoolean("allow-unregistered-types", true);
 
             _serializerDetails = system.Settings.Setup.Get<SerializationSetup>()
                 .Select(x => x.CreateSerializers(system)).GetOrElse(ImmutableHashSet<SerializerDetails>.Empty);
@@ -564,12 +566,19 @@ namespace Akka.Serialization
             if (serializer == null)
                 serializer = GetSerializerByName(defaultSerializerName);
 
-            // do a final check for the "object" serializer
-            if (serializer == null)
+            // do a final check for the "object" serializer (if allowed)
+            if (serializer == null && _allowUnregisteredTypes)
                 _serializerMap.TryGetValue(_objectType, out serializer);
 
             if (serializer == null)
-                throw new SerializationException($"Serializer not found for type {objectType.Name}");
+            {
+                var message = _allowUnregisteredTypes
+                    ? $"Serializer not found for type {objectType.Name}"
+                    : $"No serializer binding found for type {objectType.Name}. " +
+                      "Configure a binding in 'akka.actor.serialization-bindings' or set " +
+                      "'akka.actor.serialization-settings.allow-unregistered-types = true' to use the default fallback.";
+                throw new SerializationException(message);
+            }
 
             AddSerializationMap(type, serializer);
             return serializer;

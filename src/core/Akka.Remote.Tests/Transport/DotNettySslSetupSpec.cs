@@ -82,8 +82,8 @@ akka {{
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromMilliseconds(500));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(200));
         }
 
         [Fact]
@@ -285,8 +285,8 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromMilliseconds(500));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(200));
 
             // Verify that CustomValidator was actually called
             Assert.True(validatorCalled, "CustomValidator should have been invoked during TLS handshake");
@@ -447,8 +447,8 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromMilliseconds(500));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(200));
         }
 
         [Fact(DisplayName = "CertificateValidation.PinnedCertificate should reject certificates with non-matching thumbprint")]
@@ -526,8 +526,8 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromMilliseconds(500));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(200));
         }
 
         [Fact(DisplayName = "CertificateValidation.ValidateSubject should reject certificates with non-matching subject")]
@@ -640,8 +640,8 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromMilliseconds(500));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(200));
         }
 
         [Fact(DisplayName = "CertificateValidation.ChainPlusThen should combine chain validation with custom logic")]
@@ -696,8 +696,8 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromMilliseconds(500));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(200));
 
             // Verify custom validation was actually called
             Assert.True(customCheckCalled, "Custom validation logic should have been invoked");
@@ -754,8 +754,8 @@ akka {
             await AwaitAssertAsync(async () =>
             {
                 Sys.ActorSelection(_echoPath).Tell("hello", probe.Ref);
-                await probe.ExpectMsgAsync("hello", TimeSpan.FromSeconds(3));
-            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(100));
+                await probe.ExpectMsgAsync("hello", TimeSpan.FromMilliseconds(500));
+            }, TimeSpan.FromSeconds(30), TimeSpan.FromMilliseconds(200));
 
             // Verify custom validator was called (proving it took precedence)
             Assert.True(customValidatorCalled, "CustomValidator should have been invoked, proving it takes precedence");

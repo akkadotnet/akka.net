@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -14,6 +15,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
+using Akka.Streams.Implementation;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
 using Akka.Util;
@@ -278,6 +280,44 @@ namespace Akka.Streams.Implementation.Fusing
             /// * A cancellation cause, is elem is an instance of <see cref="Cancelled"/>
             /// </summary>
             public object Slot { get; set; } = Empty.Instance;
+
+            /// <summary>
+            /// The OpenTelemetry trace context associated with the element currently in <see cref="Slot"/>,
+            /// if any. Captured by <c>GraphStageLogic.Push</c> from <c>Activity.Current</c> at push time,
+            /// and cleared by <c>GraphStageLogic.Grab</c> alongside the element. Used by
+            /// <c>GraphInterpreter.ProcessPush</c> to start a stage-scoped <c>Activity</c> with this
+            /// context as parent before invoking the downstream stage's handler, so that trace context
+            /// flows end-to-end through a stream even across dispatcher boundaries where
+            /// <c>AsyncLocal</c> would be lost.
+            /// </summary>
+            internal ActivityContext? SlotContext { get; set; }
+
+            /// <summary>
+            /// Additional trace contexts (beyond <see cref="SlotContext"/>) that should be attached
+            /// as <see cref="ActivityLink"/>s to the downstream stage span when this slot is processed.
+            /// Set by fan-in stages such as <c>BatchWeighted</c>, <c>GroupedWithin</c>, and <c>Merge</c>
+            /// when a single output element represents the merged work of N upstream input elements.
+            /// The first input's context becomes <see cref="SlotContext"/> (primary parent); the
+            /// remaining N-1 contexts go here as forward references.
+            /// </summary>
+            internal ActivityContext[] SlotLinks { get; set; }
+
+            /// <summary>
+            /// Override for the primary trace context that the next <c>Push</c> on this connection's
+            /// outlet should attach to <see cref="SlotContext"/>. Set by fan-in stages just before
+            /// they call <c>Push</c> so that the merged output element carries the FIRST input's
+            /// trace context as its primary parent — instead of <c>Activity.Current</c>, which would
+            /// otherwise be the stage span of whichever input triggered the flush. Consumed and
+            /// cleared by <c>GraphStageLogic.Push</c>.
+            /// </summary>
+            internal ActivityContext? PendingPushPrimaryContext { get; set; }
+
+            /// <summary>
+            /// Companion to <see cref="PendingPushPrimaryContext"/>. Holds the additional trace
+            /// contexts (links) that the next <c>Push</c> should attach to <see cref="SlotLinks"/>.
+            /// Consumed and cleared by <c>GraphStageLogic.Push</c>.
+            /// </summary>
+            internal ActivityContext[] PendingPushLinks { get; set; }
 
             /// <summary>
             /// TBD
@@ -902,6 +942,51 @@ namespace Akka.Streams.Implementation.Fusing
             //if (IsDebug) Console.WriteLine($"{Name} PUSH {OutOwnerName(connection)} -> {InOwnerName(connection)},  {connection.Slot} ({connection.InHandler}) [{InLogicName(connection)}]");
             ActiveStage = connection.InOwner;
             connection.PortState ^= PushEndFlip;
+
+            // Trace-context carry: if the upstream Push captured an ActivityContext, start a
+            // stage-scoped Activity with it as parent so the downstream stage's handler (and any
+            // child spans it creates, e.g. OpenTelemetry.Instrumentation.SqlClient) correctly
+            // parents back to the producer's trace. If the source has no listeners or the element
+            // has no captured context, StartActivity returns null and this path allocates nothing.
+            //
+            // Fan-in stages may attach additional ActivityContexts as SlotLinks — those become
+            // ActivityLinks on the downstream stage span, preserving trace continuity for every
+            // input element that contributed to a single merged output. See SetFanInTraceContext.
+            if (connection.SlotContext.HasValue && StreamsDiagnostics.ActivitySource.HasListeners())
+            {
+                var slotContext = connection.SlotContext.Value;
+                var slotLinks = connection.SlotLinks;
+                var stage = connection.InOwner;
+                ActivityLink[] activityLinks = null;
+                if (slotLinks != null && slotLinks.Length > 0)
+                {
+                    activityLinks = new ActivityLink[slotLinks.Length];
+                    for (int i = 0; i < slotLinks.Length; i++)
+                        activityLinks[i] = new ActivityLink(slotLinks[i]);
+                }
+                var stageActivity = StreamsDiagnostics.ActivitySource.StartActivity(
+                    StreamsDiagnostics.GetStageOperationName(stage),
+                    ActivityKind.Internal,
+                    slotContext,
+                    tags: null,
+                    links: activityLinks);
+                if (stageActivity != null)
+                {
+                    stageActivity.SetTag(StreamsDiagnostics.TagStageType, StreamsDiagnostics.GetStageName(stage));
+                    if (activityLinks != null)
+                        stageActivity.SetTag(StreamsDiagnostics.TagFanInLinks, activityLinks.Length);
+                    try
+                    {
+                        connection.InHandler.OnPush();
+                    }
+                    finally
+                    {
+                        stageActivity.Dispose();
+                    }
+                    return;
+                }
+            }
+
             connection.InHandler.OnPush();
         }
 

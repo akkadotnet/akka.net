@@ -44,11 +44,16 @@ namespace Akka.Actor
         }
         
         /// <summary>
-        /// TBD
+        /// Initializes a new <see cref="HashedWheelTimerScheduler"/> using values from the
+        /// <c>akka.scheduler</c> HOCON configuration section: <c>ticks-per-wheel</c>,
+        /// <c>tick-duration</c>, and <c>shutdown-timeout</c>.
         /// </summary>
-        /// <param name="scheduler">TBD</param>
-        /// <param name="log">TBD</param>
-        /// <exception cref="ArgumentOutOfRangeException">TBD</exception>
+        /// <param name="scheduler">The HOCON configuration section for this scheduler.</param>
+        /// <param name="log">The logging adapter used to emit scheduler diagnostics.</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Thrown when <c>ticks-per-wheel</c> is not between 1 and 2^30,
+        /// <c>tick-duration</c> is less than 10 ms, or the computed wheel size would cause overflow.
+        /// </exception>
         public HashedWheelTimerScheduler(Config scheduler, ILoggingAdapter log) : base(scheduler, log)
         {
             if (SchedulerConfig.IsNullOrEmpty())
@@ -391,29 +396,16 @@ namespace Akka.Actor
         }
 
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         protected override DateTimeOffset TimeNow => DateTimeOffset.UtcNow;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override TimeSpan MonotonicClock => Util.MonotonicClock.Elapsed;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <inheritdoc/>
         public override TimeSpan HighResMonotonicClock => Util.MonotonicClock.ElapsedHighRes;
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <inheritdoc/>
         protected override void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message,
             IActorRef sender,
             ICancelable cancelable)
@@ -430,15 +422,7 @@ namespace Akka.Actor
             _registrations.Enqueue(reg);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <inheritdoc/>
         protected override void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval,
             ICanTell receiver, object message,
             IActorRef sender, ICancelable cancelable)
@@ -446,12 +430,7 @@ namespace Akka.Actor
             InternalSchedule(initialDelay, interval, new ScheduledTell(receiver, message, sender), cancelable);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <inheritdoc/>
         protected override void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable)
         {
             InternalScheduleOnce(delay, new ActionRunnable(action), cancelable);
@@ -462,13 +441,7 @@ namespace Akka.Actor
             InternalSchedule(delay, TimeSpan.Zero, action, cancelable);
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <inheritdoc/>
         protected override void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action,
             ICancelable cancelable)
         {
