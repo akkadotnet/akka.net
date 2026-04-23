@@ -21,6 +21,7 @@ using Akka.Streams.Stage;
 using Akka.Streams.Supervision;
 using Akka.Streams.Util;
 using Akka.Util;
+using Akka.Util.Internal;
 using Reactive.Streams;
 using Decider = Akka.Streams.Supervision.Decider;
 using Directive = Akka.Streams.Supervision.Directive;
@@ -509,7 +510,7 @@ namespace Akka.Streams.Implementation
         public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
-            var promise = new TaskCompletionSource<T>();
+            var promise = TaskEx.NonBlockingTaskCompletionSource<T>();
             return new LogicAndMaterializedValue<Task<T>>(new Logic(promise, this), promise.Task);
         }
     }
@@ -594,7 +595,7 @@ namespace Akka.Streams.Implementation
         public override ILogicAndMaterializedValue<Task<T>> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
-            var promise = new TaskCompletionSource<T>();
+            var promise = TaskEx.NonBlockingTaskCompletionSource<T>();
             return new LogicAndMaterializedValue<Task<T>>(new Logic(promise, this), promise.Task);
         }
     }
@@ -685,7 +686,7 @@ namespace Akka.Streams.Implementation
         public override ILogicAndMaterializedValue<Task<IImmutableList<T>>> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes)
         {
-            var promise = new TaskCompletionSource<IImmutableList<T>>();
+            var promise = TaskEx.NonBlockingTaskCompletionSource<IImmutableList<T>>();
             return new LogicAndMaterializedValue<Task<IImmutableList<T>>>(new Logic(this, promise), promise.Task);
         }
 
@@ -823,7 +824,7 @@ namespace Akka.Streams.Implementation
 
             public Task<Option<T>> PullAsync()
             {
-                var promise = new TaskCompletionSource<Option<T>>();
+                var promise = TaskEx.NonBlockingTaskCompletionSource<Option<T>>();
                 _invokeLogic(promise);
                 return promise.Task;
             }
@@ -1070,7 +1071,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Task<Option<TMat>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var completion = new TaskCompletionSource<Option<TMat>>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<Option<TMat>>();
             var stageLogic = new Logic(this, inheritedAttributes, completion);
             return new LogicAndMaterializedValue<Task<Option<TMat>>>(stageLogic, completion.Task);
         }
