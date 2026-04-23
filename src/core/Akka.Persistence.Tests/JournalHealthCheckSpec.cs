@@ -75,15 +75,20 @@ public class JournalHealthCheckSpec : PersistenceSpec
             TestActor, 1);
         journal.Tell(writeMsg, TestActor);
 
+        await ExpectMsgAsync<WriteMessagesFailed>();
+
         // Advance time to let the write fail and circuit breaker open
         var testScheduler = (TestScheduler)Sys.Scheduler;
         testScheduler.Advance(TimeSpan.FromSeconds(2));
 
-        using var cts = new CancellationTokenSource(RemainingOrDefault);
-        var pluginHealth = await Extension.CheckJournalHealthAsync("akka.persistence.journal.failing-open", cts.Token);
+        await AwaitAssertAsync(async () =>
+        {
+            using var cts = new CancellationTokenSource(RemainingOrDefault);
+            var pluginHealth = await Extension.CheckJournalHealthAsync("akka.persistence.journal.failing-open", cts.Token);
 
-        Assert.Equal(PersistenceHealthStatus.Degraded, pluginHealth.Status);
-        Assert.Contains("Circuit breaker is open", pluginHealth.Description);
+            Assert.Equal(PersistenceHealthStatus.Degraded, pluginHealth.Status);
+            Assert.Contains("Circuit breaker is open", pluginHealth.Description);
+        }, RemainingOrDefault);
     }
 
     [Fact]
@@ -97,25 +102,21 @@ public class JournalHealthCheckSpec : PersistenceSpec
             TestActor, 1);
         journal.Tell(writeMsg, TestActor);
 
+        await ExpectMsgAsync<WriteMessagesFailed>();
+
         var testScheduler = (TestScheduler)Sys.Scheduler;
-
-        // Advance time past call-timeout to let the write fail and circuit breaker open
-        testScheduler.Advance(TimeSpan.FromSeconds(1));
-
-        // Give the async operations time to complete
-        await Task.Delay(100);
 
         // Advance time past reset-timeout to transition to half-open
         testScheduler.Advance(TimeSpan.FromSeconds(1));
 
-        // Give the transition time to complete
-        await Task.Delay(100);
+        await AwaitAssertAsync(async () =>
+        {
+            using var cts = new CancellationTokenSource(RemainingOrDefault);
+            var pluginHealth = await Extension.CheckJournalHealthAsync("akka.persistence.journal.failing-half-open", cts.Token);
 
-        using var cts = new CancellationTokenSource(RemainingOrDefault);
-        var pluginHealth = await Extension.CheckJournalHealthAsync("akka.persistence.journal.failing-half-open", cts.Token);
-
-        Assert.Equal(PersistenceHealthStatus.Degraded, pluginHealth.Status);
-        Assert.Contains("Circuit breaker is half-open", pluginHealth.Description);
+            Assert.Equal(PersistenceHealthStatus.Degraded, pluginHealth.Status);
+            Assert.Contains("Circuit breaker is half-open", pluginHealth.Description);
+        }, RemainingOrDefault);
     }
 }
 
