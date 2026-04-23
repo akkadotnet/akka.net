@@ -7,6 +7,7 @@
 
 using Akka.IO;
 
+#nullable enable
 namespace Akka.Util
 {
     public static class ByteHelpers

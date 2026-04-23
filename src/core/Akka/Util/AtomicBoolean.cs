@@ -7,6 +7,7 @@
 
 using System.Threading;
 
+#nullable enable
 namespace Akka.Util
 {
     /// <summary>
@@ -18,8 +19,8 @@ namespace Akka.Util
     /// </summary>
     public class AtomicBoolean
     {
-        private const int _falseValue = 0;
-        private const int _trueValue = 1;
+        private const int FalseValue = 0;
+        private const int TrueValue = 1;
 
         private int _value;
         /// <summary>
@@ -28,7 +29,7 @@ namespace Akka.Util
         /// <param name="initialValue">TBD</param>
         public AtomicBoolean(bool initialValue = false)
         {
-            _value = initialValue ? _trueValue : _falseValue;
+            _value = initialValue ? TrueValue : FalseValue;
         }
 
         /// <summary>
@@ -39,11 +40,11 @@ namespace Akka.Util
             get
             {
                 Interlocked.MemoryBarrier();
-                return _value==_trueValue;
+                return _value==TrueValue;
             }
             set
             {
-                Interlocked.Exchange(ref _value, value ? _trueValue : _falseValue);    
+                Interlocked.Exchange(ref _value, value ? TrueValue : FalseValue);
             }
         }
 
@@ -56,8 +57,8 @@ namespace Akka.Util
         /// <returns><c>true</c> if <paramref name="newValue"/> was set</returns>
         public bool CompareAndSet(bool expected, bool newValue)
         {
-            var expectedInt = expected ? _trueValue : _falseValue;
-            var newInt = newValue ? _trueValue : _falseValue;
+            var expectedInt = expected ? TrueValue : FalseValue;
+            var newInt = newValue ? TrueValue : FalseValue;
             return Interlocked.CompareExchange(ref _value, newInt, expectedInt) == expectedInt;
         }
 
@@ -68,7 +69,7 @@ namespace Akka.Util
         /// <returns>The old value</returns>
         public bool GetAndSet(bool newValue)
         {
-            return Interlocked.Exchange(ref _value, newValue ? _trueValue : _falseValue) == _trueValue;
+            return Interlocked.Exchange(ref _value, newValue ? TrueValue : FalseValue) == TrueValue;
         }
 
         /// <summary>
