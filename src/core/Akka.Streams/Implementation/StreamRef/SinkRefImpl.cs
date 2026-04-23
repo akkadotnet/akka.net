@@ -17,6 +17,7 @@ using Akka.Streams.Dsl;
 using Akka.Streams.Serialization;
 using Akka.Streams.Stage;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Implementation.StreamRef
 {
@@ -298,7 +299,7 @@ namespace Akka.Streams.Implementation.StreamRef
         public override SinkShape<TIn> Shape { get; }
         public override ILogicAndMaterializedValue<Task<ISourceRef<TIn>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var promise = new TaskCompletionSource<ISourceRef<TIn>>();
+            var promise = TaskEx.NonBlockingTaskCompletionSource<ISourceRef<TIn>>();
             return new LogicAndMaterializedValue<Task<ISourceRef<TIn>>>(new Logic(this, promise, inheritedAttributes), promise.Task);
         }
     }

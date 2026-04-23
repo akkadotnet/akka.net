@@ -796,3 +796,4 @@ Recommendations:
 
 * [Akka.Remote Configuration](xref:akka-remote-configuration)
 * [DotNetty Transport](https://github.com/Azure/DotNetty)
+* [Serialization Security](xref:serialization#serialization-security) - Disable the default serializer fallback to prevent arbitrary type deserialization (v1.5.66+)
