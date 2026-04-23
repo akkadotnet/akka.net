@@ -30,25 +30,44 @@ namespace Akka.TestKit.Xunit.Attributes;
 [AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
 public sealed class AkkaCleanAmbientContextAttribute : BeforeAfterTestAttribute
 {
+    [ThreadStatic]
+    private static SynchronizationContext? _previousContext;
+
+    [ThreadStatic]
+    private static bool _applied;
+
     /// <inheritdoc/>
     public override void Before(MethodInfo methodUnderTest, IXunitTest test)
     {
         var instance = TestContext.Current.TestClassInstance;
         if (instance is not TestKitBase testKit)
+        {
+            _applied = false;
             return;
+        }
+
+        _applied = true;
 
         // Null cell for INoImplicitSender mirrors TestKitBase.InitializeTest:
         // the Post wrapper will pin Current = null so no sibling cell leaks in.
         var cell = testKit is INoImplicitSender ? null : TryGetCell(testKit);
 
         InternalCurrentActorCellKeeper.Current = cell;
-        SynchronizationContext.SetSynchronizationContext(new ActorCellKeepingSynchronizationContext(cell));
+        _previousContext = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(
+            new ActorCellKeepingSynchronizationContext(cell, _previousContext));
     }
 
     /// <inheritdoc/>
     public override void After(MethodInfo methodUnderTest, IXunitTest test)
     {
+        if (!_applied)
+            return;
+
+        _applied = false;
         InternalCurrentActorCellKeeper.Current = null;
+        SynchronizationContext.SetSynchronizationContext(_previousContext);
+        _previousContext = null;
     }
 
     private static ActorCell? TryGetCell(TestKitBase testKit)
