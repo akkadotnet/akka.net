@@ -400,7 +400,7 @@ namespace Akka.Streams.Implementation
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<ISourceQueueWithComplete<TOut>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var completion = new TaskCompletionSource<object>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<object>();
             var logic = new Logic(this, completion);
             return new LogicAndMaterializedValue<ISourceQueueWithComplete<TOut>>(logic, new Materialized(t => logic.Invoke(t), completion));
         }
@@ -886,7 +886,7 @@ namespace Akka.Streams.Implementation
         /// </summary>
         public override ILogicAndMaterializedValue<Task<TMat>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var completion = new TaskCompletionSource<TMat>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<TMat>();
             var logic = new Logic(this, completion, inheritedAttributes);
 
             return new LogicAndMaterializedValue<Task<TMat>>(logic, completion.Task);
