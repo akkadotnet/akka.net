@@ -17,15 +17,8 @@ namespace Akka.TestKit.Xunit.Tests;
 // Regression guard for the xUnit v3 parallel-class implicit-sender leak
 // (see ActorCellKeepingSynchronizationContext for the mechanism).
 //
-// REQUIRES xUnit.ParallelizeTestCollections=true. The shared
-// src/xunit.runner.json disables it, so these tests are [LocalFact] and
-// pass trivially in the default runner. Run with parallel enabled:
-//
-//     dotnet test --filter "FullyQualifiedName~ParallelAmbientContext" \
-//         -- xUnit.ParallelizeAssembly=true \
-//            xUnit.ParallelizeTestCollections=true
-//
-// Or drop a project-local xunit.runner.json with both flags set to true.
+// This project provides its own xunit.runner.json with parallel collections
+// enabled so CI and local runs exercise the reported failure mode by default.
 
 public abstract class ParallelAmbientContextSpecBase : TestKit, IAsyncLifetime
 {
@@ -36,7 +29,7 @@ public abstract class ParallelAmbientContextSpecBase : TestKit, IAsyncLifetime
 
     public ValueTask DisposeAsync() => default;
 
-    [LocalFact(SkipLocal = "Requires xUnit.ParallelizeTestCollections=true (disabled in default xunit.runner.json).")]
+    [Fact]
     public async Task Implicit_sender_should_resolve_to_own_TestActor()
     {
         // Pre-await prefix — before the fix, this window read whatever cell a
@@ -80,7 +73,7 @@ public abstract class ParallelNoImplicitSenderSpecBase : TestKit, IAsyncLifetime
 
     public ValueTask DisposeAsync() => default;
 
-    [LocalFact(SkipLocal = "Requires xUnit.ParallelizeTestCollections=true (disabled in default xunit.runner.json).")]
+    [Fact]
     public async Task Current_should_be_null_both_pre_and_post_await()
     {
         // Invariant: body must enter with Current == null.

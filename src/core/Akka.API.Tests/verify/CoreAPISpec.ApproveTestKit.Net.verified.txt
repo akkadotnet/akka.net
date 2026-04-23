@@ -1,16 +1,10 @@
 ﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.TestKit.Xunit")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("ae01b790-1478-4917-9299-b4855ba997cb")]
 [assembly: System.Runtime.Versioning.TargetFramework(".NETStandard,Version=v2.0", FrameworkDisplayName=".NET Standard 2.0")]
 namespace Akka.TestKit
 {
-    [Akka.Annotations.InternalApi]
-    public class ActorCellKeepingSynchronizationContext : System.Threading.SynchronizationContext
-    {
-        public ActorCellKeepingSynchronizationContext(Akka.Actor.ActorCell cell) { }
-        public override void Post(System.Threading.SendOrPostCallback d, object state) { }
-        public override void Send(System.Threading.SendOrPostCallback d, object state) { }
-    }
     public abstract class AutoPilot
     {
         protected AutoPilot() { }

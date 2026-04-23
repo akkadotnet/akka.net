@@ -37,7 +37,7 @@ namespace Akka.TestKit
     /// Not intended for use outside the test kits.
     /// </summary>
     [InternalApi]
-    public class ActorCellKeepingSynchronizationContext : SynchronizationContext
+    internal class ActorCellKeepingSynchronizationContext : SynchronizationContext
     {
         private readonly ActorCell _cell;
 
