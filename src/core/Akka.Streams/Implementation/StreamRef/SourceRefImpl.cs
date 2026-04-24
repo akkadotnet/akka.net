@@ -17,6 +17,7 @@ using Akka.Streams.Serialization;
 using Akka.Streams.Serialization.Proto.Msg;
 using Akka.Streams.Stage;
 using Akka.Util;
+using Akka.Util.Internal;
 using Google.Protobuf.WellKnownTypes;
 using Debug = System.Diagnostics.Debug;
 using Type = System.Type;
@@ -337,7 +338,7 @@ namespace Akka.Streams.Implementation.StreamRef
 
         public override ILogicAndMaterializedValue<Task<ISinkRef<TOut>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var promise = new TaskCompletionSource<ISinkRef<TOut>>();
+            var promise = TaskEx.NonBlockingTaskCompletionSource<ISinkRef<TOut>>();
             return new LogicAndMaterializedValue<Task<ISinkRef<TOut>>>(new Logic(this, promise, inheritedAttributes), promise.Task);
         }
     }

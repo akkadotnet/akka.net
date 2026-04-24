@@ -61,7 +61,17 @@ namespace Akka.MultiNode.TestAdapter.Internal
         private MultiNodeTestCase TestCase => _test.TestCase;
 
         private readonly StringBuilder _outputBuilder = new StringBuilder();
-        private string Output => _outputBuilder.ToString();
+        private readonly object _outputLock = new object();
+        private string Output
+        {
+            get
+            {
+                lock (_outputLock)
+                {
+                    return _outputBuilder.ToString();
+                }
+            }
+        }
 
         private readonly List<string> _exceptionType = new List<string>();
         private readonly List<string> _exceptionMessage = new List<string>();
@@ -256,7 +266,10 @@ namespace Akka.MultiNode.TestAdapter.Internal
                 if (eventArgs?.Data != null)
                 {
                     var data = eventArgs.Data;
-                    _outputBuilder.AppendLine(data);
+                    lock (_outputLock)
+                    {
+                        _outputBuilder.AppendLine(data);
+                    }
                     _messageBus.QueueMessage(new TestOutput
                     {
                         AssemblyUniqueID = _ids.AssemblyUniqueID,

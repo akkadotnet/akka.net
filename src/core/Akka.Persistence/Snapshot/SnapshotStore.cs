@@ -107,8 +107,14 @@ namespace Akka.Persistence.Snapshot
                         timestamp: saveSnapshot.Metadata.Timestamp == DateTime.MinValue 
                             ? DateTime.UtcNow 
                             : saveSnapshot.Metadata.Timestamp);
-                    _breaker.WithCircuitBreaker(ct => SaveAsync(metadata, saveSnapshot.Snapshot, ct))
-                        .ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
+                    _breaker.WithCircuitBreaker(
+                        async (ct)  =>
+                        {
+                            // Ensure SaveAsync is not called in SnapshotStore
+                            // actor context and so doesn't block message handling
+                            await Task.Yield();
+                            await SaveAsync(metadata, saveSnapshot.Snapshot, ct);
+                        }).ContinueWith(t => (!t.IsFaulted && !t.IsCanceled)
                                 ? new SaveSnapshotSuccess(metadata) as ISnapshotResponse
                                 : new SaveSnapshotFailure(saveSnapshot.Metadata,
                                     t.IsFaulted

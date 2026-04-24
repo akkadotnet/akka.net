@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="DotNettyTransport.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -525,20 +525,71 @@ namespace Akka.Remote.Transport.DotNetty
         {
             var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
             //NOTE: for some reason while Helios takes first element from resolved address list
-            // on the DotNetty side we need to take the last one in order to be compatible
-            return new IPEndPoint(resolved.AddressList[resolved.AddressList.Length - 1], address.Port);
+            // on the DotNetty side we need to take the last one in order to be compatible.
+            // We filter link-local addresses first, but fallback to the original list if filtering
+            // eliminates everything, preserving backward compatibility.
+            var filtered = FilterLinkLocalAddresses(resolved.AddressList).ToArray();
+
+            if (Log.IsDebugEnabled && filtered.Length < resolved.AddressList.Length)
+                Log.Debug("Filtered {0} link-local address(es) from DNS results for '{1}'",
+                    resolved.AddressList.Length - filtered.Length, address.Host);
+
+            // Important detail here: if your network is relying on APIPA addresses, then this patch preserves that.
+            // If 100% of resolved DNS addresses are link-local, and therefore 100% of them get filtered out,
+            // then we use the originally resolved list instead.
+            // In scenarios where you have a mix of APIPA and routable addresses, routable addresses win.
+            var selected = filtered.FirstOrDefault() ?? resolved.AddressList.LastOrDefault();
+            return new IPEndPoint(selected!, address.Port);
         }
 
         private async Task<IPEndPoint> ResolveNameAsync(DnsEndPoint address, AddressFamily addressFamily)
         {
             var resolved = await Dns.GetHostEntryAsync(address.Host).ConfigureAwait(false);
-            var found = resolved.AddressList.LastOrDefault(a => a.AddressFamily == addressFamily);
+            var matching = resolved.AddressList.Where(a => a.AddressFamily == addressFamily).ToArray();
+
+            // Filter out link-local addresses (169.254.0.0/16, fe80::/10) which break cluster formation
+            // on multi-NIC hosts where APIPA addresses appear in DNS results.
+            // Fallback to unfiltered list to preserve backward compatibility if filtering eliminates all candidates.
+            var filtered = FilterLinkLocalAddresses(matching).ToArray();
+
+            if (Log.IsDebugEnabled && filtered.Length < matching.Length)
+                Log.Debug("Filtered {0} link-local address(es) from DNS results for '{1}' with address family '{2}'",
+                    matching.Length - filtered.Length, address.Host, addressFamily);
+
+            // Important detail here: if your network is relying on APIPA addresses, then this patch preserves that.
+            // If 100% of resolved DNS addresses are link-local, and therefore 100% of them get filtered out,
+            // then we use the originally resolved list instead.
+            // In scenarios where you have a mix of APIPA and routable addresses, routable addresses win.
+            var found = filtered.FirstOrDefault() ?? matching.FirstOrDefault();
+
             if (found == null)
             {
                 throw new KeyNotFoundException($"Couldn't resolve IP endpoint from provided DNS name '{address}' with address family of '{addressFamily}'");
             }
 
             return new IPEndPoint(found, address.Port);
+        }
+
+        /// <summary>
+        /// Filters out IPv4 link-local (169.254.0.0/16) and IPv6 link-local (fe80::/10) addresses.
+        /// These addresses are not routable and can break cluster formation on multi-NIC hosts
+        /// where APIPA addresses appear in DNS results.
+        /// </summary>
+        internal static IEnumerable<IPAddress> FilterLinkLocalAddresses(IEnumerable<IPAddress> addresses)
+        {
+            return addresses.Where(a => !IsIPv4LinkLocal(a) && !IsIPv6LinkLocal(a));
+        }
+
+        private static bool IsIPv4LinkLocal(IPAddress ip)
+        {
+            if (ip.AddressFamily != AddressFamily.InterNetwork) return false;
+            var bytes = ip.GetAddressBytes();
+            return bytes[0] == 169 && bytes[1] == 254;
+        }
+
+        private static bool IsIPv6LinkLocal(IPAddress ip)
+        {
+            return ip.AddressFamily == AddressFamily.InterNetworkV6 && ip.IsIPv6LinkLocal;
         }
 
         #endregion
