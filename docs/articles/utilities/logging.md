@@ -5,7 +5,7 @@ title: Logging in Akka.NET
 
 # Logging
 
-> ![NOTE]
+> [!NOTE]
 > For information on how to use Serilog with Akka.NET, we have a dedicated page for that: "[Using Serilog for Akka.NET Logging](xref:serilog)."
 
 ## How to Log
@@ -22,9 +22,94 @@ Use the `Debug`, `Info`, `Warning` and `Error` methods to log.
 _log.Debug("Some message");
 ```
 
+## Semantic Logging
+
+Semantic logging, also known as structured logging, treats each log statement as a message template plus a set of named property values rather than a pre-formatted string. Instead of writing:
+
+```csharp
+_log.Info($"User {userId} added item {itemId} to cart {cartId}");
+```
+
+The template and its arguments are passed to the logger separately:
+
+```csharp
+_log.Info("User {UserId} added item {ItemId} to cart {CartId}", userId, itemId, cartId);
+```
+
+The second form preserves `UserId`, `ItemId`, and `CartId` as named properties alongside the rendered message. Downstream sinks such as Seq, Elasticsearch, Splunk, and Application Insights can index and filter on those properties directly, without parsing the rendered message text.
+
+### Native Semantic Logging Support
+
+Since v1.5.57, Akka.NET's default [`ILogMessageFormatter`](xref:Akka.Event.ILogMessageFormatter) is the [`SemanticLogMessageFormatter`](xref:Akka.Event.SemanticLogMessageFormatter). It supports named placeholders (`{UserId}`, `{RequestId}`), positional placeholders (`{0}`, `{1}`), format specifiers (`{Value:N2}`), and alignment (`{Value,10}`). The `ILoggingAdapter` returned by `Context.GetLogger()` preserves the template and its arguments as a `LogMessage` instance and publishes them to the event stream, so the template remains intact until a logger actor handles the event. No additional package is required.
+
+Serilog-specific destructuring operators (`{@Object}` and `{$Object}`) are not supported by the native formatter and are handled by the Serilog adapter instead.
+
+Custom logger implementations can extract the properties from a `LogEvent` using [`LogEvent.TryGetProperties`](xref:Akka.Event.LogEventExtensions):
+
+```csharp
+if (logEvent.TryGetProperties(out var properties))
+{
+    // properties["UserId"], properties["ItemId"], etc.
+    // forward to the structured sink
+}
+```
+
+`TryGetProperties` returns the template-extracted properties together with any context properties attached via `WithContext` or `BeginScope`, merged into a single dictionary. See [Context Enrichment and Scopes](#context-enrichment-and-scopes) for details.
+
+### Semantic Logging with Akka.Logger.Serilog
+
+[Akka.Logger.Serilog](xref:serilog) is the original semantic logging integration for Akka.NET. The adapter passes the raw message template and its arguments directly to Serilog, which applies its own parser including the destructuring operators (`{@Object}` and `{$Object}`). Context attached via `WithContext` or `BeginScope` is forwarded to Serilog as `PropertyEnricher` instances.
+
+The minimum configuration is a single HOCON line:
+
+```hocon
+akka {
+    loglevel = INFO
+    loggers = ["Akka.Logger.Serilog.SerilogLogger, Akka.Logger.Serilog"]
+}
+```
+
+To have Akka.NET's rendered-string output (for example, from `StandardOutLogger` and `DefaultLogger`) honor Serilog's destructuring syntax as well, also set the formatter:
+
+```hocon
+akka.logger-formatter = "Akka.Logger.Serilog.SerilogLogMessageFormatter, Akka.Logger.Serilog"
+```
+
+See [Using Serilog for Akka.NET Logging](xref:serilog) for the full walkthrough, including ASP.NET Core hosting and output template configuration.
+
+### Semantic Logging with Akka.Logger.NLog
+
+[Akka.Logger.NLog](https://www.nuget.org/packages/Akka.Logger.NLog/) passes the raw message template and arguments to NLog's `LogEventInfo` and forwards every property returned by [`LogEvent.TryGetProperties`](xref:Akka.Event.LogEventExtensions). Named template placeholders and any properties attached via `WithContext` or `BeginScope` are available as NLog event properties that can be referenced in layouts and targets. The adapter also surfaces Akka.NET-specific values (`logSource`, `actorPath`, `threadId`) as event properties:
+
+```xml
+<targets>
+  <target name="console"
+          xsi:type="Console"
+          layout="[${logger}] [${level:uppercase=true}] [${event-properties:item=logSource}] [${event-properties:item=actorPath}] [${event-properties:item=UserId}] : ${message}" />
+</targets>
+```
+
+```hocon
+akka {
+    loglevel = INFO
+    loggers = ["Akka.Logger.NLog.NLogLogger, Akka.Logger.NLog"]
+}
+```
+
+### Semantic Logging Best Practices
+
+The following practices help ensure that structured log output remains useful in production:
+
+* **Prefer named placeholders over positional ones.** `{UserId}` is self-documenting, survives argument reordering, and produces a property name that is meaningful to query on.
+* **Do not pre-render the message.** Using string interpolation (`$"..."`) or `string.Format` before calling the logger collapses the template variables into a single string, which prevents property extraction.
+* **Use stable property names.** Property names become query selectors in dashboards and alert rules. Renaming `{UserId}` to `{userId}` later will silently break any existing queries against the old name.
+* **Keep templates stable across call sites.** Sinks such as Seq group events by a hash of the template. `"User {UserId} logged in"` and `"User {UserId} ({Username}) logged in"` are considered two distinct event types, even though they describe the same event.
+* **Attach durable context once, not on every log call.** Use [`WithContext`](#context-enrichment-and-scopes) or `BeginScope` for values such as `TenantId`, `CorrelationId`, and `ShardId` so that every log event from the adapter carries them automatically.
+* **Avoid logging sensitive data as properties.** Log properties are persisted, indexed, and may be forwarded to external services. Do not include raw customer data, credentials, or bearer tokens without a redaction strategy.
+
 ## Context Enrichment and Scopes
 
-You can enrich a logger with additional structured context or create a temporary scope. Context values are appended to the rendered output and are also available to semantic logging sinks.
+Most log statements need to carry more than just the template arguments. Every event from a given actor, or every event handling a particular request, typically shares a few common fields such as a tenant id, shard id, or correlation id. `WithContext` and `BeginScope` allow these values to be attached to the logger once rather than repeated at every call site. The values appear in the rendered output and are merged into the property dictionary returned by [`LogEvent.TryGetProperties`](xref:Akka.Event.LogEventExtensions), so semantic sinks receive them together with the template properties.
 
 [!code-csharp[LoggingContextExample](../../../src/core/Akka.Tests/Loggers/LoggingContextSpecs.cs?name=LoggingContextExample)]
 
@@ -34,12 +119,14 @@ Example output:
 [INFO][...][Thread 0007][akka://sys/user/a][Tenant=foo][Partition=12] Processing 42
 ```
 
+The choice between `WithContext` and `BeginScope` depends on how long the context should live. `WithContext` returns a new `ILoggingAdapter` with the property attached, which is suitable for actor-scoped context such as a tenant, shard, or partition that can be stored in a field. `BeginScope` wraps the same pattern in an [`ILoggingAdapterScope`](xref:Akka.Event.ILoggingAdapterScope) for use with a `using` block, which is appropriate for context that should be limited to a single message handler, such as a correlation id or request id.
+
 ## Standard Loggers
 
 Akka.NET comes with two built in loggers.
 
-* __StandardOutLogger__
-* __BusLogging__
+* **StandardOutLogger**
+* **BusLogging**
 
 ### StandardOutLogger
 
@@ -57,21 +144,21 @@ that inherits/implements the `MinimalLogger` abstract class and passing the full
 name into the `akka.stdout-logger-class` HOCON settings.
 
 > [!WARNING]
-> Be aware that `MinimalLogger` implementations are __NOT__ real actors and will __NOT__ have any
+> Be aware that `MinimalLogger` implementations are **NOT** real actors and will **NOT** have any
 > access to the `ActorSystem` and all of its extensions. All logging done inside a `MinimalLogger`
 > have to be done in as simple as possible manner since it is used to log how other loggers are
 > behaving at the very start and very end of the `ActorSystem` life cycle.
 >
-> Note that `MinimalLogger` are __NOT__ interchangeable with other Akka.NET loggers and there can
+> Note that `MinimalLogger` are **NOT** interchangeable with other Akka.NET loggers and there can
 > only be one `MinimalLogger` registered with the `ActorSystem` in the HOCON settings.
 
 ## Third Party Loggers
 
 These loggers are also available as separate nuget packages
 
-* __Akka.Logger.Serilog__ which logs using [serilog](http://serilog.net/). See [Detailed instructions on using Serilog](xref:serilog).
-* __Akka.Logger.NLog__  which logs using [NLog](http://nlog-project.org/)
-* __Microsoft.Extensions.Logging__ - which is [built into Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting#microsoftextensionslogging-integration).
+* **Akka.Logger.Serilog** which logs using [serilog](http://serilog.net/). See [Detailed instructions on using Serilog](xref:serilog).
+* **Akka.Logger.NLog**  which logs using [NLog](http://nlog-project.org/)
+* **Microsoft.Extensions.Logging** - which is [built into Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting#microsoftextensionslogging-integration).
 
 Note that you need to modify the config as explained below.
 
@@ -143,9 +230,9 @@ builder.Services.AddAkka("MyActorSystem", configurationBuilder =>
 
 A new feature introduced in [Akka.NET v1.5](xref:akkadotnet-v15-whats-new), you now have the ability to customize the `ILogMessageFormatter` - the component responsible for formatting output written to all `Logger` implementations in Akka.NET.
 
-The primary use case for this is supporting semantic logging across the board in your user-defined actors, which is something that [Akka.Logger.Serilog](xref:serilog) supports quite well.
+Semantic logging no longer requires a custom formatter: since v1.5.57, the default formatter is [`SemanticLogMessageFormatter`](xref:Akka.Event.SemanticLogMessageFormatter), which handles named templates out of the box (see [Semantic Logging](#semantic-logging)). Swap in [Akka.Logger.Serilog](xref:serilog)'s formatter only when you need Serilog's destructuring operators (`{@Object}` and `{$Object}`) to apply to Akka.NET's own rendered output.
 
-However, maybe there are certain pieces of data you want to have injected into all of the log messages produced by Akka.NET internally - that's the sort of thing you can accomplish by customizing the `ILogMessageFormatter`:
+Custom formatters are still useful when you want to inject additional fields into every rendered log line produced by Akka.NET internally - that's the sort of thing you can accomplish by customizing the `ILogMessageFormatter`:
 
 [!code-csharp[CustomLogMessageFormatter](../../../src/core/Akka.Tests/Loggers/CustomLogFormatterSpec.cs?name=CustomLogFormatter)]
 
