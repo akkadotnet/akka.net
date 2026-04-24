@@ -30,11 +30,11 @@ namespace Akka.TestKit.Xunit.Attributes;
 [AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
 public sealed class AkkaCleanAmbientContextAttribute : BeforeAfterTestAttribute
 {
-    [ThreadStatic]
-    private static SynchronizationContext? _previousContext;
-
-    [ThreadStatic]
-    private static bool _applied;
+    // AsyncLocal flows across await boundaries via ExecutionContext, unlike [ThreadStatic].
+    // This is critical because xUnit v3's runner awaits the test body between Before() and After(),
+    // so After() can resume on a different thread than Before() ran on.
+    private static readonly AsyncLocal<SynchronizationContext?> _previousContext = new();
+    private static readonly AsyncLocal<bool> _applied = new();
 
     /// <inheritdoc/>
     public override void Before(MethodInfo methodUnderTest, IXunitTest test)
@@ -42,32 +42,32 @@ public sealed class AkkaCleanAmbientContextAttribute : BeforeAfterTestAttribute
         var instance = TestContext.Current.TestClassInstance;
         if (instance is not TestKitBase testKit)
         {
-            _applied = false;
+            _applied.Value = false;
             return;
         }
 
-        _applied = true;
+        _applied.Value = true;
 
         // Null cell for INoImplicitSender mirrors TestKitBase.InitializeTest:
         // the Post wrapper will pin Current = null so no sibling cell leaks in.
         var cell = testKit is INoImplicitSender ? null : TryGetCell(testKit);
 
         InternalCurrentActorCellKeeper.Current = cell;
-        _previousContext = SynchronizationContext.Current;
+        _previousContext.Value = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(
-            new ActorCellKeepingSynchronizationContext(cell, _previousContext));
+            new ActorCellKeepingSynchronizationContext(cell, _previousContext.Value));
     }
 
     /// <inheritdoc/>
     public override void After(MethodInfo methodUnderTest, IXunitTest test)
     {
-        if (!_applied)
+        if (!_applied.Value)
             return;
 
-        _applied = false;
+        _applied.Value = false;
         InternalCurrentActorCellKeeper.Current = null;
-        SynchronizationContext.SetSynchronizationContext(_previousContext);
-        _previousContext = null;
+        SynchronizationContext.SetSynchronizationContext(_previousContext.Value);
+        _previousContext.Value = null;
     }
 
     private static ActorCell? TryGetCell(TestKitBase testKit)
