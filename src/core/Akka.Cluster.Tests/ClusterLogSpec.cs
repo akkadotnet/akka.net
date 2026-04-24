@@ -45,6 +45,14 @@ namespace Akka.Cluster.Tests
             _cluster = Cluster.Get(Sys);
         }
 
+        protected async Task EnsureEventBusListenerReadyAsync()
+        {
+            var selection = Sys.ActorSelection("/system/clusterEventBusListener");
+            selection.Tell(new Identify(1));
+            var identity = await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(5));
+            identity.Subject.ShouldNotBe(null);
+        }
+
         protected async Task AwaitUpAsync()
         {
             await WithinAsync(Timeout, async() =>

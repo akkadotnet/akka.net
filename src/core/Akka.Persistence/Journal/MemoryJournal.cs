@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="MemoryJournal.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -6,11 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -18,71 +18,204 @@ using Akka.Util.Internal;
 
 namespace Akka.Persistence.Journal
 {
-    using Messages = IDictionary<string, LinkedList<IPersistentRepresentation>>;
-    
     /// <summary>
     /// In-memory journal for testing purposes.
+    ///
+    /// Uses a channel-based drain-on-read pattern with immutable collections to handle
+    /// the concurrent access pattern imposed by AsyncWriteJournal. Writes enqueue to
+    /// an unbounded channel (never blocking), and reads drain the channel first to ensure
+    /// all pending writes are visible before returning results.
     /// </summary>
     public class MemoryJournal : AsyncWriteJournal
     {
-        private readonly LinkedList<IPersistentRepresentation> _allMessages = new();
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _messages = new();
-        private readonly ConcurrentDictionary<string, long> _meta = new();
-        private readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> _tagsToMessagesMapping = new();
-        
-        protected virtual ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return _messages; } }
-        
+        /// <summary>
+        /// Storage container for journal data. Encapsulates the pending writes channel
+        /// and immutable snapshot state.
+        /// </summary>
+        protected sealed class JournalStorage
+        {
+            /// <summary>
+            /// Lock for serializing drain operations. Reads can happen concurrently
+            /// from multiple thread pool threads due to AsyncWriteJournal's fire-and-forget pattern.
+            /// </summary>
+            internal readonly object DrainLock = new();
+
+            /// <summary>
+            /// Pending writes channel — unbounded, writers never block.
+            /// </summary>
+            internal readonly Channel<IPersistentRepresentation> PendingWrites =
+                Channel.CreateUnbounded<IPersistentRepresentation>(
+                    new UnboundedChannelOptions { SingleWriter = false, SingleReader = true });
+
+            /// <summary>
+            /// All events in append-only order (for AllEvents queries).
+            /// </summary>
+            internal ImmutableList<IPersistentRepresentation> EventLog = ImmutableList<IPersistentRepresentation>.Empty;
+
+            /// <summary>
+            /// Events indexed by persistence ID for O(1) recovery lookup.
+            /// </summary>
+            internal ImmutableDictionary<string, ImmutableList<IPersistentRepresentation>> EventsByPersistenceId =
+                ImmutableDictionary<string, ImmutableList<IPersistentRepresentation>>.Empty;
+
+            /// <summary>
+            /// Tracks logical deletion markers per persistence ID.
+            /// </summary>
+            internal ImmutableDictionary<string, long> DeletedTo = ImmutableDictionary<string, long>.Empty;
+        }
+
+        private readonly JournalStorage _storage = new();
+
+        /// <summary>
+        /// Storage property for accessing journal data. Override in subclasses to share storage.
+        /// </summary>
+        protected virtual JournalStorage Storage => _storage;
+
+        /// <summary>
+        /// Drains all pending writes from the channel into the immutable snapshot state.
+        /// Must be called before any read operation to ensure all writes are visible.
+        /// </summary>
+        private void DrainPendingWrites()
+        {
+            lock (Storage.DrainLock)
+            {
+                while (Storage.PendingWrites.Reader.TryRead(out var item))
+                {
+                    Storage.EventLog = Storage.EventLog.Add(item);
+
+                    var pid = item.PersistenceId;
+                    var existing = Storage.EventsByPersistenceId.GetValueOrDefault(
+                        pid, ImmutableList<IPersistentRepresentation>.Empty);
+                    Storage.EventsByPersistenceId = Storage.EventsByPersistenceId.SetItem(pid, existing.Add(item));
+                }
+            }
+        }
+
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
             foreach (var w in messages)
             {
                 foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                 {
-                    var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
-                    Add(persistentRepresentation);
-                    _allMessages.AddLast(persistentRepresentation);
-                    if (p.Payload is not Tagged tagged) continue;
-                    
-                    foreach (var tag in tagged.Tags)
-                    {
-                        _tagsToMessagesMapping.AddOrUpdate(
-                            tag,
-                            (_) => new LinkedList<IPersistentRepresentation>([persistentRepresentation]),
-                            (_, v) =>
-                            {
-                                v.AddLast(persistentRepresentation);
-                                return v;
-                            });
-                    }
+                    var timestamped = p.WithTimestamp(DateTime.UtcNow.Ticks);
+                    // Non-blocking write to channel — TryWrite always succeeds on unbounded channel
+                    Storage.PendingWrites.Writer.TryWrite(timestamped);
                 }
             }
-            
-            return Task.FromResult<IImmutableList<Exception>>(null); // all good
+
+            return Task.FromResult<IImmutableList<Exception>>(null);
         }
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
-            return Task.FromResult(Math.Max(HighestSequenceNr(persistenceId), _meta.GetValueOrDefault(persistenceId, 0L)));
+            DrainPendingWrites();
+
+            if (!Storage.EventsByPersistenceId.TryGetValue(persistenceId, out var events) || events.IsEmpty)
+                return Task.FromResult(0L);
+
+            return Task.FromResult(events[events.Count - 1].SequenceNr);
         }
-        
+
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
-            var highest = HighestSequenceNr(persistenceId);
-            if (highest != 0L && max != 0L)
-                Read(persistenceId, fromSequenceNr, Math.Min(toSequenceNr, highest), max).ForEach(recoveryCallback);
+            DrainPendingWrites();
+
+            if (Storage.EventsByPersistenceId.TryGetValue(persistenceId, out var pidEvents))
+            {
+                var deletedToSeq = Storage.DeletedTo.GetValueOrDefault(persistenceId, 0L);
+
+                var messages = pidEvents
+                    .Where(e => e.SequenceNr > deletedToSeq
+                             && e.SequenceNr >= fromSequenceNr
+                             && e.SequenceNr <= toSequenceNr)
+                    .Take(max > int.MaxValue ? int.MaxValue : (int)max);
+
+                foreach (var message in messages)
+                {
+                    recoveryCallback(message);
+                }
+            }
+
             return Task.CompletedTask;
         }
-        
+
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {
-            var highestSeqNr = HighestSequenceNr(persistenceId);
-            var toSeqNr = Math.Min(toSequenceNr, highestSeqNr);
-            if (toSeqNr == highestSeqNr)
-                _meta.AddOrUpdate(persistenceId, highestSeqNr, (_, _) => highestSeqNr);
-            for (var snr = 1L; snr <= toSeqNr; snr++)
-                Delete(persistenceId, snr);
+            DrainPendingWrites();
+
+            var currentDeleted = Storage.DeletedTo.GetValueOrDefault(persistenceId, 0L);
+            Storage.DeletedTo = Storage.DeletedTo.SetItem(persistenceId, Math.Max(currentDeleted, toSequenceNr));
+
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Add a persistent representation to the journal and return all messages.
+        /// </summary>
+        public IDictionary<string, LinkedList<IPersistentRepresentation>> Add(IPersistentRepresentation persistent)
+        {
+            var timestamped = persistent.WithTimestamp(DateTime.UtcNow.Ticks);
+
+            // Non-blocking write to channel
+            Storage.PendingWrites.Writer.TryWrite(timestamped);
+
+            // Drain and build return value for API compatibility
+            DrainPendingWrites();
+
+            return Storage.EventsByPersistenceId.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new LinkedList<IPersistentRepresentation>(kvp.Value));
+        }
+
+        /// <summary>
+        /// Delete a message and return all remaining messages.
+        /// Public API for compatibility with existing code.
+        /// </summary>
+        public IDictionary<string, LinkedList<IPersistentRepresentation>> Delete(string pid, long seqNr)
+        {
+            DrainPendingWrites();
+
+            var currentDeleted = Storage.DeletedTo.GetValueOrDefault(pid, 0L);
+            Storage.DeletedTo = Storage.DeletedTo.SetItem(pid, Math.Max(currentDeleted, seqNr));
+
+            return Storage.EventsByPersistenceId.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new LinkedList<IPersistentRepresentation>(
+                    kvp.Value.Where(e => e.SequenceNr > Storage.DeletedTo.GetValueOrDefault(kvp.Key, 0L))));
+        }
+
+        /// <summary>
+        /// Read messages for a persistence ID within sequence range.
+        /// </summary>
+        public IEnumerable<IPersistentRepresentation> Read(string pid, long from, long to, long max)
+        {
+            DrainPendingWrites();
+
+            if (!Storage.EventsByPersistenceId.TryGetValue(pid, out var pidEvents))
+                return Array.Empty<IPersistentRepresentation>();
+
+            var deletedToSeq = Storage.DeletedTo.GetValueOrDefault(pid, 0L);
+
+            return pidEvents
+                .Where(e => e.SequenceNr > deletedToSeq
+                         && e.SequenceNr >= from
+                         && e.SequenceNr <= to)
+                .Take(max > int.MaxValue ? int.MaxValue : (int)max)
+                .ToArray();
+        }
+
+        /// <summary>
+        /// Get highest sequence number for a persistence ID.
+        /// </summary>
+        public long HighestSequenceNr(string pid)
+        {
+            DrainPendingWrites();
+
+            if (!Storage.EventsByPersistenceId.TryGetValue(pid, out var events) || events.IsEmpty)
+                return 0L;
+
+            return events[events.Count - 1].SequenceNr;
         }
 
         protected override bool ReceivePluginInternal(object message)
@@ -93,63 +226,79 @@ namespace Akka.Persistence.Journal
                     SelectAllPersistenceIdsAsync(request.Offset)
                         .PipeTo(request.ReplyTo, success: result => new CurrentPersistenceIds(result.Item1, result.LastOrdering));
                     return true;
-                
+
                 case ReplayTaggedMessages replay:
                     ReplayTaggedMessagesAsync(replay)
                         .PipeTo(replay.ReplyTo, success: h => new ReplayTaggedMessagesSuccess(h), failure: e => new ReplayMessagesFailure(e));
                     return true;
-                
+
                 case ReplayAllEvents replay:
                     ReplayAllEventsAsync(replay)
                         .PipeTo(replay.ReplyTo, success: h => new EventReplaySuccess(h),
                             failure: e => new EventReplayFailure(e));
                     return true;
-                
+
                 default:
                     return false;
             }
         }
-        
+
         private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((new HashSet<string>(_allMessages.Skip(offset).Select(p => p.PersistenceId)), _allMessages.Count)); 
+            DrainPendingWrites();
+
+            var ids = new HashSet<string>(Storage.EventLog.Skip(offset).Select(p => p.PersistenceId));
+            var count = Storage.EventLog.Count;
+
+            return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((ids, count));
         }
-        
+
         /// <summary>
-        /// Replays all events with given tag withing provided boundaries from memory.
+        /// Replays all events with given tag within provided boundaries from memory.
         /// </summary>
         private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
-            if (!_tagsToMessagesMapping.ContainsKey(replay.Tag))
-                return Task.FromResult(0);
+            DrainPendingWrites();
+
+            var snapshot = Storage.EventLog
+                .Where(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag))
+                .Skip(replay.FromOffset)
+                .Take(replay.Max)
+                .ToArray();
+
+            var count = Storage.EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
 
             var index = 0;
-            foreach (var persistence in _tagsToMessagesMapping[replay.Tag]
-                         .Skip(replay.FromOffset)
-                         .Take(replay.ToOffset))
+            foreach (var persistence in snapshot)
             {
                 replay.ReplyTo.Tell(new ReplayedTaggedMessage(persistence, replay.Tag, replay.FromOffset + index), ActorRefs.NoSender);
                 index++;
             }
 
-            return Task.FromResult(_tagsToMessagesMapping[replay.Tag].Count - 1);
+            return Task.FromResult(count - 1);
         }
-        
+
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            var index = 0;
-            var replayed = _allMessages
+            DrainPendingWrites();
+
+            var snapshot = Storage.EventLog
                 .Skip(replay.FromOffset)
-                .Take(replay.ToOffset - replay.FromOffset)
+                .Take((int)replay.Max)
                 .ToArray();
-            foreach (var message in replayed)
+
+            var count = Storage.EventLog.Count;
+
+            var index = 0;
+            foreach (var message in snapshot)
             {
                 replay.ReplyTo.Tell(new ReplayedEvent(message, replay.FromOffset + index), ActorRefs.NoSender);
                 index++;
             }
-            return Task.FromResult(_allMessages.Count - 1);
+
+            return Task.FromResult(count - 1);
         }
-        
+
         #region QueryAPI
 
         [Serializable]
@@ -164,7 +313,7 @@ namespace Akka.Persistence.Journal
                 ReplyTo = replyTo;
             }
         }
-        
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -189,18 +338,18 @@ namespace Akka.Persistence.Journal
                 HighestOrderingNumber = highestOrderingNumber;
             }
         }
-        
+
         [Serializable]
         public sealed class ReplayTaggedMessages : IJournalRequest
         {
             public readonly int FromOffset;
-            
+
             public readonly int ToOffset;
-            
+
             public readonly int Max;
-            
+
             public readonly string Tag;
-            
+
             public readonly IActorRef ReplyTo;
 
             /// <summary>
@@ -236,7 +385,7 @@ namespace Akka.Persistence.Journal
                 ReplyTo = replyTo;
             }
         }
-        
+
         [Serializable]
         public sealed class ReplayedTaggedMessage : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
@@ -247,7 +396,7 @@ namespace Akka.Persistence.Journal
             public readonly string Tag;
 
             public readonly int Offset;
-            
+
             public ReplayedTaggedMessage(IPersistentRepresentation persistent, string tag, int offset)
             {
                 Persistent = persistent;
@@ -257,7 +406,7 @@ namespace Akka.Persistence.Journal
                 Offset = offset;
             }
         }
-        
+
         [Serializable]
         public sealed class ReplayAllEvents : IJournalRequest
         {
@@ -292,7 +441,7 @@ namespace Akka.Persistence.Journal
                 ReplyTo = replyTo;
             }
         }
-        
+
 
         [Serializable]
         public sealed class ReplayedEvent : INoSerializationVerificationNeeded, IDeadLetterSuppression
@@ -301,14 +450,14 @@ namespace Akka.Persistence.Journal
             public readonly IPersistentRepresentation Persistent;
 
             public readonly int Offset;
-            
+
             public ReplayedEvent(IPersistentRepresentation persistent, int offset)
             {
                 Persistent = persistent;
                 Offset = offset;
             }
         }
-        
+
         [Serializable]
         public sealed class ReplayTaggedMessagesSuccess
         {
@@ -322,7 +471,7 @@ namespace Akka.Persistence.Journal
             /// </summary>
             public int HighestSequenceNr { get; }
         }
-        
+
         [Serializable]
         public sealed class EventReplaySuccess
         {
@@ -375,95 +524,26 @@ namespace Akka.Persistence.Journal
                 return Equals(Cause, other.Cause);
             }
 
-        
+
             public override bool Equals(object obj)
             {
                 return obj is EventReplayFailure f && Equals(f);
             }
 
-        
+
             public override int GetHashCode() => Cause.GetHashCode();
 
-        
+
             public override string ToString() => $"EventReplayFailure<cause: {Cause.Message}>";
         }
 
         #endregion
-        
-        #region IMemoryMessages implementation
-        
-        public Messages Add(IPersistentRepresentation persistent)
-        {
-            var list = Messages.GetOrAdd(persistent.PersistenceId, _ => new LinkedList<IPersistentRepresentation>());
-            list.AddLast(persistent);
-            return Messages;
-        }
-        
-        public Messages Update(string pid, long seqNr, Func<IPersistentRepresentation, IPersistentRepresentation> updater)
-        {
-            if (Messages.TryGetValue(pid, out var persistents))
-            {
-                var node = persistents.First;
-                while (node != null)
-                {
-                    if (node.Value.SequenceNr == seqNr)
-                        node.Value = updater(node.Value);
-
-                    node = node.Next;
-                }
-            }
-
-            return Messages;
-        }
-        
-        public Messages Delete(string pid, long seqNr)
-        {
-            if (Messages.TryGetValue(pid, out var persistents))
-            {
-                var node = persistents.First;
-                while (node != null)
-                {
-                    if (node.Value.SequenceNr == seqNr)
-                        persistents.Remove(node);
-
-                    node = node.Next;
-                }
-            }
-
-            return Messages;
-        }
-        
-        public IEnumerable<IPersistentRepresentation> Read(string pid, long fromSeqNr, long toSeqNr, long max)
-        {
-            if (Messages.TryGetValue(pid, out var persistents))
-            {
-                return persistents
-                    .Where(x => x.SequenceNr >= fromSeqNr && x.SequenceNr <= toSeqNr)
-                    .Take(max > int.MaxValue ? int.MaxValue : (int)max);
-            }
-
-            return [];
-        }
-        
-        public long HighestSequenceNr(string pid)
-        {
-            if (Messages.TryGetValue(pid, out var persistents))
-            {
-                var last = persistents.LastOrDefault();
-                return last?.SequenceNr ?? 0L;
-            }
-
-            return 0L;
-        }
-
-        #endregion
     }
-    
+
     public class SharedMemoryJournal : MemoryJournal
     {
-        private static readonly ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> SharedMessages = new();
-        
-        protected override ConcurrentDictionary<string, LinkedList<IPersistentRepresentation>> Messages { get { return SharedMessages; } }
+        private static readonly JournalStorage SharedStorage = new();
+
+        protected override JournalStorage Storage => SharedStorage;
     }
 }
-
