@@ -125,9 +125,15 @@ namespace Akka.Cluster.Tests.MultiNode
                 if (i > 1)
                     Thread.Sleep(ThreadLocalRandom.Current.Next(15) * 1000);
 
-                Cluster.Get(Sys).State.Members.Count.ShouldBe(totalNumberOfNodes);
-                Cluster.Get(Sys).State.Members.All(x => x.Status == MemberStatus.Up).ShouldBeTrue();
-                Cluster.Get(Sys).State.Unreachable.Count.ShouldBe(0);
+                Within(TimeSpan.FromSeconds(20), () =>
+                {
+                    AwaitAssert(() =>
+                    {
+                        Cluster.Get(Sys).State.Members.Count.ShouldBe(totalNumberOfNodes);
+                        Cluster.Get(Sys).State.Members.All(x => x.Status == MemberStatus.Up).ShouldBeTrue();
+                        Cluster.Get(Sys).State.Unreachable.Count.ShouldBe(0);
+                    });
+                });
 
                 EnterBarrier("before-terminate-"+i);
                 RunOn(() =>
