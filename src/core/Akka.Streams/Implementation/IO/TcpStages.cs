@@ -41,7 +41,7 @@ namespace Akka.Streams.Implementation.IO
             private readonly ConnectionSourceStage _stage;
             private IActorRef _listener;
             private readonly TaskCompletionSource<StreamTcp.ServerBinding> _bindingPromise;
-            private readonly TaskCompletionSource<NotUsed> _unbindPromise = new();
+            private readonly TaskCompletionSource<NotUsed> _unbindPromise = TaskEx.NonBlockingTaskCompletionSource<NotUsed>();
             private bool _unbindStarted = false;
             private readonly Queue<StreamTcp.IncomingConnection> _pendingConnections = new();
 
@@ -655,8 +655,8 @@ namespace Akka.Streams.Implementation.IO
         /// <returns>TBD</returns>
         public override ILogicAndMaterializedValue<Task<StreamTcp.OutgoingConnection>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var localAddressPromise = new TaskCompletionSource<EndPoint>();
-            var outgoingConnectionPromise = new TaskCompletionSource<StreamTcp.OutgoingConnection>();
+            var localAddressPromise = TaskEx.NonBlockingTaskCompletionSource<EndPoint>();
+            var outgoingConnectionPromise = TaskEx.NonBlockingTaskCompletionSource<StreamTcp.OutgoingConnection>();
             localAddressPromise.Task.ContinueWith(t =>
                 {
                     if (t.IsCanceled) outgoingConnectionPromise.TrySetCanceled();

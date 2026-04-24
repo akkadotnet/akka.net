@@ -58,9 +58,7 @@ namespace Akka.Streams.Dsl
                     {
                         if (IsAvailable(outlet))
                         {
-                            // isAvailable(out) implies !pending
-                            // -> grab and push immediately
-                            Push(outlet, Grab(inlet));
+                            GrabAndPushFanIn(inlet, outlet);
                             TryPull(inlet);
                         }
                         else _pendingQueue.Enqueue(inlet);
@@ -111,7 +109,7 @@ namespace Akka.Streams.Dsl
                 }
                 else if (IsAvailable(inlet))
                 {
-                    Push(_stage.Out, Grab(inlet));
+                    GrabAndPushFanIn(inlet, _stage.Out);
                     if(AreUpstreamsClosed && !IsPending)
                         CompleteStage();
                     else
@@ -312,7 +310,7 @@ namespace Akka.Streams.Dsl
                              /* blocked */
                         }
                         else
-                            Emit(_stage.Out, Grab(port), pullPort);
+                            GrabAndEmitFanIn(port, _stage.Out, pullPort);
                     },
                     onUpstreamFinish: OnComplete);
                 }
@@ -339,7 +337,7 @@ namespace Akka.Streams.Dsl
             private void EmitPreferred()
             {
                 _preferredEmitting++;
-                Emit(_stage.Out, Grab(_stage.Preferred), Emitted);
+                GrabAndEmitFanIn(_stage.Preferred, _stage.Out, Emitted);
                 TryPull(_stage.Preferred);
             }
 
@@ -355,7 +353,8 @@ namespace Akka.Streams.Dsl
                 for (int i = 0; i < _stage._secondaryPorts; i++)
                 {
                     var port = _stage.In(i);
-                    if (IsAvailable(port)) Emit(_stage.Out, Grab(port), _pullMe[i]);
+                    if (IsAvailable(port))
+                        GrabAndEmitFanIn(port, _stage.Out, _pullMe[i]);
                 }
             }
 
@@ -1729,7 +1728,7 @@ namespace Akka.Streams.Dsl
                     var i = inEnumerator.Current;
                     var idx = iidx;
                     SetHandler(i,
-                        onPush: () => Push(stage.Out, Grab(i)),
+                        onPush: () => GrabAndPushFanIn(i, stage.Out),
                         onUpstreamFinish: () =>
                         {
                             if (idx == _activeStream)
