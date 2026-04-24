@@ -3,13 +3,15 @@
   <Description>Akka.Remote x-plat performance benchmark</Description>
   <Copyright>Copyright (c) Akka.NET Team</Copyright>
   <Authors>Akka.NET Team</Authors>
-  <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net6.0</TargetFrameworks>
+  <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net6.0;net9.0</TargetFrameworks>
   <OutputType>Exe</OutputType>
   <IsPackable>false</IsPackable>
 </PropertyGroup>
 
 <PropertyGroup>
   <ServerGarbageCollection>true</ServerGarbageCollection>
+  <!-- unclear if this can be set according to https://learn.microsoft.com/en-us/dotnet/core/runtime-config/garbage-collector#dynamic-adaptation-to-application-sizes-datas -->
+  <GarbageCollectionAdaptationMode>0</GarbageCollectionAdaptationMode>
   <TieredPGO>true</TieredPGO>
 </PropertyGroup>
 
