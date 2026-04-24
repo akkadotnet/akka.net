@@ -35,6 +35,12 @@ namespace Akka.Persistence.Snapshot
         protected sealed class SnapshotStorage
         {
             /// <summary>
+            /// Lock for serializing drain operations. Reads can happen concurrently
+            /// from multiple thread pool threads due to SnapshotStore's async pattern.
+            /// </summary>
+            public readonly object DrainLock = new();
+
+            /// <summary>
             /// Pending writes channel — unbounded, writers never block.
             /// </summary>
             public readonly Channel<SnapshotEntry> PendingWrites =
@@ -60,19 +66,22 @@ namespace Akka.Persistence.Snapshot
         /// </summary>
         private void DrainPendingWrites()
         {
-            while (Storage.PendingWrites.Reader.TryRead(out var item))
+            lock (Storage.DrainLock)
             {
-                var existingIndex = Storage.Snapshots.FindIndex(x => x.Id == item.Id);
+                while (Storage.PendingWrites.Reader.TryRead(out var item))
+                {
+                    var existingIndex = Storage.Snapshots.FindIndex(x => x.Id == item.Id);
 
-                if (existingIndex >= 0)
-                {
-                    // Update existing snapshot by replacing it
-                    Storage.Snapshots = Storage.Snapshots.SetItem(existingIndex, item);
-                }
-                else
-                {
-                    // Add new snapshot
-                    Storage.Snapshots = Storage.Snapshots.Add(item);
+                    if (existingIndex >= 0)
+                    {
+                        // Update existing snapshot by replacing it
+                        Storage.Snapshots = Storage.Snapshots.SetItem(existingIndex, item);
+                    }
+                    else
+                    {
+                        // Add new snapshot
+                        Storage.Snapshots = Storage.Snapshots.Add(item);
+                    }
                 }
             }
         }

@@ -35,6 +35,12 @@ namespace Akka.Persistence.Journal
         protected sealed class JournalStorage
         {
             /// <summary>
+            /// Lock for serializing drain operations. Reads can happen concurrently
+            /// from multiple thread pool threads due to AsyncWriteJournal's fire-and-forget pattern.
+            /// </summary>
+            public readonly object DrainLock = new();
+
+            /// <summary>
             /// Pending writes channel — unbounded, writers never block.
             /// </summary>
             public readonly Channel<IPersistentRepresentation> PendingWrites =
@@ -71,14 +77,17 @@ namespace Akka.Persistence.Journal
         /// </summary>
         private void DrainPendingWrites()
         {
-            while (Storage.PendingWrites.Reader.TryRead(out var item))
+            lock (Storage.DrainLock)
             {
-                Storage.EventLog = Storage.EventLog.Add(item);
+                while (Storage.PendingWrites.Reader.TryRead(out var item))
+                {
+                    Storage.EventLog = Storage.EventLog.Add(item);
 
-                var pid = item.PersistenceId;
-                var existing = Storage.EventsByPersistenceId.GetValueOrDefault(
-                    pid, ImmutableList<IPersistentRepresentation>.Empty);
-                Storage.EventsByPersistenceId = Storage.EventsByPersistenceId.SetItem(pid, existing.Add(item));
+                    var pid = item.PersistenceId;
+                    var existing = Storage.EventsByPersistenceId.GetValueOrDefault(
+                        pid, ImmutableList<IPersistentRepresentation>.Empty);
+                    Storage.EventsByPersistenceId = Storage.EventsByPersistenceId.SetItem(pid, existing.Add(item));
+                }
             }
         }
 

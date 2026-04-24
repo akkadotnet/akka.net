@@ -1107,6 +1107,7 @@ namespace Akka.Persistence.Journal
         protected sealed class JournalStorage
         {
             public System.Collections.Immutable.ImmutableDictionary<string, long> DeletedTo;
+            public readonly object DrainLock;
             public System.Collections.Immutable.ImmutableList<Akka.Persistence.IPersistentRepresentation> EventLog;
             public System.Collections.Immutable.ImmutableDictionary<string, System.Collections.Immutable.ImmutableList<Akka.Persistence.IPersistentRepresentation>> EventsByPersistenceId;
             public readonly System.Threading.Channels.Channel<Akka.Persistence.IPersistentRepresentation> PendingWrites;
@@ -1286,6 +1287,7 @@ namespace Akka.Persistence.Snapshot
         protected override System.Threading.Tasks.Task SaveAsync(Akka.Persistence.SnapshotMetadata metadata, object snapshot, System.Threading.CancellationToken cancellationToken) { }
         protected sealed class SnapshotStorage
         {
+            public readonly object DrainLock;
             public readonly System.Threading.Channels.Channel<Akka.Persistence.Snapshot.SnapshotEntry> PendingWrites;
             public System.Collections.Immutable.ImmutableList<Akka.Persistence.Snapshot.SnapshotEntry> Snapshots;
             public SnapshotStorage() { }
