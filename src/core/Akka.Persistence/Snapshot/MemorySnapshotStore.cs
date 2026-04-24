@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="MemorySnapshotStore.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -6,10 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Util.Internal;
 
@@ -19,36 +20,75 @@ namespace Akka.Persistence.Snapshot
     /// INTERNAL API.
     ///
     /// In-memory SnapshotStore implementation.
+    ///
+    /// Uses a channel-based drain-on-read pattern with immutable collections to handle
+    /// the concurrent access pattern imposed by SnapshotStore. Writes enqueue to
+    /// an unbounded channel (never blocking), and reads drain the channel first to ensure
+    /// all pending writes are visible before returning results.
     /// </summary>
     public class MemorySnapshotStore : SnapshotStore
     {
         /// <summary>
-        /// Lock for thread-safe access to the Snapshots collection.
-        ///
-        /// Note: We use locks instead of thread-safe collections (e.g., ConcurrentDictionary) because:
-        /// 1. Each persistence ID can have multiple snapshots at different sequence numbers, requiring range queries
-        /// 2. LoadAsync needs to find the highest sequenceNr matching criteria via enumeration and sorting
-        /// 3. SaveAsync requires atomic check-then-update-or-add operations (FirstOrDefault + mutation/Add)
-        /// 4. ConcurrentDictionary keyed by persistenceId would still require a non-thread-safe List/Bag per value
-        ///
-        /// The lock ensures atomicity of compound operations and consistent enumeration during LINQ queries.
+        /// Storage container for snapshot data. Encapsulates the pending writes channel
+        /// and immutable snapshot state.
         /// </summary>
-        private readonly object _snapshotsLock = new();
+        protected sealed class SnapshotStorage
+        {
+            /// <summary>
+            /// Pending writes channel — unbounded, writers never block.
+            /// </summary>
+            public readonly Channel<SnapshotEntry> PendingWrites =
+                Channel.CreateUnbounded<SnapshotEntry>(
+                    new UnboundedChannelOptions { SingleWriter = false, SingleReader = true });
+
+            /// <summary>
+            /// All snapshots stored in memory.
+            /// </summary>
+            public ImmutableList<SnapshotEntry> Snapshots = ImmutableList<SnapshotEntry>.Empty;
+        }
+
+        private readonly SnapshotStorage _storage = new();
 
         /// <summary>
-        /// This is available to expose/override the snapshots in derived snapshot stores
+        /// Storage property for accessing snapshot data. Override in subclasses to share storage.
         /// </summary>
-        protected virtual List<SnapshotEntry> Snapshots { get; } = new();
+        protected virtual SnapshotStorage Storage => _storage;
+
+        /// <summary>
+        /// Drains all pending writes from the channel into the immutable snapshot state.
+        /// Must be called before any read operation to ensure all writes are visible.
+        /// </summary>
+        private void DrainPendingWrites()
+        {
+            while (Storage.PendingWrites.Reader.TryRead(out var item))
+            {
+                var existingIndex = Storage.Snapshots.FindIndex(x => x.Id == item.Id);
+
+                if (existingIndex >= 0)
+                {
+                    // Update existing snapshot by replacing it
+                    Storage.Snapshots = Storage.Snapshots.SetItem(existingIndex, item);
+                }
+                else
+                {
+                    // Add new snapshot
+                    Storage.Snapshots = Storage.Snapshots.Add(item);
+                }
+            }
+        }
 
         protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken)
         {
-            bool Pred(SnapshotEntry x) => x.PersistenceId == metadata.PersistenceId && (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr)
-                                                                                    && (metadata.Timestamp == DateTime.MinValue || metadata.Timestamp == DateTime.MaxValue || x.Timestamp == metadata.Timestamp.Ticks);
+            DrainPendingWrites();
 
-            lock (_snapshotsLock)
+            bool Pred(SnapshotEntry x) => x.PersistenceId == metadata.PersistenceId
+                && (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr)
+                && (metadata.Timestamp == DateTime.MinValue || metadata.Timestamp == DateTime.MaxValue || x.Timestamp == metadata.Timestamp.Ticks);
+
+            var snapshot = Storage.Snapshots.FirstOrDefault(Pred);
+            if (snapshot != null)
             {
-                var snapshot = Snapshots.FirstOrDefault(Pred);
-                Snapshots.Remove(snapshot);
+                Storage.Snapshots = Storage.Snapshots.Remove(snapshot);
             }
 
             return TaskEx.Completed;
@@ -56,24 +96,26 @@ namespace Akka.Persistence.Snapshot
 
         protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
-            var filter = CreateRangeFilter(persistenceId, criteria);
+            DrainPendingWrites();
 
-            lock (_snapshotsLock)
-            {
-                Snapshots.RemoveAll(x => filter(x));
-            }
+            var filter = CreateRangeFilter(persistenceId, criteria);
+            Storage.Snapshots = Storage.Snapshots.RemoveAll(x => filter(x));
+
             return TaskEx.Completed;
         }
 
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
-            var filter = CreateRangeFilter(persistenceId, criteria);
+            DrainPendingWrites();
 
-            SelectedSnapshot snapshot;
-            lock (_snapshotsLock)
-            {
-                snapshot = Snapshots.Where(filter).OrderByDescending(x => x.SequenceNr).Take(1).Select(x => ToSelectedSnapshot(x)).FirstOrDefault();
-            }
+            var filter = CreateRangeFilter(persistenceId, criteria);
+            var snapshot = Storage.Snapshots
+                .Where(filter)
+                .OrderByDescending(x => x.SequenceNr)
+                .Take(1)
+                .Select(x => ToSelectedSnapshot(x))
+                .FirstOrDefault();
+
             return Task.FromResult(snapshot);
         }
 
@@ -81,27 +123,10 @@ namespace Akka.Persistence.Snapshot
         {
             var snapshotEntry = ToSnapshotEntry(metadata, snapshot);
 
-            lock (_snapshotsLock)
-            {
-                var existingSnapshot = Snapshots.FirstOrDefault(CreateSnapshotIdFilter(snapshotEntry.Id));
-
-                if (existingSnapshot != null)
-                {
-                    existingSnapshot.Snapshot = snapshotEntry.Snapshot;
-                    existingSnapshot.Timestamp = snapshotEntry.Timestamp;
-                }
-                else
-                {
-                    Snapshots.Add(snapshotEntry);
-                }
-            }
+            // Non-blocking write to channel — TryWrite always succeeds on unbounded channel
+            Storage.PendingWrites.Writer.TryWrite(snapshotEntry);
 
             return TaskEx.Completed;
-        }
-
-        private static Func<SnapshotEntry, bool> CreateSnapshotIdFilter(string snapshotId)
-        {
-            return x => x.Id == snapshotId;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -114,14 +139,12 @@ namespace Akka.Persistence.Snapshot
 
         private static SnapshotEntry ToSnapshotEntry(SnapshotMetadata metadata, object snapshot)
         {
-            return new SnapshotEntry
-            {
-                Id = metadata.PersistenceId + "_" + metadata.SequenceNr,
-                PersistenceId = metadata.PersistenceId,
-                SequenceNr = metadata.SequenceNr,
-                Snapshot = snapshot,
-                Timestamp = metadata.Timestamp.Ticks
-            };
+            return new SnapshotEntry(
+                id: metadata.PersistenceId + "_" + metadata.SequenceNr,
+                persistenceId: metadata.PersistenceId,
+                sequenceNr: metadata.SequenceNr,
+                timestamp: metadata.Timestamp.Ticks,
+                snapshot: snapshot);
         }
 
         private static SelectedSnapshot ToSelectedSnapshot(SnapshotEntry entry)
@@ -129,7 +152,7 @@ namespace Akka.Persistence.Snapshot
             return new SelectedSnapshot(metadata: new SnapshotMetadata(
                 persistenceId: entry.PersistenceId,
                 sequenceNr: entry.SequenceNr,
-                timestamp: DateTime.SpecifyKind(new DateTime(entry.Timestamp), DateTimeKind.Utc)), 
+                timestamp: DateTime.SpecifyKind(new DateTime(entry.Timestamp), DateTimeKind.Utc)),
                 snapshot: entry.Snapshot);
         }
     }
@@ -137,19 +160,24 @@ namespace Akka.Persistence.Snapshot
     /// <summary>
     /// INTERNAL API.
     ///
-    /// Represents a snapshot stored inside the in-memory <see cref="SnapshotStore"/>
+    /// Represents a snapshot stored inside the in-memory <see cref="SnapshotStore"/>.
+    /// Immutable by design to support concurrent access patterns.
     /// </summary>
-    public class SnapshotEntry
+    public sealed class SnapshotEntry
     {
-        public string Id { get; set; }
+        public SnapshotEntry(string id, string persistenceId, long sequenceNr, long timestamp, object snapshot)
+        {
+            Id = id;
+            PersistenceId = persistenceId;
+            SequenceNr = sequenceNr;
+            Timestamp = timestamp;
+            Snapshot = snapshot;
+        }
 
-        public string PersistenceId { get; set; }
-
-        public long SequenceNr { get; set; }
-
-        public long Timestamp { get; set; }
-
-        public object Snapshot { get; set; }
-
+        public string Id { get; }
+        public string PersistenceId { get; }
+        public long SequenceNr { get; }
+        public long Timestamp { get; }
+        public object Snapshot { get; }
     }
 }
