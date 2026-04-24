@@ -1,3 +1,48 @@
+#### 1.5.66 April 24th, 2026 ####
+
+Akka.NET v1.5.66 is a significant release with persistence bug fixes, major Akka.Streams improvements including OpenTelemetry trace propagation and non-blocking materialized values, and new serialization security controls.
+
+**Akka.Streams: OpenTelemetry Trace Context Propagation**
+
+Akka.Streams now propagates `System.Diagnostics.Activity` trace context end-to-end through stream graphs, including across async stage boundaries, fan-in merges, and fan-out broadcasts. This enables full distributed tracing visibility into stream pipelines when using OpenTelemetry.
+
+For full documentation, see: https://getakka.net/articles/streams/stream-tracing.html
+
+* [Akka.Streams: end-to-end OpenTelemetry trace context propagation](https://github.com/akkadotnet/akka.net/pull/8160)
+
+**Akka.Streams: Non-Blocking Materialized-Value TaskCompletionSource**
+
+All `TaskCompletionSource` instances used for materialized values across Akka.Streams now use `TaskCreationOptions.RunContinuationsAsynchronously`, eliminating potential deadlocks and thread-pool starvation when continuations run synchronously on completion.
+
+* [Non-blocking materialized-value TaskCompletionSource](https://github.com/akkadotnet/akka.net/issues/8161)
+
+**Akka.Persistence**
+* [Redesign MemoryJournal and MemorySnapshotStore with channel-based drain-on-read pattern](https://github.com/akkadotnet/akka.net/pull/8184)
+* [Ensure WriteMessagesAsync/SaveAsync is called asynchronously](https://github.com/akkadotnet/akka.net/pull/8163)
+
+**Akka.Core**
+* [Filter link-local (APIPA) addresses from DNS resolution results](https://github.com/akkadotnet/akka.net/pull/8178)
+* [Fix multi-node adapter output race](https://github.com/akkadotnet/akka.net/pull/8180)
+
+**New Features**
+* [Add `allow-unregistered-types` serialization setting](https://github.com/akkadotnet/akka.net/pull/8173) — when set to `false`, `FindSerializerForType` throws `SerializationException` if no explicit serializer binding exists, rather than falling back to the default serializer.
+* [Widen ActorTaskScheduler(ActorCell) ctor to protected internal](https://github.com/akkadotnet/akka.net/pull/8158)
+
+**Documentation**
+* [Surface serialization security guidance on remoting security page](https://github.com/akkadotnet/akka.net/pull/8177)
+* [Replace TBD XML doc placeholders in Scheduler and Stash](https://github.com/akkadotnet/akka.net/pull/8119)
+
+4 contributors since release 1.5.65
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 18 | 3962 | 991 | Aaron Stannard |
+| 8 | 1627 | 1952 | Gregorius Soedharmo |
+| 6 | 214 | 177 | Matt Kotsenas |
+| 1 | 55 | 39 | schdooz |
+
+To see the full set of changes in Akka.NET v1.5.66, [click here](https://github.com/akkadotnet/akka.net/milestone/149?closed=1).
+
 #### 1.5.65 April 10th, 2026 ####
 
 Akka.NET v1.5.65 is a maintenance release with important bug fixes for Akka.Cluster.Sharding, Akka.Core configuration, and Akka.TestKit.
