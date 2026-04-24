@@ -3806,11 +3806,11 @@ namespace Akka.Streams.Implementation
             public static readonly Akka.Streams.Implementation.StreamSupervisor.StoppedChildren Instance;
         }
     }
-    [Akka.Annotations.InternalApi]
-    public static class StreamsDiagnostics
+    [Akka.Annotations.InternalApiAttribute()]
+    public class static StreamsDiagnostics
     {
-        public const string ActivitySourceName = "Akka.Streams";
         public static readonly System.Diagnostics.ActivitySource ActivitySource;
+        public const string ActivitySourceName = "Akka.Streams";
         public static string GetStageName(Akka.Streams.Stage.GraphStageLogic stage) { }
     }
     public sealed class StructuralInfoModule : Akka.Streams.Implementation.Module
