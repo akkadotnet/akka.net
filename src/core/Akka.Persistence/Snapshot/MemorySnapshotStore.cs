@@ -38,19 +38,19 @@ namespace Akka.Persistence.Snapshot
             /// Lock for serializing drain operations. Reads can happen concurrently
             /// from multiple thread pool threads due to SnapshotStore's async pattern.
             /// </summary>
-            public readonly object DrainLock = new();
+            internal readonly object DrainLock = new();
 
             /// <summary>
             /// Pending writes channel — unbounded, writers never block.
             /// </summary>
-            public readonly Channel<SnapshotEntry> PendingWrites =
+            internal readonly Channel<SnapshotEntry> PendingWrites =
                 Channel.CreateUnbounded<SnapshotEntry>(
                     new UnboundedChannelOptions { SingleWriter = false, SingleReader = true });
 
             /// <summary>
             /// All snapshots stored in memory.
             /// </summary>
-            public ImmutableList<SnapshotEntry> Snapshots = ImmutableList<SnapshotEntry>.Empty;
+            internal ImmutableList<SnapshotEntry> Snapshots = ImmutableList<SnapshotEntry>.Empty;
         }
 
         private readonly SnapshotStorage _storage = new();

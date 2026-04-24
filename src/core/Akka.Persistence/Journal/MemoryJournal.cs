@@ -38,30 +38,30 @@ namespace Akka.Persistence.Journal
             /// Lock for serializing drain operations. Reads can happen concurrently
             /// from multiple thread pool threads due to AsyncWriteJournal's fire-and-forget pattern.
             /// </summary>
-            public readonly object DrainLock = new();
+            internal readonly object DrainLock = new();
 
             /// <summary>
             /// Pending writes channel — unbounded, writers never block.
             /// </summary>
-            public readonly Channel<IPersistentRepresentation> PendingWrites =
+            internal readonly Channel<IPersistentRepresentation> PendingWrites =
                 Channel.CreateUnbounded<IPersistentRepresentation>(
                     new UnboundedChannelOptions { SingleWriter = false, SingleReader = true });
 
             /// <summary>
             /// All events in append-only order (for AllEvents queries).
             /// </summary>
-            public ImmutableList<IPersistentRepresentation> EventLog = ImmutableList<IPersistentRepresentation>.Empty;
+            internal ImmutableList<IPersistentRepresentation> EventLog = ImmutableList<IPersistentRepresentation>.Empty;
 
             /// <summary>
             /// Events indexed by persistence ID for O(1) recovery lookup.
             /// </summary>
-            public ImmutableDictionary<string, ImmutableList<IPersistentRepresentation>> EventsByPersistenceId =
+            internal ImmutableDictionary<string, ImmutableList<IPersistentRepresentation>> EventsByPersistenceId =
                 ImmutableDictionary<string, ImmutableList<IPersistentRepresentation>>.Empty;
 
             /// <summary>
             /// Tracks logical deletion markers per persistence ID.
             /// </summary>
-            public ImmutableDictionary<string, long> DeletedTo = ImmutableDictionary<string, long>.Empty;
+            internal ImmutableDictionary<string, long> DeletedTo = ImmutableDictionary<string, long>.Empty;
         }
 
         private readonly JournalStorage _storage = new();
