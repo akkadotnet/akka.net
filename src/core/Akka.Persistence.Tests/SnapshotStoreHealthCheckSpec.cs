@@ -72,15 +72,20 @@ public class SnapshotStoreHealthCheckSpec : PersistenceSpec
         var saveMsg = new SaveSnapshot(new SnapshotMetadata("test-pid", 1, DateTime.UtcNow), "test-snapshot");
         snapshotStore.Tell(saveMsg, TestActor);
 
+        await ExpectMsgAsync<SaveSnapshotFailure>();
+
         // Advance time to let the save fail and circuit breaker open
         var testScheduler = (TestScheduler)Sys.Scheduler;
         testScheduler.Advance(TimeSpan.FromSeconds(2));
 
-        using var cts = new CancellationTokenSource(RemainingOrDefault);
-        var pluginHealth = await Extension.CheckSnapshotStoreHealthAsync("akka.persistence.snapshot-store.failing-open", cts.Token);
+        await AwaitAssertAsync(async () =>
+        {
+            using var cts = new CancellationTokenSource(RemainingOrDefault);
+            var pluginHealth = await Extension.CheckSnapshotStoreHealthAsync("akka.persistence.snapshot-store.failing-open", cts.Token);
 
-        Assert.Equal(PersistenceHealthStatus.Degraded, pluginHealth.Status);
-        Assert.Contains("Circuit breaker is open", pluginHealth.Description);
+            Assert.Equal(PersistenceHealthStatus.Degraded, pluginHealth.Status);
+            Assert.Contains("Circuit breaker is open", pluginHealth.Description);
+        }, RemainingOrDefault);
     }
 
     [Fact]
@@ -93,25 +98,21 @@ public class SnapshotStoreHealthCheckSpec : PersistenceSpec
         var saveMsg = new SaveSnapshot(new SnapshotMetadata("test-pid", 1, DateTime.UtcNow), "test-snapshot");
         snapshotStore.Tell(saveMsg, TestActor);
 
+        await ExpectMsgAsync<SaveSnapshotFailure>();
+
         var testScheduler = (TestScheduler)Sys.Scheduler;
-
-        // Advance time past call-timeout to let the save fail and circuit breaker open
-        testScheduler.Advance(TimeSpan.FromSeconds(1));
-
-        // Give the async operations time to complete
-        await Task.Delay(100);
 
         // Advance time past reset-timeout to transition to half-open
         testScheduler.Advance(TimeSpan.FromSeconds(1));
 
-        // Give the transition time to complete
-        await Task.Delay(100);
+        await AwaitAssertAsync(async () =>
+        {
+            using var cts = new CancellationTokenSource(RemainingOrDefault);
+            var pluginHealth = await Extension.CheckSnapshotStoreHealthAsync("akka.persistence.snapshot-store.failing-half-open", cts.Token);
 
-        using var cts = new CancellationTokenSource(RemainingOrDefault);
-        var pluginHealth = await Extension.CheckSnapshotStoreHealthAsync("akka.persistence.snapshot-store.failing-half-open", cts.Token);
-
-        Assert.Equal(PersistenceHealthStatus.Degraded, pluginHealth.Status);
-        Assert.Contains("Circuit breaker is half-open", pluginHealth.Description);
+            Assert.Equal(PersistenceHealthStatus.Degraded, pluginHealth.Status);
+            Assert.Contains("Circuit breaker is half-open", pluginHealth.Description);
+        }, RemainingOrDefault);
     }
 }
 

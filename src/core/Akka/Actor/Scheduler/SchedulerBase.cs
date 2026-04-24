@@ -32,10 +32,10 @@ namespace Akka.Actor
         protected readonly ILoggingAdapter Log;
 
         /// <summary>
-        /// TBD
+        /// Initializes a new instance of the scheduler with the provided configuration and logging adapter.
         /// </summary>
-        /// <param name="scheduler">TBD</param>
-        /// <param name="log">TBD</param>
+        /// <param name="scheduler">The HOCON configuration section for this scheduler implementation.</param>
+        /// <param name="log">The logging adapter used to emit scheduler diagnostics.</param>
         protected SchedulerBase(Config scheduler, ILoggingAdapter log)
         {
             SchedulerConfig = scheduler;
@@ -121,57 +121,57 @@ namespace Akka.Actor
         public abstract TimeSpan HighResMonotonicClock { get; }
 
         /// <summary>
-        /// TBD
+        /// Schedules a single message delivery to an actor after a specified delay.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="delay">The time to wait before delivering the message.</param>
+        /// <param name="receiver">The target actor or <see cref="ICanTell"/> endpoint.</param>
+        /// <param name="message">The message to deliver.</param>
+        /// <param name="sender">The actor to set as the sender of the message, or <see langword="null"/>.</param>
+        /// <param name="cancelable">An optional token that can be used to cancel the scheduled delivery.</param>
         protected abstract void InternalScheduleTellOnce(TimeSpan delay, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
         /// <summary>
-        /// TBD
+        /// Schedules repeated message deliveries to an actor, starting after an initial delay.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="receiver">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="sender">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="initialDelay">The time to wait before the first delivery.</param>
+        /// <param name="interval">The time between subsequent deliveries.</param>
+        /// <param name="receiver">The target actor or <see cref="ICanTell"/> endpoint.</param>
+        /// <param name="message">The message to deliver.</param>
+        /// <param name="sender">The actor to set as the sender of the message, or <see langword="null"/>.</param>
+        /// <param name="cancelable">An optional token that can be used to cancel the scheduled deliveries.</param>
         protected abstract void InternalScheduleTellRepeatedly(TimeSpan initialDelay, TimeSpan interval, ICanTell receiver, object message, IActorRef sender, ICancelable cancelable);
 
         /// <summary>
-        /// TBD
+        /// Schedules an <see cref="Action"/> to be invoked once after a specified delay.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="delay">The time to wait before invoking the action.</param>
+        /// <param name="action">The delegate to invoke.</param>
+        /// <param name="cancelable">An optional token that can be used to cancel the scheduled invocation.</param>
         protected abstract void InternalScheduleOnce(TimeSpan delay, Action action, ICancelable cancelable);
 
         /// <summary>
-        /// TBD
+        /// Schedules an <see cref="IRunnable"/> to be executed once after a specified delay.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="delay">The time to wait before executing the runnable.</param>
+        /// <param name="action">The <see cref="IRunnable"/> to execute.</param>
+        /// <param name="cancelable">An optional token that can be used to cancel the scheduled execution.</param>
         protected abstract void InternalScheduleOnce(TimeSpan delay, IRunnable action, ICancelable cancelable);
 
         /// <summary>
-        /// TBD
+        /// Schedules an <see cref="Action"/> to be invoked repeatedly, starting after an initial delay.
         /// </summary>
-        /// <param name="initialDelay">TBD</param>
-        /// <param name="interval">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <param name="cancelable">TBD</param>
+        /// <param name="initialDelay">The time to wait before the first invocation.</param>
+        /// <param name="interval">The time between subsequent invocations.</param>
+        /// <param name="action">The delegate to invoke.</param>
+        /// <param name="cancelable">An optional token that can be used to cancel the scheduled invocations.</param>
         protected abstract void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, Action action, ICancelable cancelable);
 
         protected abstract void InternalScheduleRepeatedly(TimeSpan initialDelay, TimeSpan interval, IRunnable action, ICancelable cancelable);
 
         /// <summary>
-        /// TBD
+        /// Validates that <paramref name="interval"/> is greater than zero.
         /// </summary>
-        /// <param name="interval">TBD</param>
-        /// <param name="parameterName">TBD</param>
+        /// <param name="interval">The interval value to validate.</param>
+        /// <param name="parameterName">The caller's parameter name, used in the exception message.</param>
         /// <exception cref="ArgumentOutOfRangeException">This exception is thrown if the given <paramref name="interval"/> is negative or zero.</exception>
         protected static void ValidateInterval(TimeSpan interval, string parameterName)
         {
@@ -180,10 +180,10 @@ namespace Akka.Actor
         }
 
         /// <summary>
-        /// TBD
+        /// Validates that <paramref name="delay"/> is not negative.
         /// </summary>
-        /// <param name="delay">TBD</param>
-        /// <param name="parameterName">TBD</param>
+        /// <param name="delay">The delay value to validate.</param>
+        /// <param name="parameterName">The caller's parameter name, used in the exception message.</param>
         /// <exception cref="ArgumentOutOfRangeException">This exception is thrown if the given <paramref name="delay"/> is negative.</exception>
         protected static void ValidateDelay(TimeSpan delay, string parameterName)
         {

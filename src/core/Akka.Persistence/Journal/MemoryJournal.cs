@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="MemoryJournal.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
@@ -19,54 +20,87 @@ namespace Akka.Persistence.Journal
 {
     /// <summary>
     /// In-memory journal for testing purposes.
+    ///
+    /// Uses a channel-based drain-on-read pattern with immutable collections to handle
+    /// the concurrent access pattern imposed by AsyncWriteJournal. Writes enqueue to
+    /// an unbounded channel (never blocking), and reads drain the channel first to ensure
+    /// all pending writes are visible before returning results.
     /// </summary>
     public class MemoryJournal : AsyncWriteJournal
     {
         /// <summary>
-        /// All events in append-only order (for AllEvents queries).
+        /// Storage container for journal data. Encapsulates the pending writes channel
+        /// and immutable snapshot state.
         /// </summary>
-        private readonly List<IPersistentRepresentation> _eventLog = new();
+        protected sealed class JournalStorage
+        {
+            /// <summary>
+            /// Lock for serializing drain operations. Reads can happen concurrently
+            /// from multiple thread pool threads due to AsyncWriteJournal's fire-and-forget pattern.
+            /// </summary>
+            internal readonly object DrainLock = new();
+
+            /// <summary>
+            /// Pending writes channel — unbounded, writers never block.
+            /// </summary>
+            internal readonly Channel<IPersistentRepresentation> PendingWrites =
+                Channel.CreateUnbounded<IPersistentRepresentation>(
+                    new UnboundedChannelOptions { SingleWriter = false, SingleReader = true });
+
+            /// <summary>
+            /// All events in append-only order (for AllEvents queries).
+            /// </summary>
+            internal ImmutableList<IPersistentRepresentation> EventLog = ImmutableList<IPersistentRepresentation>.Empty;
+
+            /// <summary>
+            /// Events indexed by persistence ID for O(1) recovery lookup.
+            /// </summary>
+            internal ImmutableDictionary<string, ImmutableList<IPersistentRepresentation>> EventsByPersistenceId =
+                ImmutableDictionary<string, ImmutableList<IPersistentRepresentation>>.Empty;
+
+            /// <summary>
+            /// Tracks logical deletion markers per persistence ID.
+            /// </summary>
+            internal ImmutableDictionary<string, long> DeletedTo = ImmutableDictionary<string, long>.Empty;
+        }
+
+        private readonly JournalStorage _storage = new();
 
         /// <summary>
-        /// Events indexed by persistence ID for O(1) recovery lookup.
-        /// Maintained on write to avoid O(n) scans across all entities during recovery.
+        /// Storage property for accessing journal data. Override in subclasses to share storage.
         /// </summary>
-        private readonly Dictionary<string, List<IPersistentRepresentation>> _eventsByPersistenceId = new();
+        protected virtual JournalStorage Storage => _storage;
 
-        private readonly ReaderWriterLockSlim _lock = new(LockRecursionPolicy.NoRecursion);
-        private readonly Dictionary<string, long> _deletedTo = new();
+        /// <summary>
+        /// Drains all pending writes from the channel into the immutable snapshot state.
+        /// Must be called before any read operation to ensure all writes are visible.
+        /// </summary>
+        private void DrainPendingWrites()
+        {
+            lock (Storage.DrainLock)
+            {
+                while (Storage.PendingWrites.Reader.TryRead(out var item))
+                {
+                    Storage.EventLog = Storage.EventLog.Add(item);
 
-        protected virtual List<IPersistentRepresentation> EventLog => _eventLog;
-        protected virtual Dictionary<string, List<IPersistentRepresentation>> EventsByPersistenceId => _eventsByPersistenceId;
-        protected virtual ReaderWriterLockSlim Lock => _lock;
-        protected virtual Dictionary<string, long> DeletedTo => _deletedTo;
+                    var pid = item.PersistenceId;
+                    var existing = Storage.EventsByPersistenceId.GetValueOrDefault(
+                        pid, ImmutableList<IPersistentRepresentation>.Empty);
+                    Storage.EventsByPersistenceId = Storage.EventsByPersistenceId.SetItem(pid, existing.Add(item));
+                }
+            }
+        }
 
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
-            Lock.EnterWriteLock();
-            try
+            foreach (var w in messages)
             {
-                foreach (var w in messages)
+                foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
                 {
-                    foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
-                    {
-                        var persistentRepresentation = p.WithTimestamp(DateTime.UtcNow.Ticks);
-
-                        // Maintain both indexes on write
-                        EventLog.Add(persistentRepresentation);
-
-                        if (!EventsByPersistenceId.TryGetValue(persistentRepresentation.PersistenceId, out var pidEvents))
-                        {
-                            pidEvents = new List<IPersistentRepresentation>();
-                            EventsByPersistenceId[persistentRepresentation.PersistenceId] = pidEvents;
-                        }
-                        pidEvents.Add(persistentRepresentation);
-                    }
+                    var timestamped = p.WithTimestamp(DateTime.UtcNow.Ticks);
+                    // Non-blocking write to channel — TryWrite always succeeds on unbounded channel
+                    Storage.PendingWrites.Writer.TryWrite(timestamped);
                 }
-            }
-            finally
-            {
-                Lock.ExitWriteLock();
             }
 
             return Task.FromResult<IImmutableList<Exception>>(null);
@@ -74,59 +108,33 @@ namespace Akka.Persistence.Journal
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
-            Lock.EnterReadLock();
-            try
-            {
-                // Use index for O(1) lookup instead of O(n) scan
-                if (!EventsByPersistenceId.TryGetValue(persistenceId, out var events) || events.Count == 0)
-                    return Task.FromResult(0L);
+            DrainPendingWrites();
 
-                var highest = events[events.Count - 1].SequenceNr;
+            if (!Storage.EventsByPersistenceId.TryGetValue(persistenceId, out var events) || events.IsEmpty)
+                return Task.FromResult(0L);
 
-                // Return actual highest sequence number from journal
-                // Deletion is logical only - events remain in index
-                return Task.FromResult(highest);
-            }
-            finally
-            {
-                Lock.ExitReadLock();
-            }
+            return Task.FromResult(events[events.Count - 1].SequenceNr);
         }
 
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
-            IPersistentRepresentation[] messages;
+            DrainPendingWrites();
 
-            Lock.EnterReadLock();
-            try
+            if (Storage.EventsByPersistenceId.TryGetValue(persistenceId, out var pidEvents))
             {
-                // Use index for O(events_for_entity) instead of O(total_events)
-                if (!EventsByPersistenceId.TryGetValue(persistenceId, out var pidEvents))
+                var deletedToSeq = Storage.DeletedTo.GetValueOrDefault(persistenceId, 0L);
+
+                var messages = pidEvents
+                    .Where(e => e.SequenceNr > deletedToSeq
+                             && e.SequenceNr >= fromSequenceNr
+                             && e.SequenceNr <= toSequenceNr)
+                    .Take(max > int.MaxValue ? int.MaxValue : (int)max);
+
+                foreach (var message in messages)
                 {
-                    messages = Array.Empty<IPersistentRepresentation>();
+                    recoveryCallback(message);
                 }
-                else
-                {
-                    var deletedToSeq = DeletedTo.GetValueOrDefault(persistenceId, 0L);
-
-                    messages = pidEvents
-                        .Where(e => e.SequenceNr > deletedToSeq  // Skip deleted messages
-                                 && e.SequenceNr >= fromSequenceNr
-                                 && e.SequenceNr <= toSequenceNr)
-                        .Take(max > int.MaxValue ? int.MaxValue : (int)max)
-                        .ToArray();
-                }
-            }
-            finally
-            {
-                Lock.ExitReadLock();
-            }
-
-            // Execute callbacks outside the lock to avoid potential deadlocks
-            foreach (var message in messages)
-            {
-                recoveryCallback(message);
             }
 
             return Task.CompletedTask;
@@ -134,17 +142,10 @@ namespace Akka.Persistence.Journal
 
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {
-            Lock.EnterWriteLock();
-            try
-            {
-                // Track deletion marker instead of actually removing events
-                // This is simpler and matches the semantics (logical deletion)
-                DeletedTo[persistenceId] = toSequenceNr;
-            }
-            finally
-            {
-                Lock.ExitWriteLock();
-            }
+            DrainPendingWrites();
+
+            var currentDeleted = Storage.DeletedTo.GetValueOrDefault(persistenceId, 0L);
+            Storage.DeletedTo = Storage.DeletedTo.SetItem(persistenceId, Math.Max(currentDeleted, toSequenceNr));
 
             return Task.CompletedTask;
         }
@@ -154,38 +155,17 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public IDictionary<string, LinkedList<IPersistentRepresentation>> Add(IPersistentRepresentation persistent)
         {
-            Lock.EnterWriteLock();
-            try
-            {
-                var timestamped = persistent.WithTimestamp(DateTime.UtcNow.Ticks);
+            var timestamped = persistent.WithTimestamp(DateTime.UtcNow.Ticks);
 
-                // Maintain both indexes
-                EventLog.Add(timestamped);
+            // Non-blocking write to channel
+            Storage.PendingWrites.Writer.TryWrite(timestamped);
 
-                if (!EventsByPersistenceId.TryGetValue(timestamped.PersistenceId, out var pidEvents))
-                {
-                    pidEvents = new List<IPersistentRepresentation>();
-                    EventsByPersistenceId[timestamped.PersistenceId] = pidEvents;
-                }
-                pidEvents.Add(timestamped);
-            }
-            finally
-            {
-                Lock.ExitWriteLock();
-            }
+            // Drain and build return value for API compatibility
+            DrainPendingWrites();
 
-            // Return view of all messages as LinkedList per persistence ID for API compatibility
-            Lock.EnterReadLock();
-            try
-            {
-                return EventsByPersistenceId.ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => new LinkedList<IPersistentRepresentation>(kvp.Value));
-            }
-            finally
-            {
-                Lock.ExitReadLock();
-            }
+            return Storage.EventsByPersistenceId.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new LinkedList<IPersistentRepresentation>(kvp.Value));
         }
 
         /// <summary>
@@ -194,31 +174,15 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public IDictionary<string, LinkedList<IPersistentRepresentation>> Delete(string pid, long seqNr)
         {
-            Lock.EnterWriteLock();
-            try
-            {
-                var currentDeleted = DeletedTo.GetValueOrDefault(pid, 0L);
-                DeletedTo[pid] = Math.Max(currentDeleted, seqNr);
-            }
-            finally
-            {
-                Lock.ExitWriteLock();
-            }
+            DrainPendingWrites();
 
-            // Return view of non-deleted messages as LinkedList per persistence ID for API compatibility
-            // Use index instead of scanning entire event log
-            Lock.EnterReadLock();
-            try
-            {
-                return EventsByPersistenceId.ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => new LinkedList<IPersistentRepresentation>(
-                        kvp.Value.Where(e => e.SequenceNr > DeletedTo.GetValueOrDefault(kvp.Key, 0L))));
-            }
-            finally
-            {
-                Lock.ExitReadLock();
-            }
+            var currentDeleted = Storage.DeletedTo.GetValueOrDefault(pid, 0L);
+            Storage.DeletedTo = Storage.DeletedTo.SetItem(pid, Math.Max(currentDeleted, seqNr));
+
+            return Storage.EventsByPersistenceId.ToDictionary(
+                kvp => kvp.Key,
+                kvp => new LinkedList<IPersistentRepresentation>(
+                    kvp.Value.Where(e => e.SequenceNr > Storage.DeletedTo.GetValueOrDefault(kvp.Key, 0L))));
         }
 
         /// <summary>
@@ -226,26 +190,19 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public IEnumerable<IPersistentRepresentation> Read(string pid, long from, long to, long max)
         {
-            Lock.EnterReadLock();
-            try
-            {
-                // Use index for O(events_for_entity) instead of O(total_events)
-                if (!EventsByPersistenceId.TryGetValue(pid, out var pidEvents))
-                    return Array.Empty<IPersistentRepresentation>();
+            DrainPendingWrites();
 
-                var deletedToSeq = DeletedTo.GetValueOrDefault(pid, 0L);
+            if (!Storage.EventsByPersistenceId.TryGetValue(pid, out var pidEvents))
+                return Array.Empty<IPersistentRepresentation>();
 
-                return pidEvents
-                    .Where(e => e.SequenceNr > deletedToSeq
-                             && e.SequenceNr >= from
-                             && e.SequenceNr <= to)
-                    .Take(max > int.MaxValue ? int.MaxValue : (int)max)
-                    .ToArray(); // Materialize under lock
-            }
-            finally
-            {
-                Lock.ExitReadLock();
-            }
+            var deletedToSeq = Storage.DeletedTo.GetValueOrDefault(pid, 0L);
+
+            return pidEvents
+                .Where(e => e.SequenceNr > deletedToSeq
+                         && e.SequenceNr >= from
+                         && e.SequenceNr <= to)
+                .Take(max > int.MaxValue ? int.MaxValue : (int)max)
+                .ToArray();
         }
 
         /// <summary>
@@ -253,21 +210,12 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public long HighestSequenceNr(string pid)
         {
-            Lock.EnterReadLock();
-            try
-            {
-                // Use index for O(1) lookup instead of O(n) scan
-                if (!EventsByPersistenceId.TryGetValue(pid, out var events) || events.Count == 0)
-                    return 0L;
+            DrainPendingWrites();
 
-                // Return actual highest sequence number from journal
-                // Deletion is logical only - events remain in index
-                return events[events.Count - 1].SequenceNr;
-            }
-            finally
-            {
-                Lock.ExitReadLock();
-            }
+            if (!Storage.EventsByPersistenceId.TryGetValue(pid, out var events) || events.IsEmpty)
+                return 0L;
+
+            return events[events.Count - 1].SequenceNr;
         }
 
         protected override bool ReceivePluginInternal(object message)
@@ -297,19 +245,10 @@ namespace Akka.Persistence.Journal
 
         private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            HashSet<string> ids;
-            int count;
+            DrainPendingWrites();
 
-            Lock.EnterReadLock();
-            try
-            {
-                ids = new HashSet<string>(EventLog.Skip(offset).Select(p => p.PersistenceId));
-                count = EventLog.Count;
-            }
-            finally
-            {
-                Lock.ExitReadLock();
-            }
+            var ids = new HashSet<string>(Storage.EventLog.Skip(offset).Select(p => p.PersistenceId));
+            var count = Storage.EventLog.Count;
 
             return Task.FromResult<(IEnumerable<string> Ids, int LastOrdering)>((ids, count));
         }
@@ -319,27 +258,16 @@ namespace Akka.Persistence.Journal
         /// </summary>
         private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
-            IPersistentRepresentation[] snapshot;
-            int count;
+            DrainPendingWrites();
 
-            Lock.EnterReadLock();
-            try
-            {
-                // Scan for events with matching tag
-                snapshot = EventLog
-                    .Where(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag))
-                    .Skip(replay.FromOffset)
-                    .Take(replay.Max)
-                    .ToArray();
+            var snapshot = Storage.EventLog
+                .Where(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag))
+                .Skip(replay.FromOffset)
+                .Take(replay.Max)
+                .ToArray();
 
-                count = EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
-            }
-            finally
-            {
-                Lock.ExitReadLock();
-            }
+            var count = Storage.EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
 
-            // Send messages outside the lock to avoid potential deadlocks
             var index = 0;
             foreach (var persistence in snapshot)
             {
@@ -352,25 +280,15 @@ namespace Akka.Persistence.Journal
 
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            IPersistentRepresentation[] snapshot;
-            int count;
+            DrainPendingWrites();
 
-            Lock.EnterReadLock();
-            try
-            {
-                snapshot = EventLog
-                    .Skip(replay.FromOffset)
-                    .Take((int)replay.Max)
-                    .ToArray();
+            var snapshot = Storage.EventLog
+                .Skip(replay.FromOffset)
+                .Take((int)replay.Max)
+                .ToArray();
 
-                count = EventLog.Count;
-            }
-            finally
-            {
-                Lock.ExitReadLock();
-            }
+            var count = Storage.EventLog.Count;
 
-            // Send messages outside the lock to avoid potential deadlocks
             var index = 0;
             foreach (var message in snapshot)
             {
@@ -624,14 +542,8 @@ namespace Akka.Persistence.Journal
 
     public class SharedMemoryJournal : MemoryJournal
     {
-        private static readonly List<IPersistentRepresentation> SharedEventLog = new();
-        private static readonly Dictionary<string, List<IPersistentRepresentation>> SharedEventsByPersistenceId = new();
-        private static readonly ReaderWriterLockSlim SharedLock = new(LockRecursionPolicy.NoRecursion);
-        private static readonly Dictionary<string, long> SharedDeletedTo = new();
+        private static readonly JournalStorage SharedStorage = new();
 
-        protected override List<IPersistentRepresentation> EventLog => SharedEventLog;
-        protected override Dictionary<string, List<IPersistentRepresentation>> EventsByPersistenceId => SharedEventsByPersistenceId;
-        protected override ReaderWriterLockSlim Lock => SharedLock;
-        protected override Dictionary<string, long> DeletedTo => SharedDeletedTo;
+        protected override JournalStorage Storage => SharedStorage;
     }
 }

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Akka.Streams.Stage;
 using Akka.Streams.Util;
 using Akka.Util;
+using Akka.Util.Internal;
 
 namespace Akka.Streams.Dsl
 {
@@ -60,7 +61,7 @@ namespace Akka.Streams.Dsl
 
         public override ILogicAndMaterializedValue<Task<Option<T>>> CreateLogicAndMaterializedValue(Attributes inheritedAttributes)
         {
-            var completion = new TaskCompletionSource<Option<T>>();
+            var completion = TaskEx.NonBlockingTaskCompletionSource<Option<T>>();
             var logic = new Logic(this, completion);
 
             return new LogicAndMaterializedValue<Task<Option<T>>>(logic, completion.Task);
