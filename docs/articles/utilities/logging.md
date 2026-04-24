@@ -125,8 +125,8 @@ The choice between `WithContext` and `BeginScope` depends on how long the contex
 
 Akka.NET comes with two built in loggers.
 
-* __StandardOutLogger__
-* __BusLogging__
+* **StandardOutLogger**
+* **BusLogging**
 
 ### StandardOutLogger
 
@@ -144,21 +144,21 @@ that inherits/implements the `MinimalLogger` abstract class and passing the full
 name into the `akka.stdout-logger-class` HOCON settings.
 
 > [!WARNING]
-> Be aware that `MinimalLogger` implementations are __NOT__ real actors and will __NOT__ have any
+> Be aware that `MinimalLogger` implementations are **NOT** real actors and will **NOT** have any
 > access to the `ActorSystem` and all of its extensions. All logging done inside a `MinimalLogger`
 > have to be done in as simple as possible manner since it is used to log how other loggers are
 > behaving at the very start and very end of the `ActorSystem` life cycle.
 >
-> Note that `MinimalLogger` are __NOT__ interchangeable with other Akka.NET loggers and there can
+> Note that `MinimalLogger` are **NOT** interchangeable with other Akka.NET loggers and there can
 > only be one `MinimalLogger` registered with the `ActorSystem` in the HOCON settings.
 
 ## Third Party Loggers
 
 These loggers are also available as separate nuget packages
 
-* __Akka.Logger.Serilog__ which logs using [serilog](http://serilog.net/). See [Detailed instructions on using Serilog](xref:serilog).
-* __Akka.Logger.NLog__  which logs using [NLog](http://nlog-project.org/)
-* __Microsoft.Extensions.Logging__ - which is [built into Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting#microsoftextensionslogging-integration).
+* **Akka.Logger.Serilog** which logs using [serilog](http://serilog.net/). See [Detailed instructions on using Serilog](xref:serilog).
+* **Akka.Logger.NLog**  which logs using [NLog](http://nlog-project.org/)
+* **Microsoft.Extensions.Logging** - which is [built into Akka.Hosting](https://github.com/akkadotnet/Akka.Hosting#microsoftextensionslogging-integration).
 
 Note that you need to modify the config as explained below.
 
