@@ -75,6 +75,12 @@ namespace Akka.Persistence.Tests
                 .ShouldOnlyContainInOrder(ordered);
         }
 
+        protected async Task ExpectMsgInOrderAsync(params object[] ordered)
+        {
+            var msg = await ExpectMsgAsync<object[]>();
+            msg.ShouldOnlyContainInOrder(ordered);
+        }
+
         protected void ExpectAnyMsgInOrder(params IEnumerable<object>[] expected)
         {
             var msg = ExpectMsg<object[]>();
