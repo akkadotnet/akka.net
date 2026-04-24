@@ -56,6 +56,12 @@ namespace Akka.Persistence.Tests
             private CrashMessage() { }
         }
 
+        internal class CrashMessagePersisted
+        {
+            public static readonly CrashMessagePersisted Instance = new();
+            private CrashMessagePersisted() { }
+        }
+
         internal class SendingMessage
         {
             public SendingMessage(long deliveryId, bool isRecovering)
@@ -104,7 +110,13 @@ namespace Akka.Persistence.Tests
             protected override bool ReceiveCommand(object message)
             {
                 if (message is Message message1) Persist(message1, _ => Send());
-                else if (message is CrashMessage crashMessage) Persist(crashMessage, _ => { });
+                else if (message is CrashMessage crashMessage) Persist(crashMessage, _ =>
+                {
+                    // Signal that the CrashMessage has been persisted
+                    // This is necessary to avoid a race condition where the supervisor
+                    // is stopped before the CrashMessage is persisted to the journal
+                    _testProbe.Tell(CrashMessagePersisted.Instance);
+                });
                 else return false;
                 return true;
             }
@@ -122,7 +134,7 @@ namespace Akka.Persistence.Tests
         {
         }
 
-        [LocalFact(SkipLocal = "Racy on Azure DevOps")]
+        [Fact]
         public void AtLeastOnceDelivery_should_not_send_when_actor_crashes()
         {
             var testProbe = CreateTestProbe();
@@ -132,6 +144,12 @@ namespace Akka.Persistence.Tests
             testProbe.ExpectMsg<SendingMessage>();
 
             supervisor.Tell(CrashMessage.Instance);
+            // Wait for the CrashMessage to be persisted before stopping the supervisor
+            // This fixes a race condition where the supervisor could be stopped before
+            // the CrashMessage is written to the journal, causing recovery to succeed
+            // instead of crash (which would then trigger OnReplaySuccess and send messages)
+            testProbe.ExpectMsg<CrashMessagePersisted>();
+
             var deathProbe = CreateTestProbe();
             deathProbe.Watch(supervisor);
             Sys.Stop(supervisor);
