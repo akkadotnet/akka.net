@@ -12,6 +12,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Util.Internal;
 
 namespace Akka.Persistence.Snapshot
@@ -22,14 +23,22 @@ namespace Akka.Persistence.Snapshot
     /// In-memory SnapshotStore implementation.
     ///
     /// Uses a channel-based drain-on-read pattern with immutable collections to handle
-    /// the concurrent access pattern imposed by SnapshotStore. Writes enqueue to
-    /// an unbounded channel (never blocking), and reads drain the channel first to ensure
-    /// all pending writes are visible before returning results.
+    /// the concurrent access pattern imposed by SnapshotStore. All mutations (writes
+    /// and deletes) enqueue to an unbounded channel (never blocking), and reads drain
+    /// the channel first to ensure all pending operations are visible before returning results.
     /// </summary>
     public class MemorySnapshotStore : SnapshotStore
     {
         /// <summary>
-        /// Storage container for snapshot data. Encapsulates the pending writes channel
+        /// Represents a snapshot operation — either a write or a delete.
+        /// </summary>
+        internal readonly record struct SnapshotOperation(
+            SnapshotEntry? Write = null,
+            SnapshotMetadata? DeleteByMetadata = null,
+            (string PersistenceId, SnapshotSelectionCriteria Criteria)? DeleteByCriteria = null);
+
+        /// <summary>
+        /// Storage container for snapshot data. Encapsulates the pending operations channel
         /// and immutable snapshot state.
         /// </summary>
         protected sealed class SnapshotStorage
@@ -41,10 +50,21 @@ namespace Akka.Persistence.Snapshot
             internal readonly object DrainLock = new();
 
             /// <summary>
-            /// Pending writes channel — unbounded, writers never block.
+            /// Tracks number of in-flight write/delete operations that have been dispatched
+            /// but not yet completed. Reads must wait for this to reach zero.
             /// </summary>
-            internal readonly Channel<SnapshotEntry> PendingWrites =
-                Channel.CreateUnbounded<SnapshotEntry>(
+            internal int InFlightOps;
+
+            /// <summary>
+            /// Event signaled when InFlightOps reaches zero.
+            /// </summary>
+            internal readonly ManualResetEventSlim InFlightComplete = new(true);
+
+            /// <summary>
+            /// Pending operations channel — unbounded, writers never block.
+            /// </summary>
+            internal readonly Channel<SnapshotOperation> PendingOps =
+                Channel.CreateUnbounded<SnapshotOperation>(
                     new UnboundedChannelOptions { SingleWriter = false, SingleReader = true });
 
             /// <summary>
@@ -61,26 +81,77 @@ namespace Akka.Persistence.Snapshot
         protected virtual SnapshotStorage Storage => _storage;
 
         /// <summary>
-        /// Drains all pending writes from the channel into the immutable snapshot state.
-        /// Must be called before any read operation to ensure all writes are visible.
+        /// Tracks in-flight write/delete operations so reads can wait for pending ops to complete.
+        /// This ensures operations dispatched via fire-and-forget (with Task.Yield) are visible
+        /// before any read operations proceed.
         /// </summary>
-        private void DrainPendingWrites()
+        protected internal override bool AroundReceive(Receive receive, object message)
         {
+            switch (message)
+            {
+                case SaveSnapshot:
+                case DeleteSnapshot:
+                case DeleteSnapshots:
+                    // Increment in-flight counter before dispatch
+                    if (Interlocked.Increment(ref Storage.InFlightOps) == 1)
+                        Storage.InFlightComplete.Reset();
+                    break;
+            }
+
+            return base.AroundReceive(receive, message);
+        }
+
+        /// <summary>
+        /// Signals that an in-flight operation has completed.
+        /// </summary>
+        private void CompleteInFlightOp()
+        {
+            if (Interlocked.Decrement(ref Storage.InFlightOps) == 0)
+                Storage.InFlightComplete.Set();
+        }
+
+        /// <summary>
+        /// Drains all pending operations from the channel into the immutable snapshot state.
+        /// Must be called before any read operation to ensure all mutations are visible.
+        /// </summary>
+        private void DrainPendingOps()
+        {
+            // Wait for any in-flight write/delete operations to complete first
+            Storage.InFlightComplete.Wait();
+
             lock (Storage.DrainLock)
             {
-                while (Storage.PendingWrites.Reader.TryRead(out var item))
+                while (Storage.PendingOps.Reader.TryRead(out var op))
                 {
-                    var existingIndex = Storage.Snapshots.FindIndex(x => x.Id == item.Id);
+                    if (op.Write is { } item)
+                    {
+                        var existingIndex = Storage.Snapshots.FindIndex(x => x.Id == item.Id);
 
-                    if (existingIndex >= 0)
-                    {
-                        // Update existing snapshot by replacing it
-                        Storage.Snapshots = Storage.Snapshots.SetItem(existingIndex, item);
+                        if (existingIndex >= 0)
+                        {
+                            Storage.Snapshots = Storage.Snapshots.SetItem(existingIndex, item);
+                        }
+                        else
+                        {
+                            Storage.Snapshots = Storage.Snapshots.Add(item);
+                        }
                     }
-                    else
+                    else if (op.DeleteByMetadata is { } metadata)
                     {
-                        // Add new snapshot
-                        Storage.Snapshots = Storage.Snapshots.Add(item);
+                        bool Pred(SnapshotEntry x) => x.PersistenceId == metadata.PersistenceId
+                            && (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr)
+                            && (metadata.Timestamp == DateTime.MinValue || metadata.Timestamp == DateTime.MaxValue || x.Timestamp == metadata.Timestamp.Ticks);
+
+                        var snapshot = Storage.Snapshots.FirstOrDefault(Pred);
+                        if (snapshot != null)
+                        {
+                            Storage.Snapshots = Storage.Snapshots.Remove(snapshot);
+                        }
+                    }
+                    else if (op.DeleteByCriteria is { } deleteCriteria)
+                    {
+                        var filter = CreateRangeFilter(deleteCriteria.PersistenceId, deleteCriteria.Criteria);
+                        Storage.Snapshots = Storage.Snapshots.RemoveAll(x => filter(x));
                     }
                 }
             }
@@ -88,34 +159,33 @@ namespace Akka.Persistence.Snapshot
 
         protected override Task DeleteAsync(SnapshotMetadata metadata, CancellationToken cancellationToken)
         {
-            DrainPendingWrites();
-
-            bool Pred(SnapshotEntry x) => x.PersistenceId == metadata.PersistenceId
-                && (metadata.SequenceNr <= 0 || metadata.SequenceNr == long.MaxValue || x.SequenceNr == metadata.SequenceNr)
-                && (metadata.Timestamp == DateTime.MinValue || metadata.Timestamp == DateTime.MaxValue || x.Timestamp == metadata.Timestamp.Ticks);
-
-            var snapshot = Storage.Snapshots.FirstOrDefault(Pred);
-            if (snapshot != null)
+            try
             {
-                Storage.Snapshots = Storage.Snapshots.Remove(snapshot);
+                Storage.PendingOps.Writer.TryWrite(new SnapshotOperation(DeleteByMetadata: metadata));
+                return TaskEx.Completed;
             }
-
-            return TaskEx.Completed;
+            finally
+            {
+                CompleteInFlightOp();
+            }
         }
 
         protected override Task DeleteAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
-            DrainPendingWrites();
-
-            var filter = CreateRangeFilter(persistenceId, criteria);
-            Storage.Snapshots = Storage.Snapshots.RemoveAll(x => filter(x));
-
-            return TaskEx.Completed;
+            try
+            {
+                Storage.PendingOps.Writer.TryWrite(new SnapshotOperation(DeleteByCriteria: (persistenceId, criteria)));
+                return TaskEx.Completed;
+            }
+            finally
+            {
+                CompleteInFlightOp();
+            }
         }
 
         protected override Task<SelectedSnapshot> LoadAsync(string persistenceId, SnapshotSelectionCriteria criteria, CancellationToken cancellationToken)
         {
-            DrainPendingWrites();
+            DrainPendingOps();
 
             var filter = CreateRangeFilter(persistenceId, criteria);
             var snapshot = Storage.Snapshots
@@ -130,12 +200,16 @@ namespace Akka.Persistence.Snapshot
 
         protected override Task SaveAsync(SnapshotMetadata metadata, object snapshot, CancellationToken cancellationToken)
         {
-            var snapshotEntry = ToSnapshotEntry(metadata, snapshot);
-
-            // Non-blocking write to channel — TryWrite always succeeds on unbounded channel
-            Storage.PendingWrites.Writer.TryWrite(snapshotEntry);
-
-            return TaskEx.Completed;
+            try
+            {
+                var snapshotEntry = ToSnapshotEntry(metadata, snapshot);
+                Storage.PendingOps.Writer.TryWrite(new SnapshotOperation(Write: snapshotEntry));
+                return TaskEx.Completed;
+            }
+            finally
+            {
+                CompleteInFlightOp();
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

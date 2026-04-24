@@ -22,14 +22,22 @@ namespace Akka.Persistence.Journal
     /// In-memory journal for testing purposes.
     ///
     /// Uses a channel-based drain-on-read pattern with immutable collections to handle
-    /// the concurrent access pattern imposed by AsyncWriteJournal. Writes enqueue to
-    /// an unbounded channel (never blocking), and reads drain the channel first to ensure
-    /// all pending writes are visible before returning results.
+    /// the concurrent access pattern imposed by AsyncWriteJournal. All mutations (writes
+    /// and deletes) enqueue to an unbounded channel (never blocking), and reads drain
+    /// the channel first to ensure all pending operations are visible before returning results.
     /// </summary>
     public class MemoryJournal : AsyncWriteJournal
     {
         /// <summary>
-        /// Storage container for journal data. Encapsulates the pending writes channel
+        /// Represents a journal operation — either a write or a delete.
+        /// </summary>
+        internal readonly record struct JournalOperation(
+            IPersistentRepresentation? Write = null,
+            string? DeletePersistenceId = null,
+            long DeleteToSequenceNr = 0);
+
+        /// <summary>
+        /// Storage container for journal data. Encapsulates the pending operations channel
         /// and immutable snapshot state.
         /// </summary>
         protected sealed class JournalStorage
@@ -41,10 +49,21 @@ namespace Akka.Persistence.Journal
             internal readonly object DrainLock = new();
 
             /// <summary>
-            /// Pending writes channel — unbounded, writers never block.
+            /// Tracks number of in-flight write/delete operations that have been dispatched
+            /// but not yet completed. Reads must wait for this to reach zero.
             /// </summary>
-            internal readonly Channel<IPersistentRepresentation> PendingWrites =
-                Channel.CreateUnbounded<IPersistentRepresentation>(
+            internal int InFlightOps;
+
+            /// <summary>
+            /// Event signaled when InFlightOps reaches zero.
+            /// </summary>
+            internal readonly ManualResetEventSlim InFlightComplete = new(true);
+
+            /// <summary>
+            /// Pending operations channel — unbounded, writers never block.
+            /// </summary>
+            internal readonly Channel<JournalOperation> PendingOps =
+                Channel.CreateUnbounded<JournalOperation>(
                     new UnboundedChannelOptions { SingleWriter = false, SingleReader = true });
 
             /// <summary>
@@ -72,43 +91,88 @@ namespace Akka.Persistence.Journal
         protected virtual JournalStorage Storage => _storage;
 
         /// <summary>
-        /// Drains all pending writes from the channel into the immutable snapshot state.
-        /// Must be called before any read operation to ensure all writes are visible.
+        /// Tracks in-flight write/delete operations so reads can wait for pending ops to complete.
+        /// This ensures operations dispatched via fire-and-forget (with Task.Yield) are visible
+        /// before any read operations proceed.
         /// </summary>
-        private void DrainPendingWrites()
+        protected internal override bool AroundReceive(Receive receive, object message)
         {
+            switch (message)
+            {
+                case WriteMessages:
+                case DeleteMessagesTo:
+                    // Increment in-flight counter before dispatch
+                    if (Interlocked.Increment(ref Storage.InFlightOps) == 1)
+                        Storage.InFlightComplete.Reset();
+                    break;
+            }
+
+            return base.AroundReceive(receive, message);
+        }
+
+        /// <summary>
+        /// Signals that an in-flight operation has completed.
+        /// </summary>
+        private void CompleteInFlightOp()
+        {
+            if (Interlocked.Decrement(ref Storage.InFlightOps) == 0)
+                Storage.InFlightComplete.Set();
+        }
+
+        /// <summary>
+        /// Drains all pending operations from the channel into the immutable snapshot state.
+        /// Must be called before any read operation to ensure all mutations are visible.
+        /// </summary>
+        private void DrainPendingOps()
+        {
+            // Wait for any in-flight write/delete operations to complete first
+            Storage.InFlightComplete.Wait();
+
             lock (Storage.DrainLock)
             {
-                while (Storage.PendingWrites.Reader.TryRead(out var item))
+                while (Storage.PendingOps.Reader.TryRead(out var op))
                 {
-                    Storage.EventLog = Storage.EventLog.Add(item);
+                    if (op.Write is { } item)
+                    {
+                        Storage.EventLog = Storage.EventLog.Add(item);
 
-                    var pid = item.PersistenceId;
-                    var existing = Storage.EventsByPersistenceId.GetValueOrDefault(
-                        pid, ImmutableList<IPersistentRepresentation>.Empty);
-                    Storage.EventsByPersistenceId = Storage.EventsByPersistenceId.SetItem(pid, existing.Add(item));
+                        var pid = item.PersistenceId;
+                        var existing = Storage.EventsByPersistenceId.GetValueOrDefault(
+                            pid, ImmutableList<IPersistentRepresentation>.Empty);
+                        Storage.EventsByPersistenceId = Storage.EventsByPersistenceId.SetItem(pid, existing.Add(item));
+                    }
+                    else if (op.DeletePersistenceId is { } deletePid)
+                    {
+                        var currentDeleted = Storage.DeletedTo.GetValueOrDefault(deletePid, 0L);
+                        Storage.DeletedTo = Storage.DeletedTo.SetItem(deletePid, Math.Max(currentDeleted, op.DeleteToSequenceNr));
+                    }
                 }
             }
         }
 
         protected override Task<IImmutableList<Exception>> WriteMessagesAsync(IEnumerable<AtomicWrite> messages, CancellationToken cancellationToken)
         {
-            foreach (var w in messages)
+            try
             {
-                foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
+                foreach (var w in messages)
                 {
-                    var timestamped = p.WithTimestamp(DateTime.UtcNow.Ticks);
-                    // Non-blocking write to channel — TryWrite always succeeds on unbounded channel
-                    Storage.PendingWrites.Writer.TryWrite(timestamped);
+                    foreach (var p in (IEnumerable<IPersistentRepresentation>)w.Payload)
+                    {
+                        var timestamped = p.WithTimestamp(DateTime.UtcNow.Ticks);
+                        Storage.PendingOps.Writer.TryWrite(new JournalOperation(Write: timestamped));
+                    }
                 }
+                return Task.FromResult<IImmutableList<Exception>>(null);
             }
-
-            return Task.FromResult<IImmutableList<Exception>>(null);
+            finally
+            {
+                CompleteInFlightOp();
+            }
         }
 
         public override Task<long> ReadHighestSequenceNrAsync(string persistenceId, long fromSequenceNr, CancellationToken cancellationToken)
         {
-            DrainPendingWrites();
+            DrainPendingOps();
 
             if (!Storage.EventsByPersistenceId.TryGetValue(persistenceId, out var events) || events.IsEmpty)
                 return Task.FromResult(0L);
@@ -119,7 +183,7 @@ namespace Akka.Persistence.Journal
         public override Task ReplayMessagesAsync(IActorContext context, string persistenceId, long fromSequenceNr, long toSequenceNr, long max,
             Action<IPersistentRepresentation> recoveryCallback)
         {
-            DrainPendingWrites();
+            DrainPendingOps();
 
             if (Storage.EventsByPersistenceId.TryGetValue(persistenceId, out var pidEvents))
             {
@@ -142,12 +206,17 @@ namespace Akka.Persistence.Journal
 
         protected override Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, CancellationToken cancellationToken)
         {
-            DrainPendingWrites();
-
-            var currentDeleted = Storage.DeletedTo.GetValueOrDefault(persistenceId, 0L);
-            Storage.DeletedTo = Storage.DeletedTo.SetItem(persistenceId, Math.Max(currentDeleted, toSequenceNr));
-
-            return Task.CompletedTask;
+            try
+            {
+                Storage.PendingOps.Writer.TryWrite(new JournalOperation(
+                    DeletePersistenceId: persistenceId,
+                    DeleteToSequenceNr: toSequenceNr));
+                return Task.CompletedTask;
+            }
+            finally
+            {
+                CompleteInFlightOp();
+            }
         }
 
         /// <summary>
@@ -158,10 +227,10 @@ namespace Akka.Persistence.Journal
             var timestamped = persistent.WithTimestamp(DateTime.UtcNow.Ticks);
 
             // Non-blocking write to channel
-            Storage.PendingWrites.Writer.TryWrite(timestamped);
+            Storage.PendingOps.Writer.TryWrite(new JournalOperation(Write: timestamped));
 
             // Drain and build return value for API compatibility
-            DrainPendingWrites();
+            DrainPendingOps();
 
             return Storage.EventsByPersistenceId.ToDictionary(
                 kvp => kvp.Key,
@@ -174,10 +243,13 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public IDictionary<string, LinkedList<IPersistentRepresentation>> Delete(string pid, long seqNr)
         {
-            DrainPendingWrites();
+            // Enqueue the delete operation
+            Storage.PendingOps.Writer.TryWrite(new JournalOperation(
+                DeletePersistenceId: pid,
+                DeleteToSequenceNr: seqNr));
 
-            var currentDeleted = Storage.DeletedTo.GetValueOrDefault(pid, 0L);
-            Storage.DeletedTo = Storage.DeletedTo.SetItem(pid, Math.Max(currentDeleted, seqNr));
+            // Drain to apply it and return filtered results
+            DrainPendingOps();
 
             return Storage.EventsByPersistenceId.ToDictionary(
                 kvp => kvp.Key,
@@ -190,7 +262,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public IEnumerable<IPersistentRepresentation> Read(string pid, long from, long to, long max)
         {
-            DrainPendingWrites();
+            DrainPendingOps();
 
             if (!Storage.EventsByPersistenceId.TryGetValue(pid, out var pidEvents))
                 return Array.Empty<IPersistentRepresentation>();
@@ -210,7 +282,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         public long HighestSequenceNr(string pid)
         {
-            DrainPendingWrites();
+            DrainPendingOps();
 
             if (!Storage.EventsByPersistenceId.TryGetValue(pid, out var events) || events.IsEmpty)
                 return 0L;
@@ -245,7 +317,7 @@ namespace Akka.Persistence.Journal
 
         private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
-            DrainPendingWrites();
+            DrainPendingOps();
 
             var ids = new HashSet<string>(Storage.EventLog.Skip(offset).Select(p => p.PersistenceId));
             var count = Storage.EventLog.Count;
@@ -258,7 +330,7 @@ namespace Akka.Persistence.Journal
         /// </summary>
         private Task<int> ReplayTaggedMessagesAsync(ReplayTaggedMessages replay)
         {
-            DrainPendingWrites();
+            DrainPendingOps();
 
             var snapshot = Storage.EventLog
                 .Where(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag))
@@ -280,7 +352,7 @@ namespace Akka.Persistence.Journal
 
         private Task<int> ReplayAllEventsAsync(ReplayAllEvents replay)
         {
-            DrainPendingWrites();
+            DrainPendingOps();
 
             var snapshot = Storage.EventLog
                 .Skip(replay.FromOffset)

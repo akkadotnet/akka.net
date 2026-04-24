@@ -1070,6 +1070,7 @@ namespace Akka.Persistence.Journal
         public MemoryJournal() { }
         protected virtual Akka.Persistence.Journal.MemoryJournal.JournalStorage Storage { get; }
         public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Add(Akka.Persistence.IPersistentRepresentation persistent) { }
+        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         public System.Collections.Generic.IDictionary<string, System.Collections.Generic.LinkedList<Akka.Persistence.IPersistentRepresentation>> Delete(string pid, long seqNr) { }
         protected override System.Threading.Tasks.Task DeleteMessagesToAsync(string persistenceId, long toSequenceNr, System.Threading.CancellationToken cancellationToken) { }
         public long HighestSequenceNr(string pid) { }
@@ -1276,6 +1277,7 @@ namespace Akka.Persistence.Snapshot
     {
         public MemorySnapshotStore() { }
         protected virtual Akka.Persistence.Snapshot.MemorySnapshotStore.SnapshotStorage Storage { get; }
+        protected override bool AroundReceive(Akka.Actor.Receive receive, object message) { }
         protected override System.Threading.Tasks.Task DeleteAsync(Akka.Persistence.SnapshotMetadata metadata, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.Task DeleteAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken) { }
         protected override System.Threading.Tasks.Task<Akka.Persistence.SelectedSnapshot> LoadAsync(string persistenceId, Akka.Persistence.SnapshotSelectionCriteria criteria, System.Threading.CancellationToken cancellationToken) { }
