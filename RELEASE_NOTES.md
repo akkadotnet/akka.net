@@ -1,3 +1,24 @@
+#### 1.5.67 April 25th, 2026 ####
+
+Akka.NET v1.5.67 is a hotfix release that reverts a breaking change to the persistence plugin contract introduced in v1.5.66.
+
+**Akka.Persistence: Revert async `WriteMessagesAsync`/`SaveAsync` dispatch ([#8163](https://github.com/akkadotnet/akka.net/pull/8163))**
+
+v1.5.66 added `Task.Yield()` inside `AsyncWriteJournal.ExecuteBatch` and `SnapshotStore` to move persistence plugin `WriteMessagesAsync`/`SaveAsync` calls off the actor thread. While this improved throughput in benchmarks, it silently broke the implicit contract that persistence plugins rely on — that the synchronous preamble of these methods executes in actor context.
+
+This caused failures in plugins that:
+* Access `Self` inside `WriteMessagesAsync` (e.g. Akka.Persistence.Sql, Akka.Persistence.EventStore) — throws `NotSupportedException` off the actor thread
+* Use non-thread-safe collections for write tracking (e.g. `Dictionary<string, Task>`) — concurrent access from actor thread and thread pool causes `InvalidOperationException`
+* Send messages to subscribers after writes complete (e.g. Akka.Persistence.Redis) — accesses shared actor state off-thread
+
+This release removes the `Task.Yield()` calls and restores the original dispatch behavior. A future version may reintroduce this optimization with a more targeted approach that preserves the plugin threading contract.
+
+**If you are on v1.5.66**, upgrade to v1.5.67 immediately if you use any third-party persistence plugin.
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 1 | 3 | 17 | Aaron Stannard |
+
 #### 1.5.66 April 24th, 2026 ####
 
 Akka.NET v1.5.66 is a significant release with persistence bug fixes, major Akka.Streams improvements including OpenTelemetry trace propagation and non-blocking materialized values, and new serialization security controls.
