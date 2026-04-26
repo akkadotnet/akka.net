@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Reflection;
 using System.Threading;
@@ -22,19 +24,28 @@ namespace Akka.TestKit.Xunit.Attributes;
 /// an <see cref="ActorCellKeepingSynchronizationContext"/> that re-pins the
 /// cell across <c>await</c> continuations.
 /// <para/>
+/// Intended for xUnit v3 test kits built on <see cref="TestKitBase"/>.
 /// Applied to <see cref="TestKit"/> (and inherited by derived test
-/// classes) so users get parallel-safe behavior automatically. See
+/// classes) so users get parallel-safe behavior automatically, and can also
+/// be applied by downstream test kits that derive directly from
+/// <see cref="TestKitBase"/>. See
 /// <see cref="ActorCellKeepingSynchronizationContext"/> for the underlying
 /// mechanism and the ThreadStatic-vs-ExecutionContext rationale.
 /// </summary>
-[AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 public sealed class AkkaCleanAmbientContextAttribute : BeforeAfterTestAttribute
 {
+    private sealed class AmbientContextState
+    {
+        public required bool Applied { get; init; }
+        public SynchronizationContext? PreviousContext { get; init; }
+        public ActorCell? PreviousCell { get; init; }
+    }
+
     // AsyncLocal flows across await boundaries via ExecutionContext, unlike [ThreadStatic].
     // This is critical because xUnit v3's runner awaits the test body between Before() and After(),
     // so After() can resume on a different thread than Before() ran on.
-    private static readonly AsyncLocal<SynchronizationContext?> _previousContext = new();
-    private static readonly AsyncLocal<bool> _applied = new();
+    private static readonly AsyncLocal<AmbientContextState?> _state = new();
 
     /// <inheritdoc/>
     public override void Before(MethodInfo methodUnderTest, IXunitTest test)
@@ -42,32 +53,41 @@ public sealed class AkkaCleanAmbientContextAttribute : BeforeAfterTestAttribute
         var instance = TestContext.Current.TestClassInstance;
         if (instance is not TestKitBase testKit)
         {
-            _applied.Value = false;
+            _state.Value = new AmbientContextState
+            {
+                Applied = false,
+                PreviousContext = SynchronizationContext.Current,
+                PreviousCell = InternalCurrentActorCellKeeper.Current
+            };
             return;
         }
-
-        _applied.Value = true;
 
         // Null cell for INoImplicitSender mirrors TestKitBase.InitializeTest:
         // the Post wrapper will pin Current = null so no sibling cell leaks in.
         var cell = testKit is INoImplicitSender ? null : TryGetCell(testKit);
 
+        _state.Value = new AmbientContextState
+        {
+            Applied = true,
+            PreviousContext = SynchronizationContext.Current,
+            PreviousCell = InternalCurrentActorCellKeeper.Current
+        };
+
         InternalCurrentActorCellKeeper.Current = cell;
-        _previousContext.Value = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(
-            new ActorCellKeepingSynchronizationContext(cell, _previousContext.Value));
+            new ActorCellKeepingSynchronizationContext(cell, _state.Value.PreviousContext));
     }
 
     /// <inheritdoc/>
     public override void After(MethodInfo methodUnderTest, IXunitTest test)
     {
-        if (!_applied.Value)
+        var state = _state.Value;
+        if (state is null || !state.Applied)
             return;
 
-        _applied.Value = false;
-        InternalCurrentActorCellKeeper.Current = null;
-        SynchronizationContext.SetSynchronizationContext(_previousContext.Value);
-        _previousContext.Value = null;
+        InternalCurrentActorCellKeeper.Current = state.PreviousCell;
+        SynchronizationContext.SetSynchronizationContext(state.PreviousContext);
+        _state.Value = null;
     }
 
     private static ActorCell? TryGetCell(TestKitBase testKit)

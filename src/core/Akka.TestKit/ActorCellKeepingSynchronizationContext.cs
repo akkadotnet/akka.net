@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +41,7 @@ namespace Akka.TestKit
     [InternalApi]
     internal class ActorCellKeepingSynchronizationContext : SynchronizationContext
     {
-        private readonly ActorCell _cell;
+        private readonly ActorCell? _cell;
         private readonly SynchronizationContext? _inner;
 
         /// <summary>
@@ -61,7 +63,7 @@ namespace Akka.TestKit
         /// MaxConcurrencySyncContext) while wrapping callbacks with the cell-pinning
         /// window. When null, falls back to <see cref="ThreadPool"/> dispatch.
         /// </param>
-        public ActorCellKeepingSynchronizationContext(ActorCell cell, SynchronizationContext? inner = null)
+        public ActorCellKeepingSynchronizationContext(ActorCell? cell, SynchronizationContext? inner = null)
         {
             _cell = cell;
             _inner = inner;
@@ -76,9 +78,9 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="d">The delegate to invoke.</param>
         /// <param name="state">The state object to pass to <paramref name="d"/>.</param>
-        public override void Post(SendOrPostCallback d, object state)
+        public override void Post(SendOrPostCallback d, object? state)
         {
-            void WrappedCallback(object s)
+            void WrappedCallback(object? s)
             {
                 var oldCell = InternalCurrentActorCellKeeper.Current;
                 var oldContext = Current;
@@ -109,7 +111,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="d">The delegate to invoke.</param>
         /// <param name="state">The state object to pass to <paramref name="d"/>.</param>
-        public override void Send(SendOrPostCallback d, object state)
+        public override void Send(SendOrPostCallback d, object? state)
         {
             if (_inner != null)
             {
