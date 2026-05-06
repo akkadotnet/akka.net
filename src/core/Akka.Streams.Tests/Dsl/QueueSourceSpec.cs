@@ -413,12 +413,10 @@ namespace Akka.Streams.Tests.Dsl
         public async Task QueueSource_should_offer_with_cancellation_token_none()
         {
             await this.AssertAllStagesStoppedAsync(async () => {
-                var tuple =
+                var (source, probe) =
                     Source.Queue<int>(0, OverflowStrategy.Backpressure)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var source = tuple.Item1;
-                var probe = tuple.Item2;
                 var cancellableSource = Assert.IsAssignableFrom<ICancellableSourceQueueWithComplete<int>>(source);
 
                 var offer = cancellableSource.OfferAsync(1, CancellationToken.None);
@@ -435,12 +433,10 @@ namespace Akka.Streams.Tests.Dsl
         public async Task QueueSource_should_cancel_pending_offer_when_backpressured_buffer_is_full()
         {
             await this.AssertAllStagesStoppedAsync(async () => {
-                var tuple =
+                var (source, probe) =
                     Source.Queue<int>(1, OverflowStrategy.Backpressure)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var source = tuple.Item1;
-                var probe = tuple.Item2;
 
                 AssertSuccess(source.OfferAsync(1));
 
@@ -464,12 +460,10 @@ namespace Akka.Streams.Tests.Dsl
         public async Task QueueSource_should_cancel_pending_offer_when_backpressured_without_buffer()
         {
             await this.AssertAllStagesStoppedAsync(async () => {
-                var tuple =
+                var (source, probe) =
                     Source.Queue<int>(0, OverflowStrategy.Backpressure)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var source = tuple.Item1;
-                var probe = tuple.Item2;
 
                 using var cts = new CancellationTokenSource();
                 var offer = source.OfferAsync(1, cts.Token);
@@ -490,12 +484,10 @@ namespace Akka.Streams.Tests.Dsl
         public async Task QueueSource_should_accept_next_backpressured_offer_after_pending_offer_is_canceled()
         {
             await this.AssertAllStagesStoppedAsync(async () => {
-                var tuple =
+                var (source, probe) =
                     Source.Queue<int>(1, OverflowStrategy.Backpressure)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var source = tuple.Item1;
-                var probe = tuple.Item2;
 
                 AssertSuccess(source.OfferAsync(1));
 
@@ -520,12 +512,10 @@ namespace Akka.Streams.Tests.Dsl
         public async Task QueueSource_should_not_enqueue_offer_when_token_is_already_canceled()
         {
             await this.AssertAllStagesStoppedAsync(async () => {
-                var tuple =
+                var (source, probe) =
                     Source.Queue<int>(0, OverflowStrategy.Backpressure)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var source = tuple.Item1;
-                var probe = tuple.Item2;
 
                 using var cts = new CancellationTokenSource();
                 cts.Cancel();
@@ -546,12 +536,10 @@ namespace Akka.Streams.Tests.Dsl
         public async Task QueueSource_should_ignore_cancellation_after_offer_was_enqueued()
         {
             await this.AssertAllStagesStoppedAsync(async () => {
-                var tuple =
+                var (source, probe) =
                     Source.Queue<int>(1, OverflowStrategy.Backpressure)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var source = tuple.Item1;
-                var probe = tuple.Item2;
 
                 using var cts = new CancellationTokenSource();
                 var offer = source.OfferAsync(1, cts.Token);
@@ -572,12 +560,10 @@ namespace Akka.Streams.Tests.Dsl
         public async Task QueueSource_should_ignore_cancellation_after_complete_was_requested_for_pending_offer()
         {
             await this.AssertAllStagesStoppedAsync(async () => {
-                var tuple =
+                var (source, probe) =
                     Source.Queue<int>(0, OverflowStrategy.Backpressure)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var source = tuple.Item1;
-                var probe = tuple.Item2;
 
                 using var cts = new CancellationTokenSource();
                 var offer = source.OfferAsync(1, cts.Token);
@@ -597,7 +583,7 @@ namespace Akka.Streams.Tests.Dsl
                 using var mapStarted = new ManualResetEventSlim();
                 using var releaseMap = new ManualResetEventSlim();
 
-                var tuple =
+                var (source, probe) =
                     Source.Queue<int>(0, OverflowStrategy.Backpressure)
                         .Select(element =>
                         {
@@ -607,8 +593,6 @@ namespace Akka.Streams.Tests.Dsl
                         })
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var source = tuple.Item1;
-                var probe = tuple.Item2;
 
                 probe.Request(1);
                 var firstOffer = source.OfferAsync(1);
