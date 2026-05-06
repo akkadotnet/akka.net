@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <PackageReference Include="Akka.Bootstrap.Docker" Version="0.5.3" />
-    <PackageReference Include="Akka.Persistence.Sql" Version="1.5.44" />
+    <PackageReference Include="Akka.Persistence.Sql" Version="1.5.67" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.14" />
     <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.14" />
   </ItemGroup>
