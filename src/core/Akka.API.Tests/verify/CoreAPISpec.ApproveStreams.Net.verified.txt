@@ -669,6 +669,10 @@ namespace Akka.Streams
         public Akka.Streams.IGraph<TShape, TMat> Named(string name) { }
         public Akka.Streams.IGraph<TShape, TMat> WithAttributes(Akka.Streams.Attributes attributes) { }
     }
+    public interface ICancellableSourceQueueWithComplete<in T> : Akka.Streams.ISourceQueueWithComplete<T>, Akka.Streams.ISourceQueue<T>
+    {
+        System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(T element, System.Threading.CancellationToken cancellationToken);
+    }
     public interface IFlowMonitor
     {
         Akka.Streams.FlowMonitor.IStreamState State { get; }
@@ -918,6 +922,10 @@ namespace Akka.Streams
         public override Akka.Streams.Shape DeepCopy() { }
         public override bool Equals(object obj) { }
         public override int GetHashCode() { }
+    }
+    public static class SourceQueueWithCompleteExtensions
+    {
+        public static System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync<T>(this Akka.Streams.ISourceQueueWithComplete<T> sourceQueue, T element, System.Threading.CancellationToken cancellationToken) { }
     }
     public sealed class SourceShape<TOut> : Akka.Streams.Shape
     {
@@ -3550,12 +3558,13 @@ namespace Akka.Streams.Implementation
         public override Akka.Streams.SourceShape<TOut> Shape { get; }
         public override Akka.Streams.Stage.ILogicAndMaterializedValue<Akka.Streams.ISourceQueueWithComplete<TOut>> CreateLogicAndMaterializedValue(Akka.Streams.Attributes inheritedAttributes) { }
         public interface IInput { }
-        public sealed class Materialized : Akka.Streams.ISourceQueueWithComplete<TOut>, Akka.Streams.ISourceQueue<TOut>
+        public sealed class Materialized : Akka.Streams.ICancellableSourceQueueWithComplete<TOut>, Akka.Streams.ISourceQueueWithComplete<TOut>, Akka.Streams.ISourceQueue<TOut>
         {
             public Materialized(System.Action<Akka.Streams.Implementation.QueueSource<TOut>.IInput> invokeLogic, System.Threading.Tasks.TaskCompletionSource<object> completion) { }
             public void Complete() { }
             public void Fail(System.Exception ex) { }
             public System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(TOut element) { }
+            public System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(TOut element, System.Threading.CancellationToken cancellationToken) { }
             public System.Threading.Tasks.Task WatchCompletionAsync() { }
         }
     }

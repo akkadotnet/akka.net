@@ -3,6 +3,7 @@
 **Placeholder for nightly build**
 
 * Core: Add `ILoggingAdapter` context enrichment, explicit scopes, and bracketed context output in StandardOutLogger and Xunit logger
+* Akka.Streams: Add cancellation-aware source queue offers via `ICancellableSourceQueueWithComplete<T>` and an `ISourceQueueWithComplete<T>.OfferAsync(T element, CancellationToken cancellationToken)` extension method, so backpressured pending offers from `Source.Queue` can be canceled without later emitting the canceled element.
 
 #### 1.5.47 August 12th, 2025 ####
 
