@@ -1,6 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="../../../xunitSettings.props" />
-
   <PropertyGroup>
     <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
     <OutputType>Exe</OutputType>
@@ -25,6 +23,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="xunit.runner.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
