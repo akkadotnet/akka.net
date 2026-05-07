@@ -35,7 +35,7 @@ namespace Akka.TestKit.Xunit.Attributes;
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
 public sealed class AkkaCleanAmbientContextAttribute : BeforeAfterTestAttribute
 {
-    private sealed class AmbientContextState
+    private sealed record AmbientContextState
     {
         public required bool Applied { get; init; }
         public SynchronizationContext? PreviousContext { get; init; }
