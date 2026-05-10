@@ -31,7 +31,10 @@ namespace Akka.Benchmarks.Streams
     [Config(typeof(ThroughputBenchmarkConfig))]
     public class FramingBenchmarks
     {
-        private const int MessageCount = 10_000;
+        private const int MessageCount = 100_000;
+        // 16 MB cap on framed message length. SimpleFramingProtocolDecoder adds 4 internally,
+        // so this stays well clear of int.MaxValue overflow (max + 4 ≈ 16 MB still).
+        private const int MaxFrameLength = 16 * 1024 * 1024;
 
         [Params(64, 1024)]
         public int MessageSize { get; set; }
@@ -128,7 +131,7 @@ namespace Akka.Benchmarks.Streams
             _gate = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             _completion = Source.FromTask(_gate.Task)
                 .ConcatMany(_ => Source.From(_rawMessages))
-                .Via(Framing.SimpleFramingProtocolEncoder(int.MaxValue))
+                .Via(Framing.SimpleFramingProtocolEncoder(MaxFrameLength))
                 .RunWith(Sink.Ignore<ByteString>(), _materializer);
         }
 
@@ -148,8 +151,8 @@ namespace Akka.Benchmarks.Streams
             _gate = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             _completion = Source.FromTask(_gate.Task)
                 .ConcatMany(_ => Source.From(_rawMessages))
-                .Via(Framing.SimpleFramingProtocolEncoder(int.MaxValue))
-                .Via(Framing.SimpleFramingProtocolDecoder(int.MaxValue))
+                .Via(Framing.SimpleFramingProtocolEncoder(MaxFrameLength))
+                .Via(Framing.SimpleFramingProtocolDecoder(MaxFrameLength))
                 .RunWith(Sink.Ignore<ByteString>(), _materializer);
         }
 
@@ -168,7 +171,7 @@ namespace Akka.Benchmarks.Streams
             _gate = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             _completion = Source.FromTask(_gate.Task)
                 .ConcatMany(_ => Source.From(_delimiterFramedChunks))
-                .Via(Framing.Delimiter(_delimiter, int.MaxValue))
+                .Via(Framing.Delimiter(_delimiter, MaxFrameLength))
                 .RunWith(Sink.Ignore<ByteString>(), _materializer);
         }
 
@@ -190,7 +193,7 @@ namespace Akka.Benchmarks.Streams
             _gate = new TaskCompletionSource<NotUsed>(TaskCreationOptions.RunContinuationsAsynchronously);
             _completion = Source.FromTask(_gate.Task)
                 .ConcatMany(_ => Source.From(_jsonChunks))
-                .Via(JsonFraming.ObjectScanner(int.MaxValue))
+                .Via(JsonFraming.ObjectScanner(MaxFrameLength))
                 .RunWith(Sink.Ignore<ByteString>(), _materializer);
         }
 
