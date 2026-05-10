@@ -53,7 +53,7 @@ namespace Akka.Tests.Serialization
             //The above config explictly does not configures the serialization-identifiers section
             using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
             {
-                var serializer = (CustomSerializer)system.Serialization.FindSerializerForType(typeof(object));
+                var serializer = system.Serialization.FindSerializerForType(typeof(object)).AsV1<CustomSerializer>();
                 Assert.Equal(666, serializer.Identifier);
             }
         }
@@ -79,7 +79,7 @@ namespace Akka.Tests.Serialization
             {
                 var firstMessage = new FirstMessage("First message");
                 var serialization = system.Serialization;
-                var serializer = (CustomManifestSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializer = serialization.FindSerializerFor(firstMessage).AsV1<CustomManifestSerializer>();
 
                 var serialized = serializer.ToBinary(firstMessage);
                 var manifest = serializer.Manifest(firstMessage);
@@ -156,7 +156,7 @@ namespace Akka.Tests.Serialization
             {
                 var firstMessage = new FirstMessage("First message");
                 var serialization = system.Serialization;
-                var serializer = (CustomSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializer = serialization.FindSerializerFor(firstMessage).AsV1<CustomSerializer>();
                 var serializerById = serialization.GetSerializerById(1);
 
                 serializer.Identifier.Should().Be(666); // This is because identifier is hardwired, so it could not be
@@ -257,7 +257,7 @@ namespace Akka.Tests.Serialization
             {
                 var firstMessage = new FirstMessage("First message");
                 var serialization = system.Serialization;
-                var serializer = (CustomManifestSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializer = serialization.FindSerializerFor(firstMessage).AsV1<CustomManifestSerializer>();
 
                 var serialized = serializer.ToBinary(firstMessage);
                 var manifest = serializer.Manifest(firstMessage);

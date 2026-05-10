@@ -69,7 +69,7 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = (ClusterClientMessageSerializer)Sys.Serialization.FindSerializerFor(message);
+            var serializer = Sys.Serialization.FindSerializerFor(message).AsV1<ClusterClientMessageSerializer>();
             var serialized = serializer.ToBinary(message);
             return (T)serializer.FromBinary(serialized, serializer.Manifest(message));
         }

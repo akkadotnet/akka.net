@@ -251,7 +251,7 @@ namespace Akka.Actor.Internal
             var showSerializerWarning = Settings.Config.HasPath(configPath) && !Settings.Config.GetBoolean(configPath, false);
 
             if (showSerializerWarning &&
-                Serialization.FindSerializerForType(typeof (object)) is NewtonSoftJsonSerializer)
+                Serialization.FindSerializerForType(typeof(object)) is SerializerV1Adapter { Inner: NewtonSoftJsonSerializer })
             {
                 Log.Warning($"NewtonSoftJsonSerializer has been detected as a default serializer. " +
                             $"It will be obsoleted in Akka.NET starting from version 1.5 in the favor of Hyperion " +

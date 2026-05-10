@@ -58,8 +58,7 @@ namespace Akka.Remote.Tests.Serialization
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(message);
-            serializer.Should().BeOfType<PrimitiveSerializers>();
+            var serializer = Sys.Serialization.FindSerializerFor(message).AsV1<PrimitiveSerializers>();
             var serializedBytes = serializer.ToBinary(message);
             var manifest = serializer.Manifest(message);
             return (T)serializer.FromBinary(serializedBytes, manifest);
@@ -67,8 +66,7 @@ namespace Akka.Remote.Tests.Serialization
 
         private T AssertCrossPlatformAndReturn<T>(T message)
         {
-            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(message);
-            serializer.Should().BeOfType<PrimitiveSerializers>();
+            var serializer = Sys.Serialization.FindSerializerFor(message).AsV1<PrimitiveSerializers>();
             var serializedBytes = serializer.ToBinary(message);
             // GetType() will make sure that each namespace is compatible with the serializer
             // as the test is run on each platform.

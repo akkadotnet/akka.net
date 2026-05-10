@@ -333,29 +333,16 @@ namespace Akka.Persistence.Custom.Journal
                             // This WithTransport method call is important, it allows for proper
                             // local IActorRef serialization by switching the serialization information
                             // context during the serialization process
-                            var (binary, manifest) = Akka.Serialization.Serialization.WithTransport(
-                                system: _serialization.System, 
-                                state: (@event.Payload, serializer), 
+                            var (binary, manifest) = Akka.Serialization.Serialization.WithTransport<(object Payload, SerializerV2 Serializer), (byte[], string)>(
+                                system: _serialization.System,
+                                state: (@event.Payload, serializer),
                                 action: state =>
                                 {
-                                    var (thePayload, theSerializer) = state;
-                                    var thisManifest = "";
-                                    
-                                    // There are two kinds of serializer when it comes to manifest
-                                    // support, we have to support both of them for proper payload
-                                    // serialization
-                                    if (theSerializer is SerializerWithStringManifest stringManifest)
-                                    {
-                                        thisManifest = stringManifest.Manifest(thePayload);
-                                    }
-                                    else if (theSerializer.IncludeManifest)
-                                    {
-                                        thisManifest = thePayload.GetType().TypeQualifiedName();
-                                    }
-                                    
-                                    // Return the serialized byte array and the manifest for the
-                                    // serialized data
-                                    return (theSerializer.ToBinary(thePayload), thisManifest);
+                                    // V2 dispatch: Manifest() always returns the right string —
+                                    // the V1 adapter reproduces the V1 IncludeManifest /
+                                    // SerializerWithStringManifest dispatch internally.
+                                    var thisManifest = state.Serializer.Manifest(state.Payload);
+                                    return (state.Serializer.ToBinary(state.Payload), thisManifest);
                                 });
                             
                             // Populate the SQL parameters

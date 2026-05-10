@@ -589,14 +589,6 @@ namespace Akka.Cluster.Serialization
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static string GetObjectManifest(Serializer serializer, object obj)
-        {
-            if (serializer is SerializerWithStringManifest manifestSerializer)
-            {
-                return manifestSerializer.Manifest(obj);
-            }
-
-            return obj.GetType().TypeQualifiedName();
-        }
+        private static string GetObjectManifest(SerializerV2 serializer, object obj) => serializer.Manifest(obj);
     }
 }

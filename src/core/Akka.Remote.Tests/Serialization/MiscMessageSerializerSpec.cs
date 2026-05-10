@@ -389,15 +389,11 @@ namespace Akka.Remote.Tests.Serialization
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            serializer.Should().BeOfType<MiscMessageSerializer>();
+            // MiscMessageSerializer is a SerializerWithStringManifest; AsV1<T>() asserts the
+            // V2 dispatch returns a SerializerV1Adapter wrapping the expected V1 type.
+            var serializer = Sys.Serialization.FindSerializerFor(message).AsV1<MiscMessageSerializer>();
             var serializedBytes = serializer.ToBinary(message);
-
-            if (serializer is SerializerWithStringManifest serializerManifest)
-            {
-                return (T)serializerManifest.FromBinary(serializedBytes, serializerManifest.Manifest(message));
-            }
-            return (T)serializer.FromBinary(serializedBytes, typeof(T));
+            return (T)serializer.FromBinary(serializedBytes, serializer.Manifest(message));
         }
 
         private void AssertEqual<T>(T message)

@@ -126,7 +126,7 @@ akka.cluster.client.use-legacy-serialization = {(useLegacy ? "on" : "off")}
         }
         else
         {
-            var manifestSerializer = (SerializerWithStringManifest)serializer;
+            var manifestSerializer = serializer.AsV1<SerializerWithStringManifest>();
             var manifest = manifestSerializer.Manifest(message);
             deserialized = (IClusterClientProtocolMessage) manifestSerializer.FromBinary(serialized, manifest);
         }
