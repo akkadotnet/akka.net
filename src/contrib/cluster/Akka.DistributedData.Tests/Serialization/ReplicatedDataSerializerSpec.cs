@@ -11,6 +11,7 @@ using Akka.Cluster;
 using Akka.Configuration;
 using Akka.DistributedData.Internal;
 using Akka.DistributedData.Serialization;
+using Akka.Serialization;
 using FluentAssertions;
 using Xunit;
 
@@ -271,7 +272,7 @@ namespace Akka.DistributedData.Tests.Serialization
         private void CheckSerialization<T>(T expected)
         {
             var serializer = Sys.Serialization.FindSerializerFor(expected);
-            serializer.Should().BeOfType<ReplicatedDataSerializer>();
+            serializer.AsV1<ReplicatedDataSerializer>();
             var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, expected);
             var blob = serializer.ToBinary(expected);
             var actual = Sys.Serialization.Deserialize(blob, serializer.Identifier, manifest);

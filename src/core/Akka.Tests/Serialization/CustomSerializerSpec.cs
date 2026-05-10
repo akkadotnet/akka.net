@@ -164,7 +164,7 @@ namespace Akka.Tests.Serialization
                 serializer.Should().NotBeEquivalentTo(serializerById);
                 
                 serializerById.Identifier.Should().Be(1); // This should be the JSON serializer
-                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
+                serializerById.AsV1<NewtonSoftJsonSerializer>(); // throws if not wrapping
             }
         }
         
@@ -197,9 +197,9 @@ namespace Akka.Tests.Serialization
 
                 serializer.Should().Be(serializerById);
                 serializer.Should().Be(objectSerializer);
-                serializer.Should().BeOfType<CustomIllegalSerializer>();
-                serializerById.Should().BeOfType<CustomIllegalSerializer>();
-                objectSerializer.Should().BeOfType<CustomIllegalSerializer>();
+                serializer.AsV1<CustomIllegalSerializer>();
+                serializerById.AsV1<CustomIllegalSerializer>();
+                objectSerializer.AsV1<CustomIllegalSerializer>();
             }
         }
         
@@ -231,11 +231,11 @@ namespace Akka.Tests.Serialization
                 var serializerById = serialization.GetSerializerById(1);
                 var invalidSerializerById = serialization.GetSerializerById(serializer.Identifier);
 
-                serializer.Should().BeOfType<CustomIllegalSerializer>();
-                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
-                objectSerializer.Should().BeOfType<NewtonSoftJsonSerializer>();
-                
-                invalidSerializerById.Should().NotBeOfType<CustomIllegalSerializer>(); // This is the bad part
+                serializer.AsV1<CustomIllegalSerializer>();
+                serializerById.AsV1<NewtonSoftJsonSerializer>();
+                objectSerializer.AsV1<NewtonSoftJsonSerializer>();
+
+                invalidSerializerById.TryAsV1<CustomIllegalSerializer>().Should().BeNull(); // This is the bad part
                 invalidSerializerById.Identifier.Should().Be(serializerById.Identifier); // This is the bad part
             }
         }

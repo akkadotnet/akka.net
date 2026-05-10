@@ -800,7 +800,7 @@ namespace Akka.Tests.Serialization
             var serialization = Sys.Serialization;
             // byte[] is explicitly bound in default config
             var serializer = serialization.FindSerializerFor(new byte[] { 1, 2, 3 });
-            serializer.Should().BeOfType<ByteArraySerializer>();
+            serializer.AsV1<ByteArraySerializer>(); // throws if not wrapping
         }
 
         private sealed class UnregisteredMessage
@@ -828,7 +828,7 @@ namespace Akka.Tests.Serialization
 
             // Should not throw, should return json serializer
             var serializer = serialization.FindSerializerFor(unregisteredType);
-            serializer.Should().BeOfType<NewtonSoftJsonSerializer>();
+            serializer.AsV1<NewtonSoftJsonSerializer>(); // throws if not wrapping
         }
 
         private sealed class SomeRandomType { }

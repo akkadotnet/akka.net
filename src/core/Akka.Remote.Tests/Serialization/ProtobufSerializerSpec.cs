@@ -11,6 +11,7 @@ using Akka.Configuration;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
+using Akka.Serialization;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -36,8 +37,7 @@ namespace Akka.Remote.Tests.Serialization
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            serializer.Should().BeOfType<ProtobufSerializer>();
+            var serializer = Sys.Serialization.FindSerializerFor(message).AsV1<ProtobufSerializer>();
             var serializedBytes = serializer.ToBinary(message);
             return (T)serializer.FromBinary(serializedBytes, typeof(T));
         }

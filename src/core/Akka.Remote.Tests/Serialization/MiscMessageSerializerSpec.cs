@@ -146,7 +146,7 @@ namespace Akka.Remote.Tests.Serialization
             var props = Props.Create<BlackHoleActor>().WithDeploy(new Deploy(new RemoteScope(address)));
             var actorRef = remoteSystem.ActorOf(props, "hello");
 
-            var serializer = remoteSystem.Serialization.FindSerializerFor(actorRef).AsInstanceOf<SerializerWithStringManifest>();
+            var serializer = remoteSystem.Serialization.FindSerializerFor(actorRef).AsV1<SerializerWithStringManifest>();
             var serializedBytes = serializer.ToBinary(actorRef);
             var deserialized = serializer.FromBinary(serializedBytes, serializer.Manifest(actorRef));
             deserialized.Should().Be(actorRef);
