@@ -26,6 +26,28 @@ namespace Akka.IO
 {
     using static Akka.IO.Tcp;
 
+    //  ┌──────────────────────── ASCII *phase* diagram ─────────────────────────┐
+    //  │                                                                         │
+    //  │     +-----------+   Connected   +---------------+                       │
+    //  │     |Connecting |──────────────►|AwaitReg       |──Register──────────┐  │
+    //  │     +-----------+               +---------------+                    │  │
+    //  │                                                                      ▼  │
+    //  │                          +------------------+   PeerClosed   +-----+    │
+    //  │                          |       Open       |───keepOpen────►| EOF |    │
+    //  │                          +-------┬----------+                +--┬--+    │
+    //  │                                  │ Close / ConfirmedClose       │       │
+    //  │                                  ▼                              ▼       │
+    //  │                          +------------------+   StreamEof   +-------+   │
+    //  │                          |     Closing      |───────────────►|Closed |  │
+    //  │                          +------------------+                +-------+  │
+    //  │                                                                         │
+    //  └─────────────────────────────────────────────────────────────────────────┘
+    //
+    // Phases map onto Become(...) calls: AwaitRegBehaviour, OpenBehaviour,
+    // PeerSentEofBehaviour, ClosingBehaviour. State that survives a Become
+    // lives in the connection-state flag region below; everything else is
+    // local to the behaviour.
+
     /// <summary>
     /// INTERNAL API: Base class for TcpIncomingConnection and TcpOutgoingConnection.
     ///
@@ -178,14 +200,38 @@ namespace Akka.IO
 
         private readonly Queue<WriteCommand> _pendingRegistrationWrites = new();
 
-        // State flags
+        #region Connection state flags
+        // Transient flags that survive a Become(...) and together describe where this
+        // connection sits in the Open → PeerSentEof / Closing → Closed flow.
+        // Set/cleared only on the actor thread; no synchronization required.
+
+        // Peer sent FIN — incoming side is half-closed. Set by HandleStreamEof or
+        // by the Closing-phase StreamEof handler; once true, no further reads will arrive.
         private bool _peerClosed;
+
+        // We've sent FIN (or fully closed). Set when Tcp.Close / Tcp.ConfirmedClose
+        // completes the transport shutdown; latches off for the rest of the close.
         private bool _outputShutdown;
+
+        // From Tcp.Register: when true, peer-FIN does not stop the connection — we
+        // just transition to PeerSentEofBehaviour and keep the write side open.
         private bool _keepOpenOnPeerClosed;
+
+        // We've initiated a graceful close (HandleClose has run). Used to fast-fail
+        // any further Tcp.Write commands with DroppingWriteBecauseClosingException.
         private bool _closingGracefully;
+
+        // The pipe-reader pump task observed completion (EOF or error). Read path
+        // gates on this together with _outputShutdown to know when TryFinishClose
+        // can stop the actor.
         private bool _readPumpCompleted;
+
+        // Read pump failed with an I/O error rather than EOF. Set together with
+        // _readPumpError; the next HandlePipeRead with IsCompleted=true will surface
+        // this as Tcp.ErrorClosed instead of treating it as a clean EOF.
         private bool _readPumpHasError;
         private Exception? _readPumpError;
+        #endregion
 
         private static readonly IOException DroppingWriteBecauseClosingException =
             new("Dropping write because the connection is closing");
@@ -242,7 +288,7 @@ namespace Akka.IO
             if (_closeInformation != null)
             {
                 if (Settings.TraceLogging)
-                    Log.Debug("[TcpConnection] sending close event [{0}] to {1}", _closeInformation.ClosedEvent,
+                    Log.Debug("sending close event [{0}] to {1}", _closeInformation.ClosedEvent,
                         string.Join(",", _closeInformation.NotificationsTo));
 
                 foreach (var sub in _closeInformation.NotificationsTo)
@@ -404,7 +450,7 @@ namespace Akka.IO
             Receive<StreamEof>(_ =>
             {
                 // Already in PeerSentEof state — this is a duplicate notification, ignore
-                if (_traceLogging) Log.Debug("[TcpConnection] StreamEof in PeerSentEofBehaviour (no-op)");
+                if (_traceLogging) Log.Debug("StreamEof in PeerSentEofBehaviour (no-op)");
             });
             SuspendResumeHandlers();
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
@@ -440,13 +486,13 @@ namespace Akka.IO
                 if (closeEvent is ConfirmedClosed)
                 {
                     if (_traceLogging)
-                        Log.Debug("[TcpConnection] Peer FIN received during ConfirmedClose - connection fully closed");
+                        Log.Debug("Peer FIN received during ConfirmedClose - connection fully closed");
                     DoCloseConnection(closeSender, ConfirmedClosed.Instance);
                     return;
                 }
 
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] EOF received during close - waiting for transport to finish");
+                    Log.Debug("EOF received during close - waiting for transport to finish");
 
                 TryFinishClose(closeSender, closeEvent);
             });
@@ -455,7 +501,7 @@ namespace Akka.IO
             Receive<TransportOperationCompleted>(_ =>
             {
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] Transport operation completed during close");
+                    Log.Debug("Transport operation completed during close");
 
                 if (closeEvent is ConfirmedClosed)
                 {
@@ -464,7 +510,7 @@ namespace Akka.IO
                     _outputShutdown = true;
 
                     if (_traceLogging)
-                        Log.Debug("[TcpConnection] ConfirmedClose: FIN sent, waiting for peer FIN");
+                        Log.Debug("ConfirmedClose: FIN sent, waiting for peer FIN");
                 }
                 else
                 {
@@ -476,13 +522,13 @@ namespace Akka.IO
             Receive<TransportOperationFailed>(msg =>
             {
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] Transport operation failed during close: {0}", msg.Cause.Message);
+                    Log.Debug("Transport operation failed during close: {0}", msg.Cause.Message);
                 DoCloseConnection(closeSender, closeEvent);
             });
             Receive<IoTaskFailed>(msg =>
             {
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] I/O task failed during close: {0}", msg.Cause.Message);
+                    Log.Debug("I/O task failed during close: {0}", msg.Cause.Message);
                 DoCloseConnection(closeSender, closeEvent);
             });
             SuspendResumeHandlers();
@@ -528,7 +574,7 @@ namespace Akka.IO
             Receive<ResumeWriting>(_ =>
             {
                 // No special action needed — transport handles write buffering
-                if (_traceLogging) Log.Debug("[TcpConnection] ResumeWriting received");
+                if (_traceLogging) Log.Debug("ResumeWriting received");
             });
         }
 
@@ -547,7 +593,7 @@ namespace Akka.IO
             _readPumpHasError = true;
             _readPumpError = msg.Cause;
             if (_traceLogging)
-                Log.Debug("[TcpConnection] Read pump failed: {0}", msg.Cause.Message);
+                Log.Debug("Read pump failed: {0}", msg.Cause.Message);
         }
 
         private void HandleReadPumpCompleted()
@@ -555,7 +601,7 @@ namespace Akka.IO
             _readPumpCompleted = true;
 
             if (_traceLogging)
-                Log.Debug("[TcpConnection] Read pump completed");
+                Log.Debug("Read pump completed");
         }
 
         /* ================================================================= */
@@ -584,7 +630,7 @@ namespace Akka.IO
             if (_readPending || _transport == null || _cts == null) return;
             _readPending = true;
 
-            if (_traceLogging) Log.Debug("[TcpConnection] RequestPipeRead: kicking off pipe read");
+            if (_traceLogging) Log.Debug("RequestPipeRead: kicking off pipe read");
 
             var self = Self;
             var reader = _transport.Input;
@@ -624,7 +670,7 @@ namespace Akka.IO
                 _handler!.Tell(new Received(data));
 
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] Delivered {0} bytes to handler", data.Length);
+                    Log.Debug("Delivered {0} bytes to handler", data.Length);
             }
 
             if (msg.IsCompleted || msg.IsCanceled)
@@ -640,7 +686,7 @@ namespace Akka.IO
                 if (data.Length > 0)
                 {
                     if (_traceLogging)
-                        Log.Debug("[TcpConnection] Pipe completed with data — requesting drain read");
+                        Log.Debug("Pipe completed with data — requesting drain read");
                     RequestPipeRead();
                     return;
                 }
@@ -656,7 +702,7 @@ namespace Akka.IO
                     // Propagate as an I/O error, not as normal EOF.
                     var error = _readPumpError ?? _transport!.ReadError ?? new IOException("Connection reset by peer");
                     if (_traceLogging)
-                        Log.Debug("[TcpConnection] Pipe completed with error — signaling I/O error: {0}",
+                        Log.Debug("Pipe completed with error — signaling I/O error: {0}",
                             error.Message);
                     HandleIoError(error);
                     return;
@@ -664,7 +710,7 @@ namespace Akka.IO
 
                 // Normal EOF — peer closed their write side cleanly.
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] Pipe completed — signaling EOF");
+                    Log.Debug("Pipe completed — signaling EOF");
                 Self.Tell(StreamEof.Instance);
                 return;
             }
@@ -682,7 +728,7 @@ namespace Akka.IO
             _readPending = false;
 
             if (_traceLogging)
-                Log.Debug("[TcpConnection] Pipe read cancelled");
+                Log.Debug("Pipe read cancelled");
         }
 
         private static async ValueTask<PipeReadCompleted> ReadPipeChunkAsync(PipeReader reader, CancellationToken ct)
@@ -950,14 +996,14 @@ namespace Akka.IO
             {
                 // Duplicate EOF — already handled, ignore
                 if (_traceLogging)
-                    Log.Debug("[TcpConnection] HandleStreamEof: duplicate EOF, ignoring");
+                    Log.Debug("HandleStreamEof: duplicate EOF, ignoring");
                 return;
             }
 
             _peerClosed = true;
 
             if (_traceLogging)
-                Log.Debug("[TcpConnection] HandleStreamEof: peer closed");
+                Log.Debug("HandleStreamEof: peer closed");
 
             if (_outputShutdown)
             {

@@ -3992,8 +3992,8 @@ namespace Akka.IO
         }
         public sealed class Received : Akka.IO.Tcp.Event
         {
-            public Received(System.ReadOnlyMemory<byte> data) { }
-            public System.ReadOnlyMemory<byte> Data { get; }
+            public Received(System.Buffers.ReadOnlySequence<byte> data) { }
+            public System.Buffers.ReadOnlySequence<byte> Data { get; }
             public override string ToString() { }
         }
         public class Register : Akka.IO.Tcp.Command

@@ -1354,8 +1354,8 @@ namespace Akka.Streams.Dsl
     }
     public static class FileIO
     {
-        public static Akka.Streams.Dsl.Source<System.ReadOnlyMemory<byte>, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> FromFile(System.IO.FileInfo f, int chunkSize = 8192, long startPosition = 0) { }
-        public static Akka.Streams.Dsl.Sink<System.ReadOnlyMemory<byte>, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> ToFile(System.IO.FileInfo f, System.IO.FileMode? fileMode = default, long startPosition = 0, bool autoFlush = false, Akka.Streams.Implementation.IO.FlushSignaler flushSignaler = null) { }
+        public static Akka.Streams.Dsl.Source<System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> FromFile(System.IO.FileInfo f, int chunkSize = 8192, long startPosition = 0) { }
+        public static Akka.Streams.Dsl.Sink<System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> ToFile(System.IO.FileInfo f, System.IO.FileMode? fileMode = default, long startPosition = 0, bool autoFlush = false, Akka.Streams.Implementation.IO.FlushSignaler flushSignaler = null) { }
     }
     public class FixedDelay<T> : Akka.Streams.Dsl.IDelayStrategy<T>
     {
@@ -1559,12 +1559,13 @@ namespace Akka.Streams.Dsl
     }
     public static class Framing
     {
-        public static Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, Akka.NotUsed> Delimiter(System.ReadOnlyMemory<byte> delimiter, int maximumFrameLength, bool allowTruncation = false) { }
-        public static Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, Akka.NotUsed> LengthField(int fieldLength, int maximumFramelength, int fieldOffset = 0, Akka.Util.ByteOrder byteOrder = 1) { }
-        public static Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, Akka.NotUsed> LengthField(int fieldLength, int fieldOffset, int maximumFrameLength, Akka.Util.ByteOrder byteOrder, System.Func<System.Collections.Generic.IReadOnlyList<byte>, int, int> computeFrameSize) { }
-        public static Akka.Streams.Dsl.BidiFlow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, Akka.NotUsed> SimpleFramingProtocol(int maximumMessageLength) { }
-        public static Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, Akka.NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength) { }
-        public static Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, Akka.NotUsed> SimpleFramingProtocolEncoder(int maximumMessageLength) { }
+        public static Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> Delimiter(System.Buffers.ReadOnlySequence<byte> delimiter, int maximumFrameLength, bool allowTruncation = false) { }
+        public static Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> Delimiter(System.ReadOnlyMemory<byte> delimiter, int maximumFrameLength, bool allowTruncation = false) { }
+        public static Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> LengthField(int fieldLength, int maximumFramelength, int fieldOffset = 0, Akka.Util.ByteOrder byteOrder = 1) { }
+        public static Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> LengthField(int fieldLength, int fieldOffset, int maximumFrameLength, Akka.Util.ByteOrder byteOrder, System.Func<System.Collections.Generic.IReadOnlyList<byte>, int, int> computeFrameSize) { }
+        public static Akka.Streams.Dsl.BidiFlow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> SimpleFramingProtocol(int maximumMessageLength) { }
+        public static Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength) { }
+        public static Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> SimpleFramingProtocolEncoder(int maximumMessageLength) { }
         public class FramingException : System.Exception
         {
             public FramingException(string message) { }
@@ -1682,7 +1683,7 @@ namespace Akka.Streams.Dsl
     }
     public static class JsonFraming
     {
-        public static Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, Akka.NotUsed> ObjectScanner(int maximumObjectLength) { }
+        public static Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> ObjectScanner(int maximumObjectLength) { }
     }
     public static class Keep
     {
@@ -2259,10 +2260,10 @@ namespace Akka.Streams.Dsl
     }
     public static class StreamConverters
     {
-        public static Akka.Streams.Dsl.Sink<System.ReadOnlyMemory<byte>, System.IO.Stream> AsInputStream(System.TimeSpan? readTimeout = default) { }
-        public static Akka.Streams.Dsl.Source<System.ReadOnlyMemory<byte>, System.IO.Stream> AsOutputStream(System.TimeSpan? writeTimeout = default) { }
-        public static Akka.Streams.Dsl.Source<System.ReadOnlyMemory<byte>, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> FromInputStream(System.Func<System.IO.Stream> createInputStream, int chunkSize = 8192) { }
-        public static Akka.Streams.Dsl.Sink<System.ReadOnlyMemory<byte>, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> FromOutputStream(System.Func<System.IO.Stream> createOutputStream, bool autoFlush = false) { }
+        public static Akka.Streams.Dsl.Sink<System.Buffers.ReadOnlySequence<byte>, System.IO.Stream> AsInputStream(System.TimeSpan? readTimeout = default) { }
+        public static Akka.Streams.Dsl.Source<System.Buffers.ReadOnlySequence<byte>, System.IO.Stream> AsOutputStream(System.TimeSpan? writeTimeout = default) { }
+        public static Akka.Streams.Dsl.Source<System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> FromInputStream(System.Func<System.IO.Stream> createInputStream, int chunkSize = 8192) { }
+        public static Akka.Streams.Dsl.Sink<System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.IO.IOResult>> FromOutputStream(System.Func<System.IO.Stream> createOutputStream, bool autoFlush = false) { }
     }
     [Akka.Annotations.InternalApi]
     public sealed class StreamRefSettings
@@ -2405,11 +2406,11 @@ namespace Akka.Streams.Dsl
         public override Akka.Streams.Dsl.TcpExt CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
         public readonly struct IncomingConnection
         {
-            public readonly Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, Akka.NotUsed> Flow;
+            public readonly Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> Flow;
             public readonly System.Net.EndPoint LocalAddress;
             public readonly System.Net.EndPoint RemoteAddress;
-            public IncomingConnection(System.Net.EndPoint localAddress, System.Net.EndPoint remoteAddress, Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, Akka.NotUsed> flow) { }
-            public TMat HandleWith<TMat>(Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, TMat> handler, Akka.Streams.IMaterializer materializer) { }
+            public IncomingConnection(System.Net.EndPoint localAddress, System.Net.EndPoint remoteAddress, Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> flow) { }
+            public TMat HandleWith<TMat>(Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, TMat> handler, Akka.Streams.IMaterializer materializer) { }
         }
         public readonly struct OutgoingConnection
         {
@@ -2430,9 +2431,9 @@ namespace Akka.Streams.Dsl
         [Akka.Annotations.InternalApi]
         public TcpExt(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Streams.Dsl.Source<Akka.Streams.Dsl.Tcp.IncomingConnection, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
-        public System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding> BindAndHandle(Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, Akka.NotUsed> handler, Akka.Streams.IMaterializer materializer, string host, int port, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
-        public Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(string host, int port) { }
-        public Akka.Streams.Dsl.Flow<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(System.Net.EndPoint remoteAddress, System.Net.EndPoint localAddress = null, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = true, System.TimeSpan? connectionTimeout = default, System.TimeSpan? idleTimeout = default) { }
+        public System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding> BindAndHandle(Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> handler, Akka.Streams.IMaterializer materializer, string host, int port, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
+        public Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(string host, int port) { }
+        public Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(System.Net.EndPoint remoteAddress, System.Net.EndPoint localAddress = null, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = true, System.TimeSpan? connectionTimeout = default, System.TimeSpan? idleTimeout = default) { }
     }
     public sealed class TcpIdleTimeoutException : System.TimeoutException
     {
@@ -3367,8 +3368,8 @@ namespace Akka.Streams.Implementation
     {
         public JsonObjectParser(int maximumObjectLength = 2147483647) { }
         public bool IsEmpty { get; }
-        public void Offer(System.ReadOnlyMemory<byte> input) { }
-        public Akka.Util.Option<System.ReadOnlyMemory<byte>> Poll() { }
+        public void Offer(System.Buffers.ReadOnlySequence<byte> input) { }
+        public Akka.Util.Option<System.Buffers.ReadOnlySequence<byte>> Poll() { }
     }
     [Akka.Annotations.InternalApi]
     public sealed class LastOrDefaultStage<T> : Akka.Streams.Stage.GraphStageWithMaterializedValue<Akka.Streams.SinkShape<T>, System.Threading.Tasks.Task<T>>
@@ -4630,11 +4631,11 @@ namespace Akka.Streams.Implementation.IO
         public void Flush() { }
     }
     [Akka.Annotations.InternalApi]
-    public class IncomingConnectionStage : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>>>
+    public class IncomingConnectionStage : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>>>
     {
         public IncomingConnectionStage(Akka.Actor.IActorRef connection, System.Net.EndPoint remoteAddress, bool halfClose) { }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
-        public override Akka.Streams.FlowShape<System.ReadOnlyMemory<byte>, System.ReadOnlyMemory<byte>> Shape { get; }
+        public override Akka.Streams.FlowShape<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }
         public override string ToString() { }
     }
