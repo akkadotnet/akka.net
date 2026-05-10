@@ -545,7 +545,7 @@ namespace Akka.Tests.Serialization
             // V2 wraps V1 serializers in SerializerV1Adapter, so .GetType() returns the adapter
             // type — assert against the wrapped V1 type via AsV1<T>() instead.
             Sys.Serialization.FindSerializerFor(null).AsV1<NullSerializer>().GetType().ShouldBe(typeof(NullSerializer));
-            Sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).AsV1<ByteArraySerializer>().GetType().ShouldBe(typeof(ByteArraySerializer));
+            Sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).GetType().ShouldBe(typeof(ByteArraySerializer));
             Sys.Serialization.FindSerializerFor("dummy").AsV1<DummySerializer>().GetType().ShouldBe(typeof(DummySerializer));
             Sys.Serialization.FindSerializerFor(123).AsV1<NewtonSoftJsonSerializer>().GetType().ShouldBe(typeof(NewtonSoftJsonSerializer));
         }
@@ -798,9 +798,9 @@ namespace Akka.Tests.Serialization
         public void Should_still_work_for_explicitly_bound_types_when_fallback_disabled()
         {
             var serialization = Sys.Serialization;
-            // byte[] is explicitly bound in default config
+            // byte[] is explicitly bound in default config; ByteArraySerializer is V2-native
             var serializer = serialization.FindSerializerFor(new byte[] { 1, 2, 3 });
-            serializer.AsV1<ByteArraySerializer>(); // throws if not wrapping
+            serializer.Should().BeOfType<ByteArraySerializer>();
         }
 
         private sealed class UnregisteredMessage
