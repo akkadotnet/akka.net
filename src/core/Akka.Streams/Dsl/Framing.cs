@@ -10,6 +10,7 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
@@ -198,24 +199,11 @@ namespace Akka.Streams.Dsl
         };
 
         /// <summary>
-        /// Appends <paramref name="second"/> to <paramref name="first"/> and returns a new <see cref="ReadOnlySequence{T}"/>.
+        /// Appends <paramref name="second"/> to <paramref name="first"/> and returns a new
+        /// <see cref="ReadOnlySequence{T}"/> by chaining the underlying segments. No data copy.
         /// </summary>
-        /// <remarks>
-        /// Bridge implementation that materializes both inputs into a single contiguous array.
-        /// Allocation behaviour matches the previous <c>ReadOnlyMemory</c>-based implementation;
-        /// a follow-up pass replaces this with a multi-segment <see cref="ReadOnlySequenceSegment{T}"/>
-        /// chain to skip the copy entirely.
-        /// </remarks>
         private static ReadOnlySequence<byte> Concat(ReadOnlySequence<byte> first, ReadOnlySequence<byte> second)
-        {
-            if (first.IsEmpty) return second;
-            if (second.IsEmpty) return first;
-            var totalLength = checked((int)(first.Length + second.Length));
-            var result = new byte[totalLength];
-            first.CopyTo(result.AsSpan(0, (int)first.Length));
-            second.CopyTo(result.AsSpan((int)first.Length));
-            return new ReadOnlySequence<byte>(result);
-        }
+            => BufferSegment.Concat(first, second);
 
         private sealed class SimpleFramingProtocolEncoderStage : SimpleLinearGraphStage<ReadOnlySequence<byte>>
         {
@@ -319,28 +307,39 @@ namespace Akka.Streams.Dsl
                         Pull(_stage.Inlet);
                 }
 
-                // Bridge: materialize for index scanning. Replaced with SequenceReader-based
-                // scan in the follow-up pass.
+                /// <summary>
+                /// Locates the first occurrence of <paramref name="value"/> in <paramref name="buffer"/>
+                /// starting at index <paramref name="from"/>. Works on multi-segment sequences without
+                /// materializing.
+                /// </summary>
                 private static int IndexOf(ReadOnlySequence<byte> buffer, byte value, int from)
                 {
-                    var span = AsSpan(buffer);
-                    for (var i = from; i < span.Length; i++)
-                        if (span[i] == value) return i;
-                    return -1;
+                    if (from >= buffer.Length) return -1;
+                    var reader = new SequenceReader<byte>(buffer);
+                    if (from > 0) reader.Advance(from);
+                    return reader.TryAdvanceTo(value, advancePastDelimiter: false)
+                        ? (int)reader.Consumed
+                        : -1;
                 }
 
+                /// <summary>
+                /// Returns whether <paramref name="buffer"/> contains <paramref name="pattern"/> at
+                /// position <paramref name="offset"/>. Works on multi-segment sequences via
+                /// <see cref="SequenceReader{T}.IsNext(ReadOnlySpan{T}, bool)"/>.
+                /// </summary>
                 private static bool HasSubstring(ReadOnlySequence<byte> buffer, ReadOnlySequence<byte> pattern, int offset)
                 {
-                    var bufSpan = AsSpan(buffer);
-                    var patSpan = AsSpan(pattern);
-                    if (offset + patSpan.Length > bufSpan.Length) return false;
-                    for (var i = 0; i < patSpan.Length; i++)
-                        if (bufSpan[offset + i] != patSpan[i]) return false;
-                    return true;
+                    var patternLength = (int)pattern.Length;
+                    if (offset + patternLength > buffer.Length) return false;
+                    var reader = new SequenceReader<byte>(buffer);
+                    if (offset > 0) reader.Advance(offset);
+                    // Pattern is small (usually 1–4 bytes); compare via stack span when not single-segment.
+                    if (pattern.IsSingleSegment)
+                        return reader.IsNext(pattern.FirstSpan, advancePast: false);
+                    Span<byte> patternBuf = patternLength <= 64 ? stackalloc byte[patternLength] : new byte[patternLength];
+                    pattern.CopyTo(patternBuf);
+                    return reader.IsNext(patternBuf, advancePast: false);
                 }
-
-                private static ReadOnlySpan<byte> AsSpan(ReadOnlySequence<byte> sequence)
-                    => sequence.IsSingleSegment ? sequence.FirstSpan : sequence.ToArray();
 
                 private void DoParse()
                 {
@@ -375,14 +374,11 @@ namespace Akka.Streams.Dsl
                         }
                         else if (HasSubstring(_buffer, _stage._separatorBytes, possibleMatchPosition))
                         {
-                            // Found a match
+                            // Found a match — slice without copying. Slice is a struct view over the
+                            // existing segments; consumed segments fall out of scope when the slice
+                            // is reassigned to _buffer.
                             var parsedFrame = _buffer.Slice(0, possibleMatchPosition);
                             _buffer = _buffer.Slice(possibleMatchPosition + separatorLength);
-                            // compact: copy to new array so we don't hold references to old buffers
-                            if (!parsedFrame.IsEmpty)
-                                parsedFrame = new ReadOnlySequence<byte>(parsedFrame.ToArray());
-                            if (!_buffer.IsEmpty)
-                                _buffer = new ReadOnlySequence<byte>(_buffer.ToArray());
                             _nextPossibleMatch = 0;
                             Push(_stage.Outlet, parsedFrame);
 
@@ -461,9 +457,8 @@ namespace Akka.Streams.Dsl
                 /// </summary>
                 private void PushFrame()
                 {
-                    var emitSlice = _buffer.Slice(0, _frameSize);
-                    // compact the emitted frame
-                    var emit = new ReadOnlySequence<byte>(emitSlice.ToArray());
+                    // Slice the frame and remainder without copying.
+                    var emit = _buffer.Slice(0, _frameSize);
                     _buffer = _buffer.Slice(_frameSize);
                     _frameSize = int.MaxValue;
                     Push(_stage.Outlet, emit);

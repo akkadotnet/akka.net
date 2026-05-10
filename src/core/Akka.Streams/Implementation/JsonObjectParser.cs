@@ -45,11 +45,10 @@ namespace Akka.Streams.Implementation
         private static bool IsWhitespace(byte input) => Whitespace.Contains(input);
 
         private readonly int _maximumObjectLength;
-        // Internal storage stays as ReadOnlyMemory<byte> so the empty-buffer fast path keeps
-        // zero-copy behaviour: a single-segment ReadOnlySequence input is borrowed directly.
-        // The SequenceReader-based rewrite in the follow-up pass makes the multi-segment case
-        // zero-copy too.
-        private ReadOnlyMemory<byte> _buffer = ReadOnlyMemory<byte>.Empty;
+        // Internal storage uses ReadOnlySequence<byte> so concatenating multiple Offer inputs
+        // can chain segments instead of allocating a fresh byte[] for the merged buffer. The
+        // empty-buffer fast path borrows the input directly. Slicing on Poll is zero-copy.
+        private ReadOnlySequence<byte> _buffer = ReadOnlySequence<byte>.Empty;
         private int _pos; // latest position of pointer while scanning for json object end
         private int _trimFront;
         private int _depth;
@@ -79,26 +78,10 @@ namespace Akka.Streams.Implementation
         public void Offer(ReadOnlySequence<byte> input)
         {
             if (input.IsEmpty) return;
-            if (_buffer.IsEmpty)
-            {
-                // Zero-copy fast path: single-segment input is borrowed directly.
-                if (input.IsSingleSegment)
-                {
-                    _buffer = input.First;
-                    return;
-                }
-                // Multi-segment input is rare in practice; flatten into a single array.
-                var arr = new byte[checked((int)input.Length)];
-                input.CopyTo(arr);
-                _buffer = arr;
-                return;
-            }
-            // Concatenate buffers — same allocation footprint as before.
-            var inputLength = checked((int)input.Length);
-            var combined = new byte[_buffer.Length + inputLength];
-            _buffer.Span.CopyTo(combined);
-            input.CopyTo(combined.AsSpan(_buffer.Length));
-            _buffer = new ReadOnlyMemory<byte>(combined);
+            // Zero-copy concatenation: chain the existing buffer and new input via segment links.
+            // Empty-buffer case borrows the input directly. Multi-Offer case grows a segment chain
+            // without copying any data; the chain length is bounded below in the SeekObject path.
+            _buffer = _buffer.IsEmpty ? input : BufferSegment.Concat(_buffer, input);
         }
 
         /// <summary>
@@ -119,33 +102,40 @@ namespace Akka.Streams.Implementation
                 return Option<ReadOnlySequence<byte>>.None;
 
             var emit = _buffer.Slice(0, _pos);
-            var buffer = _buffer.Slice(_pos);
-            // compact: copy remainder so we don't hold onto the previous buffer
-            var bufArr = buffer.ToArray();
-            _buffer = new ReadOnlyMemory<byte>(bufArr);
+            _buffer = _buffer.Slice(_pos);
             _pos = 0;
 
             var trimFront = _trimFront;
             _trimFront = 0;
 
             if (trimFront == 0)
-                return new ReadOnlySequence<byte>(emit);
+                return emit;
 
             var trimmed = emit.Slice(trimFront);
-            return trimmed.IsEmpty
-                ? Option<ReadOnlySequence<byte>>.None
-                : new ReadOnlySequence<byte>(trimmed);
+            return trimmed.IsEmpty ? Option<ReadOnlySequence<byte>>.None : trimmed;
         }
 
         /// <summary>
-        /// Returns true if an entire valid JSON object was found, false otherwise
+        /// Returns true if an entire valid JSON object was found, false otherwise.
         /// </summary>
+        /// <remarks>
+        /// Uses <see cref="SequenceReader{T}"/> to step through the buffer one byte at a time
+        /// without materializing it. Reader advancement stays in sync with <c>_pos</c> because
+        /// <see cref="Proceed"/> increments <c>_pos</c> by exactly 1 on every call (the
+        /// <c>_pos = -1</c> branch terminates the loop).
+        /// </remarks>
         private bool SeekObject()
         {
             _completedObject = false;
             var bufferSize = _buffer.Length;
-            while (_pos != -1 && (_pos < bufferSize && _pos < _maximumObjectLength) && !_completedObject)
-                Proceed(_buffer.Span[_pos]);
+            var reader = new SequenceReader<byte>(_buffer);
+            if (_pos > 0) reader.Advance(_pos);
+
+            while (_pos != -1 && _pos < bufferSize && _pos < _maximumObjectLength && !_completedObject)
+            {
+                if (!reader.TryRead(out var b)) break;
+                Proceed(b);
+            }
 
             if (_pos >= _maximumObjectLength)
                 throw new Framing.FramingException(
