@@ -175,6 +175,7 @@ namespace Akka.Tests.IO
                 // Skip if "localhost" doesn't resolve to an IPv6 address on this system.
                 // Socket.ConnectAsync(DnsEndPoint) only tries addresses returned by DNS —
                 // if DNS doesn't return ::1, we can't reach an IPv6-only server via "localhost".
+                // TODO: see https://github.com/akkadotnet/akka.net/issues/8178 — separate-PR DNS resolution issue may apply here.
                 var addresses = await System.Net.Dns.GetHostAddressesAsync("localhost");
                 if (!addresses.Any(a => a.AddressFamily == AddressFamily.InterNetworkV6))
                     return;

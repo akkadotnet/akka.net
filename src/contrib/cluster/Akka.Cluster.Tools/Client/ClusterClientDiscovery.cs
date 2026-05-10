@@ -183,11 +183,7 @@ public class ClusterClientDiscovery: UntypedActor, IWithUnboundedStash, IWithTim
                     return null;
                 }
                 
-#if NETSTANDARD2_1
-                json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-#else
-                json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-#endif
+                json = await response.Content.ReadAsStringAsync(ct);
                 
                 if(string.IsNullOrWhiteSpace(json))
                 {
