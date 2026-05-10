@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -178,7 +179,7 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(() => {
                 var f = StreamConverters.FromInputStream(() => new ListInputStream(new[] { "a", "b", "c" }))
-                .RunWith(Sink.First<ReadOnlyMemory<byte>>(), _materializer);
+                .RunWith(Sink.First<ReadOnlySequence<byte>>(), _materializer);
 
                 f.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
                 f.Result.ToArray().Should().Equal(Encoding.UTF8.GetBytes("abc"));
@@ -192,10 +193,10 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(() => {
                 var latch = new TestLatch(1);
                 var probe = StreamConverters.FromInputStream(() => new EmittedInputStream(latch), chunkSize: 1)
-                    .RunWith(this.SinkProbe<ReadOnlyMemory<byte>>(), _materializer);
+                    .RunWith(this.SinkProbe<ReadOnlySequence<byte>>(), _materializer);
 
                 probe.Request(4);
-                probe.ExpectNext<ReadOnlyMemory<byte>>(m => m.Span.SequenceEqual(Encoding.UTF8.GetBytes("M")));
+                probe.ExpectNext<ReadOnlySequence<byte>>(m => m.ToArray().SequenceEqual(Encoding.UTF8.GetBytes("M")));
                 latch.CountDown();
                 probe.ExpectComplete();
                 return Task.CompletedTask;

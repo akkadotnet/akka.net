@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
@@ -13,7 +14,7 @@ using Akka.Streams.Stage;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// Provides JSON framing stages that can separate valid JSON objects from incoming <c>ReadOnlyMemory&lt;byte&gt;</c> objects.
+    /// Provides JSON framing stages that can separate valid JSON objects from incoming <c>ReadOnlySequence&lt;byte&gt;</c> objects.
     /// </summary>
     public static class JsonFraming
     {
@@ -44,12 +45,12 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="maximumObjectLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
         /// <returns>TBD</returns>
-        public static Flow<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, NotUsed> ObjectScanner(int maximumObjectLength)
+        public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> ObjectScanner(int maximumObjectLength)
         {
-            return Flow.Create<ReadOnlyMemory<byte>>().Via(new Scanner(maximumObjectLength));
+            return Flow.Create<ReadOnlySequence<byte>>().Via(new Scanner(maximumObjectLength));
         }
 
-        private sealed class Scanner : SimpleLinearGraphStage<ReadOnlyMemory<byte>>
+        private sealed class Scanner : SimpleLinearGraphStage<ReadOnlySequence<byte>>
         {
             private sealed class Logic : InAndOutGraphStageLogic
             {

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Threading.Tasks;
 using Akka.Streams.Actors;
@@ -20,7 +21,7 @@ namespace Akka.Streams.Implementation.IO
     /// INTERNAL API
     /// Creates simple synchronous Source backed by the given file.
     /// </summary>
-    internal sealed class FileSource : SourceModule<ReadOnlyMemory<byte>, Task<IOResult>>
+    internal sealed class FileSource : SourceModule<ReadOnlySequence<byte>, Task<IOResult>>
     {
         private readonly FileInfo _f;
         private readonly int _chunkSize;
@@ -36,7 +37,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="shape">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
-        public FileSource(FileInfo f, int chunkSize, long startPosition, Attributes attributes, SourceShape<ReadOnlyMemory<byte>> shape) : base(shape)
+        public FileSource(FileInfo f, int chunkSize, long startPosition, Attributes attributes, SourceShape<ReadOnlySequence<byte>> shape) : base(shape)
         {
             if(chunkSize <= 0)
                 throw new ArgumentException($"chunkSize must be > 0 (was {chunkSize})", nameof(chunkSize));
@@ -74,7 +75,7 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
-        protected override SourceModule<ReadOnlyMemory<byte>, Task<IOResult>> NewInstance(SourceShape<ReadOnlyMemory<byte>> shape)
+        protected override SourceModule<ReadOnlySequence<byte>, Task<IOResult>> NewInstance(SourceShape<ReadOnlySequence<byte>> shape)
             => new FileSource(_f, _chunkSize, _startPosition, Attributes, shape);
 
         /// <summary>
@@ -83,7 +84,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="context">TBD</param>
         /// <param name="task">TBD</param>
         /// <returns>TBD</returns>
-        public override IPublisher<ReadOnlyMemory<byte>> Create(MaterializationContext context, out Task<IOResult> task)
+        public override IPublisher<ReadOnlySequence<byte>> Create(MaterializationContext context, out Task<IOResult> task)
         {
             // FIXME rewrite to be based on GraphStage rather than dangerous downcasts
             var materializer = ActorMaterializerHelper.Downcast(context.Materializer);
@@ -95,7 +96,7 @@ namespace Akka.Streams.Implementation.IO
             var actorRef = materializer.ActorOf(context, props.WithDispatcher(dispatcher.Name));
 
             task = ioResultPromise.Task;
-            return new ActorPublisherImpl<ReadOnlyMemory<byte>>(actorRef);
+            return new ActorPublisherImpl<ReadOnlySequence<byte>>(actorRef);
 
         }
     }
@@ -104,7 +105,7 @@ namespace Akka.Streams.Implementation.IO
     /// INTERNAL API
     /// Source backed by the given input stream.
     /// </summary>
-    internal sealed class InputStreamSource : SourceModule<ReadOnlyMemory<byte>, Task<IOResult>>
+    internal sealed class InputStreamSource : SourceModule<ReadOnlySequence<byte>, Task<IOResult>>
     {
         private readonly Func<Stream> _createInputStream;
         private readonly int _chunkSize;
@@ -116,7 +117,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="chunkSize">TBD</param>
         /// <param name="attributes">TBD</param>
         /// <param name="shape">TBD</param>
-        public InputStreamSource(Func<Stream> createInputStream, int chunkSize, Attributes attributes, SourceShape<ReadOnlyMemory<byte>> shape) : base(shape)
+        public InputStreamSource(Func<Stream> createInputStream, int chunkSize, Attributes attributes, SourceShape<ReadOnlySequence<byte>> shape) : base(shape)
         {
             _createInputStream = createInputStream;
             _chunkSize = chunkSize;
@@ -141,7 +142,7 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
-        protected override SourceModule<ReadOnlyMemory<byte>, Task<IOResult>> NewInstance(SourceShape<ReadOnlyMemory<byte>> shape)
+        protected override SourceModule<ReadOnlySequence<byte>, Task<IOResult>> NewInstance(SourceShape<ReadOnlySequence<byte>> shape)
             => new InputStreamSource(_createInputStream, _chunkSize, Attributes, shape);
 
         /// <summary>
@@ -150,11 +151,11 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="context">TBD</param>
         /// <param name="task">TBD</param>
         /// <returns>TBD</returns>
-        public override IPublisher<ReadOnlyMemory<byte>> Create(MaterializationContext context, out Task<IOResult> task)
+        public override IPublisher<ReadOnlySequence<byte>> Create(MaterializationContext context, out Task<IOResult> task)
         {
             var materializer = ActorMaterializerHelper.Downcast(context.Materializer);
             var ioResultPromise = TaskEx.NonBlockingTaskCompletionSource<IOResult>();
-            IPublisher<ReadOnlyMemory<byte>> pub;
+            IPublisher<ReadOnlySequence<byte>> pub;
             
             try
             {
@@ -167,12 +168,12 @@ namespace Akka.Streams.Implementation.IO
                         .GetMandatoryAttribute<ActorAttributes.Dispatcher>()
                         .Name);
                 var actorRef = materializer.ActorOf(context, props);
-                pub = new ActorPublisherImpl<ReadOnlyMemory<byte>>(actorRef);
+                pub = new ActorPublisherImpl<ReadOnlySequence<byte>>(actorRef);
             }
             catch (Exception ex)
             {
                 ioResultPromise.TrySetException(ex);
-                pub = new ErrorPublisher<ReadOnlyMemory<byte>>(ex, Attributes.GetNameOrDefault("inputStreamSource"));
+                pub = new ErrorPublisher<ReadOnlySequence<byte>>(ex, Attributes.GetNameOrDefault("inputStreamSource"));
             }
 
             task = ioResultPromise.Task;

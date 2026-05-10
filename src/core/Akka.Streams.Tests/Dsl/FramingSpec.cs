@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -38,16 +39,17 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        // Helper to concatenate two ReadOnlyMemory<byte> segments
-        private static ReadOnlyMemory<byte> Concat(ReadOnlyMemory<byte> a, ReadOnlyMemory<byte> b)
+        // Helper to concatenate two ReadOnlySequence<byte> segments
+        private static ReadOnlySequence<byte> Concat(ReadOnlySequence<byte> a, ReadOnlySequence<byte> b)
         {
-            var result = new byte[a.Length + b.Length];
-            a.Span.CopyTo(result);
-            b.Span.CopyTo(result.AsSpan(a.Length));
-            return result;
+            var aLen = (int)a.Length;
+            var result = new byte[aLen + (int)b.Length];
+            a.CopyTo(result.AsSpan(0, aLen));
+            b.CopyTo(result.AsSpan(aLen));
+            return new ReadOnlySequence<byte>(result);
         }
 
-        private sealed class Rechunker : SimpleLinearGraphStage<ReadOnlyMemory<byte>>
+        private sealed class Rechunker : SimpleLinearGraphStage<ReadOnlySequence<byte>>
         {
             #region Logic
 
@@ -66,9 +68,10 @@ namespace Akka.Streams.Tests.Dsl
                 public override void OnPush()
                 {
                     var chunk = Grab(_stage.Inlet);
-                    var newBuffer = new byte[_bufferLength + chunk.Length];
+                    var chunkLen = (int)chunk.Length;
+                    var newBuffer = new byte[_bufferLength + chunkLen];
                     _buffer.AsSpan(0, _bufferLength).CopyTo(newBuffer);
-                    chunk.Span.CopyTo(newBuffer.AsSpan(_bufferLength));
+                    chunk.CopyTo(newBuffer.AsSpan(_bufferLength));
                     _buffer = newBuffer;
                     _bufferLength = newBuffer.Length;
                     Rechunk();
@@ -98,7 +101,7 @@ namespace Akka.Streams.Tests.Dsl
                         _buffer = remaining;
                         _bufferLength = remaining.Length;
 
-                        Push(_stage.Outlet, new ReadOnlyMemory<byte>(newChunk));
+                        Push(_stage.Outlet, new ReadOnlySequence<byte>(newChunk));
 
                         if (IsClosed(_stage.Inlet) && _bufferLength == 0)
                             CompleteStage();
@@ -115,34 +118,35 @@ namespace Akka.Streams.Tests.Dsl
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
-        private Flow<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, NotUsed> Rechunk
-            => Flow.Create<ReadOnlyMemory<byte>>().Via(new Rechunker()).Named("rechunker");
+        private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> Rechunk
+            => Flow.Create<ReadOnlySequence<byte>>().Via(new Rechunker()).Named("rechunker");
 
-        private static readonly List<ReadOnlyMemory<byte>> DelimiterBytes =
-            new List<string> {"\n", "\r\n", "FOO"}.Select(s => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(s)).ToList();
+        private static readonly List<ReadOnlySequence<byte>> DelimiterBytes =
+            new List<string> {"\n", "\r\n", "FOO"}.Select(s => new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(s))).ToList();
 
-        private static readonly List<ReadOnlyMemory<byte>> BaseTestSequences =
-            new List<string> { "", "foo", "hello world" }.Select(s => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(s)).ToList();
+        private static readonly List<ReadOnlySequence<byte>> BaseTestSequences =
+            new List<string> { "", "foo", "hello world" }.Select(s => new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(s))).ToList();
 
-        private static Flow<ReadOnlyMemory<byte>, string, NotUsed> SimpleLines(string delimiter, int maximumBytes, bool allowTruncation = true)
+        private static Flow<ReadOnlySequence<byte>, string, NotUsed> SimpleLines(string delimiter, int maximumBytes, bool allowTruncation = true)
         {
             return Framing.Delimiter(Encoding.UTF8.GetBytes(delimiter), maximumBytes, allowTruncation)
-                .Select(x => Encoding.UTF8.GetString(x.Span)).Named("LineFraming");
+                .Select(x => Encoding.UTF8.GetString(x.ToArray())).Named("LineFraming");
         }
 
-        private static IEnumerable<ReadOnlyMemory<byte>> CompleteTestSequence(ReadOnlyMemory<byte> delimiter)
+        private static IEnumerable<ReadOnlySequence<byte>> CompleteTestSequence(ReadOnlySequence<byte> delimiter)
         {
             for (var i = 0; i < delimiter.Length; i++)
                 foreach (var sequence in BaseTestSequences)
                     yield return ConcatTwo(delimiter.Slice(0, i), sequence);
         }
 
-        private static ReadOnlyMemory<byte> ConcatTwo(ReadOnlyMemory<byte> a, ReadOnlyMemory<byte> b)
+        private static ReadOnlySequence<byte> ConcatTwo(ReadOnlySequence<byte> a, ReadOnlySequence<byte> b)
         {
-            var result = new byte[a.Length + b.Length];
-            a.Span.CopyTo(result);
-            b.Span.CopyTo(result.AsSpan(a.Length));
-            return result;
+            var aLen = (int)a.Length;
+            var result = new byte[aLen + (int)b.Length];
+            a.CopyTo(result.AsSpan(0, aLen));
+            b.CopyTo(result.AsSpan(aLen));
+            return new ReadOnlySequence<byte>(result);
         }
 
         [Fact]
@@ -157,14 +161,14 @@ namespace Akka.Streams.Tests.Dsl
                         .Select(x => ConcatTwo(x, delimiter))
                         .Via(Rechunk)
                         .Via(Framing.Delimiter(delimiter, 256))
-                        .RunWith(Sink.Seq<ReadOnlyMemory<byte>>(), Materializer);
+                        .RunWith(Sink.Seq<ReadOnlySequence<byte>>(), Materializer);
 
                     task.Wait(TimeSpan.FromDays(3)).Should().BeTrue();
                     // Compare element-by-element using span equality
                     var results = task.Result.ToList();
                     results.Count.Should().Be(testSequence.Count);
                     for (var j = 0; j < results.Count; j++)
-                        results[j].Span.SequenceEqual(testSequence[j].Span).Should().BeTrue();
+                        results[j].ToArray().SequenceEqual(testSequence[j].ToArray()).Should().BeTrue();
                 }
             }
         }
@@ -172,7 +176,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Delimiter_bytes_based_framing_must_respect_maximum_line_settings()
         {
-            var task1 = Source.Single((ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("a\nb\nc\nd\n"))
+            var task1 = Source.Single(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("a\nb\nc\nd\n")))
                 .Via(SimpleLines("\n", 1))
                 .Limit(100)
                 .RunWith(Sink.Seq<string>(), Materializer);
@@ -181,14 +185,14 @@ namespace Akka.Streams.Tests.Dsl
             task1.Result.Should().BeEquivalentTo(new[] {"a", "b", "c", "d"});
 
             var task2 =
-                Source.Single((ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("ab\n"))
+                Source.Single(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("ab\n")))
                     .Via(SimpleLines("\n", 1))
                     .Limit(100)
                     .RunWith(Sink.Seq<string>(), Materializer);
             task2.Invoking(t => t.Wait(TimeSpan.FromSeconds(3))).Should().Throw<Framing.FramingException>();
 
             var task3 =
-                Source.Single((ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("aaa"))
+                Source.Single(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("aaa")))
                     .Via(SimpleLines("\n", 2))
                     .Limit(100)
                     .RunWith(Sink.Seq<string>(), Materializer);
@@ -198,7 +202,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Delimiter_bytes_based_framing_must_work_with_empty_streams()
         {
-            var task = Source.Empty<ReadOnlyMemory<byte>>().Via(SimpleLines("\n", 256)).RunAggregate(new List<string>(), (list, s) =>
+            var task = Source.Empty<ReadOnlySequence<byte>>().Via(SimpleLines("\n", 256)).RunAggregate(new List<string>(), (list, s) =>
             {
                 list.Add(s);
                 return list;
@@ -211,7 +215,7 @@ namespace Akka.Streams.Tests.Dsl
         public void Delimiter_bytes_based_framing_must_report_truncated_frames()
         {
             var task =
-                Source.Single((ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("I have no end"))
+                Source.Single(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("I have no end")))
                     .Via(SimpleLines("\n", 256, false))
                     .Grouped(1000)
                     .RunWith(Sink.First<IEnumerable<string>>(), Materializer);
@@ -223,7 +227,7 @@ namespace Akka.Streams.Tests.Dsl
         public async Task Delimiter_bytes_based_framing_must_allow_truncated_frames_if_configured_so()
         {
             var task =
-                Source.Single((ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("I have no end"))
+                Source.Single(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("I have no end")))
                     .Via(SimpleLines("\n", 256))
                     .Grouped(1000)
                     .RunWith(Sink.First<IEnumerable<string>>(), Materializer);
@@ -240,7 +244,7 @@ namespace Akka.Streams.Tests.Dsl
               .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        private static readonly ReadOnlyMemory<byte> ReferenceChunk = Encoding.ASCII.GetBytes(RandomString(0x100001));
+        private static readonly ReadOnlySequence<byte> ReferenceChunk = new(Encoding.ASCII.GetBytes(RandomString(0x100001)));
 
         private static readonly List<ByteOrder> ByteOrders = new()
         {
@@ -269,36 +273,37 @@ namespace Akka.Streams.Tests.Dsl
 
         private static readonly List<int> FieldOffsets = new() {0, 1, 2, 3, 15, 16, 31, 32, 44, 107};
 
-        private static ReadOnlyMemory<byte> Encode(ReadOnlyMemory<byte> payload, int fieldOffset, int fieldLength, ByteOrder byteOrder) =>
+        private static ReadOnlySequence<byte> Encode(ReadOnlySequence<byte> payload, int fieldOffset, int fieldLength, ByteOrder byteOrder) =>
             EncodeComplexFrame(payload, fieldLength, byteOrder, new byte[fieldOffset], Array.Empty<byte>());
 
-        private static ReadOnlyMemory<byte> EncodeComplexFrame(
-            ReadOnlyMemory<byte> payload,
+        private static ReadOnlySequence<byte> EncodeComplexFrame(
+            ReadOnlySequence<byte> payload,
             int fieldLength,
             ByteOrder byteOrder,
             byte[] offset,
             byte[] tail)
         {
-            var h = new byte[4].PutInt(payload.Length, order: byteOrder);
+            var payloadLength = (int)payload.Length;
+            var h = new byte[4].PutInt(payloadLength, order: byteOrder);
             byte[] header = byteOrder == ByteOrder.LittleEndian
                 ? h.AsSpan(0, fieldLength).ToArray()
                 : h.AsSpan(4 - fieldLength).ToArray();
 
             // Concatenate: offset + header + payload + tail
-            var totalLength = offset.Length + header.Length + payload.Length + tail.Length;
+            var totalLength = offset.Length + header.Length + payloadLength + tail.Length;
             var result = new byte[totalLength];
             var pos = 0;
             offset.CopyTo(result, pos); pos += offset.Length;
             header.CopyTo(result, pos); pos += header.Length;
-            payload.Span.CopyTo(result.AsSpan(pos)); pos += payload.Length;
+            payload.CopyTo(result.AsSpan(pos, payloadLength)); pos += payloadLength;
             tail.CopyTo(result, pos);
-            return result;
+            return new ReadOnlySequence<byte>(result);
         }
 
         [Fact]
         public void Length_field_based_framing_must_work_with_various_byte_orders_frame_lengths_and_offsets()
         {
-            IEnumerable<Task<(IEnumerable<ReadOnlyMemory<byte>>, List<ReadOnlyMemory<byte>>, (ByteOrder, int, int))>> GetFutureResults()
+            IEnumerable<Task<(IEnumerable<ReadOnlySequence<byte>>, List<ReadOnlySequence<byte>>, (ByteOrder, int, int))>> GetFutureResults()
             {
                 foreach (var byteOrder in ByteOrders)
                 foreach (var fieldOffset in FieldOffsets)
@@ -314,7 +319,7 @@ namespace Akka.Streams.Tests.Dsl
                         .Via(Rechunk)
                         .Via(Framing.LengthField(fieldLength, int.MaxValue, fieldOffset, byteOrder))
                         .Grouped(10000)
-                        .RunWith(Sink.First<IEnumerable<ReadOnlyMemory<byte>>>(), Materializer)
+                        .RunWith(Sink.First<IEnumerable<ReadOnlySequence<byte>>>(), Materializer)
                         .ContinueWith(t => (t.Result, encodedFrames, (byteOrder, fieldOffset, fieldLength)));
                 }
             }
@@ -325,7 +330,7 @@ namespace Akka.Streams.Tests.Dsl
                 var resultList = result.ToList();
                 resultList.Count.Should().Be(encodedFrames.Count, $"byteOrder: {byteOrder}, fieldOffset: {fieldOffset}, fieldLength: {fieldLength}");
                 for (var i = 0; i < resultList.Count; i++)
-                    resultList[i].Span.SequenceEqual(encodedFrames[i].Span).Should().BeTrue(
+                    resultList[i].ToArray().SequenceEqual(encodedFrames[i].ToArray()).Should().BeTrue(
                         $"byteOrder: {byteOrder}, fieldOffset: {fieldOffset}, fieldLength: {fieldLength}");
             });
         }
@@ -333,7 +338,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Length_field_based_framing_must_work_with_various_byte_orders_frame_lengths_and_offsets_using_ComputeFrameSize()
         {
-            IEnumerable<Task<(IEnumerable<ReadOnlyMemory<byte>>, List<ReadOnlyMemory<byte>>, (ByteOrder, int, int))>> GetFutureResults()
+            IEnumerable<Task<(IEnumerable<ReadOnlySequence<byte>>, List<ReadOnlySequence<byte>>, (ByteOrder, int, int))>> GetFutureResults()
             {
                 foreach (var byteOrder in ByteOrders)
                 foreach (var fieldOffset in FieldOffsets)
@@ -365,7 +370,7 @@ namespace Akka.Streams.Tests.Dsl
                         .Via(Rechunk)
                         .Via(Framing.LengthField(fieldLength, fieldOffset, int.MaxValue, byteOrder, ComputeFrameSize))
                         .Grouped(10000)
-                        .RunWith(Sink.First<IEnumerable<ReadOnlyMemory<byte>>>(), Materializer)
+                        .RunWith(Sink.First<IEnumerable<ReadOnlySequence<byte>>>(), Materializer)
                         .ContinueWith(t => (t.Result, encodedFrames, (byteOrder, fieldOffset, fieldLength)));
                 }
             }
@@ -376,7 +381,7 @@ namespace Akka.Streams.Tests.Dsl
                 var resultList = result.ToList();
                 resultList.Count.Should().Be(encodedFrames.Count, $"byteOrder: {byteOrder}, fieldOffset: {fieldOffset}, fieldLength: {fieldLength}");
                 for (var i = 0; i < resultList.Count; i++)
-                    resultList[i].Span.SequenceEqual(encodedFrames[i].Span).Should().BeTrue(
+                    resultList[i].ToArray().SequenceEqual(encodedFrames[i].ToArray()).Should().BeTrue(
                         $"byteOrder: {byteOrder}, fieldOffset: {fieldOffset}, fieldLength: {fieldLength}");
             });
         }
@@ -384,9 +389,9 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void Length_field_based_framing_must_work_with_empty_streams()
         {
-            var task = Source.Empty<ReadOnlyMemory<byte>>()
+            var task = Source.Empty<ReadOnlySequence<byte>>()
                 .Via(Framing.LengthField(4, int.MaxValue, 0, ByteOrder.BigEndian))
-                .RunAggregate(new List<ReadOnlyMemory<byte>>(), (list, s) =>
+                .RunAggregate(new List<ReadOnlySequence<byte>>(), (list, s) =>
                 {
                     list.Add(s);
                     return list;
@@ -401,7 +406,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var task1 = Source.Single(Encode(ReferenceChunk.Slice(0, 100), 0, 1, ByteOrder.BigEndian))
                 .Via(Framing.LengthField(1, 99, 0, ByteOrder.BigEndian))
-                .RunAggregate(new List<ReadOnlyMemory<byte>>(), (list, s) =>
+                .RunAggregate(new List<ReadOnlySequence<byte>>(), (list, s) =>
                 {
                     list.Add(s);
                     return list;
@@ -410,7 +415,7 @@ namespace Akka.Streams.Tests.Dsl
 
             var task2 = Source.Single(Encode(ReferenceChunk.Slice(0, 100), 49, 1, ByteOrder.BigEndian))
                 .Via(Framing.LengthField(1, 100, 0, ByteOrder.BigEndian))
-                .RunAggregate(new List<ReadOnlyMemory<byte>>(), (list, s) =>
+                .RunAggregate(new List<ReadOnlySequence<byte>>(), (list, s) =>
                 {
                     list.Add(s);
                     return list;
@@ -438,7 +443,7 @@ namespace Akka.Streams.Tests.Dsl
                                         .Via(Rechunk)
                                         .Via(Framing.LengthField(fieldLength, int.MaxValue, fieldOffset, byteOrder))
                                         .Grouped(10000)
-                                        .RunWith(Sink.First<IEnumerable<ReadOnlyMemory<byte>>>(), Materializer)
+                                        .RunWith(Sink.First<IEnumerable<ReadOnlySequence<byte>>>(), Materializer)
                                         .Wait(TimeSpan.FromSeconds(5))
                                         .ShouldBeTrue("Stream should complete withing 5 seconds");
                             };
@@ -456,7 +461,7 @@ namespace Akka.Streams.Tests.Dsl
             var codecFlow = Framing.SimpleFramingProtocol(1024)
                 .Atop(rechunkBidi)
                 .Atop(Framing.SimpleFramingProtocol(1024).Reversed())
-                .Join(Flow.Create<ReadOnlyMemory<byte>>()); // Loopback
+                .Join(Flow.Create<ReadOnlySequence<byte>>()); // Loopback
 
             var random = new Random();
             var testMessages = Enumerable.Range(1, 100).Select(_ => ReferenceChunk.Slice(0, random.Next(1024))).ToList();
@@ -464,13 +469,13 @@ namespace Akka.Streams.Tests.Dsl
             var task = Source.From(testMessages)
                 .Via(codecFlow)
                 .Limit(1000)
-                .RunWith(Sink.Seq<ReadOnlyMemory<byte>>(), Materializer);
+                .RunWith(Sink.Seq<ReadOnlySequence<byte>>(), Materializer);
 
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             var results = task.Result.ToList();
             results.Count.Should().Be(testMessages.Count);
             for (var i = 0; i < results.Count; i++)
-                results[i].Span.SequenceEqual(testMessages[i].Span).Should().BeTrue();
+                results[i].ToArray().SequenceEqual(testMessages[i].ToArray()).Should().BeTrue();
         }
 
         [Fact]
@@ -479,11 +484,11 @@ namespace Akka.Streams.Tests.Dsl
             // A 4-byte message containing only an Int specifying the length of the payload
             // The issue shows itself if length in message is less than or equal
             // to -4 (if expected length field is length 4)
-            var bytes = (ReadOnlyMemory<byte>)BitConverter.GetBytes(-4).ToArray();
+            var bytes = new ReadOnlySequence<byte>(BitConverter.GetBytes(-4));
 
             var result = Source.Single(bytes)
-                .Via(Flow.Create<ReadOnlyMemory<byte>>().Via(Framing.LengthField(4, 1000)))
-                .RunWith(Sink.Seq<ReadOnlyMemory<byte>>(), Materializer);
+                .Via(Flow.Create<ReadOnlySequence<byte>>().Via(Framing.LengthField(4, 1000)))
+                .RunWith(Sink.Seq<ReadOnlySequence<byte>>(), Materializer);
 
             await Awaiting(async () => await result)
                 .Should().ThrowAsync<Framing.FramingException>()
@@ -498,15 +503,15 @@ namespace Akka.Streams.Tests.Dsl
 
             var tempArray = new byte[4].PutInt(unchecked((int)0xFF010203), order: ByteOrder.LittleEndian);
             Array.Resize(ref tempArray, 8);
-            var bs = (ReadOnlyMemory<byte>)tempArray.PutInt(checked(0x04050607), order: ByteOrder.LittleEndian);
+            var bs = new ReadOnlySequence<byte>(tempArray.PutInt(checked(0x04050607), order: ByteOrder.LittleEndian));
 
             var result = Source.Single(bs)
-                .Via(Flow.Create<ReadOnlyMemory<byte>>().Via(Framing.LengthField(4, 0, 1000, ByteOrder.LittleEndian, ComputeFrameSize)))
-                .RunWith(Sink.Seq<ReadOnlyMemory<byte>>(), Materializer);
+                .Via(Flow.Create<ReadOnlySequence<byte>>().Via(Framing.LengthField(4, 0, 1000, ByteOrder.LittleEndian, ComputeFrameSize)))
+                .RunWith(Sink.Seq<ReadOnlySequence<byte>>(), Materializer);
 
             var complete = await result.WaitAsync(3.Seconds());
             complete.Should().HaveCount(1);
-            complete[0].Span.SequenceEqual(bs.Span).Should().BeTrue();
+            complete[0].ToArray().SequenceEqual(bs.ToArray()).Should().BeTrue();
         }
 
         [Fact]
@@ -515,11 +520,11 @@ namespace Akka.Streams.Tests.Dsl
             int ComputeFrameSize(IReadOnlyList<byte> offset, int length) => 3;
 
             // A 4-byte message containing only an Int specifying the length of the payload
-            var bytes = (ReadOnlyMemory<byte>)BitConverter.GetBytes(4);
+            var bytes = new ReadOnlySequence<byte>(BitConverter.GetBytes(4));
 
             var result = Source.Single(bytes)
-                .Via(Flow.Create<ReadOnlyMemory<byte>>().Via(Framing.LengthField(4, 0, 1000, ByteOrder.LittleEndian, ComputeFrameSize)))
-                .RunWith(Sink.Seq<ReadOnlyMemory<byte>>(), Materializer);
+                .Via(Flow.Create<ReadOnlySequence<byte>>().Via(Framing.LengthField(4, 0, 1000, ByteOrder.LittleEndian, ComputeFrameSize)))
+                .RunWith(Sink.Seq<ReadOnlySequence<byte>>(), Materializer);
 
             await Awaiting(async () => await result)
                 .Should().ThrowAsync<Framing.FramingException>()
@@ -531,20 +536,20 @@ namespace Akka.Streams.Tests.Dsl
         public async Task Length_field_based_framing_must_let_zero_length_field_values_pass_through()
         {
             // Interleave empty frames with a frame with data
-            var b = (ReadOnlyMemory<byte>)BitConverter.GetBytes(42).ToArray();
+            var b = new ReadOnlySequence<byte>(BitConverter.GetBytes(42));
             var encodedPayload = Encode(b, 0, 4, ByteOrder.LittleEndian);
-            var emptyFrame = Encode(ReadOnlyMemory<byte>.Empty, 0, 4, ByteOrder.LittleEndian);
+            var emptyFrame = Encode(ReadOnlySequence<byte>.Empty, 0, 4, ByteOrder.LittleEndian);
 
             var bytes = new[] { emptyFrame, encodedPayload, emptyFrame };
 
             var result = Source.From(bytes)
-                .Via(Flow.Create<ReadOnlyMemory<byte>>().Via(Framing.LengthField(4, 1000)))
-                .RunWith(Sink.Seq<ReadOnlyMemory<byte>>(), Materializer);
+                .Via(Flow.Create<ReadOnlySequence<byte>>().Via(Framing.LengthField(4, 1000)))
+                .RunWith(Sink.Seq<ReadOnlySequence<byte>>(), Materializer);
 
             var complete = await result.WaitAsync(3.Seconds());
             complete.Should().HaveCount(bytes.Length);
             for (var i = 0; i < complete.Count; i++)
-                complete[i].Span.SequenceEqual(bytes[i].Span).Should().BeTrue();
+                complete[i].ToArray().SequenceEqual(bytes[i].ToArray()).Should().BeTrue();
         }
     }
 }

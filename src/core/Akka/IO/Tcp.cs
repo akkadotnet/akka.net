@@ -674,14 +674,22 @@ namespace Akka.IO
         /// Whenever data are read from a socket they will be transferred within this
         /// class to the handler actor which was designated in the <see cref="Register" /> message.
         /// </summary>
+        /// <remarks>
+        /// <see cref="Data"/> is a <see cref="ReadOnlySequence{T}"/> to allow potentially
+        /// non-contiguous buffers from the underlying transport. Today the actor copies
+        /// the pipe's pooled segments into a single contiguous array before delivery, so
+        /// the sequence is single-segment in practice; downstream framing stages should
+        /// still treat it as multi-segment to remain compatible with future zero-copy
+        /// optimizations.
+        /// </remarks>
         public sealed class Received : Event
         {
-            public Received(ReadOnlyMemory<byte> data)
+            public Received(ReadOnlySequence<byte> data)
             {
                 Data = data;
             }
 
-            public ReadOnlyMemory<byte> Data { get; }
+            public ReadOnlySequence<byte> Data { get; }
 
             public override string ToString() =>
                 $"Received(bytes: {Data.Length})";

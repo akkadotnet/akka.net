@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
@@ -35,13 +36,20 @@ namespace Akka.Streams.Dsl
         /// <param name="maximumFrameLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
         /// <param name="allowTruncation">If false, then when the last frame being decoded contains no valid delimiter this Flow fails the stream instead of returning a truncated frame.</param>
         /// <returns>TBD</returns>
-        public static Flow<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, NotUsed> Delimiter(ReadOnlyMemory<byte> delimiter, int maximumFrameLength,
+        public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> Delimiter(ReadOnlySequence<byte> delimiter, int maximumFrameLength,
             bool allowTruncation = false)
         {
-            return Flow.Create<ReadOnlyMemory<byte>>()
+            return Flow.Create<ReadOnlySequence<byte>>()
                 .Via(new DelimiterFramingStage(delimiter, maximumFrameLength, allowTruncation))
                 .Named("DelimiterFraming");
         }
+
+        /// <summary>
+        /// Convenience overload accepting <see cref="ReadOnlyMemory{T}"/> for the delimiter.
+        /// </summary>
+        public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> Delimiter(ReadOnlyMemory<byte> delimiter, int maximumFrameLength,
+            bool allowTruncation = false)
+            => Delimiter(new ReadOnlySequence<byte>(delimiter), maximumFrameLength, allowTruncation);
 
         /// <summary>
         /// Creates a Flow that decodes an incoming stream of unstructured byte chunks into a stream of frames, assuming that
@@ -58,13 +66,13 @@ namespace Akka.Streams.Dsl
         /// This exception is thrown when the specified <paramref name="fieldLength"/> is not equal to either 1, 2, 3 or 4.
         /// </exception>
         /// <returns>TBD</returns>
-        public static Flow<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, NotUsed> LengthField(int fieldLength, int maximumFramelength,
+        public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> LengthField(int fieldLength, int maximumFramelength,
             int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
         {
             if (fieldLength is < 1 or > 4)
                 throw new ArgumentException("Length field length must be 1,2,3 or 4", nameof(fieldLength));
 
-            return Flow.Create<ReadOnlyMemory<byte>>()
+            return Flow.Create<ReadOnlySequence<byte>>()
                 .Via(new LengthFieldFramingStage(fieldLength, maximumFramelength, fieldOffset, byteOrder))
                 .Named("LengthFieldFraming");
         }
@@ -91,7 +99,7 @@ namespace Akka.Streams.Dsl
         /// This exception is thrown when the specified <paramref name="fieldLength"/> is not equal to either 1, 2, 3 or 4.
         /// </exception>
         /// <returns>TBD</returns>
-        public static Flow<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, NotUsed> LengthField(
+        public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> LengthField(
             int fieldLength,
             int fieldOffset,
             int maximumFrameLength,
@@ -101,7 +109,7 @@ namespace Akka.Streams.Dsl
             if (fieldLength is < 1 or > 4)
                 throw new ArgumentException("Length field length must be 1,2,3 or 4", nameof(fieldLength));
 
-            return Flow.Create<ReadOnlyMemory<byte>>()
+            return Flow.Create<ReadOnlySequence<byte>>()
                 .Via(new LengthFieldFramingStage(fieldLength, maximumFrameLength, fieldOffset, byteOrder, computeFrameSize))
                 .Named("LengthFieldFraming");
         }
@@ -122,7 +130,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="maximumMessageLength">Maximum length of allowed messages. If sent or received messages exceed the configured limit this BidiFlow will fail the stream. The header attached by this BidiFlow are not included in this limit.</param>
         /// <returns>TBD</returns>
-        public static BidiFlow<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, NotUsed> SimpleFramingProtocol(int maximumMessageLength)
+        public static BidiFlow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> SimpleFramingProtocol(int maximumMessageLength)
         {
             return BidiFlow.FromFlowsMat(SimpleFramingProtocolEncoder(maximumMessageLength),
                 SimpleFramingProtocolDecoder(maximumMessageLength), Keep.Left);
@@ -133,7 +141,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="maximumMessageLength">TBD</param>
         /// <returns>TBD</returns>
-        public static Flow<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength)
+        public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength)
         {
             return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Slice(4));
         }
@@ -143,9 +151,9 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="maximumMessageLength">TBD</param>
         /// <returns>TBD</returns>
-        public static Flow<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, NotUsed> SimpleFramingProtocolEncoder(int maximumMessageLength)
+        public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> SimpleFramingProtocolEncoder(int maximumMessageLength)
         {
-            return Flow.Create<ReadOnlyMemory<byte>>().Via(new SimpleFramingProtocolEncoderStage(maximumMessageLength));
+            return Flow.Create<ReadOnlySequence<byte>>().Via(new SimpleFramingProtocolEncoderStage(maximumMessageLength));
         }
 
         /// <summary>
@@ -190,19 +198,26 @@ namespace Akka.Streams.Dsl
         };
 
         /// <summary>
-        /// Appends <paramref name="second"/> to <paramref name="first"/> and returns a new <see cref="ReadOnlyMemory{T}"/>.
+        /// Appends <paramref name="second"/> to <paramref name="first"/> and returns a new <see cref="ReadOnlySequence{T}"/>.
         /// </summary>
-        private static ReadOnlyMemory<byte> Concat(ReadOnlyMemory<byte> first, ReadOnlyMemory<byte> second)
+        /// <remarks>
+        /// Bridge implementation that materializes both inputs into a single contiguous array.
+        /// Allocation behaviour matches the previous <c>ReadOnlyMemory</c>-based implementation;
+        /// a follow-up pass replaces this with a multi-segment <see cref="ReadOnlySequenceSegment{T}"/>
+        /// chain to skip the copy entirely.
+        /// </remarks>
+        private static ReadOnlySequence<byte> Concat(ReadOnlySequence<byte> first, ReadOnlySequence<byte> second)
         {
             if (first.IsEmpty) return second;
             if (second.IsEmpty) return first;
-            var result = new byte[first.Length + second.Length];
-            first.Span.CopyTo(result);
-            second.Span.CopyTo(result.AsSpan(first.Length));
-            return new ReadOnlyMemory<byte>(result);
+            var totalLength = checked((int)(first.Length + second.Length));
+            var result = new byte[totalLength];
+            first.CopyTo(result.AsSpan(0, (int)first.Length));
+            second.CopyTo(result.AsSpan((int)first.Length));
+            return new ReadOnlySequence<byte>(result);
         }
 
-        private sealed class SimpleFramingProtocolEncoderStage : SimpleLinearGraphStage<ReadOnlyMemory<byte>>
+        private sealed class SimpleFramingProtocolEncoderStage : SimpleLinearGraphStage<ReadOnlySequence<byte>>
         {
             #region Logic
 
@@ -229,7 +244,7 @@ namespace Akka.Streams.Dsl
                     {
                         var header = new byte[4];
                         BinaryPrimitives.WriteInt32BigEndian(header, (int)messageSize);
-                        Push(_stage.Outlet, Concat(new ReadOnlyMemory<byte>(header), message));
+                        Push(_stage.Outlet, Concat(new ReadOnlySequence<byte>(header), message));
                     }
 
                 }
@@ -249,7 +264,7 @@ namespace Akka.Streams.Dsl
             protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
         }
 
-        private sealed class DelimiterFramingStage : SimpleLinearGraphStage<ReadOnlyMemory<byte>>
+        private sealed class DelimiterFramingStage : SimpleLinearGraphStage<ReadOnlySequence<byte>>
         {
             #region Logic
 
@@ -257,13 +272,13 @@ namespace Akka.Streams.Dsl
             {
                 private readonly DelimiterFramingStage _stage;
                 private readonly byte _firstSeparatorByte;
-                private ReadOnlyMemory<byte> _buffer = ReadOnlyMemory<byte>.Empty;
+                private ReadOnlySequence<byte> _buffer = ReadOnlySequence<byte>.Empty;
                 private int _nextPossibleMatch;
 
                 public Logic(DelimiterFramingStage stage) : base (stage.Shape)
                 {
                     _stage = stage;
-                    _firstSeparatorByte = stage._separatorBytes.Span[0];
+                    _firstSeparatorByte = stage._separatorBytes.FirstSpan[0];
 
                     SetHandlers(stage.Inlet, stage.Outlet, this);
                 }
@@ -304,46 +319,53 @@ namespace Akka.Streams.Dsl
                         Pull(_stage.Inlet);
                 }
 
-                private int IndexOf(ReadOnlyMemory<byte> buffer, byte value, int from)
+                // Bridge: materialize for index scanning. Replaced with SequenceReader-based
+                // scan in the follow-up pass.
+                private static int IndexOf(ReadOnlySequence<byte> buffer, byte value, int from)
                 {
-                    var span = buffer.Span;
+                    var span = AsSpan(buffer);
                     for (var i = from; i < span.Length; i++)
                         if (span[i] == value) return i;
                     return -1;
                 }
 
-                private bool HasSubstring(ReadOnlyMemory<byte> buffer, ReadOnlyMemory<byte> pattern, int offset)
+                private static bool HasSubstring(ReadOnlySequence<byte> buffer, ReadOnlySequence<byte> pattern, int offset)
                 {
-                    var bufSpan = buffer.Span;
-                    var patSpan = pattern.Span;
+                    var bufSpan = AsSpan(buffer);
+                    var patSpan = AsSpan(pattern);
                     if (offset + patSpan.Length > bufSpan.Length) return false;
                     for (var i = 0; i < patSpan.Length; i++)
                         if (bufSpan[offset + i] != patSpan[i]) return false;
                     return true;
                 }
 
+                private static ReadOnlySpan<byte> AsSpan(ReadOnlySequence<byte> sequence)
+                    => sequence.IsSingleSegment ? sequence.FirstSpan : sequence.ToArray();
+
                 private void DoParse()
                 {
                     while (true)
                     {
                         var possibleMatchPosition = IndexOf(_buffer, _firstSeparatorByte, _nextPossibleMatch);
+                        var bufferLength = (int)_buffer.Length;
+                        var separatorLength = (int)_stage._separatorBytes.Length;
 
                         if (possibleMatchPosition > _stage._maximumLineBytes)
                         {
-                            FailStage(new FramingException($"Read {_buffer.Length} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
+                            FailStage(new FramingException($"Read {bufferLength} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
                         }
                         else if (possibleMatchPosition == -1)
                         {
-                            if (_buffer.Length > _stage._maximumLineBytes)
-                                FailStage(new FramingException($"Read {_buffer.Length} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
+                            if (bufferLength > _stage._maximumLineBytes)
+                                FailStage(new FramingException($"Read {bufferLength} bytes which is more than {_stage._maximumLineBytes} without seeing a line terminator"));
                             else
                             {
                                 // No matching character, we need to accumulate more bytes into the buffer
-                                _nextPossibleMatch = _buffer.Length;
+                                _nextPossibleMatch = bufferLength;
                                 TryPull();
                             }
                         }
-                        else if (possibleMatchPosition + _stage._separatorBytes.Length > _buffer.Length)
+                        else if (possibleMatchPosition + separatorLength > bufferLength)
                         {
                             // We have found a possible match (we found the first character of the terminator
                             // sequence) but we don't have yet enough bytes. We remember the position to
@@ -355,18 +377,12 @@ namespace Akka.Streams.Dsl
                         {
                             // Found a match
                             var parsedFrame = _buffer.Slice(0, possibleMatchPosition);
-                            _buffer = _buffer.Slice(possibleMatchPosition + _stage._separatorBytes.Length);
+                            _buffer = _buffer.Slice(possibleMatchPosition + separatorLength);
                             // compact: copy to new array so we don't hold references to old buffers
                             if (!parsedFrame.IsEmpty)
-                            {
-                                var arr = parsedFrame.ToArray();
-                                parsedFrame = new ReadOnlyMemory<byte>(arr);
-                            }
+                                parsedFrame = new ReadOnlySequence<byte>(parsedFrame.ToArray());
                             if (!_buffer.IsEmpty)
-                            {
-                                var arr = _buffer.ToArray();
-                                _buffer = new ReadOnlyMemory<byte>(arr);
-                            }
+                                _buffer = new ReadOnlySequence<byte>(_buffer.ToArray());
                             _nextPossibleMatch = 0;
                             Push(_stage.Outlet, parsedFrame);
 
@@ -387,11 +403,11 @@ namespace Akka.Streams.Dsl
 
             #endregion
 
-            private readonly ReadOnlyMemory<byte> _separatorBytes;
+            private readonly ReadOnlySequence<byte> _separatorBytes;
             private readonly int _maximumLineBytes;
             private readonly bool _allowTruncation;
 
-            public DelimiterFramingStage(ReadOnlyMemory<byte> separatorBytes, int maximumLineBytes, bool allowTruncation) : base("DelimiterFraming")
+            public DelimiterFramingStage(ReadOnlySequence<byte> separatorBytes, int maximumLineBytes, bool allowTruncation) : base("DelimiterFraming")
             {
                 _separatorBytes = separatorBytes;
                 _maximumLineBytes = maximumLineBytes;
@@ -405,14 +421,14 @@ namespace Akka.Streams.Dsl
             public override string ToString() => "DelimiterFraming";
         }
 
-        private sealed class LengthFieldFramingStage : SimpleLinearGraphStage<ReadOnlyMemory<byte>>
+        private sealed class LengthFieldFramingStage : SimpleLinearGraphStage<ReadOnlySequence<byte>>
         {
             #region Logic
 
             private sealed class Logic : InAndOutGraphStageLogic
             {
                 private readonly LengthFieldFramingStage _stage;
-                private ReadOnlyMemory<byte> _buffer = ReadOnlyMemory<byte>.Empty;
+                private ReadOnlySequence<byte> _buffer = ReadOnlySequence<byte>.Empty;
                 private int _frameSize = int.MaxValue;
 
                 public Logic(LengthFieldFramingStage stage) : base(stage.Shape)
@@ -445,10 +461,9 @@ namespace Akka.Streams.Dsl
                 /// </summary>
                 private void PushFrame()
                 {
-                    var emitSpan = _buffer.Slice(0, _frameSize);
+                    var emitSlice = _buffer.Slice(0, _frameSize);
                     // compact the emitted frame
-                    var emitArr = emitSpan.ToArray();
-                    var emit = new ReadOnlyMemory<byte>(emitArr);
+                    var emit = new ReadOnlySequence<byte>(emitSlice.ToArray());
                     _buffer = _buffer.Slice(_frameSize);
                     _frameSize = int.MaxValue;
                     Push(_stage.Outlet, emit);
@@ -461,12 +476,15 @@ namespace Akka.Streams.Dsl
                 /// </summary>
                 private void TryPushFrame()
                 {
-                    var bufferSize = _buffer.Length;
+                    var bufferSize = (int)_buffer.Length;
                     if (bufferSize >= _frameSize)
                         PushFrame();
                     else if (bufferSize >= _stage._minimumChunkSize)
                     {
-                        var lengthFieldSpan = _buffer.Slice(_stage._lengthFieldOffset).Span;
+                        // Length field is at most 4 bytes — copy into a stack buffer to give the
+                        // decoder a contiguous span regardless of the underlying segment layout.
+                        Span<byte> lengthFieldSpan = stackalloc byte[_stage._lengthFieldLength];
+                        _buffer.Slice(_stage._lengthFieldOffset, _stage._lengthFieldLength).CopyTo(lengthFieldSpan);
                         var parsedLength = _stage._intDecoder(lengthFieldSpan, _stage._lengthFieldLength);
 
                         _frameSize = _stage._computeFrameSize.HasValue

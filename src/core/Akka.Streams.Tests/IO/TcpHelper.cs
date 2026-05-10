@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading;
@@ -14,7 +15,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.IO;
 using Akka.Streams.TestKit;
-// ByteString replaced by ReadOnlyMemory<byte>
+// ByteString replaced by ReadOnlySequence<byte>
 using Akka.TestKit;
 using Reactive.Streams;
 using Xunit;
@@ -38,12 +39,12 @@ namespace Akka.Streams.Tests.IO
 
         protected sealed class ClientWrite
         {
-            public ClientWrite(ReadOnlyMemory<byte> bytes)
+            public ClientWrite(ReadOnlySequence<byte> bytes)
             {
                 Bytes = bytes;
             }
 
-            public ReadOnlyMemory<byte> Bytes { get; }
+            public ReadOnlySequence<byte> Bytes { get; }
         }
 
         protected sealed class ClientRead
@@ -71,12 +72,12 @@ namespace Akka.Streams.Tests.IO
 
         protected sealed class ReadResult
         {
-            public ReadResult(ReadOnlyMemory<byte> bytes)
+            public ReadResult(ReadOnlySequence<byte> bytes)
             {
                 Bytes = bytes;
             }
 
-            public ReadOnlyMemory<byte> Bytes { get; }
+            public ReadOnlySequence<byte> Bytes { get; }
         }
 
         // FIXME: Workaround object just to force a ResumeReading that will poll for a possibly pending close event
@@ -109,7 +110,7 @@ namespace Akka.Streams.Tests.IO
         protected class TestClient : UntypedActor
         {
             private readonly IActorRef _connection;
-            private readonly Queue<ReadOnlyMemory<byte>> _queuedWrites = new();
+            private readonly Queue<ReadOnlySequence<byte>> _queuedWrites = new();
             private bool _writePending;
             private int _toRead;
             private byte[] _readBuffer = Array.Empty<byte>();
@@ -158,13 +159,14 @@ namespace Akka.Streams.Tests.IO
                     
                     case Tcp.Received r:
                         var incoming = r.Data;
-                        var newBuf = new byte[_readBuffer.Length + incoming.Length];
+                        var incomingLen = (int)incoming.Length;
+                        var newBuf = new byte[_readBuffer.Length + incomingLen];
                         _readBuffer.CopyTo(newBuf, 0);
-                        incoming.Span.CopyTo(newBuf.AsSpan(_readBuffer.Length));
+                        incoming.CopyTo(newBuf.AsSpan(_readBuffer.Length));
                         _readBuffer = newBuf;
                         if (_readBuffer.Length >= _toRead)
                         {
-                            _readTo.Tell(new ReadResult(_readBuffer.AsMemory()));
+                            _readTo.Tell(new ReadResult(new ReadOnlySequence<byte>(_readBuffer)));
                             _readBuffer = Array.Empty<byte>();
                             _toRead = 0;
                             _readTo = Context.System.DeadLetters;
@@ -304,11 +306,11 @@ namespace Akka.Streams.Tests.IO
                 _connectionProbe = testkit.CreateTestProbe();
             }
 
-            public void Write(ReadOnlyMemory<byte> bytes) => _connectionActor.Tell(new ClientWrite(bytes));
+            public void Write(ReadOnlySequence<byte> bytes) => _connectionActor.Tell(new ClientWrite(bytes));
 
             public void Read(int count) => _connectionActor.Tell(new ClientRead(count, _connectionProbe.Ref));
 
-            public async Task<ReadOnlyMemory<byte>> WaitReadAsync() => (await _connectionProbe.ExpectMsgAsync<ReadResult>()).Bytes;
+            public async Task<ReadOnlySequence<byte>> WaitReadAsync() => (await _connectionProbe.ExpectMsgAsync<ReadResult>()).Bytes;
 
             public void ConfirmedClose() => _connectionActor.Tell(new ClientClose(Tcp.ConfirmedClose.Instance));
 
@@ -347,7 +349,7 @@ namespace Akka.Streams.Tests.IO
 
             public TcpReadProbe(TestKitBase testkit)
             {
-                SubscriberProbe = testkit.CreateManualSubscriberProbe<ReadOnlyMemory<byte>>();
+                SubscriberProbe = testkit.CreateManualSubscriberProbe<ReadOnlySequence<byte>>();
             }
 
             public async Task<ISubscription> TcpReadSubscription()
@@ -355,11 +357,11 @@ namespace Akka.Streams.Tests.IO
                 return _tcpReadSubscription ??= await SubscriberProbe.ExpectSubscriptionAsync();
             }
 
-            public TestSubscriber.ManualProbe<ReadOnlyMemory<byte>> SubscriberProbe { get; }
+            public TestSubscriber.ManualProbe<ReadOnlySequence<byte>> SubscriberProbe { get; }
 
-            public async Task<ReadOnlyMemory<byte>> ReadAsync(int count)
+            public async Task<ReadOnlySequence<byte>> ReadAsync(int count)
             {
-                var chunks = new System.Collections.Generic.List<ReadOnlyMemory<byte>>();
+                var chunks = new System.Collections.Generic.List<ReadOnlySequence<byte>>();
                 var totalRead = 0;
 
                 while (totalRead < count)
@@ -367,7 +369,7 @@ namespace Akka.Streams.Tests.IO
                     (await TcpReadSubscription()).Request(1);
                     var chunk = await SubscriberProbe.ExpectNextAsync();
                     chunks.Add(chunk);
-                    totalRead += chunk.Length;
+                    totalRead += (int)chunk.Length;
                 }
 
                 // Combine all chunks into one
@@ -375,10 +377,11 @@ namespace Akka.Streams.Tests.IO
                 var pos = 0;
                 foreach (var chunk in chunks)
                 {
-                    chunk.Span.CopyTo(result.AsSpan(pos));
-                    pos += chunk.Length;
+                    var chunkLen = (int)chunk.Length;
+                    chunk.CopyTo(result.AsSpan(pos, chunkLen));
+                    pos += chunkLen;
                 }
-                return result;
+                return new ReadOnlySequence<byte>(result);
             }
 
             public async Task CloseAsync() => (await TcpReadSubscription()).Cancel();
@@ -386,22 +389,22 @@ namespace Akka.Streams.Tests.IO
 
         protected class TcpWriteProbe
         {
-            private StreamTestKit.PublisherProbeSubscription<ReadOnlyMemory<byte>> _tcpWriteSubscription;
+            private StreamTestKit.PublisherProbeSubscription<ReadOnlySequence<byte>> _tcpWriteSubscription;
             private long _demand;
 
             public TcpWriteProbe(TestKitBase testkit)
             {
-                PublisherProbe = testkit.CreateManualPublisherProbe<ReadOnlyMemory<byte>>();
+                PublisherProbe = testkit.CreateManualPublisherProbe<ReadOnlySequence<byte>>();
             }
 
-            public async Task<StreamTestKit.PublisherProbeSubscription<ReadOnlyMemory<byte>>> TcpWriteSubscription()
+            public async Task<StreamTestKit.PublisherProbeSubscription<ReadOnlySequence<byte>>> TcpWriteSubscription()
             {
                 return _tcpWriteSubscription ??= await PublisherProbe.ExpectSubscriptionAsync();
             }
 
-            public TestPublisher.ManualProbe<ReadOnlyMemory<byte>> PublisherProbe { get; }
+            public TestPublisher.ManualProbe<ReadOnlySequence<byte>> PublisherProbe { get; }
 
-            public async Task WriteAsync(ReadOnlyMemory<byte> bytes)
+            public async Task WriteAsync(ReadOnlySequence<byte> bytes)
             {
                 var subscription = await TcpWriteSubscription();
                 if (_demand == 0)

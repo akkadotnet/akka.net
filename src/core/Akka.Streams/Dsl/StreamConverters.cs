@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Threading.Tasks;
 using Akka.Streams.Implementation.IO;
@@ -21,7 +22,7 @@ namespace Akka.Streams.Dsl
     {
         /// <summary>
         /// Creates a <see cref="Source{TOut,TMat}"/> from an <see cref="Stream"/> created by the given function.
-        /// Emitted elements are <paramref name="chunkSize"/> sized <c>ReadOnlyMemory&lt;byte&gt;</c> elements.
+        /// Emitted elements are <paramref name="chunkSize"/> sized <c>ReadOnlySequence&lt;byte&gt;</c> elements.
         /// The actual size of emitted elements depends how much data the underlying
         /// <see cref="Stream"/> returns on each read invocation. Such chunks will
         /// never be larger than chunkSize though.
@@ -38,12 +39,12 @@ namespace Akka.Streams.Dsl
         /// <param name="createInputStream">A function which creates the <see cref="Stream"/> to read from</param>
         /// <param name="chunkSize">The size of each read operation, defaults to 8192</param>
         /// <returns>TBD</returns>
-        public static Source<ReadOnlyMemory<byte>, Task<IOResult>> FromInputStream(Func<Stream> createInputStream, int chunkSize = 8192)
+        public static Source<ReadOnlySequence<byte>, Task<IOResult>> FromInputStream(Func<Stream> createInputStream, int chunkSize = 8192)
         {
-            var shape = new SourceShape<ReadOnlyMemory<byte>>(new Outlet<ReadOnlyMemory<byte>>("InputStreamSource"));
+            var shape = new SourceShape<ReadOnlySequence<byte>>(new Outlet<ReadOnlySequence<byte>>("InputStreamSource"));
             var streamSource = new InputStreamSource(createInputStream, chunkSize, DefaultAttributes.InputStreamSource,
                 shape);
-            return new Source<ReadOnlyMemory<byte>, Task<IOResult>>(streamSource);
+            return new Source<ReadOnlySequence<byte>, Task<IOResult>>(streamSource);
         }
 
         /// <summary>
@@ -60,11 +61,11 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="writeTimeout">The max time the write operation on the materialized OutputStream should block, defaults to 5 seconds</param>
         /// <returns>TBD</returns>
-        public static Source<ReadOnlyMemory<byte>, Stream> AsOutputStream(TimeSpan? writeTimeout = null)
+        public static Source<ReadOnlySequence<byte>, Stream> AsOutputStream(TimeSpan? writeTimeout = null)
             => Source.FromGraph(new OutputStreamSourceStage(writeTimeout ?? TimeSpan.FromSeconds(5)));
 
         /// <summary>
-        /// Creates a Sink which writes incoming <c>ReadOnlyMemory&lt;byte&gt;</c> elements to an <see cref="Stream"/> created by the given function.
+        /// Creates a Sink which writes incoming <c>ReadOnlySequence&lt;byte&gt;</c> elements to an <see cref="Stream"/> created by the given function.
         /// 
         /// Materializes a <see cref="Task{TResult}"/> of <see cref="IOResult"/> that will be completed with the size of the file (in bytes) at the streams completion,
         /// and a possible exception if IO operation was not completed successfully.
@@ -79,12 +80,12 @@ namespace Akka.Streams.Dsl
         /// <param name="createOutputStream">A function which creates the <see cref="Stream"/> to write to</param>
         /// <param name="autoFlush">If set to true the <see cref="Stream"/> will be flushed whenever a byte array is written, default is false</param>
         /// <returns>TBD</returns>
-        public static Sink<ReadOnlyMemory<byte>, Task<IOResult>> FromOutputStream(Func<Stream> createOutputStream, bool autoFlush = false)
+        public static Sink<ReadOnlySequence<byte>, Task<IOResult>> FromOutputStream(Func<Stream> createOutputStream, bool autoFlush = false)
         {
-            var shape = new SinkShape<ReadOnlyMemory<byte>>(new Inlet<ReadOnlyMemory<byte>>("OutputStreamSink"));
+            var shape = new SinkShape<ReadOnlySequence<byte>>(new Inlet<ReadOnlySequence<byte>>("OutputStreamSink"));
             var streamSink = new OutputStreamSink(createOutputStream, DefaultAttributes.OutputStreamSink, shape,
                 autoFlush);
-            return new Sink<ReadOnlyMemory<byte>, Task<IOResult>>(streamSink);
+            return new Sink<ReadOnlySequence<byte>, Task<IOResult>>(streamSink);
         }
 
         /// <summary>
@@ -101,7 +102,7 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="readTimeout">The max time the read operation on the materialized stream should block</param>
         /// <returns>TBD</returns>
-        public static Sink<ReadOnlyMemory<byte>, Stream> AsInputStream(TimeSpan? readTimeout = null)
+        public static Sink<ReadOnlySequence<byte>, Stream> AsInputStream(TimeSpan? readTimeout = null)
         {
             readTimeout = readTimeout ?? TimeSpan.FromSeconds(5);
             return Sink.FromGraph(new InputStreamSinkStage(readTimeout.Value));

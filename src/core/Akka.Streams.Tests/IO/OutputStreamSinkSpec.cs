@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -208,11 +209,11 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var p = CreateTestProbe();
-                var datas = new List<ReadOnlyMemory<byte>>
+                var datas = new List<ReadOnlySequence<byte>>
                 {
-                    (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("a"),
-                    (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("c"),
-                    (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("c")
+                    new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("a")),
+                    new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("c")),
+                    new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("c"))
                 };
 
                 var completion = Source.From(datas)
@@ -231,7 +232,7 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var p = CreateTestProbe();
-                var completion = Source.Failed<ReadOnlyMemory<byte>>(new Exception("Boom!"))
+                var completion = Source.Failed<ReadOnlySequence<byte>>(new Exception("Boom!"))
                     .RunWith(StreamConverters.FromOutputStream(() => new CloseOutputStream(p)), _materializer);
 
                 await p.ExpectMsgAsync("closed");
@@ -247,7 +248,7 @@ namespace Akka.Streams.Tests.IO
             {
                 await Awaiting(async () =>
                 {
-                    await Source.Failed<ReadOnlyMemory<byte>>(new Exception("Boom!"))
+                    await Source.Failed<ReadOnlySequence<byte>>(new Exception("Boom!"))
                         .RunWith(StreamConverters.FromOutputStream(() => new OutputStream()), _materializer)
                         .WaitAsync(3.Seconds());
                 }).Should().ThrowAsync<AbruptIOTerminationException>();
@@ -260,7 +261,7 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var p = CreateTestProbe();
-                var completion = Source.Empty<ReadOnlyMemory<byte>>()
+                var completion = Source.Empty<ReadOnlySequence<byte>>()
                     .RunWith(StreamConverters.FromOutputStream(() => new CompletionOutputStream(p)), _materializer);
 
                 await p.ExpectMsgAsync("closed");

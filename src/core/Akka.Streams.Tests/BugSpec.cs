@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO.Pipes;
 using System.Linq;
@@ -42,14 +43,14 @@ namespace Akka.Streams.Tests
             var cnt = 0;
 
             var writeToStreamTask = Source.From(Enumerable.Range(0, 100))
-                .Select(i => Encoding.ASCII.GetBytes(i.ToString()).AsMemory())
-                .Select(bs => cnt++ == 10 ? ReadOnlyMemory<byte>.Empty : bs) // empty byte array caused original bug
+                .Select(i => new ReadOnlySequence<byte>(Encoding.ASCII.GetBytes(i.ToString())))
+                .Select(bs => cnt++ == 10 ? ReadOnlySequence<byte>.Empty : bs) // empty byte array caused original bug
                 .ToMaterialized(StreamConverters.FromOutputStream(() => serverPipe), Keep.Right)
                 .Run(Materializer);
 
             var result = new List<string>();
             var readFromStreamTask = StreamConverters.FromInputStream(() => clientPipe, 1)
-                .RunForeach(bs => result.Add(Encoding.ASCII.GetString(bs.Span)), Materializer);
+                .RunForeach(bs => result.Add(Encoding.ASCII.GetString(bs.ToArray())), Materializer);
 
             await Task.WhenAll(writeToStreamTask, readFromStreamTask).WaitAsync(3.Seconds());
 

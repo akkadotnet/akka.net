@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -244,8 +245,9 @@ namespace Akka.Tests.IO
                 var offset = 0;
                 foreach (var serverMsg in serverMsgs)
                 {
-                    serverMsg.Data.Span.CopyTo(bigBuffer.AsSpan(offset));
-                    offset += serverMsg.Data.Length;
+                    var dataLength = (int)serverMsg.Data.Length;
+                    serverMsg.Data.CopyTo(bigBuffer.AsSpan(offset, dataLength));
+                    offset += dataLength;
                 }
 
                 var recv1 = bigBuffer.Slice(0, length).ToArray();
@@ -302,7 +304,8 @@ namespace Akka.Tests.IO
                     return o as Tcp.Received;
                 }, RemainingOrDefault, TimeSpan.FromSeconds(2)).ToListAsync();
 
-                serverMsgs.Should().HaveCount(1).And.Subject.Should().Contain(m => m.Data.ToArray().SequenceEqual(msg.ToArray()));
+                var msgBytes = msg.ToArray();
+                serverMsgs.Should().HaveCount(1).And.Subject.Should().Contain(m => m.Data.ToArray().SequenceEqual(msgBytes));
             });
         }
 
@@ -406,7 +409,7 @@ namespace Akka.Tests.IO
 
                 // All messages data should be received, and be in the same order as they were sent
                 var received = await actors.ServerHandler.ReceiveWhileAsync(o => o as Tcp.Received, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.5)).ToListAsync();
-                var content = string.Join("", received.Select(r => Encoding.ASCII.GetString(r.Data.Span)));
+                var content = string.Join("", received.Select(r => Encoding.ASCII.GetString(r.Data.ToArray())));
                 content.ShouldBe(contentBuilder.ToString());
             });
         }
@@ -455,11 +458,11 @@ namespace Akka.Tests.IO
 
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(Encoding.ASCII.GetBytes("Captain on the bridge!").AsMemory(), Aye.Instance));
                 await actors.ClientHandler.ExpectMsgAsync(Aye.Instance);
-                Encoding.ASCII.GetString((await actors.ServerHandler.ExpectMsgAsync<Tcp.Received>()).Data.Span).ShouldBe("Captain on the bridge!");
+                Encoding.ASCII.GetString((await actors.ServerHandler.ExpectMsgAsync<Tcp.Received>()).Data.ToArray()).ShouldBe("Captain on the bridge!");
 
                 actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(Encoding.ASCII.GetBytes("For the king!").AsMemory(), Yes.Instance));
                 await actors.ServerHandler.ExpectMsgAsync(Yes.Instance);
-                Encoding.ASCII.GetString((await actors.ClientHandler.ExpectMsgAsync<Tcp.Received>()).Data.Span).ShouldBe("For the king!");
+                Encoding.ASCII.GetString((await actors.ClientHandler.ExpectMsgAsync<Tcp.Received>()).Data.ToArray()).ShouldBe("For the king!");
 
                 actors.ServerHandler.Send(actors.ServerConnection, Tcp.Close.Instance);
                 await actors.ServerHandler.ExpectMsgAsync<Tcp.Closed>();
@@ -557,9 +560,9 @@ namespace Akka.Tests.IO
             for (var i = 0; i < rounds; i++)
             {
                 actors.ClientHandler.Send(actors.ClientConnection, Tcp.Write.Create(testData));
-                await actors.ServerHandler.ExpectMsgAsync<Tcp.Received>(x => x.Data.Length == 1 && x.Data.Span[0] == 0, hint: $"server didn't received at {i} round");
+                await actors.ServerHandler.ExpectMsgAsync<Tcp.Received>(x => x.Data.Length == 1 && x.Data.FirstSpan[0] == 0, hint: $"server didn't received at {i} round");
                 actors.ServerHandler.Send(actors.ServerConnection, Tcp.Write.Create(testData));
-                await actors.ClientHandler.ExpectMsgAsync<Tcp.Received>(x => x.Data.Length == 1 && x.Data.Span[0] == 0, hint: $"client didn't received at {i} round");
+                await actors.ClientHandler.ExpectMsgAsync<Tcp.Received>(x => x.Data.Length == 1 && x.Data.FirstSpan[0] == 0, hint: $"client didn't received at {i} round");
             }
         }
 
@@ -627,7 +630,7 @@ namespace Akka.Tests.IO
                     if (remaining > 0)
                     {
                         var recv = await handler.ExpectMsgAsync<Tcp.Received>();
-                        remaining = remaining - recv.Data.Length;
+                        remaining = remaining - (int)recv.Data.Length;
                         continue;
                     }
 

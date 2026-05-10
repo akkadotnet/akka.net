@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.IO;
 using Akka.Pattern;
@@ -18,7 +19,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ReadOnlyMemory<byte>>, Stream>
+    internal sealed class InputStreamSinkStage : GraphStageWithMaterializedValue<SinkShape<ReadOnlySequence<byte>>, Stream>
     {
         #region internal classes
 
@@ -76,13 +77,13 @@ namespace Akka.Streams.Implementation.IO
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly ReadOnlyMemory<byte> Bytes;
+            public readonly ReadOnlySequence<byte> Bytes;
 
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="bytes">TBD</param>
-            public Data(ReadOnlyMemory<byte> bytes)
+            public Data(ReadOnlySequence<byte> bytes)
             {
                 Bytes = bytes;
             }
@@ -220,7 +221,7 @@ namespace Akka.Streams.Implementation.IO
 
         #endregion
 
-        private readonly Inlet<ReadOnlyMemory<byte>> _in = new("InputStreamSink.in");
+        private readonly Inlet<ReadOnlySequence<byte>> _in = new("InputStreamSink.in");
         private readonly TimeSpan _readTimeout;
         private BlockingCollection<IStreamToAdapterMessage> _dataQueue;
 
@@ -231,7 +232,7 @@ namespace Akka.Streams.Implementation.IO
         public InputStreamSinkStage(TimeSpan readTimeout)
         {
             _readTimeout = readTimeout;
-            Shape = new SinkShape<ReadOnlyMemory<byte>>(_in);
+            Shape = new SinkShape<ReadOnlySequence<byte>>(_in);
         }
 
         /// <summary>
@@ -242,7 +243,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public override SinkShape<ReadOnlyMemory<byte>> Shape { get; }
+        public override SinkShape<ReadOnlySequence<byte>> Shape { get; }
 
         /// <summary>
         /// TBD
@@ -337,7 +338,7 @@ namespace Akka.Streams.Implementation.IO
         private bool _isActive = true;
         private bool _isStageAlive = true;
         private bool _isInitialized;
-        private ReadOnlyMemory<byte>? _detachedChunk;
+        private ReadOnlySequence<byte>? _detachedChunk;
 
         /// <summary>
         /// TBD
@@ -500,20 +501,21 @@ namespace Akka.Streams.Implementation.IO
             var size = chunkValue.Length;
             if (size <= count)
             {
-                chunkValue.Span.CopyTo(buffer.AsSpan(offset, size));
+                var sizeInt = (int)size;
+                chunkValue.CopyTo(buffer.AsSpan(offset, sizeInt));
                 _detachedChunk = null;
-                if (size == count)
-                    return gotBytes + size;
+                if (sizeInt == count)
+                    return gotBytes + sizeInt;
 
-                return GetData(buffer, offset + size, count - size, gotBytes + size);
+                return GetData(buffer, offset + sizeInt, count - sizeInt, gotBytes + sizeInt);
             }
 
-            chunkValue.Slice(0, count).Span.CopyTo(buffer.AsSpan(offset, count));
+            chunkValue.Slice(0, count).CopyTo(buffer.AsSpan(offset, count));
             _detachedChunk = chunkValue.Slice(count);
             return gotBytes + count;
         }
 
-        private ReadOnlyMemory<byte>? GrabDataChunk()
+        private ReadOnlySequence<byte>? GrabDataChunk()
         {
             if (_detachedChunk.HasValue)
                 return _detachedChunk;

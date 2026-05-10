@@ -6,20 +6,21 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.IO;
 using Akka.Streams.Dsl;
 using Reactive.Streams;
 
 namespace Akka.Streams.Tests.TCK
 {
-    class InputStreamSourceTest : AkkaPublisherVerification<ReadOnlyMemory<byte>>
+    class InputStreamSourceTest : AkkaPublisherVerification<ReadOnlySequence<byte>>
     {
-        public override IPublisher<ReadOnlyMemory<byte>> CreatePublisher(long elements)
+        public override IPublisher<ReadOnlySequence<byte>> CreatePublisher(long elements)
         {
             return StreamConverters.FromInputStream(() => new InputStream())
                 .WithAttributes(ActorAttributes.CreateDispatcher("akka.test.stream-dispatcher"))
                 .Take(elements)
-                .RunWith(Sink.AsPublisher<ReadOnlyMemory<byte>>(false), Materializer);
+                .RunWith(Sink.AsPublisher<ReadOnlySequence<byte>>(false), Materializer);
         }
 
         private sealed class InputStream : Stream

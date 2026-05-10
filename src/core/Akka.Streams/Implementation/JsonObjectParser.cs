@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Linq;
 using Akka.Annotations;
 using Akka.Streams.Dsl;
@@ -17,7 +18,7 @@ namespace Akka.Streams.Implementation
     /// <summary>
     /// INTERNAL API: Use <see cref="JsonFraming"/> instead
     ///
-    /// **Mutable** framing implementation that given any number of <see cref="ReadOnlyMemory{T}"/> chunks, can emit JSON objects contained within them.
+    /// **Mutable** framing implementation that given any number of <see cref="ReadOnlySequence{T}"/> chunks, can emit JSON objects contained within them.
     /// Typically JSON objects are separated by new-lines or commas, however a top-level JSON Array can also be understood and chunked up
     /// into valid JSON objects by this framing implementation.
     ///
@@ -44,6 +45,10 @@ namespace Akka.Streams.Implementation
         private static bool IsWhitespace(byte input) => Whitespace.Contains(input);
 
         private readonly int _maximumObjectLength;
+        // Internal storage stays as ReadOnlyMemory<byte> so the empty-buffer fast path keeps
+        // zero-copy behaviour: a single-segment ReadOnlySequence input is borrowed directly.
+        // The SequenceReader-based rewrite in the follow-up pass makes the multi-segment case
+        // zero-copy too.
         private ReadOnlyMemory<byte> _buffer = ReadOnlyMemory<byte>.Empty;
         private int _pos; // latest position of pointer while scanning for json object end
         private int _trimFront;
@@ -71,18 +76,28 @@ namespace Akka.Streams.Implementation
         /// Use <see cref="Poll"/> to extract contained JSON objects.
         /// </summary>
         /// <param name="input">TBD</param>
-        public void Offer(ReadOnlyMemory<byte> input)
+        public void Offer(ReadOnlySequence<byte> input)
         {
             if (input.IsEmpty) return;
             if (_buffer.IsEmpty)
             {
-                _buffer = input;
+                // Zero-copy fast path: single-segment input is borrowed directly.
+                if (input.IsSingleSegment)
+                {
+                    _buffer = input.First;
+                    return;
+                }
+                // Multi-segment input is rare in practice; flatten into a single array.
+                var arr = new byte[checked((int)input.Length)];
+                input.CopyTo(arr);
+                _buffer = arr;
                 return;
             }
-            // Concatenate buffers
-            var combined = new byte[_buffer.Length + input.Length];
+            // Concatenate buffers — same allocation footprint as before.
+            var inputLength = checked((int)input.Length);
+            var combined = new byte[_buffer.Length + inputLength];
             _buffer.Span.CopyTo(combined);
-            input.Span.CopyTo(combined.AsSpan(_buffer.Length));
+            input.CopyTo(combined.AsSpan(_buffer.Length));
             _buffer = new ReadOnlyMemory<byte>(combined);
         }
 
@@ -97,15 +112,15 @@ namespace Akka.Streams.Implementation
         /// </summary>
         /// <exception cref="Framing.FramingException">TBD</exception>
         /// <returns>TBD</returns>
-        public Option<ReadOnlyMemory<byte>> Poll()
+        public Option<ReadOnlySequence<byte>> Poll()
         {
             var foundObject = SeekObject();
             if(!foundObject || _pos == -1 || _pos == 0)
-                return Option<ReadOnlyMemory<byte>>.None;
+                return Option<ReadOnlySequence<byte>>.None;
 
             var emit = _buffer.Slice(0, _pos);
             var buffer = _buffer.Slice(_pos);
-            // compact: copy to own array
+            // compact: copy remainder so we don't hold onto the previous buffer
             var bufArr = buffer.ToArray();
             _buffer = new ReadOnlyMemory<byte>(bufArr);
             _pos = 0;
@@ -114,10 +129,12 @@ namespace Akka.Streams.Implementation
             _trimFront = 0;
 
             if (trimFront == 0)
-                return emit;
+                return new ReadOnlySequence<byte>(emit);
 
             var trimmed = emit.Slice(trimFront);
-            return trimmed.IsEmpty ? Option<ReadOnlyMemory<byte>>.None : trimmed;
+            return trimmed.IsEmpty
+                ? Option<ReadOnlySequence<byte>>.None
+                : new ReadOnlySequence<byte>(trimmed);
         }
 
         /// <summary>

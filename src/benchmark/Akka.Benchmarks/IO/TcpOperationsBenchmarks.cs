@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -288,26 +289,27 @@ namespace Akka.Benchmarks
         private sealed class Framer
         {
             private readonly int _messageSize;
-            private ReadOnlyMemory<byte> _partialRead = ReadOnlyMemory<byte>.Empty;
+            private ReadOnlySequence<byte> _partialRead = ReadOnlySequence<byte>.Empty;
 
             public Framer(int messageSize)
             {
                 _messageSize = messageSize;
             }
 
-            public IEnumerable<ReadOnlyMemory<byte>> Deframe(ReadOnlyMemory<byte> data)
+            public IEnumerable<ReadOnlySequence<byte>> Deframe(ReadOnlySequence<byte> data)
             {
                 // Prepend any partial read from last time
                 if (_partialRead.Length > 0)
                 {
-                    var combined = new byte[_partialRead.Length + data.Length];
-                    _partialRead.Span.CopyTo(combined);
-                    data.Span.CopyTo(combined.AsSpan(_partialRead.Length));
-                    data = combined;
-                    _partialRead = ReadOnlyMemory<byte>.Empty;
+                    var partialLen = (int)_partialRead.Length;
+                    var combined = new byte[partialLen + (int)data.Length];
+                    _partialRead.CopyTo(combined.AsSpan(0, partialLen));
+                    data.CopyTo(combined.AsSpan(partialLen));
+                    data = new ReadOnlySequence<byte>(combined);
+                    _partialRead = ReadOnlySequence<byte>.Empty;
                 }
 
-                var msgs = new List<ReadOnlyMemory<byte>>();
+                var msgs = new List<ReadOnlySequence<byte>>();
                 int offset = 0;
                 while (offset + _messageSize <= data.Length)
                 {
@@ -318,7 +320,7 @@ namespace Akka.Benchmarks
                 // Buffer any remaining bytes for next time
                 if (offset < data.Length)
                 {
-                    _partialRead = data.Slice(offset, data.Length - offset);
+                    _partialRead = data.Slice(offset, (int)data.Length - offset);
                 }
 
                 return msgs;

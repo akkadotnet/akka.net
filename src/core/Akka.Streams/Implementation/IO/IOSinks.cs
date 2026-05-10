@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ namespace Akka.Streams.Implementation.IO
     /// Creates simple synchronous Sink which writes all incoming elements to the given file
     /// (creating it before hand if necessary).
     /// </summary>
-    internal sealed class FileSink : SinkModule<ReadOnlyMemory<byte>, Task<IOResult>>
+    internal sealed class FileSink : SinkModule<ReadOnlySequence<byte>, Task<IOResult>>
     {
         private readonly FileInfo _f;
         private readonly long _startPosition;
@@ -39,7 +40,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="shape">TBD</param>
         /// <param name="autoFlush"></param>
         /// <param name="flushSignaler"></param>
-        public FileSink(FileInfo f, long startPosition, FileMode fileMode, Attributes attributes, SinkShape<ReadOnlyMemory<byte>> shape, bool autoFlush, FlushSignaler flushSignaler) : base(shape)
+        public FileSink(FileInfo f, long startPosition, FileMode fileMode, Attributes attributes, SinkShape<ReadOnlySequence<byte>> shape, bool autoFlush, FlushSignaler flushSignaler) : base(shape)
         {
             _f = f;
             _startPosition = startPosition;
@@ -75,7 +76,7 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
-        protected override SinkModule<ReadOnlyMemory<byte>, Task<IOResult>> NewInstance(SinkShape<ReadOnlyMemory<byte>> shape)
+        protected override SinkModule<ReadOnlySequence<byte>, Task<IOResult>> NewInstance(SinkShape<ReadOnlySequence<byte>> shape)
             => new FileSink(_f, _startPosition, _fileMode, Attributes, shape, _autoFlush, _flushSignaler);
 
         /// <summary>
@@ -99,7 +100,7 @@ namespace Akka.Streams.Implementation.IO
                     .GetMandatoryAttribute<ActorAttributes.Dispatcher>()
                     .Name));
             materializer = ioResultPromise.Task;
-            return new ActorSubscriberImpl<ReadOnlyMemory<byte>>(actorRef);
+            return new ActorSubscriberImpl<ReadOnlySequence<byte>>(actorRef);
         }
     }
 
@@ -108,7 +109,7 @@ namespace Akka.Streams.Implementation.IO
     /// Creates simple synchronous  Sink which writes all incoming elements to the given file
     /// (creating it before hand if necessary).
     /// </summary>
-    internal sealed class OutputStreamSink : SinkModule<ReadOnlyMemory<byte>, Task<IOResult>>
+    internal sealed class OutputStreamSink : SinkModule<ReadOnlySequence<byte>, Task<IOResult>>
     {
         private readonly Func<Stream> _createOutput;
         private readonly bool _autoFlush;
@@ -120,7 +121,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="attributes">TBD</param>
         /// <param name="shape">TBD</param>
         /// <param name="autoFlush">TBD</param>
-        public OutputStreamSink(Func<Stream> createOutput, Attributes attributes, SinkShape<ReadOnlyMemory<byte>> shape, bool autoFlush) : base(shape)
+        public OutputStreamSink(Func<Stream> createOutput, Attributes attributes, SinkShape<ReadOnlySequence<byte>> shape, bool autoFlush) : base(shape)
         {
             _createOutput = createOutput;
             Attributes = attributes;
@@ -145,7 +146,7 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         /// <param name="shape">TBD</param>
         /// <returns>TBD</returns>
-        protected override SinkModule<ReadOnlyMemory<byte>, Task<IOResult>> NewInstance(SinkShape<ReadOnlyMemory<byte>> shape)
+        protected override SinkModule<ReadOnlySequence<byte>, Task<IOResult>> NewInstance(SinkShape<ReadOnlySequence<byte>> shape)
             => new OutputStreamSink(_createOutput, Attributes, shape, _autoFlush);
 
         /// <summary>
@@ -174,7 +175,7 @@ namespace Akka.Streams.Implementation.IO
             var actorRef = mat.ActorOf(context, props);
 
             materializer = ioResultPromise.Task;
-            return new ActorSubscriberImpl<ReadOnlyMemory<byte>>(actorRef);
+            return new ActorSubscriberImpl<ReadOnlySequence<byte>>(actorRef);
         }
     }
 }

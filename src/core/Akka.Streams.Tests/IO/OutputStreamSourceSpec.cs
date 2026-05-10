@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
@@ -32,7 +33,7 @@ namespace Akka.Streams.Tests.IO
 
         private readonly ActorMaterializer _materializer;
         private readonly byte[] _bytesArray;
-        private readonly ReadOnlyMemory<byte> _byteString;
+        private readonly ReadOnlySequence<byte> _byteString;
 
         public OutputStreamSourceSpec(ITestOutputHelper helper) : base(  
             ConfigurationFactory.ParseString("akka.loglevel = DEBUg").WithFallback(Utils.UnboundedMailboxConfig), 
@@ -49,7 +50,7 @@ namespace Akka.Streams.Tests.IO
                 Convert.ToByte(new Random().Next(256))
             };
 
-            _byteString = _bytesArray.AsMemory();
+            _byteString = new ReadOnlySequence<byte>(_bytesArray);
         }
 
         private static async Task ExpectTimeout(Task f, TimeSpan duration) => 
@@ -61,7 +62,7 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var (outputStream, probe) = StreamConverters.AsOutputStream()
-                    .ToMaterialized(this.SinkProbe<ReadOnlyMemory<byte>>(), Keep.Both)
+                    .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer);
                 var s = await probe.ExpectSubscriptionAsync();
 
@@ -80,7 +81,7 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var (outputStream, probe) = StreamConverters.AsOutputStream()
-                    .ToMaterialized(this.SinkProbe<ReadOnlyMemory<byte>>(), Keep.Both)
+                    .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer);
 
                 using (outputStream)
@@ -109,14 +110,14 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var (outputStream, probe) = StreamConverters.AsOutputStream()
-                    .ToMaterialized(this.SinkProbe<ReadOnlyMemory<byte>>(), Keep.Both)
+                    .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer);
                 
                 using (outputStream)
                 {
                     var s = await probe.ExpectSubscriptionAsync();
 
-                    await outputStream.WriteAsync(_bytesArray, 0, _byteString.Length)
+                    await outputStream.WriteAsync(_bytesArray, 0, (int)_byteString.Length)
                         .WaitAsync(Timeout);
                     var f = outputStream.FlushAsync();
                     s.Request(1);
@@ -139,18 +140,18 @@ namespace Akka.Streams.Tests.IO
             {
                 var (outputStream, probe) = StreamConverters.AsOutputStream()
                     .WithAttributes(Attributes.CreateInputBuffer(16, 16))
-                    .ToMaterialized(this.SinkProbe<ReadOnlyMemory<byte>>(), Keep.Both)
+                    .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer);
                 using (outputStream)
                 {
                     var s = await probe.ExpectSubscriptionAsync();
 
                     foreach (var _ in Enumerable.Range(1, 16))
-                        await outputStream.WriteAsync(_bytesArray, 0, _byteString.Length)
+                        await outputStream.WriteAsync(_bytesArray, 0, (int)_byteString.Length)
                             .WaitAsync(Timeout);
 
                     //blocked call
-                    var f = outputStream.WriteAsync(_bytesArray, 0, _byteString.Length);
+                    var f = outputStream.WriteAsync(_bytesArray, 0, (int)_byteString.Length);
 
                     await ExpectTimeout(f, Timeout);
                     await probe.ExpectNoMsgAsync(TimeSpan.Zero);
@@ -170,14 +171,14 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var (outputStream, probe) = StreamConverters.AsOutputStream()
-                    .ToMaterialized(this.SinkProbe<ReadOnlyMemory<byte>>(), Keep.Both)
+                    .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer);
 
                 await probe.ExpectSubscriptionAsync();
                 outputStream.Dispose();
                 await probe.ExpectCompleteAsync();
 
-                await AssertThrowsAsync<IOException>(() => outputStream.WriteAsync(_bytesArray, 0, _byteString.Length))
+                await AssertThrowsAsync<IOException>(() => outputStream.WriteAsync(_bytesArray, 0, (int)_byteString.Length))
                     .WaitAsync(Timeout);
             }, _materializer);
         }
@@ -191,7 +192,7 @@ namespace Akka.Streams.Tests.IO
             {
                 await this.AssertAllStagesStoppedAsync(async () =>
                 {
-                    StreamConverters.AsOutputStream().RunWith(this.SinkProbe<ReadOnlyMemory<byte>>(), materializer);
+                    StreamConverters.AsOutputStream().RunWith(this.SinkProbe<ReadOnlySequence<byte>>(), materializer);
                     ((ActorMaterializerImpl) materializer).Supervisor.Tell(StreamSupervisor.GetChildren.Instance,
                         TestActor);
                     var actorRef = (await ExpectMsgAsync<StreamSupervisor.Children>())
@@ -211,8 +212,8 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var sourceProbe = CreateTestProbe();
-                var (outputStream, probe) = TestSourceStage<ReadOnlyMemory<byte>, Stream>.Create(new OutputStreamSourceStage(Timeout), sourceProbe)
-                    .ToMaterialized(this.SinkProbe<ReadOnlyMemory<byte>>(), Keep.Both)
+                var (outputStream, probe) = TestSourceStage<ReadOnlySequence<byte>, Stream>.Create(new OutputStreamSourceStage(Timeout), sourceProbe)
+                    .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer);
 
                 var s = await probe.ExpectSubscriptionAsync();
@@ -240,7 +241,7 @@ namespace Akka.Streams.Tests.IO
                 () =>
                     StreamConverters.AsOutputStream(Timeout)
                         .WithAttributes(Attributes.CreateInputBuffer(0, 0))
-                        .RunWith(Sink.First<ReadOnlyMemory<byte>>(), _materializer)).Should().Throw<ArgumentException>();
+                        .RunWith(Sink.First<ReadOnlySequence<byte>>(), _materializer)).Should().Throw<ArgumentException>();
             /*
              With Sink.First we test the code path in which the source
              itself throws an exception when being materialized. If
@@ -255,7 +256,7 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var (outputStream, probe) = StreamConverters.AsOutputStream(Timeout)
-                    .ToMaterialized(this.SinkProbe<ReadOnlyMemory<byte>>(), Keep.Both)
+                    .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer);
 
                 var sub = await probe.ExpectSubscriptionAsync();
@@ -279,16 +280,16 @@ namespace Akka.Streams.Tests.IO
                 var field = typeof(OutputStreamAdapter).GetField("_dataQueue", bindFlags);
                 if (field == null)
                     throw new Exception($"Failed to retrieve the field `_dataQueue` from class {nameof(OutputStreamAdapter)}");
-                var blockingCollection = (BlockingCollection<ReadOnlyMemory<byte>>) field.GetValue(outputStream);
+                var blockingCollection = (BlockingCollection<ReadOnlySequence<byte>>) field.GetValue(outputStream);
 
                 //give the stage enough time to finish, otherwise it may take the hello message
                 await Task.Delay(1000);
 
                 // if a take operation is pending inside the stage it will steal this one and the next take will not succeed
-                blockingCollection.Add(System.Text.Encoding.UTF8.GetBytes("hello").AsMemory());
+                blockingCollection.Add(new ReadOnlySequence<byte>(System.Text.Encoding.UTF8.GetBytes("hello")));
 
                 blockingCollection.TryTake(out var result, TimeSpan.FromSeconds(3)).Should().BeTrue();
-                System.Text.Encoding.UTF8.GetString(result.Span).Should().Be("hello");
+                System.Text.Encoding.UTF8.GetString(result.ToArray()).Should().Be("hello");
             }, _materializer);
         }
 
@@ -302,7 +303,7 @@ namespace Akka.Streams.Tests.IO
             {
                 var (outputStream, probe) = StreamConverters.AsOutputStream(Timeout)
                     .AddAttributes(Attributes.CreateInputBuffer(bufferSize, bufferSize))
-                    .ToMaterialized(this.SinkProbe<ReadOnlyMemory<byte>>(), Keep.Both)
+                    .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer);
 
                 using (outputStream)

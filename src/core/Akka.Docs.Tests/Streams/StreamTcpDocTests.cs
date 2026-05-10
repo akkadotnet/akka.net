@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
@@ -37,7 +38,7 @@ namespace DocsExamples.Streams
         {
             #region echo-server-simple-bind
             // define an incoming request processing logic
-            Flow<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>, NotUsed> echo = Flow.Create<ReadOnlyMemory<byte>>();
+            Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> echo = Flow.Create<ReadOnlySequence<byte>>();
 
             Tcp.ServerBinding binding = await Sys.TcpStream()
                 .BindAndHandle(echo, Materializer, "localhost", 9000);
@@ -60,14 +61,14 @@ namespace DocsExamples.Streams
             {
                 Console.WriteLine($"New connection from: {connection.RemoteAddress}");
 
-                var echo = Flow.Create<ReadOnlyMemory<byte>>()
+                var echo = Flow.Create<ReadOnlySequence<byte>>()
                     .Via(Framing.Delimiter(
                         Encoding.ASCII.GetBytes("\n").AsMemory(),
                         maximumFrameLength: 256,
                         allowTruncation: true))
-                    .Select(c => Encoding.ASCII.GetString(c.Span))
+                    .Select(c => Encoding.ASCII.GetString(c.ToArray()))
                     .Select(c => c + "!!!\n")
-                    .Select(s => (ReadOnlyMemory<byte>)Encoding.ASCII.GetBytes(s).AsMemory());
+                    .Select(s => new ReadOnlySequence<byte>(Encoding.ASCII.GetBytes(s).AsMemory()));
 
                 connection.HandleWith(echo, Materializer);
             }, Materializer);
@@ -83,7 +84,7 @@ namespace DocsExamples.Streams
             connections.RunForeach(connection =>
             {
                 #region close-incoming-connection
-                var closed = Flow.FromSinkAndSource(Sink.Cancelled<ReadOnlyMemory<byte>>(), Source.Empty<ReadOnlyMemory<byte>>());
+                var closed = Flow.FromSinkAndSource(Sink.Cancelled<ReadOnlySequence<byte>>(), Source.Empty<ReadOnlySequence<byte>>());
                 connection.HandleWith(closed, Materializer);
                 #endregion
             }, Materializer);
@@ -105,12 +106,12 @@ namespace DocsExamples.Streams
                     var welcomeMessage = $"Welcome to: {connection.LocalAddress}, you are: {connection.RemoteAddress}!";
                     var welcome = Source.Single(welcomeMessage);
 
-                    var serverLogic = Flow.Create<ReadOnlyMemory<byte>>()
+                    var serverLogic = Flow.Create<ReadOnlySequence<byte>>()
                         .Via(Framing.Delimiter(
                             Encoding.ASCII.GetBytes("\n").AsMemory(),
                             maximumFrameLength: 256,
                             allowTruncation: true))
-                        .Select(c => Encoding.ASCII.GetString(c.Span))
+                        .Select(c => Encoding.ASCII.GetString(c.ToArray()))
                         .Select(command =>
                         {
                             serverProbe.Tell(command);
@@ -119,7 +120,7 @@ namespace DocsExamples.Streams
                         .Via(commandParser)
                         .Merge(welcome)
                         .Select(c => c + "\n")
-                        .Select(s => (ReadOnlyMemory<byte>)Encoding.ASCII.GetBytes(s).AsMemory());
+                        .Select(s => new ReadOnlySequence<byte>(Encoding.ASCII.GetBytes(s).AsMemory()));
 
                     connection.HandleWith(serverLogic, Materializer);
                 }), Keep.Both)
@@ -141,14 +142,14 @@ namespace DocsExamples.Streams
 
                 var replParser = Flow.Create<string>().TakeWhile(c => c != "q")
                     .Concat(Source.Single("BYE"))
-                    .Select(elem => (ReadOnlyMemory<byte>)Encoding.ASCII.GetBytes($"{elem}\n").AsMemory());
+                    .Select(elem => new ReadOnlySequence<byte>(Encoding.ASCII.GetBytes($"{elem}\n").AsMemory()));
 
-                var repl = Flow.Create<ReadOnlyMemory<byte>>()
+                var repl = Flow.Create<ReadOnlySequence<byte>>()
                     .Via(Framing.Delimiter(
                         Encoding.ASCII.GetBytes("\n").AsMemory(),
                         maximumFrameLength: 256,
                         allowTruncation: true))
-                    .Select(c => Encoding.ASCII.GetString(c.Span))
+                    .Select(c => Encoding.ASCII.GetString(c.ToArray()))
                     .Select(text =>
                     {
                         Output.WriteLine($"Server: {text}");

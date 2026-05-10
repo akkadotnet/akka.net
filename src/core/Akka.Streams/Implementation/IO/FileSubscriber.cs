@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -129,9 +130,10 @@ namespace Akka.Streams.Implementation.IO
                 case OnNext next:
                     try
                     {
-                        var memory = (ReadOnlyMemory<byte>)next.Element;
-                        _chan.Write(memory.Span);
-                        _bytesWritten += memory.Length;
+                        var sequence = (ReadOnlySequence<byte>)next.Element;
+                        foreach (var segment in sequence)
+                            _chan.Write(segment.Span);
+                        _bytesWritten += sequence.Length;
                         if (_autoFlush)
                             _chan.Flush(true);
                     }

@@ -67,11 +67,11 @@ namespace Akka.IO
         /// </summary>
         private sealed class PipeReadCompleted : INoSerializationVerificationNeeded
         {
-            public ReadOnlyMemory<byte> Data { get; }
+            public ReadOnlySequence<byte> Data { get; }
             public bool IsCompleted { get; }
             public bool IsCanceled { get; }
 
-            public PipeReadCompleted(ReadOnlyMemory<byte> data, bool isCompleted, bool isCanceled)
+            public PipeReadCompleted(ReadOnlySequence<byte> data, bool isCompleted, bool isCanceled)
             {
                 Data = data;
                 IsCompleted = isCompleted;
@@ -691,16 +691,23 @@ namespace Akka.IO
             {
                 var result = await reader.ReadAsync(ct).ConfigureAwait(false);
                 var buffer = result.Buffer;
-                byte[] data;
 
+                // We must copy out of the pipe's pooled segments before AdvanceTo because
+                // Tell is non-blocking — the handler may not have consumed the data by the
+                // time the segments are returned to the pool. Zero-copy reads require an
+                // explicit ack protocol with the handler that's out of scope here.
+                // The result is wrapped in ReadOnlySequence<byte> (single-segment in practice)
+                // so downstream Streams stages can chain sequences without further copies.
+                ReadOnlySequence<byte> data;
                 if (buffer.Length > 0)
                 {
-                    data = new byte[checked((int)buffer.Length)];
-                    buffer.CopyTo(data);
+                    var array = new byte[checked((int)buffer.Length)];
+                    buffer.CopyTo(array);
+                    data = new ReadOnlySequence<byte>(array);
                 }
                 else
                 {
-                    data = Array.Empty<byte>();
+                    data = ReadOnlySequence<byte>.Empty;
                 }
 
                 reader.AdvanceTo(buffer.End);
