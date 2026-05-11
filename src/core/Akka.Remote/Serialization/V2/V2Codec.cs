@@ -35,12 +35,13 @@ using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text;
 using Akka.Actor;
 using Akka.Serialization;
 using Google.Protobuf;
 
-namespace Akka.Benchmarks.Serialization
+namespace Akka.Remote.Serialization.V2
 {
     // ─── PatchingBufferWriter — IBufferWriter<byte> with patch capability ─────
 
@@ -49,7 +50,7 @@ namespace Akka.Benchmarks.Serialization
     /// span over already-written bytes for length-prefix patching. Reuses a growable byte
     /// array across <see cref="Reset"/> calls.
     /// </summary>
-    public sealed class PatchingBufferWriter : IBufferWriter<byte>
+    internal sealed class PatchingBufferWriter : IBufferWriter<byte>
     {
         private byte[] _buffer;
         private int _written;
@@ -119,7 +120,7 @@ namespace Akka.Benchmarks.Serialization
 
         /// <summary>
         /// Writes a single-byte field tag (field number ≤ 15 fits in 1 byte).
-        /// Tag = (field_number << 3) | wire_type, varint-encoded. For field numbers 1–15
+        /// Tag = (field_number &lt;&lt; 3) | wire_type, varint-encoded. For field numbers 1–15
         /// the tag fits in one byte.
         /// </summary>
         public static int WriteTag(IBufferWriter<byte> buffer, int fieldNumber, byte wireType)
@@ -275,11 +276,31 @@ namespace Akka.Benchmarks.Serialization
     /// <summary>
     /// Static-dispatch lookup for V2 inner serializers. No reflection at dispatch time —
     /// Type-keyed for write, integer-ID-keyed for read.
+    ///
+    /// Two construction modes:
+    /// <list type="bullet">
+    ///   <item>Standalone (no-arg ctor) — caller explicitly registers serializers via
+    ///   <see cref="Register"/>. Used by benchmarks where we want full control over the
+    ///   registered set.</item>
+    ///   <item>Serialization-backed (ctor takes an <see cref="Akka.Serialization.Serialization"/>) —
+    ///   the registry caches per-Type / per-ID lookups but falls through to the running
+    ///   <see cref="Akka.Serialization.Serialization"/> on first miss. Used by the Akka.Remote
+    ///   integration so HOCON-configured V1 serializers (auto-wrapped) and V2-native serializers
+    ///   are both reachable without explicit registration.</item>
+    /// </list>
     /// </summary>
-    public sealed class V2SerializerRegistry
+    internal sealed class V2SerializerRegistry
     {
         private readonly ConcurrentDictionary<Type, SerializerV2> _byType = new();
         private readonly ConcurrentDictionary<int, SerializerV2> _byId = new();
+        private readonly Akka.Serialization.Serialization? _fallback;
+
+        public V2SerializerRegistry() { }
+
+        public V2SerializerRegistry(Akka.Serialization.Serialization serialization)
+        {
+            _fallback = serialization ?? throw new ArgumentNullException(nameof(serialization));
+        }
 
         public void Register(SerializerV2 serializer, params Type[] types)
         {
@@ -288,8 +309,30 @@ namespace Akka.Benchmarks.Serialization
                 _byType[t] = serializer;
         }
 
-        public SerializerV2 FindFor(object obj) => _byType[obj.GetType()];
-        public SerializerV2 GetById(int id) => _byId[id];
+        public SerializerV2 FindFor(object obj)
+        {
+            var type = obj.GetType();
+            if (_byType.TryGetValue(type, out var cached))
+                return cached;
+            if (_fallback is null)
+                throw new InvalidOperationException($"No V2 serializer registered for type [{type}]");
+            var serializer = _fallback.FindSerializerForType(type);
+            _byType[type] = serializer;
+            // Also cache by ID so receive-side lookups are fast.
+            _byId[serializer.Identifier] = serializer;
+            return serializer;
+        }
+
+        public SerializerV2 GetById(int id)
+        {
+            if (_byId.TryGetValue(id, out var cached))
+                return cached;
+            if (_fallback is null)
+                throw new InvalidOperationException($"No V2 serializer registered for id [{id}]");
+            var serializer = _fallback.GetSerializerById(id);
+            _byId[id] = serializer;
+            return serializer;
+        }
     }
 
     // ─── V2 envelope serializer — writes the full AckAndEnvelopeContainer ─────
@@ -300,7 +343,7 @@ namespace Akka.Benchmarks.Serialization
     /// IBufferWriter, with no intermediate byte[] allocations. The inner V2 serializer
     /// is invoked exactly once to write directly into the same buffer.
     /// </summary>
-    public sealed class V2RemoteEnvelopeWriter
+    internal sealed class V2RemoteEnvelopeWriter
     {
         private readonly V2SerializerRegistry _registry;
 
@@ -311,9 +354,8 @@ namespace Akka.Benchmarks.Serialization
 
         /// <summary>
         /// Writes the full AckAndEnvelopeContainer wire bytes for a single Send.
-        /// Recipient and sender are passed as pre-serialized ActorRefData proto bytes —
-        /// caller is expected to cache these across calls (V1 also constructs them per
-        /// call, so the benchmark is on equal footing).
+        /// Recipient and sender are passed as pre-serialized ActorRefData proto bytes.
+        /// Optional Ack is encoded as AcknowledgementInfo at field 1.
         /// </summary>
         /// <returns>Total bytes written.</returns>
         public int Serialize(
@@ -321,15 +363,44 @@ namespace Akka.Benchmarks.Serialization
             ReadOnlySpan<byte> recipientProtoBytes,
             ReadOnlySpan<byte> senderProtoBytes,
             ulong seq,
-            object payload)
+            object payload,
+            ulong? ackCumulative = null,
+            IReadOnlyList<ulong>? ackNacks = null)
         {
             var start = buffer.WrittenCount;
             var inner = _registry.FindFor(payload);
 
             // ─── AckAndEnvelopeContainer ──────────────────────────────────────
-            //   field 2: envelope (RemoteEnvelope) — length-delimited
-            //   (field 1 ack omitted — V1's ConstructMessage skips it for SendNoAck;
-            //    benchmark V1 path uses ackOption=null so this matches.)
+            //   field 1: ack (AcknowledgementInfo, length-delimited) — optional
+            //   field 2: envelope (RemoteEnvelope, length-delimited)
+
+            if (ackCumulative.HasValue)
+            {
+                ProtoWire.WriteTag(buffer, fieldNumber: 1, ProtoWire.WireTypeLengthDelimited);
+                var ackLenOffset = buffer.WrittenCount;
+                ProtoWire.ReserveFixedWidthVarint(buffer);
+                var ackStart = buffer.WrittenCount;
+
+                // AcknowledgementInfo field 1: cumulativeAck (fixed64)
+                ProtoWire.WriteTag(buffer, fieldNumber: 1, ProtoWire.WireTypeFixed64);
+                ProtoWire.WriteFixed64(buffer, ackCumulative.Value);
+
+                // AcknowledgementInfo field 2: nacks (repeated fixed64)
+                if (ackNacks is not null)
+                {
+                    for (var i = 0; i < ackNacks.Count; i++)
+                    {
+                        ProtoWire.WriteTag(buffer, fieldNumber: 2, ProtoWire.WireTypeFixed64);
+                        ProtoWire.WriteFixed64(buffer, ackNacks[i]);
+                    }
+                }
+
+                var ackEnd = buffer.WrittenCount;
+                ProtoWire.PatchFixedWidthVarint(
+                    buffer.PatchSpan(ackLenOffset, ProtoWire.FixedWidthVarintBytes),
+                    (uint)(ackEnd - ackStart));
+            }
+
             ProtoWire.WriteTag(buffer, fieldNumber: 2, ProtoWire.WireTypeLengthDelimited);
             var envelopeLenOffset = buffer.WrittenCount;
             ProtoWire.ReserveFixedWidthVarint(buffer);
@@ -421,7 +492,7 @@ namespace Akka.Benchmarks.Serialization
     /// extracts from <c>AckAndEnvelopeContainer</c> / <c>RemoteEnvelope</c> /
     /// <c>Payload</c>, ready to be handed to a dispatcher.
     /// </summary>
-    public readonly struct V2DeserializedEnvelope
+    internal readonly struct V2DeserializedEnvelope
     {
         public V2DeserializedEnvelope(string recipientPath, string senderPath, ulong seq, object payload)
         {
@@ -443,7 +514,7 @@ namespace Akka.Benchmarks.Serialization
     /// payload bytes are sliced (no copy) and dispatched to the registered V2 serializer
     /// by integer ID — no <c>Type.GetType(manifest)</c>, no reflection.
     /// </summary>
-    public sealed class V2RemoteEnvelopeReader
+    internal sealed class V2RemoteEnvelopeReader
     {
         private readonly V2SerializerRegistry _registry;
 

@@ -30,6 +30,7 @@ using Akka.Configuration;
 using Akka.Remote;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
+using Akka.Remote.Serialization.V2;
 using Akka.Remote.Transport;
 using Akka.Serialization;
 using BenchmarkDotNet.Attributes;
@@ -167,7 +168,7 @@ namespace Akka.Benchmarks.Serialization
         // ─── V2 spike (read) ──────────────────────────────────────────────────
 
         [Benchmark(Description = "V2: hand-rolled parser + V2 inner Deserialize (zero-copy inner)")]
-        public V2DeserializedEnvelope V2_Read()
+        public object V2_Read()
         {
             // Memory-based read: the inner payload bytes are sliced from the wire buffer
             // zero-copy and wrapped as a ReadOnlySequence<byte> for the V2 inner serializer's
@@ -252,7 +253,7 @@ namespace Akka.Benchmarks.Serialization
         private void VerifyReadRoundTrip()
         {
             var v1Read = V1_Read();
-            var v2Read = V2_Read();
+            var v2Read = (V2DeserializedEnvelope)V2_Read();
             if (!PayloadEqual(v1Read, v2Read.Payload))
                 throw new InvalidOperationException(
                     $"Read round-trip mismatch (v1='{v1Read}' v2='{v2Read.Payload}')");

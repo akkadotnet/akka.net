@@ -1490,8 +1490,15 @@ namespace Akka.Remote
                 ByteString pdu;
                 try
                 {
-                    pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
-                        SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+                    // V2 send path — skips MessageSerializer.Serialize + the intermediate
+                    // SerializedMessage proto. Hand-writes AckAndEnvelopeContainer wire format
+                    // directly via PatchingBufferWriter, with the inner V2 serializer invoked
+                    // inline. Wire format unchanged — V1 peers parse this output transparently.
+                    //
+                    // V1 fallback (commented out): _codec.ConstructMessage + SerializeMessage.
+                    pdu = ((AkkaPduProtobuffCodec)_codec).ConstructMessageV2(
+                        send.Recipient.LocalAddressToUse, send.Recipient,
+                        send.Message, send.SenderOption, send.Seq, _lastAck);
                 }
                 catch (Exception e) when (e is not SerializationException)
                 {

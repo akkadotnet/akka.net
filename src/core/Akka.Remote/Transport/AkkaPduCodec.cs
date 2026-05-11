@@ -6,12 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Google.Protobuf;
 using System.Runtime.Serialization;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
+using Akka.Remote.Serialization.V2;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote.Transport
@@ -583,6 +585,96 @@ namespace Akka.Remote.Transport
 
         public AkkaPduProtobuffCodec(ActorSystem system) : base(system)
         {
+        }
+
+        // ─── V2 wrap-pipeline (experimental) ──────────────────────────────────
+        //
+        // Skips the MessageSerializer.Serialize + ConstructMessage two-step (which
+        // builds a SerializedMessage proto, ByteString.CopyFroms the inner bytes,
+        // then builds RemoteEnvelope + AckAndEnvelopeContainer proto graphs, then
+        // serializes that graph via ToByteString()). Instead, hand-writes the
+        // AckAndEnvelopeContainer wire format directly into a buffer, with the inner
+        // V2 serializer invoked inline. Wire format is unchanged — V1 peers parse
+        // V2 output transparently.
+        //
+        // See src/core/Akka.Remote/Serialization/V2/V2Codec.cs for the writer/reader
+        // implementation and the fixed-width-varint patching technique.
+
+        private V2SerializerRegistry? _v2Registry;
+        private V2RemoteEnvelopeWriter? _v2Writer;
+
+        private V2RemoteEnvelopeWriter V2Writer
+        {
+            get
+            {
+                if (_v2Writer is not null)
+                    return _v2Writer;
+
+                var serialization = ((ExtendedActorSystem)System).Serialization;
+                _v2Registry = new V2SerializerRegistry(serialization);
+                _v2Writer = new V2RemoteEnvelopeWriter(_v2Registry);
+                return _v2Writer;
+            }
+        }
+
+        // Per-thread scratch buffer for V2 wire-format writes. EndpointWriter actors run on
+        // dispatcher threads; one buffer per thread, reset between calls. Avoids per-call
+        // allocation of the buffer object + its backing byte[].
+        [System.ThreadStatic]
+        private static PatchingBufferWriter _threadBuffer;
+
+        /// <summary>
+        /// V2 send path. Equivalent in wire format to the V1
+        /// <see cref="ConstructMessage(Address, IActorRef, SerializedMessage, IActorRef, SeqNo?, Ack)"/>,
+        /// but skips the intermediate <see cref="SerializedMessage"/> proto construction and
+        /// the AckAndEnvelopeContainer.ToByteString() serialize step.
+        /// </summary>
+        public ByteString ConstructMessageV2(
+            Address localAddress,
+            IActorRef recipient,
+            object payload,
+            IActorRef senderOption = null,
+            SeqNo? seqOption = null,
+            Ack ackOption = null)
+        {
+            // Recipient/sender ActorRefData wire bytes — V1 also builds these per call
+            // inside ConstructMessage via SerializeActorRef, so the per-call cost is the
+            // same here. (Caching is a follow-on optimization for both V1 and V2.)
+            var recipientBytes = SerializeActorRef(recipient.Path.Address, recipient).ToByteArray();
+            var senderBytes = (senderOption is not null && senderOption.Path is not null)
+                ? SerializeActorRef(localAddress, senderOption).ToByteArray()
+                : Array.Empty<byte>();
+
+            var seq = seqOption is { } s ? (ulong)s.RawValue : SeqUndefined;
+
+            ulong? ackCumulative = null;
+            IReadOnlyList<ulong> ackNacks = null;
+            if (ackOption is not null)
+            {
+                ackCumulative = (ulong)ackOption.CumulativeAck.RawValue;
+                ackNacks = ackOption.Nacks.Select(n => (ulong)n.RawValue).ToArray();
+            }
+
+            // ThreadStatic pooled buffer — first call on a thread allocates, subsequent calls
+            // reset and reuse. EndpointWriter dispatch is sequential on the actor's thread.
+            var buffer = _threadBuffer;
+            if (buffer is null)
+            {
+                buffer = new PatchingBufferWriter(initialCapacity: 1024);
+                _threadBuffer = buffer;
+            }
+            else
+            {
+                buffer.Reset();
+            }
+
+            V2Writer.Serialize(buffer, recipientBytes, senderBytes, seq, payload, ackCumulative, ackNacks);
+
+            // One final byte[] copy into the ByteString. V1 also allocates here via
+            // ackAndEnvelope.ToByteString(). UnsafeByteOperations.UnsafeWrap would
+            // avoid the copy but requires sole ownership of the byte[] — left for a
+            // follow-on with pooled buffers.
+            return ByteString.CopyFrom(buffer.WrittenSpan);
         }
     }
 }
