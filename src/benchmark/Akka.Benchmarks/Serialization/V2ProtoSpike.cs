@@ -193,6 +193,81 @@ namespace Akka.Benchmarks.Serialization
             buffer.Advance(written);
             return lengthBytes + written;
         }
+
+        // ─── Read helpers ─────────────────────────────────────────────────
+        // All read helpers take `ref ReadOnlySpan<byte>` and advance the span past
+        // what they consumed. They accept both canonical and over-long varints.
+
+        public static uint ReadVarint32(ref ReadOnlySpan<byte> bytes)
+        {
+            uint value = 0;
+            var shift = 0;
+            var consumed = 0;
+            while (true)
+            {
+                var b = bytes[consumed++];
+                value |= (uint)(b & 0x7F) << shift;
+                if ((b & 0x80) == 0)
+                    break;
+                shift += 7;
+                if (shift >= 35)
+                    throw new InvalidOperationException("Varint exceeds 5 bytes");
+            }
+            bytes = bytes.Slice(consumed);
+            return value;
+        }
+
+        public static (int fieldNumber, byte wireType) ReadTag(ref ReadOnlySpan<byte> bytes)
+        {
+            var tag = ReadVarint32(ref bytes);
+            return ((int)(tag >> 3), (byte)(tag & 0x7));
+        }
+
+        public static ulong ReadFixed64(ref ReadOnlySpan<byte> bytes)
+        {
+            var value = BinaryPrimitives.ReadUInt64LittleEndian(bytes);
+            bytes = bytes.Slice(sizeof(ulong));
+            return value;
+        }
+
+        public static ReadOnlySpan<byte> ReadLengthDelimited(ref ReadOnlySpan<byte> bytes)
+        {
+            var length = (int)ReadVarint32(ref bytes);
+            var slice = bytes.Slice(0, length);
+            bytes = bytes.Slice(length);
+            return slice;
+        }
+
+        public static string ReadString(ref ReadOnlySpan<byte> bytes)
+        {
+            var slice = ReadLengthDelimited(ref bytes);
+            return Encoding.UTF8.GetString(slice);
+        }
+
+        /// <summary>
+        /// Skips a field whose tag has already been read. Used for forward compat when
+        /// encountering unknown field numbers from newer producers.
+        /// </summary>
+        public static void SkipField(ref ReadOnlySpan<byte> bytes, byte wireType)
+        {
+            switch (wireType)
+            {
+                case WireTypeVarint:
+                    ReadVarint32(ref bytes);
+                    break;
+                case WireTypeFixed64:
+                    bytes = bytes.Slice(sizeof(ulong));
+                    break;
+                case WireTypeLengthDelimited:
+                    ReadLengthDelimited(ref bytes);
+                    break;
+                case WireTypeFixed32:
+                    bytes = bytes.Slice(sizeof(uint));
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown wire type [{wireType}]");
+            }
+        }
     }
 
     // ─── V2 serializer registry (Type → SerializerV2, ID → SerializerV2) ──────
@@ -336,6 +411,220 @@ namespace Akka.Benchmarks.Serialization
             var span = buffer.GetSpan(bytes.Length);
             bytes.CopyTo(span);
             buffer.Advance(bytes.Length);
+        }
+    }
+
+    // ─── V2 envelope reader — parses AckAndEnvelopeContainer wire bytes ───────
+
+    /// <summary>
+    /// Result of a V2 envelope read. Mirrors the fields that the V1 receive path
+    /// extracts from <c>AckAndEnvelopeContainer</c> / <c>RemoteEnvelope</c> /
+    /// <c>Payload</c>, ready to be handed to a dispatcher.
+    /// </summary>
+    public readonly struct V2DeserializedEnvelope
+    {
+        public V2DeserializedEnvelope(string recipientPath, string senderPath, ulong seq, object payload)
+        {
+            RecipientPath = recipientPath;
+            SenderPath = senderPath;
+            Seq = seq;
+            Payload = payload;
+        }
+
+        public string RecipientPath { get; }
+        public string SenderPath { get; }
+        public ulong Seq { get; }
+        public object Payload { get; }
+    }
+
+    /// <summary>
+    /// V2 receive-side reader. Parses the AckAndEnvelopeContainer wire format directly
+    /// from a byte span, without materializing the intermediate proto objects. The inner
+    /// payload bytes are sliced (no copy) and dispatched to the registered V2 serializer
+    /// by integer ID — no <c>Type.GetType(manifest)</c>, no reflection.
+    /// </summary>
+    public sealed class V2RemoteEnvelopeReader
+    {
+        private readonly V2SerializerRegistry _registry;
+
+        public V2RemoteEnvelopeReader(V2SerializerRegistry registry)
+        {
+            _registry = registry;
+        }
+
+        /// <summary>
+        /// Span-based read for use cases where the wire bytes don't have a Memory backing
+        /// (e.g. stack-allocated). The inner-payload slice is materialized via .ToArray()
+        /// since we can't construct a ReadOnlySequence&lt;byte&gt; from a Span. Prefer
+        /// <see cref="Read(ReadOnlyMemory{byte})"/> when possible for zero-copy slicing.
+        /// </summary>
+        public V2DeserializedEnvelope Read(ReadOnlySpan<byte> wireBytes)
+            => ReadCore(wireBytes, useMemorySlicing: false, root: default);
+
+        /// <summary>
+        /// Memory-based read. The inner-payload slice is a zero-copy slice of
+        /// <paramref name="wireBytes"/> — no <c>.ToArray()</c> allocation.
+        /// </summary>
+        public V2DeserializedEnvelope Read(ReadOnlyMemory<byte> wireBytes)
+            => ReadCore(wireBytes.Span, useMemorySlicing: true, root: wireBytes);
+
+        private V2DeserializedEnvelope ReadCore(
+            ReadOnlySpan<byte> wireBytes,
+            bool useMemorySlicing,
+            ReadOnlyMemory<byte> root)
+        {
+            var span = wireBytes;
+
+            string recipientPath = string.Empty;
+            string senderPath = string.Empty;
+            ulong seq = 0;
+            object? payload = null;
+
+            while (!span.IsEmpty)
+            {
+                var (fieldNumber, wireType) = ProtoWire.ReadTag(ref span);
+                switch (fieldNumber)
+                {
+                    case 2: // envelope (RemoteEnvelope, length-delimited)
+                    {
+                        var envelopeLen = (int)ProtoWire.ReadVarint32(ref span);
+                        // Offset of the envelope's first byte within wireBytes.
+                        var envelopeOffset = wireBytes.Length - span.Length;
+                        var envelopeSpan = span.Slice(0, envelopeLen);
+                        ParseRemoteEnvelope(
+                            envelopeSpan,
+                            useMemorySlicing ? root.Slice(envelopeOffset, envelopeLen) : default,
+                            useMemorySlicing,
+                            out recipientPath, out senderPath, out seq, out payload);
+                        span = span.Slice(envelopeLen);
+                        break;
+                    }
+                    default:
+                        ProtoWire.SkipField(ref span, wireType);
+                        break;
+                }
+            }
+
+            return new V2DeserializedEnvelope(recipientPath, senderPath, seq, payload!);
+        }
+
+        private void ParseRemoteEnvelope(
+            ReadOnlySpan<byte> envelopeBytes,
+            ReadOnlyMemory<byte> envelopeMemory,
+            bool useMemorySlicing,
+            out string recipientPath,
+            out string senderPath,
+            out ulong seq,
+            out object? payload)
+        {
+            recipientPath = string.Empty;
+            senderPath = string.Empty;
+            seq = 0;
+            payload = null;
+
+            var bytes = envelopeBytes;
+            while (!bytes.IsEmpty)
+            {
+                var (fieldNumber, wireType) = ProtoWire.ReadTag(ref bytes);
+                switch (fieldNumber)
+                {
+                    case 1: // recipient (ActorRefData)
+                    {
+                        var actorRefBytes = ProtoWire.ReadLengthDelimited(ref bytes);
+                        recipientPath = ExtractActorRefPath(actorRefBytes);
+                        break;
+                    }
+                    case 2: // message (Payload)
+                    {
+                        var payloadLen = (int)ProtoWire.ReadVarint32(ref bytes);
+                        var payloadOffset = envelopeBytes.Length - bytes.Length;
+                        var payloadSpan = bytes.Slice(0, payloadLen);
+                        payload = ParsePayload(
+                            payloadSpan,
+                            useMemorySlicing ? envelopeMemory.Slice(payloadOffset, payloadLen) : default,
+                            useMemorySlicing);
+                        bytes = bytes.Slice(payloadLen);
+                        break;
+                    }
+                    case 4: // sender (ActorRefData)
+                    {
+                        var actorRefBytes = ProtoWire.ReadLengthDelimited(ref bytes);
+                        senderPath = ExtractActorRefPath(actorRefBytes);
+                        break;
+                    }
+                    case 5: // seq (fixed64)
+                        seq = ProtoWire.ReadFixed64(ref bytes);
+                        break;
+                    default:
+                        ProtoWire.SkipField(ref bytes, wireType);
+                        break;
+                }
+            }
+        }
+
+        private object ParsePayload(
+            ReadOnlySpan<byte> payloadBytes,
+            ReadOnlyMemory<byte> payloadMemory,
+            bool useMemorySlicing)
+        {
+            var messageOffset = -1;
+            var messageLength = 0;
+            var serializerId = 0;
+            var manifest = string.Empty;
+            var bytes = payloadBytes;
+
+            while (!bytes.IsEmpty)
+            {
+                var (fieldNumber, wireType) = ProtoWire.ReadTag(ref bytes);
+                switch (fieldNumber)
+                {
+                    case 1: // message (bytes — the inner serialized payload)
+                    {
+                        var len = (int)ProtoWire.ReadVarint32(ref bytes);
+                        messageOffset = payloadBytes.Length - bytes.Length;
+                        messageLength = len;
+                        bytes = bytes.Slice(len);
+                        break;
+                    }
+                    case 2: // serializerId (int32 / varint)
+                        serializerId = (int)ProtoWire.ReadVarint32(ref bytes);
+                        break;
+                    case 3: // messageManifest (bytes — UTF-8)
+                        manifest = ProtoWire.ReadString(ref bytes);
+                        break;
+                    default:
+                        ProtoWire.SkipField(ref bytes, wireType);
+                        break;
+                }
+            }
+
+            var serializer = _registry.GetById(serializerId);
+
+            // Memory-slicing path: zero-copy — slice the original memory at the inner offset,
+            // wrap as ReadOnlySequence, hand to V2 serializer's Deserialize. Allocations on
+            // this path come only from the inner deserialization itself (e.g. Encoding.UTF8.GetString).
+            if (useMemorySlicing)
+            {
+                var innerMemory = payloadMemory.Slice(messageOffset, messageLength);
+                return serializer.Deserialize(new ReadOnlySequence<byte>(innerMemory), manifest);
+            }
+
+            // Span-only path: must materialize to byte[] to construct a ReadOnlySequence.
+            var messageSlice = payloadBytes.Slice(messageOffset, messageLength);
+            return serializer.Deserialize(new ReadOnlySequence<byte>(messageSlice.ToArray()), manifest);
+        }
+
+        private static string ExtractActorRefPath(ReadOnlySpan<byte> actorRefDataBytes)
+        {
+            var bytes = actorRefDataBytes;
+            while (!bytes.IsEmpty)
+            {
+                var (fieldNumber, wireType) = ProtoWire.ReadTag(ref bytes);
+                if (fieldNumber == 1 && wireType == ProtoWire.WireTypeLengthDelimited)
+                    return ProtoWire.ReadString(ref bytes);
+                ProtoWire.SkipField(ref bytes, wireType);
+            }
+            return string.Empty;
         }
     }
 }

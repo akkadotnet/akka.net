@@ -66,10 +66,16 @@ namespace Akka.Benchmarks.Serialization
         // V2 infrastructure
         private V2SerializerRegistry _registry = null!;
         private V2RemoteEnvelopeWriter _v2Writer = null!;
+        private V2RemoteEnvelopeReader _v2Reader = null!;
         private PatchingBufferWriter _v2Buffer = null!;
 
         // Payload values
         private object _payloadValue = null!;
+
+        // Pre-serialized wire bytes for the READ benchmarks (produced once at setup;
+        // both paths read from these without re-serializing per iteration).
+        private byte[] _v1WireBytes = null!;
+        private byte[] _v2WireBytes = null!;
 
         [GlobalSetup]
         public void Setup()
@@ -103,12 +109,21 @@ namespace Akka.Benchmarks.Serialization
             _registry.Register(bytesSerializer, typeof(byte[]));
 
             _v2Writer = new V2RemoteEnvelopeWriter(_registry);
+            _v2Reader = new V2RemoteEnvelopeReader(_registry);
             _v2Buffer = new PatchingBufferWriter(1024);
 
             // ─── Wire-compat smoke test ────────────────────────────────────
             // Produce the same envelope via both paths and confirm the V2 output
             // parses correctly as an AckAndEnvelopeContainer.
             VerifyWireCompat();
+
+            // ─── Pre-serialize wire bytes for the READ benchmarks ──────────
+            _v1WireBytes = V1_ConstructMessage().ToByteArray();
+            _v2Buffer.Reset();
+            V2_ConstructMessage();
+            _v2WireBytes = _v2Buffer.WrittenSpan.ToArray();
+
+            VerifyReadRoundTrip();
         }
 
         [GlobalCleanup]
@@ -126,12 +141,41 @@ namespace Akka.Benchmarks.Serialization
             return _codec.ConstructMessage(_localAddress, _recipient, serialized, _sender, seqOption: new SeqNo(1), ackOption: null);
         }
 
-        // ─── V2 spike ─────────────────────────────────────────────────────────
+        // ─── V2 spike (write) ─────────────────────────────────────────────────
 
         [Benchmark(Description = "V2: PatchingBufferWriter + inline inner write")]
         public int V2_ConstructMessage()
         {
             return _v2Writer.Serialize(_v2Buffer, _recipientBytes, _senderBytes, seq: 1, _payloadValue);
+        }
+
+        // ─── V1 read baseline ─────────────────────────────────────────────────
+
+        [Benchmark(Description = "V1: AckAndEnvelopeContainer.Parser + MessageSerializer.Deserialize")]
+        public object V1_Read()
+        {
+            // Mirrors AkkaPduProtobuffCodec.DecodeMessage + DefaultMessageDispatcher.Dispatch:
+            //   1. Parse the full proto graph (allocates AckAndEnvelopeContainer + RemoteEnvelope
+            //      + Payload + ActorRefData × 2)
+            //   2. Extract recipient/sender/seq/payload from the proto objects
+            //   3. Hand the inner Payload to MessageSerializer.Deserialize, which calls
+            //      Serialization.Deserialize → serializer.FromBinary(bytes, manifest)
+            var container = AckAndEnvelopeContainer.Parser.ParseFrom(_v1WireBytes);
+            return MessageSerializer.Deserialize(_extSystem, container.Envelope.Message);
+        }
+
+        // ─── V2 spike (read) ──────────────────────────────────────────────────
+
+        [Benchmark(Description = "V2: hand-rolled parser + V2 inner Deserialize (zero-copy inner)")]
+        public V2DeserializedEnvelope V2_Read()
+        {
+            // Memory-based read: the inner payload bytes are sliced from the wire buffer
+            // zero-copy and wrapped as a ReadOnlySequence<byte> for the V2 inner serializer's
+            // Deserialize. No materialization of the inner bytes — the only allocations on
+            // this path come from the inner deserialization itself (e.g. Encoding.UTF8.GetString
+            // for strings, or the byte[] copy that ByteArraySerializer is forced to do
+            // because V1 callers retain the returned reference).
+            return _v2Reader.Read((ReadOnlyMemory<byte>)_v2WireBytes);
         }
 
         // ─── Helpers ──────────────────────────────────────────────────────────
@@ -197,6 +241,35 @@ namespace Akka.Benchmarks.Serialization
                     $"Wire compat broken: serializer id mismatch (v1={v1Parsed.Envelope.Message.SerializerId} v2={v2Parsed.Envelope.Message.SerializerId})");
 
             _v2Buffer.Reset();
+        }
+
+        /// <summary>
+        /// Verifies both the V1 read (proto parse + MessageSerializer.Deserialize) and the
+        /// V2 read (hand-rolled parser) produce the same logical payload. Also verifies V2's
+        /// reader handles V1's canonical-varint wire bytes — not just its own over-long ones.
+        /// Throws at setup if anything diverges. Not part of per-iteration timing.
+        /// </summary>
+        private void VerifyReadRoundTrip()
+        {
+            var v1Read = V1_Read();
+            var v2Read = V2_Read();
+            if (!PayloadEqual(v1Read, v2Read.Payload))
+                throw new InvalidOperationException(
+                    $"Read round-trip mismatch (v1='{v1Read}' v2='{v2Read.Payload}')");
+
+            // Also confirm the V2 reader can parse V1's canonical-varint wire bytes.
+            var v2OnV1 = _v2Reader.Read((ReadOnlyMemory<byte>)_v1WireBytes);
+            if (!PayloadEqual(v1Read, v2OnV1.Payload))
+                throw new InvalidOperationException(
+                    $"V2 reader on V1 bytes mismatch (v1='{v1Read}' v2onv1='{v2OnV1.Payload}')");
+        }
+
+        /// <summary>Equality that handles byte[] by content rather than by reference.</summary>
+        private static bool PayloadEqual(object a, object b)
+        {
+            if (a is byte[] ab && b is byte[] bb)
+                return ab.AsSpan().SequenceEqual(bb);
+            return Equals(a, b);
         }
     }
 }
