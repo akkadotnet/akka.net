@@ -1487,11 +1487,20 @@ namespace Akka.Remote
                         send.Recipient, send.Recipient.Path, send.SenderOption ?? _system.DeadLetters);
                 }
 
+                var useDirectOutboundPath = Settings.EnableDirectOutboundMessagePath
+                    && send.Message is not ISystemMessage
+                    && send.Seq is null
+                    && _lastAck is null;
+
                 ByteString pdu;
                 try
                 {
-                    pdu = _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
-                        SerializeMessage(send.Message), send.SenderOption, send.Seq, _lastAck);
+                    var serializedMessage = SerializeMessage(send.Message);
+                    pdu = useDirectOutboundPath
+                        ? _codec.ConstructMessagePayload(send.Recipient.LocalAddressToUse, send.Recipient,
+                            serializedMessage, send.SenderOption, send.Seq, _lastAck)
+                        : _codec.ConstructMessage(send.Recipient.LocalAddressToUse, send.Recipient,
+                            serializedMessage, send.SenderOption, send.Seq, _lastAck);
                 }
                 catch (Exception e) when (e is not SerializationException)
                 {
@@ -1514,7 +1523,9 @@ namespace Akka.Remote
                 }
                 else
                 {
-                    var ok = _handle.Write(pdu);
+                    var ok = useDirectOutboundPath
+                        ? _handle.WrappedHandle.Write(pdu)
+                        : _handle.Write(pdu);
 
                     if (ok)
                     {
