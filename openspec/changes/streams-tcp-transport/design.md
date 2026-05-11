@@ -19,12 +19,14 @@ With Specs 1+2, Akka.IO TCP now uses `Stream` + `Pipe` + `IStreamProvider` (with
 - Implement `StreamsTcpTransport : Transport` using Akka.Streams TCP
 - Integrated outbound framing + serialization via `FrameBufferWriter : IBufferWriter<byte>` (single buffer, no intermediate payload copies on the write side)
 - Collapse the outbound path so the transport-owned write loop receives a send-shaped work item, writes protocol metadata, serializes the payload into the same writer, and emits one contiguous frame
+- Preserve the current remoting wire format in the first production redesign
 - All existing `akka.remote.dot-netty.tcp.*` HOCON configuration works unchanged
 - All non-DotNetty-specific Akka.Remote specs pass
 - Remove DotNetty dependency entirely
 
 **Non-Goals:**
 - Preserving `AssociationHandle.Write(ByteString)` purely for compatibility if it blocks the integrated write path
+- Preserving source-compatible C# transport or setup APIs if they block the faster design
 - Read-side pooled buffer leasing across actor boundaries
 - Changing the actor-visible `Endpoint` / `EndpointWriter` / `EndpointReader` behavior more than necessary to lower serialization into the write loop
 - UDP transport (separate, later)
@@ -69,15 +71,21 @@ Write path:
 
 **Alternative considered:** Separate Akka.Streams framing stage. Rejected for the transport — adds an unnecessary element copy between stages. The general-purpose `Framing.LengthField()` stage remains available for user-facing Streams TCP.
 
-### 3. PDU encoding strategy remains open until the spike lands
+### 3. First production redesign preserves the current wire format
 
-**Decision:** The production transport will keep the outer socket frame length prefix, but the inner protocol encoding remains an implementation choice until the spike proves the integrated writer path. The initial spike should validate the design against the current Protobuf-based remote envelope and protocol wrapper before a binary PDU replacement is committed.
+**Decision:** The first production redesign keeps the current remoting wire format end-to-end, including the existing protocol wrapper and envelope semantics, while rewriting the outbound path to construct that wire format in one pass.
 
-**Rationale:** PR #8203 showed that the primary problem is the split pipeline, not just Protobuf. A spike that collapses the write path while keeping current wire semantics gives us a cleaner measurement of architectural benefit before taking on a wire-format rewrite.
+**Rationale:** PR #8203 showed that the primary problem is the split pipeline, not just Protobuf. Keeping the wire format stable isolates the performance value of the new outbound regime and gets us to a production redesign faster.
 
-**Follow-up:** If the integrated writer path is successful, a later production step can still replace `AkkaPduProtobuffCodec` with a simpler binary format if the numbers justify the compatibility break.
+**Follow-up:** If the integrated writer path is successful and further gains are still available, a later change can revisit the wire format separately.
 
-### 4. StreamsTcpTransport implements Transport abstraction
+### 4. Performance-first API breaks are acceptable
+
+**Decision:** If the current C# transport, association, or setup APIs block the integrated outbound path, they should be changed instead of wrapped in compatibility shims on the hot path.
+
+**Rationale:** The priority for Akka.NET 1.6 is to prove the new regime is faster. Preserving source compatibility in the performance-critical path would obscure that result and slow down the redesign.
+
+### 5. StreamsTcpTransport implements Transport abstraction
 
 **Decision:** New `StreamsTcpTransport : Transport` that uses Akka.Streams TCP for both server-side listening and client-side association.
 
@@ -92,7 +100,7 @@ Client path (`Associate`):
 
 **Rationale:** Reuses the Akka.Streams TCP infrastructure (which, after Spec 1, uses `Stream` + `Pipe` + `IStreamProvider`). Backpressure propagates naturally through Streams demand signaling.
 
-### 5. Configuration key preservation
+### 6. Configuration key preservation
 
 **Decision:** Parse all existing `akka.remote.dot-netty.tcp.*` HOCON keys into `StreamsTcpTransportSettings`. The config section name stays the same. Only the transport class reference changes.
 
@@ -108,13 +116,13 @@ Keys preserved:
 - `connection-timeout`
 - `batching.*` (flush batching settings — Spec 5 optimization)
 
-### 6. Remove DotNetty dependency
+### 7. Remove DotNetty dependency
 
 **Decision:** Delete `src/core/Akka.Remote/Transport/DotNetty/` entirely. Remove all DotNetty NuGet packages from `Akka.Remote.csproj`.
 
 **Rationale:** Clean break. No adapter layer or backward compat shim for DotNetty. The new transport is the only transport. DotNetty-specific programmatic APIs (`DotNettyTransportSettings`, `DotNettySslSetup`) are replaced by their equivalents.
 
-### 7. Read path remains copy-based above the transport boundary
+### 8. Read path remains copy-based above the transport boundary
 
 **Decision:** The read side uses the Pipe from Spec 1, but pooled buffer ownership stops before actor-visible lifetime begins. Transport and framing layers may parse from `ReadOnlySequence<byte>` while data is still in scope, but payload bytes are copied before they become inbound actor messages or stateful protocol queues.
 
@@ -131,9 +139,18 @@ Read path:
 
 **Rationale:** Read-side zero-copy across actor boundaries would require explicit lifetime / release semantics and effectively a mini-GC for inbound messages. That is not a good trade-off for this milestone. Outbound pooling captures most of the practical gain with much less risk.
 
+### Phased delivery path
+
+- Phase 1: keep the benchmark-only spike as the proof that the integrated outbound regime is directionally better.
+- Phase 2: land a production outbound writer path that emits the current remoting wire format from send-shaped work items and takes any required C# API breaks.
+- Phase 3: swap the DotNetty transport backend for `StreamsTcpTransport` on the same wire format.
+- Phase 4: run `RemotePingPong`, tune batching and buffer thresholds, and only then decide which compatibility cleanups or additional protocol changes are worth doing.
+
 ## Risks / Trade-offs
 
-**[Transport abstraction changes]** → The existing `AssociationHandle.Write(ByteString)` boundary is not a good fit for a transport-owned pooled write path. This is an intentional 1.6 breaking change. The spike must prove enough benefit to justify it.
+**[Transport abstraction changes]** → The existing `AssociationHandle.Write(ByteString)` boundary is not a good fit for a transport-owned pooled write path. This is an intentional 1.6 breaking change. The spike already gives directional evidence that the break is worth taking.
+
+**[Wire format stays the same, so some protocol allocations may remain]** → Acceptable for the first production redesign. The goal is to remove the largest structural costs first and benchmark the result before taking on a separate wire-format rewrite.
 
 **[Akka.Remote now depends on Akka.Streams]** → Currently `Akka.Remote` depends on `Akka` core only (plus DotNetty). The new transport adds a dependency on `Akka.Streams`. This is a new transitive dependency for all remoting users. Acceptable since Streams is a core module, not an external package.
 

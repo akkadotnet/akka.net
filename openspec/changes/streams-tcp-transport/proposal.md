@@ -16,14 +16,15 @@ That is where buffer pooling is practical. Read-side pooling is intentionally ou
 ## What Changes
 
 - New `StreamsTcpTransport : Transport` implementation in Akka.Remote using Akka.Streams TCP
-- **Wire-compatible outer framing**: preserve the `[4-byte length][payload]` socket framing used by the current transport
+- **Wire-compatible first production slice**: preserve the current remoting wire format end-to-end while redesigning the outbound path
 - **Config-compatible**: all `akka.remote.dot-netty.tcp.*` HOCON keys continue to work (mapped to new transport settings)
 - `AkkaProtocolTransport` remains the handshake / heartbeat / association-management layer, but the outbound write contract below it is allowed to change for performance
 - New transport-owned outbound writer loop that lowers serialization and protocol framing into a single buffer construction path
 - New pooled `FrameBufferWriter : IBufferWriter<byte>` for outbound writes only
-- Replace the current multi-stage `MessageSerializer` -> `AkkaPduCodec.ConstructMessage` -> `AkkaProtocolHandle.Write` write path with one integrated path that writes directly to the transport-owned writer
+- Replace the current multi-stage `MessageSerializer` -> `AkkaPduCodec.ConstructMessage` -> `AkkaProtocolHandle.Write` write path with one integrated path that writes the current wire format directly to the transport-owned writer
 - Remove DotNetty NuGet dependency from Akka.Remote
 - **BREAKING**: the current `AssociationHandle.Write(ByteString)` / `InboundPayload(ByteString)` assumptions are no longer design constraints for the new transport implementation
+- **BREAKING**: source-compatible C# transport/setup APIs are not a goal if they block the faster outbound regime
 - **BREAKING**: `DotNettySslSetup` replaced by `TlsSetup` (Spec 2)
 - **BREAKING**: DotNetty-specific programmatic APIs removed
 
@@ -32,7 +33,7 @@ That is where buffer pooling is practical. Read-side pooling is intentionally ou
 - `AkkaProtocolTransport` remains the layer responsible for handshake, heartbeats, acking, and association state management
 - Akka.Remote's actor-level semantics stay the same: sends are still driven by send-shaped work items and inbound payloads still become ordinary actor messages after deserialization
 - Read-side transport behavior remains copy-based before actor-visible lifetime begins
-- The outer socket framing stays length-delimited
+- The remoting wire format stays compatible in the first production redesign
 - All HOCON configuration keys (names preserved, implementation remapped)
 
 ## Capabilities
@@ -45,9 +46,9 @@ That is where buffer pooling is practical. Read-side pooling is intentionally ou
 
 ## Impact
 
-- **Akka.Remote** (`src/core/Akka.Remote/`): New transport implementation and outbound writer pipeline. Remove `Transport/DotNetty/` directory entirely. Update `EndpointWriter`, `MessageSerializer`, and transport abstractions to support transport-owned outbound buffer construction.
+- **Akka.Remote** (`src/core/Akka.Remote/`): New transport implementation and outbound writer pipeline. Remove `Transport/DotNetty/` directory entirely. Update `EndpointWriter`, `MessageSerializer`, and transport abstractions to support transport-owned outbound buffer construction while preserving the current wire format.
 - **Configuration**: All `akka.remote.dot-netty.tcp.*` keys remapped to `StreamsTcpTransportSettings`. Default transport class changes from `TcpTransport` (DotNetty) to `StreamsTcpTransport`.
 - **NuGet dependencies**: Remove `DotNetty.Transport`, `DotNetty.Codecs`, `DotNetty.Handlers`, `DotNetty.Common`, `DotNetty.Buffers`. Add dependency on `Akka.Streams` from `Akka.Remote`.
-- **Benchmarks**: Add a bounded spike that compares the current split outbound pipeline against an integrated transport-owned write loop before the full transport rewrite is attempted.
+- **Benchmarks**: Add a bounded spike that compares the current split outbound pipeline against an integrated transport-owned write loop before the full transport rewrite is attempted, then benchmark the first wire-compatible redesigned transport before any compatibility follow-up work.
 - **Test suites**: All Akka.Remote specs that don't directly reference DotNetty APIs must pass. DotNetty-specific tests removed.
 - **Downstream**: Spec 4 (SerializerV2) is now explicitly a foundation for the integrated outbound path, not a standalone end-state. Spec 5 benchmarks both the spike and the final transport.

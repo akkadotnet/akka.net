@@ -44,6 +44,12 @@ The RemotePingPong benchmark is the standard throughput measurement for Akka.NET
 
 **Caveat:** These results are directional only. The run used a small sample count, BenchmarkDotNet flagged short iteration times, and some cases had wide confidence intervals and outlier removal. Treat this as evidence that the integrated outbound loop is worth pursuing, not as publication-quality benchmark data.
 
+### 1B. First end-to-end comparison stays on the current wire format
+
+**Decision:** The first full RemotePingPong comparison should use the redesigned transport and outbound path while preserving the current remoting wire format. Source-compatible C# API shims should not be added to the hot path before this comparison.
+
+**Rationale:** This isolates whether the new regime is actually better. If the wire-compatible redesign does not beat the baseline in its cleanest form, extra compatibility work is unlikely to improve that outcome.
+
 ### 2. Flush batching in write task
 
 **Decision:** The write-to-stream background task SHALL coalesce pending writes before calling `stream.FlushAsync()`. Instead of flushing after every `WriteAsync`, batch writes within a configurable window (e.g., flush after N writes or after a micro-delay if no more writes are pending).

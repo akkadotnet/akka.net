@@ -14,12 +14,12 @@
 - [ ] 2.4 Benchmark common payload shapes (`string`, `byte[]`, small and large payloads)
 - [ ] 2.5 Record whether the integrated loop is enough to justify changing the transport write contract
 
-## 3. Production PDU strategy
+## 3. Wire-compatible production integration
 
-- [ ] 3.1 Decide whether production transport keeps the current Protobuf wire semantics initially or replaces `AkkaPduProtobuffCodec` with a binary codec after the spike lands
-- [ ] 3.2 If binary PDU replacement is still justified, create `BinaryPduCodec` in `src/core/Akka.Remote/` with `WritePdu(IBufferWriter<byte>, ...)` methods for payload, associate, disassociate, heartbeat PDU types
-- [ ] 3.3 If binary PDU replacement is chosen, create `ReadPdu(ReadOnlySequence<byte>)` methods that parse PDU type and extract fields
-- [ ] 3.4 If binary PDU replacement is chosen, define PDU type constants and round-trip tests for all PDU types
+- [ ] 3.1 Lock the first production redesign to the current remoting wire format; do not introduce a new on-the-wire protocol in this milestone
+- [ ] 3.2 Implement direct writing of the current protocol wrapper and remote envelope into the transport-owned outbound writer loop
+- [ ] 3.3 Verify the integrated writer output is accepted by the current remoting decoder and interop tests
+- [ ] 3.4 Defer any alternative binary PDU format to a later change after end-to-end performance validation
 
 ## 4. StreamsTcpTransport Implementation
 
@@ -28,7 +28,7 @@
 - [ ] 4.3 Implement `Associate(remoteAddress)`: use `Tcp.OutgoingConnection()` to connect, materialize flow, return `StreamsAssociationHandle`
 - [ ] 4.4 Implement `Shutdown()`: close listener, close all active associations, complete materialized streams
 - [ ] 4.5 Implement `IsResponsibleFor(Address)`: protocol check for "tcp" / "ssl.tcp"
-- [ ] 4.6 Replace the current write boundary with a contract that supports transport-owned outbound frame construction; do not preserve `Write(ByteString)` if it blocks the integrated path
+- [ ] 4.6 Replace the current write boundary with a contract that supports transport-owned outbound frame construction; do not preserve source-compatible C# APIs if they block the integrated path
 
 ## 5. Integrated Write Path
 
@@ -73,3 +73,9 @@
 - [ ] 9.8 Test: cluster formation with multiple nodes using new transport
 - [ ] 9.9 Remove DotNetty-specific test files
 - [ ] 9.10 Run full test suite: `dotnet test -c Release`
+
+## 10. Compatibility follow-up after performance proof
+
+- [ ] 10.1 After the redesigned transport beats the baseline, audit which compatibility shims or migration helpers are actually worth adding back
+- [ ] 10.2 Decide whether any public C# transport/setup APIs need adapters or only release-note migration guidance
+- [ ] 10.3 Keep any future wire-format changes in a separate post-validation change

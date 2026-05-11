@@ -7,7 +7,7 @@ The Akka.NET 1.6 transport and serialization overhaul (Specs 1-4) replaces DotNe
 - Establish DotNetty baseline using RemotePingPong benchmark on current `dev` branch
 - Add a bounded outbound-write-loop spike benchmark before the full transport rewrite lands
 - Use the spike results as a gate for whether the transport write contract should change before the full transport rewrite proceeds
-- Run identical end-to-end benchmark on the new Akka.Streams transport after the transport contract changes are implemented
+- Run the first end-to-end benchmark on the wire-compatible Akka.Streams redesign before adding compatibility shims or alternate wire formats
 - New transport MUST exceed DotNetty throughput (messages/second)
 - Identify and implement optimizations: flush batching, write coalescing, Pipe tuning, outbound buffer pool sizing, dispatch improvements
 - Continuous benchmarking as optimizations land

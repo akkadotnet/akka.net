@@ -14,7 +14,7 @@
 
 ## 2. Initial Comparison
 
-- [ ] 2.1 Run RemotePingPong benchmark against new transport (after Specs 1-4 integrated)
+- [ ] 2.1 Run RemotePingPong benchmark against the first wire-compatible redesigned transport (after Specs 1-4 integrated and before compatibility follow-up work)
 - [ ] 2.2 Compare messages/second, latency, and allocation rate vs DotNetty baseline
 - [ ] 2.3 Profile with dotnet-trace or JetBrains profiler to identify hot spots
 - [ ] 2.4 Document initial comparison results
