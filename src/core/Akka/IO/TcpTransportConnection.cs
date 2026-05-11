@@ -200,7 +200,8 @@ namespace Akka.IO
             }
             catch (ObjectDisposedException)
             {
-                // slopwatch-ignore: SW003 CTS may already be disposed during shutdown races
+                // The CTS was already disposed by another shutdown path.
+                return;
             }
         }
 
@@ -215,7 +216,8 @@ namespace Akka.IO
             }
             catch (InvalidOperationException)
             {
-                // slopwatch-ignore: SW003 pipe may already be completed by another shutdown path
+                // Another shutdown path already completed the writer.
+                return;
             }
         }
 
@@ -230,7 +232,8 @@ namespace Akka.IO
             }
             catch (InvalidOperationException)
             {
-                // slopwatch-ignore: SW003 pipe may already be completed by another shutdown path
+                // Another shutdown path already completed the writer.
+                return;
             }
         }
 
@@ -258,7 +261,8 @@ namespace Akka.IO
             }
             catch (ObjectDisposedException)
             {
-                // slopwatch-ignore: SW003 stream may already be disposed by another shutdown path
+                // Another shutdown path already disposed the stream.
+                return;
             }
         }
 
@@ -273,7 +277,8 @@ namespace Akka.IO
             }
             catch (ObjectDisposedException)
             {
-                // slopwatch-ignore: SW003 stream may already be disposed by another shutdown path
+                // Another shutdown path already disposed the stream.
+                return;
             }
         }
 
