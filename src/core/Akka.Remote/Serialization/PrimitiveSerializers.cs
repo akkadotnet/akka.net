@@ -80,7 +80,7 @@ namespace Akka.Remote.Serialization
         };
 
         /// <inheritdoc/>
-        public override void Serialize(IBufferWriter<byte> buffer, object obj)
+        public override int Serialize(IBufferWriter<byte> buffer, object obj)
         {
             switch (obj)
             {
@@ -92,21 +92,21 @@ namespace Akka.Remote.Serialization
                     var span = buffer.GetSpan(maxBytes);
                     var written = Encoding.UTF8.GetBytes(s.AsSpan(), span);
                     buffer.Advance(written);
-                    return;
+                    return written;
                 }
                 case int i:
                 {
                     var span = buffer.GetSpan(sizeof(int));
                     BinaryPrimitives.WriteInt32LittleEndian(span, i);
                     buffer.Advance(sizeof(int));
-                    return;
+                    return sizeof(int);
                 }
                 case long l:
                 {
                     var span = buffer.GetSpan(sizeof(long));
                     BinaryPrimitives.WriteInt64LittleEndian(span, l);
                     buffer.Advance(sizeof(long));
-                    return;
+                    return sizeof(long);
                 }
                 default:
                     throw new ArgumentException($"Cannot serialize object of type [{obj.GetType()}]");

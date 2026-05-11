@@ -112,7 +112,7 @@ namespace Akka.Benchmarks.Serialization
             }
 
             // Payload: write directly into the writer's span — no intermediate byte[].
-            _serializer.Serialize(_writer, _value);
+            _serializer.Serialize(_writer, _value);  // returned bytes-written ignored — writer state is authoritative
 
             // Read back via SequenceReader for the header, then hand the remaining sequence
             // (the payload slice) to Deserialize. This is what EndpointWriter will do.

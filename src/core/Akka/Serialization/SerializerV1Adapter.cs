@@ -62,13 +62,14 @@ namespace Akka.Serialization
         }
 
         /// <inheritdoc/>
-        public override void Serialize(IBufferWriter<byte> buffer, object obj)
+        public override int Serialize(IBufferWriter<byte> buffer, object obj)
         {
             // V1 is byte[]-native; we have to allocate once on this path. The V1-bridge overrides
             // below ensure that callers reaching us through ToBinary/FromBinary don't pay an
             // additional round trip through ArrayBufferWriter.
             var bytes = _inner.ToBinary(obj);
             buffer.Write(bytes);
+            return bytes.Length;
         }
 
         /// <inheritdoc/>

@@ -36,12 +36,12 @@ namespace Akka.Serialization
         public override int SizeHint(object o) => o is byte[] b ? b.Length : 0;
 
         /// <inheritdoc/>
-        public override void Serialize(IBufferWriter<byte> buffer, object obj)
+        public override int Serialize(IBufferWriter<byte> buffer, object obj)
         {
             if (obj is byte[] bytes)
             {
                 buffer.Write(bytes);
-                return;
+                return bytes.Length;
             }
             throw new NotSupportedException("The object to convert is not a byte array.");
         }

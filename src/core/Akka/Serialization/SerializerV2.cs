@@ -97,7 +97,8 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="buffer">The buffer to write into.</param>
         /// <param name="obj">The object to serialize.</param>
-        public abstract void Serialize(IBufferWriter<byte> buffer, object obj);
+        /// <returns>The number of bytes written to the buffer.</returns>
+        public abstract int Serialize(IBufferWriter<byte> buffer, object obj);
 
         /// <summary>
         /// Deserializes an object from the given byte sequence.
@@ -125,8 +126,8 @@ namespace Akka.Serialization
         public virtual byte[] ToBinary(object obj)
         {
             var buffer = new ArrayBufferWriter<byte>(SizeHint(obj));
-            Serialize(buffer, obj);
-            return buffer.WrittenSpan.ToArray();
+            var written = Serialize(buffer, obj);
+            return buffer.WrittenSpan.Slice(0, written).ToArray();
         }
 
         /// <summary>
