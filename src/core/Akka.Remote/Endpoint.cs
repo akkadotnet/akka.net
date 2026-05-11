@@ -1977,7 +1977,11 @@ namespace Akka.Remote
         {
             try
             {
-                return _codec.DecodeMessage(pdu, _provider, LocalAddress);
+                // V2 receive path — parses AckAndEnvelopeContainer wire bytes directly,
+                // skips the proto graph allocation, uses UnsafeByteOperations.UnsafeWrap to
+                // zero-copy the inner payload bytes. Downstream AckedReceiveBuffer +
+                // DeliverAndAck + Dispatch pipeline unchanged (reliable delivery preserved).
+                return ((AkkaPduProtobuffCodec)_codec).DecodeMessageV2(pdu, _provider, LocalAddress);
             }
             catch (Exception ex)
             {

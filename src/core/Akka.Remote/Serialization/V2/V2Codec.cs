@@ -494,18 +494,31 @@ namespace Akka.Remote.Serialization.V2
     /// </summary>
     internal readonly struct V2DeserializedEnvelope
     {
-        public V2DeserializedEnvelope(string recipientPath, string senderPath, ulong seq, object payload)
+        public V2DeserializedEnvelope(
+            string recipientPath,
+            string senderPath,
+            ulong seq,
+            object payload,
+            ulong? ackCumulative = null,
+            ulong[]? ackNacks = null)
         {
             RecipientPath = recipientPath;
             SenderPath = senderPath;
             Seq = seq;
             Payload = payload;
+            AckCumulative = ackCumulative;
+            AckNacks = ackNacks;
         }
 
         public string RecipientPath { get; }
         public string SenderPath { get; }
         public ulong Seq { get; }
         public object Payload { get; }
+
+        /// <summary>Cumulative ack sequence number, if the envelope carried an AcknowledgementInfo field.</summary>
+        public ulong? AckCumulative { get; }
+        /// <summary>Negative-ack sequence numbers, if the envelope carried an AcknowledgementInfo with nacks.</summary>
+        public ulong[]? AckNacks { get; }
     }
 
     /// <summary>
@@ -550,16 +563,23 @@ namespace Akka.Remote.Serialization.V2
             string senderPath = string.Empty;
             ulong seq = 0;
             object? payload = null;
+            ulong? ackCumulative = null;
+            ulong[]? ackNacks = null;
 
             while (!span.IsEmpty)
             {
                 var (fieldNumber, wireType) = ProtoWire.ReadTag(ref span);
                 switch (fieldNumber)
                 {
+                    case 1: // ack (AcknowledgementInfo, length-delimited)
+                    {
+                        var ackBytes = ProtoWire.ReadLengthDelimited(ref span);
+                        ParseAck(ackBytes, out ackCumulative, out ackNacks);
+                        break;
+                    }
                     case 2: // envelope (RemoteEnvelope, length-delimited)
                     {
                         var envelopeLen = (int)ProtoWire.ReadVarint32(ref span);
-                        // Offset of the envelope's first byte within wireBytes.
                         var envelopeOffset = wireBytes.Length - span.Length;
                         var envelopeSpan = span.Slice(0, envelopeLen);
                         ParseRemoteEnvelope(
@@ -576,7 +596,33 @@ namespace Akka.Remote.Serialization.V2
                 }
             }
 
-            return new V2DeserializedEnvelope(recipientPath, senderPath, seq, payload!);
+            return new V2DeserializedEnvelope(recipientPath, senderPath, seq, payload!, ackCumulative, ackNacks);
+        }
+
+        private static void ParseAck(ReadOnlySpan<byte> ackBytes, out ulong? cumulative, out ulong[]? nacks)
+        {
+            cumulative = null;
+            nacks = null;
+            List<ulong>? nackList = null;
+            var bytes = ackBytes;
+            while (!bytes.IsEmpty)
+            {
+                var (fieldNumber, wireType) = ProtoWire.ReadTag(ref bytes);
+                switch (fieldNumber)
+                {
+                    case 1: // cumulativeAck (fixed64)
+                        cumulative = ProtoWire.ReadFixed64(ref bytes);
+                        break;
+                    case 2: // nacks (repeated fixed64)
+                        (nackList ??= new List<ulong>()).Add(ProtoWire.ReadFixed64(ref bytes));
+                        break;
+                    default:
+                        ProtoWire.SkipField(ref bytes, wireType);
+                        break;
+                }
+            }
+            if (nackList is { Count: > 0 })
+                nacks = nackList.ToArray();
         }
 
         private void ParseRemoteEnvelope(
