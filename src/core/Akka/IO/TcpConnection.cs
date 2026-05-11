@@ -143,6 +143,24 @@ namespace Akka.IO
             public TransportOperationFailed(Exception cause) { Cause = cause; }
         }
 
+        /// <summary>
+        /// Self-tell: transport finalization completed successfully.
+        /// </summary>
+        private sealed class TransportFinalized : INoSerializationVerificationNeeded
+        {
+            public static readonly TransportFinalized Instance = new();
+            private TransportFinalized() { }
+        }
+
+        /// <summary>
+        /// Self-tell: transport finalization failed.
+        /// </summary>
+        private sealed class TransportFinalizeFailed : INoSerializationVerificationNeeded
+        {
+            public Exception Cause { get; }
+            public TransportFinalizeFailed(Exception cause) { Cause = cause; }
+        }
+
         private sealed class CommanderDied : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public static readonly CommanderDied Instance = new();
@@ -231,6 +249,13 @@ namespace Akka.IO
         // this as Tcp.ErrorClosed instead of treating it as a clean EOF.
         private bool _readPumpHasError;
         private Exception? _readPumpError;
+
+        // True once the transport has been fully cleaned up via CloseAsync or DisposeAsync.
+        // When set, PostStop skips the abort fallback because there's nothing left to tear down.
+        private bool _transportFinalized;
+
+        // True while an async finalization task is in flight (used by ConfirmedClose).
+        private bool _transportFinalizing;
         #endregion
 
         private static readonly IOException DroppingWriteBecauseClosingException =
@@ -265,11 +290,13 @@ namespace Akka.IO
 
             if (_transport != null)
             {
-                // Abort cancels the CTS, sets linger=0, closes the socket.
-                // This unblocks any pending stream.ReadAsync/WriteAsync in the pump tasks.
-                // The pump tasks will exit with OperationCanceledException or IOException.
-                try { _transport.Abort(); }
-                catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
+                if (!_transportFinalized)
+                {
+                    // Abort is the emergency fallback for unexpected actor stops.
+                    // Clean Close / ConfirmedClose paths finalize the transport before stopping.
+                    try { _transport.Abort(); }
+                    catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
+                }
             }
             else
             {
@@ -486,8 +513,8 @@ namespace Akka.IO
                 if (closeEvent is ConfirmedClosed)
                 {
                     if (_traceLogging)
-                        Log.Debug("Peer FIN received during ConfirmedClose - connection fully closed");
-                    DoCloseConnection(closeSender, ConfirmedClosed.Instance);
+                        Log.Debug("Peer FIN received during ConfirmedClose - waiting for transport finalization");
+                    TryFinishClose(closeSender, closeEvent);
                     return;
                 }
 
@@ -511,11 +538,14 @@ namespace Akka.IO
 
                     if (_traceLogging)
                         Log.Debug("ConfirmedClose: FIN sent, waiting for peer FIN");
+
+                    TryFinishClose(closeSender, closeEvent);
                 }
                 else
                 {
-                    // For regular Close, transport is fully closed
+                    // For regular Close, transport is fully closed and finalized.
                     _outputShutdown = true;
+                    _transportFinalized = true;
                     TryFinishClose(closeSender, closeEvent);
                 }
             });
@@ -529,6 +559,25 @@ namespace Akka.IO
             {
                 if (_traceLogging)
                     Log.Debug("I/O task failed during close: {0}", msg.Cause.Message);
+                DoCloseConnection(closeSender, closeEvent);
+            });
+            Receive<TransportFinalized>(_ =>
+            {
+                _transportFinalizing = false;
+                _transportFinalized = true;
+
+                if (_traceLogging)
+                    Log.Debug("Transport finalization completed");
+
+                DoCloseConnection(closeSender, closeEvent);
+            });
+            Receive<TransportFinalizeFailed>(msg =>
+            {
+                _transportFinalizing = false;
+
+                if (_traceLogging)
+                    Log.Debug("Transport finalization failed: {0}", msg.Cause.Message);
+
                 DoCloseConnection(closeSender, closeEvent);
             });
             SuspendResumeHandlers();
@@ -551,14 +600,35 @@ namespace Akka.IO
         {
             if (closeEvent is ConfirmedClosed)
             {
-                // For ConfirmedClose, we need to wait for peer FIN (StreamEof).
-                // The StreamEof handler calls DoCloseConnection directly.
+                // For ConfirmedClose, wait until our FIN has been sent and the peer's FIN has arrived.
+                // Once both sides are closed, finalize the transport asynchronously before stopping.
+                if (_outputShutdown && _peerClosed)
+                    StartTransportFinalization();
+
                 return;
             }
 
             // For regular Close: once read pump has completed and output is shutdown
             if (_outputShutdown && _readPumpCompleted)
                 DoCloseConnection(closeSender, closeEvent);
+        }
+
+        private void StartTransportFinalization()
+        {
+            if (_transport is null || _transportFinalized || _transportFinalizing)
+                return;
+
+            _transportFinalizing = true;
+            _transport.DisposeAsync().AsTask().ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    return (object)new TransportFinalizeFailed(t.Exception!.InnerException ?? t.Exception);
+
+                if (t.IsCanceled)
+                    return (object)new TransportFinalizeFailed(new TaskCanceledException("Transport finalization was canceled"));
+
+                return TransportFinalized.Instance;
+            }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(Self);
         }
 
         private void SuspendResumeHandlers()
