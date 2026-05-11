@@ -14,6 +14,7 @@ A POC at github.com/Aaronontheweb/AkkaSerializationPoC (PR #42, spike/serializer
 - `Serialization.cs` uses V2 internally (auto-wraps V1 on registration)
 - `MessagePackSerializer : SerializerV2` + sealed `AkkaWriter`/`AkkaReader` in separate package
 - Mechanical port of simple internal Protobuf serializers to V2 base (same IDs, same wire format)
+- Expose the minimum serializer contract needed for the transport-owned outbound writer loop to serialize directly into its destination buffer
 - Hand-written serializers validate the API before source generator investment
 - Persistence data fully backward compatible (V1-serialized events remain readable)
 
@@ -23,6 +24,7 @@ A POC at github.com/Aaronontheweb/AkkaSerializationPoC (PR #42, spike/serializer
 - Changing persistence envelope serializers (PersistenceMessageSerializer, PersistenceSnapshotSerializer)
 - Changing the HOCON registration mechanism
 - HOCON-less or attribute-only registration (future enhancement)
+- Solving read-side pooled buffer lifetime across actor boundaries
 
 ## Decisions
 
@@ -66,7 +68,13 @@ SerializerV2 (core Akka — IBufferWriter/ReadOnlySequence, no MessagePack)
 
 **Rationale:** 22% faster deserialization from JIT devirtualization. The interface layer was YAGNI — we're committed to MessagePack for user message codegen. `AkkaWriter.RawBuffer` escape hatch preserves extensibility for advanced scenarios.
 
-### 6. Bridge methods for transport compatibility
+### 6. V2 is optimized for outbound transport integration
+
+**Decision:** `SerializerV2.Serialize(IBufferWriter<byte>, object)` is designed around a transport-owned outbound destination. The serializer writes bytes into a writer it does not own, and it does not manage pooled buffer lifetime itself.
+
+**Rationale:** The transport is the natural owner of outbound frame buffers. Keeping ownership outside the serializer avoids pushing `IMemoryOwner<byte>` or other lifetime-bearing types into the serializer API.
+
+### 7. Bridge methods for transport compatibility
 
 **Decision:** `SerializerV2` has `ToBinary(object) → byte[]` and `FromBinary(byte[], string) → object` implemented in terms of the buffer API:
 
@@ -82,7 +90,7 @@ public virtual object FromBinary(byte[] bytes, string manifest)
     => Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
 ```
 
-**Rationale:** The current transport (and Spec 3's initial `FrameBufferWriter` path) can call `Serialize(IBufferWriter<byte>)` directly. The bridge is for backward compat with code that still expects `byte[]`. The bridge is virtual so it can be bypassed when direct buffer access is available.
+**Rationale:** The production transport will eventually call `Serialize(IBufferWriter<byte>)` directly once the write-loop spike validates the architecture. The bridge is for backward compat with code that still expects `byte[]`. The bridge is virtual so it can be bypassed when direct buffer access is available.
 
 ## Risks / Trade-offs
 
@@ -93,3 +101,5 @@ public virtual object FromBinary(byte[] bytes, string manifest)
 **[Internal serializer port could introduce bugs]** → Mitigated by wire format being byte-identical (same Protobuf bytes, same IDs). Existing serialization round-trip tests catch regressions.
 
 **[WrappedPayloadSupport serializers deferred]** → The 4 serializers with nested user payloads continue using V1 `FindSerializerFor()` → `ToBinary()` through the adapter. They work correctly but miss the zero-copy benefit for the inner payload. Addressed in a follow-up pass after API validation.
+
+**[Transport integration still needs proof]** → `SerializerV2` is only valuable if the transport can exploit it. Mitigated by the bounded benchmark spike in Spec 3, which is sequenced before the full transport contract rewrite.

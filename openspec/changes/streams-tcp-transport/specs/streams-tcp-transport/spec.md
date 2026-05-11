@@ -11,9 +11,9 @@ The system SHALL provide `StreamsTcpTransport : Transport` that implements the p
 - **WHEN** `StreamsTcpTransport.Associate(remoteAddress)` is called
 - **THEN** it SHALL connect via `Tcp.OutgoingConnection()` (using `IStreamProvider` with optional TLS), materialize the connection, and return a `StreamsAssociationHandle`
 
-#### Scenario: AssociationHandle write
-- **WHEN** `StreamsAssociationHandle.Write(ReadOnlyMemory<byte>)` is called
-- **THEN** it SHALL enqueue the data for framing and transmission through the materialized Akka.Streams flow
+#### Scenario: Transport write contract modernized for outbound ownership
+- **WHEN** the new transport implementation is integrated into remoting
+- **THEN** the write contract below the remoting outbound loop SHALL support transport-owned frame construction and SHALL NOT require prebuilt `ByteString` payloads to be passed across that boundary
 
 #### Scenario: Transport shutdown
 - **WHEN** `StreamsTcpTransport.Shutdown()` is called
@@ -34,6 +34,17 @@ The system SHALL provide `FrameBufferWriter : IBufferWriter<byte>` that writes i
 - **WHEN** the frame has been written to the socket via `stream.WriteAsync()`
 - **THEN** the pooled `byte[]` SHALL be returned to `ArrayPool<byte>.Shared`
 
+### Requirement: Outbound transport loop owns buffer lifetime
+The outbound remoting transport loop SHALL own pooled write buffers and SHALL build transport frames from send-shaped work items rather than actor messages carrying pooled buffers.
+
+#### Scenario: Send-shaped work enters outbound loop
+- **WHEN** remoting has a user message ready to send
+- **THEN** the outbound loop SHALL receive a send-shaped work item containing the semantic message metadata, not a prebuilt transport payload
+
+#### Scenario: Transport owns pooled outbound buffer
+- **WHEN** the outbound loop rents a buffer to construct a frame
+- **THEN** the transport SHALL retain ownership of that buffer until the transport write completes or fails
+
 ### Requirement: Binary PDU encoding
 The system SHALL use a simple binary PDU format written directly to `IBufferWriter<byte>`, replacing the Protobuf `AkkaPduProtobuffCodec`.
 
@@ -50,11 +61,11 @@ The system SHALL use a simple binary PDU format written directly to `IBufferWrit
 - **THEN** the PDU SHALL be encoded with the appropriate PDU type byte and protocol-specific fields
 
 ### Requirement: Length-delimited frame parsing on read path
-The system SHALL parse incoming data from `PipeReader` as length-delimited frames, slicing complete frames as `ReadOnlySequence<byte>` for deserialization.
+The system SHALL parse incoming data from `PipeReader` as length-delimited frames while keeping read-side pooled buffer lifetime internal to the transport.
 
 #### Scenario: Complete frame available
 - **WHEN** `PipeReader.ReadAsync()` returns a buffer containing at least `4 + frameLength` bytes
-- **THEN** the parser SHALL read the 4-byte length, slice the payload as `ReadOnlySequence<byte>`, parse the PDU header, and pass the payload to `serializer.Deserialize()`
+- **THEN** the parser SHALL read the 4-byte length, parse the frame while bytes are live, and copy before data crosses actor-visible lifetime boundaries
 
 #### Scenario: Partial frame buffering
 - **WHEN** `PipeReader.ReadAsync()` returns a buffer with fewer bytes than the frame length indicates
@@ -63,6 +74,10 @@ The system SHALL parse incoming data from `PipeReader` as length-delimited frame
 #### Scenario: Maximum frame size enforcement
 - **WHEN** the 4-byte length header indicates a frame larger than `maximum-frame-size`
 - **THEN** the parser SHALL close the connection with an error (prevents memory exhaustion from malformed/malicious data)
+
+#### Scenario: No pooled inbound buffers across actor boundaries
+- **WHEN** inbound bytes are turned into remoting protocol events or actor messages
+- **THEN** they SHALL no longer depend on transport-owned pooled buffer lifetime
 
 ### Requirement: DotNetty HOCON configuration compatibility
 All existing `akka.remote.dot-netty.tcp.*` HOCON configuration keys SHALL continue to work without modification, mapped to the new `StreamsTcpTransportSettings`.
@@ -99,7 +114,7 @@ All Akka.Remote specs that do not directly reference DotNetty library APIs SHALL
 
 #### Scenario: EndpointWriter sends messages
 - **WHEN** `EndpointWriter` serializes a message and writes it to the transport
-- **THEN** it SHALL use the `FrameBufferWriter` path (`IBufferWriter<byte>` → single buffer → transport write)
+- **THEN** it SHALL lower serialization and protocol framing into the transport-owned outbound writer path (`Send`-shaped work → single buffer construction → transport write)
 
 #### Scenario: Two ActorSystems communicate
 - **WHEN** two ActorSystems are configured with `StreamsTcpTransport` and remoting enabled

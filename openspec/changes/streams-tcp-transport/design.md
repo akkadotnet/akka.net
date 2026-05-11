@@ -1,37 +1,59 @@
 ## Context
 
-Akka.Remote's transport layer is pluggable via the abstract `Transport` class (`src/core/Akka.Remote/Transport/Transport.cs`). The current concrete implementation is `DotNettyTransport` which uses DotNetty's channel pipeline for framing, TLS, and socket I/O. Above the transport sits `AkkaProtocolTransport` — an adapter that handles the Akka protocol handshake (Associate/Disassociate), heartbeats, and association state management. `AkkaProtocolTransport` doesn't change.
+Akka.Remote's transport layer is pluggable via the abstract `Transport` class (`src/core/Akka.Remote/Transport/Transport.cs`). The current concrete implementation is `DotNettyTransport`, which uses DotNetty's channel pipeline for framing, TLS, and socket I/O. Above the transport sits `AkkaProtocolTransport`, an adapter that handles the Akka protocol handshake (Associate/Disassociate), heartbeats, and association state management.
 
-The transport API:
-- `Listen()` → binds a server socket, returns address + listener
-- `Associate(remoteAddress)` → connects to remote, returns `AssociationHandle`
-- `AssociationHandle.Write(ReadOnlyMemory<byte>)` → send framed data (after Spec 1, payload is `ReadOnlyMemory<byte>`)
-- `AssociationHandle.ReadHandlerSource` → listener receives `InboundPayload` events
+The current outbound hot path is split across multiple stages:
 
-With Specs 1+2, Akka.IO TCP now uses `Stream` + `Pipe` + `IStreamProvider` (with optional TLS). Akka.Streams TCP (`Tcp.Bind()`, `Tcp.OutgoingConnection()`) wraps Akka.IO TCP actors in a `Flow<ReadOnlyMemory<byte>, ReadOnlyMemory<byte>>`. The new transport builds on this.
+- `EndpointWriter.WriteSend()` serializes the user message into a `SerializedMessage`
+- `AkkaPduCodec.ConstructMessage()` builds the remote envelope bytes
+- `AkkaProtocolHandle.Write()` wraps that again in `AkkaProtocolMessage`
+- the concrete transport turns the resulting `ByteString` back into transport bytes
+
+That split is the main architectural bottleneck exposed by PR #8203. The abstraction overhead itself is small; the real cost is that serialization, protocol framing, and transport framing march along separate allocation-heavy paths.
+
+With Specs 1+2, Akka.IO TCP now uses `Stream` + `Pipe` + `IStreamProvider` (with optional TLS). That gives the transport a place to own a pooled outbound writer and build the entire frame in one loop. The new transport should exploit that directly.
 
 ## Goals / Non-Goals
 
 **Goals:**
 - Implement `StreamsTcpTransport : Transport` using Akka.Streams TCP
-- Integrated framing + serialization via `FrameBufferWriter : IBufferWriter<byte>` (single buffer, zero intermediate copies)
-- Replace Protobuf PDU encoding with simple binary encoding directly to `IBufferWriter<byte>`
+- Integrated outbound framing + serialization via `FrameBufferWriter : IBufferWriter<byte>` (single buffer, no intermediate payload copies on the write side)
+- Collapse the outbound path so the transport-owned write loop receives a send-shaped work item, writes protocol metadata, serializes the payload into the same writer, and emits one contiguous frame
 - All existing `akka.remote.dot-netty.tcp.*` HOCON configuration works unchanged
 - All non-DotNetty-specific Akka.Remote specs pass
 - Remove DotNetty dependency entirely
 
 **Non-Goals:**
-- Changing the `AkkaProtocolTransport` adapter (handshake, heartbeat, association management)
-- Changing the `Endpoint` / `EndpointWriter` / `EndpointReader` actor hierarchy
+- Preserving `AssociationHandle.Write(ByteString)` purely for compatibility if it blocks the integrated write path
+- Read-side pooled buffer leasing across actor boundaries
+- Changing the actor-visible `Endpoint` / `EndpointWriter` / `EndpointReader` behavior more than necessary to lower serialization into the write loop
 - UDP transport (separate, later)
 - QUIC transport (future, different spec)
 - Optimizing flush batching (Spec 5 — Performance)
 
 ## Decisions
 
-### 1. FrameBufferWriter for integrated framing + serialization
+### 1. Transport-owned outbound writer loop
 
-**Decision:** Create `FrameBufferWriter : IBufferWriter<byte>` that wraps a pooled `byte[]` with a start offset. The write path reserves 4 bytes for the length header, writes PDU metadata + serialized payload via `IBufferWriter<byte>`, then backfills the length. One buffer, one syscall.
+**Decision:** The new transport lowers serialization and framing into a single outbound write loop owned by the remoting transport. The queue item crossing into that loop is send-shaped work, not prebuilt bytes.
+
+```
+Write path:
+  EndpointWriter / transport state dequeues Send-shaped work
+    → rent transport-owned frame buffer
+    → reserve outer framing bytes
+    → write protocol / envelope metadata
+    → serializer writes payload directly into same writer
+    → backfill lengths
+    → flush completed frame to transport
+    → return buffer to pool
+```
+
+**Rationale:** This is the smallest design that actually removes the current split between serialization and transport framing. It also keeps buffer lifetime simple: the outbound transport loop owns the pool and returns buffers after the write completes.
+
+### 2. FrameBufferWriter for integrated outbound framing + serialization
+
+**Decision:** Create `FrameBufferWriter : IBufferWriter<byte>` that wraps a pooled `byte[]` with a start offset. The write path reserves space for the outer frame header, writes protocol metadata + serialized payload via `IBufferWriter<byte>`, then backfills the length.
 
 ```
 Write path:
@@ -43,30 +65,19 @@ Write path:
     → stream.WriteAsync()
 ```
 
-**Rationale:** The length header is always exactly 4 bytes. Reserve them upfront, write the rest, backfill. No need for a separate framing stage (which would require an extra copy). The serializer's `IBufferWriter<byte>` contract flows end-to-end from serialization through framing to the socket.
+**Rationale:** The length header is always exactly 4 bytes. Reserve it upfront, write the rest, backfill. No separate framing stage is needed. The buffer exists only inside the outbound loop, which avoids having to pass `IMemoryOwner<byte>` or other ownership wrappers through the actor protocol.
 
 **Alternative considered:** Separate Akka.Streams framing stage. Rejected for the transport — adds an unnecessary element copy between stages. The general-purpose `Framing.LengthField()` stage remains available for user-facing Streams TCP.
 
-### 2. Binary PDU encoding (replaces Protobuf AkkaPduCodec)
+### 3. PDU encoding strategy remains open until the spike lands
 
-**Decision:** Replace the Protobuf `SerializedMessage` / `AkkaProtocolMessage` envelope with simple binary encoding written directly to `IBufferWriter<byte>`.
+**Decision:** The production transport will keep the outer socket frame length prefix, but the inner protocol encoding remains an implementation choice until the spike proves the integrated writer path. The initial spike should validate the design against the current Protobuf-based remote envelope and protocol wrapper before a binary PDU replacement is committed.
 
-```
-PDU format (written to IBufferWriter):
-  [4 bytes] total frame length (little-endian int32)
-  [1 byte]  PDU type (0x01 = payload, 0x02 = associate, 0x03 = disassociate, 0x04 = heartbeat)
-  --- for payload PDU type ---
-  [4 bytes] serializerId (little-endian int32)
-  [2 bytes] manifest length (little-endian uint16)
-  [N bytes] manifest (UTF8)
-  [M bytes] serialized payload (remaining bytes = frame length - header)
-```
+**Rationale:** PR #8203 showed that the primary problem is the split pipeline, not just Protobuf. A spike that collapses the write path while keeping current wire semantics gives us a cleaner measurement of architectural benefit before taking on a wire-format rewrite.
 
-**Rationale:** The Protobuf PDU encoding allocates intermediate `byte[]` arrays and Protobuf `ByteString` wrappers. Direct binary encoding to `IBufferWriter<byte>` eliminates these allocations. The PDU format is simple enough that Protobuf's schema evolution isn't needed — it's a fixed internal protocol, not a public API.
+**Follow-up:** If the integrated writer path is successful, a later production step can still replace `AkkaPduProtobuffCodec` with a simpler binary format if the numbers justify the compatibility break.
 
-**Wire compatibility note:** This changes the PDU encoding format. A v1.6 node CANNOT talk to a v1.5 node. This is acceptable for a major version. The outer framing (4-byte length prefix) is preserved.
-
-### 3. StreamsTcpTransport implements Transport abstraction
+### 4. StreamsTcpTransport implements Transport abstraction
 
 **Decision:** New `StreamsTcpTransport : Transport` that uses Akka.Streams TCP for both server-side listening and client-side association.
 
@@ -77,11 +88,11 @@ Server path (`Listen`):
 
 Client path (`Associate`):
 - `Tcp.OutgoingConnection(remoteAddress)` → materialize → `StreamsAssociationHandle`
-- `Write(ReadOnlyMemory<byte>)` queues data for the materialized flow
+- the association write path accepts already-framed transport bytes only as an implementation detail; the preferred production path is that framing happens before this boundary inside the outbound loop
 
 **Rationale:** Reuses the Akka.Streams TCP infrastructure (which, after Spec 1, uses `Stream` + `Pipe` + `IStreamProvider`). Backpressure propagates naturally through Streams demand signaling.
 
-### 4. Configuration key preservation
+### 5. Configuration key preservation
 
 **Decision:** Parse all existing `akka.remote.dot-netty.tcp.*` HOCON keys into `StreamsTcpTransportSettings`. The config section name stays the same. Only the transport class reference changes.
 
@@ -97,33 +108,37 @@ Keys preserved:
 - `connection-timeout`
 - `batching.*` (flush batching settings — Spec 5 optimization)
 
-### 5. Remove DotNetty dependency
+### 6. Remove DotNetty dependency
 
 **Decision:** Delete `src/core/Akka.Remote/Transport/DotNetty/` entirely. Remove all DotNetty NuGet packages from `Akka.Remote.csproj`.
 
 **Rationale:** Clean break. No adapter layer or backward compat shim for DotNetty. The new transport is the only transport. DotNetty-specific programmatic APIs (`DotNettyTransportSettings`, `DotNettySslSetup`) are replaced by their equivalents.
 
-### 6. Read path: Pipe → length-delimited frame parsing → deserialize
+### 7. Read path remains copy-based above the transport boundary
 
-**Decision:** The read side uses the Pipe from Spec 1. `ReadOnlySequence<byte>` from `PipeReader` is parsed for length-delimited frames. Each complete frame's payload `ReadOnlySequence<byte>` is sliced and passed directly to `serializer.Deserialize()`.
+**Decision:** The read side uses the Pipe from Spec 1, but pooled buffer ownership stops before actor-visible lifetime begins. Transport and framing layers may parse from `ReadOnlySequence<byte>` while data is still in scope, but payload bytes are copied before they become inbound actor messages or stateful protocol queues.
 
 ```
 Read path:
   stream.ReadAsync() → Pipe.Writer
   Pipe.Reader.ReadAsync() → ReadOnlySequence<byte>
     → read 4-byte length → check if enough bytes for full frame
-    → if yes: slice payload → parse PDU header → serializer.Deserialize(payloadSlice)
+    → if yes: parse frame while bytes are live
+    → copy before crossing actor-visible lifetime boundaries
+    → deserialize / dispatch as ordinary inbound remoting data
     → if no: AdvanceTo(consumed, examined) → wait for more data
 ```
 
-**Rationale:** `ReadOnlySequence<byte>` is what `PipeReader` returns and what `serializer.Deserialize()` takes. The frame parser just reads the length, checks bounds, and slices. Zero copy from Pipe buffer to serializer. The only copy is the one in the Akka.IO TCP actor (required for unbounded message lifetime — decided in Spec 1).
+**Rationale:** Read-side zero-copy across actor boundaries would require explicit lifetime / release semantics and effectively a mini-GC for inbound messages. That is not a good trade-off for this milestone. Outbound pooling captures most of the practical gain with much less risk.
 
 ## Risks / Trade-offs
 
-**[Breaking wire compatibility with v1.5]** → The binary PDU encoding is incompatible with the Protobuf PDU used in v1.5. This is a major version break. Mixed-version clusters are not supported during upgrade. All nodes must be upgraded together. Document clearly in release notes.
+**[Transport abstraction changes]** → The existing `AssociationHandle.Write(ByteString)` boundary is not a good fit for a transport-owned pooled write path. This is an intentional 1.6 breaking change. The spike must prove enough benefit to justify it.
 
 **[Akka.Remote now depends on Akka.Streams]** → Currently `Akka.Remote` depends on `Akka` core only (plus DotNetty). The new transport adds a dependency on `Akka.Streams`. This is a new transitive dependency for all remoting users. Acceptable since Streams is a core module, not an external package.
 
 **[Flush batching needs tuning]** → DotNetty's `FlushConsolidationHandler` batches flushes for throughput. The new transport needs equivalent batching (consolidate multiple writes before calling `stream.FlushAsync()`). Deferred to Spec 5 (Performance) for benchmarking-driven optimization.
 
 **[FrameBufferWriter growth on SizeHint underestimate]** → If `serializer.SizeHint()` underestimates, `FrameBufferWriter` rents a larger array from `ArrayPool` and copies. This is a fallback path — `SizeHint` should be accurate for most messages. Benchmark to ensure the growth path doesn't regress.
+
+**[Read-side pooling intentionally excluded]** → Some peak read-side gains are left on the table. This is acceptable because the actor-lifetime semantics make pooled inbound buffers disproportionately risky.

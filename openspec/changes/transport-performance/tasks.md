@@ -5,6 +5,13 @@
 - [ ] 1.3 Document hardware specs, .NET version, OS, benchmark configuration
 - [ ] 1.4 Commit baseline results to repo for future comparison
 
+## 1A. Outbound write-loop spike
+
+- [x] 1A.1 Add a bounded benchmark that compares the current split outbound remoting write path to an integrated transport-owned writer loop
+- [x] 1A.2 Use send-shaped work items in the spike rather than prebuilt payload bytes
+- [x] 1A.3 Measure throughput / time and allocations for common payload shapes (`string`, `byte[]`, small and large payloads)
+- [x] 1A.4 Record whether the integrated loop justifies changing the transport write contract before full implementation begins
+
 ## 2. Initial Comparison
 
 - [ ] 2.1 Run RemotePingPong benchmark against new transport (after Specs 1-4 integrated)
