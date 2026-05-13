@@ -9,6 +9,7 @@
 using System;
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipelines;
 using System.Net.Sockets;
@@ -245,36 +246,80 @@ namespace Akka.Remote.Transport.Pipelines
 
         // ── Write loop ─────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Asynchronous write loop that drains <see cref="_writeChannel"/> and sends
+        /// coalesced length-prefixed frames to the underlying stream.
+        ///
+        /// <para>
+        /// <b>Double-buffer ping-pong optimisation 🏓</b>: two <see cref="ArrayBufferWriter{T}"/>
+        /// slots are pre-allocated and alternated each cycle.  While the OS/kernel is
+        /// transmitting the <em>previous</em> batch (in-flight <see cref="Task"/>), the CPU
+        /// simultaneously drains new messages from the channel into the <em>other</em> buffer.
+        /// The in-flight task is only awaited immediately before we would start the next
+        /// <see cref="Stream.WriteAsync(ReadOnlyMemory{byte},CancellationToken)"/> call, giving
+        /// maximum overlap between user-space batching and kernel I/O.
+        /// </para>
+        ///
+        /// <!-- CopilotNotes: ValueTask is NOT safe to store and re-await; .AsTask() boxes once
+        ///      but lets us hold the Task across loop iterations.  The swap (activeIdx ^= 1)
+        ///      is only performed when a write is actually started so we never clear a buffer
+        ///      that is still live inside an in-flight WriteAsync. -->
+        /// </summary>
         private async Task WriteLoopAsync(CancellationToken ct)
         {
-            // Reusable batch buffer — avoids per-batch heap allocations.
-            var batchBuffer = new ArrayBufferWriter<byte>(initialCapacity: 8192);
+            // Two buffers — one fills while the other is in-flight to the stream. ✨
+            var buffers = new ArrayBufferWriter<byte>[]
+            {
+                new(initialCapacity: 8192),
+                new(initialCapacity: 8192),
+            };
+            var activeIdx   = 0;
+            Task? inflightWrite = null;
 
             try
             {
                 while (await _writeChannel.Reader.WaitToReadAsync(ct).ConfigureAwait(false))
                 {
-                    batchBuffer.Clear();
+                    var active = buffers[activeIdx];
+                    active.Clear();
 
-                    // Drain ALL currently available payloads into a single batch write.
+                    // Drain ALL currently available payloads into the active buffer.
                     // This is the write-coalescing step: one StreamWriter.WriteAsync per batch
                     // instead of one per message.
                     while (_writeChannel.Reader.TryRead(out var payload))
                     {
                         // CopilotNotes: GetSpan returns at least 'count' bytes. We write the
                         // 4-byte LE length header then the payload bytes back-to-back.
-                        BinaryPrimitives.WriteInt32LittleEndian(batchBuffer.GetSpan(FrameHeaderSize), payload.Length);
-                        batchBuffer.Advance(FrameHeaderSize);
+                        BinaryPrimitives.WriteInt32LittleEndian(active.GetSpan(FrameHeaderSize), payload.Length);
+                        active.Advance(FrameHeaderSize);
 
-                        payload.AsSpan().CopyTo(batchBuffer.GetSpan(payload.Length));
-                        batchBuffer.Advance(payload.Length);
+                        payload.AsSpan().CopyTo(active.GetSpan(payload.Length));
+                        active.Advance(payload.Length);
                     }
 
-                    if (batchBuffer.WrittenCount > 0)
-                        await _stream.WriteAsync(batchBuffer.WrittenMemory, ct).ConfigureAwait(false);
-                    // No explicit Flush needed: NetworkStream.WriteAsync flushes immediately.
-                    // SslStream also flushes per WriteAsync call.
+                    if (active.WrittenCount > 0)
+                    {
+                        // Await the PREVIOUS write before launching the next one.
+                        // At this point inflightWrite owns the OTHER buffer slot, so once it
+                        // completes that slot is idle and can be safely cleared next cycle.
+                        // No explicit Flush needed: NetworkStream.WriteAsync flushes immediately.
+                        // SslStream also flushes per WriteAsync call.
+                        if (inflightWrite != null)
+                            await inflightWrite.ConfigureAwait(false);
+
+                        // Kick off the write for the freshly-filled buffer without awaiting it
+                        // yet — this is the key: kernel I/O runs concurrently with the next batch fill.
+                        inflightWrite = _stream.WriteAsync(active.WrittenMemory, ct).AsTask();
+
+                        // Swap: next iteration fills the slot that was just awaited (now idle).
+                        activeIdx ^= 1;
+                    }
                 }
+
+                // Channel drained — await the final in-flight write so we don't close
+                // the stream while bytes are still being flushed to the OS. 🌸
+                if (inflightWrite != null)
+                    await inflightWrite.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

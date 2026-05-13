@@ -228,7 +228,7 @@ namespace Akka.Remote.Transport.Pipelines
                     var serializedMessage = new SerializedMessage
                     {
                         Message         = env.Message.Message is { Length: > 0 }
-                            ? ByteString.CopyFrom(env.Message.Message)
+                            ? ByteString.CopyFrom(env.Message.Message.Value.Span)
                             : ByteString.Empty,
                         SerializerId    = env.Message.SerializerId,
                         MessageManifest = env.Message.Manifest is { Length: > 0 }

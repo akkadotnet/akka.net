@@ -7,6 +7,7 @@
 
 #nullable enable
 
+using System;
 using global::MessagePack;
 
 namespace Akka.Remote.Transport.Pipelines.MessagePack
@@ -160,7 +161,7 @@ namespace Akka.Remote.Transport.Pipelines.MessagePack
     internal sealed class MpPayload
     {
         /// <summary>The opaque serialized actor message bytes.</summary>
-        [Key(0)] public byte[]? Message { get; set; }
+        [Key(0)] public ReadOnlyMemory<byte>? Message { get; set; }
 
         /// <summary>Akka serializer ID (matches <c>Payload.serializerId</c>).</summary>
         [Key(1)] public int SerializerId { get; set; }
