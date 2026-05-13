@@ -16,6 +16,7 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="MessagePack" Version="3.1.4" />
     </ItemGroup>
 
   <ItemGroup>

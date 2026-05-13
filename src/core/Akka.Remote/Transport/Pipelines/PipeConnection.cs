@@ -1,0 +1,357 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="PipeConnection.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+#nullable enable
+using System;
+using System.Buffers;
+using System.Buffers.Binary;
+using System.IO;
+using System.IO.Pipelines;
+using System.Net.Sockets;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Channels;
+using System.Threading.Tasks;
+using Akka.Event;
+using Google.Protobuf;
+
+namespace Akka.Remote.Transport.Pipelines
+{
+    /// <summary>
+    /// INTERNAL API.
+    ///
+    /// Represents a single TCP association managed by <see cref="TcpPipeTransport"/>.
+    ///
+    /// <para>
+    /// Owns two async loops running concurrently via <see cref="Start"/>:
+    /// <list type="bullet">
+    ///   <item><see cref="ReadLoopAsync"/> — reads length-prefixed frames from a
+    ///     <see cref="PipeReader"/>-wrapped stream and delivers them to the registered
+    ///     <see cref="IHandleEventListener"/>.</item>
+    ///   <item><see cref="WriteLoopAsync"/> — drains a bounded
+    ///     <see cref="Channel{T}"/> and writes coalesced length-prefixed frames to the stream.</item>
+    /// </list>
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Frame format (little-endian, matching Akka.Remote's DotNetty default):</b>
+    /// <code>
+    /// ┌──────────────────────────┬───────────────────────────┐
+    /// │  length : int32 (4 B LE) │  payload : byte[length]   │
+    /// └──────────────────────────┴───────────────────────────┘
+    /// </code>
+    /// </para>
+    ///
+    /// <!-- CopilotNotes: Little-endian framing matches akka.remote.dot-netty.tcp byte-order = "little-endian".
+    ///      This makes rolling upgrades from DotNetty to PipeTransport wire-compatible when both use
+    ///      the protobuf AkkaProtocol codec. Phase 2 can negotiate a frame-tag format for further gains. -->
+    /// </summary>
+    internal sealed class PipeConnection : IDisposable
+    {
+        // ── Frame constants ─────────────────────────────────────────────────────
+        private const int FrameHeaderSize = 4; // 4-byte LE int32 length prefix
+
+        // ── Core infrastructure ────────────────────────────────────────────────
+        private readonly Socket _socket;
+        private readonly Stream _stream; // NetworkStream or SslStream
+        private readonly PipeReader _reader;
+        private readonly Channel<byte[]> _writeChannel;
+        private readonly CancellationTokenSource _cts;
+        private readonly ILoggingAdapter _log;
+        private readonly TcpPipeTransport _transport;
+
+        // Listener is set asynchronously once ReadHandlerSource.Task completes.
+        // CopilotNotes: Declared volatile so the write loop's TryEnqueueWrite has a cheap
+        // fast-exit path without taking a lock. The read loop awaits the handler source
+        // task before processing any frames, so the pre-listener buffer below is a
+        // belt-and-suspenders safety net for the inbound path only.
+        private volatile IHandleEventListener? _listener;
+
+        // Closed gate: 0 = open, 1 = closed. Used in BeginDisassociate / DisassociateQuiet.
+        private int _closed;
+
+        // ── Public API ─────────────────────────────────────────────────────────
+
+        /// <summary>The <see cref="AssociationHandle"/> exposed to the upper transport layers.</summary>
+        public PipeAssociationHandle Handle { get; }
+
+        // ── Constructor ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Constructs a <see cref="PipeConnection"/> over an already-connected (and optionally TLS-wrapped) stream.
+        /// Call <see cref="Start"/> after construction to start the read/write loops.
+        /// </summary>
+        /// <param name="socket">The underlying socket. Owned by this connection; closed on <see cref="Dispose"/>.</param>
+        /// <param name="stream">The <see cref="NetworkStream"/> or <see cref="System.Net.Security.SslStream"/> to use.</param>
+        /// <param name="handle">The pre-constructed association handle. Its <see cref="PipeAssociationHandle.Connection"/> is wired here.</param>
+        /// <param name="transport">Parent transport (used for connection-set bookkeeping).</param>
+        /// <param name="log">Logger.</param>
+        /// <param name="writeChannelCapacity">Bounded capacity of the outbound write channel.</param>
+        internal PipeConnection(
+            Socket socket,
+            Stream stream,
+            PipeAssociationHandle handle,
+            TcpPipeTransport transport,
+            ILoggingAdapter log,
+            int writeChannelCapacity)
+        {
+            _socket    = socket;
+            _stream    = stream;
+            _reader    = PipeReader.Create(stream, new StreamPipeReaderOptions(leaveOpen: true));
+            _writeChannel = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(writeChannelCapacity)
+            {
+                SingleReader = true,
+                SingleWriter = false,
+                // CopilotNotes: DropWrite means a full channel returns false from TryWrite,
+                // which maps to the AssociationHandle.Write contract: "false = dropped, no duplicate".
+                FullMode = BoundedChannelFullMode.DropWrite
+            });
+            _cts       = new CancellationTokenSource();
+            _log       = log;
+            _transport = transport;
+            Handle     = handle;
+
+            // Wire circular reference: handle -> connection
+            handle.Connection = this;
+        }
+
+        // ── Lifecycle ──────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Starts the read and write loops as background <see cref="Task"/>s.
+        /// Must be called exactly once after construction.
+        /// </summary>
+        public void Start()
+        {
+            // Register listener callback: when ProtocolStateActor (or equivalent) completes
+            // ReadHandlerSource, store the listener reference so the read loop can deliver frames.
+            Handle.ReadHandlerSource.Task.ContinueWith(
+                t => { _listener = t.Result; },
+                TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnRanToCompletion);
+
+            // Fire-and-forget — exceptions are caught and logged inside each loop.
+            _ = ReadLoopAsync(_cts.Token);
+            _ = WriteLoopAsync(_cts.Token);
+        }
+
+        /// <summary>
+        /// Enqueue a payload for writing. Thread-safe. Returns <c>false</c> if the
+        /// channel is at capacity (write dropped) or the connection is closing.
+        /// </summary>
+        public bool TryEnqueueWrite(ByteString payload)
+        {
+            if (Volatile.Read(ref _closed) == 1)
+                return false;
+
+            // ToByteArray() copies — Phase 2 can eliminate this via IBufferWriter writer.
+            return _writeChannel.Writer.TryWrite(payload.ToByteArray());
+        }
+
+        /// <summary>
+        /// Begin graceful disassociation: drain any pending writes then close.
+        /// Safe to call multiple times concurrently.
+        /// </summary>
+        public void BeginDisassociate()
+        {
+            if (Interlocked.CompareExchange(ref _closed, 1, 0) == 0)
+            {
+                // Signal writer channel that no more items will be enqueued.
+                _writeChannel.Writer.TryComplete();
+                // Cancel both read + write loops.
+                _cts.Cancel();
+            }
+        }
+
+        /// <summary>
+        /// Quiet close used during transport-level shutdown — does NOT notify the listener
+        /// (the actor system is shutting down anyway).
+        /// </summary>
+        public void DisassociateQuiet()
+        {
+            if (Interlocked.CompareExchange(ref _closed, 1, 0) == 0)
+            {
+                _writeChannel.Writer.TryComplete();
+                _cts.Cancel();
+                CloseSocket();
+            }
+        }
+
+        // ── Read loop ──────────────────────────────────────────────────────────
+
+        private async Task ReadLoopAsync(CancellationToken ct)
+        {
+            try
+            {
+                // Wait for the upper layer (ProtocolStateActor) to register itself as the
+                // IHandleEventListener before we start processing frames.
+                // CopilotNotes: WaitAsync is .NET 6+ and returns a faulted task if ct is cancelled,
+                // which is caught below. On net10.0 this is in-box.
+                var listener = await Handle.ReadHandlerSource.Task
+                    .WaitAsync(ct)
+                    .ConfigureAwait(false);
+                _listener = listener;
+
+                while (!ct.IsCancellationRequested)
+                {
+                    var result = await _reader.ReadAsync(ct).ConfigureAwait(false);
+                    var buffer = result.Buffer;
+
+                    while (TryParseFrame(ref buffer, out var frame))
+                    {
+                        // CopilotNotes: ByteString.CopyFrom allocates per frame (the frame bytes are
+                        // already in a pooled PipeReader buffer). Phase 2 can avoid the copy by
+                        // teaching IHandleEventListener about ReadOnlySequence<byte> directly.
+                        var bytes = frame.IsSingleSegment
+                            ? ByteString.CopyFrom(frame.FirstSpan)
+                            : ByteString.CopyFrom(frame.ToArray());
+
+                        listener.Notify(new InboundPayload(bytes));
+                    }
+
+                    _reader.AdvanceTo(buffer.Start, buffer.End);
+
+                    if (result.IsCompleted || result.IsCanceled)
+                        break;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal shutdown — no-op.
+            }
+            catch (Exception ex) when (IsConnectionReset(ex))
+            {
+                _log.Info("Pipe transport: connection reset by remote [{0}]", Handle.RemoteAddress);
+            }
+            catch (EndOfStreamException)
+            {
+                _log.Debug("Pipe transport: remote [{0}] closed the connection.", Handle.RemoteAddress);
+            }
+            catch (Exception ex)
+            {
+                _log.Warning(ex, "Pipe transport: read loop error on connection [{0}]", Handle.RemoteAddress);
+            }
+            finally
+            {
+                await _reader.CompleteAsync().ConfigureAwait(false);
+                NotifyDisassociated();
+                CloseSocket();
+                _transport.RemoveConnection(this);
+            }
+        }
+
+        // ── Write loop ─────────────────────────────────────────────────────────
+
+        private async Task WriteLoopAsync(CancellationToken ct)
+        {
+            // Reusable batch buffer — avoids per-batch heap allocations.
+            var batchBuffer = new ArrayBufferWriter<byte>(initialCapacity: 8192);
+
+            try
+            {
+                while (await _writeChannel.Reader.WaitToReadAsync(ct).ConfigureAwait(false))
+                {
+                    batchBuffer.Clear();
+
+                    // Drain ALL currently available payloads into a single batch write.
+                    // This is the write-coalescing step: one StreamWriter.WriteAsync per batch
+                    // instead of one per message.
+                    while (_writeChannel.Reader.TryRead(out var payload))
+                    {
+                        // CopilotNotes: GetSpan returns at least 'count' bytes. We write the
+                        // 4-byte LE length header then the payload bytes back-to-back.
+                        BinaryPrimitives.WriteInt32LittleEndian(batchBuffer.GetSpan(FrameHeaderSize), payload.Length);
+                        batchBuffer.Advance(FrameHeaderSize);
+
+                        payload.AsSpan().CopyTo(batchBuffer.GetSpan(payload.Length));
+                        batchBuffer.Advance(payload.Length);
+                    }
+
+                    if (batchBuffer.WrittenCount > 0)
+                        await _stream.WriteAsync(batchBuffer.WrittenMemory, ct).ConfigureAwait(false);
+                    // No explicit Flush needed: NetworkStream.WriteAsync flushes immediately.
+                    // SslStream also flushes per WriteAsync call.
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal shutdown — no-op.
+            }
+            catch (Exception ex) when (IsConnectionReset(ex))
+            {
+                _log.Info("Pipe transport: write connection reset on [{0}]", Handle.RemoteAddress);
+            }
+            catch (Exception ex)
+            {
+                _log.Warning(ex, "Pipe transport: write loop error on connection [{0}]", Handle.RemoteAddress);
+            }
+        }
+
+        // ── Frame parsing ──────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Tries to parse one complete frame from <paramref name="buffer"/>.
+        /// On success, advances <paramref name="buffer"/> past the consumed header + payload.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool TryParseFrame(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> frame)
+        {
+            if (buffer.Length < FrameHeaderSize)
+            {
+                frame = default;
+                return false;
+            }
+
+            Span<byte> header = stackalloc byte[FrameHeaderSize];
+            buffer.Slice(0, FrameHeaderSize).CopyTo(header);
+            var payloadLength = BinaryPrimitives.ReadInt32LittleEndian(header);
+
+            // Guard against corrupt / malicious frames.
+            if (payloadLength < 0 || buffer.Length < FrameHeaderSize + (long)payloadLength)
+            {
+                frame = default;
+                return false;
+            }
+
+            frame  = buffer.Slice(FrameHeaderSize, payloadLength);
+            buffer = buffer.Slice(FrameHeaderSize + payloadLength);
+            return true;
+        }
+
+        // ── Helpers ────────────────────────────────────────────────────────────
+
+        private void NotifyDisassociated()
+        {
+            // Only notify if the listener is already wired — if not, the connection died
+            // before the upper layer could register, which is a non-fatal edge case.
+            _listener?.Notify(new Disassociated(DisassociateInfo.Unknown));
+        }
+
+        private void CloseSocket()
+        {
+            try { _socket.Shutdown(SocketShutdown.Both); } catch (Exception) { /* Socket may already be closed */ }
+            try { _socket.Close();  } catch (Exception) { /* Best-effort */ }
+            try { _stream.Dispose(); } catch (Exception) { /* Best-effort */ }
+        }
+
+        private static bool IsConnectionReset(Exception ex) =>
+            ex is SocketException { SocketErrorCode: SocketError.ConnectionReset
+                                                   or SocketError.ConnectionAborted
+                                                   or SocketError.OperationAborted }
+            || (ex is IOException ioEx && ioEx.InnerException is SocketException);
+
+        // ── IDisposable ────────────────────────────────────────────────────────
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            BeginDisassociate();
+            _cts.Dispose();
+        }
+    }
+}
+
+
