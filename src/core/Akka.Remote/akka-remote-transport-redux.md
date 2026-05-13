@@ -378,4 +378,32 @@ require no changes other than the transport-class path.
 | `tcp-nodelay` | `on` | Disable Nagle's algorithm |
 | `dns-use-ipv6` | `false` | Prefer IPv6 in DNS resolution |
 | `write-channel-capacity` | `1024` | Outbound write-channel bound |
+| `envelope` | `protobuf` | PDU envelope codec: `"protobuf"` (wire-compat default) or `"messagepack"` (cluster-wide opt-in, better perf) |
+
+### Enabling MessagePack envelopes (cluster-wide opt-in)
+
+> ⚠️ **Every node in the cluster must use the same codec.** Mixed-codec clusters
+> will throw `PduCodecException` on decode.  Roll out in a coordinated cluster
+> restart, not a rolling upgrade.
+
+```hocon
+akka.remote.pipe.tcp {
+  hostname = "0.0.0.0"
+  port     = 2552
+  envelope = messagepack   # switch from protobuf to MessagePack
+}
+```
+
+The MessagePack codec (`AkkaPduMessagePackCodec`) mirrors the
+`AkkaProtocolMessage` / `AckAndEnvelopeContainer` protobuf schema using the
+[MessagePack-CSharp](https://github.com/MessagePack-CSharp/MessagePack-CSharp)
+v3 library already bundled in `Akka.Remote`.  It produces smaller frames
+and lower GC pressure because:
+
+- Control messages (heartbeat, disassociate) are pre-serialised into static
+  `byte[]` fields — **no per-call allocation**.
+- Actor-ref paths are stored as plain strings (same data, no protobuf
+  `ActorRefData` wrapper struct).
+- `MpPayload` fields that are empty are serialised as MessagePack `nil` instead
+  of an empty `bytes` field, saving a few bytes per message.
 

@@ -7,12 +7,37 @@
 
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Net;
+using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport.DotNetty; // SslSettings lives here; same assembly so internal access is fine
 
 namespace Akka.Remote.Transport.Pipelines
 {
+    /// <summary>
+    /// Selects which PDU envelope codec the Pipelines transport uses for
+    /// the <c>AkkaProtocol</c> wire layer.
+    ///
+    /// <!-- CopilotNotes: Only switch to MessagePack when every node in the cluster
+    ///      is running the PipeTransport with this setting — mixed clusters will throw
+    ///      PduCodecException when trying to decode the incorrect wire format. -->
+    /// </summary>
+    internal enum EnvelopeCodecKind
+    {
+        /// <summary>
+        /// Default — the same protobuf-based <c>AkkaPduProtobuffCodec</c> used by DotNetty.
+        /// Wire-compatible with all existing Akka.Remote nodes.
+        /// </summary>
+        Protobuf,
+
+        /// <summary>
+        /// Opt-in — source-generated MessagePack codec.  Smaller frames, lower GC pressure,
+        /// but <b>not</b> wire-compatible with protobuf nodes.
+        /// </summary>
+        MessagePack
+    }
+
     /// <summary>
     /// INTERNAL API.
     ///
@@ -78,6 +103,13 @@ namespace Akka.Remote.Transport.Pipelines
         /// <summary>SSL/TLS settings. Only meaningful when <see cref="EnableSsl"/> is <c>true</c>.</summary>
         public SslSettings Ssl { get; }
 
+        /// <summary>
+        /// Selects which PDU codec is used for the AkkaProtocol wire layer.
+        /// Defaults to <see cref="EnvelopeCodecKind.Protobuf"/> for wire-compatibility
+        /// with DotNetty nodes.
+        /// </summary>
+        public EnvelopeCodecKind EnvelopeCodec { get; }
+
         // ── Constructor ────────────────────────────────────────────────────────
 
         private PipeTransportSettings(
@@ -85,7 +117,8 @@ namespace Akka.Remote.Transport.Pipelines
             bool enableSsl, TimeSpan connectTimeout, int maxFrameSize,
             int sendBufferSize, int receiveBufferSize, int backlog,
             bool tcpKeepAlive, bool tcpNoDelay, bool dnsUseIpv6,
-            int writeChannelCapacity, SslSettings ssl)
+            int writeChannelCapacity, SslSettings ssl,
+            EnvelopeCodecKind envelopeCodec)
         {
             Hostname             = hostname;
             PublicHostname       = publicHostname;
@@ -102,6 +135,7 @@ namespace Akka.Remote.Transport.Pipelines
             DnsUseIpv6           = dnsUseIpv6;
             WriteChannelCapacity = writeChannelCapacity;
             Ssl                  = ssl;
+            EnvelopeCodec        = envelopeCodec;
         }
 
         // ── Factory ────────────────────────────────────────────────────────────
@@ -133,6 +167,11 @@ namespace Akka.Remote.Transport.Pipelines
                     $"akka.remote.pipe.tcp.maximum-frame-size must be at least {MinFrameSize} bytes",
                     nameof(maxFrame));
 
+            var envelopeStr = config.GetString("envelope", "protobuf");
+            var envelopeCodec = string.Equals(envelopeStr, "messagepack", StringComparison.OrdinalIgnoreCase)
+                ? EnvelopeCodecKind.MessagePack
+                : EnvelopeCodecKind.Protobuf;
+
             return new PipeTransportSettings(
                 hostname:            host,
                 publicHostname:      !string.IsNullOrEmpty(publicHost) ? publicHost : host,
@@ -150,8 +189,48 @@ namespace Akka.Remote.Transport.Pipelines
                 writeChannelCapacity: config.GetInt("write-channel-capacity", 1024),
                 ssl: enableSsl
                     ? SslSettings.Create(config.GetConfig("ssl"))
-                    : SslSettings.Empty
+                    : SslSettings.Empty,
+                envelopeCodec: envelopeCodec
             );
+        }
+
+        /// <summary>
+        /// Creates the <see cref="AkkaPduCodec"/> appropriate for the current
+        /// <paramref name="remoteConfig"/> (<c>akka.remote</c> block).
+        ///
+        /// <para>
+        /// When <c>akka.remote.pipe.tcp</c> is in <c>enabled-transports</c> and its
+        /// <c>envelope</c> key is <c>"messagepack"</c>, returns an
+        /// <see cref="AkkaPduMessagePackCodec"/>; otherwise returns the default
+        /// <see cref="AkkaPduProtobuffCodec"/>.
+        /// </para>
+        ///
+        /// <!-- CopilotNotes: Called from EndpointManager and AkkaProtocolManager to
+        ///      ensure the same codec is used consistently for both the protocol-level
+        ///      (handshake/heartbeat/disassociate) and message-level (AckAndEnvelope) frames. -->
+        /// </summary>
+        /// <param name="remoteConfig">The resolved <c>akka.remote</c> config block.</param>
+        /// <param name="system">The hosting actor system.</param>
+        /// <returns>The most appropriate <see cref="AkkaPduCodec"/> instance.</returns>
+        public static AkkaPduCodec CreateCodec(Config remoteConfig, ActorSystem system)
+        {
+            IList<string>? enabledTransports = null;
+            try { enabledTransports = remoteConfig.GetStringList("enabled-transports"); }
+            catch (Exception) { /* config key absent — fall back to protobuf */ }
+
+            if (enabledTransports != null
+                && enabledTransports.Contains("akka.remote.pipe.tcp"))
+            {
+                var pipeConfig = remoteConfig.GetConfig("pipe.tcp");
+                if (!pipeConfig.IsNullOrEmpty())
+                {
+                    var envelope = pipeConfig.GetString("envelope", "protobuf");
+                    if (string.Equals(envelope, "messagepack", StringComparison.OrdinalIgnoreCase))
+                        return new AkkaPduMessagePackCodec(system);
+                }
+            }
+
+            return new AkkaPduProtobuffCodec(system);
         }
     }
 }
