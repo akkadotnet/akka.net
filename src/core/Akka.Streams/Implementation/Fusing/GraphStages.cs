@@ -1050,7 +1050,8 @@ namespace Akka.Streams.Implementation.Fusing
             public override void OnUpstreamFailure(Exception e)
             {
                 base.OnUpstreamFailure(e);
-                _completion.TrySetException(e);
+                if (_completion.TrySetException(e))
+                    _ = _completion.Task.Exception;
             }
         }
 
