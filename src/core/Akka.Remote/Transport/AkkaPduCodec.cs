@@ -105,13 +105,13 @@ namespace Akka.Remote.Transport
         /// <param name="bytes">TBD</param>
         public Payload(ByteString bytes)
         {
-            Bytes = bytes;
+            Bytes = bytes.Memory;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public ByteString Bytes { get; private set; }
+        public ReadOnlyMemory<byte> Bytes { get; private set; }
     }
 
     /// <summary>
@@ -251,6 +251,8 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public abstract ByteString ConstructPayload(ByteString payload);
 
+        public abstract ByteString ConstructPayload(ReadOnlyMemory<byte> payload);
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -342,6 +344,31 @@ namespace Akka.Remote.Transport
         public override ByteString ConstructPayload(ByteString payload)
         {
             return new AkkaProtocolMessage() { Payload = payload }.ToByteString();
+        }
+
+        public override ByteString ConstructPayload(ReadOnlyMemory<byte> payload)
+        {
+            return new AkkaProtocolMessage() { Payload = ByteString.CopyFrom(payload.Span) }.ToByteString();
+        }
+        
+        public ByteString ConstructPayload2(ReadOnlyMemory<byte> payload)
+        {
+            // CopilotNotes: We calculate the exact size needed for the protobuf message upfront
+            // so we can allocate a single byte[] and write directly into it - no intermediate
+            // ByteString allocation for the payload field! Very efficient, much wow uwu ~✨
+            // AkkaProtocolMessage.Payload is field number 2, type LEN (wire type 2)
+            const int fieldTag = (2 << 3) | 2; // field 2, wire type 2 (length-delimited)
+            var payloadLength = payload.Length;
+            var tagSize = CodedOutputStream.ComputeRawVarint32Size(fieldTag);
+            var msgSize = tagSize + CodedOutputStream.ComputeLengthSize(payloadLength) + payloadLength;
+            var buffer = new byte[msgSize];
+            using var cos = new CodedOutputStream(buffer);
+            cos.WriteTag(2, WireFormat.WireType.LengthDelimited);
+            cos.WriteLength(payloadLength);
+            cos.Flush(); // flush tag+length before raw copy
+            var headerSize = (int)cos.Position;
+            payload.Span.CopyTo(buffer.AsSpan(headerSize));
+            return UnsafeByteOperations.UnsafeWrap(buffer);
         }
 
         /// <summary>

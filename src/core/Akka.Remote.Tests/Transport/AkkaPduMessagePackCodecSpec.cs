@@ -9,6 +9,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Transport;
@@ -129,7 +130,7 @@ namespace Akka.Remote.Tests.Transport
 
             var pdu = _codec.DecodePdu(bytes) as Payload;
             pdu.Should().NotBeNull();
-            pdu!.Bytes.ToStringUtf8().Should().Be("hello-msgpack-world");
+            Encoding.UTF8.GetString(pdu!.Bytes.Span).Should().Be("hello-msgpack-world");
         }
 
         // ── Message-level: ConstructMessage round-trip ─────────────────────────

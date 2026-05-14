@@ -1029,13 +1029,13 @@ namespace Akka.Remote.Transport
                                     {
                                         case AssociatedWaitHandler awh:
                                             var nQueue = new Queue<ByteString>(awh.Queue);
-                                            nQueue.Enqueue(p.Bytes);
+                                            nQueue.Enqueue(UnsafeByteOperations.UnsafeWrap(p.Bytes));
                                             return
                                                 Stay()
                                                     .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
                                                         nQueue));
                                         case ListenerReady lr:
-                                            lr.Listener.Notify(new InboundPayload(p.Bytes));
+                                            lr.Listener.Notify(new InboundPayload( UnsafeByteOperations.UnsafeWrap(p.Bytes)));
                                             return Stay();
                                         default:
                                             throw new AkkaProtocolException(

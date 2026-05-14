@@ -61,7 +61,7 @@ namespace Akka.Remote.Transport.Pipelines.MessagePack
         [Key(0)] public byte Tag { get; set; }
 
         /// <summary>Serialized inner <see cref="MpAckAndEnvelope"/> bytes. Non-null when <see cref="Tag"/> == <see cref="ProtocolTag.Payload"/>.</summary>
-        [Key(1)] public byte[]? Payload { get; set; }
+        [Key(1)] public ReadOnlyMemory<byte>? Payload { get; set; }
 
         /// <summary>Handshake origin info. Non-null when <see cref="Tag"/> == <see cref="ProtocolTag.Associate"/>.</summary>
         [Key(2)] public MpHandshakeInfo? HandshakeInfo { get; set; }

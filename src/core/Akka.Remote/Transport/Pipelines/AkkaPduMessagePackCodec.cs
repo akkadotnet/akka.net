@@ -93,12 +93,12 @@ namespace Akka.Remote.Transport.Pipelines
         {
             try
             {
-                var frame = MP.MessagePackSerializer.Deserialize<MpProtocolFrame>(raw.ToByteArray());
+                var frame = MP.MessagePackSerializer.Deserialize<MpProtocolFrame>(raw.Memory);
                 return frame.Tag switch
                 {
                     ProtocolTag.Payload =>
                         new Payload(frame.Payload is { Length: > 0 }
-                            ? ByteString.CopyFrom(frame.Payload)
+                            ? ByteString.CopyFrom(frame.Payload.Value.Span)
                             : ByteString.Empty),
 
                     ProtocolTag.Heartbeat => new Heartbeat(),
@@ -131,6 +131,16 @@ namespace Akka.Remote.Transport.Pipelines
             {
                 Tag     = ProtocolTag.Payload,
                 Payload = payload.ToByteArray()
+            };
+            return ByteString.CopyFrom(SerializeFrame(frame));
+        }
+
+        public override ByteString ConstructPayload(ReadOnlyMemory<byte> payload)
+        {
+            var frame = new MpProtocolFrame
+            {
+                Tag     = ProtocolTag.Payload,
+                Payload = payload
             };
             return ByteString.CopyFrom(SerializeFrame(frame));
         }
