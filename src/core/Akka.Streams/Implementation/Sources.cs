@@ -173,7 +173,8 @@ namespace Akka.Streams.Implementation
             public override void PostStop()
             {
                 var exception = new StreamDetachedException();
-                _completion.TrySetException(exception);
+                if (_completion.TrySetException(exception))
+                    _ = _completion.Task.Exception;
                 StopCallback(input =>
                 {
                     if (!(input is Offer<TOut> offer)) return;
