@@ -20,6 +20,8 @@ jobs:
         inputs:
           packageType: 'sdk'
           useGlobalJson: true
+          installationPath: '$(Agent.TempDirectory)/dotnet'
+          performMultiLevelLookup: false
       
       # Set the Incrementalist base branch based on PR target branch
       - pwsh: |
