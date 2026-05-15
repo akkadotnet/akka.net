@@ -933,14 +933,16 @@ namespace Akka.Streams.Implementation
                             }
                             catch (Exception ex)
                             {
-                                _completion.TrySetException(ex);
+                                if (_completion.TrySetException(ex))
+                                    _ = _completion.Task.Exception;
                                 FailStage(ex);
                             }
                         }
                     }
                     else
                     {
-                        _completion.TrySetException(result.Exception);
+                        if (_completion.TrySetException(result.Exception))
+                            _ = _completion.Task.Exception;
                         FailStage(result.Exception);
                     }
                 });
@@ -952,7 +954,8 @@ namespace Akka.Streams.Implementation
                 }
                 catch (Exception ex)
                 {
-                    _completion.TrySetException(ex);
+                    if (_completion.TrySetException(ex))
+                        _ = _completion.Task.Exception;
                     FailStage(ex);
                 }
             }
@@ -974,7 +977,8 @@ namespace Akka.Streams.Implementation
 
             public override void OnUpstreamFailure(Exception ex)
             {
-                _completion.TrySetException(ex);
+                if (_completion.TrySetException(ex))
+                    _ = _completion.Task.Exception;
                 base.OnUpstreamFailure(ex);
             }
 

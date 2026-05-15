@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
@@ -269,6 +271,41 @@ namespace Akka.Streams.Tests.Dsl
                 // wait until the underlying tasks are completed
                 await AssertThrowsAsync(() => outerSinkMat, FailingMatGraphStage.Exception).WaitAsync(3.Seconds());
                 await AssertThrowsAsync(() => innerSourceMat, FailingMatGraphStage.Exception).WaitAsync(3.Seconds());
+            }, _materializer);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private async Task RunTaskFlattenSourceUnobservedReproAsync()
+        {
+            var sourcePromise = new TaskCompletionSource<Source<int, string>>();
+            var probe = this.CreateSubscriberProbe<int>();
+
+            var sourceMatVal = Source.FromTaskSource(sourcePromise.Task)
+                .ToMaterialized(Sink.FromSubscriber(probe), Keep.Left)
+                .Run(_materializer);
+
+            await probe.AsyncBuilder()
+                .EnsureSubscription()
+                .Request(1)
+                .Cancel()
+                .ExecuteAsync();
+
+            await Task.Delay(100);
+            sourcePromise.SetResult(Underlying);
+
+            var task = AssertThrowsAsync<StreamDetachedException>(() => sourceMatVal);
+            await task.WaitAsync(3.Seconds());
+        }
+
+        [Fact]
+        public async Task TaskSource_with_discarded_inner_materialized_task_must_not_trigger_UnobservedTaskException()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                await UnobservedTaskExceptionAssertions.ShouldNotRaiseAsync(
+                    RunTaskFlattenSourceUnobservedReproAsync,
+                    aggregate => aggregate.InnerExceptions.Any(e => e is StreamDetachedException),
+                    "discarding FromTaskSource's hidden inner materialized task should not leave a faulted task unobserved");
             }, _materializer);
         }
 

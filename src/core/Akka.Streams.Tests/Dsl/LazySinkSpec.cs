@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
@@ -208,6 +209,30 @@ namespace Akka.Streams.Tests.Dsl
                 task.Exception.ShouldNotBe(null);
                 task.Exception.Flatten().InnerException.Should().BeEquivalentTo(matFail);
                 return Task.CompletedTask;
+            }, Materializer);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private Task RunLazySinkUnobservedReproAsync()
+        {
+            Source.Single(1)
+                .ToMaterialized(
+                    Sink.LazyInitAsync<int, TestSubscriber.Probe<int>>(() => Task.FromException<Sink<int, TestSubscriber.Probe<int>>>(Ex)),
+                    Keep.Left)
+                .Run(Materializer);
+
+            return Task.CompletedTask;
+        }
+
+        [Fact]
+        public async Task A_LazySink_with_discarded_materialized_task_must_not_trigger_UnobservedTaskException()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                await UnobservedTaskExceptionAssertions.ShouldNotRaiseAsync(
+                    RunLazySinkUnobservedReproAsync,
+                    aggregate => aggregate.InnerExceptions.Any(e => ReferenceEquals(e, Ex)),
+                    "discarding LazySink's materialized task should not leave a hidden faulted task unobserved");
             }, Materializer);
         }
 
