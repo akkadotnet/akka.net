@@ -174,7 +174,11 @@ namespace Akka.Streams.Implementation
             {
                 var exception = new StreamDetachedException();
                 if (_completion.TrySetException(exception))
+                {
+                    // See #8210: Source.Queue can fault this internal task even when WatchCompletionAsync() was never called.
+                    // Observe the fault here so shutdown does not leak an UnobservedTaskException.
                     _ = _completion.Task.Exception;
+                }
                 StopCallback(input =>
                 {
                     if (!(input is Offer<TOut> offer)) return;

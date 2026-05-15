@@ -928,7 +928,11 @@ namespace Akka.Streams.Implementation
                             catch (Exception ex)
                             {
                                 if (_completion.TrySetException(ex))
+                                {
+                                    // Same discarded materialized-task pattern as #8209 and #8210: callers may never keep
+                                    // this Task<Option<TMat>>, so observe the fault here to avoid a later UnobservedTaskException.
                                     _ = _completion.Task.Exception;
+                                }
                                 FailStage(ex);
                             }
                         }
@@ -936,7 +940,11 @@ namespace Akka.Streams.Implementation
                     else
                     {
                         if (_completion.TrySetException(result.Exception))
+                        {
+                            // Same discarded materialized-task pattern as #8209 and #8210: callers may never keep
+                            // this Task<Option<TMat>>, so observe the fault here to avoid a later UnobservedTaskException.
                             _ = _completion.Task.Exception;
+                        }
                         FailStage(result.Exception);
                     }
                 });
@@ -949,7 +957,11 @@ namespace Akka.Streams.Implementation
                 catch (Exception ex)
                 {
                     if (_completion.TrySetException(ex))
+                    {
+                        // Same discarded materialized-task pattern as #8209 and #8210: callers may never keep
+                        // this Task<Option<TMat>>, so observe the fault here to avoid a later UnobservedTaskException.
                         _ = _completion.Task.Exception;
+                    }
                     FailStage(ex);
                 }
             }
@@ -972,7 +984,11 @@ namespace Akka.Streams.Implementation
             public override void OnUpstreamFailure(Exception ex)
             {
                 if (_completion.TrySetException(ex))
+                {
+                    // Same discarded materialized-task pattern as #8209 and #8210: callers may never keep
+                    // this Task<Option<TMat>>, so observe the fault here to avoid a later UnobservedTaskException.
                     _ = _completion.Task.Exception;
+                }
                 base.OnUpstreamFailure(ex);
             }
 
