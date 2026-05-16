@@ -20,8 +20,10 @@ namespace Akka.IO
     /// An actor handling the connection state machine for an outgoing connection
     /// to be established.
     /// </summary>
-    internal sealed class TcpOutgoingConnection : TcpConnection
+    internal sealed class TcpOutgoingConnection : TcpConnection, IWithTimers
     {
+        private const string RetryConnectTimerKey = "retry-connect";
+
         private readonly IActorRef _commander;
         private readonly Tcp.Connect _connect;
 
@@ -29,6 +31,19 @@ namespace Akka.IO
 
         private readonly ConnectException _finishConnectNeverReturnedTrueException =
             new("Could not establish connection because finishConnect never returned true");
+
+        public ITimerScheduler Timers { get; set; }
+
+        /// <summary>
+        /// Internal trigger used to re-attempt an outgoing connection from inside the
+        /// actor's own message loop, so connect failures are reported as <see cref="Tcp.CommandFailed"/>
+        /// instead of being swallowed by the scheduler thread.
+        /// </summary>
+        private sealed class RetryConnect
+        {
+            public static readonly RetryConnect Instance = new();
+            private RetryConnect() { }
+        }
 
         public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
             : base(
@@ -210,25 +225,15 @@ namespace Akka.IO
                         // used only when we've resolved a DNS endpoint.
                         case > 0 when fallbackAddress != null:
                         {
-                            var self = Self;
                             var previousAddress = (IPEndPoint)args.RemoteEndPoint;
                             args.RemoteEndPoint = fallbackAddress;
-                            Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
-                            {
-                                if (!Socket.ConnectAsync(args))
-                                    self.Tell(IO.Tcp.SocketConnected.Instance);
-                            });
+                            ScheduleConnectRetry();
                             Become(() => Connecting(remainingFinishConnectRetries - 1, args, previousAddress));
                             break;
                         }
                         case > 0:
                         {
-                            var self = Self;
-                            Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
-                            {
-                                if (!Socket.ConnectAsync(args))
-                                    self.Tell(IO.Tcp.SocketConnected.Instance);
-                            });
+                            ScheduleConnectRetry();
                             Become(() => Connecting(remainingFinishConnectRetries - 1, args, null));
                             break;
                         }
@@ -239,6 +244,18 @@ namespace Akka.IO
                             break;
                     }
             });
+            Receive<RetryConnect>(_ =>
+            {
+                // Re-attempt the connection from within the actor's message loop so that any
+                // exception (e.g. PlatformNotSupportedException on Linux when reusing a socket
+                // after a failed connect attempt) is caught by ReportConnectFailure and reported
+                // to the commander as Tcp.CommandFailed instead of being swallowed by the scheduler.
+                ReportConnectFailure(() =>
+                {
+                    if (!Socket.ConnectAsync(args))
+                        Self.Tell(IO.Tcp.SocketConnected.Instance);
+                });
+            });
             Receive<ReceiveTimeout>(_ =>
             {
                 if (_connect.Timeout.HasValue) Context.SetReceiveTimeout(null); // Clear the timeout
@@ -246,6 +263,9 @@ namespace Akka.IO
                 Stop(new ConnectException($"Connect timeout of {_connect.Timeout} expired"));
             });
         }
+
+        private void ScheduleConnectRetry()
+            => Timers.StartSingleTimer(RetryConnectTimerKey, RetryConnect.Instance, TimeSpan.FromMilliseconds(1));
     }
 
     [InternalApi]

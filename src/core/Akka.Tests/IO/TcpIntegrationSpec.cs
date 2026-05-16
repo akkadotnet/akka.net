@@ -503,6 +503,50 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
+        public async Task Should_report_CommandFailed_when_a_scheduled_connect_retry_throws()
+        {
+            // Regression test for https://github.com/akkadotnet/akka.net/issues/8195
+            //
+            // When a connect attempt fails, TcpOutgoingConnection schedules a retry. That retry
+            // used to run on the scheduler thread, so any exception it threw (e.g.
+            // PlatformNotSupportedException on Linux when reusing a socket after a failed
+            // connect) was logged and swallowed by the scheduler - the commander was never
+            // told and stayed stuck forever.
+            //
+            // This exercises the same code path deterministically and cross-platform: an
+            // IPv4-forced socket is driven down the DNS-fallback retry path and asked to
+            // retry against an IPv6 address, which throws NotSupportedException everywhere.
+            // The fix must surface that failure to the commander as Tcp.CommandFailed.
+
+            const string host = "akka-test-8195.invalid";
+
+            // Pre-seed the DNS cache so the host resolves to BOTH an IPv4 and an IPv6
+            // address, forcing TcpOutgoingConnection down its DNS-fallback retry path.
+            var cache = (SimpleDnsCache)Akka.IO.Dns.Instance.Apply(Sys).Cache;
+            cache.Put(
+                new Akka.IO.Dns.Resolved(host, new[] { IPAddress.Loopback }, new[] { IPAddress.IPv6Loopback }),
+                ttl: (long)TimeSpan.FromMinutes(10).TotalMilliseconds);
+
+            // Grab a free loopback port then release it, so the connection attempt is refused.
+            int port;
+            using (var probeSocket = new Socket(SocketType.Stream, ProtocolType.Tcp))
+            {
+                probeSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+                port = ((IPEndPoint)probeSocket.LocalEndPoint).Port;
+            }
+
+            // OutgoingSocketForceIpv4 => the connection actor allocates an IPv4-only socket,
+            // so the IPv6 fallback retry throws NotSupportedException.
+            var settings = TcpSettings.Create(Sys) with { OutgoingSocketForceIpv4 = true };
+
+            var connectCommander = CreateTestProbe();
+            connectCommander.Send(Sys.Tcp(),
+                new Tcp.Connect(new DnsEndPoint(host, port)) { TcpSettings = settings });
+
+            await connectCommander.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(10));
+        }
+
+        [Fact]
         public async Task The_TCP_transport_implementation_handle_tcp_connection_actor_death_properly()
         {
             await new TestSetup(this, shouldBindServer:false).RunAsync(async _ =>
