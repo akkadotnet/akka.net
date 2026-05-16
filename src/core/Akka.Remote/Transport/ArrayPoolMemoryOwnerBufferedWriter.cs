@@ -27,9 +27,10 @@ public sealed class ArrayPoolMemoryOwnerBufferedWriter<T> : IMemoryOwner<T>, IBu
     private T[] _array;
     private int _position;
     
-    public ArrayPoolMemoryOwnerBufferedWriter(ArrayPool<T> pool)
+    public ArrayPoolMemoryOwnerBufferedWriter(ArrayPool<T> pool, int initialSize = 256)
     {
         _pool = pool;
+        _array = _pool.Rent(256); // Start with a reasonable default size
     }
 
     public Memory<T> Memory => new(_array, 0, _array.Length - _position);
