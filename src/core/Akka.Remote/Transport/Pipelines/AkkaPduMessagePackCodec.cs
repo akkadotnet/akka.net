@@ -27,7 +27,7 @@ namespace Akka.Remote.Transport.Pipelines
     /// <para>
     /// This codec is <b>cluster-wide opt-in</b>: enable it only when every node in the
     /// cluster is running the pipelines transport with
-    /// <c>akka.remote.pipe.tcp.envelope = messagepack</c>.  Mixed-codec clusters will
+    /// <c>akka.remote.pipe.tcp.envelope = messagepack</c>. Mixed-codec clusters will
     /// produce <see cref="PduCodecException"/> on decode.
     /// </para>
     ///
@@ -35,9 +35,11 @@ namespace Akka.Remote.Transport.Pipelines
     /// Wire format summary:
     /// <list type="bullet">
     ///   <item>
-    ///     <b>Protocol frame</b> — a MessagePack-serialized <see cref="MpProtocolFrame"/>
-    ///     with a 1-byte <c>Tag</c> discriminant, optional <c>Payload</c> bytes, and
-    ///     optional <c>HandshakeInfo</c>.  Mirrors <c>AkkaProtocolMessage</c>.
+    ///     <b>Protocol frame</b> — a single discriminator byte (<see cref="ProtocolTag"/>)
+    ///     followed by tag-specific payload bytes. This replaces the previous
+    ///     <c>MpProtocolFrame</c> envelope so that the <see cref="ProtocolTag.Payload"/>
+    ///     case can carry the inner <see cref="MpAckAndEnvelope"/> bytes <i>verbatim</i> with
+    ///     no extra MessagePack header / length prefix and no extra buffer copy.
     ///   </item>
     ///   <item>
     ///     <b>Message envelope</b> — a MessagePack-serialized <see cref="MpAckAndEnvelope"/>
@@ -47,29 +49,28 @@ namespace Akka.Remote.Transport.Pipelines
     /// </list>
     /// </para>
     ///
-    /// <!-- CopilotNotes: The codec intentionally avoids ByteString allocations for the
-    ///      static control messages (heartbeat, disassociate) by caching their serialised
-    ///      bytes as static readonly fields computed once in the static constructor. -->
+    /// <!-- CopilotNotes: The codec caches the static control frames (heartbeat,
+    ///      disassociate variants) as 1-byte ByteStrings shared across the process.
+    ///      The Payload path is fully zero-copy on decode (UnsafeWrap on a slice of
+    ///      the inbound buffer) and a single-allocation prefix-and-copy on encode. -->
     /// </summary>
     internal sealed class AkkaPduMessagePackCodec : AkkaPduCodec
     {
-        // ── Static cache for allocation-free control messages ─────────────────
+        // ── Static cache for allocation-free control frames ─────────────────
+        // CopilotNotes: Each cached frame is exactly one byte. We share them as
+        // ByteStrings so the write path returns the same instance every time.
 
-        // CopilotNotes: These are safe as static bytes because no ActorSystem state is
-        // encoded in heartbeat/disassociate frames — same reasoning as HeartbeatPdu in
-        // AkkaPduProtobuffCodec.
-        private static readonly byte[] s_heartbeatBytes;
-        private static readonly byte[] s_disassociateBytes;
-        private static readonly byte[] s_disassociateQuarantinedBytes;
-        private static readonly byte[] s_disassociateShuttingDownBytes;
+        private static readonly ByteString s_heartbeatBytes               = SingleByte(ProtocolTag.Heartbeat);
+        private static readonly ByteString s_disassociateBytes            = SingleByte(ProtocolTag.Disassociate);
+        private static readonly ByteString s_disassociateQuarantinedBytes = SingleByte(ProtocolTag.DisassociateQuarantined);
+        private static readonly ByteString s_disassociateShuttingDownBytes= SingleByte(ProtocolTag.DisassociateShuttingDown);
 
-        static AkkaPduMessagePackCodec()
-        {
-            s_heartbeatBytes               = SerializeFrame(new MpProtocolFrame { Tag = ProtocolTag.Heartbeat });
-            s_disassociateBytes            = SerializeFrame(new MpProtocolFrame { Tag = ProtocolTag.Disassociate });
-            s_disassociateQuarantinedBytes = SerializeFrame(new MpProtocolFrame { Tag = ProtocolTag.DisassociateQuarantined });
-            s_disassociateShuttingDownBytes= SerializeFrame(new MpProtocolFrame { Tag = ProtocolTag.DisassociateShuttingDown });
-        }
+        // Cached PDU singletons — these types carry no per-instance state on the
+        // decode side, so we share them and skip per-frame allocations.
+        private static readonly Heartbeat    s_heartbeatPdu                = new();
+        private static readonly Disassociate s_disassociateUnknownPdu      = new(DisassociateInfo.Unknown);
+        private static readonly Disassociate s_disassociateQuarantinedPdu  = new(DisassociateInfo.Quarantined);
+        private static readonly Disassociate s_disassociateShutdownPdu     = new(DisassociateInfo.Shutdown);
 
         // ── Constructor ────────────────────────────────────────────────────────
 
@@ -83,36 +84,47 @@ namespace Akka.Remote.Transport.Pipelines
 
         /// <inheritdoc/>
         /// <summary>
-        /// Decodes a MessagePack-serialized <see cref="MpProtocolFrame"/> from <paramref name="raw"/>
-        /// and returns the corresponding <see cref="IAkkaPdu"/> variant.
+        /// Reads the leading discriminator byte and dispatches to the matching PDU.
+        /// For <see cref="ProtocolTag.Payload"/> the inner envelope bytes are returned
+        /// as a zero-copy <see cref="ByteString"/> slice of <paramref name="raw"/>.
         /// </summary>
         /// <exception cref="PduCodecException">
-        /// Thrown when the bytes cannot be deserialized or the tag is unrecognised.
+        /// Thrown when the buffer is empty, the tag is unrecognised, or an Associate
+        /// frame fails to deserialize.
         /// </exception>
         public override IAkkaPdu DecodePdu(ByteString raw)
         {
+            if (raw.Length == 0)
+                throw new PduCodecException("Empty MessagePack PDU frame.");
+
+            var tag = raw.Span[0];
             try
             {
-                var frame = MP.MessagePackSerializer.Deserialize<MpProtocolFrame>(raw.Memory);
-                return frame.Tag switch
+                switch (tag)
                 {
-                    ProtocolTag.Payload =>
-                        new Payload(frame.Payload is { Length: > 0 }
-                            ? ByteString.CopyFrom(frame.Payload.Value.Span)
-                            : ByteString.Empty),
+                    case ProtocolTag.Payload:
+                        // CopilotNotes: zero-copy slice — UnsafeWrap shares the underlying
+                        // buffer, no allocation, no memcpy. Inner envelope bytes start at offset 1.
+                        return new Payload(UnsafeByteOperations.UnsafeWrap(raw.Memory.Slice(1)));
 
-                    ProtocolTag.Heartbeat => new Heartbeat(),
+                    case ProtocolTag.Heartbeat:
+                        return s_heartbeatPdu;
 
-                    ProtocolTag.Associate => DecodeAssociate(frame),
+                    case ProtocolTag.Associate:
+                        return DecodeAssociate(raw.Memory.Slice(1));
 
-                    ProtocolTag.Disassociate            => new Disassociate(DisassociateInfo.Unknown),
-                    ProtocolTag.DisassociateQuarantined => new Disassociate(DisassociateInfo.Quarantined),
-                    ProtocolTag.DisassociateShuttingDown=> new Disassociate(DisassociateInfo.Shutdown),
+                    case ProtocolTag.Disassociate:
+                        return s_disassociateUnknownPdu;
+                    case ProtocolTag.DisassociateQuarantined:
+                        return s_disassociateQuarantinedPdu;
+                    case ProtocolTag.DisassociateShuttingDown:
+                        return s_disassociateShutdownPdu;
 
-                    _ => throw new PduCodecException(
-                        $"Unknown MessagePack protocol tag: {frame.Tag}. " +
-                        "Ensure all cluster nodes use the same envelope codec.")
-                };
+                    default:
+                        throw new PduCodecException(
+                            $"Unknown MessagePack protocol tag: {tag}. " +
+                            "Ensure all cluster nodes use the same envelope codec.");
+                }
             }
             catch (MP.MessagePackSerializationException ex)
             {
@@ -122,28 +134,16 @@ namespace Akka.Remote.Transport.Pipelines
 
         /// <inheritdoc/>
         /// <summary>
-        /// Wraps <paramref name="payload"/> (the serialized <c>AckAndEnvelopeContainer</c> bytes)
-        /// in an <see cref="MpProtocolFrame"/> with <see cref="ProtocolTag.Payload"/>.
+        /// Wraps already-serialized inner-envelope bytes by prepending the
+        /// <see cref="ProtocolTag.Payload"/> discriminator byte.
+        /// Single allocation, single buffer copy of <paramref name="payload"/>.
         /// </summary>
-        public override ByteString ConstructPayload(ByteString payload)
-        {
-            var frame = new MpProtocolFrame
-            {
-                Tag     = ProtocolTag.Payload,
-                Payload = payload.ToByteArray()
-            };
-            return ByteString.CopyFrom(SerializeFrame(frame));
-        }
+        public override ByteString ConstructPayload(ByteString payload) =>
+            PrependTag(ProtocolTag.Payload, payload.Span);
 
-        public override ByteString ConstructPayload(ReadOnlyMemory<byte> payload)
-        {
-            var frame = new MpProtocolFrame
-            {
-                Tag     = ProtocolTag.Payload,
-                Payload = payload
-            };
-            return ByteString.CopyFrom(SerializeFrame(frame));
-        }
+        /// <inheritdoc cref="ConstructPayload(ByteString)"/>
+        public override ByteString ConstructPayload(ReadOnlyMemory<byte> payload) =>
+            PrependTag(ProtocolTag.Payload, payload.Span);
 
         /// <inheritdoc/>
         public override ByteString ConstructAssociate(HandshakeInfo info)
@@ -152,46 +152,52 @@ namespace Akka.Remote.Transport.Pipelines
                 throw new ArgumentException(
                     $"HandshakeInfo origin {info.Origin} is missing host or port.", nameof(info));
 
-            var frame = new MpProtocolFrame
+            var hi = new MpHandshakeInfo
             {
-                Tag = ProtocolTag.Associate,
-                HandshakeInfo = new MpHandshakeInfo
-                {
-                    Protocol = info.Origin.Protocol,
-                    System   = info.Origin.System,
-                    Hostname = info.Origin.Host!,
-                    Port     = info.Origin.Port!.Value,
-                    Uid      = info.Uid // int → long widening
-                }
+                Protocol = info.Origin.Protocol,
+                System   = info.Origin.System,
+                Hostname = info.Origin.Host!,
+                Port     = info.Origin.Port!.Value,
+                Uid      = info.Uid // int → long widening
             };
-            return ByteString.CopyFrom(SerializeFrame(frame));
+
+            // CopilotNotes: Could be optimized further with a pooled IBufferWriter that
+            // writes the tag byte directly before MessagePack writes the body — but
+            // Associate is sent only once per handshake so the simple path is fine.
+            var body = MP.MessagePackSerializer.Serialize(hi);
+            return PrependTag(ProtocolTag.Associate, body);
         }
 
         /// <inheritdoc/>
-        public override ByteString ConstructDisassociate(DisassociateInfo reason)
+        public override ByteString ConstructDisassociate(DisassociateInfo reason) => reason switch
         {
-            var bytes = reason switch
-            {
-                DisassociateInfo.Quarantined => s_disassociateQuarantinedBytes,
-                DisassociateInfo.Shutdown    => s_disassociateShuttingDownBytes,
-                _                            => s_disassociateBytes
-            };
-            // CopilotNotes: CopyFrom required because ByteString must own the backing array.
-            return ByteString.CopyFrom(bytes);
-        }
+            DisassociateInfo.Quarantined => s_disassociateQuarantinedBytes,
+            DisassociateInfo.Shutdown    => s_disassociateShuttingDownBytes,
+            _                            => s_disassociateBytes
+        };
 
         /// <inheritdoc/>
-        public override ByteString ConstructHeartbeat() =>
-            ByteString.CopyFrom(s_heartbeatBytes);
+        public override ByteString ConstructHeartbeat() => s_heartbeatBytes;
 
         // ── Message-level encode / decode ──────────────────────────────────────
 
         /// <inheritdoc/>
         /// <summary>
         /// Deserializes a MessagePack <see cref="MpAckAndEnvelope"/> and reconstructs an
-        /// <see cref="AckAndMessage"/>, bridging into the protobuf-based upper-layer types
-        /// (<see cref="SerializedMessage"/> etc.) so <c>EndpointWriter</c> / <c>EndpointReader</c>
-        /// remain unchanged.
+        /// <see cref="AckAndMessage"/>.
+        ///
+        /// <para>
+        /// Unlike the protobuf codec, this path creates a <see cref="MsgPackSerializedMessage"/>
+        /// instead of a protobuf <c>SerializedMessage</c>, avoiding two <c>ByteString.CopyFrom</c>
+        /// allocations per inbound message. The <see cref="Message"/> type carries a
+        /// <c>HasMsgPackPayload</c> flag so <c>EndpointReader</c> can route to the correct
+        /// Dispatch overload.
+        /// </para>
+        ///
+        /// <!-- CopilotNotes: MpPayload.Message / MpPayload.Manifest are already
+        ///      ReadOnlyMemory<byte> values whose backing byte[] is owned by the MessagePack
+        ///      deserializer's output — safe to hold long-term even inside the reliable-delivery
+        ///      receive buffer. -->
         /// </summary>
         public override AckAndMessage DecodeMessage(
             ByteString raw,
@@ -234,20 +240,17 @@ namespace Akka.Remote.Transport.Pipelines
                         unchecked { seqOption = new SeqNo((long)env.Seq); }
                     }
 
-                    // Reconstruct the protobuf Payload (SerializedMessage) from the MessagePack fields.
-                    var serializedMessage = new SerializedMessage
-                    {
-                        Message         = env.Message.Message is { Length: > 0 }
-                            ? ByteString.CopyFrom(env.Message.Message.Value.Span)
-                            : ByteString.Empty,
-                        SerializerId    = env.Message.SerializerId,
-                        MessageManifest = env.Message.Manifest is { Length: > 0 }
-                            ? ByteString.CopyFrom(env.Message.Manifest)
-                            : ByteString.Empty
-                    };
+                    // CopilotNotes: Build MsgPackSerializedMessage — no ByteString allocation!
+                    // ReadOnlyMemory<byte> slices point directly into the MpPayload fields.
+                    // Property pattern on a nullable struct unwraps it, so 'm' and 'mf' are
+                    // already ReadOnlyMemory<byte> (non-nullable) — no .Value needed.
+                    var msgPackPayload = new MsgPackSerializedMessage(
+                        bytes:        env.Message.Message  is { Length: > 0 } m  ? m  : ReadOnlyMemory<byte>.Empty,
+                        serializerId: env.Message.SerializerId,
+                        manifest:     env.Message.Manifest is { Length: > 0 } mf ? mf : ReadOnlyMemory<byte>.Empty);
 
                     messageOption = new Message(
-                        recipient, recipientAddress, serializedMessage,
+                        recipient, recipientAddress, msgPackPayload,
                         senderOption, seqOption);
                 }
 
@@ -301,15 +304,30 @@ namespace Akka.Remote.Transport.Pipelines
 
         // ── Private helpers ────────────────────────────────────────────────────
 
-        private static byte[] SerializeFrame(MpProtocolFrame frame) =>
-            MP.MessagePackSerializer.Serialize(frame);
-
-        private static Associate DecodeAssociate(MpProtocolFrame frame)
+        /// <summary>
+        /// Allocates a single <c>byte[1 + tail.Length]</c>, writes <paramref name="tag"/>
+        /// at index 0, copies <paramref name="tail"/> after it, and returns a zero-copy
+        /// <see cref="ByteString"/> wrapping the array via <see cref="UnsafeByteOperations.UnsafeWrap(System.ReadOnlyMemory{byte})"/>.
+        /// </summary>
+        private static ByteString PrependTag(byte tag, ReadOnlySpan<byte> tail)
         {
-            if (frame.HandshakeInfo is not { } hi)
-                throw new PduCodecException(
-                    "Associate MessagePack frame is missing HandshakeInfo.");
+            var buf = new byte[1 + tail.Length];
+            buf[0] = tag;
+            tail.CopyTo(buf.AsSpan(1));
+            return UnsafeByteOperations.UnsafeWrap(buf);
+        }
 
+        /// <summary>Returns a one-byte <see cref="ByteString"/> containing <paramref name="tag"/>.</summary>
+        private static ByteString SingleByte(byte tag) =>
+            UnsafeByteOperations.UnsafeWrap(new[] { tag });
+
+        private static Associate DecodeAssociate(ReadOnlyMemory<byte> body)
+        {
+            if (body.IsEmpty)
+                throw new PduCodecException(
+                    "Associate MessagePack frame is missing HandshakeInfo body.");
+
+            var hi = MP.MessagePackSerializer.Deserialize<MpHandshakeInfo>(body);
             var origin = new Address(hi.Protocol, hi.System, hi.Hostname, hi.Port);
             return new Associate(new HandshakeInfo(origin, (int)hi.Uid));
         }
@@ -324,9 +342,9 @@ namespace Akka.Remote.Transport.Pipelines
         private static MpPayload BuildMpPayload(SerializedMessage msg) =>
             new()
             {
-                Message      = msg.Message.IsEmpty      ? null : msg.Message.ToByteArray(),
+                Message      = msg.Message.IsEmpty      ? null : msg.Message.Memory,
                 SerializerId = msg.SerializerId,
-                Manifest     = msg.MessageManifest.IsEmpty ? null : msg.MessageManifest.ToByteArray()
+                Manifest     = msg.MessageManifest.IsEmpty ? null : msg.MessageManifest.Memory
             };
 
         /// <summary>

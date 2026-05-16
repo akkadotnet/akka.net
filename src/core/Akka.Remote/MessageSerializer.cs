@@ -31,7 +31,7 @@ namespace Akka.Remote
             SerializedMessage messageProtocol)
         {
             return system.Serialization.Deserialize(
-                messageProtocol.Message.ToByteArray(),
+                messageProtocol.Message.Memory,
                 messageProtocol.SerializerId,
                 !messageProtocol.MessageManifest.IsEmpty ? messageProtocol.MessageManifest.ToStringUtf8() : null);
         }
@@ -55,7 +55,7 @@ namespace Akka.Remote
 
                 var serializedMsg = new SerializedMessage
                 {
-                    Message = ByteString.CopyFrom(serializer.ToBinary(message)),
+                    Message = UnsafeByteOperations.UnsafeWrap(serializer.ToBinary(message)), //ByteString.CopyFrom(serializer.ToBinary(message)),
                     SerializerId = serializer.Identifier
                 };
 

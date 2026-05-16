@@ -1,0 +1,35 @@
+
+akka.actor {
+    serializers.messagepack = "Akka.Serialization.MessagePack.MsgPackSerializer, Akka.Serialization.MessagePack"
+    serialization-bindings {
+        "System.Object" = messagepack
+    }
+  serialization-settings {
+      messagepack {
+        
+        # Use "Lz4BlockArray" or "Lz4Block" to enable.
+        # "Lz4BlockArray" is reccomended by MessagePack author.
+        # Note that all sides must have this set!
+        enable-lz4-compression = "none"
+        
+        # If False, Assembly version mismatches on typeless types may throw!
+        allow-assembly-version-mismatch = true
+        
+        # If True, Assembly version is included in typeless serialized data. 
+        omit-assembly-version = true
+        
+        # A set of converters with FQCN (Including assembly) to use,
+        # before falling back to the TypelessFormatter.
+        # Note that Other converters like Akka surrogates are registered -before-
+        # these. If you need to party on those types, use 'converters-override' instead 
+        converters = []
+        
+        # A set of 'Override' converters with FQCN (including assmebly) to use,
+        # BEFORE All other converters.
+        # This may break Akka Serialization if you are not careful!
+        converters-override = [] 
+        
+      }
+    }
+  }
+}

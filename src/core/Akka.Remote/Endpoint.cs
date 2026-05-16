@@ -36,14 +36,24 @@ namespace Akka.Remote
     internal interface IInboundMessageDispatcher
     {
         /// <summary>
-        /// TBD
+        /// Dispatches an inbound remote message carried in a protobuf <c>SerializedMessage</c>.
+        /// Used by the DotNetty and Pipe+Protobuf codec paths.
         /// </summary>
-        /// <param name="recipient">TBD</param>
-        /// <param name="recipientAddress">TBD</param>
-        /// <param name="message">TBD</param>
-        /// <param name="senderOption">TBD</param>
         void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
             IActorRef senderOption = null);
+
+        /// <summary>
+        /// Dispatches an inbound remote message carried in a <see cref="MsgPackSerializedMessage"/>.
+        ///
+        /// <para>
+        /// This overload is the allocation-free hot path for the Pipe+MessagePack codec:
+        /// no <c>ByteString</c> is touched and the underlying
+        /// <see cref="Akka.Serialization.Serialization.Deserialize(ReadOnlyMemory{byte},int,string)"/>
+        /// overload is called directly, avoiding the UTF-8 re-encode round-trip.
+        /// </para>
+        /// </summary>
+        void Dispatch(IInternalActorRef recipient, Address recipientAddress,
+            in MsgPackSerializedMessage message, IActorRef senderOption = null);
     }
 
     /// <summary>
@@ -83,6 +93,42 @@ namespace Akka.Remote
             IActorRef senderOption = null)
         {
             var payload = MessageSerializer.Deserialize(_system, message);
+            DispatchPayload(recipient, recipientAddress, payload, senderOption);
+        }
+
+        /// <inheritdoc/>
+        /// <summary>
+        /// MessagePack hot-path overload — zero <c>ByteString</c> allocations. ✨
+        /// Calls <see cref="Akka.Serialization.Serialization.Deserialize(ReadOnlyMemory{byte},int,string)"/>
+        /// directly on the raw memory from the MpPayload, then routes via the shared
+        /// <see cref="DispatchPayload"/> helper.
+        ///
+        /// <!-- CopilotNotes: The 'in' modifier passes the 24-byte struct by ref-to-const so
+        ///      there is zero copying of the struct itself either. -->
+        /// </summary>
+        public void Dispatch(IInternalActorRef recipient, Address recipientAddress,
+            in MsgPackSerializedMessage message, IActorRef senderOption = null)
+        {
+            // ManifestString returns null for missing manifest — matches MessageSerializer.Deserialize behaviour.
+            var payload = _system.Serialization.Deserialize(
+                message.Bytes, message.SerializerId, message.ManifestString);
+            DispatchPayload(recipient, recipientAddress, payload, senderOption);
+        }
+
+        /// <summary>
+        /// INTERNAL API.
+        /// Shared routing core invoked by both Dispatch overloads after deserialization.
+        /// Routes the already-deserialized <paramref name="payload"/> to the appropriate local
+        /// handler based on the <paramref name="recipient"/> type (daemon, local ref, remote-deployed).
+        ///
+        /// <!-- CopilotNotes: Extracted so the routing switch is never duplicated — DRY hot path. -->
+        /// </summary>
+        private void DispatchPayload(
+            IInternalActorRef recipient,
+            Address recipientAddress,
+            object payload,
+            IActorRef senderOption)
+        {
             var payloadClass = payload?.GetType();
             var sender = senderOption ?? _system.DeadLetters;
             var originalReceiver = recipient.Path;
@@ -1849,10 +1895,9 @@ namespace Akka.Remote
                         {
                             try
                             {
-                                _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                                    ackAndMessage.MessageOption.RecipientAddress,
-                                    ackAndMessage.MessageOption.SerializedMessage,
-                                    ackAndMessage.MessageOption.SenderOptional);
+                                // CopilotNotes: Route to the allocation-free MsgPack overload when available,
+                                // falling back to the classic protobuf SerializedMessage path otherwise.
+                                DispatchMessage(ackAndMessage.MessageOption);
                             }
                             catch (Exception e)
                             {
@@ -1873,14 +1918,31 @@ namespace Akka.Remote
 
         private void LogTransientSerializationError(Message msg, Exception error)
         {
-            var sm = msg.SerializedMessage;
+            // CopilotNotes: Handle both payload types — MsgPack has no ByteString so we pull
+            // the info from MsgPackSerializedMessage; protobuf path uses SerializedMessage as before.
+            int serializerId;
+            string manifest;
+
+            if (msg.HasMsgPackPayload)
+            {
+                var mp = msg.MsgPackMessage;
+                serializerId = mp.SerializerId;
+                manifest = mp.ManifestString ?? "";
+            }
+            else
+            {
+                var sm = msg.SerializedMessage!;
+                serializerId = sm.SerializerId;
+                manifest = sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8();
+            }
+
             _log.Warning(error,
               "Deserialization failed for message with serializer id [{0}] and manifest [{1}]. " +
                 "Transient association error (association remains live). {2}. {3}",
-              sm.SerializerId,
-              sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8(),
+              serializerId,
+              manifest,
               error.Message,
-              Serializer.GetErrorForSerializerId(sm.SerializerId));
+              Serializer.GetErrorForSerializerId(serializerId));
         }
 
         private void NotReading()
@@ -1963,7 +2025,37 @@ namespace Akka.Remote
 
             // Notify writer that some messages can be acked
             Context.Parent.Tell(new EndpointWriter.OutboundAck(deliverable.Ack));
-            deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
+            // CopilotNotes: Each buffered message picks its own dispatch path based on payload type.
+            deliverable.Deliverables.ForEach(msg => DispatchMessage(msg));
+        }
+
+        /// <summary>
+        /// Routes a decoded <see cref="Message"/> to the correct
+        /// Dispatch overload based on which payload
+        /// type is present (<see cref="MsgPackSerializedMessage"/> vs protobuf <c>SerializedMessage</c>).
+        ///
+        /// <!-- CopilotNotes: Centralised here so the hot-path and the reliable-delivery
+        ///      replay path (DeliverAndAck) both benefit from the MsgPack zero-copy route. -->
+        /// </summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        private void DispatchMessage(Message msg)
+        {
+            if (msg.HasMsgPackPayload)
+            {
+                _msgDispatch.Dispatch(
+                    msg.Recipient,
+                    msg.RecipientAddress,
+                    msg.MsgPackMessage,
+                    msg.SenderOptional);
+            }
+            else
+            {
+                _msgDispatch.Dispatch(
+                    msg.Recipient,
+                    msg.RecipientAddress,
+                    msg.SerializedMessage!,
+                    msg.SenderOptional);
+            }
         }
 
         private AckAndMessage TryDecodeMessageAndAck(ByteString pdu)

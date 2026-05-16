@@ -83,6 +83,27 @@ namespace Akka.Remote.Serialization
             }
         }
 
+        public override object FromBinary(ReadOnlyMemory<byte> bytes, string manifest)
+        {
+            switch (manifest)
+            {
+                case StringManifest:
+                case StringManifestNetCore:
+                case StringManifestNetFx:
+                    return Encoding.UTF8.GetString(bytes.Span);
+                case Int32Manifest:
+                case Int32ManifestNetCore:
+                case Int32ManifestNetFx:
+                    return BitConverter.ToInt32(bytes.Span);
+                case Int64Manifest:
+                case Int64ManifestNetCore:
+                case Int64ManifestNetFx:
+                    return BitConverter.ToInt64(bytes.Span);
+                default:
+                    throw new ArgumentException($"Unimplemented deserialization of message with manifest [{manifest}] in [${GetType()}]");
+            }
+        }
+
         /// <inheritdoc />
         public override string Manifest(object obj)
         {

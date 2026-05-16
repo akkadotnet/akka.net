@@ -15,56 +15,44 @@ namespace Akka.Remote.Transport.Pipelines.MessagePack
     /// <summary>
     /// INTERNAL API.
     ///
-    /// Tag constants for <see cref="MpProtocolFrame.Tag"/>, mirroring the
-    /// <c>CommandType</c> enum in <c>WireFormats.proto</c>.
+    /// Tag constants used as the leading discriminator byte of every MessagePack
+    /// protocol frame produced by <see cref="AkkaPduMessagePackCodec"/>.
+    ///
+    /// <para>
+    /// Conceptually equivalent to a MessagePack <c>[Union]</c> discriminator, but the
+    /// codec writes the tag as a single raw byte at offset <c>0</c> and the tail of the
+    /// buffer is interpreted per-tag. This avoids the array/map header MessagePack would
+    /// otherwise add for a polymorphic envelope, and — crucially — lets the
+    /// <see cref="Payload"/> tag carry the inner <see cref="MpAckAndEnvelope"/> bytes
+    /// verbatim with zero double-encoding overhead.
+    /// </para>
+    ///
+    /// Wire layout per tag:
+    /// <list type="bullet">
+    ///   <item><see cref="Payload"/>: <c>[tag][raw inner MpAckAndEnvelope MessagePack bytes…]</c></item>
+    ///   <item><see cref="Heartbeat"/>, <see cref="Disassociate"/>,
+    ///         <see cref="DisassociateQuarantined"/>, <see cref="DisassociateShuttingDown"/>:
+    ///         <c>[tag]</c> only — single byte on the wire.</item>
+    ///   <item><see cref="Associate"/>: <c>[tag][MessagePack-serialized MpHandshakeInfo]</c></item>
+    /// </list>
+    ///
+    /// <!-- CopilotNotes: Values mirror the protobuf CommandType enum 1:1 so semantics
+    ///      stay identical between codecs even though the wire layouts differ. -->
     /// </summary>
     internal static class ProtocolTag
     {
-        // CopilotNotes: These map 1:1 to the protobuf CommandType enum values so the
-        // semantics are identical regardless of which codec is used on each hop.
-        
-        /// <summary>A raw payload frame (wraps serialized <c>AckAndEnvelopeContainer</c> bytes).</summary>
+        /// <summary>A raw payload frame; tail bytes are the inner <see cref="MpAckAndEnvelope"/> verbatim.</summary>
         public const byte Payload = 0;
-        /// <summary>Heartbeat — no additional payload.</summary>
+        /// <summary>Heartbeat — no tail.</summary>
         public const byte Heartbeat = 1;
-        /// <summary>Associate handshake — <see cref="MpProtocolFrame.HandshakeInfo"/> must be populated.</summary>
+        /// <summary>Associate handshake — tail is a serialized <see cref="MpHandshakeInfo"/>.</summary>
         public const byte Associate = 2;
-        /// <summary>Disassociate (unknown reason).</summary>
+        /// <summary>Disassociate (unknown reason) — no tail.</summary>
         public const byte Disassociate = 3;
-        /// <summary>Disassociate: remote quarantined this node.</summary>
+        /// <summary>Disassociate: remote quarantined this node — no tail.</summary>
         public const byte DisassociateQuarantined = 4;
-        /// <summary>Disassociate: remote is shutting down.</summary>
+        /// <summary>Disassociate: remote is shutting down — no tail.</summary>
         public const byte DisassociateShuttingDown = 5;
-    }
-
-    // ── Protocol-level outer envelope ────────────────────────────────────────
-    // Mirrors AkkaProtocolMessage { payload | instruction } + AkkaControlMessage + AkkaHandshakeInfo.
-    // We flatten into a single tagged struct to avoid an extra allocation for the control path.
-
-    /// <summary>
-    /// INTERNAL API.
-    ///
-    /// Outer protocol-level frame, equivalent to the protobuf <c>AkkaProtocolMessage</c>
-    /// union. Uses a single <see cref="Tag"/> discriminant instead of a protobuf
-    /// <c>oneof</c> field selection.
-    ///
-    /// <!-- CopilotNotes: Keeping this a single flat type avoids the union-boxing overhead
-    ///      of MessagePack's [Union] attribute approach. The Tag byte is in Key(0) so
-    ///      reading it costs only 1 byte before we decide what else to deserialize.
-    ///      AllowPrivate = true is required because the type is internal and the
-    ///      source generator needs access to non-public members. -->
-    /// </summary>
-    [MessagePackObject(AllowPrivate = true)]
-    internal sealed class MpProtocolFrame
-    {
-        /// <summary>One of the <see cref="ProtocolTag"/> constants.</summary>
-        [Key(0)] public byte Tag { get; set; }
-
-        /// <summary>Serialized inner <see cref="MpAckAndEnvelope"/> bytes. Non-null when <see cref="Tag"/> == <see cref="ProtocolTag.Payload"/>.</summary>
-        [Key(1)] public ReadOnlyMemory<byte>? Payload { get; set; }
-
-        /// <summary>Handshake origin info. Non-null when <see cref="Tag"/> == <see cref="ProtocolTag.Associate"/>.</summary>
-        [Key(2)] public MpHandshakeInfo? HandshakeInfo { get; set; }
     }
 
     /// <summary>
@@ -72,6 +60,7 @@ namespace Akka.Remote.Transport.Pipelines.MessagePack
     ///
     /// Mirror of <c>AkkaHandshakeInfo { origin: AddressData, uid: fixed64 }</c>.
     /// The <c>AddressData</c> fields are inlined to reduce nested allocations.
+    /// Serialized as the tail of an <see cref="ProtocolTag.Associate"/> frame.
     /// </summary>
     [MessagePackObject(AllowPrivate = true)]
     internal sealed class MpHandshakeInfo
@@ -98,6 +87,10 @@ namespace Akka.Remote.Transport.Pipelines.MessagePack
 
     // ── Application-level message envelope ───────────────────────────────────
     // Mirrors AckAndEnvelopeContainer { ack, envelope } + RemoteEnvelope + AcknowledgementInfo.
+    //
+    // CopilotNotes: For the hot path (Payload frames) these bytes are written *directly*
+    // after the 1-byte protocol tag — no double envelope, no MessagePack `bin` length
+    // prefix, and decoded with a zero-copy ByteString slice. Very speed, much wow ✨
 
     /// <summary>
     /// INTERNAL API.
@@ -170,13 +163,6 @@ namespace Akka.Remote.Transport.Pipelines.MessagePack
         /// Optional type manifest bytes (matches <c>Payload.messageManifest</c>).
         /// Null is used instead of an empty array to save 1 byte on the wire.
         /// </summary>
-        [Key(2)] public byte[]? Manifest { get; set; }
+        [Key(2)] public ReadOnlyMemory<byte>? Manifest { get; set; }
     }
 }
-
-
-
-
-
-
-

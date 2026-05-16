@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -95,6 +96,23 @@ namespace Akka.Serialization
         /// <param name="type">The type of object contained in the array</param>
         /// <returns>The object contained in the array</returns>
         public abstract object FromBinary(byte[] bytes, Type type);
+        
+        public virtual object FromBinary(ReadOnlyMemory<byte> bytes, Type type)
+        {
+            return FromBinary(bytes.ToArray(), type);
+        }
+        
+        public virtual object FromBinaryOwner(IMemoryOwner<byte> bytes, Type type)
+        {
+            try
+            {
+                return FromBinary(bytes.Memory, type);
+            }
+            finally
+            {
+                bytes.Dispose();
+            }
+        }
 
         /// <summary>
         /// Deserializes a byte array into an object.
@@ -102,6 +120,10 @@ namespace Akka.Serialization
         /// <param name="bytes">The array containing the serialized object</param>
         /// <returns>The object contained in the array</returns>
         public T FromBinary<T>(byte[] bytes) => (T)FromBinary(bytes, typeof(T));
+        
+        public T FromBinaryOwner<T>(IMemoryOwner<byte> bytes) => (T)FromBinaryOwner(bytes, typeof(T));
+        
+        public T FromBinary<T>(ReadOnlyMemory<byte> bytes) => (T)FromBinary(bytes, typeof(T));
     }
 
     /// <summary>
@@ -143,6 +165,11 @@ namespace Akka.Serialization
             return FromBinary(bytes, manifest);
         }
 
+        public override object FromBinary(ReadOnlyMemory<byte> bytes, Type type)
+        {
+            return FromBinary(bytes, type.TypeQualifiedName());
+        }
+
         /// <summary>
         /// Deserializes a byte array into an object using an optional <paramref name="manifest"/> (type hint).
         ///
@@ -159,6 +186,11 @@ namespace Akka.Serialization
         /// <param name="manifest">The type hint used to deserialize the object contained in the array.</param>
         /// <returns>The object contained in the array</returns>
         public abstract object FromBinary(byte[] bytes, string manifest);
+        
+        public virtual object FromBinary(ReadOnlyMemory<byte> bytes, string manifest)
+        {
+            return FromBinary(bytes.ToArray(), manifest);
+        }
 
         /// <summary>
         /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(byte[],System.Type)"/> method.

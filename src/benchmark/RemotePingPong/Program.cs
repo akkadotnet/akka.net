@@ -42,6 +42,85 @@ namespace RemotePingPong
         }
 
         /// <summary>
+        /// Selects which message-body serializer is used for user messages during the benchmark.
+        /// This is orthogonal to the transport-envelope codec (protobuf vs messagepack).
+        /// </summary>
+        internal enum SerializerMode
+        {
+            /// <summary>
+            /// Akka.NET built-in NewtonSoft JSON serializer (the historic default).
+            /// Good for correctness checks; not the fastest~
+            /// </summary>
+            Default,
+
+            /// <summary>
+            /// Hyperion binary serializer — fast, schema-tolerant.
+            /// Requires <c>Akka.Serialization.Hyperion</c> package. UwU
+            /// </summary>
+            Hyperion,
+
+            /// <summary>
+            /// MessagePack typeless serializer — very compact + fast.
+            /// Requires <c>Akka.Serialization.MessagePack</c> package. Nyaa~!
+            /// </summary>
+            MsgPack,
+        }
+
+        /// <summary>
+        /// Controls what message body type is sent in the ping-pong loop.
+        /// </summary>
+        internal enum PayloadMode
+        {
+            /// <summary>
+            /// Sends a primitive <see cref="long"/> payload (fast path / primitive serializer path).
+            /// </summary>
+            Primitive,
+
+            /// <summary>
+            /// Sends a custom object payload so user serializers (Hyperion/MessagePack/JSON)
+            /// are actually exercised end-to-end.
+            /// </summary>
+            SerializedObject,
+        }
+
+        private static PayloadMode ParsePayloadMode(string? arg)
+        {
+            return (arg ?? "").ToLowerInvariant() switch
+            {
+                "object" or "serialized" or "serializer" => PayloadMode.SerializedObject,
+                _ => PayloadMode.Primitive,
+            };
+        }
+
+        private static string PayloadLabel(PayloadMode mode) => mode switch
+        {
+            PayloadMode.SerializedObject => "Custom object (serializer path)",
+            _ => "Primitive long",
+        };
+
+        /// <summary>
+        /// Parses a serializer mode string from the command line.
+        /// Valid values (case-insensitive): "default", "hyperion", "msgpack", "messagepack".
+        /// Defaults to <see cref="SerializerMode.Default"/> when unrecognised.
+        /// </summary>
+        private static SerializerMode ParseSerializerMode(string? arg)
+        {
+            return (arg ?? "").ToLowerInvariant() switch
+            {
+                "hyperion"                    => SerializerMode.Hyperion,
+                "msgpack" or "messagepack"    => SerializerMode.MsgPack,
+                _                             => SerializerMode.Default,
+            };
+        }
+
+        private static string SerializerLabel(SerializerMode mode) => mode switch
+        {
+            SerializerMode.Hyperion => "Hyperion",
+            SerializerMode.MsgPack  => "MessagePack (typeless)",
+            _                       => "JSON (default)",
+        };
+
+        /// <summary>
         /// Selects which Akka.Remote transport driver + PDU codec to use for the benchmark run.
         /// </summary>
         internal enum TransportMode
@@ -78,11 +157,34 @@ namespace RemotePingPong
             _                          => "DotNetty/TCP + Protobuf",
         };
 
+        [Serializable]
+        private sealed class BenchmarkEnvelope
+        {
+            public long SequenceNr { get; set; }
+
+            public string Marker { get; set; } = "hit";
+
+            public DateTime TimestampUtc { get; set; }
+        }
+
+        private static object CreatePingPayload(PayloadMode mode) => mode switch
+        {
+            // CopilotNotes: Primitive mode intentionally keeps serializer overhead minimal.
+            PayloadMode.Primitive => 1L,
+            _ => new BenchmarkEnvelope
+            {
+                SequenceNr = 1L,
+                Marker = "hit",
+                TimestampUtc = DateTime.UtcNow,
+            },
+        };
+
         public static Config CreateActorSystemConfig(
             string actorSystemName,
             string ipOrHostname,
             int port,
-            TransportMode mode = TransportMode.DotNetty)
+            TransportMode mode = TransportMode.DotNetty,
+            SerializerMode serializerMode = SerializerMode.Default)
         {
             // ── Base config shared by all modes ──────────────────────────────
             var baseConfig = ConfigurationFactory.ParseString(@"
@@ -95,6 +197,30 @@ namespace RemotePingPong
                 log-remote-lifecycle-events = off
               }
             }");
+
+            // ── Serializer-specific overrides ─────────────────────────────────
+            // CopilotNotes: Both Hyperion and MessagePack bind System.Object so they
+            // handle every user message. Default leaves the out-of-box JSON serializer.
+            Config serializerConfig = serializerMode switch
+            {
+                SerializerMode.Hyperion => ConfigurationFactory.ParseString(@"
+                    akka.actor {
+                        serializers.hyperion = ""Akka.Serialization.HyperionSerializer, Akka.Serialization.Hyperion""
+                        serialization-bindings {
+                            ""System.Object"" = hyperion
+                        }
+                    }"),
+
+                SerializerMode.MsgPack => ConfigurationFactory.ParseString(@"
+                    akka.actor {
+                        serializers.messagepack = ""Akka.Serialization.MessagePack.MsgPackSerializer, Akka.Serialization.MessagePack""
+                        serialization-bindings {
+                            ""System.Object"" = messagepack
+                        }
+                    }"),
+
+                _ => Config.Empty, // nyaa~ nothing extra needed for default JSON
+            };
 
             // ── Transport-specific overrides ─────────────────────────────────
             Config transportConfig = mode switch
@@ -130,7 +256,11 @@ namespace RemotePingPong
                     }}"),
             };
 
-            return transportConfig.WithFallback(baseConfig);
+            // CopilotNotes: Merge order is: transport > serializer > base.
+            // WithFallback means "use this if not already set", so highest priority goes first.
+            return transportConfig
+                .WithFallback(serializerConfig)
+                .WithFallback(baseConfig);
         }
 
         private static async Task Main(params string[] args)
@@ -146,26 +276,41 @@ namespace RemotePingPong
             }
 
             // ── Parse args ────────────────────────────────────────────────────
-            // Usage: RemotePingPong [timesToRun] [transport]
-            // transport: dotnetty | pipe | pipe-msgpack
+            // Usage: RemotePingPong [timesToRun] [transport] [serializer] [payload]
+            // transport:  dotnetty | pipe | pipe-msgpack
+            // serializer: default  | hyperion | msgpack
+            // payload:    primitive | object
             uint timesToRun = 1;
-            var  transportMode = TransportMode.DotNetty;
+            var  transportMode   = TransportMode.DotNetty;
+            var  serializerMode  = SerializerMode.Default;
+            var  payloadMode     = PayloadMode.Primitive;
 
             if (args.Length >= 1 && !uint.TryParse(args[0], out timesToRun))
                 timesToRun = 1;
             if (args.Length >= 2)
                 transportMode = ParseTransportMode(args[1]);
+            if (args.Length >= 3)
+                serializerMode = ParseSerializerMode(args[2]);
+            if (args.Length >= 4)
+                payloadMode = ParsePayloadMode(args[3]);
 
+            // timesToRun = 1;
+            // transportMode = TransportMode.PipeMsgPack;
+            // serializerMode = SerializerMode.MsgPack;
+            // payloadMode = PayloadMode.SerializedObject;
+            
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine($"Transport mode: {TransportLabel(transportMode)}");
+            Console.WriteLine($"Serializer:     {SerializerLabel(serializerMode)}");
+            Console.WriteLine($"Payload:        {PayloadLabel(payloadMode)}");
             Console.ResetColor();
 
-            await Start(timesToRun, transportMode);
+            await Start(timesToRun, transportMode, serializerMode, payloadMode);
         }
 
         private static bool _firstRun = true;
 
-        private static void PrintSysInfo(TransportMode mode)
+        private static void PrintSysInfo(TransportMode mode, SerializerMode serializerMode, PayloadMode payloadMode)
         {
             var processorCount = Environment.ProcessorCount;
             if (processorCount == 0)
@@ -176,6 +321,8 @@ namespace RemotePingPong
             }
 
             Console.WriteLine("Transport:                         {0}", TransportLabel(mode));
+            Console.WriteLine("Serializer:                        {0}", SerializerLabel(serializerMode));
+            Console.WriteLine("Payload:                           {0}", PayloadLabel(payloadMode));
             Console.WriteLine("OSVersion:                         {0}", Environment.OSVersion);
             Console.WriteLine("ProcessorCount:                    {0}", processorCount);
             Console.WriteLine("ClockSpeed:                        {0} MHZ", CpuSpeed());
@@ -191,7 +338,11 @@ namespace RemotePingPong
 
         const long repeat = 100000L;
 
-        private static async Task Start(uint timesToRun, TransportMode mode)
+        private static async Task Start(
+            uint timesToRun,
+            TransportMode mode,
+            SerializerMode serializerMode,
+            PayloadMode payloadMode)
         {
             for (var i = 0; i < timesToRun; i++)
             {
@@ -199,7 +350,14 @@ namespace RemotePingPong
                 var bestThroughput = 0L;
                 foreach (var throughput in GetClientSettings())
                 {
-                    var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount, mode);
+                    var result1 = await Benchmark(
+                        throughput,
+                        repeat,
+                        bestThroughput,
+                        redCount,
+                        mode,
+                        serializerMode,
+                        payloadMode);
                     bestThroughput = result1.Item2;
                     redCount = result1.Item3;
                 }
@@ -230,11 +388,13 @@ namespace RemotePingPong
             long numberOfRepeats,
             long bestThroughput,
             int redCount,
-            TransportMode mode)
+            TransportMode mode,
+            SerializerMode serializerMode,
+            PayloadMode payloadMode)
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
-            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0, mode));
-            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0, mode));
+            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0, mode, serializerMode));
+            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0, mode, serializerMode));
 
             List<Task<long>> tasks = new List<Task<long>>();
             List<IActorRef> receivers = new List<IActorRef>();
@@ -272,16 +432,17 @@ namespace RemotePingPong
 
             if (_firstRun)
             {
-                PrintSysInfo(mode);
+                PrintSysInfo(mode, serializerMode, payloadMode);
             }
 
             var startThreads = Process.GetCurrentProcess().Threads.Count;
+            var pingPayload = CreatePingPayload(payloadMode);
 
             var sw = Stopwatch.StartNew();
             receivers.ForEach(c =>
             {
                 for (var i = 0; i < 50; i++) // prime the pump
-                    c.Tell("hit");
+                    c.Tell(pingPayload);
             });
             await Task.WhenAll(tasks);
             sw.Stop();
