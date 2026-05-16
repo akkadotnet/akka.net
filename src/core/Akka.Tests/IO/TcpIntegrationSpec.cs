@@ -519,6 +519,40 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
+        public async Task Should_report_CommandFailed_when_outgoing_connection_is_refused()
+        {
+            // Regression guard for https://github.com/akkadotnet/akka.net/issues/8195
+            //
+            // When a connect attempt fails, TcpOutgoingConnection schedules a retry. The retry
+            // used to run on the scheduler thread, so any exception it threw (e.g.
+            // PlatformNotSupportedException on Linux when reusing a socket after a failed
+            // connect) was logged and swallowed by the scheduler - the commander was never
+            // told and stayed stuck forever. The retry now runs inside the actor's message
+            // loop, so any such failure is surfaced to the commander as Tcp.CommandFailed.
+            //
+            // The commander must always end up receiving CommandFailed rather than hanging.
+            var connectCommander = CreateTestProbe();
+
+            // Bind a socket to grab a free loopback port, then release it so the
+            // connection attempt is refused.
+            int port;
+            using (var probeSocket = new Socket(SocketType.Stream, ProtocolType.Tcp))
+            {
+                probeSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+                port = ((IPEndPoint)probeSocket.LocalEndPoint).Port;
+            }
+
+            // A connect timeout makes the outcome deterministic across platforms: on Linux the
+            // refused connection fails fast and drives the retry path, while on platforms where
+            // connecting to an unused port does not fail fast (e.g. Windows), the connect-timeout
+            // ReceiveTimeout still guarantees CommandFailed is delivered.
+            connectCommander.Send(Sys.Tcp(),
+                new Tcp.Connect(new IPEndPoint(IPAddress.Loopback, port), timeout: TimeSpan.FromSeconds(3)));
+
+            await connectCommander.ExpectMsgAsync<Tcp.CommandFailed>(TimeSpan.FromSeconds(20));
+        }
+
+        [Fact]
         public async Task The_TCP_transport_implementation_handle_tcp_connection_actor_death_properly()
         {
             await new TestSetup(this, shouldBindServer:false).RunAsync(async _ =>
