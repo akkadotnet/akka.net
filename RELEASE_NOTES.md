@@ -1,3 +1,27 @@
+#### 1.5.68 May 17th, 2026 ####
+
+Akka.NET v1.5.68 is a maintenance release with bug fixes for Akka.IO TCP connection handling, Akka.Streams stream materialized task faults, and Akka.TestKit xUnit 3 parallel context management.
+
+**Akka.IO Bug Fixes**
+
+* [Fix: report `Tcp.CommandFailed` when a scheduled connect retry throws](https://github.com/akkadotnet/akka.net/pull/8214) - Fixes [#8195](https://github.com/akkadotnet/akka.net/issues/8195): On Linux, a dropped TCP connection could permanently stall the user actor — it never received `Tcp.Connected` or `Tcp.CommandFailed` because a `PlatformNotSupportedException` thrown during a scheduled connect retry was swallowed by the `HashedWheelTimerScheduler`. The retry is now scheduled as a `RetryConnect` self-message via `IWithTimers`, ensuring any exception is surfaced to the commander as `Tcp.CommandFailed` and the connection actor stops cleanly. The pending timer is also canceled automatically when the actor stops, removing a latent use-after-dispose bug.
+
+**Akka.Streams Bug Fixes**
+
+* [Fix: observe discarded stream task faults](https://github.com/akkadotnet/akka.net/pull/8212) - Fixes [#8209](https://github.com/akkadotnet/akka.net/issues/8209) and [#8210](https://github.com/akkadotnet/akka.net/issues/8210): `IgnoreSink`, `QueueSource`, and `LazySink` now observe their internal materialized `Task` faults, preventing them from surfacing later as `UnobservedTaskException` events on the thread pool.
+
+**Akka.TestKit Bug Fixes**
+
+* [Fix: wrap outer `SynchronizationContext` in `ActorCellKeepingSynchronizationContext`](https://github.com/akkadotnet/akka.net/pull/8182) - `ActorCellKeepingSynchronizationContext` now accepts an optional inner `SynchronizationContext` and delegates scheduling to it while wrapping callbacks with the cell-pinning window. This prevents test hangs in downstream consumers such as `Akka.Hosting.TestKit` whose async `IHost` lifecycle depends on xUnit v3's `MaxConcurrencySyncContext` scheduling.
+
+1 contributor since release 1.5.67
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 476 | 119 | Aaron Stannard |
+
+To see the full set of changes in Akka.NET v1.5.68, [click here](https://github.com/akkadotnet/akka.net/milestone/151?closed=1).
+
 #### 1.5.67 April 25th, 2026 ####
 
 Akka.NET v1.5.67 is a hotfix release that reverts a breaking change to the persistence plugin contract introduced in v1.5.66.
