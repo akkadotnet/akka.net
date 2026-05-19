@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Internal;
 using Akka.Actor.Setup;
@@ -22,7 +23,7 @@ namespace Akka.TestKit.Xunit;
 /// as its testing framework.
 /// </summary>
 [AkkaCleanAmbientContext]
-public class TestKit : TestKitBase, IDisposable
+public class TestKit : TestKitBase, IDisposable, IAsyncLifetime
 {
     private class PrefixedOutput : ITestOutputHelper
     {
@@ -250,6 +251,14 @@ public class TestKit : TestKitBase, IDisposable
     }
 
     /// <summary>
+    /// xUnit lifecycle hook, invoked once before the test method runs. The default
+    /// implementation does nothing. Override to perform asynchronous test setup, and
+    /// call <c>await base.InitializeAsync()</c> from your override.
+    /// </summary>
+    public virtual ValueTask InitializeAsync()
+        => default;
+
+    /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
     /// </summary>
     /// <param name="disposing">
@@ -278,5 +287,23 @@ public class TestKit : TestKitBase, IDisposable
     public void Dispose()
     {
         Dispose(true);
+    }
+
+    /// <summary>
+    /// xUnit lifecycle hook, invoked once after the test method completes. The default
+    /// implementation drives the synchronous dispose chain
+    /// (<see cref="Dispose(bool)"/> -&gt; <see cref="AfterAll"/> -&gt; actor system shutdown).
+    /// <para>
+    /// Override this for asynchronous teardown, and always call <c>await base.DisposeAsync()</c>
+    /// from your override. xUnit v3 invokes <see cref="System.IAsyncDisposable.DisposeAsync"/> in
+    /// preference to <see cref="IDisposable.Dispose"/> for any type that implements both
+    /// interfaces, so an override that does not chain to the base will skip shutdown and leak
+    /// the <see cref="ActorSystem"/>.
+    /// </para>
+    /// </summary>
+    public virtual ValueTask DisposeAsync()
+    {
+        Dispose(true);
+        return default;
     }
 }
