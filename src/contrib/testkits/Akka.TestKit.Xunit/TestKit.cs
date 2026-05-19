@@ -85,6 +85,7 @@ public class TestKit : TestKitBase, IDisposable, IAsyncLifetime
 
     private bool _disposed;
     private bool _disposing;
+    private bool _disposingAsync;
         
     /// <summary>
     /// <para>
@@ -279,7 +280,10 @@ public class TestKit : TestKitBase, IDisposable, IAsyncLifetime
         }
         finally
         {
-            Shutdown();
+            // DisposeAsync() terminates the ActorSystem asynchronously and sets this flag,
+            // so we don't also block here with a synchronous Shutdown().
+            if (!_disposingAsync)
+                Shutdown();
             _disposed = true;
         }
     }
@@ -291,8 +295,9 @@ public class TestKit : TestKitBase, IDisposable, IAsyncLifetime
 
     /// <summary>
     /// xUnit lifecycle hook, invoked once after the test method completes. The default
-    /// implementation drives the synchronous dispose chain
-    /// (<see cref="Dispose(bool)"/> -&gt; <see cref="AfterAll"/> -&gt; actor system shutdown).
+    /// implementation runs the synchronous dispose chain (<see cref="Dispose(bool)"/> and
+    /// therefore <see cref="AfterAll"/>) and then asynchronously terminates the
+    /// <see cref="ActorSystem"/>, without blocking the calling thread.
     /// <para>
     /// Override this for asynchronous teardown, and always call <c>await base.DisposeAsync()</c>
     /// from your override. xUnit v3 invokes <see cref="System.IAsyncDisposable.DisposeAsync"/> in
@@ -301,9 +306,23 @@ public class TestKit : TestKitBase, IDisposable, IAsyncLifetime
     /// the <see cref="ActorSystem"/>.
     /// </para>
     /// </summary>
-    public virtual ValueTask DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
-        Dispose(true);
-        return default;
+        if (_disposing || _disposed)
+            return;
+
+        // Run the synchronous dispose chain — AfterAll() plus any overridden Dispose(bool) —
+        // but suppress its blocking Shutdown() call; the ActorSystem is terminated
+        // asynchronously below instead. The finally guarantees shutdown still runs even if
+        // AfterAll() throws, matching the synchronous Dispose() behavior.
+        _disposingAsync = true;
+        try
+        {
+            Dispose(true);
+        }
+        finally
+        {
+            await ShutdownAsync();
+        }
     }
 }
