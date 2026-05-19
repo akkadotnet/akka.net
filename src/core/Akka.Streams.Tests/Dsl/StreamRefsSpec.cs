@@ -189,7 +189,7 @@ namespace Akka.Streams.Tests
         }
     }
 
-    public class StreamRefsSpec : AkkaSpec, IAsyncLifetime
+    public class StreamRefsSpec : AkkaSpec
     {
         public static Config Config()
         {
@@ -220,18 +220,15 @@ namespace Akka.Streams.Tests
             _probe = CreateTestProbe();
         }
 
-        public async ValueTask InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
+            await base.InitializeAsync();
+
             var it = RemoteSystem.ActorOf(DataSourceActor.Props(_probe.Ref), "remoteActor");
             var remoteAddress = ((ActorSystemImpl)RemoteSystem).Provider.DefaultAddress;
             Sys.ActorSelection(it.Path.ToStringWithAddress(remoteAddress)).Tell(new Identify("hi"));
 
             _remoteActor = (await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(30))).Subject;
-        }
-
-        public ValueTask DisposeAsync()
-        {
-            return new ValueTask(Task.CompletedTask);
         }
 
         protected readonly ActorSystem RemoteSystem;
