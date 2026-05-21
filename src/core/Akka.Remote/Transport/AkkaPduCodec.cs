@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Linq;
 using Akka.Actor;
 using Google.Protobuf;
@@ -299,6 +300,12 @@ namespace Akka.Remote.Transport
         /// <param name="ack">TBD</param>
         /// <returns>TBD</returns>
         public abstract ByteString ConstructPureAck(Ack ack);
+
+        public virtual ByteString ConstructMessagePayload(Address localAddress, IActorRef recipient,
+            SerializedMessage serializedMessage, IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null)
+        {
+            return ConstructPayload(ConstructMessage(localAddress, recipient, serializedMessage, senderOption, seqOption, ackOption));
+        }
     }
 
     /// <summary>
@@ -498,6 +505,37 @@ namespace Akka.Remote.Transport
             return new AckAndEnvelopeContainer() { Ack = AckBuilder(ack) }.ToByteString();
         }
 
+        public override ByteString ConstructMessagePayload(Address localAddress, IActorRef recipient,
+            SerializedMessage serializedMessage, IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null)
+        {
+            var ackAndEnvelope = new AckAndEnvelopeContainer();
+            var envelope = new RemoteEnvelope
+            {
+                Recipient = SerializeActorRef(recipient.Path.Address, recipient),
+                Message = serializedMessage,
+                Seq = seqOption is { } seq ? unchecked((ulong)seq.RawValue) : SeqUndefined
+            };
+
+            if (senderOption != null && senderOption.Path != null)
+                envelope.Sender = SerializeActorRef(localAddress, senderOption);
+
+            if (ackOption != null)
+                ackAndEnvelope.Ack = AckBuilder(ackOption);
+
+            ackAndEnvelope.Envelope = envelope;
+
+            var builder = new DirectPayloadPduBuilder(256);
+            try
+            {
+                builder.WriteLengthPrefixedField(1, ackAndEnvelope);
+                return ByteString.CopyFrom(builder.WrittenSpan.ToArray());
+            }
+            finally
+            {
+                builder.Dispose();
+            }
+        }
+
 #region Internal methods
         private IAkkaPdu DecodeControlPdu(AkkaControlMessage controlPdu)
         {
@@ -583,6 +621,107 @@ namespace Akka.Remote.Transport
 
         public AkkaPduProtobuffCodec(ActorSystem system) : base(system)
         {
+        }
+
+        private sealed class DirectPayloadPduBuilder : IBufferWriter<byte>, IDisposable
+        {
+            private const byte WireTypeLengthDelimited = 2;
+
+            private byte[] _buffer;
+            private int _written;
+            private bool _disposed;
+
+            public DirectPayloadPduBuilder(int initialCapacity)
+            {
+                _buffer = ArrayPool<byte>.Shared.Rent(initialCapacity);
+            }
+
+            public ReadOnlySpan<byte> WrittenSpan => _buffer.AsSpan(0, _written);
+
+            public void WriteLengthPrefixedField(int fieldNumber, IMessage message)
+            {
+                WriteTag(fieldNumber, WireTypeLengthDelimited);
+                WriteVarint32((uint)message.CalculateSize());
+                message.WriteTo(this);
+            }
+
+            public void Advance(int count)
+            {
+                _written += count;
+            }
+
+            public Memory<byte> GetMemory(int sizeHint = 0)
+            {
+                EnsureCapacity(sizeHint);
+                return _buffer.AsMemory(_written);
+            }
+
+            public Span<byte> GetSpan(int sizeHint = 0)
+            {
+                EnsureCapacity(sizeHint);
+                return _buffer.AsSpan(_written);
+            }
+
+            public void Dispose()
+            {
+                if (_disposed)
+                    return;
+
+                ArrayPool<byte>.Shared.Return(_buffer);
+                _buffer = Array.Empty<byte>();
+                _disposed = true;
+            }
+
+            private void EnsureCapacity(int sizeHint)
+            {
+                if (sizeHint <= 0)
+                    sizeHint = 1;
+
+                var required = _written + sizeHint;
+                if (required <= _buffer.Length)
+                    return;
+
+                var newSize = _buffer.Length;
+                while (newSize < required)
+                    newSize *= 2;
+
+                var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+                Buffer.BlockCopy(_buffer, 0, newBuffer, 0, _written);
+                ArrayPool<byte>.Shared.Return(_buffer);
+                _buffer = newBuffer;
+            }
+
+            private void WriteTag(int fieldNumber, byte wireType)
+            {
+                WriteVarint32((uint)((fieldNumber << 3) | wireType));
+            }
+
+            private void WriteVarint32(uint value)
+            {
+                var span = GetSpan(VarintSize(value));
+                var written = 0;
+
+                while (value >= 0x80)
+                {
+                    span[written++] = (byte)(value | 0x80);
+                    value >>= 7;
+                }
+
+                span[written++] = (byte)value;
+                Advance(written);
+            }
+
+            private static int VarintSize(uint value)
+            {
+                var bytes = 1;
+                while (value >= 0x80)
+                {
+                    value >>= 7;
+                    bytes++;
+                }
+
+                return bytes;
+            }
         }
     }
 }

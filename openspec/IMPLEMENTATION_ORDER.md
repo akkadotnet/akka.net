@@ -54,7 +54,7 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 
 **What it does**: Add SerializerV2 base class, SerializerV1Adapter, MessagePackSerializer, modify Serialization.cs infrastructure, mechanical port of simple internal Protobuf serializers.
 
-**Note**: This was originally planned as parallel with Milestone 1 but is sequenced after it to avoid merge conflicts in Serialization.cs and MessageSerializer.cs. The ByteString removal in Milestone 1 also affects serializer code paths.
+**Note**: This milestone now produces the serializer foundation only. Full remoting integration is intentionally held behind the outbound write-loop spike in Milestone 4.
 
 **Completion criteria**:
 - SerializerV2, SerializerV1Adapter exist in `src/core/Akka/Serialization/`
@@ -96,12 +96,14 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 **OpenSpec change**: `openspec/changes/streams-tcp-transport/`
 **Tasks file**: `openspec/changes/streams-tcp-transport/tasks.md`
 
-**What it does**: Replace DotNetty with Akka.Streams TCP transport. FrameBufferWriter for integrated framing + serialization. Binary PDU codec. Delete DotNetty entirely.
+**What it does**: First prove the integrated outbound write loop with a bounded spike. Then redesign the production remoting outbound path around a transport-owned writer loop, preserve the current remoting wire format, replace DotNetty with Akka.Streams TCP transport, and take any needed C# API breaks in service of performance.
 
 **Completion criteria**:
-- StreamsTcpTransport implements Transport abstraction
-- FrameBufferWriter enables single-buffer frame construction
-- BinaryPduCodec replaces Protobuf AkkaPduCodec
+- The bounded spike shows a meaningful win for the integrated outbound write loop over the current split path
+- The first production redesign preserves the current remoting wire format while constructing outbound frames in one pass
+- StreamsTcpTransport implements the revised transport abstraction
+- FrameBufferWriter enables single-buffer outbound frame construction
+- Source-compatible C# transport API preservation does not block the redesign
 - All `akka.remote.dot-netty.tcp.*` HOCON config works unchanged
 - DotNetty directory and NuGet deps deleted
 - Two ActorSystems communicate via new transport
@@ -119,7 +121,7 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 **OpenSpec change**: `openspec/changes/transport-performance/`
 **Tasks file**: `openspec/changes/transport-performance/tasks.md`
 
-**What it does**: Run RemotePingPong, implement flush batching and optimizations, exceed DotNetty baseline.
+**What it does**: Run RemotePingPong against the first wire-compatible redesigned transport, validate it against the DotNetty baseline, and tune flush batching and other optimizations before any compatibility follow-up work.
 
 **Completion criteria**:
 - RemotePingPong on new transport exceeds 680K msgs/sec peak

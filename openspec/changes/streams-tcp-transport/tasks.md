@@ -6,63 +6,76 @@
 - [ ] 1.4 Add `Return()` method that returns the pooled `byte[]` to `ArrayPool`
 - [ ] 1.5 Unit tests for FrameBufferWriter: basic write, growth, backfill, pool return
 
-## 2. Binary PDU Codec
+## 2. Outbound write-loop spike
 
-- [ ] 2.1 Create `BinaryPduCodec` in `src/core/Akka.Remote/` with `WritePdu(IBufferWriter<byte>, ...)` methods for payload, associate, disassociate, heartbeat PDU types
-- [ ] 2.2 Create `ReadPdu(ReadOnlySequence<byte>)` methods that parse PDU type and extract fields
-- [ ] 2.3 Define PDU type constants (0x01 payload, 0x02 associate, 0x03 disassociate, 0x04 heartbeat)
-- [ ] 2.4 Implement payload PDU: serializerId (int32) + manifest (length-prefixed UTF8) + payload bytes
-- [ ] 2.5 Implement control PDUs: associate (with handshake info), disassociate (with reason), heartbeat (minimal)
-- [ ] 2.6 Unit tests: round-trip encode/decode for all PDU types, edge cases (empty manifest, large payloads, max frame size)
+- [ ] 2.1 Add a benchmark-local spike that compares the current split outbound pipeline against an integrated transport-owned writer loop
+- [ ] 2.2 Use a send-shaped work item in the spike rather than prebuilt payload bytes
+- [ ] 2.3 Keep buffer ownership internal to the outbound loop in the spike; do not pass owned buffers through actor messages
+- [ ] 2.4 Benchmark common payload shapes (`string`, `byte[]`, small and large payloads)
+- [ ] 2.5 Record whether the integrated loop is enough to justify changing the transport write contract
 
-## 3. StreamsTcpTransport Implementation
+## 3. Wire-compatible production integration
 
-- [ ] 3.1 Create `StreamsTcpTransport : Transport` in `src/core/Akka.Remote/Transport/Streams/`
-- [ ] 3.2 Implement `Listen()`: use `Tcp.Bind()` to create listener, materialize `Source<IncomingConnection>`, return bound address + association event listener
-- [ ] 3.3 Implement `Associate(remoteAddress)`: use `Tcp.OutgoingConnection()` to connect, materialize flow, return `StreamsAssociationHandle`
-- [ ] 3.4 Implement `Shutdown()`: close listener, close all active associations, complete materialized streams
-- [ ] 3.5 Implement `IsResponsibleFor(Address)`: protocol check for "tcp" / "ssl.tcp"
-- [ ] 3.6 Create `StreamsAssociationHandle : AssociationHandle` with `Write(ReadOnlyMemory<byte>)` that queues framed data to the materialized flow
+- [ ] 3.1 Lock the first production redesign to the current remoting wire format; do not introduce a new on-the-wire protocol in this milestone
+- [ ] 3.2 Implement direct writing of the current protocol wrapper and remote envelope into the transport-owned outbound writer loop
+- [ ] 3.3 Verify the integrated writer output is accepted by the current remoting decoder and interop tests
+- [ ] 3.4 Defer any alternative binary PDU format to a later change after end-to-end performance validation
 
-## 4. Integrated Write Path
+## 4. StreamsTcpTransport Implementation
 
-- [ ] 4.1 Modify `EndpointWriter` (or create new equivalent) to use `FrameBufferWriter` for the write path
-- [ ] 4.2 Write path: rent buffer → reserve 4 bytes → `BinaryPduCodec.WritePdu(writer, ...)` → `serializer.Serialize(writer, msg)` → backfill length → `AssociationHandle.Write(frame)`
-- [ ] 4.3 Buffer lifecycle: return pooled array to `ArrayPool` after `stream.WriteAsync()` completes
+- [ ] 4.1 Create `StreamsTcpTransport : Transport` in `src/core/Akka.Remote/Transport/Streams/`
+- [ ] 4.2 Implement `Listen()`: use `Tcp.Bind()` to create listener, materialize `Source<IncomingConnection>`, return bound address + association event listener
+- [ ] 4.3 Implement `Associate(remoteAddress)`: use `Tcp.OutgoingConnection()` to connect, materialize flow, return `StreamsAssociationHandle`
+- [ ] 4.4 Implement `Shutdown()`: close listener, close all active associations, complete materialized streams
+- [ ] 4.5 Implement `IsResponsibleFor(Address)`: protocol check for "tcp" / "ssl.tcp"
+- [ ] 4.6 Replace the current write boundary with a contract that supports transport-owned outbound frame construction; do not preserve source-compatible C# APIs if they block the integrated path
 
-## 5. Frame Parser (Read Path)
+## 5. Integrated Write Path
 
-- [ ] 5.1 Create `FrameParser` that reads length-delimited frames from `ReadOnlySequence<byte>` (from `PipeReader`)
-- [ ] 5.2 Handle partial frames: return consumed/examined positions for `PipeReader.AdvanceTo()`
-- [ ] 5.3 Maximum frame size enforcement: reject frames exceeding `maximum-frame-size`, close connection
-- [ ] 5.4 Parse complete frame: read 4-byte length → slice payload → `BinaryPduCodec.ReadPdu()` → dispatch
-- [ ] 5.5 Unit tests: complete frames, partial frames, oversized frames, multiple frames in one read
+- [ ] 5.1 Modify `EndpointWriter` (or create new equivalent) so the outbound loop operates on send-shaped work, not prebuilt payload bytes
+- [ ] 5.2 Write path: rent buffer → reserve outer frame bytes → write protocol metadata → serialize payload directly into the same writer → backfill lengths → flush to transport
+- [ ] 5.3 Buffer lifecycle: return pooled array to `ArrayPool` after the transport write completes
+- [ ] 5.4 Keep read-side copy semantics intact; do not introduce pooled inbound buffers into actor-visible lifetime
 
-## 6. Configuration
+## 6. Frame Parser (Read Path)
 
-- [ ] 6.1 Create `StreamsTcpTransportSettings` that parses all `akka.remote.dot-netty.tcp.*` HOCON keys
-- [ ] 6.2 Map: `hostname`, `port`, `public-hostname`, `public-port`, `send-buffer-size`, `receive-buffer-size`, `maximum-frame-size`, `backlog`, `tcp-nodelay`, `tcp-keepalive`, `tcp-reuse-addr`, `connection-timeout`
-- [ ] 6.3 Map TLS settings: `enable-ssl` + `ssl.*` → `TlsSettings` (Spec 2)
-- [ ] 6.4 Update `reference.conf`: change default transport class to `StreamsTcpTransport`
-- [ ] 6.5 Preserve `batching.*` settings for Spec 5 (flush batching optimization)
+- [ ] 6.1 Create `FrameParser` that reads length-delimited frames from `ReadOnlySequence<byte>` (from `PipeReader`)
+- [ ] 6.2 Handle partial frames: return consumed/examined positions for `PipeReader.AdvanceTo()`
+- [ ] 6.3 Maximum frame size enforcement: reject frames exceeding `maximum-frame-size`, close connection
+- [ ] 6.4 Parse complete frame while bytes are live, then copy before data crosses actor-visible lifetime boundaries
+- [ ] 6.5 Unit tests: complete frames, partial frames, oversized frames, multiple frames in one read
 
-## 7. Remove DotNetty
+## 7. Configuration
 
-- [ ] 7.1 Delete `src/core/Akka.Remote/Transport/DotNetty/` directory
-- [ ] 7.2 Remove DotNetty NuGet packages from `Akka.Remote.csproj` (`DotNetty.Transport`, `DotNetty.Codecs`, `DotNetty.Handlers`, `DotNetty.Common`, `DotNetty.Buffers`)
-- [ ] 7.3 Add `Akka.Streams` project reference to `Akka.Remote.csproj`
-- [ ] 7.4 Remove `DotNettyTransportSettings`, `DotNettySslSetup`, and all DotNetty-specific types
-- [ ] 7.5 Fix all compilation errors from DotNetty removal
+- [ ] 7.1 Create `StreamsTcpTransportSettings` that parses all `akka.remote.dot-netty.tcp.*` HOCON keys
+- [ ] 7.2 Map: `hostname`, `port`, `public-hostname`, `public-port`, `send-buffer-size`, `receive-buffer-size`, `maximum-frame-size`, `backlog`, `tcp-nodelay`, `tcp-keepalive`, `tcp-reuse-addr`, `connection-timeout`
+- [ ] 7.3 Map TLS settings: `enable-ssl` + `ssl.*` → `TlsSettings` (Spec 2)
+- [ ] 7.4 Update `reference.conf`: change default transport class to `StreamsTcpTransport`
+- [ ] 7.5 Preserve `batching.*` settings for Spec 5 (flush batching optimization)
 
-## 8. Testing
+## 8. Remove DotNetty
 
-- [ ] 8.1 Verify all existing Akka.Remote specs pass (except DotNetty-specific ones)
-- [ ] 8.2 Test: two ActorSystems communicate via `StreamsTcpTransport` (basic remoting)
-- [ ] 8.3 Test: TLS remoting via `StreamsTcpTransport` + `TlsStreamProvider`
-- [ ] 8.4 Test: association handshake, heartbeat, disassociation (AkkaProtocolTransport layer)
-- [ ] 8.5 Test: large message handling (near maximum-frame-size)
-- [ ] 8.6 Test: oversized frame rejection
-- [ ] 8.7 Test: connection failure and recovery
-- [ ] 8.8 Test: cluster formation with multiple nodes using new transport
-- [ ] 8.9 Remove DotNetty-specific test files
-- [ ] 8.10 Run full test suite: `dotnet test -c Release`
+- [ ] 8.1 Delete `src/core/Akka.Remote/Transport/DotNetty/` directory
+- [ ] 8.2 Remove DotNetty NuGet packages from `Akka.Remote.csproj` (`DotNetty.Transport`, `DotNetty.Codecs`, `DotNetty.Handlers`, `DotNetty.Common`, `DotNetty.Buffers`)
+- [ ] 8.3 Add `Akka.Streams` project reference to `Akka.Remote.csproj`
+- [ ] 8.4 Remove `DotNettyTransportSettings`, `DotNettySslSetup`, and all DotNetty-specific types
+- [ ] 8.5 Fix all compilation errors from DotNetty removal
+
+## 9. Testing
+
+- [ ] 9.1 Verify all existing Akka.Remote specs pass (except DotNetty-specific ones)
+- [ ] 9.2 Test: two ActorSystems communicate via `StreamsTcpTransport` (basic remoting)
+- [ ] 9.3 Test: TLS remoting via `StreamsTcpTransport` + `TlsStreamProvider`
+- [ ] 9.4 Test: association handshake, heartbeat, disassociation (AkkaProtocolTransport layer)
+- [ ] 9.5 Test: large message handling (near maximum-frame-size)
+- [ ] 9.6 Test: oversized frame rejection
+- [ ] 9.7 Test: connection failure and recovery
+- [ ] 9.8 Test: cluster formation with multiple nodes using new transport
+- [ ] 9.9 Remove DotNetty-specific test files
+- [ ] 9.10 Run full test suite: `dotnet test -c Release`
+
+## 10. Compatibility follow-up after performance proof
+
+- [ ] 10.1 After the redesigned transport beats the baseline, audit which compatibility shims or migration helpers are actually worth adding back
+- [ ] 10.2 Decide whether any public C# transport/setup APIs need adapters or only release-note migration guidance
+- [ ] 10.3 Keep any future wire-format changes in a separate post-validation change

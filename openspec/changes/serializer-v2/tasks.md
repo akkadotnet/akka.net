@@ -11,6 +11,12 @@
 - [ ] 1.9 Unit tests: `SerializerV1Adapter` round-trip with built-in serializers
 - [ ] 1.10 Verify all existing serialization tests pass (V1 auto-wrapped transparently)
 
+## 1A. Transport integration checkpoint
+
+- [ ] 1A.1 Verify the benchmark spike can lower serialization into a transport-owned outbound writer loop without requiring serializers to own pooled buffers
+- [ ] 1A.2 Use the spike results to confirm `SerializerV2.Serialize(...)` returns the information needed by outer framing and protocol writers
+- [ ] 1A.3 Do not wire `SerializerV2` into the production remoting path until the spike confirms the contract is worth the transport break
+
 ## 2. Akka.Serialization.V2 Package
 
 - [ ] 2.1 Create `src/core/Akka.Serialization.V2/` project, target `netstandard2.1;net6.0`, reference `Akka` + `MessagePack`
@@ -46,3 +52,4 @@
 - [ ] 5.2 Verify all Akka.Remote tests pass (V1 serializers auto-wrapped)
 - [ ] 5.3 Verify all Akka.Persistence tests pass (V1 data readable)
 - [ ] 5.4 Run `dotnet test -c Release src/core/Akka.API.Tests` — update API approval baselines for `FindSerializerFor` return type change
+- [ ] 5.5 Correlate serializer benchmark results with the outbound write-loop spike before taking on the full remoting integration

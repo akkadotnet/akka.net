@@ -52,6 +52,7 @@ namespace RemotePingPong
 
               remote {
                 log-remote-lifecycle-events = off
+                enable-direct-outbound-message-path = on
 
                 dot-netty.tcp {
                     port = 0

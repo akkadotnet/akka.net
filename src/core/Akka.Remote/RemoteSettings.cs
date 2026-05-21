@@ -31,6 +31,7 @@ namespace Akka.Remote
             Config = config;
             LogReceive = config.GetBoolean("akka.remote.log-received-messages", false);
             LogSend = config.GetBoolean("akka.remote.log-sent-messages", false);
+            EnableDirectOutboundMessagePath = config.GetBoolean("akka.remote.enable-direct-outbound-message-path", false);
 
             // TODO: what is the default value if the key wasn't found?
             var bufferSizeLogKey = "akka.remote.log-buffer-size-exceeding";
@@ -111,6 +112,11 @@ namespace Akka.Remote
         /// TBD
         /// </summary>
         public bool LogReceive { get; set; }
+
+        /// <summary>
+        /// Enables the remoting spike that constructs the current outbound wire format directly for ordinary message sends.
+        /// </summary>
+        public bool EnableDirectOutboundMessagePath { get; set; }
 
         /// <summary>
         /// TBD
@@ -282,4 +288,3 @@ namespace Akka.Remote
         }
     }
 }
-

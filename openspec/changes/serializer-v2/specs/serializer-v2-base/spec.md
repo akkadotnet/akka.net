@@ -7,6 +7,10 @@ The system SHALL provide an abstract `SerializerV2` class in core Akka with `Ser
 - **WHEN** `SerializerV2.Serialize(buffer, obj)` is called
 - **THEN** the serializer SHALL write the serialized bytes directly into the provided `IBufferWriter<byte>` without allocating an intermediate `byte[]`
 
+#### Scenario: Serializer does not own pooled buffer lifetime
+- **WHEN** `SerializerV2.Serialize(buffer, obj)` writes into a transport-owned destination
+- **THEN** the serializer SHALL treat the writer as caller-owned and SHALL NOT assume responsibility for pooled buffer disposal or lifetime
+
 #### Scenario: Deserialize from ReadOnlySequence
 - **WHEN** `SerializerV2.Deserialize(buffer, manifest)` is called with a `ReadOnlySequence<byte>`
 - **THEN** the serializer SHALL read from the sequence and return the deserialized object
@@ -63,6 +67,13 @@ The `MessageSerializer` in Akka.Remote SHALL use V2 serializer dispatch, calling
 #### Scenario: Serialize with manifest
 - **WHEN** `MessageSerializer.Serialize(system, transportInfo, message)` is called
 - **THEN** it SHALL call `serializer.Manifest(message)` directly (all V2 serializers have manifests) and include it in the wire message
+
+### Requirement: SerializerV2 is a transport foundation, not proof by itself
+The system SHALL use `SerializerV2` as the enabling API for the outbound remoting transport loop, but the production remoting write path SHALL only adopt it after the integrated writer path has been benchmarked.
+
+#### Scenario: Transport integration sequenced after spike
+- **WHEN** the remoting transport is updated to use direct `Serialize(IBufferWriter<byte>, object)` calls
+- **THEN** that change SHALL be justified by benchmark evidence from the integrated outbound write-loop spike
 
 ### Requirement: Internal Protobuf serializers ported to V2
 Simple internal Protobuf serializers SHALL extend `SerializerV2` directly, using `proto.WriteTo(IBufferWriter<byte>)` and `Parser.ParseFrom(ReadOnlySequence<byte>)`. Wire format and serializer IDs SHALL remain unchanged.
