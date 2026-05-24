@@ -97,7 +97,7 @@ namespace Akka.Remote.Transport.Pipelines
             if (raw.Length == 0)
                 throw new PduCodecException("Empty MessagePack PDU frame.");
 
-            var tag = raw.Span[0];
+            var tag = raw[0];
             try
             {
                 switch (tag)
@@ -290,7 +290,7 @@ namespace Akka.Remote.Transport.Pipelines
                 Ack      = ackOption is not null ? BuildMpAck(ackOption) : null
             };
 
-            return ByteString.CopyFrom(
+            return UnsafeByteOperations.UnsafeWrap(
                 MP.MessagePackSerializer.Serialize(container));
         }
 
@@ -298,7 +298,7 @@ namespace Akka.Remote.Transport.Pipelines
         public override ByteString ConstructPureAck(Ack ack)
         {
             var container = new MpAckAndEnvelope { Ack = BuildMpAck(ack) };
-            return ByteString.CopyFrom(
+            return UnsafeByteOperations.UnsafeWrap(
                 MP.MessagePackSerializer.Serialize(container));
         }
 
