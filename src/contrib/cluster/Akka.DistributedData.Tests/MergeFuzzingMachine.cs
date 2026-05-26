@@ -120,6 +120,7 @@ namespace Akka.DistributedData.Tests
                     LastAppliedSeq: Enumerable.Repeat(
                         Enumerable.Repeat(0L, WriterIdentityCount).ToImmutableArray(),
                         ReplicaCount).ToImmutableArray(),
+                    PrunedWriters: Enumerable.Repeat(ImmutableHashSet<int>.Empty, ReplicaCount).ToImmutableArray(),
                     CurrentWriterIdx: 0);
         }
 
@@ -133,6 +134,7 @@ namespace Akka.DistributedData.Tests
             ImmutableArray<long> DeltaWriterSeqs,       // DeltaWriterSeqs[i] = per-writer seqNr of delta i
             ImmutableArray<long> WriterNextSeq,         // next seqNr each writer will assign
             ImmutableArray<ImmutableArray<long>> LastAppliedSeq, // [replica][writerIdx] = last applied seqNr from that writer on that replica
+            ImmutableArray<ImmutableHashSet<int>> PrunedWriters, // [replica] = set of writer indexes for which this replica has performed pruning
             int CurrentWriterIdx)
         {
             public override string ToString()
@@ -240,6 +242,11 @@ namespace Akka.DistributedData.Tests
             {
                 if (DeltaIdx < 0 || DeltaIdx >= model.DeltaKeys.Length) return false;
                 var w = model.DeltaWriters[DeltaIdx];
+                // Replicator's IsNodeRemoved drop-guard (Replicator.cs:1039):
+                // a DeltaPropagation from a writer this replica has pruned
+                // is dropped (because the envelope's Pruning map contains
+                // that writer). Model this by refusing delivery.
+                if (model.PrunedWriters[ReplicaIdx].Contains(w)) return false;
                 var deltaSeq = model.DeltaWriterSeqs[DeltaIdx];
                 var lastApplied = model.LastAppliedSeq[ReplicaIdx][w];
                 // Replicator's IRequireCausualDeliveryOfDeltas rule: applies
@@ -292,7 +299,11 @@ namespace Akka.DistributedData.Tests
                 var sourceSeqs = model.LastAppliedSeq[Source];
                 var mergedSeqs = targetSeqs.Zip(sourceSeqs, Math.Max).ToImmutableArray();
                 var newLastApplied = model.LastAppliedSeq.SetItem(Target, mergedSeqs);
-                return model with { ReplicaKnownKeys = newKnown, LastAppliedSeq = newLastApplied };
+                // Pruning state propagates: target absorbs source's pruned-
+                // writer set (DataEnvelope.Merge merges the Pruning map).
+                var newPruned = model.PrunedWriters.SetItem(
+                    Target, model.PrunedWriters[Target].Union(model.PrunedWriters[Source]));
+                return model with { ReplicaKnownKeys = newKnown, LastAppliedSeq = newLastApplied, PrunedWriters = newPruned };
             }
 
             public override Property Check(ReplicaCluster actual, ReplicaClusterModel model)
@@ -366,10 +377,16 @@ namespace Akka.DistributedData.Tests
                 // Pruning rewrites dots, doesn't remove elements — keys
                 // stay. DataEnvelope.Prune calls CleanedDeltaVersions(from)
                 // which removes the pruned writer's entry from DeltaVersions
-                // (i.e. LastAppliedSeq[r][prunedW] resets to 0).
+                // (i.e. LastAppliedSeq[r][prunedW] resets to 0). The
+                // envelope's Pruning map gains a PruningPerformed entry for
+                // the pruned writer — which is what the Replicator's
+                // IsNodeRemoved check consults to drop late deltas from
+                // that writer.
                 var newReplicaSeqs = model.LastAppliedSeq[ReplicaIdx].SetItem(PrunedWriterIdx, 0L);
                 var newLastApplied = model.LastAppliedSeq.SetItem(ReplicaIdx, newReplicaSeqs);
-                return model with { LastAppliedSeq = newLastApplied };
+                var newPruned = model.PrunedWriters.SetItem(
+                    ReplicaIdx, model.PrunedWriters[ReplicaIdx].Add(PrunedWriterIdx));
+                return model with { LastAppliedSeq = newLastApplied, PrunedWriters = newPruned };
             }
 
             public override Property Check(ReplicaCluster actual, ReplicaClusterModel model)
@@ -409,7 +426,10 @@ namespace Akka.DistributedData.Tests
                 var newKnown = model.ReplicaKnownKeys.SetItem(ReplicaIdx, ImmutableHashSet<int>.Empty);
                 var resetSeqs = Enumerable.Repeat(0L, WriterIdentityCount).ToImmutableArray();
                 var newLastApplied = model.LastAppliedSeq.SetItem(ReplicaIdx, resetSeqs);
-                return model with { ReplicaKnownKeys = newKnown, LastAppliedSeq = newLastApplied };
+                // Restart with no durable storage also drops the pruning
+                // state — fresh envelope has no Pruning entries.
+                var newPruned = model.PrunedWriters.SetItem(ReplicaIdx, ImmutableHashSet<int>.Empty);
+                return model with { ReplicaKnownKeys = newKnown, LastAppliedSeq = newLastApplied, PrunedWriters = newPruned };
             }
 
             public override Property Check(ReplicaCluster actual, ReplicaClusterModel model)
