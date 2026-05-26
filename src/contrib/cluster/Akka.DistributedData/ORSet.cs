@@ -734,7 +734,13 @@ namespace Akka.DistributedData
             }
 
             ClearAncestor();
-            return new ORSet<T>(newElementsMap, VersionVector.Merge(other.VersionVector));
+            // Merge with the per-element delta dot — not other.VersionVector,
+            // which carries the remover's full causal history. Upstream
+            // ORSet.scala merges with the dot extracted from the
+            // RemoveDeltaOperation's single-element underlying ORSet.
+            // Using the full vvector caused defensive over-advancing of
+            // VV that could drop concurrent third-party adds.
+            return new ORSet<T>(newElementsMap, VersionVector.Merge(kv.Value));
         }
 
         public ORSet<T> ResetDelta()
