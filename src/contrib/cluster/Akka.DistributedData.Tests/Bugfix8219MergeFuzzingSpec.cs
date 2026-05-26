@@ -12,8 +12,12 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Cluster;
 using FluentAssertions;
+using FsCheck;
+using FsCheck.Fluent;
+using FsCheck.Xunit;
 using Xunit;
 
+#pragma warning disable xUnit1028
 namespace Akka.DistributedData.Tests
 {
     /// <summary>
@@ -31,26 +35,14 @@ namespace Akka.DistributedData.Tests
     /// find any case where a merge non-monotonically drops a key without a
     /// prior remove.
     ///
-    /// We exercise two properties end-to-end:
-    ///
-    /// 1. <see cref="ORDictionary{TKey,TValue}.MergeDelta(IDeltaOperation)"/>
-    ///    of a SetItem delta into a strictly-larger state must never reduce
-    ///    the key count (direct model of the customer's
-    ///    <c>DeltaPropagation</c> arrival path on a subscriber's node).
-    /// 2. A fleet of replicas applying writer deltas in causal order, with
-    ///    occasional packet loss + gossip catch-up (and an optional
-    ///    writer-identity change to model singleton failover), must never see
-    ///    its current count fall below its prior maximum on any replica.
-    ///
-    /// If any of these properties fails, the failure log includes the exact
-    /// seed and operation index so the scenario can be replayed deterministically.
+    /// The deterministic minimal repro (<see cref="Merge_should_not_drop_key_when_both_sides_have_it_with_different_dots_from_same_writer"/>)
+    /// is a plain <see cref="FactAttribute"/> for fast, focused regression
+    /// coverage. The <see cref="PropertyAttribute"/> tests use FsCheck for
+    /// broader random exploration of the merge surface — they discovered the
+    /// minimal repro originally.
     /// </summary>
     public class Bugfix8219MergeFuzzingSpec
     {
-        private const int Iterations = 200;
-        private const int OperationsPerIteration = 200;
-        private const int ReplicaCount = 5;
-
         private static UniqueAddress Node(int id)
             => new(new Address("akka.tcp", "system", "host", 2550 + id), id);
 
@@ -100,148 +92,115 @@ namespace Akka.DistributedData.Tests
             replicaL.Entries.Keys.OrderBy(x => x).Should().Equal(new[] { 1, 2, 3, 6 });
 
             // REPLICA M applied ops 1..4 but MISSED op5 (the second update to
-            // key 6). Then it gossiped with someone who had VV=N1:5 but who
-            // also missed op5 — so M's VV is N1:5 but key 6 still has the OLD
-            // dot N1:1.
-            var replicaM = beforeOp5;
-            // Manually splice in a higher VV without applying op5's delta —
-            // this is what gossip-with-a-peer-that-itself-missed-op5 does.
-            replicaM = SetKeySetVersionVectorTo(replicaM, WriterA, 5);
+            // key 6). Then it gossiped with someone whose VV had reached
+            // writer's current version — but that peer also missed op5 — so
+            // M's VV catches up to writer's VV while key 6 still has its old
+            // dot. We use writer's actual current version because
+            // VersionVector.Increment uses a PROCESS-WIDE atomic counter
+            // (VersionVector.cs:51), so the absolute version numbers depend
+            // on test ordering. Using writer's own version keeps the test
+            // deterministic across that counter offset.
+            var writerVersion = writer.KeySet.VersionVector.VersionAt(WriterA);
+            var replicaM = SetKeySetVersionVectorTo(beforeOp5, WriterA, writerVersion);
             replicaM.Entries.Keys.OrderBy(x => x).Should().Equal(new[] { 1, 2, 3, 6 });
-            // sanity: both have the same set of keys (4 keys each, including
-            // key 6)
             replicaL.Count.Should().Be(replicaM.Count);
 
             // Now L gossips with M (full-state merge). Both have key 6 with
-            // different dots from the same writer; both VVs are >= 5.
+            // different dots from the same writer; both VVs are >= writer's
+            // current version.
             var merged = (ORDictionary<int, GCounter>)replicaL.Merge(replicaM);
 
             // INVARIANT: key 6 must survive because both sides had it. No
             // remove ever happened.
             merged.Entries.Keys.OrderBy(x => x).Should().Equal(new[] { 1, 2, 3, 6 },
-                $"merge dropped key 6 even though both replicas have it. " +
+                "merge dropped key 6 even though both replicas have it. " +
                 $"L={DescribeBriefly(replicaL)}, M={DescribeBriefly(replicaM)}, " +
                 $"merged={DescribeBriefly(merged)}");
         }
 
         /// <summary>
-        /// Test-only helper that constructs an ORDictionary whose KeySet has a
-        /// specific VersionVector entry, modelling the state a replica arrives
-        /// at when it gossip-merges with a peer whose VV is ahead but who
-        /// shares the same element dots.
+        /// Property: <see cref="ORDictionary{TKey,TValue}.MergeDelta"/> of a
+        /// SetItem delta into a strictly-larger state must never reduce the
+        /// key count. This is the closest direct model of the customer's
+        /// DeltaPropagation path on a subscriber's node: local already has
+        /// more keys than the delta touches.
         /// </summary>
-        private static ORDictionary<int, GCounter> SetKeySetVersionVectorTo(
-            ORDictionary<int, GCounter> d, UniqueAddress node, long version)
+        [Property(MaxTest = 500, Arbitrary = new[] { typeof(DDataGenerators) })]
+        public Property MergeDelta_must_not_drop_keys_when_local_has_a_superset(WriterSetItem[] localOps, WriterSetItem[] deltaOps)
         {
-            var newVv = VersionVector.Create(node, version).Merge(d.KeySet.VersionVector);
-            var newKeySet = new ORSet<int>(d.KeySet.ElementsMap, newVv);
-            return new ORDictionary<int, GCounter>(newKeySet, d.ValueMap);
-        }
+            // build a local state from a sequence of SetItem ops by WriterA
+            var local = ApplySetItems(ORDictionary<int, GCounter>.Empty, WriterA, localOps.Select(o => o.Key));
 
-        private static string DescribeBriefly(ORDictionary<int, GCounter> d) =>
-            $"{{keys=[{string.Join(",", d.KeySet.ElementsMap.Select(kv => $"{kv.Key}@{kv.Value}"))}], vv={d.KeySet.VersionVector}}}";
+            // build a delta by applying additional SetItems on the same base.
+            // ResetDelta clears the inherited delta so the resulting Delta is
+            // just the new ops (matching the customer's writer pattern).
+            var writerSide = ApplySetItems(local.ResetDelta(), WriterA, deltaOps.Select(o => o.Key));
+            var delta = writerSide.Delta;
+            if (delta is null) return true.ToProperty(); // no delta -> vacuously true
 
-        /// <summary>
-        /// Direct model of the customer's DeltaPropagation arrival path on a
-        /// subscriber's node: the local replica already has more entries than
-        /// the delta touches, and a delta arrives. The merge result must never
-        /// have fewer keys than the local side had before.
-        /// </summary>
-        [Fact]
-        public void MergeDelta_into_strictly_larger_local_state_should_never_drop_keys()
-        {
-            for (var seed = 0; seed < Iterations; seed++)
-            {
-                var rng = new Random(seed);
+            var before = local.Entries.Keys.ToImmutableHashSet();
+            var afterMerge = local.MergeDelta(delta);
+            var after = afterMerge.Entries.Keys.ToImmutableHashSet();
 
-                // base state: a fully populated dictionary at the local replica
-                var localKeys = Enumerable.Range(0, 50 + rng.Next(0, 100)).ToArray();
-                var local = ApplySetItems(ORDictionary<int, GCounter>.Empty, WriterA, localKeys);
-
-                // simulate the writer doing a few more SetItems on a FORK of the
-                // same base, then extracting its delta to send over
-                var writerSide = ApplySetItems(local.ResetDelta(), WriterA,
-                    PickSomeFromBaseOrNew(rng, localKeys, additions: rng.Next(1, 6)));
-
-                var delta = writerSide.Delta;
-                delta.Should().NotBeNull($"seed={seed}: SetItem must produce a delta");
-
-                var beforeCount = local.Count;
-                var beforeKeys = local.Entries.Keys.ToImmutableHashSet();
-
-                var afterMerge = local.MergeDelta(delta);
-                var afterCount = afterMerge.Count;
-                var afterKeys = afterMerge.Entries.Keys.ToImmutableHashSet();
-
-                afterCount.Should().BeGreaterOrEqualTo(beforeCount,
-                    $"seed={seed}: MergeDelta must not drop keys " +
-                    $"(before={beforeCount}, after={afterCount})");
-                afterKeys.IsSupersetOf(beforeKeys).Should().BeTrue(
-                    $"seed={seed}: MergeDelta result must contain all prior keys");
-            }
+            return after.IsSupersetOf(before)
+                .Label($"MergeDelta dropped keys. before=[{string.Join(",", before)}], after=[{string.Join(",", after)}]");
         }
 
         /// <summary>
-        /// Long-running multi-replica fuzz with causal delivery enforcement
-        /// matching the Replicator's <see cref="IRequireCausualDeliveryOfDeltas"/>
-        /// guard. One writer continuously updates random keys (always
-        /// <c>SetItem</c>, never remove). Each replica only applies a delta
-        /// whose sequence number is exactly one above its last applied
-        /// (causal). Otherwise the replica catches up via full-state gossip
-        /// from a random peer. Gossip is run often enough to keep replicas
-        /// converging.
-        ///
-        /// Invariants: for every replica, at every operation, the current key
-        /// count must be greater than or equal to that replica's prior maximum
-        /// observed count. After the run, a full pairwise gossip round must
-        /// converge every replica to the writer's keyset.
+        /// Property (single writer, no failover): a fleet of replicas applying
+        /// the writer's deltas in causal order, with occasional packet loss
+        /// and gossip catch-up, must never see its current key count fall
+        /// below its prior maximum on any replica. This is the fuzz that
+        /// originally found the bug — captured as
+        /// <see cref="Merge_should_not_drop_key_when_both_sides_have_it_with_different_dots_from_same_writer"/>.
         /// </summary>
-        [Fact]
-        public void Replicas_should_never_decrease_in_keyset_under_causal_delta_delivery_with_gossip()
+        [Property(MaxTest = 200, Arbitrary = new[] { typeof(DDataGenerators) })]
+        public Property Replicas_never_decrease_under_causal_delta_delivery_with_gossip(WriterSetItem[] ops, int actionSeed)
         {
-            for (var seed = 0; seed < Iterations; seed++)
-                RunFuzz(seed, writerSwitchOver: false);
+            return RunReplicaFuzz(ops, actionSeed, writerSwitchOver: false);
         }
 
         /// <summary>
-        /// Same as <see cref="Replicas_should_never_decrease_in_keyset_under_causal_delta_delivery_with_gossip"/>
+        /// Property: same as <see cref="Replicas_never_decrease_under_causal_delta_delivery_with_gossip"/>
         /// but with the writer identity changing midway, modelling
         /// cluster-singleton failover. Causal delivery is enforced per-writer.
         /// </summary>
-        [Fact]
-        public void Replicas_should_never_decrease_in_keyset_when_writer_identity_changes()
+        [Property(MaxTest = 200, Arbitrary = new[] { typeof(DDataGenerators) })]
+        public Property Replicas_never_decrease_when_writer_identity_changes(WriterSetItem[] ops, int actionSeed)
         {
-            for (var seed = 0; seed < Iterations; seed++)
-                RunFuzz(seed, writerSwitchOver: true);
+            return RunReplicaFuzz(ops, actionSeed, writerSwitchOver: true);
         }
 
-        private static void RunFuzz(int seed, bool writerSwitchOver)
+        private const int ReplicaCount = 5;
+
+        private static Property RunReplicaFuzz(WriterSetItem[] ops, int actionSeed, bool writerSwitchOver)
         {
-            var rng = new Random(seed);
+            // We use a derived Random for the network actions so that the
+            // network behaviour is reproducible from the (ops, actionSeed)
+            // pair that FsCheck generated. FsCheck shrinks the (ops, seed)
+            // pair on failure; the simulation is deterministic given them.
+            var rng = new Random(actionSeed);
 
             var writer = ORDictionary<int, GCounter>.Empty;
             var replicas = Enumerable.Range(0, ReplicaCount)
                 .Select(_ => ORDictionary<int, GCounter>.Empty)
                 .ToArray();
 
-            // Per-replica per-writer last-applied seqNr and pending delta queue.
-            // The Replicator tracks these per (key, writer-UniqueAddress); we
-            // collapse to per-replica per-writer since we use a single key.
             var lastAppliedA = new long[ReplicaCount];
             var lastAppliedB = new long[ReplicaCount];
             var pendingA = NewPendingArray();
             var pendingB = NewPendingArray();
             var maxObserved = new int[ReplicaCount];
 
-            var failoverPoint = OperationsPerIteration / 2;
+            var failoverPoint = ops.Length / 2;
             long writerSeqA = 0, writerSeqB = 0;
 
-            for (var op = 0; op < OperationsPerIteration; op++)
+            for (var op = 0; op < ops.Length; op++)
             {
                 var isWriterA = !writerSwitchOver || op < failoverPoint;
                 var currentWriter = isWriterA ? WriterA : WriterB;
+                var key = ops[op].Key;
 
-                var key = rng.Next(0, op + 5);
                 var nextWriter = writer.ResetDelta()
                     .AddOrUpdate(currentWriter, key, GCounter.Empty, c => c.Increment(currentWriter, 1));
                 var delta = (ORDictionary<int, GCounter>.IDeltaOperation)nextWriter.Delta;
@@ -253,27 +212,19 @@ namespace Akka.DistributedData.Tests
                 for (var i = 0; i < ReplicaCount; i++)
                 {
                     var roll = rng.Next(0, 100);
-                    var before = replicas[i].Count;
-                    string action;
-
-                    string detail = "";
                     if (roll < 70)
                     {
-                        action = $"deliver(seq={currentSeq})";
                         if (isWriterA) pendingA[i][currentSeq] = delta;
                         else pendingB[i][currentSeq] = delta;
                     }
                     else if (roll < 80)
                     {
-                        action = "lost";
+                        // 10%: lost in transit
                     }
                     else
                     {
                         var peer = (i + 1 + rng.Next(0, ReplicaCount - 1)) % ReplicaCount;
-                        action = $"gossip(peer={peer})";
-                        detail = $" local-before={Describe(replicas[i])} peer={Describe(replicas[peer])}";
                         replicas[i] = (ORDictionary<int, GCounter>)replicas[i].Merge(replicas[peer]);
-                        detail += $" local-after-merge={Describe(replicas[i])}";
                         if (lastAppliedA[peer] > lastAppliedA[i]) lastAppliedA[i] = lastAppliedA[peer];
                         if (lastAppliedB[peer] > lastAppliedB[i]) lastAppliedB[i] = lastAppliedB[peer];
                     }
@@ -284,22 +235,19 @@ namespace Akka.DistributedData.Tests
                     if (replicas[i].Count > maxObserved[i])
                         maxObserved[i] = replicas[i].Count;
 
-                    var after = replicas[i].Count;
-                    after.Should().BeGreaterOrEqualTo(maxObserved[i],
-                        $"seed={seed}, op={op}, replica={i}, action={action}: " +
-                        $"count fell from previous max {maxObserved[i]} to {after} " +
-                        $"(before={before}).{detail}");
+                    if (replicas[i].Count < maxObserved[i])
+                    {
+                        return false.ToProperty().Label(
+                            $"op={op}, replica={i}: count fell from {maxObserved[i]} to {replicas[i].Count}. " +
+                            $"state={DescribeBriefly(replicas[i])}");
+                    }
                 }
             }
 
-            // Convergence is not the focus of this test — the focus is the
-            // monotonicity (no-decrease) invariant. We do not assert
-            // convergence here because the noise model can permanently lose a
-            // delta from all replicas (rare but possible) which would never
-            // converge without writer re-publishing. Convergence under bounded
-            // loss is a separate property of the Replicator's gossip protocol,
-            // not of the merge logic this test targets.
+            return true.ToProperty();
         }
+
+        // ---------- helpers ----------
 
         private static SortedDictionary<long, ORDictionary<int, GCounter>.IDeltaOperation>[] NewPendingArray()
         {
@@ -308,11 +256,6 @@ namespace Akka.DistributedData.Tests
                 a[i] = new SortedDictionary<long, ORDictionary<int, GCounter>.IDeltaOperation>();
             return a;
         }
-
-        private static string Describe(ORDictionary<int, GCounter> d) =>
-            $"{{ keys=[{string.Join(",", d.KeySet.ElementsMap.Select(kv => $"{kv.Key}->{kv.Value}"))}], vv={d.KeySet.VersionVector} }}";
-
-        // ---------- helpers ----------
 
         private static ORDictionary<int, GCounter> ApplySetItems(
             ORDictionary<int, GCounter> start,
@@ -330,8 +273,6 @@ namespace Akka.DistributedData.Tests
         /// gap. Models the Replicator's
         /// <see cref="IRequireCausualDeliveryOfDeltas"/> guard: a delta is
         /// only applied if its seqNr is exactly one above the last applied.
-        /// Returns the new state; <paramref name="lastApplied"/> is updated
-        /// in-place to reflect the last applied seqNr.
         /// </summary>
         private static ORDictionary<int, GCounter> DrainContiguousDeltas(
             ORDictionary<int, GCounter> state,
@@ -350,17 +291,21 @@ namespace Akka.DistributedData.Tests
             return state;
         }
 
-        private static int[] PickSomeFromBaseOrNew(Random rng, int[] baseKeys, int additions)
+        /// <summary>
+        /// Test-only helper that constructs an ORDictionary whose KeySet has
+        /// a specific VersionVector entry, modelling the state a replica
+        /// arrives at when it gossip-merges with a peer whose VV is ahead but
+        /// who shares the same element dots.
+        /// </summary>
+        private static ORDictionary<int, GCounter> SetKeySetVersionVectorTo(
+            ORDictionary<int, GCounter> d, UniqueAddress node, long version)
         {
-            var result = new int[additions];
-            for (var i = 0; i < additions; i++)
-            {
-                if (baseKeys.Length > 0 && rng.Next(0, 2) == 0)
-                    result[i] = baseKeys[rng.Next(0, baseKeys.Length)];
-                else
-                    result[i] = 1_000_000 + rng.Next(0, 1_000_000);
-            }
-            return result;
+            var newVv = VersionVector.Create(node, version).Merge(d.KeySet.VersionVector);
+            var newKeySet = new ORSet<int>(d.KeySet.ElementsMap, newVv);
+            return new ORDictionary<int, GCounter>(newKeySet, d.ValueMap);
         }
+
+        private static string DescribeBriefly(ORDictionary<int, GCounter> d) =>
+            $"{{keys=[{string.Join(",", d.KeySet.ElementsMap.Select(kv => $"{kv.Key}@{kv.Value}"))}], vv={d.KeySet.VersionVector}}}";
     }
 }
