@@ -310,7 +310,7 @@ namespace Akka.DistributedData
                 {
                     var v2 = vector1.Versions.GetValueOrDefault(Node, 0L);
                     var mergedVersions = v2 >= Version ? vector1.Versions : vector1.Versions.SetItem(Node, Version);
-                    return new MultiVersionVector(mergedVersions);
+                    return VersionVector.Create(mergedVersions);
                 }
                 case SingleVersionVector vector when Node == vector.Node:
                     return Version >= vector.Version ? this : new SingleVersionVector(vector.Node, vector.Version);
@@ -371,8 +371,13 @@ namespace Akka.DistributedData
         internal override IEnumerable<(UniqueAddress addr, long version)> InternalVersions =>
             Versions.Select(x => (x.Key, x.Value));
 
+        // Construct results through VersionVector.Create so single-entry
+        // dictionaries canonicalize to SingleVersionVector — matches
+        // upstream VersionVector.apply. Without this, single-dot states
+        // are stored as MultiVersionVector and route into the MVV/MVV
+        // merge branch which was previously buggy (see #8219 follow-up).
         public override VersionVector Increment(UniqueAddress node) =>
-            new MultiVersionVector(Versions.SetItem(node, Counter.GetAndIncrement()));
+            VersionVector.Create(Versions.SetItem(node, Counter.GetAndIncrement()));
 
         public override long VersionAt(UniqueAddress node) => Versions.GetValueOrDefault(node, 0L);
 
@@ -392,13 +397,13 @@ namespace Akka.DistributedData
                             merged[pair.Key] = pair.Value;
                     }
 
-                    return new MultiVersionVector(merged.ToImmutable());
+                    return VersionVector.Create(merged.ToImmutable());
                 }
                 case SingleVersionVector vector:
                 {
                     var v1 = Versions.GetValueOrDefault(vector.Node, 0L);
                     var merged = v1 >= vector.Version ? Versions : Versions.SetItem(vector.Node, vector.Version);
-                    return new MultiVersionVector(merged);
+                    return VersionVector.Create(merged);
                 }
                 default:
                     throw new NotSupportedException("MultiVersionVector doesn't support merge with provided version vector");
@@ -410,10 +415,10 @@ namespace Akka.DistributedData
         public override bool NeedPruningFrom(UniqueAddress removedNode) => Versions.ContainsKey(removedNode);
 
         public override VersionVector Prune(UniqueAddress removedNode, UniqueAddress collapseInto) =>
-            new MultiVersionVector(Versions.Remove(removedNode)).Increment(collapseInto);
+            VersionVector.Create(Versions.Remove(removedNode)).Increment(collapseInto);
 
         public override VersionVector PruningCleanup(UniqueAddress removedNode) =>
-            new MultiVersionVector(Versions.Remove(removedNode));
+            VersionVector.Create(Versions.Remove(removedNode));
 
         
         public override string ToString() =>

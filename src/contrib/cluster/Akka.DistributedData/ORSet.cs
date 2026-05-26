@@ -239,11 +239,12 @@ namespace Akka.DistributedData
                 else
                 {
                     var rhsDots = (MultiVersionVector)r;
+                    // Intersection of lhs and rhs dot-maps: entries where both
+                    // sides record the same (node, version) pair. Matches
+                    // upstream ORSet.scala mergeCommonKeys MVV/MVV branch.
                     var commonDots = rhsDots.Versions
-                        .Where(kv =>
-                        {
-                            return rhsDots.Versions.TryGetValue(kv.Key, out var v) && v == kv.Value;
-                        }).ToImmutableDictionary();
+                        .Where(kv => lhsDots.Versions.TryGetValue(kv.Key, out var v) && v == kv.Value)
+                        .ToImmutableDictionary();
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUniqueDots = lhsDots.Versions.RemoveRange(commonDotKeys);
                     var rhsUniqueDots = rhsDots.Versions.RemoveRange(commonDotKeys);
@@ -733,7 +734,13 @@ namespace Akka.DistributedData
             }
 
             ClearAncestor();
-            return new ORSet<T>(newElementsMap, VersionVector.Merge(other.VersionVector));
+            // Merge with the per-element delta dot — not other.VersionVector,
+            // which carries the remover's full causal history. Upstream
+            // ORSet.scala merges with the dot extracted from the
+            // RemoveDeltaOperation's single-element underlying ORSet.
+            // Using the full vvector caused defensive over-advancing of
+            // VV that could drop concurrent third-party adds.
+            return new ORSet<T>(newElementsMap, VersionVector.Merge(kv.Value));
         }
 
         public ORSet<T> ResetDelta()
