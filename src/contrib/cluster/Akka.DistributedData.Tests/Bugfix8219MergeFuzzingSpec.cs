@@ -154,7 +154,7 @@ namespace Akka.DistributedData.Tests
         /// originally found the bug — captured as
         /// <see cref="Merge_should_not_drop_key_when_both_sides_have_it_with_different_dots_from_same_writer"/>.
         /// </summary>
-        [Property(MaxTest = 200, Arbitrary = new[] { typeof(DDataGenerators) })]
+        [Property(MaxTest = 500, Arbitrary = new[] { typeof(DDataGenerators) })]
         public Property Replicas_never_decrease_under_causal_delta_delivery_with_gossip(WriterSetItem[] ops, int actionSeed)
         {
             return RunReplicaFuzz(ops, actionSeed, writerSwitchOver: false);
@@ -165,7 +165,7 @@ namespace Akka.DistributedData.Tests
         /// but with the writer identity changing midway, modelling
         /// cluster-singleton failover. Causal delivery is enforced per-writer.
         /// </summary>
-        [Property(MaxTest = 200, Arbitrary = new[] { typeof(DDataGenerators) })]
+        [Property(MaxTest = 500, Arbitrary = new[] { typeof(DDataGenerators) })]
         public Property Replicas_never_decrease_when_writer_identity_changes(WriterSetItem[] ops, int actionSeed)
         {
             return RunReplicaFuzz(ops, actionSeed, writerSwitchOver: true);

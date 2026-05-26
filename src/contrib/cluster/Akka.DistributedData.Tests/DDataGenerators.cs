@@ -58,13 +58,15 @@ namespace Akka.DistributedData.Tests
         /// <summary>
         /// A sequence of writer operations (5..50 operations long). The
         /// resulting list, when applied in order, exercises both new-key adds
-        /// and repeated updates of existing keys.
+        /// and repeated updates of existing keys. We sample the length via
+        /// <see cref="Gen.Choose(int,int)"/> rather than filtering with
+        /// <see cref="Gen.Where{T}"/> so FsCheck doesn't waste iterations
+        /// rejecting too-small or too-large arrays.
         /// </summary>
         public static Arbitrary<WriterSetItem[]> WriterSetItemSequenceGenerator()
         {
-            var gen = WriterSetItemGenerator().Generator
-                .ArrayOf()
-                .Where(arr => arr.Length >= 5 && arr.Length <= 50);
+            var gen = Gen.Choose(5, 50)
+                .SelectMany(len => WriterSetItemGenerator().Generator.ArrayOf(len));
             return Arb.From(gen);
         }
     }
