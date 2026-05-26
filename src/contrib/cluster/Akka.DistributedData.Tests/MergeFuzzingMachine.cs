@@ -26,20 +26,35 @@ namespace Akka.DistributedData.Tests
     ///
     /// Operations:
     /// <list type="bullet">
-    ///   <item><c>WriterSetItem(key)</c> — current writer does <c>AddOrUpdate</c>.</item>
+    ///   <item><c>WriterSetItem(key)</c> — the current writer applies
+    ///         <c>AddOrUpdate(key)</c>, producing a new delta with the
+    ///         writer's next per-writer sequence number.</item>
     ///   <item><c>DeliverDelta(replicaIdx, deltaIdx)</c> — apply a previously-
-    ///         produced writer delta to a replica via <c>MergeDelta</c>.</item>
+    ///         produced writer delta to a replica via
+    ///         <see cref="ORDictionary{TKey,TValue}.MergeDelta"/>.
+    ///         <b>Preconditioned on the Replicator's
+    ///         <see cref="IRequireCausualDeliveryOfDeltas"/> rule</b>: the
+    ///         delta's per-writer sequence number must be exactly one above
+    ///         the replica's last-applied seqNr for that writer (no gap, no
+    ///         re-apply). Production replicators NACK any delta that violates
+    ///         this; the Machine refuses to even propose such an operation,
+    ///         so every counterexample the Machine finds is reachable through
+    ///         a production-faithful sequence of events.</item>
     ///   <item><c>GossipBetween(target, source)</c> — full-state
-    ///         <c>Merge</c> of source into target.</item>
+    ///         <c>Merge</c> of source into target. Like the production
+    ///         gossip merge, this also advances target's per-writer
+    ///         last-applied seqNr to the max of both sides (because
+    ///         <see cref="Internal.DataEnvelope"/> merges its
+    ///         <c>DeltaVersions</c>).</item>
     ///   <item><c>ChangeWriterIdentity</c> — switch the writer's
-    ///         <see cref="UniqueAddress"/>, modelling singleton failover.</item>
+    ///         <see cref="UniqueAddress"/>, modelling singleton failover.
+    ///         Each writer has its own independent seqNr stream.</item>
     /// </list>
     ///
     /// Invariant: at every step, every replica's keyset must be a superset
-    /// of all keys that operation has ever told it about (directly via
-    /// delivered delta or transitively via gossip from a peer that knew
-    /// the key). Because no remove operation exists, keysets must only
-    /// ever grow.
+    /// of all keys it has ever been told about (directly via delivered
+    /// delta or transitively via gossip from a peer that knew the key).
+    /// Because no remove operation exists, keysets must only ever grow.
     /// </summary>
     [InternalApi]
     public sealed class MergeFuzzingMachine : Machine<MergeFuzzingMachine.ReplicaCluster, MergeFuzzingMachine.ReplicaClusterModel>
@@ -64,7 +79,7 @@ namespace Akka.DistributedData.Tests
                 WriterSetItem.Generator(),
             };
 
-            if (model.WriterKeys.Length > 0)
+            if (model.DeltaKeys.Length > 0)
             {
                 gens.Add(DeliverDelta.Generator(model));
                 gens.Add(ChangeWriterIdentity.Generator());
@@ -87,8 +102,13 @@ namespace Akka.DistributedData.Tests
                 new ReplicaClusterModel(
                     ReplicaCount: ReplicaCount,
                     ReplicaKnownKeys: Enumerable.Repeat(ImmutableHashSet<int>.Empty, ReplicaCount).ToImmutableArray(),
-                    WriterKeys: ImmutableArray<int>.Empty,
-                    DeliveredDeltas: Enumerable.Repeat(ImmutableHashSet<int>.Empty, ReplicaCount).ToImmutableArray(),
+                    DeltaKeys: ImmutableArray<int>.Empty,
+                    DeltaWriters: ImmutableArray<int>.Empty,
+                    DeltaWriterSeqs: ImmutableArray<long>.Empty,
+                    WriterNextSeq: Enumerable.Repeat(0L, WriterIdentityCount).ToImmutableArray(),
+                    LastAppliedSeq: Enumerable.Repeat(
+                        Enumerable.Repeat(0L, WriterIdentityCount).ToImmutableArray(),
+                        ReplicaCount).ToImmutableArray(),
                     CurrentWriterIdx: 0);
         }
 
@@ -97,15 +117,20 @@ namespace Akka.DistributedData.Tests
         public sealed record ReplicaClusterModel(
             int ReplicaCount,
             ImmutableArray<ImmutableHashSet<int>> ReplicaKnownKeys,
-            ImmutableArray<int> WriterKeys,
-            ImmutableArray<ImmutableHashSet<int>> DeliveredDeltas,
+            ImmutableArray<int> DeltaKeys,              // DeltaKeys[i] = key added by delta i
+            ImmutableArray<int> DeltaWriters,           // DeltaWriters[i] = writer-identity index that produced delta i
+            ImmutableArray<long> DeltaWriterSeqs,       // DeltaWriterSeqs[i] = per-writer seqNr of delta i
+            ImmutableArray<long> WriterNextSeq,         // next seqNr each writer will assign
+            ImmutableArray<ImmutableArray<long>> LastAppliedSeq, // [replica][writerIdx] = last applied seqNr from that writer on that replica
             int CurrentWriterIdx)
         {
             public override string ToString()
             {
                 var known = string.Join("; ",
                     ReplicaKnownKeys.Select((s, i) => $"R{i}=[{string.Join(",", s.OrderBy(x => x))}]"));
-                return $"Model(writerKeys=[{string.Join(",", WriterKeys)}], known={{{known}}}, writer=W{CurrentWriterIdx})";
+                var seqs = string.Join("; ",
+                    LastAppliedSeq.Select((arr, i) => $"R{i}={{{string.Join(",", arr.Select((v, w) => $"W{w}:{v}"))}}}"));
+                return $"Model(deltas={DeltaKeys.Length}, known={{{known}}}, seqs={{{seqs}}}, writer=W{CurrentWriterIdx})";
             }
         }
 
@@ -144,8 +169,18 @@ namespace Akka.DistributedData.Tests
 
             public override bool Pre(ReplicaClusterModel _) => true;
 
-            public override ReplicaClusterModel Run(ReplicaClusterModel model) =>
-                model with { WriterKeys = model.WriterKeys.Add(Key) };
+            public override ReplicaClusterModel Run(ReplicaClusterModel model)
+            {
+                var w = model.CurrentWriterIdx;
+                var nextSeq = model.WriterNextSeq[w] + 1;
+                return model with
+                {
+                    DeltaKeys = model.DeltaKeys.Add(Key),
+                    DeltaWriters = model.DeltaWriters.Add(w),
+                    DeltaWriterSeqs = model.DeltaWriterSeqs.Add(nextSeq),
+                    WriterNextSeq = model.WriterNextSeq.SetItem(w, nextSeq),
+                };
+            }
 
             public override Property Check(ReplicaCluster actual, ReplicaClusterModel model)
             {
@@ -163,29 +198,39 @@ namespace Akka.DistributedData.Tests
         {
             public static Gen<Operation<ReplicaCluster, ReplicaClusterModel>> Generator(ReplicaClusterModel model) =>
                 Gen.Choose(0, model.ReplicaCount - 1)
-                    .Zip(Gen.Choose(0, model.WriterKeys.Length - 1))
+                    .Zip(Gen.Choose(0, model.DeltaKeys.Length - 1))
                     .Select(t => (Operation<ReplicaCluster, ReplicaClusterModel>)new DeliverDelta(t.Item1, t.Item2));
 
             public int ReplicaIdx { get; }
             public int DeltaIdx { get; }
             public DeliverDelta(int replicaIdx, int deltaIdx) { ReplicaIdx = replicaIdx; DeltaIdx = deltaIdx; }
 
-            public override bool Pre(ReplicaClusterModel model) =>
-                DeltaIdx >= 0 && DeltaIdx < model.WriterKeys.Length
-                && !model.DeliveredDeltas[ReplicaIdx].Contains(DeltaIdx);
+            public override bool Pre(ReplicaClusterModel model)
+            {
+                if (DeltaIdx < 0 || DeltaIdx >= model.DeltaKeys.Length) return false;
+                var w = model.DeltaWriters[DeltaIdx];
+                var deltaSeq = model.DeltaWriterSeqs[DeltaIdx];
+                var lastApplied = model.LastAppliedSeq[ReplicaIdx][w];
+                // Production Replicator's IRequireCausualDeliveryOfDeltas rule:
+                // a delta is applied iff its seqNr == lastApplied + 1.
+                // Out-of-order or duplicate delivery is NACKed/skipped.
+                return deltaSeq == lastApplied + 1;
+            }
 
             public override ReplicaClusterModel Run(ReplicaClusterModel model)
             {
-                var key = model.WriterKeys[DeltaIdx];
-                var newKnown = model.ReplicaKnownKeys.SetItem(ReplicaIdx, model.ReplicaKnownKeys[ReplicaIdx].Add(key));
-                var newDelivered = model.DeliveredDeltas.SetItem(ReplicaIdx, model.DeliveredDeltas[ReplicaIdx].Add(DeltaIdx));
-                return model with { ReplicaKnownKeys = newKnown, DeliveredDeltas = newDelivered };
+                var w = model.DeltaWriters[DeltaIdx];
+                var deltaSeq = model.DeltaWriterSeqs[DeltaIdx];
+                var key = model.DeltaKeys[DeltaIdx];
+                var newKnown = model.ReplicaKnownKeys.SetItem(
+                    ReplicaIdx, model.ReplicaKnownKeys[ReplicaIdx].Add(key));
+                var newReplicaSeqs = model.LastAppliedSeq[ReplicaIdx].SetItem(w, deltaSeq);
+                var newLastApplied = model.LastAppliedSeq.SetItem(ReplicaIdx, newReplicaSeqs);
+                return model with { ReplicaKnownKeys = newKnown, LastAppliedSeq = newLastApplied };
             }
 
             public override Property Check(ReplicaCluster actual, ReplicaClusterModel model)
             {
-                // FsCheck.Experimental invokes Run BEFORE Check, so `model` here
-                // is already the post-state.
                 var delta = actual.WriterDeltas[DeltaIdx];
                 actual.Replicas[ReplicaIdx] = actual.Replicas[ReplicaIdx].MergeDelta(delta);
                 return CheckInvariant(actual, model);
@@ -212,7 +257,16 @@ namespace Akka.DistributedData.Tests
             {
                 var newKnown = model.ReplicaKnownKeys.SetItem(
                     Target, model.ReplicaKnownKeys[Target].Union(model.ReplicaKnownKeys[Source]));
-                return model with { ReplicaKnownKeys = newKnown };
+                // Gossip merges DeltaVersions (max), so target's per-writer
+                // lastApplied seqNr advances to the union max with source's.
+                // This is what allows a replica's currentSeqNr to advance
+                // without the corresponding delta being applied — the same
+                // mechanic that lets the production system reach the bug.
+                var targetSeqs = model.LastAppliedSeq[Target];
+                var sourceSeqs = model.LastAppliedSeq[Source];
+                var mergedSeqs = targetSeqs.Zip(sourceSeqs, System.Math.Max).ToImmutableArray();
+                var newLastApplied = model.LastAppliedSeq.SetItem(Target, mergedSeqs);
+                return model with { ReplicaKnownKeys = newKnown, LastAppliedSeq = newLastApplied };
             }
 
             public override Property Check(ReplicaCluster actual, ReplicaClusterModel model)
