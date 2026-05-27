@@ -524,6 +524,8 @@ namespace Akka.DistributedData.Internal
 
         private IReplicatedData Cleaned(IReplicatedData c, IImmutableDictionary<UniqueAddress, IPruningState> p) => p.Aggregate(c, (acc, kvp) =>
         {
+            // Cleanup has to chain through the accumulator: applying it repeatedly to the
+            // original input can leave later removed-node markers behind after the first rewrite.
             if (acc is IRemovedNodePruning pruning
                 && kvp.Value is PruningPerformed
                 && pruning.NeedPruningFrom(kvp.Key))

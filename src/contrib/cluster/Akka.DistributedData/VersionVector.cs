@@ -310,6 +310,8 @@ namespace Akka.DistributedData
                 {
                     var v2 = vector1.Versions.GetValueOrDefault(Node, 0L);
                     var mergedVersions = v2 >= Version ? vector1.Versions : vector1.Versions.SetItem(Node, Version);
+                    // Canonicalize single-entry results so logically single-dot
+                    // vectors do not leak into the MVV/MVV ORSet merge path.
                     return VersionVector.Create(mergedVersions);
                 }
                 case SingleVersionVector vector when Node == vector.Node:
@@ -372,10 +374,9 @@ namespace Akka.DistributedData
             Versions.Select(x => (x.Key, x.Value));
 
         // Construct results through VersionVector.Create so single-entry
-        // dictionaries canonicalize to SingleVersionVector — matches
-        // upstream VersionVector.apply. Without this, single-dot states
-        // are stored as MultiVersionVector and route into the MVV/MVV
-        // merge branch which was previously buggy (see #8219 follow-up).
+        // dictionaries canonicalize to SingleVersionVector. That keeps
+        // pruning and merge rewrites from manufacturing MultiVersionVector
+        // instances that route ORSet through the wrong MVV/MVV branch.
         public override VersionVector Increment(UniqueAddress node) =>
             VersionVector.Create(Versions.SetItem(node, Counter.GetAndIncrement()));
 

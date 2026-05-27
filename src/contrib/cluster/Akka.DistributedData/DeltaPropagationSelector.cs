@@ -36,7 +36,8 @@ namespace Akka.DistributedData
             {
                 // Peers that missed the pruned data need the rewritten full state together with
                 // the pruning marker. A delta-only envelope can make their next gossip look like
-                // evidence that pruned keys were removed.
+                // evidence that pruned keys were removed, so keep the marker and rewritten dots
+                // on the full-state path until the pruning marker expires.
                 return currentEnvelope;
             }
 

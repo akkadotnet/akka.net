@@ -1558,6 +1558,8 @@ namespace Akka.DistributedData
                         var key = x.Key;
                         var (data, from, to) = x.Value;
                         var envelope = _replicator.GetData(key);
+                        // After pruning has been performed we deliberately fall back to the full
+                        // envelope so receivers learn the rewritten state before they gossip again.
                         return new KeyValuePair<string, Delta>(key, new Delta(CreateDeltaEnvelope(envelope, data), from, to));
                     })
                     .ToImmutableDictionary();
