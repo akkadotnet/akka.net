@@ -522,13 +522,13 @@ namespace Akka.DistributedData.Internal
             return new DataEnvelope(mergedData, Pruning, DeltaVersions);
         }
 
-        private IReplicatedData Cleaned(IReplicatedData c, IImmutableDictionary<UniqueAddress, IPruningState> p) => p.Aggregate(c, (_, kvp) =>
+        private IReplicatedData Cleaned(IReplicatedData c, IImmutableDictionary<UniqueAddress, IPruningState> p) => p.Aggregate(c, (acc, kvp) =>
         {
-            if (c is IRemovedNodePruning pruning
+            if (acc is IRemovedNodePruning pruning
                 && kvp.Value is PruningPerformed
                 && pruning.NeedPruningFrom(kvp.Key))
                 return pruning.PruningCleanup(kvp.Key);
-            return c;
+            return acc;
         });
 
         /// <summary>

@@ -1558,11 +1558,7 @@ namespace Akka.DistributedData
                         var key = x.Key;
                         var (data, from, to) = x.Value;
                         var envelope = _replicator.GetData(key);
-                        return envelope != null
-                            ? new KeyValuePair<string, Delta>(key,
-                                new Delta(envelope.WithData(data), from, to))
-                            : new KeyValuePair<string, Delta>(key,
-                                new Delta(new DataEnvelope(data), from, to));
+                        return new KeyValuePair<string, Delta>(key, new Delta(CreateDeltaEnvelope(envelope, data), from, to));
                     })
                     .ToImmutableDictionary();
 
