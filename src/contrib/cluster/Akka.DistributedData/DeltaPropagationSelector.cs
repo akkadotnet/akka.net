@@ -30,6 +30,20 @@ namespace Akka.DistributedData
         protected abstract int MaxDeltaSize { get; }
         protected abstract DeltaPropagation CreateDeltaPropagation(ImmutableDictionary<string, (IReplicatedData data, long from, long to)> deltas);
 
+        protected static DataEnvelope CreateDeltaEnvelope(DataEnvelope currentEnvelope, IReplicatedData delta)
+        {
+            if (currentEnvelope?.Pruning.Values.Any(state => state is PruningPerformed) == true)
+            {
+                // Peers that missed the pruned data need the rewritten full state together with
+                // the pruning marker. A delta-only envelope can make their next gossip look like
+                // evidence that pruned keys were removed, so keep the marker and rewritten dots
+                // on the full-state path until the pruning marker expires.
+                return currentEnvelope;
+            }
+
+            return currentEnvelope?.WithData(delta) ?? new DataEnvelope(delta);
+        }
+
         public long CurrentVersion(string key) => _deltaCounter.GetValueOrDefault(key, 0L);
 
         public void Update(string key, IReplicatedData delta)
