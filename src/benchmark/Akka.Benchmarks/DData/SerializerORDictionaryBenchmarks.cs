@@ -13,6 +13,7 @@ using Akka.Cluster;
 using Akka.Configuration;
 using Akka.DistributedData;
 using Akka.DistributedData.Serialization;
+using Akka.Serialization;
 using BenchmarkDotNet.Attributes;
 
 namespace Akka.Benchmarks.DData;
@@ -70,8 +71,8 @@ public class SerializerORDictionaryBenchmarks
   }
 }");
         sys = ActorSystem.Create("rddsb", conf);
-        ser = (ReplicatedDataSerializer)sys.Serialization.FindSerializerForType(
-            typeof(IReplicatedDataSerialization));
+        ser = sys.Serialization.FindSerializerForType(
+            typeof(IReplicatedDataSerialization)).AsV1<ReplicatedDataSerializer>();
         _c1Ser = ser.ToBinary(_c1);
         _c1Manifest = ser.Manifest(_c1);
     }

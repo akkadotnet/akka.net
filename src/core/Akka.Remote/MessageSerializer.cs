@@ -59,19 +59,13 @@ namespace Akka.Remote
                     SerializerId = serializer.Identifier
                 };
 
-                if (serializer is SerializerWithStringManifest serializer2)
-                {
-                    var manifest = serializer2.Manifest(message);
-                    if (!string.IsNullOrEmpty(manifest))
-                    {
-                        serializedMsg.MessageManifest = ByteString.CopyFromUtf8(manifest);
-                    }
-                }
-                else
-                {
-                    if (serializer.IncludeManifest)
-                        serializedMsg.MessageManifest = ByteString.CopyFromUtf8(message.GetType().TypeQualifiedName());
-                }
+                // V2 dispatch — every SerializerV2 exposes Manifest(); empty string means "no
+                // manifest field on the wire". V1-wrapped serializers reproduce the V1 behavior
+                // (TypeQualifiedName for IncludeManifest=true plain Serializers, the
+                // user-defined manifest for SerializerWithStringManifest, empty otherwise).
+                var manifest = serializer.Manifest(message);
+                if (!string.IsNullOrEmpty(manifest))
+                    serializedMsg.MessageManifest = ByteString.CopyFromUtf8(manifest);
 
                 return serializedMsg;
             }

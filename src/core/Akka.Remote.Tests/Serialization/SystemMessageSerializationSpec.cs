@@ -11,6 +11,7 @@ using Akka.Configuration;
 using Akka.Dispatch.SysMsg;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
+using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using Akka.Util.Internal;
@@ -172,7 +173,7 @@ namespace Akka.Remote.Tests.Serialization
         private T AssertAndReturn<T>(T message)
         {
             var serializer = Sys.Serialization.FindSerializerFor(message);
-            serializer.Should().BeOfType<SystemMessageSerializer>();
+            serializer.AsV1<SystemMessageSerializer>();
             var serializedBytes = serializer.ToBinary(message);
             return (T)serializer.FromBinary(serializedBytes, typeof(T));
         }

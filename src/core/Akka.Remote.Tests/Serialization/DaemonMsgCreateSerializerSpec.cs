@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Routing;
+using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
 
@@ -46,7 +47,7 @@ namespace Akka.Remote.Tests.Serialization
         [Fact]
         public void Serialization_must_resolve_DaemonMsgCreateSerializer()
         {
-            _ser.FindSerializerForType(typeof(DaemonMsgCreate)).GetType().ShouldBe(typeof(DaemonMsgCreateSerializer));
+            _ser.FindSerializerForType(typeof(DaemonMsgCreate)).AsV1<DaemonMsgCreateSerializer>().GetType().ShouldBe(typeof(DaemonMsgCreateSerializer));
         }
 
         [Fact]

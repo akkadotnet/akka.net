@@ -46,27 +46,31 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 
 ---
 
-### Milestone 2: `serializer-v2` (Spec 4)
+### Milestone 2: `serializer-v2` (Spec 4) — foundation only
 
 **Branch**: `feature/spec4-serializer-v2` (off Milestone 1's merged branch)
 **OpenSpec change**: `openspec/changes/serializer-v2/`
 **Tasks file**: `openspec/changes/serializer-v2/tasks.md`
 
-**What it does**: Add SerializerV2 base class, SerializerV1Adapter, MessagePackSerializer, modify Serialization.cs infrastructure, mechanical port of simple internal Protobuf serializers.
+**What it does**: Establish the `SerializerV2` foundation — base class, V1 adapter, `Serialization.cs` / `MessageSerializer.cs` infrastructure changes, and V2 ports of `ByteArraySerializer` and `PrimitiveSerializers` as the reference implementation. Add a standalone transport-envelope benchmark that simulates `EndpointWriter`'s round trip on the V2 API and compares V2-direct against the V1-bridge baseline.
 
-**Note**: This was originally planned as parallel with Milestone 1 but is sequenced after it to avoid merge conflicts in Serialization.cs and MessageSerializer.cs. The ByteString removal in Milestone 1 also affects serializer code paths.
+**Note**: This was originally planned as parallel with Milestone 1 but is sequenced after it to avoid merge conflicts in `Serialization.cs` and `MessageSerializer.cs`. The ByteString removal in Milestone 1 also affects serializer code paths.
+
+**Scope changed (2026-05-10)**: MessagePack codec, `AkkaWriter` / `AkkaReader`, `[AkkaSerializable]` / `[AkkaField]` / `[AkkaSerializer]` attributes, the `Akka.Serialization.V2` NuGet package, the Roslyn source generator, and the mechanical port of remaining Protobuf-based internal serializers (`ClusterMessageSerializer`, `SystemMessageSerializer`, the four `WrappedPayloadSupport` serializers) all moved out of this milestone and into a future change (`serializer-v2-codegen`). Reason: the runtime codec API stands or falls with the source generator that makes it ergonomic; locking in surface area before codegen requirements are in hand would force redesign churn.
 
 **Completion criteria**:
-- SerializerV2, SerializerV1Adapter exist in `src/core/Akka/Serialization/`
-- Akka.Serialization.V2 package exists with MessagePackSerializer, AkkaWriter, AkkaReader
-- `Serialization.cs` uses SerializerV2 internally, auto-wraps V1
-- `FindSerializerFor()` returns SerializerV2
-- Hand-written MessagePack serializer round-trips through full pipeline
+
+- `SerializerV2`, `SerializerV1Adapter` exist in `src/core/Akka/Serialization/`
+- `Serialization.cs` uses `SerializerV2` internally, auto-wraps V1 on registration
+- `FindSerializerFor()` returns `SerializerV2`
+- `MessageSerializer.cs` (Akka.Remote) uses V2 dispatch (calls `Manifest()` directly)
+- `ByteArraySerializer` and `PrimitiveSerializers` ported to `SerializerV2` (same IDs, byte-identical wire format, all primitive paths covered: string / int32 / int64 / byte[])
+- Transport-envelope benchmark exists in `src/benchmark/` and reports V2-direct vs V1-bridge allocations and throughput across the reference serializer paths
 - All existing serialization tests pass (V1 auto-wrapped)
-- Simple internal Protobuf serializers ported to V2 base (same IDs, same wire format)
+- All Akka.Persistence tests pass (V1-persisted data still readable)
 - `dotnet test -c Release --framework net10.0` passes
 
-**After completion**: Review with human. Archive via `openspec archive serializer-v2`.
+**After completion**: Review with human, including benchmark results. Archive via `openspec archive serializer-v2`.
 
 ---
 
@@ -128,6 +132,18 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 - Results documented
 
 **After completion**: Review with human. Archive via `openspec archive transport-performance`.
+
+---
+
+## Unscheduled / Future Changes
+
+### `serializer-v2-codegen` (spawned 2026-05-10 from Milestone 2 scope split)
+
+**OpenSpec change**: `openspec/changes/serializer-v2-codegen/`
+
+**What it will do**: Pick up the user-facing codec story that was deferred out of Milestone 2 — `MessagePackSerializer : SerializerV2`, sealed `AkkaWriter` / `AkkaReader`, `[AkkaSerializable]` / `[AkkaField]` / `[AkkaSerializer]` attributes, the `Akka.Serialization.V2` NuGet package, the Roslyn source generator, and the mechanical port of remaining Protobuf-based internal serializers.
+
+**Sequencing**: Not on the critical path for the 1.6 transport epic. Can be scheduled independently once Milestone 2 is archived and the V2 API has been validated by its benchmark and downstream consumption from Spec 3.
 
 ## Orchestration
 

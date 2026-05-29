@@ -282,7 +282,7 @@ namespace Akka.DistributedData
         private readonly ICancelable _pruningTask;
         private readonly ICancelable _clockTask;
 
-        private readonly Serializer _serializer;
+        private readonly SerializerV2 _serializer;
         private readonly long _maxPruningDisseminationNanos;
 
         /// <summary>

@@ -1,20 +1,24 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ByteArraySerializer.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
+using System.Buffers;
 using Akka.Actor;
 
 namespace Akka.Serialization
 {
     /// <summary>
-    /// This is a special <see cref="Serializer"/> that serializes and deserializes byte arrays only
-    /// (just returns the byte array unchanged/uncopied).
+    /// A <see cref="SerializerV2"/> that serializes and deserializes byte arrays as the identity
+    /// transform — the byte array is the wire format. Serializer ID is 4. Wire format is
+    /// byte-identical to the legacy V1 implementation.
     /// </summary>
-    public class ByteArraySerializer : Serializer
+    public class ByteArraySerializer : SerializerV2
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="ByteArraySerializer" /> class.
@@ -25,37 +29,45 @@ namespace Akka.Serialization
         {
         }
 
-        /// <summary>
-        /// Returns whether this serializer needs a manifest in the fromBinary method
-        /// </summary>
-        public override bool IncludeManifest => false;
+        /// <inheritdoc/>
+        public override string Manifest(object o) => string.Empty;
 
-        /// <summary>
-        /// Serializes the given object into a byte array
-        /// </summary>
-        /// <param name="obj">The object to serialize </param>
-        /// <exception cref="NotSupportedException">
-        /// This exception is thrown if the given <paramref name="obj"/> is not a byte array.
-        /// </exception>
-        /// <returns>A byte array containing the serialized object</returns>
+        /// <inheritdoc/>
+        public override int SizeHint(object o) => o is byte[] b ? b.Length : 0;
+
+        /// <inheritdoc/>
+        public override int Serialize(IBufferWriter<byte> buffer, object obj)
+        {
+            if (obj is byte[] bytes)
+            {
+                buffer.Write(bytes);
+                return bytes.Length;
+            }
+            throw new NotSupportedException("The object to convert is not a byte array.");
+        }
+
+        /// <inheritdoc/>
+        public override object Deserialize(ReadOnlySequence<byte> buffer, string manifest)
+        {
+            // Materialize a fresh array — callers may retain the returned reference, so we cannot
+            // alias to the (potentially pooled) backing memory of the sequence.
+            return buffer.IsSingleSegment
+                ? buffer.First.ToArray()
+                : buffer.ToArray();
+        }
+
+        /// <inheritdoc/>
         public override byte[] ToBinary(object obj)
         {
-            if (obj == null)
-                return null;
             if (obj is byte[] bytes)
                 return bytes;
             throw new NotSupportedException("The object to convert is not a byte array.");
         }
 
-        /// <summary>
-        /// Deserializes a byte array into an object of type <paramref name="type"/>.
-        /// </summary>
-        /// <param name="bytes">The array containing the serialized object</param>
-        /// <param name="type">The type of object contained in the array</param>
-        /// <returns>The object contained in the array</returns>
-        public override object FromBinary(byte[] bytes, Type type)
-        {
-            return bytes;
-        }
+        /// <inheritdoc/>
+        public override object FromBinary(byte[] bytes, string manifest) => bytes;
+
+        /// <inheritdoc/>
+        public override object FromBinary(byte[] bytes, Type? type) => bytes;
     }
 }

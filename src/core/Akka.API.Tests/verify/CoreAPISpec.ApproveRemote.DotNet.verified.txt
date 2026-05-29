@@ -446,11 +446,14 @@ namespace Akka.Remote.Serialization
         public override string Manifest(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
-    public sealed class PrimitiveSerializers : Akka.Serialization.SerializerWithStringManifest
+    public sealed class PrimitiveSerializers : Akka.Serialization.SerializerV2
     {
         public PrimitiveSerializers(Akka.Actor.ExtendedActorSystem system, Akka.Configuration.Config config) { }
+        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> buffer, string manifest) { }
         public override object FromBinary(byte[] bytes, string manifest) { }
-        public override string Manifest(object obj) { }
+        public override string Manifest(object o) { }
+        public override void Serialize(System.Buffers.IBufferWriter<byte> buffer, object obj) { }
+        public override int SizeHint(object o) { }
         public override byte[] ToBinary(object obj) { }
     }
     public class ProtobufSerializer : Akka.Serialization.Serializer

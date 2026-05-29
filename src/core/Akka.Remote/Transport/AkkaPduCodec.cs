@@ -6,12 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Google.Protobuf;
 using System.Runtime.Serialization;
 using Akka.Remote.Serialization;
 using Akka.Remote.Serialization.Proto.Msg;
+using Akka.Remote.Serialization.V2;
 using SerializedMessage = Akka.Remote.Serialization.Proto.Msg.Payload;
 
 namespace Akka.Remote.Transport
@@ -583,6 +585,360 @@ namespace Akka.Remote.Transport
 
         public AkkaPduProtobuffCodec(ActorSystem system) : base(system)
         {
+        }
+
+        // ─── V2 wrap-pipeline (experimental) ──────────────────────────────────
+        //
+        // Skips the MessageSerializer.Serialize + ConstructMessage two-step (which
+        // builds a SerializedMessage proto, ByteString.CopyFroms the inner bytes,
+        // then builds RemoteEnvelope + AckAndEnvelopeContainer proto graphs, then
+        // serializes that graph via ToByteString()). Instead, hand-writes the
+        // AckAndEnvelopeContainer wire format directly into a buffer, with the inner
+        // V2 serializer invoked inline. Wire format is unchanged — V1 peers parse
+        // V2 output transparently.
+        //
+        // See src/core/Akka.Remote/Serialization/V2/V2Codec.cs for the writer/reader
+        // implementation and the fixed-width-varint patching technique.
+
+        private V2SerializerRegistry? _v2Registry;
+        private V2RemoteEnvelopeWriter? _v2Writer;
+
+        private V2RemoteEnvelopeWriter V2Writer
+        {
+            get
+            {
+                if (_v2Writer is not null)
+                    return _v2Writer;
+
+                var serialization = ((ExtendedActorSystem)System).Serialization;
+                _v2Registry = new V2SerializerRegistry(serialization);
+                _v2Writer = new V2RemoteEnvelopeWriter(_v2Registry);
+                return _v2Writer;
+            }
+        }
+
+        // Per-thread scratch buffer for V2 wire-format writes. EndpointWriter actors run on
+        // dispatcher threads; one buffer per thread, reset between calls. Avoids per-call
+        // allocation of the buffer object + its backing byte[].
+        [System.ThreadStatic]
+        private static PatchingBufferWriter _threadBuffer;
+
+        /// <summary>
+        /// V2 send path. Equivalent in wire format to the V1
+        /// <see cref="ConstructMessage(Address, IActorRef, SerializedMessage, IActorRef, SeqNo?, Ack)"/>,
+        /// but skips the intermediate <see cref="SerializedMessage"/> proto construction and
+        /// the AckAndEnvelopeContainer.ToByteString() serialize step.
+        /// </summary>
+        public ByteString ConstructMessageV2(
+            Address localAddress,
+            IActorRef recipient,
+            object payload,
+            IActorRef senderOption = null,
+            SeqNo? seqOption = null,
+            Ack ackOption = null)
+        {
+            // Recipient/sender ActorRefData wire bytes — V1 also builds these per call
+            // inside ConstructMessage via SerializeActorRef, so the per-call cost is the
+            // same here. (Caching is a follow-on optimization for both V1 and V2.)
+            var recipientBytes = SerializeActorRef(recipient.Path.Address, recipient).ToByteArray();
+            var senderBytes = (senderOption is not null && senderOption.Path is not null)
+                ? SerializeActorRef(localAddress, senderOption).ToByteArray()
+                : Array.Empty<byte>();
+
+            var seq = seqOption is { } s ? (ulong)s.RawValue : SeqUndefined;
+
+            ulong? ackCumulative = null;
+            IReadOnlyList<ulong> ackNacks = null;
+            if (ackOption is not null)
+            {
+                ackCumulative = (ulong)ackOption.CumulativeAck.RawValue;
+                ackNacks = ackOption.Nacks.Select(n => (ulong)n.RawValue).ToArray();
+            }
+
+            // ThreadStatic pooled buffer — first call on a thread allocates, subsequent calls
+            // reset and reuse. EndpointWriter dispatch is sequential on the actor's thread.
+            var buffer = _threadBuffer;
+            if (buffer is null)
+            {
+                buffer = new PatchingBufferWriter(initialCapacity: 1024);
+                _threadBuffer = buffer;
+            }
+            else
+            {
+                buffer.Reset();
+            }
+
+            V2Writer.Serialize(buffer, recipientBytes, senderBytes, seq, payload, ackCumulative, ackNacks);
+
+            // One final byte[] copy into the ByteString. V1 also allocates here via
+            // ackAndEnvelope.ToByteString(). UnsafeByteOperations.UnsafeWrap would
+            // avoid the copy but requires sole ownership of the byte[] — left for a
+            // follow-on with pooled buffers.
+            return ByteString.CopyFrom(buffer.WrittenSpan);
+        }
+
+        /// <summary>
+        /// V2 receive path. Parses the AckAndEnvelopeContainer wire bytes directly into
+        /// an <see cref="AckAndMessage"/> in the same shape V1's <see cref="DecodeMessage"/>
+        /// produces, so the downstream AckedReceiveBuffer / DeliverAndAck / Dispatch pipeline
+        /// is unchanged (reliable delivery semantics preserved across reconnects).
+        ///
+        /// What V2 saves on this path:
+        ///   - No <c>AckAndEnvelopeContainer.Parser.ParseFrom</c> proto graph allocation
+        ///     (parses field tags directly, doesn't materialize <c>AckAndEnvelopeContainer</c>,
+        ///     <c>RemoteEnvelope</c>, or <c>ActorRefData</c> proto objects).
+        ///   - Inner payload bytes are wrapped zero-copy via
+        ///     <see cref="UnsafeByteOperations.UnsafeWrap(ReadOnlyMemory{byte})"/> instead of
+        ///     copied through <c>ByteString.CopyFrom</c>. The downstream
+        ///     <c>payload.Message.ToByteArray()</c> in <see cref="MessageSerializer.Deserialize"/>
+        ///     still materializes once for the V1-typed Serialize/Deserialize bridge.
+        /// </summary>
+        public AckAndMessage DecodeMessageV2(
+            ByteString raw,
+            IRemoteActorRefProvider provider,
+            Address localAddress)
+        {
+            // ByteString.Memory is zero-copy. The V2 parser slices into it for the inner
+            // payload bytes, which are then handed to UnsafeWrap below — also zero-copy.
+            var meta = ParseEnvelopeMetadata(raw.Memory);
+
+            Ack ackOption = null;
+            if (meta.AckCumulative.HasValue)
+            {
+                var nacks = meta.AckNacks is null || meta.AckNacks.Length == 0
+                    ? Enumerable.Empty<SeqNo>()
+                    : meta.AckNacks.Select(n => new SeqNo((long)n));
+                ackOption = new Ack(new SeqNo((long)meta.AckCumulative.Value), nacks);
+            }
+
+            Message messageOption = null;
+            if (!string.IsNullOrEmpty(meta.RecipientPath))
+            {
+                var recipient = provider.ResolveActorRefWithLocalAddress(meta.RecipientPath, localAddress);
+                var recipientAddress = ActorPathCache.Cache.GetOrCompute(meta.RecipientPath).Address;
+
+                IActorRef senderOption = null;
+                if (!string.IsNullOrEmpty(meta.SenderPath))
+                    senderOption = provider.ResolveActorRefWithLocalAddress(meta.SenderPath, localAddress);
+
+                SeqNo? seqOption = null;
+                if (meta.Seq != SeqUndefined)
+                    seqOption = new SeqNo(unchecked((long)meta.Seq));
+
+                // Build a SerializedMessage that points at the wire bytes zero-copy via
+                // UnsafeWrap. The downstream MessageSerializer.Deserialize handles it the
+                // same way as a V1-decoded SerializedMessage.
+                var serializedMessage = new SerializedMessage
+                {
+                    Message = meta.InnerBytes.IsEmpty
+                        ? ByteString.Empty
+                        : UnsafeByteOperations.UnsafeWrap(meta.InnerBytes),
+                    SerializerId = meta.InnerSerializerId,
+                };
+                if (!string.IsNullOrEmpty(meta.InnerManifest))
+                    serializedMessage.MessageManifest = ByteString.CopyFromUtf8(meta.InnerManifest);
+
+                messageOption = new Message(recipient, recipientAddress, serializedMessage, senderOption, seqOption);
+            }
+
+            return new AckAndMessage(ackOption, messageOption);
+        }
+
+        /// <summary>
+        /// Raw envelope metadata extracted from the wire bytes — no proto objects materialized,
+        /// no inner payload deserialization.
+        /// </summary>
+        private readonly struct EnvelopeMetadata
+        {
+            public EnvelopeMetadata(
+                string recipientPath, string senderPath, ulong seq,
+                int innerSerializerId, string innerManifest, ReadOnlyMemory<byte> innerBytes,
+                ulong? ackCumulative, ulong[] ackNacks)
+            {
+                RecipientPath = recipientPath;
+                SenderPath = senderPath;
+                Seq = seq;
+                InnerSerializerId = innerSerializerId;
+                InnerManifest = innerManifest;
+                InnerBytes = innerBytes;
+                AckCumulative = ackCumulative;
+                AckNacks = ackNacks;
+            }
+
+            public string RecipientPath { get; }
+            public string SenderPath { get; }
+            public ulong Seq { get; }
+            public int InnerSerializerId { get; }
+            public string InnerManifest { get; }
+            public ReadOnlyMemory<byte> InnerBytes { get; }
+            public ulong? AckCumulative { get; }
+            public ulong[] AckNacks { get; }
+        }
+
+        /// <summary>
+        /// Parses AckAndEnvelopeContainer wire bytes into raw metadata. No proto objects
+        /// allocated, no inner deserialization. The inner payload bytes are a zero-copy
+        /// slice of <paramref name="wireBytes"/>.
+        /// </summary>
+        private static EnvelopeMetadata ParseEnvelopeMetadata(ReadOnlyMemory<byte> wireBytes)
+        {
+            var span = wireBytes.Span;
+            string recipientPath = string.Empty;
+            string senderPath = string.Empty;
+            ulong seq = 0;
+            int innerSerializerId = 0;
+            string innerManifest = string.Empty;
+            ReadOnlyMemory<byte> innerBytes = default;
+            ulong? ackCumulative = null;
+            ulong[] ackNacks = null;
+
+            while (!span.IsEmpty)
+            {
+                var (fieldNumber, wireType) = ProtoWire.ReadTag(ref span);
+                switch (fieldNumber)
+                {
+                    case 1: // ack (AcknowledgementInfo, length-delimited)
+                    {
+                        var ackBytes = ProtoWire.ReadLengthDelimited(ref span);
+                        ParseAckMetadata(ackBytes, out ackCumulative, out ackNacks);
+                        break;
+                    }
+                    case 2: // envelope (RemoteEnvelope, length-delimited)
+                    {
+                        var envLen = (int)ProtoWire.ReadVarint32(ref span);
+                        var envOffset = wireBytes.Length - span.Length;
+                        var envSpan = span.Slice(0, envLen);
+                        ParseEnvelopeFields(
+                            envSpan,
+                            wireBytes.Slice(envOffset, envLen),
+                            out recipientPath, out senderPath, out seq,
+                            out innerSerializerId, out innerManifest, out innerBytes);
+                        span = span.Slice(envLen);
+                        break;
+                    }
+                    default:
+                        ProtoWire.SkipField(ref span, wireType);
+                        break;
+                }
+            }
+
+            return new EnvelopeMetadata(recipientPath, senderPath, seq, innerSerializerId, innerManifest, innerBytes, ackCumulative, ackNacks);
+        }
+
+        private static void ParseAckMetadata(ReadOnlySpan<byte> ackBytes, out ulong? cumulative, out ulong[] nacks)
+        {
+            cumulative = null;
+            nacks = null;
+            List<ulong> nackList = null;
+            var bytes = ackBytes;
+            while (!bytes.IsEmpty)
+            {
+                var (fieldNumber, wireType) = ProtoWire.ReadTag(ref bytes);
+                switch (fieldNumber)
+                {
+                    case 1: cumulative = ProtoWire.ReadFixed64(ref bytes); break;
+                    case 2: (nackList ??= new List<ulong>()).Add(ProtoWire.ReadFixed64(ref bytes)); break;
+                    default: ProtoWire.SkipField(ref bytes, wireType); break;
+                }
+            }
+            if (nackList is { Count: > 0 })
+                nacks = nackList.ToArray();
+        }
+
+        private static void ParseEnvelopeFields(
+            ReadOnlySpan<byte> envSpan,
+            ReadOnlyMemory<byte> envMemory,
+            out string recipientPath, out string senderPath, out ulong seq,
+            out int innerSerializerId, out string innerManifest, out ReadOnlyMemory<byte> innerBytes)
+        {
+            recipientPath = string.Empty;
+            senderPath = string.Empty;
+            seq = 0;
+            innerSerializerId = 0;
+            innerManifest = string.Empty;
+            innerBytes = default;
+
+            var bytes = envSpan;
+            while (!bytes.IsEmpty)
+            {
+                var (fieldNumber, wireType) = ProtoWire.ReadTag(ref bytes);
+                switch (fieldNumber)
+                {
+                    case 1: // recipient
+                    {
+                        var actorRefBytes = ProtoWire.ReadLengthDelimited(ref bytes);
+                        recipientPath = ExtractActorRefPath(actorRefBytes);
+                        break;
+                    }
+                    case 2: // message (Payload)
+                    {
+                        var payloadLen = (int)ProtoWire.ReadVarint32(ref bytes);
+                        var payloadOffset = envSpan.Length - bytes.Length;
+                        var payloadSpan = bytes.Slice(0, payloadLen);
+                        var payloadMemory = envMemory.Slice(payloadOffset, payloadLen);
+                        ParsePayloadFields(
+                            payloadSpan, payloadMemory,
+                            out innerSerializerId, out innerManifest, out innerBytes);
+                        bytes = bytes.Slice(payloadLen);
+                        break;
+                    }
+                    case 4: // sender
+                    {
+                        var actorRefBytes = ProtoWire.ReadLengthDelimited(ref bytes);
+                        senderPath = ExtractActorRefPath(actorRefBytes);
+                        break;
+                    }
+                    case 5: // seq (fixed64)
+                        seq = ProtoWire.ReadFixed64(ref bytes);
+                        break;
+                    default:
+                        ProtoWire.SkipField(ref bytes, wireType);
+                        break;
+                }
+            }
+        }
+
+        private static void ParsePayloadFields(
+            ReadOnlySpan<byte> payloadSpan,
+            ReadOnlyMemory<byte> payloadMemory,
+            out int innerSerializerId, out string innerManifest, out ReadOnlyMemory<byte> innerBytes)
+        {
+            innerSerializerId = 0;
+            innerManifest = string.Empty;
+            innerBytes = default;
+
+            var bytes = payloadSpan;
+            while (!bytes.IsEmpty)
+            {
+                var (fieldNumber, wireType) = ProtoWire.ReadTag(ref bytes);
+                switch (fieldNumber)
+                {
+                    case 1: // message bytes
+                    {
+                        var len = (int)ProtoWire.ReadVarint32(ref bytes);
+                        var offset = payloadSpan.Length - bytes.Length;
+                        innerBytes = payloadMemory.Slice(offset, len);
+                        bytes = bytes.Slice(len);
+                        break;
+                    }
+                    case 2: innerSerializerId = (int)ProtoWire.ReadVarint32(ref bytes); break;
+                    case 3: innerManifest = ProtoWire.ReadString(ref bytes); break;
+                    default: ProtoWire.SkipField(ref bytes, wireType); break;
+                }
+            }
+        }
+
+        private static string ExtractActorRefPath(ReadOnlySpan<byte> actorRefDataBytes)
+        {
+            var bytes = actorRefDataBytes;
+            while (!bytes.IsEmpty)
+            {
+                var (fieldNumber, wireType) = ProtoWire.ReadTag(ref bytes);
+                if (fieldNumber == 1 && wireType == ProtoWire.WireTypeLengthDelimited)
+                    return ProtoWire.ReadString(ref bytes);
+                ProtoWire.SkipField(ref bytes, wireType);
+            }
+            return string.Empty;
         }
     }
 }

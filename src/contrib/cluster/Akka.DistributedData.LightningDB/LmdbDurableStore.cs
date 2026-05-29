@@ -70,7 +70,7 @@ namespace Akka.DistributedData.LightningDB
             _log = Context.GetLogger();
 
             _serialization = Context.System.Serialization;
-            _serializer = (SerializerWithStringManifest) _serialization.FindSerializerForType(typeof(DurableDataEnvelope));
+            _serializer = _serialization.FindSerializerForType(typeof(DurableDataEnvelope)).AsV1<SerializerWithStringManifest>();
             _manifest = _serializer.Manifest(new DurableDataEnvelope(GCounter.Empty));
 
             var useWriteBehind = _config.GetString("write-behind-interval", "").ToLowerInvariant();

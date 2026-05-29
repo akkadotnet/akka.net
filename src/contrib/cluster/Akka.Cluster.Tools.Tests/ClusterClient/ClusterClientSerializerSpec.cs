@@ -72,14 +72,14 @@ akka.cluster.client.use-legacy-serialization = {(useLegacy ? "on" : "off")}
         var serializer = Sys.Serialization.FindSerializerForType(messageType);
         if (_useLegacy)
         {
-            serializer.Should().BeOfType<NewtonSoftJsonSerializer>();
+            serializer.AsV1<NewtonSoftJsonSerializer>();
         }
         else
         {
-            serializer.Should().BeOfType<ClusterClientMessageSerializer>();
+            serializer.AsV1<ClusterClientMessageSerializer>();
         }
     }
-    
+
     [Theory(DisplayName = "ClusterClient using settings from config should use proper serializer")]
     [InlineData(typeof(Client.ClusterClient.Send))]
     [InlineData(typeof(Client.ClusterClient.SendToAll))]
@@ -100,14 +100,14 @@ akka.cluster.client.use-legacy-serialization = {(useLegacy ? "on" : "off")}
         var serializer = Sys.Serialization.FindSerializerForType(messageType);
         if (_useLegacy)
         {
-            serializer.Should().BeOfType<NewtonSoftJsonSerializer>();
+            serializer.AsV1<NewtonSoftJsonSerializer>();
         }
         else
         {
-            serializer.Should().BeOfType<ClusterClientMessageSerializer>();
+            serializer.AsV1<ClusterClientMessageSerializer>();
         }
     }
-    
+
     [Theory(DisplayName = "ClusterClient messages should be serialized properly")]
     [MemberData(nameof(MessageGenerator))]
     public void SerializeMessageTypeType(IClusterClientProtocolMessage message)
@@ -126,7 +126,7 @@ akka.cluster.client.use-legacy-serialization = {(useLegacy ? "on" : "off")}
         }
         else
         {
-            var manifestSerializer = (SerializerWithStringManifest)serializer;
+            var manifestSerializer = serializer.AsV1<SerializerWithStringManifest>();
             var manifest = manifestSerializer.Manifest(message);
             deserialized = (IClusterClientProtocolMessage) manifestSerializer.FromBinary(serialized, manifest);
         }

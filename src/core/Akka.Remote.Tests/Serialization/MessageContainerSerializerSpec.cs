@@ -10,6 +10,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
+using Akka.Serialization;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -26,8 +27,7 @@ namespace Akka.Remote.Tests.Serialization
         public void MessageContainerSerializer_must_resolve_serializer_for_ActorSelectionMessage()
         {
             Sys.Serialization.FindSerializerForType(typeof(ActorSelectionMessage))
-                .Should()
-                .BeOfType<MessageContainerSerializer>();
+                .AsV1<MessageContainerSerializer>();
         }
 
         [Fact]
@@ -54,8 +54,7 @@ namespace Akka.Remote.Tests.Serialization
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = Sys.Serialization.FindSerializerFor(message);
-            serializer.Should().BeOfType<MessageContainerSerializer>();
+            var serializer = Sys.Serialization.FindSerializerFor(message).AsV1<MessageContainerSerializer>();
             var serializedBytes = serializer.ToBinary(message);
             return (T)serializer.FromBinary(serializedBytes, typeof(T));
         }

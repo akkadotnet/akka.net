@@ -98,14 +98,14 @@ namespace Akka.Tests.Serialization
         public void SerializationSettingsShouldAllowForProgrammaticConfigurationOfSerializers()
         {
             var serializer = Sys.Serialization.FindSerializerFor(new ProgammaticDummy());
-            serializer.Should().BeOfType<TestSerializer>();
+            serializer.AsV1<TestSerializer>();
         }
 
         [Fact]
         public void SerializationSettingsShouldAllowConfiguredBindingToHookupToProgrammaticSerializer()
         {
             var serializer = Sys.Serialization.FindSerializerFor(new ConfigurationDummy());
-            serializer.Should().BeOfType<TestSerializer>();
+            serializer.AsV1<TestSerializer>();
         }
 
         [Fact]
@@ -135,7 +135,7 @@ namespace Akka.Tests.Serialization
 
             var sys2 = ActorSystem.Create("override-test", actorSystemSettings);
             var serializer = sys2.Serialization.FindSerializerFor(new ProgammaticDummy());
-            serializer.Should().BeOfType<TestSerializer>();
+            serializer.AsV1<TestSerializer>();
 
             sys2.Terminate().Wait();
         }

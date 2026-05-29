@@ -542,19 +542,21 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Can_get_serializer_by_binding()
         {
-            Sys.Serialization.FindSerializerFor(null).GetType().ShouldBe(typeof(NullSerializer));
+            // V2 wraps V1 serializers in SerializerV1Adapter, so .GetType() returns the adapter
+            // type — assert against the wrapped V1 type via AsV1<T>() instead.
+            Sys.Serialization.FindSerializerFor(null).AsV1<NullSerializer>().GetType().ShouldBe(typeof(NullSerializer));
             Sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).GetType().ShouldBe(typeof(ByteArraySerializer));
-            Sys.Serialization.FindSerializerFor("dummy").GetType().ShouldBe(typeof(DummySerializer));
-            Sys.Serialization.FindSerializerFor(123).GetType().ShouldBe(typeof(NewtonSoftJsonSerializer));
+            Sys.Serialization.FindSerializerFor("dummy").AsV1<DummySerializer>().GetType().ShouldBe(typeof(DummySerializer));
+            Sys.Serialization.FindSerializerFor(123).AsV1<NewtonSoftJsonSerializer>().GetType().ShouldBe(typeof(NewtonSoftJsonSerializer));
         }
 
         [Fact]
         public void Can_apply_a_config_based_serializer_by_the_binding()
         {
-            var dummy = (DummySerializer)Sys.Serialization.FindSerializerFor("dummy");
+            var dummy = Sys.Serialization.FindSerializerFor("dummy").AsV1<DummySerializer>();
             dummy.Config.ShouldBe(null);
 
-            var dummy2 = (DummyConfigurableSerializer) Sys.Serialization.GetSerializerById(-7);
+            var dummy2 = Sys.Serialization.GetSerializerById(-7).AsV1<DummyConfigurableSerializer>();
             dummy2.Config.ShouldNotBe(null);
             dummy2.Config.GetString("test-key", null).ShouldBe("test value");
         }
@@ -613,7 +615,7 @@ namespace Akka.Tests.Serialization
         [Fact(DisplayName = "Should be able to serialize object property with JObject value")]
         public void ObjectPropertyJObjectTest()
         {
-            var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerForType(typeof(object));
+            var serializer = Sys.Serialization.FindSerializerForType(typeof(object)).AsV1<NewtonSoftJsonSerializer>();
             var obj = JObject.FromObject(new
             {
                 FormattedMessage = "We are apple 20 points above value 10.01 ms",
@@ -648,7 +650,7 @@ namespace Akka.Tests.Serialization
         [Fact(DisplayName = "Should be able to serialize object property with anonymous type value")]
         public void ObjectPropertyObjectTest()
         {
-            var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerForType(typeof(object));
+            var serializer = Sys.Serialization.FindSerializerForType(typeof(object)).AsV1<NewtonSoftJsonSerializer>();
             var obj = new
             {
                 FormattedMessage = "We are apple 20 points above value 10.01 ms",
@@ -796,7 +798,7 @@ namespace Akka.Tests.Serialization
         public void Should_still_work_for_explicitly_bound_types_when_fallback_disabled()
         {
             var serialization = Sys.Serialization;
-            // byte[] is explicitly bound in default config
+            // byte[] is explicitly bound in default config; ByteArraySerializer is V2-native
             var serializer = serialization.FindSerializerFor(new byte[] { 1, 2, 3 });
             serializer.Should().BeOfType<ByteArraySerializer>();
         }
@@ -826,7 +828,7 @@ namespace Akka.Tests.Serialization
 
             // Should not throw, should return json serializer
             var serializer = serialization.FindSerializerFor(unregisteredType);
-            serializer.Should().BeOfType<NewtonSoftJsonSerializer>();
+            serializer.AsV1<NewtonSoftJsonSerializer>(); // throws if not wrapping
         }
 
         private sealed class SomeRandomType { }

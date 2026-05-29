@@ -9,6 +9,7 @@ using Akka.Configuration;
 using Akka.DistributedData;
 using Akka.DistributedData.Internal;
 using Akka.DistributedData.Serialization;
+using Akka.Serialization;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -36,10 +37,10 @@ namespace Akka.Cluster.Sharding.Tests
             ClusterSharding.Get(Sys);
 
             var rmSerializer = Sys.Serialization.FindSerializerFor(WriteAck.Instance);
-            rmSerializer.Should().BeOfType<ReplicatorMessageSerializer>();
+            rmSerializer.AsV1<ReplicatorMessageSerializer>();
 
             var rDSerializer = Sys.Serialization.FindSerializerFor(ORDictionary<string, GSet<string>>.Empty);
-            rDSerializer.Should().BeOfType<ReplicatedDataSerializer>();
+            rDSerializer.AsV1<ReplicatedDataSerializer>();
         }
     }
 }

@@ -82,11 +82,19 @@ namespace Akka.Serialization
     public class Serialization
     {
         /// <summary>
-        /// Used to determine the manifest for a message, if applicable.
+        /// Used to determine the manifest for a message, if applicable. V2 overload — preferred.
         /// </summary>
         /// <param name="s">The serializer we want to use on the message.</param>
         /// <param name="msg">The message payload.</param>
-        /// <returns>A populated string is applicable; <see cref="string.Empty"/> otherwise.</returns>
+        /// <returns>A populated string if applicable; <see cref="string.Empty"/> otherwise.</returns>
+        public static string ManifestFor(SerializerV2 s, object msg) => s.Manifest(msg);
+
+        /// <summary>
+        /// Used to determine the manifest for a message, if applicable. Legacy V1 overload.
+        /// </summary>
+        /// <param name="s">The serializer we want to use on the message.</param>
+        /// <param name="msg">The message payload.</param>
+        /// <returns>A populated string if applicable; <see cref="string.Empty"/> otherwise.</returns>
         /// <remarks>
         /// WARNING: if you change this method it's likely that the DaemonMsgCreateSerializer and other calls will need changes too.
         /// </remarks>
@@ -141,11 +149,11 @@ namespace Akka.Serialization
             return res;
         }
 
-        private readonly Serializer _nullSerializer;
+        private readonly SerializerV2 _nullSerializer;
 
-        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new();
-        private readonly Dictionary<int, Serializer> _serializersById = new();
-        private readonly Dictionary<string, Serializer> _serializersByName = new();
+        private readonly ConcurrentDictionary<Type, SerializerV2> _serializerMap = new();
+        private readonly Dictionary<int, SerializerV2> _serializersById = new();
+        private readonly Dictionary<string, SerializerV2> _serializersByName = new();
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
         private readonly MinimalLogger _initializationLogger;
@@ -165,7 +173,7 @@ namespace Akka.Serialization
             _initializationLogger = system.Settings.StdoutLogger;
             
             System = system;
-            _nullSerializer = new NullSerializer(system);
+            _nullSerializer = new SerializerV1Adapter(system, new NullSerializer(system));
             AddSerializer("null", _nullSerializer);
 
 
@@ -191,17 +199,19 @@ namespace Akka.Serialization
 
                 var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
 
-                var serializer = !serializerConfig.IsNullOrEmpty()
-                    ? (Serializer)Activator.CreateInstance(serializerType, system, serializerConfig)
-                    : (Serializer)Activator.CreateInstance(serializerType, system);
+                var instance = !serializerConfig.IsNullOrEmpty()
+                    ? Activator.CreateInstance(serializerType, system, serializerConfig)
+                    : Activator.CreateInstance(serializerType, system);
 
-                AddSerializer(kvp.Key, serializer);
+                var v2 = WrapAsV2(instance, serializerType);
+                AddSerializer(kvp.Key, v2);
             }
 
             // Add any serializers that are registered via the SerializationSetup
             // This has to be done here because SerializationSetup ALWAYS win.
             foreach (var details in _serializerDetails)
             {
+                // SerializerDetails is V1-typed (Serializer); auto-wrap as V2.
                 AddSerializer(details.Alias, details.Serializer);
             }
 
@@ -230,12 +240,30 @@ namespace Akka.Serialization
             // This has to be done here because SerializationSetup ALWAYS win.
             foreach (var details in _serializerDetails)
             {
-                // populate the serialization map
+                // populate the serialization map (SerializerDetails is V1-typed; auto-wrap as V2)
+                var v2 = WrapAsV2(details.Serializer);
                 foreach (var t in details.UseFor)
                 {
-                    AddSerializationMap(t, details.Serializer);
+                    AddSerializationMap(t, v2);
                 }
             }
+        }
+
+        /// <summary>
+        /// Wraps a non-null instance as a <see cref="SerializerV2"/> — pass-through if it already
+        /// is one, otherwise wraps a legacy <see cref="Serializer"/> in <see cref="SerializerV1Adapter"/>.
+        /// </summary>
+        private SerializerV2 WrapAsV2(object instance, Type? declaringType = null)
+        {
+            return instance switch
+            {
+                SerializerV2 v2 => v2,
+                Serializer v1 => new SerializerV1Adapter(System, v1),
+                null => throw new ArgumentNullException(nameof(instance),
+                    $"Configured serializer type [{declaringType?.FullName}] resolved to null."),
+                _ => throw new ConfigurationException(
+                    $"Configured serializer type [{declaringType?.FullName ?? instance.GetType().FullName}] is neither {nameof(Serializer)} nor {nameof(SerializerV2)}.")
+            };
         }
 
         private Information SerializationInfo => System.Provider.SerializationInformation;
@@ -317,12 +345,12 @@ namespace Akka.Serialization
             }
         }
 
-        private Serializer GetSerializerByName(string name)
+        private SerializerV2 GetSerializerByName(string name)
         {
             if (name == null)
                 return null;
 
-            _serializersByName.TryGetValue(name, out Serializer serializer);
+            _serializersByName.TryGetValue(name, out var serializer);
             return serializer;
         }
 
@@ -339,59 +367,74 @@ namespace Akka.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(Serializer serializer)
         {
-            var id = serializer.Identifier;
-            if(_logSerializerOverrideOnStart && _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
+            var v2 = WrapAsV2(serializer);
+            var id = v2.Identifier;
+            if (_logSerializerOverrideOnStart && _serializersById.TryGetValue(id, out var existing) && existing.GetType() != v2.GetType())
             {
                 LogWarning(
                     $"Serializer with identifier [{id}] are being overriden  " +
-                    $"from [{_serializersById[id].GetType()}] to [{serializer.GetType()}]. " +
+                    $"from [{existing.GetType()}] to [{v2.GetType()}]. " +
                     "Did you mean to do this?");
             }
-            
-            _serializersById[id] = serializer;
+
+            _serializersById[id] = v2;
         }
 
         /// <summary>
-        /// Adds the serializer to the internal state of the serialization subsystem
+        /// Adds the serializer to the internal state of the serialization subsystem.
+        /// Legacy V1 overload — the serializer is auto-wrapped in <see cref="SerializerV1Adapter"/>.
         /// </summary>
         /// <param name="name">Configuration name of the serializer</param>
         /// <param name="serializer">Serializer instance</param>
-        public void AddSerializer(string name, Serializer serializer)
+        public void AddSerializer(string name, Serializer serializer) => AddSerializerCore(name, WrapAsV2(serializer));
+
+        /// <summary>
+        /// Adds the serializer to the internal state of the serialization subsystem.
+        /// </summary>
+        /// <param name="name">Configuration name of the serializer</param>
+        /// <param name="serializer">Serializer instance</param>
+        public void AddSerializer(string name, SerializerV2 serializer) => AddSerializerCore(name, serializer);
+
+        private void AddSerializerCore(string name, SerializerV2 serializer)
         {
             var id = serializer.Identifier;
-            if(_logSerializerOverrideOnStart && _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
+            if (_logSerializerOverrideOnStart && _serializersById.TryGetValue(id, out var existingById) && existingById.GetType() != serializer.GetType())
             {
                 LogWarning(
                     $"Serializer with identifier [{id}] are being overriden  " +
-                    $"from [{_serializersById[id].GetType()}] to [{serializer.GetType()}]. " +
+                    $"from [{existingById.GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
             }
-            
-            if(_logSerializerOverrideOnStart && _serializersByName.ContainsKey(name) && _serializersByName[name].GetType() != serializer.GetType())
+
+            if (_logSerializerOverrideOnStart && _serializersByName.TryGetValue(name, out var existingByName) && existingByName.GetType() != serializer.GetType())
                 LogWarning(
-                    $"Serializer with name [{serializer.Identifier}] are being overriden  " +
-                    $"from [{_serializersByName[name].GetType()}] to [{serializer.GetType()}]. " +
+                    $"Serializer with name [{id}] are being overriden  " +
+                    $"from [{existingByName.GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
-            
+
             _serializersById[id] = serializer;
             _serializersByName[name] = serializer;
         }
 
         /// <summary>
-        /// TBD
+        /// Adds a serializer binding for the given type.
+        /// Legacy V1 overload — the serializer is auto-wrapped in <see cref="SerializerV1Adapter"/>.
         /// </summary>
-        /// <param name="type">TBD</param>
-        /// <param name="serializer">TBD</param>
-        /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AddSerializationMap(Type type, Serializer serializer)
+        public void AddSerializationMap(Type type, Serializer serializer) => AddSerializationMap(type, WrapAsV2(serializer));
+
+        /// <summary>
+        /// Adds a serializer binding for the given type.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddSerializationMap(Type type, SerializerV2 serializer)
         {
-            if(_logSerializerOverrideOnStart && _serializerMap.ContainsKey(type) && _serializerMap[type].GetType() != serializer.GetType())
+            if (_logSerializerOverrideOnStart && _serializerMap.TryGetValue(type, out var existing) && existing.GetType() != serializer.GetType())
                 LogWarning(
                     $"Serializer for type [{type}] are being overriden  " +
-                    $"from [{_serializerMap[type].GetType()}] to [{serializer.GetType()}]. " +
+                    $"from [{existing.GetType()}] to [{serializer.GetType()}]. " +
                     "Did you mean to do this?");
-            
+
             _serializerMap[type] = serializer;
         }
 
@@ -463,7 +506,10 @@ namespace Akka.Serialization
                         " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems." +
                         $" {Serializer.GetErrorForSerializerId(serializerId)}");
 
-                return serializer.FromBinary(bytes, type);
+                // V2 dispatch always uses string manifests. For Type-based callers, derive the
+                // manifest from the type's qualified name (matches V1 IncludeManifest=true behavior).
+                var manifest = type != null ? type.TypeQualifiedName() : string.Empty;
+                return serializer.FromBinary(bytes, manifest);
             });
         }
 
@@ -494,22 +540,10 @@ namespace Akka.Serialization
                 if (oldInfo == null)
                     Serialization.CurrentTransportInformation = SerializationInfo;
 
-                if (serializer is SerializerWithStringManifest stringManifest)
-                    return stringManifest.FromBinary(bytes, manifest);
-                if (string.IsNullOrEmpty(manifest))
-                    return serializer.FromBinary(bytes, null);
-                Type type;
-                try
-                {
-                    type = TypeCache.GetType(manifest);
-                }
-                catch (Exception ex)
-                {
-                    throw new SerializationException(
-                        $"Cannot find manifest class [{manifest}] for serializer with id [{serializerId}].", ex);
-                }
-
-                return serializer.FromBinary(bytes, type);
+                // Uniform V2 dispatch — V1 serializers are wrapped in SerializerV1Adapter, which
+                // handles the manifest-vs-type dispatch internally and overrides FromBinary to
+                // call the inner V1 serializer directly without round-tripping through buffers.
+                return serializer.FromBinary(bytes, manifest ?? string.Empty);
             }
             finally
             {
@@ -523,7 +557,7 @@ namespace Akka.Serialization
         /// <param name="obj">The object that needs to be serialized</param>
         /// <param name="defaultSerializerName">The config name of the serializer to use when no specific binding config is present</param>
         /// <returns>The serializer configured for the given object type</returns>
-        public Serializer FindSerializerFor(object obj, string defaultSerializerName = null)
+        public SerializerV2 FindSerializerFor(object obj, string defaultSerializerName = null)
         {
             return obj == null ? _nullSerializer : FindSerializerForType(obj.GetType(), defaultSerializerName);
         }
@@ -544,12 +578,12 @@ namespace Akka.Serialization
         /// This exception is thrown if the serializer of the given <paramref name="objectType"/> could not be found.
         /// </exception>
         /// <returns>The serializer configured for the given object type</returns>
-        public Serializer FindSerializerForType(Type objectType, string defaultSerializerName = null)
+        public SerializerV2 FindSerializerForType(Type objectType, string defaultSerializerName = null)
         {
             if (_serializerMap.TryGetValue(objectType, out var fullMatchSerializer))
                 return fullMatchSerializer;
 
-            Serializer serializer = null;
+            SerializerV2 serializer = null;
             Type type = objectType;
 
             // TODO: see if we can do a better job with proper type sorting here - most specific to least specific (object serializer goes last)
@@ -655,7 +689,7 @@ namespace Akka.Serialization
             }
         }
 
-        internal Serializer GetSerializerById(int serializerId)
+        internal SerializerV2 GetSerializerById(int serializerId)
         {
             return _serializersById[serializerId];
         }

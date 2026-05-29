@@ -15,6 +15,7 @@ using Akka.Cluster.Serialization;
 using Akka.Delivery;
 using Akka.Delivery.Internal;
 using Akka.Event;
+using Akka.Serialization;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
@@ -121,7 +122,7 @@ public class ReliableDeliverySerializerSpecs : AkkaSpec
     public void ReliableDeliveryMsgs_should_be_serializable(string scenario, IDeliverySerializable msg)
     {
         Sys.Log.Info(scenario);
-        Sys.Serialization.FindSerializerForType(msg.GetType()).Should().BeOfType<ReliableDeliverySerializer>();
+        Sys.Serialization.FindSerializerForType(msg.GetType()).AsV1<ReliableDeliverySerializer>();
         if (msg is ConsumerController.SequencedMessage<string> sequencedMessage)
         {
             // need to update the IActorRef
