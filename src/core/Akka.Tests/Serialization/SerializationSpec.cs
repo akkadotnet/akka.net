@@ -544,19 +544,19 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Can_get_serializer_by_binding()
         {
-            Sys.Serialization.FindSerializerFor(null).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NullSerializer>();
-            Sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<ByteArraySerializer>();
-            Sys.Serialization.FindSerializerFor("dummy").Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<DummySerializer>();
-            Sys.Serialization.FindSerializerFor(123).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>();
+            Sys.Serialization.FindSerializerFor(null).Should().BeOfType<NullSerializer>();
+            Sys.Serialization.FindSerializerFor(new byte[]{1,2,3}).Should().BeOfType<ByteArraySerializer>();
+            Sys.Serialization.FindSerializerFor("dummy").Should().BeOfType<DummySerializer>();
+            Sys.Serialization.FindSerializerFor(123).Should().BeOfType<NewtonSoftJsonSerializer>();
         }
 
         [Fact]
         public void Can_apply_a_config_based_serializer_by_the_binding()
         {
-            var dummy = Sys.Serialization.FindSerializerFor("dummy").Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<DummySerializer>().Subject;
+            var dummy = Sys.Serialization.FindSerializerFor("dummy").Should().BeOfType<DummySerializer>().Subject;
             dummy.Config.ShouldBe(null);
 
-            var dummy2 = Sys.Serialization.GetSerializerById(-7).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<DummyConfigurableSerializer>().Subject;
+            var dummy2 = Sys.Serialization.GetSerializerById(-7).Should().BeOfType<DummyConfigurableSerializer>().Subject;
             dummy2.Config.ShouldNotBe(null);
             dummy2.Config.GetString("test-key", null).ShouldBe("test value");
         }
@@ -631,7 +631,7 @@ namespace Akka.Tests.Serialization
         [Fact(DisplayName = "Should be able to serialize object property with JObject value")]
         public void ObjectPropertyJObjectTest()
         {
-            var serializer = Sys.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
+            var serializer = Sys.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
             var obj = JObject.FromObject(new
             {
                 FormattedMessage = "We are apple 20 points above value 10.01 ms",
@@ -666,7 +666,7 @@ namespace Akka.Tests.Serialization
         [Fact(DisplayName = "Should be able to serialize object property with anonymous type value")]
         public void ObjectPropertyObjectTest()
         {
-            var serializer = Sys.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
+            var serializer = Sys.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
             var obj = new
             {
                 FormattedMessage = "We are apple 20 points above value 10.01 ms",
@@ -882,7 +882,7 @@ namespace Akka.Tests.Serialization
             var serialization = Sys.Serialization;
             // byte[] is explicitly bound in default config
             var serializer = serialization.FindSerializerFor(new byte[] { 1, 2, 3 });
-            serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<ByteArraySerializer>();
+            serializer.Should().BeOfType<ByteArraySerializer>();
         }
 
         private sealed class UnregisteredMessage
@@ -910,7 +910,7 @@ namespace Akka.Tests.Serialization
 
             // Should not throw, should return json serializer
             var serializer = serialization.FindSerializerFor(unregisteredType);
-            serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>();
+            serializer.Should().BeOfType<NewtonSoftJsonSerializer>();
         }
 
         private sealed class SomeRandomType { }

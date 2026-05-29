@@ -345,6 +345,11 @@ namespace Akka.Serialization
             };
         }
 
+        private static Serializer AsPublicSerializer(SerializerV2 serializer)
+        {
+            return serializer is SerializerV1Adapter adapter ? adapter.Inner : serializer;
+        }
+
         /// <summary>
         /// Adds the serializer to the internal state of the serialization subsystem
         /// </summary>
@@ -559,7 +564,7 @@ namespace Akka.Serialization
         /// <returns>The serializer configured for the given object type</returns>
         public Serializer FindSerializerFor(object obj, string defaultSerializerName = null)
         {
-            return obj == null ? _nullSerializer : FindSerializerForType(obj.GetType(), defaultSerializerName);
+            return obj == null ? AsPublicSerializer(_nullSerializer) : FindSerializerForType(obj.GetType(), defaultSerializerName);
         }
 
         //cache to eliminate lots of typeof operator calls
@@ -581,7 +586,7 @@ namespace Akka.Serialization
         public Serializer FindSerializerForType(Type objectType, string defaultSerializerName = null)
         {
             if (_serializerMap.TryGetValue(objectType, out var fullMatchSerializer))
-                return fullMatchSerializer;
+                return AsPublicSerializer(fullMatchSerializer);
 
             SerializerV2 serializer = null;
             Type type = objectType;
@@ -615,7 +620,7 @@ namespace Akka.Serialization
             }
 
             AddSerializationMap(type, serializer);
-            return serializer;
+            return AsPublicSerializer(serializer);
         }
         
         /// <summary>
@@ -689,9 +694,9 @@ namespace Akka.Serialization
             }
         }
 
-        internal SerializerV2 GetSerializerById(int serializerId)
+        internal Serializer GetSerializerById(int serializerId)
         {
-            return _serializersById[serializerId];
+            return AsPublicSerializer(_serializersById[serializerId]);
         }
     }
 }

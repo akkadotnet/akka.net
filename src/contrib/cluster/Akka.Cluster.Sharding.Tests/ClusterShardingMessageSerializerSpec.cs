@@ -48,7 +48,7 @@ namespace Akka.Cluster.Sharding.Tests
         private void CheckSerialization(object obj)
         {
             var serializer = Sys.Serialization.FindSerializerFor(obj);
-            serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<ClusterShardingMessageSerializer>();
+            serializer.Should().BeOfType<ClusterShardingMessageSerializer>();
             var blob = serializer.ToBinary(obj);
             var reference = serializer.FromBinary(blob, serializer.Manifest(obj));
             reference.Should().BeEquivalentTo(obj);
@@ -134,7 +134,7 @@ namespace Akka.Cluster.Sharding.Tests
             var blob = message1.ToByteArray();
 
             var serializer = Sys.Serialization.FindSerializerForType(typeof(EventSourcedRememberEntitiesShardStore.EntitiesStarted));
-            serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<ClusterShardingMessageSerializer>();
+            serializer.Should().BeOfType<ClusterShardingMessageSerializer>();
 
             var reference = serializer.FromBinary(blob, "CB");
             reference.Should().Be(new EventSourcedRememberEntitiesShardStore.EntitiesStarted(ImmutableHashSet.Create("e1")));

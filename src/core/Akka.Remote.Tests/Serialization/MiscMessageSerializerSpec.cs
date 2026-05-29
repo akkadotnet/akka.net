@@ -390,7 +390,7 @@ namespace Akka.Remote.Tests.Serialization
         private T AssertAndReturn<T>(T message)
         {
             var serializer = Sys.Serialization.FindSerializerFor(message);
-            serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<MiscMessageSerializer>();
+            serializer.Should().BeOfType<MiscMessageSerializer>();
             var serializedBytes = serializer.ToBinary(message);
             var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, message);
             return (T)serializer.FromBinary(serializedBytes, manifest);

@@ -24,7 +24,7 @@ namespace Akka.Tests.Serialization
         {
             using (var system = ActorSystem.Create(nameof(NewtonsoftJsonConfigSpec)))
             {
-                var serializer = system.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
+                var serializer = system.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
                 Assert.Equal(TypeNameHandling.All, serializer.Settings.TypeNameHandling);
                 Assert.Equal(PreserveReferencesHandling.Objects, serializer.Settings.PreserveReferencesHandling);
                 Assert.Equal(2, serializer.Settings.Converters.Count);
@@ -46,7 +46,7 @@ namespace Akka.Tests.Serialization
             ");
             using (var system = ActorSystem.Create(nameof(NewtonsoftJsonConfigSpec), config))
             {
-                var serializer = system.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
+                var serializer = system.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
                 Assert.Equal(TypeNameHandling.None, serializer.Settings.TypeNameHandling);
                 Assert.Equal(PreserveReferencesHandling.None, serializer.Settings.PreserveReferencesHandling);
                 Assert.Equal(2, serializer.Settings.Converters.Count);
@@ -70,7 +70,7 @@ namespace Akka.Tests.Serialization
             ");
             using (var system = ActorSystem.Create(nameof(NewtonsoftJsonConfigSpec), config))
             {
-                var serializer = system.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
+                var serializer = system.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
                 Assert.Equal(TypeNameHandling.All, serializer.Settings.TypeNameHandling);
                 Assert.Equal(PreserveReferencesHandling.Objects, serializer.Settings.PreserveReferencesHandling);
                 Assert.Equal(4, serializer.Settings.Converters.Count);

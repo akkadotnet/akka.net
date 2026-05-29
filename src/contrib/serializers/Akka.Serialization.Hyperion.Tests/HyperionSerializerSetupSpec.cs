@@ -108,7 +108,7 @@ akka.actor {
                     .WithKnownTypeProvider<CustomTypeProvider>());
             
             var sys = ActorSystem.Create("test", actorSetup);
-            var serializer = sys.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<HyperionSerializer>().Subject;
+            var serializer = sys.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<HyperionSerializer>().Subject;
             var settings = serializer.Settings;
 
             settings.Surrogates.Should().BeEquivalentTo(surrogate);

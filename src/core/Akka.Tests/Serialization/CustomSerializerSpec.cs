@@ -34,7 +34,7 @@ namespace Akka.Tests.Serialization
 
         private static T Inner<T>(Serializer serializer) where T: Serializer
         {
-            return serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<T>().Subject;
+            return serializer.Should().BeOfType<T>().Subject;
         }
 
         /// <summary>
@@ -169,7 +169,7 @@ namespace Akka.Tests.Serialization
                 serializer.Should().NotBeEquivalentTo(serializerById);
                 
                 serializerById.Identifier.Should().Be(1); // This should be the JSON serializer
-                serializerById.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>();
+                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
             }
         }
         
@@ -202,9 +202,9 @@ namespace Akka.Tests.Serialization
 
                 serializer.Should().Be(serializerById);
                 serializer.Should().Be(objectSerializer);
-                serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<CustomIllegalSerializer>();
-                serializerById.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<CustomIllegalSerializer>();
-                objectSerializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<CustomIllegalSerializer>();
+                serializer.Should().BeOfType<CustomIllegalSerializer>();
+                serializerById.Should().BeOfType<CustomIllegalSerializer>();
+                objectSerializer.Should().BeOfType<CustomIllegalSerializer>();
             }
         }
         
@@ -236,11 +236,11 @@ namespace Akka.Tests.Serialization
                 var serializerById = serialization.GetSerializerById(1);
                 var invalidSerializerById = serialization.GetSerializerById(serializer.Identifier);
 
-                serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<CustomIllegalSerializer>();
-                serializerById.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>();
-                objectSerializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>();
+                serializer.Should().BeOfType<CustomIllegalSerializer>();
+                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
+                objectSerializer.Should().BeOfType<NewtonSoftJsonSerializer>();
                 
-                invalidSerializerById.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().NotBeOfType<CustomIllegalSerializer>(); // This is the bad part
+                invalidSerializerById.Should().NotBeOfType<CustomIllegalSerializer>(); // This is the bad part
                 invalidSerializerById.Identifier.Should().Be(serializerById.Identifier); // This is the bad part
             }
         }

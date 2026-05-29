@@ -53,7 +53,7 @@ namespace Akka.Cluster.Tools.Tests.Singleton
         private T AssertAndReturn<T>(T message)
         {
             var serializer = Sys.Serialization.FindSerializerFor(message);
-            Assert.IsType<ClusterSingletonMessageSerializer>(Assert.IsType<SerializerV1Adapter>(serializer).Inner);
+            Assert.IsType<ClusterSingletonMessageSerializer>(serializer);
             var serialized = serializer.ToBinary(message);
             return (T)serializer.FromBinary(serialized, serializer.Manifest(message));
         }

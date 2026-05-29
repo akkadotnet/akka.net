@@ -25,7 +25,7 @@ namespace Akka.Serialization.Hyperion.Tests
     {
         private static HyperionSerializer GetHyperionSerializer(ActorSystem system)
         {
-            return system.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<HyperionSerializer>().Subject;
+            return system.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<HyperionSerializer>().Subject;
         }
 
         [Fact]
