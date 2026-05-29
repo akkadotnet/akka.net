@@ -36,7 +36,7 @@ namespace Akka.Persistence.Snapshot
         private readonly ISet<SnapshotMetadata> _saving;
 
         private static readonly Type WrapperType = typeof(Serialization.Snapshot);
-        private readonly Akka.Serialization.SerializerV2 _wrapperSerializer;
+        private readonly Akka.Serialization.Serializer _wrapperSerializer;
         private readonly Akka.Serialization.Serialization _serialization;
 
         private readonly string _defaultSerializer;

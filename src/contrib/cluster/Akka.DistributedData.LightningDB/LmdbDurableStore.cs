@@ -50,7 +50,7 @@ namespace Akka.DistributedData.LightningDB
 
         private readonly Config _config;
         private readonly Akka.Serialization.Serialization _serialization;
-        private readonly SerializerV2 _serializer;
+        private readonly Serializer _serializer;
         private readonly string _manifest;
         private readonly long _mapSize;
 

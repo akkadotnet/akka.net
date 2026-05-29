@@ -46,15 +46,16 @@ namespace Akka.Serialization
     public sealed class SerializerDetails
     {
         internal SerializerDetails(string @alias, Serializer serializer, ImmutableHashSet<Type> useFor)
-            : this(alias, Serialization.AdaptSerializer(serializer), useFor)
-        {
-        }
-
-        internal SerializerDetails(string @alias, SerializerV2 serializer, ImmutableHashSet<Type> useFor)
         {
             Alias = alias;
             Serializer = serializer;
+            SerializerV2 = Serialization.AdaptSerializer(serializer);
             UseFor = useFor;
+        }
+
+        internal SerializerDetails(string @alias, SerializerV2 serializer, ImmutableHashSet<Type> useFor)
+            : this(alias, (Serializer)serializer, useFor)
+        {
         }
 
         /// <summary>
@@ -69,7 +70,9 @@ namespace Akka.Serialization
         /// <summary>
         /// The serializer that belongs to this <see cref="Alias"/>.
         /// </summary>
-        public SerializerV2 Serializer { get; }
+        public Serializer Serializer { get; }
+
+        internal SerializerV2 SerializerV2 { get; }
 
         /// <summary>
         /// The types of messages that this 

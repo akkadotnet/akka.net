@@ -103,15 +103,7 @@ namespace Akka.Serialization
         /// <returns>A populated string is applicable; <see cref="string.Empty"/> otherwise.</returns>
         public static string ManifestFor(Serializer s, object msg)
         {
-            switch (s)
-            {
-                case SerializerWithStringManifest s2:
-                    return s2.Manifest(msg);
-                case Serializer { IncludeManifest: true }:
-                    return msg.GetType().TypeQualifiedName();
-                default:
-                    return string.Empty;
-            }
+            return s.Manifest(msg);
         }
 
         /// <summary>
@@ -213,7 +205,7 @@ namespace Akka.Serialization
             // This has to be done here because SerializationSetup ALWAYS win.
             foreach (var details in _serializerDetails)
             {
-                AddSerializer(details.Alias, details.Serializer);
+                AddSerializer(details.Alias, details.SerializerV2);
             }
 
             foreach (var kvp in serializerBindingConfig)
@@ -244,7 +236,7 @@ namespace Akka.Serialization
                 // populate the serialization map
                 foreach (var t in details.UseFor)
                 {
-                    AddSerializationMap(t, details.Serializer);
+                    AddSerializationMap(t, details.SerializerV2);
                 }
             }
         }
@@ -565,7 +557,7 @@ namespace Akka.Serialization
         /// <param name="obj">The object that needs to be serialized</param>
         /// <param name="defaultSerializerName">The config name of the serializer to use when no specific binding config is present</param>
         /// <returns>The serializer configured for the given object type</returns>
-        public SerializerV2 FindSerializerFor(object obj, string defaultSerializerName = null)
+        public Serializer FindSerializerFor(object obj, string defaultSerializerName = null)
         {
             return obj == null ? _nullSerializer : FindSerializerForType(obj.GetType(), defaultSerializerName);
         }
@@ -586,7 +578,7 @@ namespace Akka.Serialization
         /// This exception is thrown if the serializer of the given <paramref name="objectType"/> could not be found.
         /// </exception>
         /// <returns>The serializer configured for the given object type</returns>
-        public SerializerV2 FindSerializerForType(Type objectType, string defaultSerializerName = null)
+        public Serializer FindSerializerForType(Type objectType, string defaultSerializerName = null)
         {
             if (_serializerMap.TryGetValue(objectType, out var fullMatchSerializer))
                 return fullMatchSerializer;

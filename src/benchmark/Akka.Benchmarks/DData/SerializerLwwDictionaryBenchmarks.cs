@@ -38,7 +38,7 @@ public class SerializerLwwDictionaryBenchmarks
     private UniqueAddress[] _nodes;
     private object _c1;
     private ActorSystem sys;
-    private SerializerV2 ser;
+    private Serializer ser;
     private byte[] _c1Ser;
     private string _c1Manifest;
 

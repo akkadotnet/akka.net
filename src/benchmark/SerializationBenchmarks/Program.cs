@@ -69,8 +69,8 @@ serialization-settings {{
 
         private ActorSystem _sys_noPool;
         private ActorSystem _sys_pool;
-        private SerializerV2 _noPoolSer;
-        private SerializerV2 _poolSer;
+        private Serializer _noPoolSer;
+        private Serializer _poolSer;
         private const int _numIters = 10000; 
         [Benchmark]
         public void Pooling()
@@ -107,7 +107,7 @@ serialization-settings {{
     public class SerializationTests
     {
         private ActorSystem _sys;
-        private SerializerV2 _ser;
+        private Serializer _ser;
 
         public SerializationTests()
         {

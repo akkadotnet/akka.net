@@ -85,7 +85,7 @@ namespace Akka.Serialization
                 return stringManifest.FromBinary(bytes, manifest);
 
             if (string.IsNullOrEmpty(manifest))
-                return Inner.FromBinary(bytes, null);
+                return Inner.FromBinary(bytes, (Type)null!);
 
             Type type;
             try
@@ -101,7 +101,7 @@ namespace Akka.Serialization
         }
 
         /// <inheritdoc />
-        public override object FromBinary(byte[] bytes, Type? type)
+        public override object FromBinary(byte[] bytes, Type type)
         {
             return Inner.FromBinary(bytes, type);
         }

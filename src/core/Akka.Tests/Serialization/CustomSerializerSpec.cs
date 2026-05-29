@@ -32,7 +32,7 @@ namespace Akka.Tests.Serialization
             _output = output;
         }
 
-        private static T Inner<T>(SerializerV2 serializer) where T: Serializer
+        private static T Inner<T>(Serializer serializer) where T: Serializer
         {
             return serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<T>().Subject;
         }

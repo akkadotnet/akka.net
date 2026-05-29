@@ -53,7 +53,7 @@ namespace Akka.Persistence.Tests.Serialization
         {
             var p1 = new Persistent(new MyPayload("a"), sender: TestActor);
             var bytes = _serializer.ToBinary(p1);
-            var back = _serializer.FromBinary(bytes, null);
+            var back = _serializer.FromBinary(bytes, (Type)null!);
 
             back.Should().BeOfType<Persistent>();
             var persisted = (Persistent)back;

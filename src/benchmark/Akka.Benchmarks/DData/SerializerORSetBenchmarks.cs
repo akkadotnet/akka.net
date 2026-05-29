@@ -30,7 +30,7 @@ public class SerializerORSetBenchmarks
     public int NumNodes;
         
     private ActorSystem sys;
-    private SerializerV2 ser;
+    private Serializer ser;
     private UniqueAddress[] _nodes;
     private RDDBenchTypes.TestVal[] _elements;
     private ORSet<List<RDDBenchTypes.TestVal>> _c1;
