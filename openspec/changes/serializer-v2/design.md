@@ -1,95 +1,107 @@
 ## Context
 
-Akka.NET's serialization infrastructure centers on the `Serializer` base class (`src/core/Akka/Serialization/Serializer.cs`) with `ToBinary(object) → byte[]` and `FromBinary(byte[], Type) → object`. `SerializerWithStringManifest` extends it with manifest-based dispatch. The `Serialization` class (`src/core/Akka/Serialization/Serialization.cs`) manages registration via HOCON and `SerializationSetup`, storing serializers in `Dictionary<int, Serializer>` by ID and `ConcurrentDictionary<Type, Serializer>` by type.
+Akka.NET currently centers serialization around `Serializer` and `SerializerWithStringManifest` in `src/core/Akka/Serialization/Serializer.cs`. The primary API is `ToBinary(object) -> byte[]` and `FromBinary(byte[], Type/string) -> object`. This forces byte-array allocation even when the caller could write directly to a buffer or deserialize from a `ReadOnlySequence<byte>`.
 
-All 15+ internal serializers (Cluster, Remote, Persistence, Sharding, etc.) use Google.Protobuf. They extend `SerializerWithStringManifest`, call `.ToByteArray()` for encoding, and `Parser.ParseFrom(byte[])` for decoding. Four of them (Sharding, PubSub, ReliableDelivery, Misc) wrap arbitrary user payloads via `WrappedPayloadSupport`, which calls `FindSerializerFor()` → `ToBinary()` on the inner message.
+The immediate blast radius of changing this API is larger than core Akka:
 
-A POC at github.com/Aaronontheweb/AkkaSerializationPoC (PR #42, spike/serializer-v2-redesign branch) validated the approach: sealed `AkkaWriter`/`AkkaReader` classes wrapping MessagePack, 22% faster deserialization than the interface-based dev branch, -322 net lines. The source generator is deferred — hand-written serializers validate the API first.
+- Classic Akka.Remote uses `MessageSerializer` and `WrappedPayloadSupport` to place serializer ID, manifest, and payload bytes into protobuf envelopes.
+- Akka.Persistence stores nested payloads in protobuf `PersistentPayload` records containing serializer ID, manifest, and payload bytes.
+- Snapshot storage uses wrapper serializers directly.
+- DistributedData and Akka.Delivery have direct serializer call sites.
+- Tests frequently assert concrete serializer types returned from `FindSerializerForType()`.
+
+This means `SerializerV2` must be introduced with the classic remoting and persistence bridges in the same change. A V2-only core change would leave the repo in a partially broken state.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- `SerializerV2` base class in core Akka with `IBufferWriter<byte>` / `ReadOnlySequence<byte>` API
-- `SerializerV1Adapter` wraps legacy serializers to V2
-- `Serialization.cs` uses V2 internally (auto-wraps V1 on registration)
-- `MessagePackSerializer : SerializerV2` + sealed `AkkaWriter`/`AkkaReader` in separate package
-- Mechanical port of simple internal Protobuf serializers to V2 base (same IDs, same wire format)
-- Hand-written serializers validate the API before source generator investment
-- Persistence data fully backward compatible (V1-serialized events remain readable)
+
+- Introduce `SerializerV2` as the canonical Akka.NET 1.6 serialization abstraction.
+- Intentionally break `FindSerializerFor()` / `FindSerializerForType()` return types to return `SerializerV2`.
+- Keep V1 serializers working through `SerializerV1Adapter`.
+- Preserve classic Akka.Remote wire compatibility.
+- Preserve Akka.Persistence stored event and snapshot compatibility.
+- Decide V2 API details needed by sourcegen and Artery before either depends on the API.
+- Keep MessagePack and source generation out of core Akka.
 
 **Non-Goals:**
-- Source generator (deferred until API validated)
-- Rewriting internal Protobuf serializers to use MessagePack (they stay Protobuf, just change base class)
-- Changing persistence envelope serializers (PersistenceMessageSerializer, PersistenceSnapshotSerializer)
-- Changing the HOCON registration mechanism
-- HOCON-less or attribute-only registration (future enhancement)
+
+- Implementing source-generated MessagePack serializers.
+- Introducing Artery envelopes or Artery TCP.
+- Replacing classic remoting wire format.
+- Rewriting all internal protobuf serializers to MessagePack.
+- Removing V1 serializer classes.
 
 ## Decisions
 
-### 1. SerializerV2 is independent — does not extend Serializer
+### 1. SerializerV2 Is Canonical And Independent
 
-**Decision:** `SerializerV2` is a new base class with no inheritance relationship to `Serializer` or `SerializerWithStringManifest`. V1 serializers are wrapped in `SerializerV1Adapter : SerializerV2`.
+`SerializerV2` is a new base class that does not inherit from `Serializer` or `SerializerWithStringManifest`.
 
-**Rationale:** Having V2 extend V1 permanently couples the new system to the `byte[]`-based API. The bridge methods (`ToBinary`/`FromBinary`) exist on V2 for transport compatibility but are implemented in terms of the buffer API (not inherited from V1). This allows the transport to eventually bypass the bridge entirely.
+V1 compatibility is provided by `SerializerV1Adapter : SerializerV2`.
 
-### 2. Two-layer design: core base class + MessagePack package
+Rationale: inheriting from `Serializer` permanently couples V2 to the `byte[]` API. The new API needs buffer-first methods for remoting, persistence, and source-generated serializers. Compatibility belongs in an adapter.
 
-**Decision:**
-- Layer 1: `SerializerV2` in core Akka — codec-agnostic, no MessagePack dependency
-- Layer 2: `MessagePackSerializer : SerializerV2` in `Akka.Serialization.V2` — bridges to `AkkaWriter`/`AkkaReader`
+### 2. V2 Still Provides Bridge Methods
 
-```
-SerializerV2 (core Akka — IBufferWriter/ReadOnlySequence, no MessagePack)
-  ├── SerializerV1Adapter (wraps legacy Serializer)
-  ├── MessagePackSerializer (Akka.Serialization.V2 — AkkaWriter/AkkaReader)
-  │     └── MessagePackSerializer<TProtocol> (protocol-scoped for future codegen)
-  └── [Internal Protobuf serializers extend SerializerV2 directly]
-```
+`SerializerV2` should expose compatibility bridge methods such as `ToBinary` and `FromBinary` so existing code paths can be migrated incrementally.
 
-**Rationale:** Core Akka should not depend on MessagePack. Internal Protobuf serializers extend `SerializerV2` directly and use `proto.WriteTo(IBufferWriter<byte>)` — they don't need the MessagePack layer. User-facing serializers use `MessagePackSerializer` via the separate package.
+These bridge methods should be implemented in terms of the V2 buffer API for native V2 serializers and delegated to the inner serializer for V1 adapters.
 
-### 3. Serialization.cs stores SerializerV2 internally
+Rationale: classic remoting and persistence still need byte arrays at protobuf boundaries. Bridge methods keep those compatibility paths clear without making `Serializer` the base abstraction.
 
-**Decision:** Change `_serializersById` to `Dictionary<int, SerializerV2>` and `_serializerMap` to `ConcurrentDictionary<Type, SerializerV2>`. V1 serializers instantiated from HOCON are auto-wrapped in `SerializerV1Adapter`. `FindSerializerFor()` returns `SerializerV2`.
+### 3. Serialize Must Report Bytes Written
 
-**Rationale:** V2 is the new foundation. All dispatch goes through V2. `SerializerV1Adapter.Inner` provides access to the underlying V1 serializer for callers that need backward compat.
+The V2 serialize API must make frame and payload length accounting explicit.
 
-### 4. Mechanical port of internal Protobuf serializers
+The exact shape can be `int`, `ValueTask<int>`, or a small result type, but callers must not have to infer bytes written from unrelated state when building envelopes.
 
-**Decision:** Simple internal serializers (`ClusterMessageSerializer`, `SystemMessageSerializer`, `PrimitiveSerializers`, `ByteArraySerializer`) change base class to `SerializerV2` and use `proto.WriteTo(IBufferWriter<byte>)` / `Parser.ParseFrom(ReadOnlySequence<byte>)`. Same serializer IDs, same manifests, same wire format. Google.Protobuf natively supports both APIs.
+Rationale: Artery envelopes and frame encoders need accurate payload length accounting. Classic remoting and persistence can ignore this in bridge paths, but the API must be suitable before sourcegen and Artery work begins.
 
-**Rationale:** It's a find-and-replace level change. Wire format is byte-identical. No new IDs needed. Serializers with nested user payloads via `WrappedPayloadSupport` (Sharding, PubSub, ReliableDelivery, Misc) are deferred until the API is validated with simpler serializers first.
+### 4. SizeHint Needs Unknown Size
 
-### 5. AkkaWriter/AkkaReader are sealed (from POC PR #42)
+`SizeHint` must support an unknown-size value.
 
-**Decision:** Use the spike branch approach — sealed concrete classes wrapping MessagePack directly, no `ICodecWriter`/`ICodecReader` interface abstraction.
+Rationale: V1 adapters and some serializers cannot cheaply know the serialized size. Forcing inaccurate guesses will cause poor buffer sizing and fragile frame accounting.
 
-**Rationale:** 22% faster deserialization from JIT devirtualization. The interface layer was YAGNI — we're committed to MessagePack for user message codegen. `AkkaWriter.RawBuffer` escape hatch preserves extensibility for advanced scenarios.
+### 5. Manifest Is A V2 API
 
-### 6. Bridge methods for transport compatibility
+Manifest production should be a direct V2 API, not repeated `is SerializerWithStringManifest` checks.
 
-**Decision:** `SerializerV2` has `ToBinary(object) → byte[]` and `FromBinary(byte[], string) → object` implemented in terms of the buffer API:
+Rationale: remoting and persistence both need serializer ID + manifest. V2 should make this uniform for V1 adapters, V2 hand-written serializers, and generated serializers.
 
-```csharp
-public virtual byte[] ToBinary(object obj)
-{
-    var buffer = new ArrayBufferWriter<byte>(SizeHint(obj));
-    Serialize(buffer, obj);
-    return buffer.WrittenSpan.ToArray();
-}
+### 6. Serialization.cs Stores V2 Internally
 
-public virtual object FromBinary(byte[] bytes, string manifest)
-    => Deserialize(new ReadOnlySequence<byte>(bytes), manifest);
-```
+`Serialization.cs` stores V2 serializers in its ID and type maps. V1 serializers instantiated through HOCON or setup are wrapped on registration.
 
-**Rationale:** The current transport (and Spec 3's initial `FrameBufferWriter` path) can call `Serialize(IBufferWriter<byte>)` directly. The bridge is for backward compat with code that still expects `byte[]`. The bridge is virtual so it can be bypassed when direct buffer access is available.
+Rationale: V2 is the new cheese for Akka.NET 1.6. The API break is intentional and should be visible instead of hidden behind overloads that keep old assumptions alive.
+
+### 7. Classic Remoting Is Compatibility, Not Zero-Copy
+
+Classic remoting should use V2 payload serialization but preserve its existing protobuf wire format.
+
+Rationale: the purpose of the classic bridge is to keep existing classic remoting behavior working after the V2 API break. Classic remoting will still allocate at protobuf / `ByteString` boundaries. The zero-copy remoting path belongs to Artery.
+
+### 8. Persistence Compatibility Is Part Of The Foundation
+
+Persistence event and snapshot serializers must use V2 and preserve stored data compatibility in this same change.
+
+Rationale: persistence is the highest-risk compatibility surface. Old journal and snapshot data must remain readable, and V2 payloads must store serializer ID + manifest + bytes in the same conceptual model.
+
+### 9. Sourcegen Comes Next
+
+Source-generated MessagePack serializers should be implemented only after this foundation is green.
+
+Rationale: sourcegen validates the V2 API through real serialization, classic remoting, and persistence paths before Artery envelopes depend on it.
 
 ## Risks / Trade-offs
 
-**[FindSerializerFor return type change]** → Breaking API change. All callers that type-check the result against `Serializer` or `SerializerWithStringManifest` must update. Mitigated: `SerializerV1Adapter.Inner` provides access to the original V1 serializer.
+**API break blast radius**: changing return types from `Serializer` to `SerializerV2` will produce many compile errors. This is expected and should be used as the task list.
 
-**[MessagePack as a new dependency]** → Only in the `Akka.Serialization.V2` package, not core Akka. Users who don't opt in are unaffected. MessagePack-CSharp has 215M+ downloads and is widely used in production.
+**Persistence compatibility**: old data must remain readable. Add explicit tests with V1-serialized event and snapshot bytes.
 
-**[Internal serializer port could introduce bugs]** → Mitigated by wire format being byte-identical (same Protobuf bytes, same IDs). Existing serialization round-trip tests catch regressions.
+**Classic remoting allocation remains**: acceptable for compatibility. Do not over-optimize classic remoting while Artery is the target high-throughput path.
 
-**[WrappedPayloadSupport serializers deferred]** → The 4 serializers with nested user payloads continue using V1 `FindSerializerFor()` → `ToBinary()` through the adapter. They work correctly but miss the zero-copy benefit for the inner payload. Addressed in a follow-up pass after API validation.
+**Async API uncertainty**: persistence may need async serializer behavior. Decide before Artery, even if the initial API remains sync.
+
+**V1 adapter behavior**: adapter must preserve identifiers, manifests, error semantics, and transport information handling.

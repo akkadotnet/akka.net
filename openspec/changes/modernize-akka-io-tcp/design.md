@@ -22,10 +22,10 @@ Current target frameworks are `netstandard2.0` + `net6.0`. The `netstandard2.0` 
 - Preserve the actor supervision hierarchy exactly
 
 **Non-Goals:**
-- TLS implementation (Spec 2 — just needs `TlsStreamProvider` after this lands)
-- Replacing the DotNetty transport (Spec 3 — depends on this)
-- SerializerV2 integration (Spec 4 — parallel workstream)
-- Performance benchmarking (Spec 5 — depends on Specs 3+4)
+- TLS implementation (separate `TlsStreamProvider` work)
+- Replacing or bypassing DotNetty remoting (future Artery TCP work depends on this direction)
+- SerializerV2 integration (separate atomic foundation workstream)
+- Performance benchmarking (depends on SerializerV2 and Artery TCP)
 - Changing Akka.IO.Udp (separate effort, similar pattern could apply later)
 - Source generator for serialization (deferred)
 - Modifying the Akka.Streams materializer architecture
