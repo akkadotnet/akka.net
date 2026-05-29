@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
@@ -213,6 +214,30 @@ namespace Akka.Streams.Tests.Dsl
 
                 result.Should().Throw<TestException>().WithMessage(msg);
                 return Task.CompletedTask;
+            }, Materializer);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private TestSubscriber.Probe<int> RunLazyFlowUnobservedReproAsync() =>
+            Source.Single(1)
+                .ViaMaterialized(Flow.LazyInitAsync<int, int, NotUsed>(() => Task.FromException<Flow<int, int, NotUsed>>(Ex)), Keep.Left)
+                .RunWith(this.SinkProbe<int>(), Materializer);
+
+        [Fact]
+        public async Task A_LazyFlow_with_discarded_materialized_task_must_not_trigger_UnobservedTaskException()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                await UnobservedTaskExceptionAssertions.ShouldNotRaiseAsync(
+                    () =>
+                    {
+                        var probe = RunLazyFlowUnobservedReproAsync();
+                        var error = probe.Request(1).ExpectError().As<AggregateException>();
+                        error.Flatten().InnerExceptions.Should().ContainSingle(e => ReferenceEquals(e, Ex));
+                        return Task.CompletedTask;
+                    },
+                    aggregate => aggregate.InnerExceptions.Any(e => ReferenceEquals(e, Ex)),
+                    "discarding LazyFlow's materialized task should not leave a hidden faulted task unobserved");
             }, Materializer);
         }
     }
