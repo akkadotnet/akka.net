@@ -45,6 +45,8 @@ namespace Akka.Serialization
         /// </summary>
         protected readonly ExtendedActorSystem system;
 
+        internal ExtendedActorSystem ExtendedSystem => system;
+
         private readonly FastLazy<int> _value;
 
         /// <summary>
@@ -206,4 +208,3 @@ namespace Akka.Serialization
         }
     }
 }
-

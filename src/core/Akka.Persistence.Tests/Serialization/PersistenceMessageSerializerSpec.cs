@@ -23,9 +23,11 @@ namespace Akka.Persistence.Tests.Serialization
             akka.actor {
               serializers {
                 my-payload = ""Akka.Persistence.Tests.Serialization.MyPayloadSerializer, Akka.Persistence.Tests""
+                my-v2-payload = ""Akka.Persistence.Tests.Serialization.MyV2PayloadSerializer, Akka.Persistence.Tests""
               }
               serialization-bindings {
                 ""Akka.Persistence.Tests.Serialization.MyPayload, Akka.Persistence.Tests"" = my-payload
+                ""Akka.Persistence.Tests.Serialization.MyV2Payload, Akka.Persistence.Tests"" = my-v2-payload
               }
             }";
 
@@ -61,6 +63,28 @@ namespace Akka.Persistence.Tests.Serialization
 
             // Yes, the data isn't "a" but ".a.", the custom serializer added these dots.
             payload.Data.ShouldBe(".a."); 
+        }
+
+        [Fact]
+        public void MessageSerializer_should_serialize_native_v2_events()
+        {
+            var p1 = new Persistent(new MyV2Payload("a"), sender: TestActor);
+            var bytes = _serializer.ToBinary(p1);
+            var back = _serializer.FromBinary<Persistent>(bytes);
+
+            back.Payload.Should().Be(new MyV2Payload("a"));
+            back.Sender.Should().BeEquivalentTo(TestActor);
+        }
+
+        [Fact]
+        public void SnapshotSerializer_should_serialize_native_v2_snapshots()
+        {
+            var serializer = new PersistenceSnapshotSerializer(Sys.As<ExtendedActorSystem>());
+            var snapshot = new Akka.Persistence.Serialization.Snapshot(new MyV2Payload("snap"));
+            var bytes = serializer.ToBinary(snapshot);
+            var back = serializer.FromBinary<Akka.Persistence.Serialization.Snapshot>(bytes);
+
+            back.Data.Should().Be(new MyV2Payload("snap"));
         }
 
         [Fact]

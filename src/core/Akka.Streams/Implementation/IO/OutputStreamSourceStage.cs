@@ -442,7 +442,12 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="offset">TBD</param>
         /// <param name="count">TBD</param>
         public override void Write(byte[] buffer, int offset, int count)
-            => SendData(new ReadOnlySequence<byte>(buffer, offset, count));
+        {
+            // Stream.Write returns before downstream demand may consume this chunk, so
+            // copy out of the caller-owned buffer before publishing it to the stream.
+            var source = new ReadOnlyMemory<byte>(buffer, offset, count);
+            SendData(new ReadOnlySequence<byte>(source.ToArray()));
+        }
 
         /// <summary>
         /// TBD

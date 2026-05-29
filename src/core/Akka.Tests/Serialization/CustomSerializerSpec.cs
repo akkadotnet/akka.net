@@ -32,6 +32,11 @@ namespace Akka.Tests.Serialization
             _output = output;
         }
 
+        private static T Inner<T>(SerializerV2 serializer) where T: Serializer
+        {
+            return serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<T>().Subject;
+        }
+
         /// <summary>
         /// Here we basically verify that a serializer decides where its Serializer Identifier is coming
         /// from. When using the default Serializer base class, it read from hocon config. But this should not be 
@@ -53,7 +58,7 @@ namespace Akka.Tests.Serialization
             //The above config explictly does not configures the serialization-identifiers section
             using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
             {
-                var serializer = (CustomSerializer)system.Serialization.FindSerializerForType(typeof(object));
+                var serializer = Inner<CustomSerializer>(system.Serialization.FindSerializerForType(typeof(object)));
                 Assert.Equal(666, serializer.Identifier);
             }
         }
@@ -79,7 +84,7 @@ namespace Akka.Tests.Serialization
             {
                 var firstMessage = new FirstMessage("First message");
                 var serialization = system.Serialization;
-                var serializer = (CustomManifestSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializer = Inner<CustomManifestSerializer>(serialization.FindSerializerFor(firstMessage));
 
                 var serialized = serializer.ToBinary(firstMessage);
                 var manifest = serializer.Manifest(firstMessage);
@@ -156,7 +161,7 @@ namespace Akka.Tests.Serialization
             {
                 var firstMessage = new FirstMessage("First message");
                 var serialization = system.Serialization;
-                var serializer = (CustomSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializer = Inner<CustomSerializer>(serialization.FindSerializerFor(firstMessage));
                 var serializerById = serialization.GetSerializerById(1);
 
                 serializer.Identifier.Should().Be(666); // This is because identifier is hardwired, so it could not be
@@ -164,7 +169,7 @@ namespace Akka.Tests.Serialization
                 serializer.Should().NotBeEquivalentTo(serializerById);
                 
                 serializerById.Identifier.Should().Be(1); // This should be the JSON serializer
-                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
+                serializerById.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>();
             }
         }
         
@@ -197,9 +202,9 @@ namespace Akka.Tests.Serialization
 
                 serializer.Should().Be(serializerById);
                 serializer.Should().Be(objectSerializer);
-                serializer.Should().BeOfType<CustomIllegalSerializer>();
-                serializerById.Should().BeOfType<CustomIllegalSerializer>();
-                objectSerializer.Should().BeOfType<CustomIllegalSerializer>();
+                serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<CustomIllegalSerializer>();
+                serializerById.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<CustomIllegalSerializer>();
+                objectSerializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<CustomIllegalSerializer>();
             }
         }
         
@@ -231,11 +236,11 @@ namespace Akka.Tests.Serialization
                 var serializerById = serialization.GetSerializerById(1);
                 var invalidSerializerById = serialization.GetSerializerById(serializer.Identifier);
 
-                serializer.Should().BeOfType<CustomIllegalSerializer>();
-                serializerById.Should().BeOfType<NewtonSoftJsonSerializer>();
-                objectSerializer.Should().BeOfType<NewtonSoftJsonSerializer>();
+                serializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<CustomIllegalSerializer>();
+                serializerById.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>();
+                objectSerializer.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().BeOfType<NewtonSoftJsonSerializer>();
                 
-                invalidSerializerById.Should().NotBeOfType<CustomIllegalSerializer>(); // This is the bad part
+                invalidSerializerById.Should().BeOfType<SerializerV1Adapter>().Subject.Inner.Should().NotBeOfType<CustomIllegalSerializer>(); // This is the bad part
                 invalidSerializerById.Identifier.Should().Be(serializerById.Identifier); // This is the bad part
             }
         }
@@ -257,7 +262,7 @@ namespace Akka.Tests.Serialization
             {
                 var firstMessage = new FirstMessage("First message");
                 var serialization = system.Serialization;
-                var serializer = (CustomManifestSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializer = Inner<CustomManifestSerializer>(serialization.FindSerializerFor(firstMessage));
 
                 var serialized = serializer.ToBinary(firstMessage);
                 var manifest = serializer.Manifest(firstMessage);
