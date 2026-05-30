@@ -60,7 +60,7 @@ namespace Akka.Remote.Transport.Pipelines
         private readonly Socket _socket;
         private readonly Stream _stream; // NetworkStream or SslStream
         private readonly PipeReader _reader;
-        private readonly Channel<byte[]> _writeChannel;
+        private readonly Channel<ByteString> _writeChannel;
         private readonly CancellationTokenSource _cts;
         private readonly ILoggingAdapter _log;
         private readonly TcpPipeTransport _transport;
@@ -103,7 +103,7 @@ namespace Akka.Remote.Transport.Pipelines
             _socket    = socket;
             _stream    = stream;
             _reader    = PipeReader.Create(stream, new StreamPipeReaderOptions(leaveOpen: true));
-            _writeChannel = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(writeChannelCapacity)
+            _writeChannel = Channel.CreateBounded<ByteString>(new BoundedChannelOptions(writeChannelCapacity)
             {
                 SingleReader = true,
                 SingleWriter = false,
@@ -149,7 +149,7 @@ namespace Akka.Remote.Transport.Pipelines
                 return false;
 
             // ToByteArray() copies — Phase 2 can eliminate this via IBufferWriter writer.
-            return _writeChannel.Writer.TryWrite(payload.ToByteArray());
+            return _writeChannel.Writer.TryWrite(payload);
         }
 
         /// <summary>
@@ -260,60 +260,146 @@ namespace Akka.Remote.Transport.Pipelines
         /// maximum overlap between user-space batching and kernel I/O.
         /// </para>
         ///
+        /// <para>
+        /// <b>Send-buffer watermarking 💧</b>: each batch is bounded to roughly the socket
+        /// <see cref="Socket.SendBufferSize"/>. Handing <c>WriteAsync</c> more than the kernel
+        /// can absorb in a single syscall forces partial writes — the I/O completion port
+        /// has to wait for the receiver / wire to drain SO_SNDBUF before the second half can
+        /// be queued, which serialises us behind kernel I/O and destroys the ping-pong overlap.
+        /// By cutting the batch at the watermark we keep each individual <c>WriteAsync</c>
+        /// "kernel-sized" while still draining the channel as fast as possible in the next slot.
+        /// </para>
+        ///
         /// <!-- CopilotNotes: ValueTask is NOT safe to store and re-await; .AsTask() boxes once
         ///      but lets us hold the Task across loop iterations.  The swap (activeIdx ^= 1)
         ///      is only performed when a write is actually started so we never clear a buffer
-        ///      that is still live inside an in-flight WriteAsync. -->
+        ///      that is still live inside an in-flight WriteAsync.
+        ///
+        ///      The watermark is a *soft* cap: a single payload larger than the watermark is
+        ///      still written as its own batch (we never split a single Akka frame across two
+        ///      WriteAsync calls). This is fine — the kernel will just do a multi-segment send
+        ///      itself, and we still avoid coalescing additional frames behind a huge one. -->
         /// </summary>
         private async Task WriteLoopAsync(CancellationToken ct)
         {
             // Two buffers — one fills while the other is in-flight to the stream. ✨
-            var buffers = new ArrayBufferWriter<byte>[]
-            {
-                new(initialCapacity: 8192),
-                new(initialCapacity: 8192),
-            };
+             var buffers = new ArrayBufferWriter<byte>[]
+             {
+                 new(initialCapacity: 8192),
+                 new(initialCapacity: 8192),
+             };
+
             var activeIdx   = 0;
             Task? inflightWrite = null;
 
+            // ── Send-buffer watermark ──
+            // Prefer the configured value; fall back to the socket's actual SO_SNDBUF
+            // (defaults to 64 KB on Windows, ~16-64 KB on Linux). Floor at 8 KB so a
+            // pathological "0" never collapses batching entirely. 🌸
+            var settingsSnd = _transport._settings.SendBufferSize;
+            int sendWatermark;
             try
             {
-                while (await _writeChannel.Reader.WaitToReadAsync(ct).ConfigureAwait(false))
+                sendWatermark = settingsSnd > 0 ? settingsSnd : _socket.SendBufferSize;
+            }
+            catch (Exception)
+            {
+                // Socket might already be closed in a teardown race — fall back to a sane default.
+                sendWatermark = 64 * 1024;
+            }
+            if (sendWatermark < 8 * 1024)
+                sendWatermark = 128 * 1024;
+
+            // Local helper: write a single length-prefixed frame into the given buffer.
+            // CopilotNotes: Inlined as a static local function — no closure allocation,
+            // and the JIT will happily inline it at the call sites. 💝
+            static void WriteFrame(ArrayBufferWriter<byte> dest, ByteString payload)
+            {
+                // GetSpan returns at least 'count' bytes. We write the 4-byte LE length
+                // header then the payload bytes back-to-back.
+                var sp = dest.GetSpan(FrameHeaderSize + payload.Length);
+                BinaryPrimitives.WriteInt32LittleEndian(
+                    //dest.GetSpan(FrameHeaderSize + payload.Length),
+                    sp,
+                    payload.Length);
+                //dest.Advance(FrameHeaderSize);
+
+                payload.Span.CopyTo(sp.Slice(FrameHeaderSize));
+                dest.Advance(FrameHeaderSize+payload.Length);
+            }
+
+            try
+            {
+                // Carry-over slot: if a payload would push the current batch over the
+                // watermark, we stash it here, flush the in-progress batch, then start
+                // the next batch with the stashed payload. 🎀
+                // CopilotNotes: This is what makes the watermark a "hard cap whenever
+                // possible" instead of a "soft cap" — the only way a single batch can
+                // exceed the watermark is if its *first* frame is already over-budget,
+                // which is unavoidable (we never split a single Akka frame).
+                ByteString? carry = null;
+
+                while (true)
                 {
+                    // Only block on the channel if we don't already have a carried-over
+                    // payload to write. Carry-over guarantees forward progress even when
+                    // the channel is momentarily empty.
+                    if (carry is null)
+                    {
+                        if (!await _writeChannel.Reader.WaitToReadAsync(ct).ConfigureAwait(false))
+                            break; // Channel completed — exit the loop.
+                    }
+
                     var active = buffers[activeIdx];
+                    // Safe to Clear here: the PREVIOUS write that used this slot was
+                    // already awaited (we await `inflightWrite` before swapping back to it).
                     active.Clear();
 
-                    // Drain ALL currently available payloads into the active buffer.
-                    // This is the write-coalescing step: one StreamWriter.WriteAsync per batch
-                    // instead of one per message.
+                    // 1) Drain the carried-over frame first, if any. By construction this
+                    //    frame did NOT fit alongside the previous batch's tail, so it goes
+                    //    into the freshly-cleared buffer as the new batch's first frame.
+                    if (carry is not null)
+                    {
+                        WriteFrame(active, carry);
+                        carry = null;
+                    }
+
+                    // 2) Pull additional frames from the channel — but bail (carry) the
+                    //    moment one would tip us over the watermark, so we flush a
+                    //    cleanly-sized batch instead of overshooting.
                     while (_writeChannel.Reader.TryRead(out var payload))
                     {
-                        // CopilotNotes: GetSpan returns at least 'count' bytes. We write the
-                        // 4-byte LE length header then the payload bytes back-to-back.
-                        BinaryPrimitives.WriteInt32LittleEndian(active.GetSpan(FrameHeaderSize), payload.Length);
-                        active.Advance(FrameHeaderSize);
 
-                        payload.AsSpan().CopyTo(active.GetSpan(payload.Length));
-                        active.Advance(payload.Length);
+                        // CopilotNotes: The `active.WrittenCount > 0` guard ensures that a
+                        // single oversized frame still gets sent (as its own batch) on the
+                        // next iteration — we only refuse to *append* it to an existing batch.
+                        if (active.WrittenCount > 0 &&
+                            active.WrittenCount + (FrameHeaderSize + payload.Length) > sendWatermark)
+                        {
+                            carry = payload;
+                            break;
+                        }
+
+                        WriteFrame(active, payload);
                     }
 
-                    if (active.WrittenCount > 0)
-                    {
-                        // Await the PREVIOUS write before launching the next one.
-                        // At this point inflightWrite owns the OTHER buffer slot, so once it
-                        // completes that slot is idle and can be safely cleared next cycle.
-                        // No explicit Flush needed: NetworkStream.WriteAsync flushes immediately.
-                        // SslStream also flushes per WriteAsync call.
-                        if (inflightWrite != null)
-                            await inflightWrite.ConfigureAwait(false);
+                    if (active.WrittenCount == 0)
+                        continue; // Spurious wake-up — back to WaitToReadAsync.
 
-                        // Kick off the write for the freshly-filled buffer without awaiting it
-                        // yet — this is the key: kernel I/O runs concurrently with the next batch fill.
-                        inflightWrite = _stream.WriteAsync(active.WrittenMemory, ct).AsTask();
+                    // Await the PREVIOUS write before launching the next one.
+                    // At this point inflightWrite owns the OTHER buffer slot, so once it
+                    // completes that slot is idle and can be safely cleared next cycle.
+                    // No explicit Flush needed: NetworkStream.WriteAsync flushes immediately.
+                    // SslStream also flushes per WriteAsync call.
+                    if (inflightWrite != null)
+                        await inflightWrite.ConfigureAwait(false);
 
-                        // Swap: next iteration fills the slot that was just awaited (now idle).
-                        activeIdx ^= 1;
-                    }
+                    // Kick off the write for the freshly-filled buffer without awaiting it
+                    // yet — this is the key: kernel I/O runs concurrently with the next batch fill.
+                    inflightWrite = _stream.WriteAsync(active.WrittenMemory, ct).AsTask();
+
+                    // Swap: next iteration fills the slot that was just awaited (now idle).
+                    activeIdx ^= 1;
                 }
 
                 // Channel drained — await the final in-flight write so we don't close

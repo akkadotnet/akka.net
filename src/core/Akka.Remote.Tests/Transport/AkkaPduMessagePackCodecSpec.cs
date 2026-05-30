@@ -170,10 +170,10 @@ namespace Akka.Remote.Tests.Transport
 
             // ── Message half ──────────────────────────────────────────────────────
             result.MessageOption.Should().NotBeNull();
-            result.MessageOption!.SerializedMessage.Message.ToStringUtf8()
+            Encoding.UTF8.GetString(result.MessageOption!.MsgPackMessage!.Bytes.Span)
                 .Should().Be("the-message");
-            result.MessageOption.SerializedMessage.SerializerId.Should().Be(42);
-            result.MessageOption.SerializedMessage.MessageManifest.ToStringUtf8()
+            result.MessageOption.MsgPackMessage.SerializerId.Should().Be(42);
+            Encoding.UTF8.GetString(result.MessageOption.MsgPackMessage.Manifest.Span)
                 .Should().Be("SomeCls");
             result.MessageOption.Seq.Should().NotBeNull();
             result.MessageOption.Seq!.Value.RawValue.Should().Be(7);

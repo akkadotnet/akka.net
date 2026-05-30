@@ -48,7 +48,7 @@ namespace Akka.Remote.Transport.Pipelines
     public sealed class TcpPipeTransport : Transport
     {
         // ── Fields ─────────────────────────────────────────────────────────────
-        private readonly PipeTransportSettings _settings;
+        internal readonly PipeTransportSettings _settings;
         private readonly ILoggingAdapter _log;
 
         // Server socket; set during Listen().
