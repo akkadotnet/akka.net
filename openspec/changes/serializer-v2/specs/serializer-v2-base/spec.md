@@ -25,12 +25,12 @@ The system SHALL provide an abstract `SerializerV2` class in core Akka that is t
 - **WHEN** a caller needs the manifest for an object
 - **THEN** it SHALL call a direct V2 manifest API without type-checking for `SerializerWithStringManifest`
 
-#### Scenario: Native V2 manifest is required
-- **WHEN** a native `SerializerV2` is used to serialize an object
+#### Scenario: New native V2 manifest is required
+- **WHEN** a new native `SerializerV2` is used to serialize an object
 - **THEN** it SHALL return a non-empty manifest
 - **AND** the manifest SHALL be a serializer-owned token rather than a CLR type name
 - **AND** the serialization system SHALL reject empty native V2 manifests
-- **AND** this requirement SHALL NOT prevent `SerializerV1Adapter` from accepting or preserving empty legacy V1 manifests
+- **AND** this requirement SHALL NOT prevent existing serializer-id ports or `SerializerV1Adapter` from accepting or preserving empty legacy manifests required for compatibility
 
 #### Scenario: Unknown size hint
 - **WHEN** a serializer cannot cheaply predict serialized size
@@ -146,9 +146,10 @@ Akka.Delivery SHALL provide the initial production proof-of-concept for V2 buffe
 
 The built-in byte-array serializer SHALL be ported to native `SerializerV2` while preserving legacy byte-array behavior.
 
-#### Scenario: ByteArraySerializer emits a manifest for new V2 writes
+#### Scenario: ByteArraySerializer preserves legacy empty manifest
 - **WHEN** `ByteArraySerializer` serializes a byte array through V2
-- **THEN** it SHALL emit a short non-CLR byte-array manifest
+- **THEN** it SHALL emit the legacy empty manifest for serializer id `4`
+- **AND** it SHALL keep new writes readable by older Akka.NET versions
 
 #### Scenario: ByteArraySerializer accepts legacy empty manifests
 - **WHEN** `ByteArraySerializer` deserializes bytes with a null or empty manifest

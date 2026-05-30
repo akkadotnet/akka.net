@@ -9,7 +9,7 @@
 - [ ] 1.7 Decide sync vs async V2 API shape before downstream sourcegen and Artery work
 - [ ] 1.8 Add `ToBinary` / `FromBinary` bridge methods for compatibility paths
 - [ ] 1.9 Add unit tests for native V2 serializer round-trip, manifest, size hint, and bridge methods
-- [x] 1.10 Require native V2 serializers to emit non-empty non-CLR manifests; allow `SerializerV1Adapter` to preserve empty legacy manifests
+- [x] 1.10 Require new native V2 serializers to emit non-empty non-CLR manifests; allow legacy serializer-id ports and `SerializerV1Adapter` to preserve empty legacy manifests
 
 ## 2. SerializerV1Adapter
 
@@ -78,7 +78,7 @@
 - [ ] 7.2 Port simple primitive serializers to native V2 if trivial
 - [ ] 7.3 Port `SystemMessageSerializer` to native V2 only if compatibility tests are already in place
 - [x] 7.4 Verify byte-identical output for any internal serializer ported in this milestone
-- [x] 7.5 Preserve `ByteArraySerializer` legacy empty-manifest reads while emitting a non-empty V2 manifest
+- [x] 7.5 Preserve `ByteArraySerializer` legacy empty-manifest reads and writes for serializer id `4`
 - [ ] 7.6 Revisit `SerializerV2 : Serializer` hierarchy before adding more native production V2 serializers
 
 ## 8. Validation

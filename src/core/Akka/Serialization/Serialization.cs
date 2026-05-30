@@ -114,8 +114,8 @@ namespace Akka.Serialization
         public static string ManifestFor(SerializerV2 s, object msg)
         {
             var manifest = s.Manifest(msg);
-            if (s is not SerializerV1Adapter && string.IsNullOrEmpty(manifest))
-                throw new SerializationException($"Native SerializerV2 [{s.GetType()}] must return a non-empty manifest for message type [{msg?.GetType()}].");
+            if (s is not SerializerV1Adapter and not ByteArraySerializer && string.IsNullOrEmpty(manifest))
+                throw new SerializationException($"Native SerializerV2 [{s.GetType()}] must return a non-empty manifest for message type [{msg?.GetType()}] unless preserving a legacy serializer ID manifest contract.");
             return manifest;
         }
 

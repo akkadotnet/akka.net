@@ -590,7 +590,7 @@ namespace Akka.Tests.Serialization
             var metadata = Sys.Serialization.Serialize(message, writer);
 
             metadata.SerializerId.Should().Be(serializer.Identifier);
-            metadata.Manifest.Should().Be(ByteArraySerializer.ByteArrayManifest);
+            metadata.Manifest.Should().BeEmpty();
             metadata.BytesWritten.Should().Be(message.Length);
             writer.WrittenSpan.ToArray().Should().Equal(message);
 

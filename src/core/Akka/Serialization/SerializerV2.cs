@@ -32,7 +32,8 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// V2 serializers always emit a manifest. This avoids polymorphic deserialization.
+        /// V2 serializers use manifest-aware dispatch. New V2 serializers should emit
+        /// non-empty manifests; legacy serializer-id ports may preserve empty manifests.
         /// </summary>
         public sealed override bool IncludeManifest => true;
 

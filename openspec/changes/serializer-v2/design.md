@@ -19,7 +19,7 @@ This means `SerializerV2` must be introduced with the classic remoting and persi
 - Introduce `SerializerV2` as the canonical Akka.NET 1.6 serialization abstraction.
 - Keep public `FindSerializerFor()` / `FindSerializerForType()` compatible while adding internal V2 lookup and buffer-first APIs.
 - Keep V1 serializers working through `SerializerV1Adapter`.
-- Require native V2 serializers to emit non-empty, non-CLR manifests to avoid polymorphic deserialization.
+- Require new native V2 serializers to emit non-empty, non-CLR manifests to avoid polymorphic deserialization, while preserving legacy manifests for existing serializer IDs.
 - Preserve classic Akka.Remote wire compatibility.
 - Preserve Akka.Persistence stored event and snapshot compatibility.
 - Decide V2 API details needed by sourcegen and Artery before either depends on the API.
@@ -69,7 +69,7 @@ Rationale: V1 adapters and some serializers cannot cheaply know the serialized s
 
 Manifest production should be a direct V2 API, not repeated `is SerializerWithStringManifest` checks.
 
-Native V2 serializers must return a non-empty serializer-owned manifest token. Manifests must not be CLR type names or assembly-qualified type names. This is required so V2 does not depend on polymorphic deserialization or CLR type guessing. `SerializerV1Adapter` may preserve an empty or missing manifest only when adapting legacy V1 serializers that historically omitted manifests.
+New native V2 serializers must return a non-empty serializer-owned manifest token. Manifests must not be CLR type names or assembly-qualified type names. This is required so V2 does not depend on polymorphic deserialization or CLR type guessing. Ports of existing serializer IDs may preserve their legacy manifest behavior, including empty or missing manifests, when changing the manifest would break existing wire or persisted data. `SerializerV1Adapter` may also preserve an empty or missing manifest when adapting legacy V1 serializers that historically omitted manifests.
 
 Rationale: remoting and persistence both need serializer ID + manifest. V2 should make this uniform for V1 adapters, V2 hand-written serializers, and generated serializers.
 

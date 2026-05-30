@@ -594,7 +594,7 @@ public class ConsumerControllerSpecs : TestKit.Xunit.TestKit
 
         chunks.Should().HaveCount(payload.Length);
         chunks.Should().OnlyContain(c => c.SerializerId == serializer.Identifier);
-        chunks.Should().OnlyContain(c => c.Manifest == ByteArraySerializer.ByteArrayManifest);
+        chunks.Should().OnlyContain(c => c.Manifest == string.Empty);
 
         var seqMessages = chunks.Select((c, i) =>
             ConsumerController.SequencedMessage<byte[]>.FromChunkedMessage(ProducerId, 1 + i, c, i == 0, false,

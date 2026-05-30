@@ -7,7 +7,6 @@
 
 using System;
 using System.Buffers;
-using System.Runtime.Serialization;
 using Akka.Actor;
 
 namespace Akka.Serialization
@@ -18,8 +17,6 @@ namespace Akka.Serialization
     /// </summary>
     public class ByteArraySerializer : SerializerV2
     {
-        internal const string ByteArrayManifest = "b";
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ByteArraySerializer" /> class.
         /// </summary>
@@ -30,11 +27,11 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Byte arrays use a stable short manifest.
+        /// Byte arrays preserve their legacy empty manifest for wire compatibility.
         /// </summary>
         public override string Manifest(object obj)
         {
-            return ByteArrayManifest;
+            return string.Empty;
         }
 
         /// <summary>
@@ -74,7 +71,6 @@ namespace Akka.Serialization
         /// </summary>
         public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
         {
-            ThrowIfUnsupportedManifest(manifest);
             return bytes.ToArray();
         }
 
@@ -111,16 +107,7 @@ namespace Akka.Serialization
         /// </summary>
         public override object FromBinary(byte[] bytes, string manifest)
         {
-            ThrowIfUnsupportedManifest(manifest);
             return bytes;
-        }
-
-        private static void ThrowIfUnsupportedManifest(string manifest)
-        {
-            if (string.IsNullOrEmpty(manifest) || manifest == ByteArrayManifest)
-                return;
-
-            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{typeof(ByteArraySerializer)}]");
         }
     }
 }
