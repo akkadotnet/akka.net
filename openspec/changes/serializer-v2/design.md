@@ -17,8 +17,9 @@ This means `SerializerV2` must be introduced with the classic remoting and persi
 **Goals:**
 
 - Introduce `SerializerV2` as the canonical Akka.NET 1.6 serialization abstraction.
-- Intentionally break `FindSerializerFor()` / `FindSerializerForType()` return types to return `SerializerV2`.
+- Keep public `FindSerializerFor()` / `FindSerializerForType()` compatible while adding internal V2 lookup and buffer-first APIs.
 - Keep V1 serializers working through `SerializerV1Adapter`.
+- Require native V2 serializers to emit non-empty, non-CLR manifests to avoid polymorphic deserialization.
 - Preserve classic Akka.Remote wire compatibility.
 - Preserve Akka.Persistence stored event and snapshot compatibility.
 - Decide V2 API details needed by sourcegen and Artery before either depends on the API.
@@ -34,13 +35,13 @@ This means `SerializerV2` must be introduced with the classic remoting and persi
 
 ## Decisions
 
-### 1. SerializerV2 Is Canonical And Independent
+### 1. SerializerV2 Is Canonical With A Transitional Compatibility Surface
 
-`SerializerV2` is a new base class that does not inherit from `Serializer` or `SerializerWithStringManifest`.
+`SerializerV2` is the canonical 1.6 serializer abstraction and exposes buffer-first serialization through `IBufferWriter<byte>` plus deserialization from `ReadOnlySequence<byte>`.
 
-V1 compatibility is provided by `SerializerV1Adapter : SerializerV2`.
+For the foundation PR, `SerializerV2` remains usable through existing `Serializer` call sites so classic remoting, persistence, and public lookup APIs can stay compatible while internals move to V2. V1 compatibility is provided by `SerializerV1Adapter : SerializerV2`.
 
-Rationale: inheriting from `Serializer` permanently couples V2 to the `byte[]` API. The new API needs buffer-first methods for remoting, persistence, and source-generated serializers. Compatibility belongs in an adapter.
+Rationale: a hard public API break at this layer creates broad compatibility fallout before any native V2 serializers exist. The compatibility inheritance is transitional design debt; it should be revisited before native V2 serializers become widespread.
 
 ### 2. V2 Still Provides Bridge Methods
 
@@ -48,7 +49,7 @@ Rationale: inheriting from `Serializer` permanently couples V2 to the `byte[]` A
 
 These bridge methods should be implemented in terms of the V2 buffer API for native V2 serializers and delegated to the inner serializer for V1 adapters.
 
-Rationale: classic remoting and persistence still need byte arrays at protobuf boundaries. Bridge methods keep those compatibility paths clear without making `Serializer` the base abstraction.
+Rationale: classic remoting and persistence still need byte arrays at protobuf boundaries. Bridge methods keep those compatibility paths clear while new internals can use buffer-first V2 APIs.
 
 ### 3. Serialize Must Report Bytes Written
 
@@ -68,27 +69,37 @@ Rationale: V1 adapters and some serializers cannot cheaply know the serialized s
 
 Manifest production should be a direct V2 API, not repeated `is SerializerWithStringManifest` checks.
 
+Native V2 serializers must return a non-empty serializer-owned manifest token. Manifests must not be CLR type names or assembly-qualified type names. This is required so V2 does not depend on polymorphic deserialization or CLR type guessing. `SerializerV1Adapter` may preserve an empty or missing manifest only when adapting legacy V1 serializers that historically omitted manifests.
+
 Rationale: remoting and persistence both need serializer ID + manifest. V2 should make this uniform for V1 adapters, V2 hand-written serializers, and generated serializers.
 
 ### 6. Serialization.cs Stores V2 Internally
 
 `Serialization.cs` stores V2 serializers in its ID and type maps. V1 serializers instantiated through HOCON or setup are wrapped on registration.
 
-Rationale: V2 is the new cheese for Akka.NET 1.6. The API break is intentional and should be visible instead of hidden behind overloads that keep old assumptions alive.
+Public lookup APIs keep returning `Serializer` for compatibility and unwrap `SerializerV1Adapter` when necessary. Internal lookup APIs expose `SerializerV2` for buffer-first paths.
+
+Rationale: V2 is the new cheese for Akka.NET 1.6 internally, but public compatibility is required while classic remoting, persistence, and user serializers still rely on V1 APIs.
 
 ### 7. Classic Remoting Is Compatibility, Not Zero-Copy
 
-Classic remoting should use V2 payload serialization but preserve its existing protobuf wire format.
+Classic remoting remains a byte-array compatibility path and preserves its existing protobuf wire format. Native V2 serializers can still participate through inherited bridge methods, but classic remoting does not need direct `IBufferWriter<byte>` integration.
 
-Rationale: the purpose of the classic bridge is to keep existing classic remoting behavior working after the V2 API break. Classic remoting will still allocate at protobuf / `ByteString` boundaries. The zero-copy remoting path belongs to Artery.
+Rationale: the purpose of the classic bridge is to keep existing classic remoting behavior working. Classic remoting will still allocate at protobuf / `ByteString` boundaries. The zero-copy remoting path belongs to Artery.
 
-### 8. Persistence Compatibility Is Part Of The Foundation
+### 8. Akka.Delivery Is The Initial V2 Buffer POC
+
+Akka.Delivery chunking should use internal V2 serialization APIs to write payloads through `IBufferWriter<byte>` and deserialize assembled chunks through `ReadOnlySequence<byte>`.
+
+Rationale: delivery already owns chunked byte payloads and is not tied to classic remoting protobuf envelopes. It is the lowest-risk production path for proving native V2 buffer APIs before Artery.
+
+### 9. Persistence Compatibility Is Part Of The Foundation
 
 Persistence event and snapshot serializers must use V2 and preserve stored data compatibility in this same change.
 
 Rationale: persistence is the highest-risk compatibility surface. Old journal and snapshot data must remain readable, and V2 payloads must store serializer ID + manifest + bytes in the same conceptual model.
 
-### 9. Sourcegen Comes Next
+### 10. Sourcegen Comes Next
 
 Source-generated MessagePack serializers should be implemented only after this foundation is green.
 
@@ -96,7 +107,9 @@ Rationale: sourcegen validates the V2 API through real serialization, classic re
 
 ## Risks / Trade-offs
 
-**API break blast radius**: changing return types from `Serializer` to `SerializerV2` will produce many compile errors. This is expected and should be used as the task list.
+**Compatibility inheritance tension**: `SerializerV2` being usable as `Serializer` keeps this PR compatible, but permits awkward compositions such as wrapping V2 with `SerializerV1Adapter`. Guardrails should be added before native V2 serializers become common.
+
+**API break blast radius**: internal V2 APIs should be used for new code, but public lookup APIs remain compatible for this foundation PR.
 
 **Persistence compatibility**: old data must remain readable. Add explicit tests with V1-serialized event and snapshot bytes.
 

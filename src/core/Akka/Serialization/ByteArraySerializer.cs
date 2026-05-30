@@ -6,16 +6,20 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
+using System.Runtime.Serialization;
 using Akka.Actor;
 
 namespace Akka.Serialization
 {
     /// <summary>
-    /// This is a special <see cref="Serializer"/> that serializes and deserializes byte arrays only
-    /// (just returns the byte array unchanged/uncopied).
+    /// This is a special <see cref="Serializer"/> that serializes and deserializes byte arrays only.
+    /// Legacy byte-array APIs return the supplied array unchanged.
     /// </summary>
-    public class ByteArraySerializer : Serializer
+    public class ByteArraySerializer : SerializerV2
     {
+        internal const string ByteArrayManifest = "b";
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ByteArraySerializer" /> class.
         /// </summary>
@@ -26,9 +30,53 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Returns whether this serializer needs a manifest in the fromBinary method
+        /// Byte arrays use a stable short manifest.
         /// </summary>
-        public override bool IncludeManifest => false;
+        public override string Manifest(object obj)
+        {
+            return ByteArrayManifest;
+        }
+
+        /// <summary>
+        /// Returns the exact byte array length when <paramref name="obj"/> is a byte array.
+        /// </summary>
+        public override int SizeHint(object obj)
+        {
+            if (obj == null)
+                return 0;
+            if (obj is byte[] bytes)
+                return bytes.Length;
+            throw new NotSupportedException("The object to convert is not a byte array.");
+        }
+
+        /// <summary>
+        /// Serializes the given byte array directly into <paramref name="writer"/>.
+        /// </summary>
+        public override int Serialize(object obj, IBufferWriter<byte> writer)
+        {
+            if (obj == null)
+                return 0;
+
+            if (obj is not byte[] bytes)
+                throw new NotSupportedException("The object to convert is not a byte array.");
+
+            if (bytes.Length == 0)
+                return 0;
+
+            var span = writer.GetSpan(bytes.Length);
+            bytes.CopyTo(span);
+            writer.Advance(bytes.Length);
+            return bytes.Length;
+        }
+
+        /// <summary>
+        /// Deserializes bytes into a byte array.
+        /// </summary>
+        public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
+        {
+            ThrowIfUnsupportedManifest(manifest);
+            return bytes.ToArray();
+        }
 
         /// <summary>
         /// Serializes the given object into a byte array
@@ -56,6 +104,23 @@ namespace Akka.Serialization
         public override object FromBinary(byte[] bytes, Type type)
         {
             return bytes;
+        }
+
+        /// <summary>
+        /// Deserializes a byte array without copying for legacy compatibility callers.
+        /// </summary>
+        public override object FromBinary(byte[] bytes, string manifest)
+        {
+            ThrowIfUnsupportedManifest(manifest);
+            return bytes;
+        }
+
+        private static void ThrowIfUnsupportedManifest(string manifest)
+        {
+            if (string.IsNullOrEmpty(manifest) || manifest == ByteArrayManifest)
+                return;
+
+            throw new SerializationException($"Unimplemented deserialization of message with manifest [{manifest}] in [{typeof(ByteArraySerializer)}]");
         }
     }
 }

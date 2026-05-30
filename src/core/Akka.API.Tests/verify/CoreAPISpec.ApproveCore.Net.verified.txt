@@ -5150,11 +5150,15 @@ namespace Akka.Routing
 }
 namespace Akka.Serialization
 {
-    public class ByteArraySerializer : Akka.Serialization.Serializer
+    public class ByteArraySerializer : Akka.Serialization.SerializerV2
     {
         public ByteArraySerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override bool IncludeManifest { get; }
+        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
         public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object obj) { }
+        public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
+        public override int SizeHint(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
     [Akka.Annotations.InternalApi]
@@ -5267,7 +5271,6 @@ namespace Akka.Serialization
     {
         public SerializerV1Adapter(Akka.Actor.ExtendedActorSystem system, Akka.Serialization.Serializer inner) { }
         public override int Identifier { get; }
-        public override bool IncludeManifest { get; }
         public Akka.Serialization.Serializer Inner { get; }
         public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
         public override object FromBinary(byte[] bytes, System.Type type) { }
@@ -5281,7 +5284,7 @@ namespace Akka.Serialization
     {
         public const int UnknownSize = -1;
         protected SerializerV2(Akka.Actor.ExtendedActorSystem system) { }
-        public override bool IncludeManifest { get; }
+        public override sealed bool IncludeManifest { get; }
         public abstract object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest);
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override object FromBinary(byte[] bytes, string manifest) { }

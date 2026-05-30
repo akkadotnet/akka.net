@@ -6,11 +6,13 @@ This change is not only a core serialization API change. Once `Serialization.Fin
 
 ## What Changes
 
-- **New `SerializerV2` base class in core Akka** - codec-agnostic, independent from `Serializer`, and based on `IBufferWriter<byte>` / `ReadOnlySequence<byte>`.
+- **New `SerializerV2` base class in core Akka** - codec-agnostic, based on `IBufferWriter<byte>` / `ReadOnlySequence<byte>`, and temporarily compatible with existing `Serializer` call sites.
 - **New `SerializerV1Adapter : SerializerV2`** - wraps legacy `Serializer` / `SerializerWithStringManifest` implementations.
-- **`Serialization.cs` becomes V2-first** - internal dictionaries store `SerializerV2`; HOCON and `SerializationSetup` V1 serializers are auto-wrapped; `FindSerializerFor()` and `FindSerializerForType()` return V2.
-- **Classic remoting V2 bridge** - `Akka.Remote.MessageSerializer` and nested payload helpers use V2 while preserving the existing classic protobuf wire format.
+- **`Serialization.cs` becomes V2-first internally** - internal dictionaries store `SerializerV2`; HOCON and `SerializationSetup` V1 serializers are auto-wrapped; public `FindSerializerFor()` and `FindSerializerForType()` keep returning `Serializer` for compatibility while internal V2 lookup APIs are added.
+- **Native V2 serializers require non-CLR manifests** - native V2 serializers must return non-empty, serializer-owned manifest tokens to move Akka.NET away from polymorphic deserialization; V1 adapters may preserve empty manifests for backward compatibility.
+- **Classic remoting compatibility bridge** - classic Akka.Remote can continue using byte-array `Serializer` APIs and existing protobuf wire format; native V2 serializers work there through V2 bridge methods.
 - **Akka.Persistence V2 bridge** - persistence event and snapshot serializers use V2 while preserving existing stored event and snapshot compatibility.
+- **Akka.Delivery V2 proof-of-concept** - delivery chunking writes through `IBufferWriter<byte>` and reassembles chunks as `ReadOnlySequence<byte>` to exercise the V2 path outside classic remoting.
 - **Call-site fallout fixed in the same change** - delivery, DistributedData, tests, and other direct serializer call sites compile and preserve behavior.
 - **API shape decisions are finalized before sourcegen / Artery** - bytes-written reporting, unknown `SizeHint`, manifest semantics, V1 fallback behavior, and sync/async serializer behavior are settled here.
 
@@ -42,5 +44,5 @@ This change is not only a core serialization API change. Once `Serialization.Fin
 - **Akka.Remote**: update `MessageSerializer.cs`, `Serialization/WrappedPayloadSupport.cs`, and affected tests. Classic `AkkaPduCodec` remains wire-compatible.
 - **Akka.Persistence**: update `PersistenceMessageSerializer.cs`, `PersistenceSnapshotSerializer.cs`, `LocalSnapshotStore.cs`, and persistence serialization tests.
 - **Other modules**: update delivery chunk serialization, DistributedData serializer usages, and tests that assert concrete serializer types.
-- **API surface**: `FindSerializerFor()` and `FindSerializerForType()` intentionally return `SerializerV2` in 1.6.
-- **API approval tests**: update baselines for the intentional breaking API change.
+- **API surface**: public lookup APIs remain compatible and return `Serializer`; internal V2 APIs expose `SerializerV2` where new buffer-first paths need it.
+- **API approval tests**: update baselines for intentional additive API changes and native V2 serializer ports.

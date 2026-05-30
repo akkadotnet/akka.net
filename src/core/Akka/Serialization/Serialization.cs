@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -76,6 +77,26 @@ namespace Akka.Serialization
     }
 
     /// <summary>
+    /// INTERNAL API.
+    /// </summary>
+    [InternalApi]
+    internal readonly struct SerializedPayloadMetadata
+    {
+        public SerializedPayloadMetadata(int serializerId, string manifest, int bytesWritten)
+        {
+            SerializerId = serializerId;
+            Manifest = manifest;
+            BytesWritten = bytesWritten;
+        }
+
+        public int SerializerId { get; }
+
+        public string Manifest { get; }
+
+        public int BytesWritten { get; }
+    }
+
+    /// <summary>
     /// The serialization system used by Akka.NET to serialize and deserialize objects
     /// per the <see cref="ActorSystem"/>'s serialization configuration.
     /// </summary>
@@ -92,7 +113,10 @@ namespace Akka.Serialization
         /// </remarks>
         public static string ManifestFor(SerializerV2 s, object msg)
         {
-            return s.Manifest(msg);
+            var manifest = s.Manifest(msg);
+            if (s is not SerializerV1Adapter && string.IsNullOrEmpty(manifest))
+                throw new SerializationException($"Native SerializerV2 [{s.GetType()}] must return a non-empty manifest for message type [{msg?.GetType()}].");
+            return manifest;
         }
 
         /// <summary>
@@ -103,6 +127,9 @@ namespace Akka.Serialization
         /// <returns>A populated string is applicable; <see cref="string.Empty"/> otherwise.</returns>
         public static string ManifestFor(Serializer s, object msg)
         {
+            if (s is SerializerV2 v2)
+                return ManifestFor(v2, msg);
+
             return s.Manifest(msg);
         }
 
@@ -496,6 +523,23 @@ namespace Akka.Serialization
         }
 
         /// <summary>
+        /// Serializes the given message into <paramref name="writer"/> using the V2 serializer contract.
+        /// </summary>
+        internal SerializedPayloadMetadata Serialize(object o, IBufferWriter<byte> writer)
+        {
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
+
+            return WithTransport(() =>
+            {
+                var serializer = FindSerializerV2For(o);
+                var manifest = ManifestFor(serializer, o);
+                var bytesWritten = serializer.Serialize(o, writer);
+                return new SerializedPayloadMetadata(serializer.Identifier, manifest, bytesWritten);
+            });
+        }
+
+        /// <summary>
         /// Deserializes the given array of bytes using the specified serializer id, using the optional type hint to the Serializer.
         /// </summary>
         /// <param name="bytes">TBD</param>
@@ -557,6 +601,31 @@ namespace Akka.Serialization
         }
 
         /// <summary>
+        /// Deserializes the given bytes using the V2 serializer contract.
+        /// </summary>
+        internal object Deserialize(ReadOnlySequence<byte> bytes, int serializerId, string manifest)
+        {
+            if (!_serializersById.TryGetValue(serializerId, out var serializer))
+                throw new SerializationException(
+                    $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
+                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems." +
+                    $" {Serializer.GetErrorForSerializerId(serializerId)}");
+
+            var oldInfo = Serialization.CurrentTransportInformation;
+            try
+            {
+                if (oldInfo == null)
+                    Serialization.CurrentTransportInformation = SerializationInfo;
+
+                return serializer.Deserialize(bytes, manifest ?? string.Empty);
+            }
+            finally
+            {
+                Serialization.CurrentTransportInformation = oldInfo;
+            }
+        }
+
+        /// <summary>
         /// Returns the Serializer configured for the given object, returns the NullSerializer if it's null.
         /// </summary>
         /// <param name="obj">The object that needs to be serialized</param>
@@ -564,7 +633,12 @@ namespace Akka.Serialization
         /// <returns>The serializer configured for the given object type</returns>
         public Serializer FindSerializerFor(object obj, string defaultSerializerName = null)
         {
-            return obj == null ? AsPublicSerializer(_nullSerializer) : FindSerializerForType(obj.GetType(), defaultSerializerName);
+            return AsPublicSerializer(FindSerializerV2For(obj, defaultSerializerName));
+        }
+
+        internal SerializerV2 FindSerializerV2For(object obj, string defaultSerializerName = null)
+        {
+            return obj == null ? _nullSerializer : FindSerializerV2ForType(obj.GetType(), defaultSerializerName);
         }
 
         //cache to eliminate lots of typeof operator calls
@@ -585,8 +659,13 @@ namespace Akka.Serialization
         /// <returns>The serializer configured for the given object type</returns>
         public Serializer FindSerializerForType(Type objectType, string defaultSerializerName = null)
         {
+            return AsPublicSerializer(FindSerializerV2ForType(objectType, defaultSerializerName));
+        }
+
+        internal SerializerV2 FindSerializerV2ForType(Type objectType, string defaultSerializerName = null)
+        {
             if (_serializerMap.TryGetValue(objectType, out var fullMatchSerializer))
-                return AsPublicSerializer(fullMatchSerializer);
+                return fullMatchSerializer;
 
             SerializerV2 serializer = null;
             Type type = objectType;
@@ -620,7 +699,7 @@ namespace Akka.Serialization
             }
 
             AddSerializationMap(type, serializer);
-            return AsPublicSerializer(serializer);
+            return serializer;
         }
         
         /// <summary>

@@ -599,32 +599,53 @@ internal sealed class ConsumerController<T> : ReceiveActor, IWithTimers, IWithSt
 
     private SequencedMessage<T> AssembleChunks(ImmutableList<SequencedMessage<T>> collectedChunks)
     {
-        var bufferSize = collectedChunks.Sum(chunk => chunk.Message.Chunk!.Value.SerializedMessage.Length);
-        byte[] bytes;
-        using (var mem = MemoryPool<byte>.Shared.Rent(bufferSize))
-        {
-            var curIndex = 0;
-            var memory = mem.Memory;
-            foreach (var b in collectedChunks.Select(c => c.Message.Chunk!.Value.SerializedMessage))
-            {
-                b.CopyTo(memory.Slice(curIndex));
-                curIndex += b.Length;
-            }
-
-            // have to slice the buffer here since the memory pool may have allocated more than we needed
-            bytes = memory.Slice(0, curIndex).ToArray();
-        }
-
         var headMessage = collectedChunks.Last(); // this is the last chunk
         var headChunk = headMessage.Message.Chunk!.Value;
 
         // serialization exceptions are thrown, because it will anyway be stuck with same error if retried and
         // we can't just ignore the message
 
-        var message = (T)_serialization.Deserialize(bytes, headChunk.SerializerId, headChunk.Manifest);
+        var message = (T)_serialization.Deserialize(ToReadOnlySequence(collectedChunks), headChunk.SerializerId, headChunk.Manifest);
         return new SequencedMessage<T>(headMessage.ProducerId, headMessage.SeqNr, message,
             collectedChunks.First().First,
             headMessage.Ack, headMessage.ProducerController);
+    }
+
+    private static ReadOnlySequence<byte> ToReadOnlySequence(ImmutableList<SequencedMessage<T>> collectedChunks)
+    {
+        if (collectedChunks.Count == 0)
+            return ReadOnlySequence<byte>.Empty;
+
+        var firstMemory = collectedChunks[0].Message.Chunk!.Value.SerializedMessage;
+        if (collectedChunks.Count == 1)
+            return new ReadOnlySequence<byte>(firstMemory);
+
+        var first = new ReadOnlyMemorySegment(firstMemory);
+        var last = first;
+        foreach (var chunk in collectedChunks.Skip(1))
+        {
+            last = last.Append(chunk.Message.Chunk!.Value.SerializedMessage);
+        }
+
+        return new ReadOnlySequence<byte>(first, 0, last, last.Memory.Length);
+    }
+
+    private sealed class ReadOnlyMemorySegment : ReadOnlySequenceSegment<byte>
+    {
+        public ReadOnlyMemorySegment(ReadOnlyMemory<byte> memory)
+        {
+            Memory = memory;
+        }
+
+        public ReadOnlyMemorySegment Append(ReadOnlyMemory<byte> memory)
+        {
+            var segment = new ReadOnlyMemorySegment(memory)
+            {
+                RunningIndex = RunningIndex + Memory.Length
+            };
+            Next = segment;
+            return segment;
+        }
     }
 
     private static State InitialState(ConsumerController.Start<T> start, Option<IActorRef> registering, bool stopping)

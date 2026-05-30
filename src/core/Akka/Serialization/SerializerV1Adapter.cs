@@ -37,9 +37,6 @@ namespace Akka.Serialization
         public override int Identifier => Inner.Identifier;
 
         /// <inheritdoc />
-        public override bool IncludeManifest => Inner.IncludeManifest;
-
-        /// <inheritdoc />
         public override string Manifest(object obj)
         {
             return Inner switch

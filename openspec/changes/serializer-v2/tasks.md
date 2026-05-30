@@ -3,12 +3,13 @@
 - [ ] 1.1 Create `SerializerV2` in `src/core/Akka/Serialization/SerializerV2.cs`
 - [ ] 1.2 Define buffer-first serialization API using `IBufferWriter<byte>`
 - [ ] 1.3 Define `ReadOnlySequence<byte>` deserialization API
-- [ ] 1.4 Define direct manifest API for all V2 serializers
+- [x] 1.4 Define direct manifest API for all V2 serializers
 - [ ] 1.5 Define `SizeHint` with explicit unknown-size support
 - [ ] 1.6 Decide and implement bytes-written/result reporting for `Serialize`
 - [ ] 1.7 Decide sync vs async V2 API shape before downstream sourcegen and Artery work
 - [ ] 1.8 Add `ToBinary` / `FromBinary` bridge methods for compatibility paths
 - [ ] 1.9 Add unit tests for native V2 serializer round-trip, manifest, size hint, and bridge methods
+- [x] 1.10 Require native V2 serializers to emit non-empty non-CLR manifests; allow `SerializerV1Adapter` to preserve empty legacy manifests
 
 ## 2. SerializerV1Adapter
 
@@ -29,13 +30,13 @@
 - [ ] 3.3 Wrap HOCON-registered V1 serializers in `SerializerV1Adapter`
 - [ ] 3.4 Store native V2 serializers directly
 - [ ] 3.5 Update `SerializationSetup` handling for V1 and V2 serializers
-- [ ] 3.6 Change `FindSerializerFor()` return type to `SerializerV2`
-- [ ] 3.7 Change `FindSerializerForType()` return type to `SerializerV2`
-- [ ] 3.8 Update `Serialization.ManifestFor` or replace it with V2-first manifest dispatch
-- [ ] 3.9 Update `Serialize(object)` to use V2
-- [ ] 3.10 Update all `Deserialize(...)` overloads to use V2
+- [x] 3.6 Preserve public `FindSerializerFor()` compatibility and add internal V2 lookup
+- [x] 3.7 Preserve public `FindSerializerForType()` compatibility and add internal V2 type lookup
+- [x] 3.8 Update `Serialization.ManifestFor` or replace it with V2-first manifest dispatch
+- [x] 3.9 Add internal `Serialize(object, IBufferWriter<byte>)` V2 path
+- [x] 3.10 Add internal `Deserialize(ReadOnlySequence<byte>, serializerId, manifest)` V2 path
 - [ ] 3.11 Update error messages for missing serializer IDs to remain compatible and actionable
-- [ ] 3.12 Update API approval baselines for intentional 1.6 API break
+- [x] 3.12 Update API approval baselines for intentional 1.6 API break
 
 ## 4. Classic Akka.Remote V2 Bridge
 
@@ -65,7 +66,7 @@
 ## 6. Compile Fallout Across Repo
 
 - [ ] 6.1 Fix DistributedData serializer call sites that store or call `Serializer`
-- [ ] 6.2 Fix Akka.Delivery chunk serialization call sites
+- [x] 6.2 Fix Akka.Delivery chunk serialization call sites
 - [ ] 6.3 Fix cluster and sharding serializer tests that assert concrete serializer types
 - [ ] 6.4 Fix any code that type-checks against `SerializerWithStringManifest`
 - [ ] 6.5 Fix any code that assumes `FindSerializerForType()` returns a V1 serializer
@@ -73,16 +74,18 @@
 
 ## 7. Optional Low-Risk Internal Serializer Ports
 
-- [ ] 7.1 Port `ByteArraySerializer` to native V2 if trivial
+- [x] 7.1 Port `ByteArraySerializer` to native V2 if trivial
 - [ ] 7.2 Port simple primitive serializers to native V2 if trivial
 - [ ] 7.3 Port `SystemMessageSerializer` to native V2 only if compatibility tests are already in place
-- [ ] 7.4 Verify byte-identical output for any internal serializer ported in this milestone
+- [x] 7.4 Verify byte-identical output for any internal serializer ported in this milestone
+- [x] 7.5 Preserve `ByteArraySerializer` legacy empty-manifest reads while emitting a non-empty V2 manifest
+- [ ] 7.6 Revisit `SerializerV2 : Serializer` hierarchy before adding more native production V2 serializers
 
 ## 8. Validation
 
 - [ ] 8.1 Run `dotnet build -warnaserror`
-- [ ] 8.2 Run focused Akka.Serialization tests
+- [x] 8.2 Run focused Akka.Serialization tests
 - [ ] 8.3 Run focused Akka.Remote tests
 - [ ] 8.4 Run focused Akka.Persistence tests
-- [ ] 8.5 Run `dotnet test -c Release src/core/Akka.API.Tests`
+- [x] 8.5 Run `dotnet test -c Release src/core/Akka.API.Tests`
 - [ ] 8.6 Document any remaining V1-only compatibility boundaries for the sourcegen milestone

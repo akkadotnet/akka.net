@@ -577,6 +577,45 @@ namespace Akka.Tests.Serialization
             deserialized.Should().Be(message);
         }
 
+        [Fact]
+        public void Can_roundtrip_byte_array_serializer_through_v2_buffer_api()
+        {
+            var message = new byte[] { 1, 2, 3, 4 };
+            var serializer = Sys.Serialization.FindSerializerV2For(message);
+
+            serializer.Should().BeOfType<ByteArraySerializer>();
+            serializer.SizeHint(message).Should().Be(message.Length);
+
+            var writer = new ArrayBufferWriter<byte>();
+            var metadata = Sys.Serialization.Serialize(message, writer);
+
+            metadata.SerializerId.Should().Be(serializer.Identifier);
+            metadata.Manifest.Should().Be(ByteArraySerializer.ByteArrayManifest);
+            metadata.BytesWritten.Should().Be(message.Length);
+            writer.WrittenSpan.ToArray().Should().Equal(message);
+
+            var deserialized = Sys.Serialization.Deserialize(
+                new ReadOnlySequence<byte>(writer.WrittenMemory),
+                metadata.SerializerId,
+                metadata.Manifest);
+
+            deserialized.Should().BeOfType<byte[]>();
+            ((byte[])deserialized).Should().Equal(message);
+
+            var legacyDeserialized = serializer.FromBinary(message, string.Empty);
+            legacyDeserialized.Should().BeSameAs(message);
+        }
+
+        [Fact]
+        public void Native_v2_serializer_must_return_non_empty_manifest()
+        {
+            var serializer = new EmptyManifestV2Serializer((ExtendedActorSystem)Sys);
+            Action action = () => Akka.Serialization.Serialization.ManifestFor(serializer, new NativeV2Message("no manifest"));
+
+            action.Should().Throw<SerializationException>()
+                .WithMessage("*must return a non-empty manifest*");
+        }
+
 
         private static string LegacyTypeQualifiedName(Type type)
         {
@@ -832,6 +871,27 @@ namespace Akka.Tests.Serialization
                 if (manifest != NativeManifest)
                     throw new SerializationException($"Unknown manifest [{manifest}]");
                 return new NativeV2Message(Encoding.UTF8.GetString(bytes.ToArray()));
+            }
+        }
+
+        public sealed class EmptyManifestV2Serializer : SerializerV2
+        {
+            public EmptyManifestV2Serializer(ExtendedActorSystem system) : base(system)
+            {
+            }
+
+            public override int Identifier => -107;
+
+            public override string Manifest(object obj) => string.Empty;
+
+            public override int Serialize(object obj, IBufferWriter<byte> writer)
+            {
+                return 0;
+            }
+
+            public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
+            {
+                return new object();
             }
         }
 

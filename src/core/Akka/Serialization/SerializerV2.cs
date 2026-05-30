@@ -32,9 +32,9 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Returns whether this serializer emits a manifest for compatibility callers.
+        /// V2 serializers always emit a manifest. This avoids polymorphic deserialization.
         /// </summary>
-        public override bool IncludeManifest => true;
+        public sealed override bool IncludeManifest => true;
 
         /// <summary>
         /// Returns the manifest used by this serializer for <paramref name="obj"/>.
