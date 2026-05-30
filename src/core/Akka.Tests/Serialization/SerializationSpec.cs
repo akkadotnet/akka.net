@@ -584,6 +584,8 @@ namespace Akka.Tests.Serialization
             var serializer = Sys.Serialization.FindSerializerV2For(message);
 
             serializer.Should().BeOfType<ByteArraySerializer>();
+            serializer.Identifier.Should().Be(4);
+            serializer.Manifest(message).Should().BeEmpty();
             serializer.SizeHint(message).Should().Be(message.Length);
 
             var writer = new ArrayBufferWriter<byte>();

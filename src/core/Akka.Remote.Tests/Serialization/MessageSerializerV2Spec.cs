@@ -45,7 +45,40 @@ namespace Akka.Remote.Tests.Serialization
 
             serialized.SerializerId.Should().Be(NativeV2Serializer.SerializerId);
             serialized.MessageManifest.ToStringUtf8().Should().Be(NativeV2Serializer.NativeManifest);
+            serialized.Message.ToByteArray().Should().Equal(Encoding.UTF8.GetBytes(message.Value));
             MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized).Should().Be(message);
+        }
+
+        [Fact]
+        public void Classic_MessageSerializer_should_preserve_legacy_byte_array_wire_metadata()
+        {
+            var message = new byte[] { 1, 2, 3, 4 };
+            var address = new Address("akka.tcp", "Sys", "localhost", 2551);
+            var info = new Information(address, Sys);
+
+            var serialized = MessageSerializer.Serialize((ExtendedActorSystem)Sys, info, message);
+
+            serialized.SerializerId.Should().Be(4);
+            serialized.MessageManifest.IsEmpty.Should().BeTrue();
+            serialized.Message.ToByteArray().Should().Equal(message);
+
+            var deserialized = MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized);
+            deserialized.Should().BeOfType<byte[]>();
+            ((byte[])deserialized).Should().Equal(message);
+        }
+
+        [Fact]
+        public void WrappedPayloadSupport_should_preserve_payload_serializer_metadata()
+        {
+            var message = new NativeV2Message("wrapped v2");
+            var support = new Akka.Remote.Serialization.WrappedPayloadSupport((ExtendedActorSystem)Sys);
+
+            var payload = support.PayloadToProto(message);
+
+            payload.SerializerId.Should().Be(NativeV2Serializer.SerializerId);
+            payload.MessageManifest.ToStringUtf8().Should().Be(NativeV2Serializer.NativeManifest);
+            payload.Message.ToByteArray().Should().Equal(Encoding.UTF8.GetBytes(message.Value));
+            support.PayloadFrom(payload).Should().Be(message);
         }
 
         public sealed class NativeV2Message: IEquatable<NativeV2Message>

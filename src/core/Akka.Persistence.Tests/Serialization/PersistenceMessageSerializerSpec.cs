@@ -7,13 +7,18 @@
 
 using System;
 using System.Runtime.Serialization;
+using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.Serialization;
 using Akka.TestKit;
+using Akka.Util;
 using FluentAssertions;
+using Google.Protobuf;
 using Xunit;
+using PersistentMessageProto = Akka.Persistence.Serialization.Proto.Msg.PersistentMessage;
+using PersistentPayloadProto = Akka.Persistence.Serialization.Proto.Msg.PersistentPayload;
 
 namespace Akka.Persistence.Tests.Serialization
 {
@@ -53,6 +58,12 @@ namespace Akka.Persistence.Tests.Serialization
         {
             var p1 = new Persistent(new MyPayload("a"), sender: TestActor);
             var bytes = _serializer.ToBinary(p1);
+            var serialized = PersistentMessageProto.Parser.ParseFrom(bytes);
+
+            serialized.Payload.SerializerId.Should().Be(77123);
+            serialized.Payload.PayloadManifest.ToStringUtf8().Should().Be(typeof(MyPayload).TypeQualifiedName());
+            serialized.Payload.Payload.ToByteArray().Should().Equal(Encoding.UTF8.GetBytes(".a"));
+
             var back = _serializer.FromBinary(bytes, (Type)null!);
 
             back.Should().BeOfType<Persistent>();
@@ -70,6 +81,12 @@ namespace Akka.Persistence.Tests.Serialization
         {
             var p1 = new Persistent(new MyV2Payload("a"), sender: TestActor);
             var bytes = _serializer.ToBinary(p1);
+            var serialized = PersistentMessageProto.Parser.ParseFrom(bytes);
+
+            serialized.Payload.SerializerId.Should().Be(77124);
+            serialized.Payload.PayloadManifest.ToStringUtf8().Should().Be(MyV2PayloadSerializer.PayloadManifest);
+            serialized.Payload.Payload.ToByteArray().Should().Equal(Encoding.UTF8.GetBytes("a"));
+
             var back = _serializer.FromBinary<Persistent>(bytes);
 
             back.Payload.Should().Be(new MyV2Payload("a"));
@@ -82,6 +99,12 @@ namespace Akka.Persistence.Tests.Serialization
             var serializer = new PersistenceSnapshotSerializer(Sys.As<ExtendedActorSystem>());
             var snapshot = new Akka.Persistence.Serialization.Snapshot(new MyV2Payload("snap"));
             var bytes = serializer.ToBinary(snapshot);
+            var serialized = PersistentPayloadProto.Parser.ParseFrom(bytes);
+
+            serialized.SerializerId.Should().Be(77124);
+            serialized.PayloadManifest.ToStringUtf8().Should().Be(MyV2PayloadSerializer.PayloadManifest);
+            serialized.Payload.ToByteArray().Should().Equal(Encoding.UTF8.GetBytes("snap"));
+
             var back = serializer.FromBinary<Akka.Persistence.Serialization.Snapshot>(bytes);
 
             back.Data.Should().Be(new MyV2Payload("snap"));
