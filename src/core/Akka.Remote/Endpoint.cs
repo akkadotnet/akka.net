@@ -41,19 +41,6 @@ namespace Akka.Remote
         /// </summary>
         void Dispatch(IInternalActorRef recipient, Address recipientAddress, SerializedMessage message,
             IActorRef senderOption = null);
-
-        /// <summary>
-        /// Dispatches an inbound remote message carried in a <see cref="MsgPackSerializedMessage"/>.
-        ///
-        /// <para>
-        /// This overload is the allocation-free hot path for the Pipe+MessagePack codec:
-        /// no <c>ByteString</c> is touched and the underlying
-        /// <see cref="Akka.Serialization.Serialization.Deserialize(ReadOnlyMemory{byte},int,string)"/>
-        /// overload is called directly, avoiding the UTF-8 re-encode round-trip.
-        /// </para>
-        /// </summary>
-        void Dispatch(IInternalActorRef recipient, Address recipientAddress,
-            in MsgPackSerializedMessage message, IActorRef senderOption = null);
     }
 
     /// <summary>
@@ -93,25 +80,6 @@ namespace Akka.Remote
             IActorRef senderOption = null)
         {
             var payload = MessageSerializer.Deserialize(_system, message);
-            DispatchPayload(recipient, recipientAddress, payload, senderOption);
-        }
-
-        /// <inheritdoc/>
-        /// <summary>
-        /// MessagePack hot-path overload — zero <c>ByteString</c> allocations. ✨
-        /// Calls <see cref="Akka.Serialization.Serialization.Deserialize(ReadOnlyMemory{byte},int,string)"/>
-        /// directly on the raw memory from the MpPayload, then routes via the shared
-        /// <see cref="DispatchPayload"/> helper.
-        ///
-        /// <!-- CopilotNotes: The 'in' modifier passes the 24-byte struct by ref-to-const so
-        ///      there is zero copying of the struct itself either. -->
-        /// </summary>
-        public void Dispatch(IInternalActorRef recipient, Address recipientAddress,
-            in MsgPackSerializedMessage message, IActorRef senderOption = null)
-        {
-            // ManifestString returns null for missing manifest — matches MessageSerializer.Deserialize behaviour.
-            var payload = _system.Serialization.Deserialize(
-                message.Bytes, message.SerializerId, message.ManifestString);
             DispatchPayload(recipient, recipientAddress, payload, senderOption);
         }
 
@@ -1923,26 +1891,18 @@ namespace Akka.Remote
             int serializerId;
             string manifest;
 
-            if (msg.HasMsgPackPayload)
-            {
-                var mp = msg.MsgPackMessage;
-                serializerId = mp.SerializerId;
-                manifest = mp.ManifestString ?? "";
-            }
-            else
-            {
-                var sm = msg.SerializedMessage!;
-                serializerId = sm.SerializerId;
-                manifest = sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8();
-            }
+
+            var sm = msg.SerializedMessage!;
+            serializerId = sm.SerializerId;
+            manifest = sm.MessageManifest.IsEmpty ? "" : sm.MessageManifest.ToStringUtf8();
 
             _log.Warning(error,
-              "Deserialization failed for message with serializer id [{0}] and manifest [{1}]. " +
+                "Deserialization failed for message with serializer id [{0}] and manifest [{1}]. " +
                 "Transient association error (association remains live). {2}. {3}",
-              serializerId,
-              manifest,
-              error.Message,
-              Serializer.GetErrorForSerializerId(serializerId));
+                serializerId,
+                manifest,
+                error.Message,
+                Serializer.GetErrorForSerializerId(serializerId));
         }
 
         private void NotReading()
@@ -2031,31 +1991,17 @@ namespace Akka.Remote
 
         /// <summary>
         /// Routes a decoded <see cref="Message"/> to the correct
-        /// Dispatch overload based on which payload
-        /// type is present (<see cref="MsgPackSerializedMessage"/> vs protobuf <c>SerializedMessage</c>).
-        ///
-        /// <!-- CopilotNotes: Centralised here so the hot-path and the reliable-delivery
-        ///      replay path (DeliverAndAck) both benefit from the MsgPack zero-copy route. -->
+        /// Dispatch overload
         /// </summary>
-        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        [System.Runtime.CompilerServices.MethodImpl(
+            System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         private void DispatchMessage(Message msg)
         {
-            if (msg.HasMsgPackPayload)
-            {
-                _msgDispatch.Dispatch(
-                    msg.Recipient,
-                    msg.RecipientAddress,
-                    msg.MsgPackMessage,
-                    msg.SenderOptional);
-            }
-            else
-            {
-                _msgDispatch.Dispatch(
-                    msg.Recipient,
-                    msg.RecipientAddress,
-                    msg.SerializedMessage!,
-                    msg.SenderOptional);
-            }
+            _msgDispatch.Dispatch(
+                msg.Recipient,
+                msg.RecipientAddress,
+                msg.SerializedMessage!,
+                msg.SenderOptional);
         }
 
         private AckAndMessage TryDecodeMessageAndAck(ByteString pdu)

@@ -117,25 +117,10 @@ namespace Akka.Remote.Transport
     /// <summary>
     /// INTERNAL API.
     ///
-    /// Represents a decoded inbound remote message carrying either:
-    /// <list type="bullet">
-    ///   <item>
-    ///     A protobuf <see cref="SerializedMessage"/> (<c>Payload</c>) — used by the DotNetty /
-    ///     Pipe+Protobuf codec paths; or
-    ///   </item>
-    ///   <item>
-    ///     A <see cref="MsgPackSerializedMessage"/> — used by the Pipe+MessagePack codec hot path,
-    ///     which avoids the <c>ByteString</c> allocations that the protobuf type would require.
-    ///   </item>
-    /// </list>
+    /// Represents a decoded inbound remote message carrying 
+    ///  A protobuf <see cref="SerializedMessage"/> (<c>Payload</c>) — used by the DotNetty /
+    ///  Pipe+Protobuf codec paths.
     ///
-    /// Exactly one of <see cref="SerializedMessage"/> or <see cref="MsgPackMessage"/> is non-null.
-    /// Callers should test <see cref="HasMsgPackPayload"/> and dispatch to the appropriate
-    /// <c>IInboundMessageDispatcher.Dispatch</c> overload accordingly.
-    ///
-    /// <!-- CopilotNotes: The two-ctor design keeps backward compatibility with all existing
-    ///      protobuf-path code while allowing the MsgPack codec to skip every ByteString copy
-    ///      on the inbound hot path. -->
     /// </summary>
     internal sealed class Message : IAkkaPdu, IHasSequenceNumber
     {
@@ -151,28 +136,6 @@ namespace Akka.Remote.Transport
             SerializedMessage = serializedMessage;
             RecipientAddress = recipientAddress;
             Recipient = recipient;
-            MsgPackMessage = null;
-        }
-
-        /// <summary>
-        /// Creates a <see cref="Message"/> backed by a <see cref="MsgPackSerializedMessage"/> —
-        /// the allocation-free payload type for the Pipe+MessagePack codec hot path.
-        /// </summary>
-        /// <param name="recipient">The resolved local recipient ref.</param>
-        /// <param name="recipientAddress">The address component of the recipient.</param>
-        /// <param name="msgPackMessage">Zero-copy payload decoded directly from MpPayload fields.</param>
-        /// <param name="senderOptional">Optional sender ref.</param>
-        /// <param name="seq">Sequence number for reliable delivery; null when not used.</param>
-        public Message(IInternalActorRef recipient, Address recipientAddress,
-            MsgPackSerializedMessage msgPackMessage,
-            IActorRef senderOptional = null, SeqNo? seq = null)
-        {
-            Seq = seq;
-            SenderOptional = senderOptional;
-            SerializedMessage = null; // CopilotNotes: intentionally null — use MsgPackMessage for dispatch
-            RecipientAddress = recipientAddress;
-            Recipient = recipient;
-            MsgPackMessage = msgPackMessage;
         }
 
         /// <summary>The resolved local recipient actor ref.</summary>
@@ -182,23 +145,10 @@ namespace Akka.Remote.Transport
         public Address RecipientAddress { get; private set; }
 
         /// <summary>
-        /// Protobuf payload; non-null only when constructed via the protobuf-path constructor.
-        /// Callers should check <see cref="HasMsgPackPayload"/> before accessing this.
+        /// Protobuf payload
         /// </summary>
         public SerializedMessage SerializedMessage { get; private set; }
-
-        /// <summary>
-        /// MessagePack-native payload; non-null only when constructed via the MsgPack-path constructor.
-        /// Prefer this over <see cref="SerializedMessage"/> when <see cref="HasMsgPackPayload"/> is true.
-        /// </summary>
-        public MsgPackSerializedMessage? MsgPackMessage { get; private set; }
-
-        /// <summary>
-        /// <c>true</c> when this message carries a <see cref="MsgPackSerializedMessage"/>
-        /// (the allocation-free hot path); <c>false</c> for the classic protobuf path.
-        /// </summary>
-        public bool HasMsgPackPayload => MsgPackMessage != null;
-
+        
         /// <summary>Optional sender ref; falls back to Dead Letters when null.</summary>
         public IActorRef SenderOptional { get; private set; }
 
