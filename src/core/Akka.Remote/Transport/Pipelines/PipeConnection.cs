@@ -405,7 +405,10 @@ namespace Akka.Remote.Transport.Pipelines
                 // Channel drained — await the final in-flight write so we don't close
                 // the stream while bytes are still being flushed to the OS. 🌸
                 if (inflightWrite != null)
+                {
                     await inflightWrite.ConfigureAwait(false);
+                    inflightWrite = null;
+                }
             }
             catch (OperationCanceledException)
             {

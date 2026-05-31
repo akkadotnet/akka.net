@@ -277,7 +277,7 @@ namespace Akka.Remote.Transport
             {
                 case Payload p:
                     return ConstructPayload(p.Bytes);
-                case Heartbeat h:
+                case Heartbeat _:
                     return ConstructHeartbeat();
                 case Associate a:
                     return ConstructAssociate(a.Info);
@@ -392,7 +392,7 @@ namespace Akka.Remote.Transport
 
         public override ByteString ConstructPayload(ReadOnlyMemory<byte> payload)
         {
-            return new AkkaProtocolMessage() { Payload = ByteString.CopyFrom(payload.Span) }.ToByteString();
+            return new AkkaProtocolMessage() { Payload = UnsafeByteOperations.UnsafeWrap(payload) }.ToByteString();
         }
         
         public ByteString ConstructPayload2(ReadOnlyMemory<byte> payload)
@@ -555,7 +555,6 @@ namespace Akka.Remote.Transport
             if (ackOption != null) { ackAndEnvelope.Ack = AckBuilder(ackOption); }
             envelope.Message = serializedMessage;
             ackAndEnvelope.Envelope = envelope;
-
             return ackAndEnvelope.ToByteString();
         }
 

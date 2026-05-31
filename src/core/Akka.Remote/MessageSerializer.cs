@@ -51,8 +51,8 @@ namespace Akka.Remote
             var oldInfo = Akka.Serialization.Serialization.CurrentTransportInformation;
             try
             {
-                Akka.Serialization.Serialization.CurrentTransportInformation = transportInformation;
-
+                Akka.Serialization.Serialization.CurrentTransportInformation = transportInformation; 
+                
                 var serializedMsg = new SerializedMessage
                 {
                     Message = UnsafeByteOperations.UnsafeWrap(serializer.ToBinary(message)), //ByteString.CopyFrom(serializer.ToBinary(message)),

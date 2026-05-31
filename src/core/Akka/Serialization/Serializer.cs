@@ -76,6 +76,12 @@ namespace Akka.Serialization
         /// <returns>A byte array containing the serialized object</returns>
         public abstract byte[] ToBinary(object obj);
 
+        public virtual int WriteTo(IBufferWriter<byte> writer, object obj)
+        {
+            var bytes = ToBinary(obj);
+            writer.Write(bytes);
+        }
+
         /// <summary>
         /// Serializes the given object into a byte array and uses the given address to decorate serialized ActorRef's
         /// </summary>

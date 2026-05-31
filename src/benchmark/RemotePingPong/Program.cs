@@ -219,7 +219,14 @@ namespace RemotePingPong
                         }
                     }"),
 
-                _ => Config.Empty, // nyaa~ nothing extra needed for default JSON
+                // CopilotNotes: Explicitly enable pooled StringBuilder for JSON so we get
+                // memory-friendly serialization even on the default path~ uwu
+                _ => ConfigurationFactory.ParseString(@"
+                    akka.actor.serialization-settings.json {
+                        use-pooled-string-builder = true
+                        pooled-string-builder-minsize = 2048
+                        pooled-string-builder-maxsize = 32768
+                    }"),
             };
 
             // ── Transport-specific overrides ─────────────────────────────────
