@@ -25,6 +25,10 @@
     <Protobuf Access="internal" Include="../../protobuf/WireFormats.proto" />
 
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Transport\Pipelines\MessagePack\" />
+  </ItemGroup>
     <PropertyGroup>
         <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
     </PropertyGroup>

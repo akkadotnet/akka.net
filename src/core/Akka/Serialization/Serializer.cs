@@ -80,6 +80,7 @@ namespace Akka.Serialization
         {
             var bytes = ToBinary(obj);
             writer.Write(bytes);
+            return bytes.Length;
         }
 
         /// <summary>

@@ -129,10 +129,7 @@ namespace RemotePingPong
             DotNetty,
 
             /// <summary>System.IO.Pipelines TCP transport with protobuf codec (wire-compatible).</summary>
-            PipeProtobuf,
-
-            /// <summary>System.IO.Pipelines TCP transport with MessagePack codec (fastest, cluster-wide opt-in).</summary>
-            PipeMsgPack,
+            PipeProtobuf
         }
 
         /// <summary>
@@ -145,7 +142,6 @@ namespace RemotePingPong
             return (arg ?? "").ToLowerInvariant() switch
             {
                 "pipe" or "pipe-protobuf" or "pipelines" => TransportMode.PipeProtobuf,
-                "pipe-msgpack" or "messagepack" or "msgpack" => TransportMode.PipeMsgPack,
                 _ => TransportMode.DotNetty,
             };
         }
@@ -153,7 +149,6 @@ namespace RemotePingPong
         private static string TransportLabel(TransportMode mode) => mode switch
         {
             TransportMode.PipeProtobuf => "Pipe/TCP + Protobuf",
-            TransportMode.PipeMsgPack  => "Pipe/TCP + MessagePack",
             _                          => "DotNetty/TCP + Protobuf",
         };
 
@@ -239,16 +234,6 @@ namespace RemotePingPong
                             hostname = ""{ipOrHostname}""
                             port     = {port}
                             envelope = protobuf
-                        }}
-                    }}"),
-
-                TransportMode.PipeMsgPack => ConfigurationFactory.ParseString($@"
-                    akka.remote {{
-                        enabled-transports = [""akka.remote.pipe.tcp""]
-                        pipe.tcp {{
-                            hostname = ""{ipOrHostname}""
-                            port     = {port}
-                            envelope = messagepack
                         }}
                     }}"),
 

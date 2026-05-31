@@ -22,7 +22,7 @@ public interface IReservableSegmentBufferWriter : IBufferWriter<byte>
     /// <summary>
     /// Reserves a segment of the buffer for writing. The returned <see cref="ReservedBufferRangeSegment"/>
     /// contains the offset and length of the reserved segment. The caller can then write directly to the
-    /// underlying buffer at the specified offset and length, and then call <see cref="Advance(int)"/> with
+    /// underlying buffer at the specified offset and length, ADVANCE
     /// the number of bytes actually written.
     /// </summary>
     ReservedBufferRangeSegment Reserve(int sizeHint);

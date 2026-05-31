@@ -30,12 +30,6 @@ namespace Akka.Remote.Transport.Pipelines
         /// Wire-compatible with all existing Akka.Remote nodes.
         /// </summary>
         Protobuf,
-
-        /// <summary>
-        /// Opt-in — source-generated MessagePack codec.  Smaller frames, lower GC pressure,
-        /// but <b>not</b> wire-compatible with protobuf nodes.
-        /// </summary>
-        MessagePack
     }
 
     /// <summary>
@@ -168,9 +162,7 @@ namespace Akka.Remote.Transport.Pipelines
                     nameof(maxFrame));
 
             var envelopeStr = config.GetString("envelope", "protobuf");
-            var envelopeCodec = string.Equals(envelopeStr, "messagepack", StringComparison.OrdinalIgnoreCase)
-                ? EnvelopeCodecKind.MessagePack
-                : EnvelopeCodecKind.Protobuf;
+            var envelopeCodec = EnvelopeCodecKind.Protobuf;
 
             return new PipeTransportSettings(
                 hostname:            host,
@@ -199,9 +191,7 @@ namespace Akka.Remote.Transport.Pipelines
         /// <paramref name="remoteConfig"/> (<c>akka.remote</c> block).
         ///
         /// <para>
-        /// When <c>akka.remote.pipe.tcp</c> is in <c>enabled-transports</c> and its
-        /// <c>envelope</c> key is <c>"messagepack"</c>, returns an
-        /// <see cref="AkkaPduMessagePackCodec"/>; otherwise returns the default
+        /// Returns an
         /// <see cref="AkkaPduProtobuffCodec"/>.
         /// </para>
         ///
@@ -218,17 +208,17 @@ namespace Akka.Remote.Transport.Pipelines
             try { enabledTransports = remoteConfig.GetStringList("enabled-transports"); }
             catch (Exception) { /* config key absent — fall back to protobuf */ }
 
-            if (enabledTransports != null
-                && enabledTransports.Contains("akka.remote.pipe.tcp"))
-            {
-                var pipeConfig = remoteConfig.GetConfig("pipe.tcp");
-                if (!pipeConfig.IsNullOrEmpty())
-                {
-                    var envelope = pipeConfig.GetString("envelope", "protobuf");
-                    if (string.Equals(envelope, "messagepack", StringComparison.OrdinalIgnoreCase))
-                        return new AkkaPduMessagePackCodec(system);
-                }
-            }
+            // if (enabledTransports != null
+            //     && enabledTransports.Contains("akka.remote.pipe.tcp"))
+            // {
+            //     var pipeConfig = remoteConfig.GetConfig("pipe.tcp");
+            //     if (!pipeConfig.IsNullOrEmpty())
+            //     {
+            //         var envelope = pipeConfig.GetString("envelope", "protobuf");
+            //         if (string.Equals(envelope, "messagepack", StringComparison.OrdinalIgnoreCase))
+            //             return new AkkaPduMessagePackCodec(system);
+            //     }
+            // }
 
             return new AkkaPduProtobuffCodec(system);
         }
