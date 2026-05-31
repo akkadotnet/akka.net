@@ -105,29 +105,31 @@ namespace Akka.Remote.Transport
         /// <param name="bytes">TBD</param>
         public Payload(ByteString bytes)
         {
-            Bytes = bytes;
+            Bytes = bytes.Memory;
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public ByteString Bytes { get; private set; }
+        public ReadOnlyMemory<byte> Bytes { get; private set; }
     }
 
     /// <summary>
-    /// TBD
+    /// INTERNAL API.
+    ///
+    /// Represents a decoded inbound remote message carrying 
+    ///  A protobuf <see cref="SerializedMessage"/> (<c>Payload</c>) — used by the DotNetty /
+    ///  Pipe+Protobuf codec paths.
+    ///
     /// </summary>
     internal sealed class Message : IAkkaPdu, IHasSequenceNumber
     {
         /// <summary>
-        /// TBD
+        /// Creates a <see cref="Message"/> backed by a protobuf <c>SerializedMessage</c>.
+        /// Used by the DotNetty and Pipe+Protobuf codecs.
         /// </summary>
-        /// <param name="recipient">TBD</param>
-        /// <param name="recipientAddress">TBD</param>
-        /// <param name="serializedMessage">TBD</param>
-        /// <param name="senderOptional">TBD</param>
-        /// <param name="seq">TBD</param>
-        public Message(IInternalActorRef recipient, Address recipientAddress, SerializedMessage serializedMessage, IActorRef senderOptional = null, SeqNo? seq = null)
+        public Message(IInternalActorRef recipient, Address recipientAddress, SerializedMessage serializedMessage,
+            IActorRef senderOptional = null, SeqNo? seq = null)
         {
             Seq = seq;
             SenderOptional = senderOptional;
@@ -136,30 +138,22 @@ namespace Akka.Remote.Transport
             Recipient = recipient;
         }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <summary>The resolved local recipient actor ref.</summary>
         public IInternalActorRef Recipient { get; private set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
+        /// <summary>The address component of the recipient actor path.</summary>
         public Address RecipientAddress { get; private set; }
 
         /// <summary>
-        /// TBD
+        /// Protobuf payload
         /// </summary>
         public SerializedMessage SerializedMessage { get; private set; }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
+        
+        /// <summary>Optional sender ref; falls back to Dead Letters when null.</summary>
         public IActorRef SenderOptional { get; private set; }
 
-        /// <summary>
-        /// TBD
-        /// </summary>
-        public bool ReliableDeliveryEnabled { get { return Seq != null; } }
+        /// <summary>Whether this message uses reliable delivery sequencing.</summary>
+        public bool ReliableDeliveryEnabled => Seq != null;
 
         /// <summary>
         /// The optional sequence number for reliable delivery. Null when reliable delivery is not used.
@@ -233,7 +227,7 @@ namespace Akka.Remote.Transport
             {
                 case Payload p:
                     return ConstructPayload(p.Bytes);
-                case Heartbeat h:
+                case Heartbeat _:
                     return ConstructHeartbeat();
                 case Associate a:
                     return ConstructAssociate(a.Info);
@@ -250,6 +244,8 @@ namespace Akka.Remote.Transport
         /// <param name="payload">TBD</param>
         /// <returns>TBD</returns>
         public abstract ByteString ConstructPayload(ByteString payload);
+
+        public abstract ByteString ConstructPayload(ReadOnlyMemory<byte> payload);
 
         /// <summary>
         /// TBD
@@ -342,6 +338,31 @@ namespace Akka.Remote.Transport
         public override ByteString ConstructPayload(ByteString payload)
         {
             return new AkkaProtocolMessage() { Payload = payload }.ToByteString();
+        }
+
+        public override ByteString ConstructPayload(ReadOnlyMemory<byte> payload)
+        {
+            return new AkkaProtocolMessage() { Payload = UnsafeByteOperations.UnsafeWrap(payload) }.ToByteString();
+        }
+        
+        public ByteString ConstructPayload2(ReadOnlyMemory<byte> payload)
+        {
+            // CopilotNotes: We calculate the exact size needed for the protobuf message upfront
+            // so we can allocate a single byte[] and write directly into it - no intermediate
+            // ByteString allocation for the payload field! Very efficient, much wow uwu ~✨
+            // AkkaProtocolMessage.Payload is field number 2, type LEN (wire type 2)
+            const int fieldTag = (2 << 3) | 2; // field 2, wire type 2 (length-delimited)
+            var payloadLength = payload.Length;
+            var tagSize = CodedOutputStream.ComputeRawVarint32Size(fieldTag);
+            var msgSize = tagSize + CodedOutputStream.ComputeLengthSize(payloadLength) + payloadLength;
+            var buffer = new byte[msgSize];
+            using var cos = new CodedOutputStream(buffer);
+            cos.WriteTag(2, WireFormat.WireType.LengthDelimited);
+            cos.WriteLength(payloadLength);
+            cos.Flush(); // flush tag+length before raw copy
+            var headerSize = (int)cos.Position;
+            payload.Span.CopyTo(buffer.AsSpan(headerSize));
+            return UnsafeByteOperations.UnsafeWrap(buffer);
         }
 
         /// <summary>
@@ -484,7 +505,6 @@ namespace Akka.Remote.Transport
             if (ackOption != null) { ackAndEnvelope.Ack = AckBuilder(ackOption); }
             envelope.Message = serializedMessage;
             ackAndEnvelope.Envelope = envelope;
-
             return ackAndEnvelope.ToByteString();
         }
 

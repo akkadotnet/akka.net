@@ -83,7 +83,7 @@ namespace Akka.Benchmarks.Remoting
             _recvCodec = new AkkaPduProtobuffCodec(_sys1);
             _sendCodec = new AkkaPduProtobuffCodec(_sys2);
             _fullDecode = CreatePayloadPdu();
-            _pduDecoded = ((Payload)_recvCodec.DecodePdu(_fullDecode)).Bytes;
+            _pduDecoded = UnsafeByteOperations.UnsafeWrap(((Payload)_recvCodec.DecodePdu(UnsafeByteOperations.UnsafeWrap(_fullDecode.Memory))).Bytes);
             _payloadDecoded = _recvCodec.DecodeMessage(_pduDecoded, _rarp, _addr1).MessageOption.SerializedMessage;
         }
 
@@ -155,7 +155,7 @@ namespace Akka.Benchmarks.Remoting
                 var pdu = _recvCodec.DecodePdu(_fullDecode);
                 if (pdu is Payload p)
                 {
-                    var msg = _recvCodec.DecodeMessage(p.Bytes, _rarp, _addr1);
+                    var msg = _recvCodec.DecodeMessage(UnsafeByteOperations.UnsafeWrap(p.Bytes), _rarp, _addr1);
                     var deserialize = MessageSerializer.Deserialize(_sys1, msg.MessageOption.SerializedMessage);
                 }
             }

@@ -15,6 +15,8 @@
 
 <ItemGroup>
   <ProjectReference Include="..\..\core\Akka.Remote\Akka.Remote.csproj" />
+  <ProjectReference Include="..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
+  <ProjectReference Include="..\..\contrib\serializers\Akka.Serialization.MessagePack\Akka.Serialization.MessagePack.csproj" />
 </ItemGroup>
   
 </Project>

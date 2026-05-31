@@ -140,7 +140,11 @@ namespace Akka.Remote.Transport
         {
             get
             {
-                return _managerProps ??= Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings))
+                // CopilotNotes: Capture Codec here so the lambda closes over the
+                // already-resolved value rather than the property getter. Codec is
+                // immutable after construction so this is safe.
+                var codec = Codec;
+                return _managerProps ??= Props.Create(() => new AkkaProtocolManager(WrappedTransport, Settings, codec))
                     .WithDeploy(Deploy.Local);
             }
         }
@@ -191,15 +195,24 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="wrappedTransport">TBD</param>
         /// <param name="settings">TBD</param>
-        public AkkaProtocolManager(Transport wrappedTransport, AkkaProtocolSettings settings)
+        /// <param name="codec">
+        /// The PDU codec to use for all <see cref="ProtocolStateActor"/> instances created
+        /// by this manager.  Defaults to <see cref="AkkaPduProtobuffCodec"/> when null.
+        /// </param>
+        public AkkaProtocolManager(Transport wrappedTransport, AkkaProtocolSettings settings, AkkaPduCodec? codec = null)
         {
             _wrappedTransport = wrappedTransport;
             _settings = settings;
+            // CopilotNotes: codec may be null when AkkaProtocolManager is created in tests
+            // that don't pass a codec explicitly; fall back to the protobuf codec in that case.
+            _codec = codec ?? new AkkaPduProtobuffCodec(Context.System);
         }
 
         private readonly Transport _wrappedTransport;
-
         private readonly AkkaProtocolSettings _settings;
+        // CopilotNotes: Stored here so both inbound and outbound ProtocolStateActors use
+        // the same codec instance rather than each creating their own protobuf instance.
+        private AkkaPduCodec _codec;
 
         /// <summary>
         /// The <see cref="AkkaProtocolTransport"/> does not handle recovery of associations, this task is implemented
@@ -236,7 +249,7 @@ namespace Akka.Remote.Transport
                         handle,
                         stateActorAssociationListener,
                         stateActorSettings,
-                        new AkkaPduProtobuffCodec(Context.System),
+                        _codec,
                         failureDetector)), ActorNameFor(handle.RemoteAddress));
                     break;
                 case AssociateUnderlying au:
@@ -274,7 +287,7 @@ namespace Akka.Remote.Transport
                 statusPromise,
                 stateActorWrappedTransport,
                 stateActorSettings,
-                new AkkaPduProtobuffCodec(Context.System), failureDetector, refuseUid)),
+                _codec, failureDetector, refuseUid)),
                 ActorNameFor(remoteAddress));
         }
 
@@ -1016,13 +1029,13 @@ namespace Akka.Remote.Transport
                                     {
                                         case AssociatedWaitHandler awh:
                                             var nQueue = new Queue<ByteString>(awh.Queue);
-                                            nQueue.Enqueue(p.Bytes);
+                                            nQueue.Enqueue(UnsafeByteOperations.UnsafeWrap(p.Bytes));
                                             return
                                                 Stay()
                                                     .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
                                                         nQueue));
                                         case ListenerReady lr:
-                                            lr.Listener.Notify(new InboundPayload(p.Bytes));
+                                            lr.Listener.Notify(new InboundPayload( UnsafeByteOperations.UnsafeWrap(p.Bytes)));
                                             return Stay();
                                         default:
                                             throw new AkkaProtocolException(

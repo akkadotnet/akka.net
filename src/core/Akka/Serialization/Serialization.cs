@@ -467,6 +467,20 @@ namespace Akka.Serialization
             });
         }
 
+        public object Deserialize(ReadOnlyMemory<byte> bytes, int serializerId, Type type)
+        {
+            return WithTransport(() =>
+            {
+                if (!_serializersById.TryGetValue(serializerId, out var serializer))
+                    throw new SerializationException(
+                        $"Cannot find serializer with id [{serializerId}] (class [{type?.Name}]). The most probable reason" +
+                        " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems." +
+                        $" {Serializer.GetErrorForSerializerId(serializerId)}");
+
+                return serializer.FromBinary(bytes, type);
+            });
+        }
+
         /// <summary>
         /// Deserializes the given array of bytes using the specified serializer id, using the optional type hint to the Serializer.
         /// </summary>
@@ -479,6 +493,45 @@ namespace Akka.Serialization
         /// </exception>
         /// <returns>The resulting object</returns>
         public object Deserialize(byte[] bytes, int serializerId, string manifest)
+        {
+            if (!_serializersById.TryGetValue(serializerId, out var serializer))
+                throw new SerializationException(
+                    $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
+                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems." +
+                    $" {Serializer.GetErrorForSerializerId(serializerId)}");
+
+            // not using `withTransportInformation { () =>` because deserializeByteBuffer is supposed to be the
+            // possibility for allocation free serialization
+            var oldInfo = Serialization.CurrentTransportInformation;
+            try
+            {
+                if (oldInfo == null)
+                    Serialization.CurrentTransportInformation = SerializationInfo;
+
+                if (serializer is SerializerWithStringManifest stringManifest)
+                    return stringManifest.FromBinary(bytes, manifest);
+                if (string.IsNullOrEmpty(manifest))
+                    return serializer.FromBinary(bytes, null);
+                Type type;
+                try
+                {
+                    type = TypeCache.GetType(manifest);
+                }
+                catch (Exception ex)
+                {
+                    throw new SerializationException(
+                        $"Cannot find manifest class [{manifest}] for serializer with id [{serializerId}].", ex);
+                }
+
+                return serializer.FromBinary(bytes, type);
+            }
+            finally
+            {
+                Serialization.CurrentTransportInformation = oldInfo;
+            }
+        }
+
+        public object Deserialize(ReadOnlyMemory<byte> bytes, int serializerId, string manifest)
         {
             if (!_serializersById.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(

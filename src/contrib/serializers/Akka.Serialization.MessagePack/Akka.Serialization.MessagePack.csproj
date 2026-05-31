@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyTitle>Akka.Serialization.MessagePack</AssemblyTitle>
+    <Description>MessagePack serializer for Akka.NET</Description>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework> 
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\core\Akka\Akka.csproj"/>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.HighPerformance" Version="7.1.2" />
+    <PackageReference Include="MessagePack" Version="3.1.4" />
+  </ItemGroup>
+</Project>
