@@ -9,8 +9,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -40,6 +42,31 @@ namespace RemotePingPong
             
 #endif
         }
+
+        /// <summary>
+        /// Holds the measured result for a single (combo × client-count) benchmark run.
+        /// Collected by <see cref="RunBattleRoyaleAsync"/> and formatted into a markdown table. 📊
+        /// </summary>
+        private sealed record BenchmarkRunResult(
+            TransportMode  Transport,
+            SerializerMode Serializer,
+            PayloadMode    Payload,
+            int            NumberOfClients,
+            long           TotalMessages,
+            long           ThroughputMsgPerSec,
+            double         ElapsedMs);
+
+        private static readonly (SerializerMode, PayloadMode, TransportMode)[] BattleRoyale =
+        [
+            (SerializerMode.Default, PayloadMode.Primitive, TransportMode.DotNetty),
+            (SerializerMode.Default, PayloadMode.Primitive, TransportMode.PipeProtobuf),
+            (SerializerMode.Default, PayloadMode.SerializedObject, TransportMode.DotNetty),
+            (SerializerMode.Hyperion, PayloadMode.SerializedObject, TransportMode.DotNetty),
+            (SerializerMode.MsgPack, PayloadMode.SerializedObject, TransportMode.DotNetty),
+            (SerializerMode.Default, PayloadMode.SerializedObject, TransportMode.PipeProtobuf),
+            (SerializerMode.Hyperion, PayloadMode.SerializedObject, TransportMode.PipeProtobuf),
+            (SerializerMode.MsgPack, PayloadMode.SerializedObject, TransportMode.PipeProtobuf),
+        ];
 
         /// <summary>
         /// Selects which message-body serializer is used for user messages during the benchmark.
@@ -129,7 +156,7 @@ namespace RemotePingPong
             DotNetty,
 
             /// <summary>System.IO.Pipelines TCP transport with protobuf codec (wire-compatible).</summary>
-            PipeProtobuf
+            PipeProtobuf,
         }
 
         /// <summary>
@@ -214,14 +241,7 @@ namespace RemotePingPong
                         }
                     }"),
 
-                // CopilotNotes: Explicitly enable pooled StringBuilder for JSON so we get
-                // memory-friendly serialization even on the default path~ uwu
-                _ => ConfigurationFactory.ParseString(@"
-                    akka.actor.serialization-settings.json {
-                        use-pooled-string-builder = true
-                        pooled-string-builder-minsize = 2048
-                        pooled-string-builder-maxsize = 32768
-                    }"),
+                _ => Config.Empty, // nyaa~ nothing extra needed for default JSON
             };
 
             // ── Transport-specific overrides ─────────────────────────────────
@@ -268,10 +288,24 @@ namespace RemotePingPong
             }
 
             // ── Parse args ────────────────────────────────────────────────────
-            // Usage: RemotePingPong [timesToRun] [transport] [serializer] [payload]
-            // transport:  dotnetty | pipe | pipe-msgpack
-            // serializer: default  | hyperion | msgpack
-            // payload:    primitive | object
+            // Single-run usage: RemotePingPong [timesToRun] [transport] [serializer] [payload]
+            //   transport:  dotnetty | pipe | pipe-msgpack
+            //   serializer: default  | hyperion | msgpack
+            //   payload:    primitive | object
+            //
+            // Battle-royale usage: RemotePingPong battle [outputFile?]
+            //   outputFile: path to write the markdown table; omit to print to stdout. 🎖️
+            if ((args.Length >= 1 && args[0].Equals("battle", StringComparison.OrdinalIgnoreCase)) ||
+                (args.Length >= 1 && args[0].Equals("--battle-royale", StringComparison.OrdinalIgnoreCase)))
+            {
+                var outputFile = args.Length >= 2 ? args[1] : null;
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine("⚔️  Battle Royale mode! Running all transport/serializer/payload combos~ uwu ✨");
+                Console.ResetColor();
+                await RunBattleRoyaleAsync(outputFile);
+                return;
+            }
+
             uint timesToRun = 1;
             var  transportMode   = TransportMode.DotNetty;
             var  serializerMode  = SerializerMode.Default;
@@ -382,7 +416,8 @@ namespace RemotePingPong
             int redCount,
             TransportMode mode,
             SerializerMode serializerMode,
-            PayloadMode payloadMode)
+            PayloadMode payloadMode,
+            List<BenchmarkRunResult>? collector = null)
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
             var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0, mode, serializerMode));
@@ -471,7 +506,142 @@ namespace RemotePingPong
                 startThreads,
                 endThreads);
 
+            // CopilotNotes: If a collector is provided (battle royale mode) we stash the
+            // raw measurements for later markdown table rendering. 📊
+            collector?.Add(new BenchmarkRunResult(
+                mode,
+                serializerMode,
+                payloadMode,
+                numberOfClients,
+                totalMessagesReceived,
+                throughput,
+                sw.Elapsed.TotalMilliseconds));
+
             return (redCount <= 3, bestThroughput, redCount);
+        }
+
+        // ── Battle Royale ──────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Runs every (transport × serializer × payload) combo in <see cref="BattleRoyale"/>,
+        /// printing live console progress while collecting <see cref="BenchmarkRunResult"/> entries.
+        /// On completion renders a markdown table to <paramref name="outputFile"/> (or stdout). 🎖️
+        /// </summary>
+        private static async Task RunBattleRoyaleAsync(string? outputFile)
+        {
+            var all = new List<BenchmarkRunResult>();
+
+            foreach (var (serializer, payload, transport) in BattleRoyale)
+            {
+                _firstRun = true; // reset header so sysinfo prints for each combo
+
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine();
+                Console.WriteLine(
+                    "── {0} | {1} | {2} ──",
+                    TransportLabel(transport),
+                    SerializerLabel(serializer),
+                    PayloadLabel(payload));
+                Console.ResetColor();
+
+                var redCount       = 0;
+                var bestThroughput = 0L;
+
+                foreach (var clients in GetClientSettings())
+                {
+                    var result = await Benchmark(
+                        clients, repeat, bestThroughput, redCount,
+                        transport, serializer, payload,
+                        collector: all);
+                    bestThroughput = result.Item2;
+                    redCount       = result.Item3;
+                }
+            }
+
+            // ── Emit markdown ──────────────────────────────────────────────
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine();
+            Console.WriteLine(outputFile is null
+                ? "✨ Battle Royale complete! Printing markdown table to stdout~ nyaa~"
+                : $"✨ Battle Royale complete! Writing markdown table to: {outputFile}");
+            Console.ResetColor();
+
+            var md = BuildMarkdownTable(all);
+
+            if (outputFile is null)
+            {
+                Console.WriteLine(md);
+            }
+            else
+            {
+                await File.WriteAllTextAsync(outputFile, md);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"Written {md.Length:N0} chars to {outputFile} 🌸");
+                Console.ResetColor();
+            }
+        }
+
+        /// <summary>
+        /// Builds a markdown document from the collected benchmark results.
+        ///
+        /// <para>
+        /// Emits two tables:
+        /// <list type="bullet">
+        ///   <item><b>Summary</b> — one row per combo with best throughput and the client count that achieved it.</item>
+        ///   <item><b>Detail</b> — one row per (combo × client-count) measurement.</item>
+        /// </list>
+        /// </para>
+        ///
+        /// <!-- CopilotNotes: We group by (Transport, Serializer, Payload) using LINQ to produce the
+        ///      summary rows, then flatten back to individual rows for the detail table. -->
+        /// </summary>
+        private static string BuildMarkdownTable(List<BenchmarkRunResult> results)
+        {
+            var sb = new StringBuilder();
+
+            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            sb.AppendLine($"# RemotePingPong Battle Royale — {timestamp} UTC");
+            sb.AppendLine();
+            sb.AppendLine($"> Generated by `RemotePingPong battle`. Repeat count per client: `{repeat:N0}` messages.");
+            sb.AppendLine();
+
+            // ── Summary table ──────────────────────────────────────────────
+            sb.AppendLine("## Summary — Best Throughput per Combo");
+            sb.AppendLine();
+            sb.AppendLine("| Transport | Serializer | Payload | Best Msgs/sec | At Clients |");
+            sb.AppendLine("|-----------|------------|---------|--------------:|:----------:|");
+
+            foreach (var g in results
+                         .GroupBy(r => (r.Transport, r.Serializer, r.Payload))
+                         .OrderByDescending(g => g.Max(r => r.ThroughputMsgPerSec)))
+            {
+                var best = g.MaxBy(r => r.ThroughputMsgPerSec)!;
+                sb.AppendLine(
+                    $"| {TransportLabel(best.Transport)} | {SerializerLabel(best.Serializer)} | {PayloadLabel(best.Payload)} " +
+                    $"| {best.ThroughputMsgPerSec:N0} | {best.NumberOfClients} |");
+            }
+
+            sb.AppendLine();
+
+            // ── Detail table ───────────────────────────────────────────────
+            sb.AppendLine("## Detail — All Measurements");
+            sb.AppendLine();
+            sb.AppendLine("| Transport | Serializer | Payload | Clients | Msgs/sec | Total Msgs | Time (ms) |");
+            sb.AppendLine("|-----------|------------|---------|--------:|---------:|-----------:|----------:|");
+
+            // CopilotNotes: Group ordering matches BattleRoyale declaration order, then by client count.
+            foreach (var g in results.GroupBy(r => (r.Transport, r.Serializer, r.Payload)))
+            {
+                foreach (var row in g.OrderBy(r => r.NumberOfClients))
+                {
+                    sb.AppendLine(
+                        $"| {TransportLabel(row.Transport)} | {SerializerLabel(row.Serializer)} | {PayloadLabel(row.Payload)} " +
+                        $"| {row.NumberOfClients} | {row.ThroughputMsgPerSec:N0} | {row.TotalMessages:N0} " +
+                        $"| {row.ElapsedMs:F2} |");
+                }
+            }
+
+            return sb.ToString();
         }
 
         private class AllStartedActor : UntypedActor
