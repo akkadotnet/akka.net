@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-      <PackageReference Include="Akka.Management" Version="1.5.50" />
+      <PackageReference Include="Akka.Management" Version="1.5.67" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
       <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
       <PackageReference Include="xunit.v3" Version="$(Xunit3Version)"/>
