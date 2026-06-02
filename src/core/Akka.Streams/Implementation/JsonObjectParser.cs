@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="JsonObjectParser.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -6,9 +6,9 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Linq;
 using Akka.Annotations;
-using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Util;
 using Akka.Util;
@@ -17,11 +17,11 @@ namespace Akka.Streams.Implementation
 {
     /// <summary>
     /// INTERNAL API: Use <see cref="JsonFraming"/> instead
-    /// 
-    /// **Mutable** framing implementation that given any number of <see cref="ByteString"/> chunks, can emit JSON objects contained within them.
+    ///
+    /// **Mutable** framing implementation that given any number of <see cref="ReadOnlySequence{T}"/> chunks, can emit JSON objects contained within them.
     /// Typically JSON objects are separated by new-lines or commas, however a top-level JSON Array can also be understood and chunked up
     /// into valid JSON objects by this framing implementation.
-    /// 
+    ///
     /// Leading whitespace between elements will be trimmed.
     /// </summary>
     [InternalApi]
@@ -45,7 +45,10 @@ namespace Akka.Streams.Implementation
         private static bool IsWhitespace(byte input) => Whitespace.Contains(input);
 
         private readonly int _maximumObjectLength;
-        private ByteString _buffer = ByteString.Empty;
+        // Internal storage uses ReadOnlySequence<byte> so concatenating multiple Offer inputs
+        // can chain segments instead of allocating a fresh byte[] for the merged buffer. The
+        // empty-buffer fast path borrows the input directly. Slicing on Poll is zero-copy.
+        private ReadOnlySequence<byte> _buffer = ReadOnlySequence<byte>.Empty;
         private int _pos; // latest position of pointer while scanning for json object end
         private int _trimFront;
         private int _depth;
@@ -68,11 +71,18 @@ namespace Akka.Streams.Implementation
         private bool InsideObject => !OutsideObject;
 
         /// <summary>
-        /// Appends input ByteString to internal byte string buffer.
+        /// Appends input to internal buffer.
         /// Use <see cref="Poll"/> to extract contained JSON objects.
         /// </summary>
         /// <param name="input">TBD</param>
-        public void Offer(ByteString input) => _buffer += input;
+        public void Offer(ReadOnlySequence<byte> input)
+        {
+            if (input.IsEmpty) return;
+            // Zero-copy concatenation: chain the existing buffer and new input via segment links.
+            // Empty-buffer case borrows the input directly. Multi-Offer case grows a segment chain
+            // without copying any data; the chain length is bounded below in the SeekObject path.
+            _buffer = _buffer.IsEmpty ? input : BufferSegment.Concat(_buffer, input);
+        }
 
         /// <summary>
         /// TBD
@@ -80,20 +90,19 @@ namespace Akka.Streams.Implementation
         public bool IsEmpty => _buffer.IsEmpty;
 
         /// <summary>
-        /// Attempt to locate next complete JSON object in buffered <see cref="ByteString"/> and returns it if found.
+        /// Attempt to locate next complete JSON object in buffered data and returns it if found.
         /// May throw a <see cref="Framing.FramingException"/> if the contained JSON is invalid or max object size is exceeded.
         /// </summary>
         /// <exception cref="Framing.FramingException">TBD</exception>
         /// <returns>TBD</returns>
-        public Option<ByteString> Poll()
+        public Option<ReadOnlySequence<byte>> Poll()
         {
             var foundObject = SeekObject();
             if(!foundObject || _pos == -1 || _pos == 0)
-                return Option<ByteString>.None;
+                return Option<ReadOnlySequence<byte>>.None;
 
             var emit = _buffer.Slice(0, _pos);
-            var buffer = _buffer.Slice(_pos);
-            _buffer = buffer.Compact();
+            _buffer = _buffer.Slice(_pos);
             _pos = 0;
 
             var trimFront = _trimFront;
@@ -103,18 +112,30 @@ namespace Akka.Streams.Implementation
                 return emit;
 
             var trimmed = emit.Slice(trimFront);
-            return trimmed.IsEmpty ? Option<ByteString>.None : trimmed;
+            return trimmed.IsEmpty ? Option<ReadOnlySequence<byte>>.None : trimmed;
         }
 
         /// <summary>
-        /// Returns true if an entire valid JSON object was found, false otherwise
+        /// Returns true if an entire valid JSON object was found, false otherwise.
         /// </summary>
+        /// <remarks>
+        /// Uses <see cref="SequenceReader{T}"/> to step through the buffer one byte at a time
+        /// without materializing it. Reader advancement stays in sync with <c>_pos</c> because
+        /// <see cref="Proceed"/> increments <c>_pos</c> by exactly 1 on every call (the
+        /// <c>_pos = -1</c> branch terminates the loop).
+        /// </remarks>
         private bool SeekObject()
         {
             _completedObject = false;
-            var bufferSize = _buffer.Count;
-            while (_pos != -1 && (_pos < bufferSize && _pos < _maximumObjectLength) && !_completedObject)
-                Proceed(_buffer[_pos]);
+            var bufferSize = _buffer.Length;
+            var reader = new SequenceReader<byte>(_buffer);
+            if (_pos > 0) reader.Advance(_pos);
+
+            while (_pos != -1 && _pos < bufferSize && _pos < _maximumObjectLength && !_completedObject)
+            {
+                if (!reader.TryRead(out var b)) break;
+                Proceed(b);
+            }
 
             if (_pos >= _maximumObjectLength)
                 throw new Framing.FramingException(
@@ -180,7 +201,7 @@ namespace Akka.Streams.Implementation
                 _pos++;
             }
             else
-                throw new Framing.FramingException($"Invalid JSON encountered at position {_pos} of {_buffer}");
+                throw new Framing.FramingException($"Invalid JSON encountered at position {_pos} of buffer");
 
             _lastInput = input;
         }

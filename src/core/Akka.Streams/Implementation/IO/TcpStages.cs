@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -88,7 +89,7 @@ namespace Akka.Streams.Implementation.IO
 
                 var tcpFlow =
                     Flow.FromGraph(new IncomingConnectionStage(connection, connected.RemoteAddress, _stage._halfClose))
-                    .Via(new Detacher<ByteString>()) // must read ahead for proper completions
+                    .Via(new Detacher<ReadOnlySequence<byte>>()) // must read ahead for proper completions
                     .MapMaterializedValue(unit =>
                     {
                         _connectionFlowsAwaitingInitialization.DecrementAndGet();
@@ -262,14 +263,14 @@ namespace Akka.Streams.Implementation.IO
     /// INTERNAL API
     /// </summary>
     [InternalApi]
-    public class IncomingConnectionStage : GraphStage<FlowShape<ByteString, ByteString>>
+    public class IncomingConnectionStage : GraphStage<FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>>
     {
         private readonly IActorRef _connection;
         private readonly EndPoint _remoteAddress;
         private readonly bool _halfClose;
         private readonly AtomicBoolean _hasBeenCreated = new();
-        private readonly Inlet<ByteString> _bytesIn = new("IncomingTCP.in");
-        private readonly Outlet<ByteString> _bytesOut = new("IncomingTCP.out");
+        private readonly Inlet<ReadOnlySequence<byte>> _bytesIn = new("IncomingTCP.in");
+        private readonly Outlet<ReadOnlySequence<byte>> _bytesOut = new("IncomingTCP.out");
 
         /// <summary>
         /// TBD
@@ -282,13 +283,13 @@ namespace Akka.Streams.Implementation.IO
             _connection = connection;
             _remoteAddress = remoteAddress;
             _halfClose = halfClose;
-            Shape = new FlowShape<ByteString, ByteString>(_bytesIn, _bytesOut);
+            Shape = new FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(_bytesIn, _bytesOut);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override FlowShape<ByteString, ByteString> Shape { get; }
+        public override FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>> Shape { get; }
 
         /// <summary>
         /// TBD
@@ -423,12 +424,12 @@ namespace Akka.Streams.Implementation.IO
         {
             private readonly ITcpRole _role;
             private readonly EndPoint _remoteAddress;
-            private readonly Inlet<ByteString> _bytesIn;
-            private readonly Outlet<ByteString> _bytesOut;
+            private readonly Inlet<ReadOnlySequence<byte>> _bytesIn;
+            private readonly Outlet<ReadOnlySequence<byte>> _bytesOut;
             private IActorRef _connection;
             private readonly OutHandler _readHandler;
             
-            public TcpStreamLogic(FlowShape<ByteString, ByteString> shape, ITcpRole role, EndPoint remoteAddress) : base(shape)
+            public TcpStreamLogic(FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>> shape, ITcpRole role, EndPoint remoteAddress) : base(shape)
             {
                 _role = role;
                 _remoteAddress = remoteAddress;
@@ -606,7 +607,7 @@ namespace Akka.Streams.Implementation.IO
     /// INTERNAL API
     /// </summary>
     internal sealed class OutgoingConnectionStage :
-        GraphStageWithMaterializedValue<FlowShape<ByteString, ByteString>, Task<StreamTcp.OutgoingConnection>>
+        GraphStageWithMaterializedValue<FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>, Task<StreamTcp.OutgoingConnection>>
     {
         private readonly IActorRef _tcpManager;
         private readonly EndPoint _remoteAddress;
@@ -614,8 +615,8 @@ namespace Akka.Streams.Implementation.IO
         private readonly IImmutableList<Inet.SocketOption> _options;
         private readonly bool _halfClose;
         private readonly TimeSpan? _connectionTimeout;
-        private readonly Inlet<ByteString> _bytesIn = new("IncomingTCP.in");
-        private readonly Outlet<ByteString> _bytesOut = new("IncomingTCP.out");
+        private readonly Inlet<ReadOnlySequence<byte>> _bytesIn = new("IncomingTCP.in");
+        private readonly Outlet<ReadOnlySequence<byte>> _bytesOut = new("IncomingTCP.out");
 
         /// <summary>
         /// TBD
@@ -635,7 +636,7 @@ namespace Akka.Streams.Implementation.IO
             _options = options;
             _halfClose = halfClose;
             _connectionTimeout = connectionTimeout;
-            Shape = new FlowShape<ByteString, ByteString>(_bytesIn, _bytesOut);
+            Shape = new FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(_bytesIn, _bytesOut);
         }
 
         /// <summary>
@@ -646,7 +647,7 @@ namespace Akka.Streams.Implementation.IO
         /// <summary>
         /// TBD
         /// </summary>
-        public override FlowShape<ByteString, ByteString> Shape { get; }
+        public override FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>> Shape { get; }
 
         /// <summary>
         /// TBD
@@ -681,7 +682,7 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal static class TcpIdleTimeout
     {
-        public static BidiFlow<ByteString, ByteString, ByteString, ByteString, NotUsed> Create(TimeSpan idleTimeout, EndPoint remoteAddress = null)
+        public static BidiFlow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> Create(TimeSpan idleTimeout, EndPoint remoteAddress = null)
         {
             var connectionString = remoteAddress == null ? "" : $" on connection to [{remoteAddress}]";
 
@@ -690,12 +691,12 @@ namespace Akka.Streams.Implementation.IO
                 idleTimeout);
 
             var toNetTimeout = BidiFlow.FromFlows(
-                Flow.Create<ByteString>().SelectError(e => e is TimeoutException ? idleException : e),
-                Flow.Create<ByteString>());
+                Flow.Create<ReadOnlySequence<byte>>().SelectError(e => e is TimeoutException ? idleException : e),
+                Flow.Create<ReadOnlySequence<byte>>());
 
             var fromNetTimeout = toNetTimeout.Reversed(); // now the bottom flow transforms the exception, the top one doesn't (since that one is "fromNet") 
 
-            return fromNetTimeout.Atop(BidiFlow.BidirectionalIdleTimeout<ByteString, ByteString>(idleTimeout))
+            return fromNetTimeout.Atop(BidiFlow.BidirectionalIdleTimeout<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(idleTimeout))
                 .Atop(toNetTimeout);
         }
     }

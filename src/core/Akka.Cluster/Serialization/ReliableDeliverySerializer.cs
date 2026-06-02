@@ -314,14 +314,14 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(SequencedMessageFromProto),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         var generic = method.MakeGenericMethod(type);
-        return ((ConsumerController.ISequencedMessage)generic.Invoke(this, new object[] { seqMsg })!);
+        return ((ConsumerController.ISequencedMessage)generic.Invoke(this, [seqMsg])!);
     }
 
     private ConsumerController.ISequencedMessage SequencedMessageFromProto<T>(SequencedMessage seqMsg)
     {
         if (seqMsg.IsChunk)
         {
-            var chunk = new ChunkedMessage(IO.ByteString.CopyFrom(seqMsg.Message.Message.ToByteArray()),
+            var chunk = new ChunkedMessage(seqMsg.Message.Message.Memory,
                 seqMsg.FirstChunk,
                 seqMsg.LastChunk, seqMsg.Message.SerializerId, seqMsg.Message.MessageManifest.IsEmpty ? "" : seqMsg.Message.MessageManifest.ToStringUtf8());
             return ConsumerController.SequencedMessage<T>.FromChunkedMessage(seqMsg.ProducerId, seqMsg.SeqNr, chunk,
@@ -371,14 +371,14 @@ internal sealed class ReliableDeliverySerializer : SerializerWithStringManifest
         var method = typeof(ReliableDeliverySerializer).GetMethod(nameof(DurableQueueMessageSentFromProtoGeneric),
             BindingFlags.NonPublic | BindingFlags.Instance)!;
         var generic = method.MakeGenericMethod(type);
-        return ((DurableProducerQueue.IMessageSent)generic.Invoke(this, new object[] { messageSent })!)!;
+        return ((DurableProducerQueue.IMessageSent)generic.Invoke(this, [messageSent])!)!;
     }
 
     private DurableProducerQueue.MessageSent<T> DurableQueueMessageSentFromProtoGeneric<T>(MessageSent messageSent)
     {
         if (messageSent.IsChunk)
         {
-            var chunk = new ChunkedMessage(IO.ByteString.CopyFrom(messageSent.Message.Message.ToByteArray()),
+            var chunk = new ChunkedMessage(messageSent.Message.Message.Memory,
                 messageSent.FirstChunk,
                 messageSent.LastChunk, messageSent.Message.SerializerId,
                 messageSent.Message.MessageManifest.IsEmpty ? "" : messageSent.Message.MessageManifest.ToStringUtf8()!);

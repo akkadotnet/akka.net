@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\xunitSettings.props" />
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
     <RootNamespace>DocsExamples</RootNamespace>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>

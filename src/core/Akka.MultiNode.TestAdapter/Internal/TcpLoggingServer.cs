@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Immutable;
 using System.Net;
 using Akka.Actor;
@@ -51,18 +52,20 @@ namespace Akka.MultiNode.TestAdapter.Internal
 
             Receive<Tcp.Received>(received =>
             {
+                var text = System.Text.Encoding.UTF8.GetString(received.Data.ToArray());
+
                 // It should be unlikely that a single stack trace be bigger than 10 Kib,
                 // but we should buffer this anyway, just in case.
                 //
                 // An edge case would be when a message is __exactly__ 10240 bytes in size,
                 // but that should be extremely unlikely
-                if (received.Data.Count >= MultiNodeTestCaseRunner.TcpBufferSize)
+                if (received.Data.Length >= MultiNodeTestCaseRunner.TcpBufferSize)
                 {
-                    _buffer += received.Data;
+                    _buffer += text;
                     return;
                 }
 
-                sinkCoordinator.Tell(_buffer + received.Data);
+                sinkCoordinator.Tell(_buffer + text);
                 _buffer = string.Empty;
             });
 

@@ -6,13 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.IO;
 
@@ -23,7 +23,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class FilePublisher : Actors.ActorPublisher<ByteString>
+    internal sealed class FilePublisher : Actors.ActorPublisher<ReadOnlySequence<byte>>
     {
         /// <summary>
         /// TBD
@@ -75,7 +75,7 @@ namespace Akka.Streams.Implementation.IO
         private readonly ILoggingAdapter _log;
         private long _eofReachedAtOffset = long.MinValue;
         private long _readBytesTotal;
-        private IImmutableList<ByteString> _availableChunks = ImmutableList<ByteString>.Empty;
+        private IImmutableList<ReadOnlySequence<byte>> _availableChunks = ImmutableList<ReadOnlySequence<byte>>.Empty;
         private FileStream _chan;
 
         /// <summary>
@@ -155,7 +155,7 @@ namespace Akka.Streams.Implementation.IO
             }
         }
 
-        private IImmutableList<ByteString> SignalOnNexts(IImmutableList<ByteString> chunks)
+        private IImmutableList<ReadOnlySequence<byte>> SignalOnNexts(IImmutableList<ReadOnlySequence<byte>> chunks)
         {
             if (chunks.Count != 0 && TotalDemand > 0)
             {
@@ -170,7 +170,7 @@ namespace Akka.Streams.Implementation.IO
         }
 
         //BLOCKING IO READ
-        private IImmutableList<ByteString> ReadAhead(int maxChunks, IImmutableList<ByteString> chunks)
+        private IImmutableList<ReadOnlySequence<byte>> ReadAhead(int maxChunks, IImmutableList<ReadOnlySequence<byte>> chunks)
         {
             if (chunks.Count <= maxChunks && IsActive)
             {
@@ -187,14 +187,16 @@ namespace Akka.Streams.Implementation.IO
                     }
 
                     _readBytesTotal += readBytes;
-                    var newChunks = chunks.Add(ByteString.CopyFrom(_buffer, 0, readBytes));
+                    var copy = new byte[readBytes];
+                    Array.Copy(_buffer, 0, copy, 0, readBytes);
+                    var newChunks = chunks.Add(new ReadOnlySequence<byte>(copy));
                     return ReadAhead(maxChunks, newChunks);
                 }
                 catch (Exception ex)
                 {
                     OnErrorThenStop(ex);
                     //read failed, we're done here
-                    return ImmutableList<ByteString>.Empty;
+                    return ImmutableList<ReadOnlySequence<byte>>.Empty;
                 }
             }
 

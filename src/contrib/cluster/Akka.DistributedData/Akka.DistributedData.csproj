@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>Replicated data using CRDT structures</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <PackageTags>$(AkkaPackageTags);network;cluster;crdt;replication</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>

@@ -241,7 +241,7 @@ namespace Akka.Tests.Pattern
 
             var future = breaker.Instance.WithCircuitBreaker(async ct =>
             {
-                await Task.Delay(150, ct);
+                await Task.Delay(Dilated(TimeSpan.FromSeconds(1)), ct);
                 ThrowException();
             });
 

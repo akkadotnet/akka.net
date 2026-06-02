@@ -2,8 +2,7 @@
   <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
-    <TargetFrameworks Condition=" '$(OS)' == 'Windows_NT' ">$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
-    <TargetFramework Condition=" '$(OS)' != 'Windows_NT' ">$(NetTestVersion)</TargetFramework>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
   </PropertyGroup>

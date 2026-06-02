@@ -98,7 +98,7 @@ namespace Akka.Tests.Performance.IO
                 });
                 Receive<byte[]>(data =>
                 {
-                    connection.Tell(Tcp.Write.Create(ByteString.FromBytes(data)));
+                    connection.Tell(Tcp.Write.Create(data.AsMemory()));
                 });
                 Receive<Tcp.CommandFailed>(_ =>
                 {

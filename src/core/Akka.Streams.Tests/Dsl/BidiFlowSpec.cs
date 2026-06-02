@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="BidiFlowSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
@@ -29,40 +28,40 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private static BidiFlow<int, long, ByteString, string, NotUsed> Bidi()
+        private static BidiFlow<int, long, ReadOnlyMemory<byte>, string, NotUsed> Bidi()
         {
             return
                 BidiFlow.FromFlows(
                     Flow.Create<int>().Select(x => ((long) x) + 2).WithAttributes(Attributes.CreateName("top")),
-                    Flow.Create<ByteString>()
-                        .Select(x => x.ToString(Encoding.UTF8))
+                    Flow.Create<ReadOnlyMemory<byte>>()
+                        .Select(x => Encoding.UTF8.GetString(x.Span))
                         .WithAttributes(Attributes.CreateName("bottom")));
         }
 
-        private static BidiFlow<long, int, string, ByteString, NotUsed> Inverse()
+        private static BidiFlow<long, int, string, ReadOnlyMemory<byte>, NotUsed> Inverse()
         {
             return
                 BidiFlow.FromFlows(
                     Flow.Create<long>().Select(x => ((int)x) + 2).WithAttributes(Attributes.CreateName("top")),
                     Flow.Create<string>()
-                        .Select(ByteString.FromString)
+                        .Select(s => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(s))
                         .WithAttributes(Attributes.CreateName("bottom")));
         }
 
-        private static BidiFlow<int, long, ByteString, string, Task<int>> BidiMaterialized()
+        private static BidiFlow<int, long, ReadOnlyMemory<byte>, string, Task<int>> BidiMaterialized()
         {
             return BidiFlow.FromGraph(GraphDsl.Create(Sink.First<int>(), (b, s) =>
             {
                 b.From(Source.Single(42).MapMaterializedValue(_=>Task.FromResult(0))).To(s);
 
                 var top = b.Add(Flow.Create<int>().Select(x => ((long) x) + 2));
-                var bottom = b.Add(Flow.Create<ByteString>().Select(x => x.ToString(Encoding.UTF8)));
-                return new BidiShape<int,long,ByteString, string>(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);
+                var bottom = b.Add(Flow.Create<ReadOnlyMemory<byte>>().Select(x => Encoding.UTF8.GetString(x.Span)));
+                return new BidiShape<int,long,ReadOnlyMemory<byte>, string>(top.Inlet, top.Outlet, bottom.Inlet, bottom.Outlet);
             }));
         }
 
         private const string String = "Hello World";
-        private static readonly ByteString Bytes = ByteString.FromString(String);
+        private static readonly ReadOnlyMemory<byte> Bytes = Encoding.UTF8.GetBytes(String);
 
 
         [Fact]
@@ -89,8 +88,8 @@ namespace Akka.Streams.Tests.Dsl
             var top = t.Item1;
             var bottom = t.Item2;
 
-            top.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue(); 
-            bottom.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue(); 
+            top.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+            bottom.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             top.Result.Should().Be(3);
             bottom.Result.Should().Be(String);
         }
@@ -98,7 +97,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_BidiFlow_must_work_as_a_Flow_that_is_open_to_the_left()
         {
-            var f = Bidi().Join(Flow.Create<long>().Select(x => ByteString.FromString($"Hello {x}")));
+            var f = Bidi().Join(Flow.Create<long>().Select(x => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes($"Hello {x}")));
             var result = Source.From(Enumerable.Range(1, 3)).Via(f).Limit(10).RunWith(Sink.Seq<string>(), Materializer);
             result.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             result.Result.Should().BeEquivalentTo(new[] {"Hello 3", "Hello 4", "Hello 5"});
@@ -109,7 +108,7 @@ namespace Akka.Streams.Tests.Dsl
         {
             var f = Flow.Create<string>().Select(int.Parse).Join(Bidi());
             var result =
-                Source.From(new[] {ByteString.FromString("1"), ByteString.FromString("2")})
+                Source.From(new[] {(ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("1"), (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("2")})
                     .Via(f)
                     .Limit(10)
                     .RunWith(Sink.Seq<long>(), Materializer);
@@ -145,9 +144,9 @@ namespace Akka.Streams.Tests.Dsl
                 var flow2 =
                     b.Add(
                         Flow.Create<long>()
-                            .Select(x => ByteString.FromString($"Hello {x}"))
+                            .Select(x => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes($"Hello {x}"))
                             .MapMaterializedValue(_ => Task.FromResult(0)));
-                
+
                 b.AddEdge(flow1.Outlet, bidi.Inlet1);
                 b.AddEdge(bidi.Outlet2, flow1.Inlet);
 
@@ -165,26 +164,26 @@ namespace Akka.Streams.Tests.Dsl
         public async Task A_BidiFlow_must_combine_materialization_values()
         {
             await this.AssertAllStagesStoppedAsync(() => {
-                var left = 
-                Flow.FromGraph(GraphDsl.Create(Sink.First<int>(), 
-                (b, sink) =>                                                                        
-                {                                                                             
-                    var broadcast = b.Add(new Broadcast<int>(2));                                                                                               
-                    var merge = b.Add(new Merge<int>(2));                                                                             
-                    var flow = b.Add(Flow.Create<string>().Select(int.Parse));                                                                             
-                    b.From(broadcast).To(sink);                                                                             
-                    b.From(Source.Single(1).MapMaterializedValue(_ => Task.FromResult(0))).Via(broadcast).To(merge);                                                                             
-                    b.From(flow).To(merge);                                                                             
-                    return new FlowShape<string, int>(flow.Inlet, merge.Out);                                                                        
+                var left =
+                Flow.FromGraph(GraphDsl.Create(Sink.First<int>(),
+                (b, sink) =>
+                {
+                    var broadcast = b.Add(new Broadcast<int>(2));
+                    var merge = b.Add(new Merge<int>(2));
+                    var flow = b.Add(Flow.Create<string>().Select(int.Parse));
+                    b.From(broadcast).To(sink);
+                    b.From(Source.Single(1).MapMaterializedValue(_ => Task.FromResult(0))).Via(broadcast).To(merge);
+                    b.From(flow).To(merge);
+                    return new FlowShape<string, int>(flow.Inlet, merge.Out);
                 }));
 
                 var right = Flow.FromGraph(GraphDsl.Create(Sink.First<List<long>>(), (b, sink) =>
                 {
                     var flow = b.Add(Flow.Create<long>().Grouped(10));
-                    var source = b.Add(Source.Single(ByteString.FromString("10")));
+                    var source = b.Add(Source.Single((ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes("10")));
                     b.From(flow).To(sink);
 
-                    return new FlowShape<long, ByteString>(flow.Inlet, source.Outlet);
+                    return new FlowShape<long, ReadOnlyMemory<byte>>(flow.Inlet, source.Outlet);
                 }));
 
                 var tt = left.JoinMaterialized(BidiMaterialized(), Keep.Both)
@@ -206,7 +205,7 @@ namespace Akka.Streams.Tests.Dsl
         [Fact]
         public void A_BidiFlow_must_suitably_override_attribute_handling_methods()
         {
-            var b = (BidiFlow<int, long, ByteString, string, NotUsed>)
+            var b = (BidiFlow<int, long, ReadOnlyMemory<byte>, string, NotUsed>)
                 Bidi().WithAttributes(Attributes.CreateName("")).Async().Named("name");
 
             b.Module.Attributes.GetAttribute<Attributes.Name>().Value.Should().Be("name");

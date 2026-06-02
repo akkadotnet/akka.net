@@ -30,7 +30,7 @@ public class SerializerORSetBenchmarks
     public int NumNodes;
         
     private ActorSystem sys;
-    private ReplicatedDataSerializer ser;
+    private Serializer ser;
     private UniqueAddress[] _nodes;
     private RDDBenchTypes.TestVal[] _elements;
     private ORSet<List<RDDBenchTypes.TestVal>> _c1;
@@ -70,7 +70,7 @@ public class SerializerORSetBenchmarks
   }
 }");
         sys = ActorSystem.Create("rddsb", conf);
-        ser = (ReplicatedDataSerializer)sys.Serialization.FindSerializerForType(
+        ser = sys.Serialization.FindSerializerForType(
             typeof(IReplicatedDataSerialization));
         _c1Ser = ser.ToBinary(_c1);
         _c1Manifest = ser.Manifest(_c1);

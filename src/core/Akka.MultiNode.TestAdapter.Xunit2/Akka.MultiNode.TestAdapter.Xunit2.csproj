@@ -13,7 +13,6 @@
   <ItemGroup>
     <PackageReference Include="TeamCity.ServiceMessages" Version="4.1.1" />
     <PackageReference Include="System.CodeDom" Version="9.0.8" />
-    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageReference Include="xunit.runner.utility" Version="$(XunitVersion)" />
   </ItemGroup>
 
@@ -71,8 +70,7 @@
     <ItemGroup>
       <!-- Add file to package with consideration of sub folder. If empty, the root folder is chosen. -->
       <BuildOutputInPackage Include="@(_ReferenceCopyLocalPaths)" TargetPath="%(_ReferenceCopyLocalPaths.DestinationSubDirectory)" />
-      <!-- Special case: netstandard15 dll never get restored in netcoreapp projects, but is needed in runtime -->
-      <BuildOutputInPackage Include="$(OutputPath)xunit.runner.utility.netstandard15.dll" />
+      <!-- netstandard15 shim removed — not needed on net10.0 -->
     </ItemGroup>
   </Target>
 </Project>

@@ -81,7 +81,7 @@ namespace Akka.IO
                 case Connect c:
                 {
                     var commander = Sender;
-                    Context.ActorOf(Props.Create<TcpOutgoingConnection>(_tcp, commander, c).WithDeploy(Deploy.Local), NextTcpOutgoingConnectionName());
+                    Context.ActorOf(Props.Create(() => new TcpOutgoingConnection(_tcp, commander, c)).WithDeploy(Deploy.Local), NextTcpOutgoingConnectionName());
                     return true;
                 }
                 case Bind b:

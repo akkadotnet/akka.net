@@ -25,7 +25,8 @@ public class StreamRefSerializer: Akka.TestKit.Xunit.TestKit
     public void StreamsConfigBugTest()
     {
         var message = new SequencedOnNext(10, "test");
-        var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(message);
+        var serializer = Sys.Serialization.FindSerializerFor(message);
+        serializer.Should().BeOfType<Akka.Streams.Serialization.StreamRefSerializer>();
         var manifest = serializer.Manifest(message);
 
         byte[] bytes = null;

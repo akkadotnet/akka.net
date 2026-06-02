@@ -1,0 +1,227 @@
+# Akka.NET 1.6 Milestone Runner
+# Executes one OpenSpec milestone at a time with an Opus captain orchestrating Sonnet workers.
+# The captain reads tasks, dispatches work, verifies builds, and archives on completion.
+
+input milestone: "The OpenSpec change name to execute (e.g., modernize-akka-io-tcp)"
+
+# --- Agents ---
+
+agent captain:
+  model: opus
+  persist: true
+  prompt: """
+    You are the milestone captain for the Akka.NET 1.6 transport/serialization epic.
+    You coordinate implementation work by reading OpenSpec task files, dispatching
+    task groups to workers, verifying builds, and tracking progress.
+
+    You NEVER write code or edit source files directly. You read files, run
+    verification commands (dotnet build, dotnet test), analyze output, and decide
+    what to delegate next.
+
+    Your workflow:
+    1. Read the OpenSpec tasks file for the current milestone
+    2. Read the OpenSpec design file for architectural context
+    3. Read the OpenSpec spec files for requirements
+    4. For each task group: dispatch to a worker with clear instructions
+    5. After each worker completes: verify with dotnet build
+    6. If build fails: analyze errors, dispatch targeted fix-up work
+    7. When all tasks complete and build passes: run tests
+    8. If tests fail: dispatch targeted test fixes
+    9. When everything passes: archive the OpenSpec change
+    10. If stuck: stop and report the blocker
+
+    Key commands you use:
+    - dotnet build 2>&1 | tail -80  (check compilation, read last 80 lines of output)
+    - dotnet test -c Release --framework net10.0 path/to/project.csproj 2>&1 | tail -40
+    - openspec status --change "{milestone}"
+    - openspec archive "{milestone}"
+    - git add -A && git commit -m "description"
+
+    When dispatching to workers, be SPECIFIC:
+    - Name the exact files to modify
+    - Describe the exact transformation (e.g., "change ByteString to ReadOnlyMemory<byte>")
+    - Set clear success criteria (e.g., "no ByteString references remain in src/core/Akka.Streams/")
+    - Tell the worker to check off completed tasks in the tasks file
+  """
+  permissions:
+    Bash: "run dotnet build, dotnet test, openspec, and git commands"
+
+agent worker:
+  model: sonnet
+  prompt: """
+    You are a code worker for the Akka.NET 1.6 transport/serialization epic.
+    You receive specific, well-scoped tasks from the captain and execute them precisely.
+
+    Rules:
+    - Do exactly what the captain asks. No more, no less.
+    - When you complete a task, check it off in the OpenSpec tasks file:
+      change "- [ ]" to "- [x]" for the specific task you completed.
+    - If you encounter something unexpected, report it back rather than improvising.
+    - Commit your changes with a clear message after each task group.
+    - Follow the coding conventions in CLAUDE.md.
+    - Use Allman-style braces, 4-space indentation, private fields prefixed with underscore.
+    - Prefer sealed classes and records. Enable #nullable enable in new/modified files.
+  """
+  permissions:
+    Bash: "run dotnet build, dotnet test, and git commands"
+
+agent setup:
+  model: haiku
+  prompt: "You execute simple setup commands precisely."
+  permissions:
+    Bash: "run git commands"
+
+# --- Setup ---
+
+# Read the implementation order and task files
+let plan = session: captain
+  prompt: """
+    Read these files and summarize what needs to be done for milestone '{milestone}':
+    1. openspec/IMPLEMENTATION_ORDER.md — overall plan and completion criteria
+    2. openspec/changes/{milestone}/tasks.md — specific task checklist
+    3. openspec/changes/{milestone}/design.md — architectural decisions
+    4. openspec/changes/{milestone}/proposal.md — motivation and scope
+    5. CLAUDE.md — coding conventions
+
+    Summarize:
+    - The task groups in order
+    - The completion criteria for this milestone
+    - Any special instructions (e.g., "dark period" for ByteString deletion)
+    - Key architectural decisions that workers need to know
+  """
+
+# NOTE: Create the implementation branch BEFORE running this program.
+# git checkout -b feature/spec1-{milestone}
+
+# --- Main Execution Loop ---
+
+loop until **all tasks are checked off AND dotnet build succeeds AND dotnet test passes** (max: 30):
+
+  # Captain assesses current state and decides what to dispatch
+  let orders = resume: captain
+    prompt: """
+      Assess the current state of milestone '{milestone}'.
+
+      1. Read openspec/changes/{milestone}/tasks.md to see which tasks are done vs pending
+      2. Run: dotnet build 2>&1 | tail -80
+      3. Analyze the build output
+
+      Based on this, decide your next action:
+      - If there are uncompleted task groups: identify the next one and prepare worker instructions
+      - If build fails with compilation errors: identify which files/modules have errors and prepare targeted fix instructions
+      - If build succeeds but tests haven't been run: run tests on relevant projects
+      - If tests fail: analyze failures and prepare fix instructions
+      - If everything passes: report that the milestone is complete
+
+      Output your decision as:
+      ACTION: [dispatch_tasks | fix_build_errors | run_tests | fix_test_failures | milestone_complete | stuck]
+      TARGET: [description of what needs to be done]
+      WORKER_INSTRUCTIONS: [detailed instructions for the worker, if applicable]
+    """
+    context: plan
+
+  # Execute the captain's decision
+  choice **the captain's ACTION**:
+
+    option "dispatch_tasks":
+      session: worker
+        prompt: """
+          The captain has assigned you the following work for milestone '{milestone}'.
+
+          INSTRUCTIONS:
+          {orders}
+
+          IMPORTANT:
+          - Read the design.md and spec files if you need architectural context
+          - Check off each task as you complete it in openspec/changes/{milestone}/tasks.md
+          - If something is unclear or you hit a blocker, say so in your output
+          - Do NOT commit — the orchestrator commits after verifying your work
+        """
+        context: [plan, orders]
+
+      # Commit after each completed task group
+      session: setup
+        prompt: "Run: git add -A && git commit -m 'task group complete: {orders.TARGET}'"
+
+    option "fix_build_errors":
+      session: worker
+        prompt: """
+          The captain needs you to fix compilation errors for milestone '{milestone}'.
+
+          ERROR ANALYSIS:
+          {orders}
+
+          IMPORTANT:
+          - Focus ONLY on fixing the compilation errors described above
+          - Do not make unrelated changes
+          - Run dotnet build after your fixes to verify progress
+          - Do NOT commit — the orchestrator commits after verifying your work
+        """
+        context: [plan, orders]
+
+      # Commit after build fixes
+      session: setup
+        prompt: "Run: git add -A && git commit -m 'fix build errors: {orders.TARGET}'"
+
+    option "run_tests":
+      let test_results = resume: captain
+        prompt: """
+          Build is passing. Run the test suite to verify milestone '{milestone}'.
+
+          Run: dotnet test -c Release --framework net10.0 2>&1 | tail -100
+
+          If tests pass: set ACTION to milestone_complete in your output.
+          If tests fail: analyze failures and set ACTION to fix_test_failures with worker instructions.
+        """
+
+    option "fix_test_failures":
+      session: worker
+        prompt: """
+          The captain needs you to fix test failures for milestone '{milestone}'.
+
+          TEST FAILURE ANALYSIS:
+          {orders}
+
+          IMPORTANT:
+          - Focus ONLY on fixing the described test failures
+          - Do not change test assertions unless the behavior intentionally changed
+          - Run the failing tests after your fixes to verify
+          - Do NOT commit — the orchestrator commits after verifying your work
+        """
+        context: [plan, orders]
+
+      # Commit after test fixes
+      session: setup
+        prompt: "Run: git add -A && git commit -m 'fix test failures: {orders.TARGET}'"
+
+    option "milestone_complete":
+      session: setup
+        prompt: "Echo: Milestone '{milestone}' complete. Exiting loop."
+
+    option "stuck":
+      session: setup
+        prompt: "Echo: Milestone '{milestone}' STUCK. Human review required."
+
+# --- Final Assessment ---
+
+output result = resume: captain
+  prompt: """
+    Final assessment for milestone '{milestone}'.
+
+    1. Read openspec/changes/{milestone}/tasks.md — are ALL tasks checked off?
+    2. Run: dotnet build -warnaserror 2>&1 | tail -40
+    3. Run: dotnet test -c Release --framework net10.0 2>&1 | tail -40
+    4. Run: openspec status --change "{milestone}"
+
+    If ALL of these pass:
+    - Run: openspec archive "{milestone}"
+    - Run: git add -A && git commit -m "Complete milestone: {milestone}"
+    - Run: git push -u origin feature/spec1-{milestone}
+    - Report: MILESTONE COMPLETE
+
+    If ANY fail:
+    - Do NOT archive
+    - Commit whatever progress was made
+    - Report exactly what's remaining and why
+    - Report: MILESTONE INCOMPLETE — HUMAN REVIEW NEEDED
+  """

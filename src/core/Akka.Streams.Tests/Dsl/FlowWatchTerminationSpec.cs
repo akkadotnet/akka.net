@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
@@ -25,6 +26,28 @@ namespace Akka.Streams.Tests.Dsl
         {
             var settings = ActorMaterializerSettings.Create(Sys);
             Materializer = ActorMaterializer.Create(Sys, settings);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private async Task RunIssue8209ReproAsync(string boomMessage)
+        {
+            var killSwitch = KillSwitches.Shared("issue-8209");
+            var watchTask = Source.Repeat(1)
+                .Via(killSwitch.Flow<int>())
+                .WatchTermination((_, done) => done)
+                .ToMaterialized(Sink.ForEach<int>(_ => { }), Keep.Left)
+                .Run(Materializer);
+
+            killSwitch.Abort(new InvalidOperationException(boomMessage));
+
+            var completedTask = await Task.WhenAny(watchTask, Task.Delay(TimeSpan.FromSeconds(3)));
+            completedTask.Should().BeSameAs(watchTask, "the watched termination task should complete promptly after abort");
+
+            watchTask.IsFaulted.Should().BeTrue();
+            watchTask.Exception.Should().NotBeNull();
+            watchTask.Exception!.Flatten().InnerExceptions
+                .OfType<InvalidOperationException>()
+                .Should().ContainSingle(e => e.Message == boomMessage);
         }
 
         [Fact]
@@ -142,6 +165,54 @@ namespace Akka.Streams.Tests.Dsl
 
             Action a = () => task.Wait(TimeSpan.FromSeconds(3));
             a.Should().Throw<AbruptTerminationException>();
+        }
+
+        [Fact]
+        public async Task A_WatchTermination_with_discarded_Sink_ForEach_must_not_trigger_UnobservedTaskException()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                const string boomMessage = "issue-8209-boom";
+                var unobserved = new TaskCompletionSource<AggregateException>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                EventHandler<UnobservedTaskExceptionEventArgs> handler = (_, args) =>
+                {
+                    try
+                    {
+                        if (args.Exception.Flatten().InnerExceptions
+                            .OfType<InvalidOperationException>()
+                            .Any(ex => ex.Message == boomMessage))
+                        {
+                            unobserved.TrySetResult(args.Exception);
+                        }
+                    }
+                    finally
+                    {
+                        args.SetObserved();
+                    }
+                };
+
+                TaskScheduler.UnobservedTaskException += handler;
+                try
+                {
+                    await RunIssue8209ReproAsync(boomMessage);
+
+                    for (var i = 0; i < 20 && !unobserved.Task.IsCompleted; i++)
+                    {
+                        GC.Collect();
+                        GC.WaitForPendingFinalizers();
+                        GC.Collect();
+                        await Task.Delay(100);
+                    }
+
+                    unobserved.Task.IsCompleted.Should().BeFalse(
+                        "observing WatchTermination should not leave Sink.ForEach's discarded completion task unobserved");
+                }
+                finally
+                {
+                    TaskScheduler.UnobservedTaskException -= handler;
+                }
+            }, Materializer);
         }
     }
 }
