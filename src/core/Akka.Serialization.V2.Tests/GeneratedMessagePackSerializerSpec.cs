@@ -239,6 +239,47 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         reader.Consumed.Should().Be(bytes.Length);
     }
 
+    [Fact(DisplayName = "Generated serializer should round-trip multi-level nested value objects")]
+    public void Generated_serializer_should_round_trip_multi_level_nested_value_objects()
+    {
+        var message = new WarehouseMessage(
+            "warehouse-1",
+            new WarehouseInfo(
+                new WarehouseLocation(
+                    "Seattle",
+                    new CountryInfo("US"))));
+
+        RoundTrip(message).Should().Be(message);
+    }
+
+    [Fact(DisplayName = "Generated serializer should write multi-level nested value objects inline")]
+    public void Generated_serializer_should_write_multi_level_nested_value_objects_inline()
+    {
+        var message = new WarehouseMessage(
+            "warehouse-1",
+            new WarehouseInfo(
+                new WarehouseLocation(
+                    "Seattle",
+                    new CountryInfo("US"))));
+        var bytes = _serializer.ToBinary(message);
+        var reader = new AkkaReader(new ReadOnlySequence<byte>(bytes));
+
+        reader.BeginReadObject().Should().Be(2);
+        reader.ReadFieldId().Should().Be(1);
+        reader.ReadString().Should().Be("warehouse-1");
+        reader.ReadFieldId().Should().Be(2);
+        reader.BeginReadObject().Should().Be(1);
+        reader.ReadFieldId().Should().Be(1);
+        reader.BeginReadObject().Should().Be(2);
+        reader.ReadFieldId().Should().Be(1);
+        reader.ReadString().Should().Be("Seattle");
+        reader.ReadFieldId().Should().Be(2);
+        reader.BeginReadObject().Should().Be(1);
+        reader.ReadFieldId().Should().Be(1);
+        reader.ReadString().Should().Be("US");
+        reader.Consumed.Should().Be(bytes.Length);
+    }
+
     private TMessage RoundTrip<TMessage>(TMessage message)
         where TMessage : class, IGeneratedTestProtocol
     {
@@ -306,3 +347,21 @@ public sealed record ShipmentMessage(
 public sealed record ShippingAddress(
     [property: AkkaField(1)] string Street,
     [property: AkkaField(2)] string City);
+
+[AkkaSerializable(Manifest = "warehouse-v1")]
+public sealed record WarehouseMessage(
+    [property: AkkaField(1)] string WarehouseId,
+    [property: AkkaField(2)] WarehouseInfo Warehouse) : IGeneratedTestProtocol;
+
+[AkkaSerializable]
+public sealed record WarehouseInfo(
+    [property: AkkaField(1)] WarehouseLocation Location);
+
+[AkkaSerializable]
+public sealed record WarehouseLocation(
+    [property: AkkaField(1)] string City,
+    [property: AkkaField(2)] CountryInfo Country);
+
+[AkkaSerializable]
+public sealed record CountryInfo(
+    [property: AkkaField(1)] string IsoCode);

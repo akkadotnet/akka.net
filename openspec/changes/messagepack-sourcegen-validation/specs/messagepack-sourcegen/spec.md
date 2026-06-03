@@ -72,6 +72,10 @@ Generated serializers SHALL initially support immutable message designs and nest
 - **WHEN** a message contains a nested generated type with explicit field IDs
 - **THEN** the generator SHALL serialize and deserialize the nested structure without runtime reflection
 
+#### Scenario: Multi-level nested generated type
+- **WHEN** a message contains multiple levels of nested generated types with explicit field IDs
+- **THEN** the generator SHALL serialize and deserialize the full nested structure inline without runtime reflection
+
 #### Scenario: Nested value object without manifest
 - **WHEN** a nested generated type is not a top-level protocol message
 - **THEN** the generator SHALL serialize it inline without requiring or using a serializer manifest for that nested type

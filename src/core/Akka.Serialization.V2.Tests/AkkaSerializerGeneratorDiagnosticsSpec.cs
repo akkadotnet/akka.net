@@ -59,6 +59,45 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostic.Should().NotBeNull();
     }
 
+    [Fact(DisplayName = "Generator should fail compilation when deep nested value object lacks serialization definition")]
+    public void Generator_should_fail_compilation_when_deep_nested_value_object_lacks_serialization_definition()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120502)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] Middle Middle) : IProtocol;
+
+            [AkkaSerializable]
+            public sealed record Middle([property: AkkaField(1)] Inner Inner);
+
+            public sealed record Inner([property: AkkaField(1)] string Value);
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        var diagnostic = diagnostics.FirstOrDefault(diagnostic =>
+            diagnostic.Id == "AKKASG007" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("must be annotated with [AkkaSerializable]", StringComparison.Ordinal));
+
+        diagnostic.Should().NotBeNull();
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
