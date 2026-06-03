@@ -63,6 +63,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor MissingManifest = new(
+        "AKKASG006",
+        "Top-level message manifest is required",
+        "[AkkaSerializable] top-level protocol message '{0}' must specify Manifest for serializer dispatch",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor MissingNestedSerializableDefinition = new(
+        "AKKASG007",
+        "Nested value object serialization definition is required",
+        "Property '{0}' on type '{1}' uses nested value object type '{2}', which must be annotated with [AkkaSerializable] and explicit [AkkaField] fields",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var serializers = context.SyntaxProvider
@@ -100,13 +116,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     continue;
                 }
 
-                var messagesForSerializer = pair.Right
-                    .Where(message => message != null && message.Protocols.Contains(serializer.ProtocolTypeFullName))
+                var allMessages = pair.Right
+                    .Where(message => message != null)
                     .Cast<MessageInfo>()
                     .ToImmutableArray();
+                var allMessagesByType = allMessages.ToImmutableDictionary(message => message.FullyQualifiedName);
+                var topLevelMessages = allMessages
+                    .Where(message => serializer.ProtocolType != null && message.Protocols.Any(protocol => SymbolEqualityComparer.Default.Equals(protocol, serializer.ProtocolType)))
+                    .Cast<MessageInfo>()
+                    .ToImmutableArray();
+                var reachableMessages = CollectReachableMessages(topLevelMessages, allMessagesByType);
 
-                ValidateMessages(ctx, messagesForSerializer);
-                ctx.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, messagesForSerializer));
+                if (!ValidateMessages(ctx, topLevelMessages, reachableMessages))
+                    continue;
+
+                ctx.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, topLevelMessages, reachableMessages));
             }
         });
     }
@@ -115,6 +139,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
         var attribute = context.Attributes[0];
+        var messagePackSerializer = context.SemanticModel.Compilation.GetTypeByMetadataName("Akka.Serialization.V2.MessagePackSerializer`1");
         string? name = null;
         var serializerId = 0;
 
@@ -128,11 +153,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         var baseType = symbol.BaseType;
         string protocolTypeFullName = string.Empty;
+        INamedTypeSymbol? protocolType = null;
         while (baseType != null)
         {
-            if (baseType.OriginalDefinition.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-                == "global::Akka.Serialization.V2.MessagePackSerializer<TProtocol>")
+            if (messagePackSerializer != null && SymbolEqualityComparer.Default.Equals(baseType.OriginalDefinition, messagePackSerializer))
             {
+                protocolType = baseType.TypeArguments[0] as INamedTypeSymbol;
                 protocolTypeFullName = baseType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 break;
             }
@@ -146,6 +172,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             GetFullyQualifiedTypeName(symbol),
             name ?? string.Empty,
             serializerId,
+            protocolType,
             protocolTypeFullName);
     }
 
@@ -153,6 +180,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
         var attribute = context.Attributes[0];
+        var knownTypes = KnownTypes.From(context.SemanticModel.Compilation);
         var manifest = string.Empty;
         foreach (var argument in attribute.NamedArguments)
         {
@@ -164,13 +192,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         foreach (var member in symbol.GetMembers().OfType<IPropertySymbol>())
         {
             var fieldAttribute = member.GetAttributes()
-                .FirstOrDefault(attr => attr.AttributeClass?.ToDisplayString() == FieldAttributeFullName);
+                .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.FieldAttribute));
             if (fieldAttribute == null || fieldAttribute.ConstructorArguments.Length != 1)
                 continue;
 
             var index = (int)fieldAttribute.ConstructorArguments[0].Value!;
             var isNullable = member.NullableAnnotation == NullableAnnotation.Annotated;
-            fields.Add(new FieldInfo(index, member.Name, member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), MapType(member.Type), isNullable));
+            fields.Add(new FieldInfo(index, member.Name, member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), MapType(member.Type, knownTypes), isNullable));
         }
 
         return new MessageInfo(
@@ -178,25 +206,74 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             GetFullyQualifiedTypeName(symbol),
             manifest,
             fields.OrderBy(f => f.Index).ToImmutableArray(),
-            symbol.AllInterfaces.Select(i => i.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)).ToImmutableHashSet());
+            symbol.AllInterfaces.ToImmutableArray());
     }
 
-    private static void ValidateMessages(SourceProductionContext context, ImmutableArray<MessageInfo> messages)
+    private static ImmutableArray<MessageInfo> CollectReachableMessages(
+        ImmutableArray<MessageInfo> topLevelMessages,
+        ImmutableDictionary<string, MessageInfo> allMessagesByType)
     {
-        foreach (var message in messages)
+        var messages = ImmutableArray.CreateBuilder<MessageInfo>();
+        var visited = new HashSet<string>();
+        var pending = new Queue<MessageInfo>(topLevelMessages);
+
+        while (pending.Count > 0)
+        {
+            var message = pending.Dequeue();
+            if (!visited.Add(message.FullyQualifiedName))
+                continue;
+
+            messages.Add(message);
+            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Object))
+            {
+                if (allMessagesByType.TryGetValue(field.Mapping.TypeFullName, out var nestedMessage))
+                    pending.Enqueue(nestedMessage);
+            }
+        }
+
+        return messages.ToImmutable();
+    }
+
+    private static bool ValidateMessages(SourceProductionContext context, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages)
+    {
+        var isValid = true;
+        foreach (var message in topLevelMessages.Where(message => string.IsNullOrWhiteSpace(message.Manifest)))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(MissingManifest, Location.None, message.FullyQualifiedName));
+            isValid = false;
+        }
+
+        foreach (var message in reachableMessages)
         {
             if (message.Fields.Length == 0)
+            {
                 context.ReportDiagnostic(Diagnostic.Create(MissingFields, Location.None, message.FullyQualifiedName));
+                isValid = false;
+            }
 
             foreach (var duplicate in message.Fields.GroupBy(field => field.Index).Where(group => group.Count() > 1))
+            {
                 context.ReportDiagnostic(Diagnostic.Create(DuplicateFieldIndex, Location.None, message.FullyQualifiedName, duplicate.Key));
+                isValid = false;
+            }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Unsupported))
+            {
                 context.ReportDiagnostic(Diagnostic.Create(UnsupportedFieldType, Location.None, field.Name, message.FullyQualifiedName, field.TypeFullName));
+                isValid = false;
+            }
+
+            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.MissingSerializableDefinition))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(MissingNestedSerializableDefinition, Location.None, field.Name, message.FullyQualifiedName, field.TypeFullName));
+                isValid = false;
+            }
         }
+
+        return isValid;
     }
 
-    private static string Generate(SerializerInfo serializer, ImmutableArray<MessageInfo> messages)
+    private static string Generate(SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages)
     {
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated />");
@@ -220,13 +297,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.Append("    public override int Identifier => ").Append(serializer.SerializerId).AppendLine(";");
         sb.AppendLine();
         GenerateRegistration(sb, serializer);
-        GenerateManifest(sb, messages);
-        GenerateSerialize(sb, messages);
-        GenerateDeserialize(sb, messages);
+        GenerateManifest(sb, topLevelMessages);
+        GenerateSerialize(sb, topLevelMessages);
+        GenerateDeserialize(sb, topLevelMessages);
         sb.AppendLine("    public override int SizeHint(object obj) => 128;");
         sb.AppendLine();
 
-        foreach (var message in messages)
+        foreach (var message in reachableMessages)
         {
             GenerateWriteMessage(sb, message);
             GenerateReadMessage(sb, message);
@@ -273,7 +350,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         foreach (var message in messages)
         {
             sb.Append("            case ").Append(message.FullyQualifiedName).AppendLine(" message:");
-            sb.Append("                Write").Append(message.SimpleName).AppendLine("(akkaWriter, message);");
+            sb.Append("                Write").Append(GetMessageMethodName(message)).AppendLine("(akkaWriter, message);");
             sb.AppendLine("                break;");
         }
         sb.AppendLine("            default:");
@@ -293,7 +370,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine("        return manifest switch");
         sb.AppendLine("        {");
         foreach (var message in messages)
-            sb.Append("            \"").Append(Escape(message.Manifest)).Append("\" => Read").Append(message.SimpleName).AppendLine("(reader),");
+            sb.Append("            \"").Append(Escape(message.Manifest)).Append("\" => Read").Append(GetMessageMethodName(message)).AppendLine("(reader),");
         sb.AppendLine("            _ => throw new global::System.Runtime.Serialization.SerializationException($\"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].\")");
         sb.AppendLine("        };");
         sb.AppendLine("    }");
@@ -302,7 +379,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static void GenerateWriteMessage(StringBuilder sb, MessageInfo message)
     {
-        sb.Append("    private static void Write").Append(message.SimpleName)
+        sb.Append("    private static void Write").Append(GetMessageMethodName(message))
             .Append("(global::Akka.Serialization.V2.AkkaWriter writer, ").Append(message.FullyQualifiedName).AppendLine(" message)");
         sb.AppendLine("    {");
         sb.Append("        writer.BeginObject(").Append(message.Fields.Length).AppendLine(");");
@@ -314,7 +391,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static void GenerateReadMessage(StringBuilder sb, MessageInfo message)
     {
-        sb.Append("    private ").Append(message.FullyQualifiedName).Append(" Read").Append(message.SimpleName)
+        sb.Append("    private ").Append(message.FullyQualifiedName).Append(" Read").Append(GetMessageMethodName(message))
             .AppendLine("(global::Akka.Serialization.V2.AkkaReader reader)");
         sb.AppendLine("    {");
         sb.AppendLine("        var fieldCount = reader.BeginReadObject();");
@@ -404,6 +481,19 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             case FieldKind.Enum:
                 sb.Append("        writer.WriteInt32((int)").Append(value).AppendLine(");");
                 break;
+            case FieldKind.Object:
+                if (field.IsNullable)
+                {
+                    sb.Append("        if (").Append(value).AppendLine(" is null)");
+                    sb.AppendLine("            writer.WriteNil();");
+                    sb.AppendLine("        else");
+                    sb.Append("            Write").Append(GetObjectMethodName(field.Mapping)).Append("(writer, ").Append(value).AppendLine(");");
+                }
+                else
+                {
+                    sb.Append("        Write").Append(GetObjectMethodName(field.Mapping)).Append("(writer, ").Append(value).AppendLine(");");
+                }
+                break;
         }
     }
 
@@ -445,16 +535,31 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             case FieldKind.Enum:
                 sb.Append("                    ").Append(target).Append(" = (").Append(field.TypeFullName).AppendLine(")reader.ReadInt32();");
                 break;
+            case FieldKind.Object:
+                if (field.IsNullable)
+                {
+                    sb.AppendLine("                    if (reader.TryReadNil())");
+                    sb.Append("                        ").Append(target).AppendLine(" = null;");
+                    sb.AppendLine("                    else");
+                    sb.Append("                        ").Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(reader);");
+                }
+                else
+                {
+                    sb.Append("                    ").Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(reader);");
+                }
+                break;
         }
     }
 
-    private static TypeMapping MapType(ITypeSymbol type)
+    private static TypeMapping MapType(ITypeSymbol type, KnownTypes knownTypes)
     {
-        var fullName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         if (type.TypeKind == TypeKind.Enum)
             return new TypeMapping(FieldKind.Enum);
 
-        return type.SpecialType switch
+        if (type is INamedTypeSymbol namedType && namedType.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
+            return new TypeMapping(FieldKind.Object, GetFullyQualifiedTypeName(namedType));
+
+        var mapping = type.SpecialType switch
         {
             SpecialType.System_String => new TypeMapping(FieldKind.String),
             SpecialType.System_Int32 => new TypeMapping(FieldKind.Int32),
@@ -463,11 +568,19 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             SpecialType.System_Double => new TypeMapping(FieldKind.Double),
             SpecialType.System_Decimal => new TypeMapping(FieldKind.Decimal),
             SpecialType.System_DateTime => new TypeMapping(FieldKind.DateTime),
-            _ when fullName == "global::System.Guid" => new TypeMapping(FieldKind.Guid),
-            _ when fullName == "global::System.DateTimeOffset" => new TypeMapping(FieldKind.DateTimeOffset),
-            _ when fullName == "global::Akka.Actor.IActorRef" => new TypeMapping(FieldKind.ActorRef),
+            _ when SymbolEqualityComparer.Default.Equals(type, knownTypes.Guid) => new TypeMapping(FieldKind.Guid),
+            _ when SymbolEqualityComparer.Default.Equals(type, knownTypes.DateTimeOffset) => new TypeMapping(FieldKind.DateTimeOffset),
+            _ when SymbolEqualityComparer.Default.Equals(type, knownTypes.ActorRef) => new TypeMapping(FieldKind.ActorRef),
             _ => new TypeMapping(FieldKind.Unsupported)
         };
+
+        if (mapping.Kind != FieldKind.Unsupported)
+            return mapping;
+
+        if (type is INamedTypeSymbol { IsGenericType: false, TypeKind: TypeKind.Class or TypeKind.Struct } missingNestedType)
+            return new TypeMapping(FieldKind.MissingSerializableDefinition, GetFullyQualifiedTypeName(missingNestedType));
+
+        return mapping;
     }
 
     private static string DefaultValue(FieldInfo field)
@@ -481,6 +594,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             FieldKind.Double => "0.0",
             FieldKind.Decimal => "0m",
             FieldKind.ActorRef => "global::Akka.Actor.ActorRefs.NoSender",
+            FieldKind.Object => "null",
             _ => "default"
         };
     }
@@ -497,7 +611,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static bool IsReferenceLike(TypeMapping mapping)
     {
-        return mapping.Kind is FieldKind.String or FieldKind.ActorRef;
+        return mapping.Kind is FieldKind.String or FieldKind.ActorRef or FieldKind.Object;
     }
 
     private static string GetHasLocalName(FieldInfo field)
@@ -509,6 +623,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         var name = ToCamelCase(field.Name);
         return IsRequired(field) && IsReferenceLike(field.Mapping) ? name + "!" : name;
+    }
+
+    private static string GetObjectMethodName(TypeMapping mapping)
+    {
+        return mapping.TypeFullName
+            .Replace("global::", string.Empty)
+            .Replace(".", "_")
+            .Replace("+", "_");
+    }
+
+    private static string GetMessageMethodName(MessageInfo message)
+    {
+        return message.FullyQualifiedName
+            .Replace("global::", string.Empty)
+            .Replace(".", "_")
+            .Replace("+", "_");
     }
 
     private static string GetFullyQualifiedTypeName(INamedTypeSymbol symbol)
@@ -550,13 +680,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private sealed class SerializerInfo
     {
-        public SerializerInfo(string ns, string className, string fullyQualifiedName, string name, int serializerId, string protocolTypeFullName)
+        public SerializerInfo(string ns, string className, string fullyQualifiedName, string name, int serializerId, INamedTypeSymbol? protocolType, string protocolTypeFullName)
         {
             Namespace = ns;
             ClassName = className;
             FullyQualifiedName = fullyQualifiedName;
             Name = name;
             SerializerId = serializerId;
+            ProtocolType = protocolType;
             ProtocolTypeFullName = protocolTypeFullName;
         }
 
@@ -565,12 +696,36 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string FullyQualifiedName { get; }
         public string Name { get; }
         public int SerializerId { get; }
+        public INamedTypeSymbol? ProtocolType { get; }
         public string ProtocolTypeFullName { get; }
+    }
+
+    private sealed class KnownTypes
+    {
+        private KnownTypes(Compilation compilation)
+        {
+            FieldAttribute = compilation.GetTypeByMetadataName(FieldAttributeFullName);
+            SerializableAttribute = compilation.GetTypeByMetadataName(SerializableAttributeFullName);
+            Guid = compilation.GetTypeByMetadataName("System.Guid");
+            DateTimeOffset = compilation.GetTypeByMetadataName("System.DateTimeOffset");
+            ActorRef = compilation.GetTypeByMetadataName("Akka.Actor.IActorRef");
+        }
+
+        public INamedTypeSymbol? FieldAttribute { get; }
+        public INamedTypeSymbol? SerializableAttribute { get; }
+        public INamedTypeSymbol? Guid { get; }
+        public INamedTypeSymbol? DateTimeOffset { get; }
+        public INamedTypeSymbol? ActorRef { get; }
+
+        public static KnownTypes From(Compilation compilation)
+        {
+            return new KnownTypes(compilation);
+        }
     }
 
     private sealed class MessageInfo
     {
-        public MessageInfo(string simpleName, string fullyQualifiedName, string manifest, ImmutableArray<FieldInfo> fields, ImmutableHashSet<string> protocols)
+        public MessageInfo(string simpleName, string fullyQualifiedName, string manifest, ImmutableArray<FieldInfo> fields, ImmutableArray<INamedTypeSymbol> protocols)
         {
             SimpleName = simpleName;
             FullyQualifiedName = fullyQualifiedName;
@@ -583,7 +738,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string FullyQualifiedName { get; }
         public string Manifest { get; }
         public ImmutableArray<FieldInfo> Fields { get; }
-        public ImmutableHashSet<string> Protocols { get; }
+        public ImmutableArray<INamedTypeSymbol> Protocols { get; }
     }
 
     private sealed class FieldInfo
@@ -606,12 +761,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private readonly struct TypeMapping
     {
-        public TypeMapping(FieldKind kind)
+        public TypeMapping(FieldKind kind, string typeFullName = "")
         {
             Kind = kind;
+            TypeFullName = typeFullName;
         }
 
         public FieldKind Kind { get; }
+        public string TypeFullName { get; }
     }
 
     private enum FieldKind
@@ -627,6 +784,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DateTime,
         DateTimeOffset,
         ActorRef,
-        Enum
+        Enum,
+        Object,
+        MissingSerializableDefinition
     }
 }

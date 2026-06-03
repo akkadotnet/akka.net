@@ -28,15 +28,15 @@ public sealed class AkkaSerializerAttribute : Attribute
 }
 
 /// <summary>
-/// Marks a protocol message type that should be handled by a generated serializer.
+/// Marks a type that should be handled by a generated serializer.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false, Inherited = false)]
 public sealed class AkkaSerializableAttribute : Attribute
 {
     /// <summary>
-    /// Stable serializer-owned manifest for this message type.
+    /// Stable serializer-owned manifest for top-level protocol messages.
     /// </summary>
-    public required string Manifest { get; init; }
+    public string? Manifest { get; init; }
 }
 
 /// <summary>

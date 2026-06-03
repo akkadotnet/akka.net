@@ -207,6 +207,38 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         RoundTrip(message).Should().Be(message);
     }
 
+    [Fact(DisplayName = "Generated serializer should round-trip nested value objects without manifests")]
+    public void Generated_serializer_should_round_trip_nested_value_objects_without_manifests()
+    {
+        var address = new ShippingAddress("1 Main St", "Seattle");
+        var message = new ShipmentMessage("order-1", address);
+
+        RoundTrip(message).Should().Be(message);
+
+        Action manifest = () => _serializer.Manifest(address);
+        manifest.Should().Throw<ArgumentException>()
+            .WithMessage("*Unsupported generated serializer type*");
+    }
+
+    [Fact(DisplayName = "Generated serializer should write nested value objects inline")]
+    public void Generated_serializer_should_write_nested_value_objects_inline()
+    {
+        var message = new ShipmentMessage("order-1", new ShippingAddress("1 Main St", "Seattle"));
+        var bytes = _serializer.ToBinary(message);
+        var reader = new AkkaReader(new ReadOnlySequence<byte>(bytes));
+
+        reader.BeginReadObject().Should().Be(2);
+        reader.ReadFieldId().Should().Be(1);
+        reader.ReadString().Should().Be("order-1");
+        reader.ReadFieldId().Should().Be(2);
+        reader.BeginReadObject().Should().Be(2);
+        reader.ReadFieldId().Should().Be(1);
+        reader.ReadString().Should().Be("1 Main St");
+        reader.ReadFieldId().Should().Be(2);
+        reader.ReadString().Should().Be("Seattle");
+        reader.Consumed.Should().Be(bytes.Length);
+    }
+
     private TMessage RoundTrip<TMessage>(TMessage message)
         where TMessage : class, IGeneratedTestProtocol
     {
@@ -264,3 +296,13 @@ public sealed record SparseFieldMessage(
 public sealed record ReplyMessage(
     [property: AkkaField(1)] string CorrelationId,
     [property: AkkaField(2)] IActorRef? ReplyTo) : IGeneratedTestProtocol;
+
+[AkkaSerializable(Manifest = "shipment-v1")]
+public sealed record ShipmentMessage(
+    [property: AkkaField(1)] string OrderId,
+    [property: AkkaField(2)] ShippingAddress Address) : IGeneratedTestProtocol;
+
+[AkkaSerializable]
+public sealed record ShippingAddress(
+    [property: AkkaField(1)] string Street,
+    [property: AkkaField(2)] string City);

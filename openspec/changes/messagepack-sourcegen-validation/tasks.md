@@ -45,7 +45,7 @@
 - [x] 5.3 Generate manifest dispatch
 - [x] 5.4 Generate write methods
 - [x] 5.5 Generate read methods
-- [ ] 5.6 Support nested generated types with their own explicit field IDs
+- [x] 5.6 Support nested generated types with their own explicit field IDs
 - [ ] 5.7 Support immutable and read-only collection types selected for 1.6 MVP
 - [x] 5.8 Support `IActorRef` fields using transport-aware path serialization
 - [x] 5.9 Support explicit cross-assembly composition via per-serializer registrations

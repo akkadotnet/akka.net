@@ -91,7 +91,7 @@ Generated serializers should support `IActorRef` fields by writing `Serializatio
 
 ### 7.1 Message Shape Scope
 
-The initial generator should force immutable message designs. Supported shapes should start with records / primary constructors, constructor-bound immutable classes, and init-only field or property assignment. Nested structures are required early and must use explicit `[AkkaField]` IDs of their own.
+The initial generator should force immutable message designs. Supported shapes should start with records / primary constructors, constructor-bound immutable classes, and init-only field or property assignment. Nested structures are required early and must use explicit `[AkkaField]` IDs of their own. Nested value objects do not need serializer manifests unless they are also top-level protocol messages dispatched directly by Akka serialization. Nested value-object types still need an explicit generated serialization definition via `[AkkaSerializable]`; otherwise the generator should fail compilation.
 
 Factory methods, mutable setter-centric models, inheritance-heavy object graphs, and arbitrary polymorphic discovery are out of scope for the first production slice.
 
