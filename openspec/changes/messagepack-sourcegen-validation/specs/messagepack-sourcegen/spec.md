@@ -24,6 +24,30 @@ The system SHALL provide a Roslyn incremental source generator that emits `Seria
 - **WHEN** field indexes are missing, duplicated, or unsupported
 - **THEN** the generator SHALL produce compile-time diagnostics
 
+### Requirement: Generated serializers use explicit registration
+
+Generated serializers SHALL expose per-serializer registration helpers and SHALL NOT require runtime assembly scanning.
+
+#### Scenario: Serializer declares protocol family
+- **WHEN** a user declares a partial serializer class for a protocol marker interface
+- **THEN** the generator SHALL attach discoverable registration helpers to that serializer class
+
+#### Scenario: Multiple serializers registered
+- **WHEN** an application uses serializers from multiple assemblies
+- **THEN** the application SHALL compose per-serializer registrations explicitly into one `SerializationSetup`
+
+### Requirement: Generated serializers support actor references
+
+Generated serializers SHALL support `IActorRef` fields using Akka's transport-aware actor-ref serialization helpers.
+
+#### Scenario: Actor reference field serialized
+- **WHEN** a generated serializer writes an `IActorRef` field
+- **THEN** it SHALL serialize the field using `Serialization.SerializedActorPath`
+
+#### Scenario: Actor reference field deserialized
+- **WHEN** a generated serializer reads an actor-ref path
+- **THEN** it SHALL resolve the path using the serializer's `ExtendedActorSystem`
+
 ### Requirement: Generated serializers validate SerializerV2 API
 
 Generated serializers SHALL validate `SerializerV2` through real Akka.NET integration points before Artery envelopes are implemented.
@@ -47,3 +71,19 @@ Generated serializers SHALL validate `SerializerV2` through real Akka.NET integr
 #### Scenario: V1 coexistence
 - **WHEN** V1 and generated V2 serializers are registered in the same actor system
 - **THEN** both SHALL work through the V2 serialization infrastructure
+
+#### Scenario: Akka.Delivery wrapper validation
+- **WHEN** a generated-serializer message is used as an Akka.Delivery payload
+- **THEN** the delivery wrapper SHALL preserve the generated payload metadata and recover the original message
+
+#### Scenario: DistributedData wrapper validation
+- **WHEN** a generated-serializer message is used inside a DistributedData value where supported
+- **THEN** the DistributedData wrapper SHALL preserve the generated payload metadata and recover the original message
+
+### Requirement: Benchmark POC demonstrates protocol-family performance
+
+The system SHALL include an early benchmark POC using real C# protocol-family message types before the full spec is completed.
+
+#### Scenario: Generated serializer benchmarked
+- **WHEN** the benchmark serializes and deserializes a real protocol-family message
+- **THEN** it SHALL report generated MessagePack throughput/allocation/payload-size signals against an existing baseline serializer

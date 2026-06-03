@@ -6,6 +6,7 @@ The POC at `Aaronontheweb/AkkaSerializationPoC` validated the preferred directio
 - `AkkaWriter` and `AkkaReader` are concrete sealed wrappers over MessagePack.
 - There is no generalized codec abstraction layer.
 - Source generation provides compile-time validation and avoids reflection.
+- Users explicitly register generated serializers through generated per-serializer helpers.
 
 The source generator should not be developed against hypothetical serialization APIs. It should run after `serializer-v2` makes V2 canonical and after classic remoting and persistence are bridged. That lets generated serializers validate the exact API Artery will consume.
 
@@ -17,6 +18,8 @@ The source generator should not be developed against hypothetical serialization 
 - Validate generated serializers through `Serialization`, classic remoting, events, and snapshots.
 - Confirm V2 API details before Artery envelopes are built.
 - Support AOT-oriented, reflection-free serializer code.
+- Support common Akka protocol-family message shapes, including `IActorRef` reply-to fields.
+- Produce an early benchmarkable POC before completing the full sourcegen matrix.
 - Preserve V1/V2 coexistence.
 
 **Non-Goals:**
@@ -24,6 +27,7 @@ The source generator should not be developed against hypothetical serialization 
 - Replacing all built-in protobuf serializers.
 - Adding MessagePack dependency to core Akka.
 - Implementing Artery envelopes.
+- Replacing classic remoting, persistence, Akka.Delivery, or DistributedData protobuf wrapper wire formats by default.
 - Removing V1 serializer support.
 
 ## Decisions
@@ -55,15 +59,46 @@ Generated serializers must prove:
 
 Fields are explicitly indexed using `[AkkaField(index)]`. Generated code should support unknown trailing fields where possible.
 
-### 5. Cross-Assembly Composition Is Required
+### 5. Explicit Per-Serializer Registration
 
-Real Akka.NET applications use multiple assemblies. The generator must support serializable messages and generated serializers across assembly boundaries.
+Generated serializers should expose registration helpers on the user-declared partial serializer class. Runtime assembly scanning is not part of the generated serializer path because it conflicts with NativeAOT and trimming goals.
+
+The primary shape is:
+
+```csharp
+[AkkaSerializer(Name = "orders", SerializerId = 120001)]
+public sealed partial class OrderSerializer : MessagePackSerializer<IOrderProtocol>
+{
+    public static partial SerializerRegistration CreateRegistration();
+    public static partial SerializationSetup CreateSetup();
+}
+```
+
+`CreateSetup()` is a single-serializer convenience. Multi-serializer applications compose registrations explicitly into one `SerializationSetup`; the generator does not emit a cross-assembly aggregate.
+
+### 6. Protocol Marker Grouping
+
+Users declare a serializer module and a protocol marker interface. `[AkkaSerializable]` message types implement that interface. This is similar in spirit to `System.Text.Json` source-generated contexts, but it fits Akka protocol families better and avoids a second manually-maintained type list.
+
+### 7. `IActorRef` Field Support
+
+Generated serializers should support `IActorRef` fields by writing `Serialization.SerializedActorPath(actorRef)` and resolving through the serializer's `ExtendedActorSystem` on read. Empty paths represent `ActorRefs.NoSender` / null.
+
+### 8. Wrapper Validation Without Wire Replacement
+
+Generated payloads should be validated inside existing Akka.Delivery and DistributedData wrappers where practical. This proves nested serializer behavior without changing those subsystems' default protobuf wire formats.
+
+### 9. Early Benchmark POC Stop Point
+
+Before completing the full spec, produce a basic BenchmarkDotNet POC using real C# protocol-family messages. The first benchmark should compare generated MessagePack serialization against current baseline serializer behavior and report throughput/allocation/payload-size signals.
 
 ## Risks / Trade-offs
 
 **Generator complexity**: keep diagnostics focused and add incrementally.
 
 **MessagePack conventions**: document DateTime, Guid, decimal, nullable, collection, and nested object conventions.
+
+**Benchmark interpretation**: the first benchmark is directional POC evidence, not final Artery performance proof.
 
 **API churn**: if sourcegen finds V2 API problems, fix V2 before Artery starts.
 
