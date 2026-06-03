@@ -31,6 +31,28 @@ namespace Akka.Persistence.TestKit
         ///     </para>
         /// </remarks>
         public Task Reject() => SetInterceptorAsync(JournalInterceptors.Rejection.Instance);
+        
+        /// <summary>
+        ///     Reject messages that fail type equality (using <see cref="object.Equals"/>).
+        /// </summary>
+        /// <remarks>
+        ///     <para>
+        ///         Journal will **NOT** crash, but <see cref="Eventsourced.OnPersistRejected">UntypedPersistentActor.OnPersistRejected</see> will be called
+        ///         on each rejected message.
+        ///     </para>
+        ///     <para>
+        ///         Use this Journal behavior when it is needed to verify how well a persistent actor will handle serialization,
+        ///         type conversion and other local problems withing journal.
+        ///     </para>
+        ///     <para>
+        ///         <list type="bullet">
+        ///             <item>If <typeparamref name="TMessage"/> is interface, journal will reject when message implements that interface.</item>
+        ///             <item>If <typeparamref name="TMessage"/> is class, journal will reject when message can be assigned to <typeparamref name="TMessage"/>.</item>
+        ///         </list>
+        ///     </para>
+        /// </remarks>
+        /// <typeparam name="TMessage"></typeparam>
+        public Task RejectOnType<TMessage>() => RejectOnType(typeof(TMessage));
 
         /// <summary>
         ///     Reject message during processing message of type <typeparamref name="TMessage"/>.
