@@ -59,9 +59,9 @@ Generated serializers must prove:
 
 Fields are explicitly indexed using `[AkkaField(index)]`, and those indexes are encoded as field IDs in the MessagePack payload. The MessagePack representation should not depend on constructor or property array position for compatibility.
 
-Generated readers should skip unknown field IDs. Schema evolution rules are a user-facing compatibility policy: once a field ID is published, it must not be reused for a different meaning. Renames are safe only when the field ID and wire type stay compatible; removing a field reserves its ID forever; incompatible type and enum numeric changes are breaking.
+Generated readers should skip unknown field IDs. Schema evolution should stay close to traditional MessagePack schema behavior: once a field ID is published, it must not be reused for a different meaning; renames are safe when the field ID stays stable; removing a field reserves its ID forever. Changing a field type is not compatible and should fail through normal MessagePack reader/type validation while older message versions are still in circulation.
 
-The source generator cannot reliably enforce extend-only evolution against historical versions at compile time without introducing substantial friction for first-time model design. Analyzer rules should focus on the current compilation shape and obvious protocol-family mistakes.
+The source generator should not add extra historical schema validation, swapped-field detection, or schema-registry style checks. Analyzer rules should focus on the current compilation shape and obvious protocol-family mistakes.
 
 ### 5. Explicit Per-Serializer Registration
 
