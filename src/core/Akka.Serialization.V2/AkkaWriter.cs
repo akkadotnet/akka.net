@@ -33,7 +33,7 @@ public sealed class AkkaWriter
     public void BeginObject(int fieldCount)
     {
         var writer = new MessagePackWriter(_countingBuffer);
-        writer.WriteArrayHeader(fieldCount);
+        writer.WriteMapHeader(fieldCount);
         Commit(ref writer);
     }
 

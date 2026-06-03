@@ -24,6 +24,18 @@ The system SHALL provide a Roslyn incremental source generator that emits `Seria
 - **WHEN** field indexes are missing, duplicated, or unsupported
 - **THEN** the generator SHALL produce compile-time diagnostics
 
+#### Scenario: Field IDs encoded
+- **WHEN** a generated serializer writes a message
+- **THEN** it SHALL encode each `[AkkaField]` index as an explicit field ID in the MessagePack payload
+
+#### Scenario: Unknown field skipped
+- **WHEN** a generated serializer reads a payload containing an unknown field ID
+- **THEN** it SHALL skip that field and continue reading known fields
+
+#### Scenario: Missing required field rejected
+- **WHEN** a generated serializer reads a payload missing a non-nullable required field
+- **THEN** deserialization SHALL fail with a serialization error
+
 ### Requirement: Generated serializers use explicit registration
 
 Generated serializers SHALL expose per-serializer registration helpers and SHALL NOT require runtime assembly scanning.
@@ -47,6 +59,22 @@ Generated serializers SHALL support `IActorRef` fields using Akka's transport-aw
 #### Scenario: Actor reference field deserialized
 - **WHEN** a generated serializer reads an actor-ref path
 - **THEN** it SHALL resolve the path using the serializer's `ExtendedActorSystem`
+
+### Requirement: Generated serializers favor immutable message shapes
+
+Generated serializers SHALL initially support immutable message designs and nested generated structures.
+
+#### Scenario: Immutable constructor-bound message
+- **WHEN** a message uses a record primary constructor or supported constructor-bound immutable shape
+- **THEN** the generator SHALL emit read and write code for the message
+
+#### Scenario: Nested generated type
+- **WHEN** a message contains a nested generated type with explicit field IDs
+- **THEN** the generator SHALL serialize and deserialize the nested structure without runtime reflection
+
+#### Scenario: Mutable or factory-only shape
+- **WHEN** a message requires mutable setter-centric hydration, arbitrary factory methods, or unsupported polymorphic discovery
+- **THEN** the generator SHALL reject it with a diagnostic
 
 ### Requirement: Generated serializers validate SerializerV2 API
 

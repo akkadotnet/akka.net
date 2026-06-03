@@ -30,9 +30,14 @@ public sealed class AkkaReader
     public int BeginReadObject()
     {
         var reader = CreateReader();
-        var fieldCount = reader.ReadArrayHeader();
+        var fieldCount = reader.ReadMapHeader();
         Advance(ref reader);
         return fieldCount;
+    }
+
+    public int ReadFieldId()
+    {
+        return ReadInt32();
     }
 
     public bool ReadBoolean()

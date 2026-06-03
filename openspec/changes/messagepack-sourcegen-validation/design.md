@@ -57,7 +57,11 @@ Generated serializers must prove:
 
 ### 4. Version-Tolerant Schema
 
-Fields are explicitly indexed using `[AkkaField(index)]`. Generated code should support unknown trailing fields where possible.
+Fields are explicitly indexed using `[AkkaField(index)]`, and those indexes are encoded as field IDs in the MessagePack payload. The MessagePack representation should not depend on constructor or property array position for compatibility.
+
+Generated readers should skip unknown field IDs. Schema evolution rules are a user-facing compatibility policy: once a field ID is published, it must not be reused for a different meaning. Renames are safe only when the field ID and wire type stay compatible; removing a field reserves its ID forever; incompatible type and enum numeric changes are breaking.
+
+The source generator cannot reliably enforce extend-only evolution against historical versions at compile time without introducing substantial friction for first-time model design. Analyzer rules should focus on the current compilation shape and obvious protocol-family mistakes.
 
 ### 5. Explicit Per-Serializer Registration
 
@@ -70,11 +74,10 @@ The primary shape is:
 public sealed partial class OrderSerializer : MessagePackSerializer<IOrderProtocol>
 {
     public static partial SerializerRegistration CreateRegistration();
-    public static partial SerializationSetup CreateSetup();
 }
 ```
 
-`CreateSetup()` is a single-serializer convenience. Multi-serializer applications compose registrations explicitly into one `SerializationSetup`; the generator does not emit a cross-assembly aggregate.
+Generated serializers return reusable registration data. Non-hosted applications compose registrations explicitly into one `SerializationSetup`; Akka.Hosting integrations should feed generated registrations into Akka.Hosting's serializer accumulator. The generator does not emit a cross-assembly aggregate or a generated `CreateSetup()` helper.
 
 ### 6. Protocol Marker Grouping
 
@@ -84,6 +87,18 @@ Users declare a serializer module and a protocol marker interface. `[AkkaSeriali
 
 Generated serializers should support `IActorRef` fields by writing `Serialization.SerializedActorPath(actorRef)` and resolving through the serializer's `ExtendedActorSystem` on read. Empty paths represent `ActorRefs.NoSender` / null.
 
+`ActorRefs.NoSender` is treated as the null-equivalent actor reference value for generated payloads.
+
+### 7.1 Message Shape Scope
+
+The initial generator should force immutable message designs. Supported shapes should start with records / primary constructors, constructor-bound immutable classes, and init-only field or property assignment. Nested structures are required early and must use explicit `[AkkaField]` IDs of their own.
+
+Factory methods, mutable setter-centric models, inheritance-heavy object graphs, and arbitrary polymorphic discovery are out of scope for the first production slice.
+
+### 7.2 Collection Scope
+
+Initial collection support should cover immutable and read-only collection shapes: `ImmutableArray<T>`, `ImmutableList<T>`, `ImmutableHashSet<T>`, `ImmutableDictionary<TKey,TValue>`, `IReadOnlyList<T>`, `IReadOnlyCollection<T>`, `IReadOnlyDictionary<TKey,TValue>`, and arrays where needed for interop or performance. Interface collection targets must document their concrete deserialization type.
+
 ### 8. Wrapper Validation Without Wire Replacement
 
 Generated payloads should be validated inside existing Akka.Delivery and DistributedData wrappers where practical. This proves nested serializer behavior without changing those subsystems' default protobuf wire formats.
@@ -91,6 +106,10 @@ Generated payloads should be validated inside existing Akka.Delivery and Distrib
 ### 9. Early Benchmark POC Stop Point
 
 Before completing the full spec, produce a basic BenchmarkDotNet POC using real C# protocol-family messages. The first benchmark should compare generated MessagePack serialization against current baseline serializer behavior and report throughput/allocation/payload-size signals.
+
+### 10. Packaging
+
+Ship as one user-facing package if packing can be done cleanly. Internal split projects for runtime and generator are acceptable, but users should not have to install a separate runtime package and generator package manually.
 
 ## Risks / Trade-offs
 

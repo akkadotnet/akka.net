@@ -169,7 +169,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 continue;
 
             var index = (int)fieldAttribute.ConstructorArguments[0].Value!;
-            fields.Add(new FieldInfo(index, member.Name, member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), MapType(member.Type)));
+            var isNullable = member.NullableAnnotation == NullableAnnotation.Annotated;
+            fields.Add(new FieldInfo(index, member.Name, member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), MapType(member.Type), isNullable));
         }
 
         return new MessageInfo(
@@ -246,11 +247,6 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.Append("                typeof(").Append(serializer.ProtocolTypeFullName).AppendLine("))); ");
         sb.AppendLine("    }");
         sb.AppendLine();
-        sb.AppendLine("    public static partial global::Akka.Serialization.SerializationSetup CreateSetup()");
-        sb.AppendLine("    {");
-        sb.AppendLine("        return CreateRegistration().CreateSetup();");
-        sb.AppendLine("    }");
-        sb.AppendLine();
     }
 
     private static void GenerateManifest(StringBuilder sb, ImmutableArray<MessageInfo> messages)
@@ -323,24 +319,47 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine("    {");
         sb.AppendLine("        var fieldCount = reader.BeginReadObject();");
         foreach (var field in message.Fields)
-            sb.Append("        ").Append(GetLocalType(field)).Append(' ').Append(ToCamelCase(field.Name)).Append(" = ")
-                .Append(DefaultValue(field.Mapping)).AppendLine(";");
-
-        foreach (var field in message.Fields)
         {
-            sb.Append("        if (fieldCount > ").Append(field.Index).AppendLine(")");
-            sb.AppendLine("        {");
-            GenerateReadField(sb, field);
-            sb.AppendLine("        }");
+            sb.Append("        ").Append(GetLocalType(field)).Append(' ').Append(ToCamelCase(field.Name)).Append(" = ")
+                .Append(DefaultValue(field)).AppendLine(";");
+            if (IsRequired(field))
+                sb.Append("        var ").Append(GetHasLocalName(field)).AppendLine(" = false;");
         }
 
-        sb.Append("        for (var index = ").Append(message.Fields.Length).AppendLine("; index < fieldCount; index++)");
+        sb.AppendLine("        for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)");
         sb.AppendLine("        {");
-        sb.AppendLine("            reader.SkipField();");
+        sb.AppendLine("            var fieldId = reader.ReadFieldId();");
+        sb.AppendLine("            switch (fieldId)");
+        sb.AppendLine("            {");
+        foreach (var field in message.Fields)
+        {
+            sb.Append("                case ").Append(field.Index).AppendLine(":");
+            GenerateReadField(sb, field);
+            if (IsRequired(field))
+                sb.Append("                    ").Append(GetHasLocalName(field)).AppendLine(" = true;");
+            sb.AppendLine("                    break;");
+        }
+        sb.AppendLine("                default:");
+        sb.AppendLine("                    reader.SkipField();");
+        sb.AppendLine("                    break;");
+        sb.AppendLine("            }");
         sb.AppendLine("        }");
         sb.AppendLine();
+
+        foreach (var field in message.Fields.Where(IsRequired))
+        {
+            var target = ToCamelCase(field.Name);
+            sb.Append("        if (!").Append(GetHasLocalName(field));
+            if (IsReferenceLike(field.Mapping))
+                sb.Append(" || ").Append(target).Append(" is null");
+            sb.AppendLine(")");
+            sb.Append("            throw new global::System.Runtime.Serialization.SerializationException(\"Missing required field [")
+                .Append(Escape(field.Name)).Append("] with index [").Append(field.Index).Append("] while deserializing [")
+                .Append(Escape(message.FullyQualifiedName)).AppendLine("].\");");
+        }
+
         sb.Append("        return new ").Append(message.FullyQualifiedName).Append('(')
-            .Append(string.Join(", ", message.Fields.Select(field => ToCamelCase(field.Name))))
+            .Append(string.Join(", ", message.Fields.Select(GetConstructorArgument)))
             .AppendLine(");");
         sb.AppendLine("    }");
         sb.AppendLine();
@@ -349,6 +368,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static void GenerateWriteField(StringBuilder sb, FieldInfo field)
     {
         var value = "message." + field.Name;
+        sb.Append("        writer.WriteInt32(").Append(field.Index).AppendLine(");");
         switch (field.Mapping.Kind)
         {
             case FieldKind.String:
@@ -393,37 +413,37 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         switch (field.Mapping.Kind)
         {
             case FieldKind.String:
-                sb.Append("            ").Append(target).AppendLine(" = reader.ReadString() ?? string.Empty;");
+                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadString();");
                 break;
             case FieldKind.Int32:
-                sb.Append("            ").Append(target).AppendLine(" = reader.ReadInt32();");
+                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadInt32();");
                 break;
             case FieldKind.Int64:
-                sb.Append("            ").Append(target).AppendLine(" = reader.ReadInt64();");
+                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadInt64();");
                 break;
             case FieldKind.Boolean:
-                sb.Append("            ").Append(target).AppendLine(" = reader.ReadBoolean();");
+                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadBoolean();");
                 break;
             case FieldKind.Double:
-                sb.Append("            ").Append(target).AppendLine(" = reader.ReadDouble();");
+                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadDouble();");
                 break;
             case FieldKind.Decimal:
-                sb.Append("            ").Append(target).AppendLine(" = reader.ReadDecimal();");
+                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadDecimal();");
                 break;
             case FieldKind.Guid:
-                sb.Append("            ").Append(target).AppendLine(" = reader.ReadGuid();");
+                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadGuid();");
                 break;
             case FieldKind.DateTime:
-                sb.Append("            ").Append(target).AppendLine(" = reader.ReadDateTime();");
+                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadDateTime();");
                 break;
             case FieldKind.DateTimeOffset:
-                sb.Append("            ").Append(target).AppendLine(" = reader.ReadDateTimeOffset();");
+                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadDateTimeOffset();");
                 break;
             case FieldKind.ActorRef:
-                sb.Append("            ").Append(target).AppendLine(" = ReadActorRef(reader);");
+                sb.Append("                    ").Append(target).AppendLine(" = ReadActorRef(reader);");
                 break;
             case FieldKind.Enum:
-                sb.Append("            ").Append(target).Append(" = (").Append(field.TypeFullName).AppendLine(")reader.ReadInt32();");
+                sb.Append("                    ").Append(target).Append(" = (").Append(field.TypeFullName).AppendLine(")reader.ReadInt32();");
                 break;
         }
     }
@@ -450,11 +470,11 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         };
     }
 
-    private static string DefaultValue(TypeMapping mapping)
+    private static string DefaultValue(FieldInfo field)
     {
-        return mapping.Kind switch
+        return field.Mapping.Kind switch
         {
-            FieldKind.String => "string.Empty",
+            FieldKind.String => "null",
             FieldKind.Int32 => "0",
             FieldKind.Int64 => "0L",
             FieldKind.Boolean => "false",
@@ -467,7 +487,28 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static string GetLocalType(FieldInfo field)
     {
-        return field.Mapping.Kind == FieldKind.ActorRef ? "global::Akka.Actor.IActorRef?" : field.TypeFullName;
+        return IsReferenceLike(field.Mapping) ? field.TypeFullName + "?" : field.TypeFullName;
+    }
+
+    private static bool IsRequired(FieldInfo field)
+    {
+        return !field.IsNullable;
+    }
+
+    private static bool IsReferenceLike(TypeMapping mapping)
+    {
+        return mapping.Kind is FieldKind.String or FieldKind.ActorRef;
+    }
+
+    private static string GetHasLocalName(FieldInfo field)
+    {
+        return "has" + field.Name;
+    }
+
+    private static string GetConstructorArgument(FieldInfo field)
+    {
+        var name = ToCamelCase(field.Name);
+        return IsRequired(field) && IsReferenceLike(field.Mapping) ? name + "!" : name;
     }
 
     private static string GetFullyQualifiedTypeName(INamedTypeSymbol symbol)
@@ -547,18 +588,20 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private sealed class FieldInfo
     {
-        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping)
+        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable)
         {
             Index = index;
             Name = name;
             TypeFullName = typeFullName;
             Mapping = mapping;
+            IsNullable = isNullable;
         }
 
         public int Index { get; }
         public string Name { get; }
         public string TypeFullName { get; }
         public TypeMapping Mapping { get; }
+        public bool IsNullable { get; }
     }
 
     private readonly struct TypeMapping

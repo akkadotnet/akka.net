@@ -35,7 +35,7 @@ public class GeneratedMessagePackSerializerBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        var generatedSetup = ActorSystemSetup.Create(OrderBenchmarkSerializer.CreateSetup());
+        var generatedSetup = ActorSystemSetup.Create(OrderBenchmarkSerializer.CreateRegistration().CreateSetup());
         _generatedSystem = (ExtendedActorSystem)ActorSystem.Create("generated-messagepack-bench", generatedSetup);
         _jsonSystem = (ExtendedActorSystem)ActorSystem.Create("json-messagepack-bench");
 
@@ -110,8 +110,6 @@ public interface IOrderBenchmarkProtocol
 public sealed partial class OrderBenchmarkSerializer : MessagePackSerializer<IOrderBenchmarkProtocol>
 {
     public static partial SerializerRegistration CreateRegistration();
-
-    public static partial SerializationSetup CreateSetup();
 }
 
 [AkkaSerializable(Manifest = "submit-order-v1")]
