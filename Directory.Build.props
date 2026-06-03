@@ -35,7 +35,7 @@
     <NetTestVersion>net10.0</NetTestVersion>
     <FsharpVersion>6.0.5</FsharpVersion>
     <NetStandardLibVersion>net10.0</NetStandardLibVersion>
-    <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
+    <FluentAssertionsVersion>8.10.0</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <FsCheckVersion>3.3.3</FsCheckVersion>
     <FsCheck3Version>3.3.3</FsCheck3Version>
