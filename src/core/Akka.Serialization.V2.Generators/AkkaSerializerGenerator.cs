@@ -197,7 +197,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 continue;
 
             var index = (int)fieldAttribute.ConstructorArguments[0].Value!;
-            var isNullable = member.NullableAnnotation == NullableAnnotation.Annotated;
+            var isNullable = member.NullableAnnotation == NullableAnnotation.Annotated || IsNullableValueType(member.Type);
             fields.Add(new FieldInfo(index, member.Name, member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), MapType(member.Type, knownTypes), isNullable));
         }
 
@@ -481,52 +481,66 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         var value = "message." + field.Name;
         sb.Append("        writer.Write(").Append(field.Index).AppendLine(");");
+        if (IsNullableValueField(field))
+        {
+            sb.Append("        if (").Append(value).AppendLine(" is null)");
+            sb.AppendLine("            writer.WriteNil();");
+            sb.AppendLine("        else");
+            GenerateWriteFieldValue(sb, field, value + ".Value", "            ");
+            return;
+        }
+
+        GenerateWriteFieldValue(sb, field, value, "        ");
+    }
+
+    private static void GenerateWriteFieldValue(StringBuilder sb, FieldInfo field, string value, string indent)
+    {
         switch (field.Mapping.Kind)
         {
             case FieldKind.String:
-                sb.Append("        writer.Write(").Append(value).AppendLine(");");
+                sb.Append(indent).Append("writer.Write(").Append(value).AppendLine(");");
                 break;
             case FieldKind.Int32:
-                sb.Append("        writer.Write(").Append(value).AppendLine(");");
+                sb.Append(indent).Append("writer.Write(").Append(value).AppendLine(");");
                 break;
             case FieldKind.Int64:
-                sb.Append("        writer.Write(").Append(value).AppendLine(");");
+                sb.Append(indent).Append("writer.Write(").Append(value).AppendLine(");");
                 break;
             case FieldKind.Boolean:
-                sb.Append("        writer.Write(").Append(value).AppendLine(");");
+                sb.Append(indent).Append("writer.Write(").Append(value).AppendLine(");");
                 break;
             case FieldKind.Double:
-                sb.Append("        writer.Write(").Append(value).AppendLine(");");
+                sb.Append(indent).Append("writer.Write(").Append(value).AppendLine(");");
                 break;
             case FieldKind.Decimal:
-                sb.Append("        WriteDecimal(ref writer, ").Append(value).AppendLine(");");
+                sb.Append(indent).Append("WriteDecimal(ref writer, ").Append(value).AppendLine(");");
                 break;
             case FieldKind.Guid:
-                sb.Append("        WriteGuid(ref writer, ").Append(value).AppendLine(");");
+                sb.Append(indent).Append("WriteGuid(ref writer, ").Append(value).AppendLine(");");
                 break;
             case FieldKind.DateTime:
-                sb.Append("        WriteDateTime(ref writer, ").Append(value).AppendLine(");");
+                sb.Append(indent).Append("WriteDateTime(ref writer, ").Append(value).AppendLine(");");
                 break;
             case FieldKind.DateTimeOffset:
-                sb.Append("        WriteDateTimeOffset(ref writer, ").Append(value).AppendLine(");");
+                sb.Append(indent).Append("WriteDateTimeOffset(ref writer, ").Append(value).AppendLine(");");
                 break;
             case FieldKind.ActorRef:
-                sb.Append("        WriteActorRef(ref writer, ").Append(value).AppendLine(");");
+                sb.Append(indent).Append("WriteActorRef(ref writer, ").Append(value).AppendLine(");");
                 break;
             case FieldKind.Enum:
-                sb.Append("        writer.Write((int)").Append(value).AppendLine(");");
+                sb.Append(indent).Append("writer.Write((int)").Append(value).AppendLine(");");
                 break;
             case FieldKind.Object:
                 if (field.IsNullable)
                 {
-                    sb.Append("        if (").Append(value).AppendLine(" is null)");
-                    sb.AppendLine("            writer.WriteNil();");
-                    sb.AppendLine("        else");
-                    sb.Append("            Write").Append(GetObjectMethodName(field.Mapping)).Append("(ref writer, ").Append(value).AppendLine(");");
+                    sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
+                    sb.Append(indent).AppendLine("    writer.WriteNil();");
+                    sb.Append(indent).AppendLine("else");
+                    sb.Append(indent).Append("    Write").Append(GetObjectMethodName(field.Mapping)).Append("(ref writer, ").Append(value).AppendLine(");");
                 }
                 else
                 {
-                    sb.Append("        Write").Append(GetObjectMethodName(field.Mapping)).Append("(ref writer, ").Append(value).AppendLine(");");
+                    sb.Append(indent).Append("Write").Append(GetObjectMethodName(field.Mapping)).Append("(ref writer, ").Append(value).AppendLine(");");
                 }
                 break;
         }
@@ -535,61 +549,77 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static void GenerateReadField(StringBuilder sb, FieldInfo field)
     {
         var target = ToCamelCase(field.Name);
+        if (IsNullableValueField(field))
+        {
+            sb.AppendLine("                    if (reader.TryReadNil())");
+            sb.Append("                        ").Append(target).AppendLine(" = null;");
+            sb.AppendLine("                    else");
+            GenerateReadFieldValue(sb, field, target, "                        ");
+            return;
+        }
+
+        if (field.Mapping.Kind == FieldKind.Object && field.IsNullable)
+        {
+            sb.AppendLine("                    if (reader.TryReadNil())");
+            sb.Append("                        ").Append(target).AppendLine(" = null;");
+            sb.AppendLine("                    else");
+            sb.Append("                        ").Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(ref reader);");
+            return;
+        }
+
+        GenerateReadFieldValue(sb, field, target, "                    ");
+    }
+
+    private static void GenerateReadFieldValue(StringBuilder sb, FieldInfo field, string target, string indent)
+    {
         switch (field.Mapping.Kind)
         {
             case FieldKind.String:
-                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadString();");
+                sb.Append(indent).Append(target).AppendLine(" = reader.ReadString();");
                 break;
             case FieldKind.Int32:
-                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadInt32();");
+                sb.Append(indent).Append(target).AppendLine(" = reader.ReadInt32();");
                 break;
             case FieldKind.Int64:
-                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadInt64();");
+                sb.Append(indent).Append(target).AppendLine(" = reader.ReadInt64();");
                 break;
             case FieldKind.Boolean:
-                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadBoolean();");
+                sb.Append(indent).Append(target).AppendLine(" = reader.ReadBoolean();");
                 break;
             case FieldKind.Double:
-                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadDouble();");
+                sb.Append(indent).Append(target).AppendLine(" = reader.ReadDouble();");
                 break;
             case FieldKind.Decimal:
-                sb.Append("                    ").Append(target).AppendLine(" = ReadDecimal(ref reader);");
+                sb.Append(indent).Append(target).AppendLine(" = ReadDecimal(ref reader);");
                 break;
             case FieldKind.Guid:
-                sb.Append("                    ").Append(target).AppendLine(" = ReadGuid(ref reader);");
+                sb.Append(indent).Append(target).AppendLine(" = ReadGuid(ref reader);");
                 break;
             case FieldKind.DateTime:
-                sb.Append("                    ").Append(target).AppendLine(" = ReadDateTime(ref reader);");
+                sb.Append(indent).Append(target).AppendLine(" = ReadDateTime(ref reader);");
                 break;
             case FieldKind.DateTimeOffset:
-                sb.Append("                    ").Append(target).AppendLine(" = ReadDateTimeOffset(ref reader);");
+                sb.Append(indent).Append(target).AppendLine(" = ReadDateTimeOffset(ref reader);");
                 break;
             case FieldKind.ActorRef:
-                sb.Append("                    ").Append(target).AppendLine(" = ReadActorRef(ref reader);");
+                sb.Append(indent).Append(target).AppendLine(" = ReadActorRef(ref reader);");
                 break;
             case FieldKind.Enum:
-                sb.Append("                    ").Append(target).Append(" = (").Append(field.TypeFullName).AppendLine(")reader.ReadInt32();");
+                sb.Append(indent).Append(target).Append(" = (").Append(field.Mapping.TypeFullName).AppendLine(")reader.ReadInt32();");
                 break;
             case FieldKind.Object:
-                if (field.IsNullable)
-                {
-                    sb.AppendLine("                    if (reader.TryReadNil())");
-                    sb.Append("                        ").Append(target).AppendLine(" = null;");
-                    sb.AppendLine("                    else");
-                    sb.Append("                        ").Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(ref reader);");
-                }
-                else
-                {
-                    sb.Append("                    ").Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(ref reader);");
-                }
+                sb.Append(indent).Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(ref reader);");
                 break;
         }
     }
 
     private static TypeMapping MapType(ITypeSymbol type, KnownTypes knownTypes)
     {
-        if (type.TypeKind == TypeKind.Enum)
-            return new TypeMapping(FieldKind.Enum);
+        if (TryGetNullableValueType(type, out var underlyingType))
+            return MapType(underlyingType, knownTypes);
+
+        if (type is INamedTypeSymbol enumType && type.TypeKind == TypeKind.Enum)
+            return new TypeMapping(FieldKind.Enum, GetFullyQualifiedTypeName(enumType));
 
         if (type is INamedTypeSymbol namedType && namedType.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
             return new TypeMapping(FieldKind.Object, GetFullyQualifiedTypeName(namedType));
@@ -620,6 +650,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static string DefaultValue(FieldInfo field)
     {
+        if (field.IsNullable)
+            return "null";
+
         return field.Mapping.Kind switch
         {
             FieldKind.String => "null",
@@ -647,6 +680,28 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static bool IsReferenceLike(TypeMapping mapping)
     {
         return mapping.Kind is FieldKind.String or FieldKind.ActorRef or FieldKind.Object;
+    }
+
+    private static bool IsNullableValueField(FieldInfo field)
+    {
+        return field.IsNullable && !IsReferenceLike(field.Mapping);
+    }
+
+    private static bool IsNullableValueType(ITypeSymbol type)
+    {
+        return TryGetNullableValueType(type, out _);
+    }
+
+    private static bool TryGetNullableValueType(ITypeSymbol type, out ITypeSymbol underlyingType)
+    {
+        if (type is INamedTypeSymbol namedType && namedType.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T)
+        {
+            underlyingType = namedType.TypeArguments[0];
+            return true;
+        }
+
+        underlyingType = type;
+        return false;
     }
 
     private static string GetHasLocalName(FieldInfo field)

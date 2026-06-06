@@ -140,6 +140,82 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         deserialized.Should().Be(new RequiredMessage("order-1", 42));
     }
 
+    [Fact(DisplayName = "Generated serializer should skip unknown nested field values")]
+    public void Generated_serializer_should_skip_unknown_nested_field_values()
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        var writer = new MessagePackWriter(buffer);
+        writer.WriteMapHeader(3);
+        writer.Write(99);
+        writer.WriteMapHeader(2);
+        writer.Write(1);
+        writer.Write("ignored");
+        writer.Write(2);
+        writer.WriteArrayHeader(2);
+        writer.Write("also-ignored");
+        writer.Write(17);
+        writer.Write(1);
+        writer.Write("order-1");
+        writer.Write(2);
+        writer.Write(42);
+        writer.Flush();
+
+        var deserialized = _serializer.Deserialize(new ReadOnlySequence<byte>(buffer.WrittenMemory), RequiredMessage.ManifestName);
+
+        deserialized.Should().Be(new RequiredMessage("order-1", 42));
+    }
+
+    [Fact(DisplayName = "Generated serializer should round-trip nullable value fields")]
+    public void Generated_serializer_should_round_trip_nullable_value_fields()
+    {
+        var withValues = new OptionalMessage(
+            "optional-1",
+            42,
+            Guid.Parse("78055b71-1e7a-4a20-8e52-712db4fda457"),
+            new DateTime(2026, 6, 6, 12, 30, 0, DateTimeKind.Utc),
+            SampleStatus.Accepted,
+            "notes",
+            new ShippingAddress("1 Main St", "Seattle"));
+        var withoutValues = new OptionalMessage("optional-2", null, null, null, null, null, null);
+
+        RoundTrip(withValues).Should().Be(withValues);
+        RoundTrip(withoutValues).Should().Be(withoutValues);
+    }
+
+    [Fact(DisplayName = "Generated serializer should write nil for nullable fields")]
+    public void Generated_serializer_should_write_nil_for_nullable_fields()
+    {
+        var message = new OptionalMessage("optional-1", null, null, null, null, null, null);
+        var bytes = _serializer.ToBinary(message);
+        var reader = new MessagePackReader(new ReadOnlySequence<byte>(bytes));
+
+        reader.ReadMapHeader().Should().Be(7);
+        reader.ReadInt32().Should().Be(1);
+        reader.ReadString().Should().Be("optional-1");
+        for (var fieldId = 2; fieldId <= 7; fieldId++)
+        {
+            reader.ReadInt32().Should().Be(fieldId);
+            reader.TryReadNil().Should().BeTrue();
+        }
+
+        reader.Consumed.Should().Be(bytes.Length);
+    }
+
+    [Fact(DisplayName = "Generated serializer should allow missing nullable fields")]
+    public void Generated_serializer_should_allow_missing_nullable_fields()
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        var writer = new MessagePackWriter(buffer);
+        writer.WriteMapHeader(1);
+        writer.Write(1);
+        writer.Write("optional-1");
+        writer.Flush();
+
+        var deserialized = _serializer.Deserialize(new ReadOnlySequence<byte>(buffer.WrittenMemory), OptionalMessage.ManifestName);
+
+        deserialized.Should().Be(new OptionalMessage("optional-1", null, null, null, null, null, null));
+    }
+
     [Fact(DisplayName = "Generated serializer should reject missing non-nullable required fields")]
     public void Generated_serializer_should_reject_missing_non_nullable_required_fields()
     {
@@ -405,6 +481,19 @@ public sealed record RequiredMessage(
     [property: AkkaField(2)] int Quantity) : IGeneratedTestProtocol
 {
     public const string ManifestName = "required-v1";
+}
+
+[AkkaSerializable(Manifest = OptionalMessage.ManifestName)]
+public sealed record OptionalMessage(
+    [property: AkkaField(1)] string Id,
+    [property: AkkaField(2)] int? OptionalInt,
+    [property: AkkaField(3)] Guid? OptionalGuid,
+    [property: AkkaField(4)] DateTime? OptionalTimestamp,
+    [property: AkkaField(5)] SampleStatus? OptionalStatus,
+    [property: AkkaField(6)] string? OptionalText,
+    [property: AkkaField(7)] ShippingAddress? OptionalAddress) : IGeneratedTestProtocol
+{
+    public const string ManifestName = "optional-v1";
 }
 
 [AkkaSerializable(Manifest = "sparse-v1")]

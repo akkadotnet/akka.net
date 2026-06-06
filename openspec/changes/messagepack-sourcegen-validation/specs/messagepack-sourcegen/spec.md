@@ -36,6 +36,10 @@ The system SHALL provide a Roslyn incremental source generator that emits `Seria
 - **WHEN** a generated serializer reads a payload missing a non-nullable required field
 - **THEN** deserialization SHALL fail with a serialization error
 
+#### Scenario: Nullable field preserved
+- **WHEN** a generated serializer writes or reads nullable scalar, reference, enum, or nested generated fields
+- **THEN** MessagePack nil and missing optional fields SHALL deserialize as null while present values SHALL round-trip normally
+
 ### Requirement: Generated serializers use explicit registration
 
 Generated serializers SHALL expose per-serializer registration helpers and SHALL NOT require runtime assembly scanning.
