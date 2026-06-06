@@ -3,7 +3,7 @@
 The POC at `Aaronontheweb/AkkaSerializationPoC` validated the preferred direction for generated serialization:
 
 - MessagePack is the default codec.
-- `AkkaWriter` and `AkkaReader` are concrete sealed wrappers over MessagePack.
+- Generated serializers use MessagePack-CSharp directly on their hot path.
 - There is no generalized codec abstraction layer.
 - Source generation provides compile-time validation and avoids reflection.
 - Users explicitly register generated serializers through generated per-serializer helpers.
@@ -34,15 +34,15 @@ The source generator should not be developed against hypothetical serialization 
 
 ### 1. MessagePack Package Outside Core Akka
 
-`Akka.Serialization.V2` owns MessagePack dependencies, attributes, writer/reader helpers, and source generator integration.
+`Akka.Serialization.V2` owns MessagePack dependencies, attributes, Akka-specific MessagePack helper conventions, and source generator integration.
 
 Core Akka owns only `SerializerV2` and compatibility infrastructure.
 
-### 2. Sealed Writer / Reader
+### 2. Direct MessagePack Reader / Writer
 
-Use sealed `AkkaWriter` and `AkkaReader` classes rather than codec interfaces.
+Generated serializers should create one `MessagePackWriter` per `Serialize` call and one `MessagePackReader` per `Deserialize` call, then pass those cursors by `ref` through generated helper methods. This avoids recreating `MessagePackReader` / `MessagePackWriter` per field while preserving MessagePack-CSharp's cursor semantics.
 
-Rationale: the POC showed this improves JIT devirtualization and keeps the API simpler.
+`AkkaReader` and `AkkaWriter` may remain as focused runtime/test helpers, but generated hot-path code should not depend on class wrappers around MessagePack-CSharp reader/writer state.
 
 ### 3. Sourcegen Validates V2 API Before Artery
 

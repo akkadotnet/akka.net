@@ -22,7 +22,7 @@
 
 - [x] 3.1 Add `MessagePackSerializer : SerializerV2`
 - [x] 3.2 Add generic protocol-scoped serializer base if needed by generator design
-- [x] 3.3 Bridge V2 buffer API to `AkkaWriter` / `AkkaReader`
+- [x] 3.3 Bridge V2 buffer API to direct MessagePack reader/writer generated hot path
 - [x] 3.4 Validate bytes-written/result behavior
 - [ ] 3.5 Validate unknown-size fallback behavior
 - [x] 3.6 Validate manifest behavior
@@ -72,7 +72,7 @@
 - [x] 7.3 Report payload size and allocation/throughput signals
 - [x] 7.4 Stop after the benchmark POC for human review before completing the full spec
 
-POC benchmark evidence: short BenchmarkDotNet run completed after switching generated payloads to explicit `[AkkaField]` field-id maps. Generated MessagePack serialize measured ~585 ns and deserialize measured ~1.05 us, versus Newtonsoft.Json serialize at ~20.3 us and deserialize at ~24.6 us. Generated allocations were ~904-920 B versus JSON at ~10.8-13.1 KB. Payload size logged at ~128-130 bytes versus JSON at ~411-413 bytes. Evidence log: `BenchmarkDotNet.Artifacts/Akka.Benchmarks.Serialization.GeneratedMessagePackSerializerBenchmarks-20260603-040856.log`.
+POC benchmark evidence: short BenchmarkDotNet run completed after switching generated payloads to explicit `[AkkaField]` field-id maps. The field-id implementation measured generated MessagePack serialize at ~585 ns and deserialize at ~1.05 us, versus Newtonsoft.Json serialize at ~20.3 us and deserialize at ~24.6 us. Generated allocations were ~904-920 B versus JSON at ~10.8-13.1 KB. Payload size logged at ~128-130 bytes versus JSON at ~411-413 bytes. A later direct `MessagePackReader` / `MessagePackWriter` refactor measured generated serialize at ~362 ns and deserialize at ~612 ns, with generated allocations reduced to ~856-888 B. Evidence log: `BenchmarkDotNet.Artifacts/Akka.Benchmarks.Serialization.GeneratedMessagePackSerializerBenchmarks-20260603-040856.log`.
 
 ## 8. Documentation And Validation
 

@@ -2,15 +2,15 @@
 
 ### Requirement: MessagePack writer and reader package
 
-The system SHALL provide an `Akka.Serialization.V2` package containing sealed `AkkaWriter` and `AkkaReader` types backed by MessagePack-CSharp.
+The system SHALL provide an `Akka.Serialization.V2` package containing MessagePack-CSharp-backed helper conventions for generated serializers.
 
 #### Scenario: Writer uses V2 buffer API
 - **WHEN** a generated serializer writes a message
-- **THEN** it SHALL write MessagePack bytes through `AkkaWriter` into the provided `IBufferWriter<byte>`
+- **THEN** it SHALL write MessagePack bytes into the provided `IBufferWriter<byte>` using a cursor-based `MessagePackWriter`
 
 #### Scenario: Reader uses V2 sequence API
 - **WHEN** a generated serializer reads a message
-- **THEN** it SHALL read MessagePack bytes through `AkkaReader` from the provided V2 input
+- **THEN** it SHALL read MessagePack bytes from the provided V2 input using a cursor-based `MessagePackReader`
 
 ### Requirement: Source generator emits V2 serializers
 

@@ -302,6 +302,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         GenerateDeserialize(sb, topLevelMessages);
         sb.AppendLine("    public override int SizeHint(object obj) => 128;");
         sb.AppendLine();
+        GenerateCountingBufferWriter(sb);
 
         foreach (var message in reachableMessages)
         {
@@ -344,20 +345,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         sb.AppendLine("    public override int Serialize(object obj, IBufferWriter<byte> writer)");
         sb.AppendLine("    {");
-        sb.AppendLine("        var akkaWriter = new global::Akka.Serialization.V2.AkkaWriter(writer);");
+        sb.AppendLine("        var countingWriter = new AkkaGeneratedCountingBufferWriter(writer);");
+        sb.AppendLine("        var messagePackWriter = new global::MessagePack.MessagePackWriter(countingWriter);");
         sb.AppendLine("        switch (obj)");
         sb.AppendLine("        {");
         foreach (var message in messages)
         {
             sb.Append("            case ").Append(message.FullyQualifiedName).AppendLine(" message:");
-            sb.Append("                Write").Append(GetMessageMethodName(message)).AppendLine("(akkaWriter, message);");
+            sb.Append("                Write").Append(GetMessageMethodName(message)).AppendLine("(ref messagePackWriter, message);");
             sb.AppendLine("                break;");
         }
         sb.AppendLine("            default:");
         sb.AppendLine("                throw new global::System.ArgumentException($\"Unsupported generated serializer type: {obj.GetType()}\", nameof(obj));");
         sb.AppendLine("        }");
         sb.AppendLine();
-        sb.AppendLine("        return (int)akkaWriter.BytesWritten;");
+        sb.AppendLine("        messagePackWriter.Flush();");
+        sb.AppendLine("        return checked((int)countingWriter.BytesWritten);");
         sb.AppendLine("    }");
         sb.AppendLine();
     }
@@ -366,13 +369,45 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         sb.AppendLine("    public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)");
         sb.AppendLine("    {");
-        sb.AppendLine("        var reader = new global::Akka.Serialization.V2.AkkaReader(bytes);");
+        sb.AppendLine("        var reader = new global::MessagePack.MessagePackReader(bytes);");
         sb.AppendLine("        return manifest switch");
         sb.AppendLine("        {");
         foreach (var message in messages)
-            sb.Append("            \"").Append(Escape(message.Manifest)).Append("\" => Read").Append(GetMessageMethodName(message)).AppendLine("(reader),");
+            sb.Append("            \"").Append(Escape(message.Manifest)).Append("\" => Read").Append(GetMessageMethodName(message)).AppendLine("(ref reader),");
         sb.AppendLine("            _ => throw new global::System.Runtime.Serialization.SerializationException($\"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].\")");
         sb.AppendLine("        };");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateCountingBufferWriter(StringBuilder sb)
+    {
+        sb.AppendLine("    private sealed class AkkaGeneratedCountingBufferWriter : global::System.Buffers.IBufferWriter<byte>");
+        sb.AppendLine("    {");
+        sb.AppendLine("        private readonly global::System.Buffers.IBufferWriter<byte> _inner;");
+        sb.AppendLine();
+        sb.AppendLine("        public AkkaGeneratedCountingBufferWriter(global::System.Buffers.IBufferWriter<byte> inner)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            _inner = inner;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        public long BytesWritten { get; private set; }");
+        sb.AppendLine();
+        sb.AppendLine("        public void Advance(int count)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            _inner.Advance(count);");
+        sb.AppendLine("            BytesWritten += count;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        public global::System.Memory<byte> GetMemory(int sizeHint = 0)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            return _inner.GetMemory(sizeHint);");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        public global::System.Span<byte> GetSpan(int sizeHint = 0)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            return _inner.GetSpan(sizeHint);");
+        sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine();
     }
@@ -380,9 +415,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static void GenerateWriteMessage(StringBuilder sb, MessageInfo message)
     {
         sb.Append("    private static void Write").Append(GetMessageMethodName(message))
-            .Append("(global::Akka.Serialization.V2.AkkaWriter writer, ").Append(message.FullyQualifiedName).AppendLine(" message)");
+            .Append("(ref global::MessagePack.MessagePackWriter writer, ").Append(message.FullyQualifiedName).AppendLine(" message)");
         sb.AppendLine("    {");
-        sb.Append("        writer.BeginObject(").Append(message.Fields.Length).AppendLine(");");
+        sb.Append("        writer.WriteMapHeader(").Append(message.Fields.Length).AppendLine(");");
         foreach (var field in message.Fields)
             GenerateWriteField(sb, field);
         sb.AppendLine("    }");
@@ -392,9 +427,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static void GenerateReadMessage(StringBuilder sb, MessageInfo message)
     {
         sb.Append("    private ").Append(message.FullyQualifiedName).Append(" Read").Append(GetMessageMethodName(message))
-            .AppendLine("(global::Akka.Serialization.V2.AkkaReader reader)");
+            .AppendLine("(ref global::MessagePack.MessagePackReader reader)");
         sb.AppendLine("    {");
-        sb.AppendLine("        var fieldCount = reader.BeginReadObject();");
+        sb.AppendLine("        var fieldCount = reader.ReadMapHeader();");
         foreach (var field in message.Fields)
         {
             sb.Append("        ").Append(GetLocalType(field)).Append(' ').Append(ToCamelCase(field.Name)).Append(" = ")
@@ -405,7 +440,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         sb.AppendLine("        for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)");
         sb.AppendLine("        {");
-        sb.AppendLine("            var fieldId = reader.ReadFieldId();");
+        sb.AppendLine("            var fieldId = reader.ReadInt32();");
         sb.AppendLine("            switch (fieldId)");
         sb.AppendLine("            {");
         foreach (var field in message.Fields)
@@ -417,7 +452,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.AppendLine("                    break;");
         }
         sb.AppendLine("                default:");
-        sb.AppendLine("                    reader.SkipField();");
+        sb.AppendLine("                    reader.Skip();");
         sb.AppendLine("                    break;");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
@@ -445,41 +480,41 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static void GenerateWriteField(StringBuilder sb, FieldInfo field)
     {
         var value = "message." + field.Name;
-        sb.Append("        writer.WriteInt32(").Append(field.Index).AppendLine(");");
+        sb.Append("        writer.Write(").Append(field.Index).AppendLine(");");
         switch (field.Mapping.Kind)
         {
             case FieldKind.String:
-                sb.Append("        writer.WriteString(").Append(value).AppendLine(");");
+                sb.Append("        writer.Write(").Append(value).AppendLine(");");
                 break;
             case FieldKind.Int32:
-                sb.Append("        writer.WriteInt32(").Append(value).AppendLine(");");
+                sb.Append("        writer.Write(").Append(value).AppendLine(");");
                 break;
             case FieldKind.Int64:
-                sb.Append("        writer.WriteInt64(").Append(value).AppendLine(");");
+                sb.Append("        writer.Write(").Append(value).AppendLine(");");
                 break;
             case FieldKind.Boolean:
-                sb.Append("        writer.WriteBoolean(").Append(value).AppendLine(");");
+                sb.Append("        writer.Write(").Append(value).AppendLine(");");
                 break;
             case FieldKind.Double:
-                sb.Append("        writer.WriteDouble(").Append(value).AppendLine(");");
+                sb.Append("        writer.Write(").Append(value).AppendLine(");");
                 break;
             case FieldKind.Decimal:
-                sb.Append("        writer.WriteDecimal(").Append(value).AppendLine(");");
+                sb.Append("        WriteDecimal(ref writer, ").Append(value).AppendLine(");");
                 break;
             case FieldKind.Guid:
-                sb.Append("        writer.WriteGuid(").Append(value).AppendLine(");");
+                sb.Append("        WriteGuid(ref writer, ").Append(value).AppendLine(");");
                 break;
             case FieldKind.DateTime:
-                sb.Append("        writer.WriteDateTime(").Append(value).AppendLine(");");
+                sb.Append("        WriteDateTime(ref writer, ").Append(value).AppendLine(");");
                 break;
             case FieldKind.DateTimeOffset:
-                sb.Append("        writer.WriteDateTimeOffset(").Append(value).AppendLine(");");
+                sb.Append("        WriteDateTimeOffset(ref writer, ").Append(value).AppendLine(");");
                 break;
             case FieldKind.ActorRef:
-                sb.Append("        WriteActorRef(writer, ").Append(value).AppendLine(");");
+                sb.Append("        WriteActorRef(ref writer, ").Append(value).AppendLine(");");
                 break;
             case FieldKind.Enum:
-                sb.Append("        writer.WriteInt32((int)").Append(value).AppendLine(");");
+                sb.Append("        writer.Write((int)").Append(value).AppendLine(");");
                 break;
             case FieldKind.Object:
                 if (field.IsNullable)
@@ -487,11 +522,11 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     sb.Append("        if (").Append(value).AppendLine(" is null)");
                     sb.AppendLine("            writer.WriteNil();");
                     sb.AppendLine("        else");
-                    sb.Append("            Write").Append(GetObjectMethodName(field.Mapping)).Append("(writer, ").Append(value).AppendLine(");");
+                    sb.Append("            Write").Append(GetObjectMethodName(field.Mapping)).Append("(ref writer, ").Append(value).AppendLine(");");
                 }
                 else
                 {
-                    sb.Append("        Write").Append(GetObjectMethodName(field.Mapping)).Append("(writer, ").Append(value).AppendLine(");");
+                    sb.Append("        Write").Append(GetObjectMethodName(field.Mapping)).Append("(ref writer, ").Append(value).AppendLine(");");
                 }
                 break;
         }
@@ -518,19 +553,19 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 sb.Append("                    ").Append(target).AppendLine(" = reader.ReadDouble();");
                 break;
             case FieldKind.Decimal:
-                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadDecimal();");
+                sb.Append("                    ").Append(target).AppendLine(" = ReadDecimal(ref reader);");
                 break;
             case FieldKind.Guid:
-                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadGuid();");
+                sb.Append("                    ").Append(target).AppendLine(" = ReadGuid(ref reader);");
                 break;
             case FieldKind.DateTime:
-                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadDateTime();");
+                sb.Append("                    ").Append(target).AppendLine(" = ReadDateTime(ref reader);");
                 break;
             case FieldKind.DateTimeOffset:
-                sb.Append("                    ").Append(target).AppendLine(" = reader.ReadDateTimeOffset();");
+                sb.Append("                    ").Append(target).AppendLine(" = ReadDateTimeOffset(ref reader);");
                 break;
             case FieldKind.ActorRef:
-                sb.Append("                    ").Append(target).AppendLine(" = ReadActorRef(reader);");
+                sb.Append("                    ").Append(target).AppendLine(" = ReadActorRef(ref reader);");
                 break;
             case FieldKind.Enum:
                 sb.Append("                    ").Append(target).Append(" = (").Append(field.TypeFullName).AppendLine(")reader.ReadInt32();");
@@ -541,11 +576,11 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     sb.AppendLine("                    if (reader.TryReadNil())");
                     sb.Append("                        ").Append(target).AppendLine(" = null;");
                     sb.AppendLine("                    else");
-                    sb.Append("                        ").Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(reader);");
+                    sb.Append("                        ").Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(ref reader);");
                 }
                 else
                 {
-                    sb.Append("                    ").Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(reader);");
+                    sb.Append("                    ").Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(ref reader);");
                 }
                 break;
         }
