@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using FluentAssertions;
+using MessagePack;
 using Xunit;
 
 namespace Akka.Serialization.V2.Tests;
@@ -34,55 +35,56 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         await _system.Terminate();
     }
 
-    [Fact(DisplayName = "AkkaWriter and AkkaReader should round-trip supported built-in field types")]
-    public void AkkaWriter_and_AkkaReader_should_round_trip_supported_built_in_field_types()
+    [Fact(DisplayName = "MessagePack conventions should round-trip supported built-in field types")]
+    public void MessagePack_conventions_should_round_trip_supported_built_in_field_types()
     {
         var id = Guid.Parse("8f7d35c8-2931-4a48-9b84-2c008ab7f2e4");
         var timestamp = new DateTime(2026, 6, 3, 4, 45, 0, DateTimeKind.Utc);
         var timestampOffset = new DateTimeOffset(2026, 6, 3, 4, 45, 0, TimeSpan.FromHours(2));
         var buffer = new ArrayBufferWriter<byte>();
-        var writer = new AkkaWriter(buffer);
+        var writer = new MessagePackWriter(buffer);
 
-        writer.BeginObject(9);
-        writer.WriteInt32(1);
-        writer.WriteString("alpha");
-        writer.WriteInt32(2);
-        writer.WriteInt32(42);
-        writer.WriteInt32(3);
-        writer.WriteInt64(9000000000L);
-        writer.WriteInt32(4);
-        writer.WriteBoolean(true);
-        writer.WriteInt32(5);
-        writer.WriteDouble(12.5d);
-        writer.WriteInt32(6);
-        writer.WriteDecimal(123.456m);
-        writer.WriteInt32(7);
-        writer.WriteGuid(id);
-        writer.WriteInt32(8);
-        writer.WriteDateTime(timestamp);
-        writer.WriteInt32(9);
-        writer.WriteDateTimeOffset(timestampOffset);
+        writer.WriteMapHeader(9);
+        writer.Write(1);
+        writer.Write("alpha");
+        writer.Write(2);
+        writer.Write(42);
+        writer.Write(3);
+        writer.Write(9000000000L);
+        writer.Write(4);
+        writer.Write(true);
+        writer.Write(5);
+        writer.Write(12.5d);
+        writer.Write(6);
+        WriteDecimal(ref writer, 123.456m);
+        writer.Write(7);
+        WriteGuid(ref writer, id);
+        writer.Write(8);
+        WriteDateTime(ref writer, timestamp);
+        writer.Write(9);
+        WriteDateTimeOffset(ref writer, timestampOffset);
+        writer.Flush();
 
-        var reader = new AkkaReader(new ReadOnlySequence<byte>(buffer.WrittenMemory));
-        reader.BeginReadObject().Should().Be(9);
-        reader.ReadFieldId().Should().Be(1);
+        var reader = new MessagePackReader(new ReadOnlySequence<byte>(buffer.WrittenMemory));
+        reader.ReadMapHeader().Should().Be(9);
+        reader.ReadInt32().Should().Be(1);
         reader.ReadString().Should().Be("alpha");
-        reader.ReadFieldId().Should().Be(2);
+        reader.ReadInt32().Should().Be(2);
         reader.ReadInt32().Should().Be(42);
-        reader.ReadFieldId().Should().Be(3);
+        reader.ReadInt32().Should().Be(3);
         reader.ReadInt64().Should().Be(9000000000L);
-        reader.ReadFieldId().Should().Be(4);
+        reader.ReadInt32().Should().Be(4);
         reader.ReadBoolean().Should().BeTrue();
-        reader.ReadFieldId().Should().Be(5);
+        reader.ReadInt32().Should().Be(5);
         reader.ReadDouble().Should().Be(12.5d);
-        reader.ReadFieldId().Should().Be(6);
-        reader.ReadDecimal().Should().Be(123.456m);
-        reader.ReadFieldId().Should().Be(7);
-        reader.ReadGuid().Should().Be(id);
-        reader.ReadFieldId().Should().Be(8);
-        reader.ReadDateTime().Should().Be(timestamp);
-        reader.ReadFieldId().Should().Be(9);
-        reader.ReadDateTimeOffset().Should().Be(timestampOffset);
+        reader.ReadInt32().Should().Be(6);
+        ReadDecimal(ref reader).Should().Be(123.456m);
+        reader.ReadInt32().Should().Be(7);
+        ReadGuid(ref reader).Should().Be(id);
+        reader.ReadInt32().Should().Be(8);
+        ReadDateTime(ref reader).Should().Be(timestamp);
+        reader.ReadInt32().Should().Be(9);
+        ReadDateTimeOffset(ref reader).Should().Be(timestampOffset);
         reader.Consumed.Should().Be(buffer.WrittenCount);
     }
 
@@ -110,12 +112,12 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     {
         var message = new SparseFieldMessage(17, "alpha");
         var bytes = _serializer.ToBinary(message);
-        var reader = new AkkaReader(new ReadOnlySequence<byte>(bytes));
+        var reader = new MessagePackReader(new ReadOnlySequence<byte>(bytes));
 
-        reader.BeginReadObject().Should().Be(2);
-        reader.ReadFieldId().Should().Be(2);
+        reader.ReadMapHeader().Should().Be(2);
+        reader.ReadInt32().Should().Be(2);
         reader.ReadInt32().Should().Be(17);
-        reader.ReadFieldId().Should().Be(10);
+        reader.ReadInt32().Should().Be(10);
         reader.ReadString().Should().Be("alpha");
     }
 
@@ -123,14 +125,15 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     public void Generated_serializer_should_skip_unknown_field_ids()
     {
         var buffer = new ArrayBufferWriter<byte>();
-        var writer = new AkkaWriter(buffer);
-        writer.BeginObject(3);
-        writer.WriteInt32(99);
-        writer.WriteString("ignored");
-        writer.WriteInt32(1);
-        writer.WriteString("order-1");
-        writer.WriteInt32(2);
-        writer.WriteInt32(42);
+        var writer = new MessagePackWriter(buffer);
+        writer.WriteMapHeader(3);
+        writer.Write(99);
+        writer.Write("ignored");
+        writer.Write(1);
+        writer.Write("order-1");
+        writer.Write(2);
+        writer.Write(42);
+        writer.Flush();
 
         var deserialized = _serializer.Deserialize(new ReadOnlySequence<byte>(buffer.WrittenMemory), RequiredMessage.ManifestName);
 
@@ -141,10 +144,11 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     public void Generated_serializer_should_reject_missing_non_nullable_required_fields()
     {
         var buffer = new ArrayBufferWriter<byte>();
-        var writer = new AkkaWriter(buffer);
-        writer.BeginObject(1);
-        writer.WriteInt32(2);
-        writer.WriteInt32(42);
+        var writer = new MessagePackWriter(buffer);
+        writer.WriteMapHeader(1);
+        writer.Write(2);
+        writer.Write(42);
+        writer.Flush();
 
         Action deserialize = () => _serializer.Deserialize(new ReadOnlySequence<byte>(buffer.WrittenMemory), RequiredMessage.ManifestName);
 
@@ -225,16 +229,16 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     {
         var message = new ShipmentMessage("order-1", new ShippingAddress("1 Main St", "Seattle"));
         var bytes = _serializer.ToBinary(message);
-        var reader = new AkkaReader(new ReadOnlySequence<byte>(bytes));
+        var reader = new MessagePackReader(new ReadOnlySequence<byte>(bytes));
 
-        reader.BeginReadObject().Should().Be(2);
-        reader.ReadFieldId().Should().Be(1);
+        reader.ReadMapHeader().Should().Be(2);
+        reader.ReadInt32().Should().Be(1);
         reader.ReadString().Should().Be("order-1");
-        reader.ReadFieldId().Should().Be(2);
-        reader.BeginReadObject().Should().Be(2);
-        reader.ReadFieldId().Should().Be(1);
+        reader.ReadInt32().Should().Be(2);
+        reader.ReadMapHeader().Should().Be(2);
+        reader.ReadInt32().Should().Be(1);
         reader.ReadString().Should().Be("1 Main St");
-        reader.ReadFieldId().Should().Be(2);
+        reader.ReadInt32().Should().Be(2);
         reader.ReadString().Should().Be("Seattle");
         reader.Consumed.Should().Be(bytes.Length);
     }
@@ -262,22 +266,97 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
                     "Seattle",
                     new CountryInfo("US"))));
         var bytes = _serializer.ToBinary(message);
-        var reader = new AkkaReader(new ReadOnlySequence<byte>(bytes));
+        var reader = new MessagePackReader(new ReadOnlySequence<byte>(bytes));
 
-        reader.BeginReadObject().Should().Be(2);
-        reader.ReadFieldId().Should().Be(1);
+        reader.ReadMapHeader().Should().Be(2);
+        reader.ReadInt32().Should().Be(1);
         reader.ReadString().Should().Be("warehouse-1");
-        reader.ReadFieldId().Should().Be(2);
-        reader.BeginReadObject().Should().Be(1);
-        reader.ReadFieldId().Should().Be(1);
-        reader.BeginReadObject().Should().Be(2);
-        reader.ReadFieldId().Should().Be(1);
+        reader.ReadInt32().Should().Be(2);
+        reader.ReadMapHeader().Should().Be(1);
+        reader.ReadInt32().Should().Be(1);
+        reader.ReadMapHeader().Should().Be(2);
+        reader.ReadInt32().Should().Be(1);
         reader.ReadString().Should().Be("Seattle");
-        reader.ReadFieldId().Should().Be(2);
-        reader.BeginReadObject().Should().Be(1);
-        reader.ReadFieldId().Should().Be(1);
+        reader.ReadInt32().Should().Be(2);
+        reader.ReadMapHeader().Should().Be(1);
+        reader.ReadInt32().Should().Be(1);
         reader.ReadString().Should().Be("US");
         reader.Consumed.Should().Be(bytes.Length);
+    }
+
+    private static DateTime ReadDateTime(ref MessagePackReader reader)
+    {
+        var arrayLength = reader.ReadArrayHeader();
+        arrayLength.Should().Be(2);
+
+        var ticks = reader.ReadInt64();
+        var kind = (DateTimeKind)reader.ReadInt32();
+        return new DateTime(ticks, kind);
+    }
+
+    private static void WriteDateTime(ref MessagePackWriter writer, DateTime value)
+    {
+        writer.WriteArrayHeader(2);
+        writer.Write(value.Ticks);
+        writer.Write((int)value.Kind);
+    }
+
+    private static DateTimeOffset ReadDateTimeOffset(ref MessagePackReader reader)
+    {
+        var arrayLength = reader.ReadArrayHeader();
+        arrayLength.Should().Be(2);
+
+        var ticks = reader.ReadInt64();
+        var offsetMinutes = reader.ReadInt32();
+        return new DateTimeOffset(ticks, TimeSpan.FromMinutes(offsetMinutes));
+    }
+
+    private static void WriteDateTimeOffset(ref MessagePackWriter writer, DateTimeOffset value)
+    {
+        writer.WriteArrayHeader(2);
+        writer.Write(value.Ticks);
+        writer.Write((int)value.Offset.TotalMinutes);
+    }
+
+    private static decimal ReadDecimal(ref MessagePackReader reader)
+    {
+        var arrayLength = reader.ReadArrayHeader();
+        arrayLength.Should().Be(4);
+
+        var lo = reader.ReadInt32();
+        var mid = reader.ReadInt32();
+        var hi = reader.ReadInt32();
+        var flags = reader.ReadInt32();
+        return new decimal(new[] { lo, mid, hi, flags });
+    }
+
+    private static void WriteDecimal(ref MessagePackWriter writer, decimal value)
+    {
+        Span<int> bits = stackalloc int[4];
+        decimal.GetBits(value, bits);
+        writer.WriteArrayHeader(4);
+        writer.Write(bits[0]);
+        writer.Write(bits[1]);
+        writer.Write(bits[2]);
+        writer.Write(bits[3]);
+    }
+
+    private static Guid ReadGuid(ref MessagePackReader reader)
+    {
+        var bytes = reader.ReadBytes();
+        bytes.Should().NotBeNull();
+        bytes!.Value.Length.Should().Be(16);
+
+        Span<byte> span = stackalloc byte[16];
+        bytes.Value.CopyTo(span);
+        return new Guid(span);
+    }
+
+    private static void WriteGuid(ref MessagePackWriter writer, Guid value)
+    {
+        writer.WriteBinHeader(16);
+        value.TryWriteBytes(writer.GetSpan(16));
+        writer.Advance(16);
     }
 
     private TMessage RoundTrip<TMessage>(TMessage message)

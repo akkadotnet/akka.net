@@ -6,16 +6,16 @@
 - [x] 1.4 Add test project for generated serialization
 - [x] 1.5 Configure pack/build metadata
 
-## 2. AkkaWriter / AkkaReader
+## 2. Direct MessagePack Conventions
 
-- [x] 2.1 Port sealed `AkkaWriter` from POC direction
-- [x] 2.2 Port sealed `AkkaReader` from POC direction
-- [x] 2.3 Implement primitive read/write methods
+- [x] 2.1 Use direct `MessagePackWriter` cursors in generated serializers
+- [x] 2.2 Use direct `MessagePackReader` cursors in generated serializers
+- [x] 2.3 Implement primitive read/write conventions
 - [x] 2.4 Implement DateTime, DateTimeOffset, Guid, decimal conventions
 - [ ] 2.5 Implement nullable handling
 - [x] 2.6 Implement object/field framing helpers
 - [x] 2.7 Implement unknown-field skip support
-- [x] 2.8 Add round-trip tests for supported built-in types
+- [x] 2.8 Add round-trip tests for supported built-in type conventions
 - [x] 2.9 Encode `[AkkaField]` indexes as explicit MessagePack field IDs
 
 ## 3. MessagePack Serializer Base

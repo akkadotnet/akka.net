@@ -7,7 +7,7 @@ This change runs after the atomic `serializer-v2` foundation. It is not a late o
 ## What Changes
 
 - Add `Akka.Serialization.V2` package for user-facing generated serializers.
-- Add sealed `AkkaWriter` and `AkkaReader` wrappers over MessagePack-CSharp.
+- Use direct MessagePack-CSharp reader/writer cursors in generated serializers.
 - Add attributes such as `[AkkaSerializable]`, `[AkkaField]`, and serializer configuration attributes.
 - Add a Roslyn incremental source generator that emits V2 serializers.
 - Register generated serializers explicitly through per-serializer generated helpers; do not use runtime assembly scanning.
@@ -35,6 +35,6 @@ This change runs after the atomic `serializer-v2` foundation. It is not a late o
 
 - **New package**: `src/core/Akka.Serialization.V2/`
 - **Tests**: generated serializer tests, remoting tests, persistence event tests, persistence snapshot tests, cross-assembly generator tests.
-- **Benchmarks**: initial generated MessagePack benchmark using a real protocol family; wrapper head-to-head benchmarks can follow after the POC slice.
+- **Benchmarks**: initial generated MessagePack benchmark using a real protocol family; direct cursor benchmark comparisons can follow after the POC slice.
 - **Build**: source generator package/project added to solution and pack targets.
 - **Documentation**: update migration and usage docs for generated serializers.

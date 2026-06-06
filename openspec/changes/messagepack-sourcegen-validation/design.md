@@ -42,7 +42,7 @@ Core Akka owns only `SerializerV2` and compatibility infrastructure.
 
 Generated serializers should create one `MessagePackWriter` per `Serialize` call and one `MessagePackReader` per `Deserialize` call, then pass those cursors by `ref` through generated helper methods. This avoids recreating `MessagePackReader` / `MessagePackWriter` per field while preserving MessagePack-CSharp's cursor semantics.
 
-`AkkaReader` and `AkkaWriter` may remain as focused runtime/test helpers, but generated hot-path code should not depend on class wrappers around MessagePack-CSharp reader/writer state.
+Do not keep separate `AkkaReader` or `AkkaWriter` public wrapper classes for generated serializers. Tests that need to inspect or craft payloads should use MessagePack-CSharp cursors directly.
 
 ### 3. Sourcegen Validates V2 API Before Artery
 

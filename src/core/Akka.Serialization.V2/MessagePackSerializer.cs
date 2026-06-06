@@ -22,21 +22,10 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
     {
     }
 
-    protected global::Akka.Actor.IActorRef? ReadActorRef(AkkaReader reader)
-    {
-        var path = reader.ReadString();
-        return string.IsNullOrEmpty(path) ? ActorRefs.NoSender : system.Provider.ResolveActorRef(path);
-    }
-
     protected global::Akka.Actor.IActorRef? ReadActorRef(ref MessagePackReader reader)
     {
         var path = reader.ReadString();
         return string.IsNullOrEmpty(path) ? ActorRefs.NoSender : system.Provider.ResolveActorRef(path);
-    }
-
-    protected static void WriteActorRef(AkkaWriter writer, global::Akka.Actor.IActorRef? actorRef)
-    {
-        writer.WriteString(global::Akka.Serialization.Serialization.SerializedActorPath(actorRef));
     }
 
     protected static void WriteActorRef(ref MessagePackWriter writer, global::Akka.Actor.IActorRef? actorRef)
