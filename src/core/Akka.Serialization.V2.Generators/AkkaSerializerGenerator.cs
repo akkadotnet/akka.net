@@ -500,6 +500,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             case FieldKind.String:
                 sb.Append(indent).Append("writer.Write(").Append(value).AppendLine(");");
                 break;
+            case FieldKind.ByteArray:
+                sb.Append(indent).Append("writer.Write(").Append(value).AppendLine(");");
+                break;
             case FieldKind.Int32:
                 sb.Append(indent).Append("writer.Write(").Append(value).AppendLine(");");
                 break;
@@ -577,6 +580,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             case FieldKind.String:
                 sb.Append(indent).Append(target).AppendLine(" = reader.ReadString();");
                 break;
+            case FieldKind.ByteArray:
+                sb.Append(indent).Append("var ").Append(target).AppendLine("Bytes = reader.ReadBytes();");
+                sb.Append(indent).Append(target).Append(" = ").Append(target).AppendLine("Bytes?.ToArray();");
+                break;
             case FieldKind.Int32:
                 sb.Append(indent).Append(target).AppendLine(" = reader.ReadInt32();");
                 break;
@@ -621,6 +628,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         if (type is INamedTypeSymbol enumType && type.TypeKind == TypeKind.Enum)
             return new TypeMapping(FieldKind.Enum, GetFullyQualifiedTypeName(enumType));
 
+        if (type is IArrayTypeSymbol { ElementType.SpecialType: SpecialType.System_Byte })
+            return new TypeMapping(FieldKind.ByteArray);
+
         if (type is INamedTypeSymbol namedType && namedType.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
             return new TypeMapping(FieldKind.Object, GetFullyQualifiedTypeName(namedType));
 
@@ -656,6 +666,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         return field.Mapping.Kind switch
         {
             FieldKind.String => "null",
+            FieldKind.ByteArray => "null",
             FieldKind.Int32 => "0",
             FieldKind.Int64 => "0L",
             FieldKind.Boolean => "false",
@@ -679,7 +690,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static bool IsReferenceLike(TypeMapping mapping)
     {
-        return mapping.Kind is FieldKind.String or FieldKind.ActorRef or FieldKind.Object;
+        return mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.Object;
     }
 
     private static bool IsNullableValueField(FieldInfo field)
@@ -865,6 +876,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         Unsupported,
         String,
+        ByteArray,
         Int32,
         Int64,
         Boolean,

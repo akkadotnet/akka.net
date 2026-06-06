@@ -8,7 +8,10 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Collections.Immutable;
+using System.Globalization;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
@@ -279,6 +282,57 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         }
     }
 
+    [Fact(DisplayName = "Generated MessagePack wrapper should preserve opaque custom serializer payload")]
+    public async Task Generated_MessagePack_wrapper_should_preserve_opaque_custom_serializer_payload()
+    {
+        var setup = ActorSystemSetup.Create(global::Akka.Serialization.SerializationSetup.Create(extendedSystem =>
+        {
+            var generated = GeneratedTestSerializer.CreateRegistration().CreateDetails(extendedSystem);
+            var custom = global::Akka.Serialization.SerializerDetails.Create(
+                "custom-protobuf",
+                new CustomProtobufPayloadSerializer(extendedSystem),
+                ImmutableHashSet.Create<Type>(typeof(CustomProtobufPayload)));
+            return ImmutableHashSet.Create(generated, custom);
+        }));
+        var system = ActorSystem.Create("generated-messagepack-opaque-payload-spec", setup);
+        try
+        {
+            var extendedSystem = (ExtendedActorSystem)system;
+            var innerPayload = new CustomProtobufPayload("payload-1", 17);
+            typeof(CustomProtobufPayload).GetCustomAttributes(typeof(AkkaSerializableAttribute), false).Should().BeEmpty();
+
+            var innerSerializer = system.Serialization.FindSerializerFor(innerPayload);
+            innerSerializer.Should().BeOfType<CustomProtobufPayloadSerializer>();
+            var expectedInnerBytes = innerSerializer.ToBinary(innerPayload);
+            var opaquePayload = CaptureOpaquePayload(extendedSystem, innerPayload);
+            opaquePayload.SerializerId.Should().Be(CustomProtobufPayloadSerializer.IdentifierValue);
+            opaquePayload.Manifest.Should().Be(CustomProtobufPayloadSerializer.ManifestName);
+            opaquePayload.Bytes.Should().Equal(expectedInnerBytes);
+
+            var envelope = new OpaqueEnvelope("envelope-1", opaquePayload);
+            var envelopeSerializer = system.Serialization.FindSerializerFor(envelope);
+            envelopeSerializer.Should().BeOfType<GeneratedTestSerializer>();
+            var envelopeBytes = system.Serialization.Serialize(envelope);
+
+            AssertOpaqueEnvelopeBytes(envelopeBytes, expectedInnerBytes);
+
+            var envelopeManifest = global::Akka.Serialization.Serialization.ManifestFor(envelopeSerializer, envelope);
+            var recoveredEnvelope = system.Serialization.Deserialize(envelopeBytes, envelopeSerializer.Identifier, envelopeManifest)
+                .Should().BeOfType<OpaqueEnvelope>().Subject;
+            recoveredEnvelope.EnvelopeId.Should().Be("envelope-1");
+            recoveredEnvelope.Payload.SerializerId.Should().Be(CustomProtobufPayloadSerializer.IdentifierValue);
+            recoveredEnvelope.Payload.Manifest.Should().Be(CustomProtobufPayloadSerializer.ManifestName);
+            recoveredEnvelope.Payload.Bytes.Should().Equal(expectedInnerBytes);
+
+            var recoveredInnerPayload = RecoverOpaquePayload(extendedSystem, recoveredEnvelope.Payload);
+            recoveredInnerPayload.Should().Be(innerPayload);
+        }
+        finally
+        {
+            await system.Terminate();
+        }
+    }
+
     [Fact(DisplayName = "Generated serializer should treat NoSender as null-equivalent")]
     public void Generated_serializer_should_treat_NoSender_as_null_equivalent()
     {
@@ -442,6 +496,37 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         var manifest = _serializer.Manifest(message);
         return _serializer.FromBinary(bytes, manifest).Should().BeOfType<TMessage>().Subject;
     }
+
+    private static OpaqueSerializedPayload CaptureOpaquePayload(ExtendedActorSystem system, object payload)
+    {
+        var serializer = system.Serialization.FindSerializerFor(payload);
+        var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, payload);
+        return new OpaqueSerializedPayload(serializer.Identifier, manifest, serializer.ToBinary(payload));
+    }
+
+    private static object RecoverOpaquePayload(ExtendedActorSystem system, OpaqueSerializedPayload payload)
+    {
+        return system.Serialization.Deserialize(payload.Bytes, payload.SerializerId, payload.Manifest);
+    }
+
+    private static void AssertOpaqueEnvelopeBytes(byte[] envelopeBytes, byte[] expectedInnerBytes)
+    {
+        var reader = new MessagePackReader(new ReadOnlySequence<byte>(envelopeBytes));
+        reader.ReadMapHeader().Should().Be(2);
+        reader.ReadInt32().Should().Be(1);
+        reader.ReadString().Should().Be("envelope-1");
+        reader.ReadInt32().Should().Be(2);
+        reader.ReadMapHeader().Should().Be(3);
+        reader.ReadInt32().Should().Be(1);
+        reader.ReadInt32().Should().Be(CustomProtobufPayloadSerializer.IdentifierValue);
+        reader.ReadInt32().Should().Be(2);
+        reader.ReadString().Should().Be(CustomProtobufPayloadSerializer.ManifestName);
+        reader.ReadInt32().Should().Be(3);
+        var writtenInnerBytes = reader.ReadBytes();
+        writtenInnerBytes.Should().NotBeNull();
+        writtenInnerBytes!.Value.ToArray().Should().Equal(expectedInnerBytes);
+        reader.Consumed.Should().Be(envelopeBytes.Length);
+    }
 }
 
 public interface IGeneratedTestProtocol
@@ -481,6 +566,60 @@ public sealed record RequiredMessage(
     [property: AkkaField(2)] int Quantity) : IGeneratedTestProtocol
 {
     public const string ManifestName = "required-v1";
+}
+
+[AkkaSerializable(Manifest = "opaque-envelope-v1")]
+public sealed record OpaqueEnvelope(
+    [property: AkkaField(1)] string EnvelopeId,
+    [property: AkkaField(2)] OpaqueSerializedPayload Payload) : IGeneratedTestProtocol;
+
+[AkkaSerializable]
+public sealed record OpaqueSerializedPayload(
+    [property: AkkaField(1)] int SerializerId,
+    [property: AkkaField(2)] string Manifest,
+    [property: AkkaField(3)] byte[] Bytes);
+
+public sealed record CustomProtobufPayload(string PayloadId, int Value);
+
+public sealed class CustomProtobufPayloadSerializer : global::Akka.Serialization.SerializerWithStringManifest
+{
+    public const int IdentifierValue = 120202;
+    public const string ManifestName = "custom-protobuf-v1";
+
+    public CustomProtobufPayloadSerializer(ExtendedActorSystem system) : base(system)
+    {
+    }
+
+    public override int Identifier => IdentifierValue;
+
+    public override string Manifest(object o)
+    {
+        return o switch
+        {
+            CustomProtobufPayload => ManifestName,
+            _ => throw new ArgumentException($"Unsupported custom protobuf serializer type: {o.GetType()}", nameof(o))
+        };
+    }
+
+    public override byte[] ToBinary(object obj)
+    {
+        if (obj is not CustomProtobufPayload payload)
+            throw new ArgumentException($"Unsupported custom protobuf serializer type: {obj.GetType()}", nameof(obj));
+
+        return Encoding.UTF8.GetBytes($"fake-protobuf|{payload.PayloadId}|{payload.Value.ToString(CultureInfo.InvariantCulture)}");
+    }
+
+    public override object FromBinary(byte[] bytes, string manifest)
+    {
+        if (manifest != ManifestName)
+            throw new SerializationException($"Unknown custom protobuf manifest [{manifest}].");
+
+        var parts = Encoding.UTF8.GetString(bytes).Split('|');
+        if (parts.Length != 3 || parts[0] != "fake-protobuf")
+            throw new SerializationException("Invalid custom protobuf payload bytes.");
+
+        return new CustomProtobufPayload(parts[1], int.Parse(parts[2], CultureInfo.InvariantCulture));
+    }
 }
 
 [AkkaSerializable(Manifest = OptionalMessage.ManifestName)]

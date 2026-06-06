@@ -40,6 +40,10 @@ The system SHALL provide a Roslyn incremental source generator that emits `Seria
 - **WHEN** a generated serializer writes or reads nullable scalar, reference, enum, or nested generated fields
 - **THEN** MessagePack nil and missing optional fields SHALL deserialize as null while present values SHALL round-trip normally
 
+#### Scenario: Byte array field preserved
+- **WHEN** a generated serializer writes or reads a byte-array field
+- **THEN** it SHALL encode the value as a MessagePack binary payload and preserve the original bytes
+
 ### Requirement: Generated serializers use explicit registration
 
 Generated serializers SHALL expose per-serializer registration helpers and SHALL NOT require runtime assembly scanning.
@@ -115,6 +119,12 @@ Generated serializers SHALL validate `SerializerV2` through real Akka.NET integr
 #### Scenario: V1 coexistence
 - **WHEN** V1 and generated V2 serializers are registered in the same actor system
 - **THEN** both SHALL work through the V2 serialization infrastructure
+
+#### Scenario: Opaque non-MessagePack payload inside generated wrapper
+- **WHEN** a generated MessagePack wrapper carries an application payload owned by a custom non-MessagePack Akka serializer
+- **THEN** the wrapper SHALL store the payload serializer id, serializer manifest, and opaque serialized payload bytes
+- **AND** the wrapper SHALL NOT require the inner payload type to be annotated for generated MessagePack serialization
+- **AND** the inner payload SHALL be recoverable through normal Akka deserialization using the stored serializer id, manifest, and bytes
 
 #### Scenario: Akka.Delivery wrapper validation
 - **WHEN** a generated-serializer message is used as an Akka.Delivery payload

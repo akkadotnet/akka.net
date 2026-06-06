@@ -60,10 +60,11 @@
 - [ ] 6.4 Send generated payload over classic remoting
 - [ ] 6.5 Persist and recover generated event payload
 - [ ] 6.6 Save and load generated snapshot payload
-- [ ] 6.7 Verify V1 and generated V2 serializers coexist
+- [x] 6.7 Verify V1 and generated V2 serializers coexist
 - [ ] 6.8 Verify oversized payload behavior is deterministic
 - [ ] 6.9 Validate generated payloads inside Akka.Delivery wrappers
 - [ ] 6.10 Validate generated payloads inside DistributedData wrappers
+- [x] 6.11 Validate opaque non-MessagePack payload metadata inside a generated MessagePack wrapper
 
 ## 7. POC Benchmark
 
