@@ -161,6 +161,8 @@ public sealed class AkkaReader
 
     private MessagePackReader CreateReader()
     {
+        // MessagePackReader is a ref struct and cannot be stored on this class.
+        // Keep the mutable reader local and track progress through _consumed.
         return new MessagePackReader(_buffer.Slice(_consumed));
     }
 
