@@ -348,6 +348,40 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         }
     }
 
+    [Fact(DisplayName = "Generated serializer should round-trip nested envelope payloads through Akka serialization")]
+    public async Task Generated_serializer_should_round_trip_nested_envelope_payloads_through_Akka_serialization()
+    {
+        var setup = ActorSystemSetup.Create(global::Akka.Serialization.SerializationSetup.Create(extendedSystem =>
+        {
+            var generated = GeneratedTestSerializer.CreateRegistration().CreateDetails(extendedSystem);
+            var custom = global::Akka.Serialization.SerializerDetails.Create(
+                "custom-protobuf",
+                new CustomProtobufPayloadSerializer(extendedSystem),
+                ImmutableHashSet.Create<Type>(typeof(CustomProtobufPayload)));
+            return ImmutableHashSet.Create(generated, custom);
+        }));
+        var system = ActorSystem.Create("generated-messagepack-nested-envelope-spec", setup);
+        try
+        {
+            var customPayload = new CustomProtobufPayload("payload-1", 17);
+            var generatedPayload = new RequiredMessage("order-1", 42);
+            var customEnvelope = new AttributeOuterEnvelope("outer-custom", new AttributeInnerEnvelope("inner-custom", customPayload));
+            var generatedEnvelope = new AttributeOuterEnvelope("outer-generated", new AttributeInnerEnvelope("inner-generated", generatedPayload));
+
+            var customRecovered = RoundTripThroughSerialization<AttributeOuterEnvelope>(system, customEnvelope);
+            customRecovered.Should().Be(customEnvelope);
+            customRecovered.Inner.Payload.Should().BeOfType<CustomProtobufPayload>();
+
+            var generatedRecovered = RoundTripThroughSerialization<AttributeOuterEnvelope>(system, generatedEnvelope);
+            generatedRecovered.Should().Be(generatedEnvelope);
+            generatedRecovered.Inner.Payload.Should().BeOfType<RequiredMessage>();
+        }
+        finally
+        {
+            await system.Terminate();
+        }
+    }
+
     [Fact(DisplayName = "Generated serializer should treat NoSender as null-equivalent")]
     public void Generated_serializer_should_treat_NoSender_as_null_equivalent()
     {
@@ -524,6 +558,14 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         return system.Serialization.Deserialize(payload.Bytes, payload.SerializerId, payload.Manifest);
     }
 
+    private static TMessage RoundTripThroughSerialization<TMessage>(ActorSystem system, TMessage message)
+    {
+        var serializer = system.Serialization.FindSerializerFor(message!);
+        var bytes = system.Serialization.Serialize(message!);
+        var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, message!);
+        return system.Serialization.Deserialize(bytes, serializer.Identifier, manifest).Should().BeOfType<TMessage>().Subject;
+    }
+
     private static void AssertOpaqueEnvelopeBytes(byte[] envelopeBytes, byte[] expectedInnerBytes)
     {
         var reader = new MessagePackReader(new ReadOnlySequence<byte>(envelopeBytes));
@@ -593,6 +635,16 @@ public sealed record OpaqueSerializedPayload(
     [property: AkkaField(1)] int SerializerId,
     [property: AkkaField(2)] string Manifest,
     [property: AkkaField(3)] byte[] Bytes);
+
+[AkkaSerializable(Manifest = "attribute-outer-envelope-v1")]
+public sealed record AttributeOuterEnvelope(
+    [property: AkkaField(1)] string EnvelopeId,
+    [property: AkkaField(2), AkkaEnvelopePayload] AttributeInnerEnvelope Inner) : IGeneratedTestProtocol;
+
+[AkkaSerializable(Manifest = "attribute-inner-envelope-v1")]
+public sealed record AttributeInnerEnvelope(
+    [property: AkkaField(1)] string EnvelopeId,
+    [property: AkkaField(2), AkkaEnvelopePayload] object Payload) : IGeneratedTestProtocol;
 
 public sealed record CustomProtobufPayload(string PayloadId, int Value);
 

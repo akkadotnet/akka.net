@@ -38,6 +38,7 @@
 - [x] 4.6 Add diagnostics for duplicate field indexes
 - [x] 4.7 Add diagnostics for unsupported member types
 - [ ] 4.8 Add diagnostics for invalid constructors or inaccessible members
+- [x] 4.9 Add `[AkkaEnvelopePayload]` marker for serializer-boundary fields
 
 ## 5. Source Generator
 
@@ -53,6 +54,7 @@
 - [ ] 5.10 Support init-only property or field assignment for immutable message shapes
 - [ ] 5.11 Reject unsupported mutable, factory-only, or arbitrary polymorphic message shapes with diagnostics
 - [ ] 5.12 Implement exact generated size calculators for schemas whose full encoded size can be proven
+- [x] 5.13 Support `[AkkaEnvelopePayload]` fields through runtime Akka serializer lookup
 
 ## 6. Integration Validation
 
@@ -67,6 +69,7 @@
 - [ ] 6.9 Validate generated payloads inside Akka.Delivery wrappers
 - [ ] 6.10 Validate generated payloads inside DistributedData wrappers
 - [x] 6.11 Validate opaque non-MessagePack payload metadata inside a generated MessagePack wrapper
+- [x] 6.12 Validate attribute-driven nested generated envelopes carrying generated V2 and custom V1 payloads
 
 ## 7. POC Benchmark
 
@@ -74,8 +77,12 @@
 - [x] 7.2 Compare generated MessagePack serialization against an existing baseline serializer
 - [x] 7.3 Report payload size and allocation/throughput signals
 - [x] 7.4 Stop after the benchmark POC for human review before completing the full spec
+- [x] 7.5 Add envelope payload composition benchmark scenarios for V2, V1, and pre-captured payloads
+- [x] 7.6 Run real BenchmarkDotNet for attribute-driven nested envelope payload scenarios
 
 POC benchmark evidence: short BenchmarkDotNet run completed after switching generated payloads to explicit `[AkkaField]` field-id maps. The field-id implementation measured generated MessagePack serialize at ~585 ns and deserialize at ~1.05 us, versus Newtonsoft.Json serialize at ~20.3 us and deserialize at ~24.6 us. Generated allocations were ~904-920 B versus JSON at ~10.8-13.1 KB. Payload size logged at ~128-130 bytes versus JSON at ~411-413 bytes. A later direct `MessagePackReader` / `MessagePackWriter` refactor measured generated serialize at ~362 ns and deserialize at ~612 ns, with generated allocations reduced to ~856-888 B. Evidence log: `BenchmarkDotNet.Artifacts/Akka.Benchmarks.Serialization.GeneratedMessagePackSerializerBenchmarks-20260603-040856.log`.
+
+Nested envelope benchmark evidence: real BenchmarkDotNet run for `*GeneratedMessagePackSerializerBenchmarks.NestedEnvelope_*` completed after adding `[AkkaEnvelopePayload]` support. Attribute-driven nested envelope with generated V2 payload measured serialize at ~621 ns / 1,472 B and deserialize+recover at ~1.013 us / 1,528 B. Attribute-driven nested envelope with custom V1 payload measured serialize at ~389 ns / 1,096 B and deserialize+recover at ~538 ns / 832 B. Payload sizes logged at ~233-234 bytes for nested generated payload envelopes and 150 bytes for nested custom payload envelopes. Report: `BenchmarkDotNet.Artifacts/results/Akka.Benchmarks.Serialization.GeneratedMessagePackSerializerBenchmarks-report-github.md`.
 
 ## 8. Documentation And Validation
 

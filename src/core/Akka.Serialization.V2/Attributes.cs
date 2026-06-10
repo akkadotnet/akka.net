@@ -55,3 +55,11 @@ public sealed class AkkaFieldAttribute : Attribute
     /// </summary>
     public int Index { get; }
 }
+
+/// <summary>
+/// Marks an <see cref="AkkaFieldAttribute"/> property as an Akka serializer boundary.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+public sealed class AkkaEnvelopePayloadAttribute : Attribute
+{
+}

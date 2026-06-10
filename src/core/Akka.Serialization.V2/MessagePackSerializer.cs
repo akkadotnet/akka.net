@@ -33,6 +33,98 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
         writer.Write(global::Akka.Serialization.Serialization.SerializedActorPath(actorRef));
     }
 
+    protected void WriteEnvelopePayload(ref MessagePackWriter writer, object? payload)
+    {
+        if (payload is null)
+        {
+            writer.WriteNil();
+            return;
+        }
+
+        var serializer = system.Serialization.FindSerializerFor(payload);
+        var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, payload);
+        writer.WriteMapHeader(3);
+        writer.Write(1);
+        writer.Write(serializer.Identifier);
+        writer.Write(2);
+        writer.Write(manifest);
+        writer.Write(3);
+
+        if (serializer is global::Akka.Serialization.SerializerV2 serializerV2)
+        {
+            var sizeHint = serializerV2.SizeHint(payload);
+            var buffer = sizeHint > 0 ? new ArrayBufferWriter<byte>(sizeHint) : new ArrayBufferWriter<byte>();
+            var bytesWritten = serializerV2.Serialize(payload, buffer);
+            if (bytesWritten != buffer.WrittenCount)
+                throw new global::System.Runtime.Serialization.SerializationException(
+                    $"Serializer [{serializer.GetType()}] reported [{bytesWritten}] bytes but wrote [{buffer.WrittenCount}] bytes.");
+            if (sizeHint >= 0 && bytesWritten != sizeHint)
+                throw new global::System.Runtime.Serialization.SerializationException(
+                    $"Serializer [{serializer.GetType()}] reported exact size hint [{sizeHint}] but wrote [{bytesWritten}] bytes.");
+
+            WriteBytes(ref writer, buffer.WrittenSpan);
+        }
+        else
+        {
+            WriteBytes(ref writer, serializer.ToBinary(payload));
+        }
+    }
+
+    protected object? ReadEnvelopePayload(ref MessagePackReader reader)
+    {
+        if (reader.TryReadNil())
+            return null;
+
+        var fieldCount = reader.ReadMapHeader();
+        int? serializerId = null;
+        var manifest = string.Empty;
+        byte[]? bytes = null;
+
+        for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)
+        {
+            var fieldId = reader.ReadInt32();
+            switch (fieldId)
+            {
+                case 1:
+                    serializerId = reader.ReadInt32();
+                    break;
+                case 2:
+                    manifest = reader.ReadString() ?? string.Empty;
+                    break;
+                case 3:
+                    bytes = reader.ReadBytes()?.ToArray();
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        if (serializerId is null)
+            throw new global::System.Runtime.Serialization.SerializationException("Missing envelope payload serializer id.");
+        if (bytes is null)
+            throw new global::System.Runtime.Serialization.SerializationException("Missing envelope payload bytes.");
+
+        return system.Serialization.Deserialize(bytes, serializerId.Value, manifest);
+    }
+
+    protected TPayload ReadEnvelopePayload<TPayload>(ref MessagePackReader reader)
+    {
+        var payload = ReadEnvelopePayload(ref reader);
+        if (payload is TPayload typed)
+            return typed;
+
+        throw new global::System.Runtime.Serialization.SerializationException(
+            $"Envelope payload [{payload?.GetType().FullName ?? "<null>"}] is not assignable to [{typeof(TPayload).FullName}].");
+    }
+
+    private static void WriteBytes(ref MessagePackWriter writer, ReadOnlySpan<byte> bytes)
+    {
+        writer.WriteBinHeader(bytes.Length);
+        bytes.CopyTo(writer.GetSpan(bytes.Length));
+        writer.Advance(bytes.Length);
+    }
+
     protected static DateTime ReadDateTime(ref MessagePackReader reader)
     {
         var arrayLength = reader.ReadArrayHeader();

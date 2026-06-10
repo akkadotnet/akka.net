@@ -22,6 +22,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private const string SerializerAttributeFullName = "Akka.Serialization.V2.AkkaSerializerAttribute";
     private const string SerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializableAttribute";
     private const string FieldAttributeFullName = "Akka.Serialization.V2.AkkaFieldAttribute";
+    private const string EnvelopePayloadAttributeFullName = "Akka.Serialization.V2.AkkaEnvelopePayloadAttribute";
 
     private static readonly DiagnosticDescriptor MissingSerializerName = new(
         "AKKASG001",
@@ -198,7 +199,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
             var index = (int)fieldAttribute.ConstructorArguments[0].Value!;
             var isNullable = member.NullableAnnotation == NullableAnnotation.Annotated || IsNullableValueType(member.Type);
-            fields.Add(new FieldInfo(index, member.Name, member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), MapType(member.Type, knownTypes), isNullable));
+            var isEnvelopePayload = member.GetAttributes()
+                .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.EnvelopePayloadAttribute));
+            var mapping = isEnvelopePayload ? new TypeMapping(FieldKind.EnvelopePayload) : MapType(member.Type, knownTypes);
+            fields.Add(new FieldInfo(index, member.Name, member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), mapping, isNullable));
         }
 
         return new MessageInfo(
@@ -414,7 +418,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static void GenerateWriteMessage(StringBuilder sb, MessageInfo message)
     {
-        sb.Append("    private static void Write").Append(GetMessageMethodName(message))
+        sb.Append("    private void Write").Append(GetMessageMethodName(message))
             .Append("(ref global::MessagePack.MessagePackWriter writer, ").Append(message.FullyQualifiedName).AppendLine(" message)");
         sb.AppendLine("    {");
         sb.Append("        writer.WriteMapHeader(").Append(message.Fields.Length).AppendLine(");");
@@ -530,6 +534,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             case FieldKind.ActorRef:
                 sb.Append(indent).Append("WriteActorRef(ref writer, ").Append(value).AppendLine(");");
                 break;
+            case FieldKind.EnvelopePayload:
+                sb.Append(indent).Append("WriteEnvelopePayload(ref writer, ").Append(value).AppendLine(");");
+                break;
             case FieldKind.Enum:
                 sb.Append(indent).Append("writer.Write((int)").Append(value).AppendLine(");");
                 break;
@@ -561,12 +568,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             return;
         }
 
-        if (field.Mapping.Kind == FieldKind.Object && field.IsNullable)
+        if (field.Mapping.Kind is FieldKind.Object or FieldKind.EnvelopePayload && field.IsNullable)
         {
             sb.AppendLine("                    if (reader.TryReadNil())");
             sb.Append("                        ").Append(target).AppendLine(" = null;");
             sb.AppendLine("                    else");
-            sb.Append("                        ").Append(target).Append(" = Read").Append(GetObjectMethodName(field.Mapping)).AppendLine("(ref reader);");
+            GenerateReadFieldValue(sb, field, target, "                        ");
             return;
         }
 
@@ -610,6 +617,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 break;
             case FieldKind.ActorRef:
                 sb.Append(indent).Append(target).AppendLine(" = ReadActorRef(ref reader);");
+                break;
+            case FieldKind.EnvelopePayload:
+                sb.Append(indent).Append(target).Append(" = ReadEnvelopePayload<").Append(field.TypeFullName).AppendLine(">(ref reader);");
                 break;
             case FieldKind.Enum:
                 sb.Append(indent).Append(target).Append(" = (").Append(field.Mapping.TypeFullName).AppendLine(")reader.ReadInt32();");
@@ -673,6 +683,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             FieldKind.Double => "0.0",
             FieldKind.Decimal => "0m",
             FieldKind.ActorRef => "global::Akka.Actor.ActorRefs.NoSender",
+            FieldKind.EnvelopePayload => "null",
             FieldKind.Object => "null",
             _ => "default"
         };
@@ -690,7 +701,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static bool IsReferenceLike(TypeMapping mapping)
     {
-        return mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.Object;
+        return mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload or FieldKind.Object;
     }
 
     private static bool IsNullableValueField(FieldInfo field)
@@ -806,6 +817,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         private KnownTypes(Compilation compilation)
         {
             FieldAttribute = compilation.GetTypeByMetadataName(FieldAttributeFullName);
+            EnvelopePayloadAttribute = compilation.GetTypeByMetadataName(EnvelopePayloadAttributeFullName);
             SerializableAttribute = compilation.GetTypeByMetadataName(SerializableAttributeFullName);
             Guid = compilation.GetTypeByMetadataName("System.Guid");
             DateTimeOffset = compilation.GetTypeByMetadataName("System.DateTimeOffset");
@@ -813,6 +825,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         }
 
         public INamedTypeSymbol? FieldAttribute { get; }
+        public INamedTypeSymbol? EnvelopePayloadAttribute { get; }
         public INamedTypeSymbol? SerializableAttribute { get; }
         public INamedTypeSymbol? Guid { get; }
         public INamedTypeSymbol? DateTimeOffset { get; }
@@ -886,6 +899,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DateTime,
         DateTimeOffset,
         ActorRef,
+        EnvelopePayload,
         Enum,
         Object,
         MissingSerializableDefinition

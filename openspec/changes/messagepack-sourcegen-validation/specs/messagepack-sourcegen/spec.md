@@ -60,6 +60,23 @@ The system SHALL provide a Roslyn incremental source generator that emits `Seria
 - **WHEN** a generated serializer writes or reads a byte-array field
 - **THEN** it SHALL encode the value as a MessagePack binary payload and preserve the original bytes
 
+### Requirement: Generated serializers support envelope payload boundaries
+
+Generated serializers SHALL support `[AkkaEnvelopePayload]` fields as Akka serializer boundaries rather than inline generated schemas.
+
+#### Scenario: Envelope payload field serialized
+- **WHEN** a generated serializer writes a field marked `[AkkaEnvelopePayload]`
+- **THEN** it SHALL resolve the field value through normal Akka serializer lookup
+- **AND** it SHALL store the payload serializer id, serializer manifest, and opaque serialized payload bytes
+
+#### Scenario: Envelope payload field deserialized
+- **WHEN** a generated serializer reads a non-null `[AkkaEnvelopePayload]` field
+- **THEN** it SHALL recover the field value through normal Akka deserialization using the stored serializer id, manifest, and bytes
+
+#### Scenario: Nested envelope payload chain
+- **WHEN** generated envelopes contain nested `[AkkaEnvelopePayload]` fields
+- **THEN** generated V2 payloads and custom V1 payloads SHALL round-trip without requiring structural MessagePack encoding for the inner payload object
+
 ### Requirement: Generated serializers use explicit registration
 
 Generated serializers SHALL expose per-serializer registration helpers and SHALL NOT require runtime assembly scanning.
@@ -157,3 +174,7 @@ The system SHALL include an early benchmark POC using real C# protocol-family me
 #### Scenario: Generated serializer benchmarked
 - **WHEN** the benchmark serializes and deserializes a real protocol-family message
 - **THEN** it SHALL report generated MessagePack throughput/allocation/payload-size signals against an existing baseline serializer
+
+#### Scenario: Envelope payload composition benchmarked
+- **WHEN** the benchmark serializes generated MessagePack envelopes around generated V2 payloads, custom V1 payloads, pre-captured payload metadata, and attribute-driven nested envelope payload fields
+- **THEN** it SHALL report throughput/allocation/payload-size signals for capture, wrapper serialization, and recovery paths
