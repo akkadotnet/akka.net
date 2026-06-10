@@ -30,7 +30,7 @@
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.26.1</ProtobufVersion>
-    <GrpcToolsVersion>2.60.0</GrpcToolsVersion>
+    <GrpcToolsVersion>2.81.0</GrpcToolsVersion>
     <BenchmarkDotNetVersion>0.15.8</BenchmarkDotNetVersion>
     <MessagePackVersion>3.1.4</MessagePackVersion>
     <MicrosoftCodeAnalysisCSharpVersion>4.13.0</MicrosoftCodeAnalysisCSharpVersion>
