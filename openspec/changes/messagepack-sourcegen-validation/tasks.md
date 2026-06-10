@@ -53,7 +53,7 @@
 - [x] 5.9 Support explicit cross-assembly composition via per-serializer registrations
 - [ ] 5.10 Support init-only property or field assignment for immutable message shapes
 - [ ] 5.11 Reject unsupported mutable, factory-only, or arbitrary polymorphic message shapes with diagnostics
-- [ ] 5.12 Implement exact generated size calculators for schemas whose full encoded size can be proven
+- [x] 5.12 Implement exact generated size calculators for schemas whose full encoded size can be proven
 - [x] 5.13 Support `[AkkaEnvelopePayload]` fields through runtime Akka serializer lookup
 
 ## 6. Integration Validation
@@ -70,6 +70,7 @@
 - [ ] 6.10 Validate generated payloads inside DistributedData wrappers
 - [x] 6.11 Validate opaque non-MessagePack payload metadata inside a generated MessagePack wrapper
 - [x] 6.12 Validate attribute-driven nested generated envelopes carrying generated V2 and custom V1 payloads
+- [x] 6.13 Avoid byte-array copy when deserializing V2 envelope payloads from MessagePack `bin` fields
 
 ## 7. POC Benchmark
 
@@ -79,10 +80,20 @@
 - [x] 7.4 Stop after the benchmark POC for human review before completing the full spec
 - [x] 7.5 Add envelope payload composition benchmark scenarios for V2, V1, and pre-captured payloads
 - [x] 7.6 Run real BenchmarkDotNet for attribute-driven nested envelope payload scenarios
+- [x] 7.7 Add same-shape V1 versus generated V2 nested envelope benchmark scenarios
 
 POC benchmark evidence: short BenchmarkDotNet run completed after switching generated payloads to explicit `[AkkaField]` field-id maps. The field-id implementation measured generated MessagePack serialize at ~585 ns and deserialize at ~1.05 us, versus Newtonsoft.Json serialize at ~20.3 us and deserialize at ~24.6 us. Generated allocations were ~904-920 B versus JSON at ~10.8-13.1 KB. Payload size logged at ~128-130 bytes versus JSON at ~411-413 bytes. A later direct `MessagePackReader` / `MessagePackWriter` refactor measured generated serialize at ~362 ns and deserialize at ~612 ns, with generated allocations reduced to ~856-888 B. Evidence log: `BenchmarkDotNet.Artifacts/Akka.Benchmarks.Serialization.GeneratedMessagePackSerializerBenchmarks-20260603-040856.log`.
 
-Nested envelope benchmark evidence: real BenchmarkDotNet run for `*GeneratedMessagePackSerializerBenchmarks.NestedEnvelope_*` completed after adding `[AkkaEnvelopePayload]` support. Attribute-driven nested envelope with generated V2 payload measured serialize at ~621 ns / 1,472 B and deserialize+recover at ~1.013 us / 1,528 B. Attribute-driven nested envelope with custom V1 payload measured serialize at ~389 ns / 1,096 B and deserialize+recover at ~538 ns / 832 B. Payload sizes logged at ~233-234 bytes for nested generated payload envelopes and 150 bytes for nested custom payload envelopes. Report: `BenchmarkDotNet.Artifacts/results/Akka.Benchmarks.Serialization.GeneratedMessagePackSerializerBenchmarks-report-github.md`.
+Nested envelope benchmark evidence: real BenchmarkDotNet run for `*GeneratedMessagePackSerializerBenchmarks.NestedEnvelope_*` completed after adding `[AkkaEnvelopePayload]`, exact generated `SizeHint`, pooled V2 payload staging for MessagePack `bin` fallback, V2 `ReadOnlySequence<byte>` payload deserialization, and same-shape V1 comparison scenarios. Payload sizes logged at ~233-234 bytes for nested generated V2 payload envelopes, 150 bytes for nested tiny custom V1 payload envelopes, and ~267-268 bytes for nested same-shape custom V1 payload envelopes. Report: `BenchmarkDotNet.Artifacts/results/Akka.Benchmarks.Serialization.GeneratedMessagePackSerializerBenchmarks-report-github.md`.
+
+| Method                                                           | Mean       | Error    | StdDev   | Gen0   | Allocated |
+|----------------------------------------------------------------- |-----------:|---------:|---------:|-------:|----------:|
+| NestedEnvelope_generated_payload_serialize                       |   628.4 ns | 11.94 ns | 15.52 ns | 0.1078 |     904 B |
+| NestedEnvelope_generated_payload_deserialize_and_recover         |   938.0 ns | 17.96 ns | 18.45 ns | 0.1392 |    1176 B |
+| NestedEnvelope_custom_payload_serialize                          |   391.2 ns |  7.83 ns | 12.19 ns | 0.0973 |     816 B |
+| NestedEnvelope_custom_payload_deserialize_and_recover            |   545.9 ns | 10.87 ns | 18.46 ns | 0.0849 |     712 B |
+| NestedEnvelope_custom_same_shape_payload_serialize               |   757.9 ns | 15.72 ns | 46.11 ns | 0.2241 |    1880 B |
+| NestedEnvelope_custom_same_shape_payload_deserialize_and_recover | 1,006.0 ns | 20.14 ns | 25.47 ns | 0.1659 |    1400 B |
 
 ## 8. Documentation And Validation
 

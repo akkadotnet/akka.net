@@ -20,6 +20,10 @@ The system SHALL treat a non-negative `SerializerV2.SizeHint` result as the exac
 - **WHEN** a generated serializer cannot compute the exact encoded size of every field it writes
 - **THEN** `SizeHint` SHALL return `SerializerV2.UnknownSize`
 
+#### Scenario: Generated serializer can prove exact size
+- **WHEN** a generated serializer can compute the exact encoded size of every field it writes
+- **THEN** `SizeHint` SHALL return the exact serialized byte count
+
 #### Scenario: Unknown envelope payload size propagates
 - **WHEN** a generated serializer contains an envelope payload whose payload serializer reports `SerializerV2.UnknownSize`
 - **THEN** every enclosing generated serializer that includes that payload SHALL also report `SerializerV2.UnknownSize`
@@ -72,6 +76,14 @@ Generated serializers SHALL support `[AkkaEnvelopePayload]` fields as Akka seria
 #### Scenario: Envelope payload field deserialized
 - **WHEN** a generated serializer reads a non-null `[AkkaEnvelopePayload]` field
 - **THEN** it SHALL recover the field value through normal Akka deserialization using the stored serializer id, manifest, and bytes
+
+#### Scenario: V2 envelope payload deserialized without byte-array copy
+- **WHEN** a generated serializer reads a non-null `[AkkaEnvelopePayload]` field whose payload serializer is V2
+- **THEN** it SHALL dispatch the MessagePack `bin` payload as a `ReadOnlySequence<byte>` without first copying it into a byte array
+
+#### Scenario: Unknown-size envelope payload serialized through staging buffer
+- **WHEN** a generated serializer writes a non-null `[AkkaEnvelopePayload]` field whose serialized length is not known before writing the MessagePack `bin` header
+- **THEN** it SHALL stage the inner payload bytes before writing the outer `bin` field
 
 #### Scenario: Nested envelope payload chain
 - **WHEN** generated envelopes contain nested `[AkkaEnvelopePayload]` fields
@@ -176,5 +188,5 @@ The system SHALL include an early benchmark POC using real C# protocol-family me
 - **THEN** it SHALL report generated MessagePack throughput/allocation/payload-size signals against an existing baseline serializer
 
 #### Scenario: Envelope payload composition benchmarked
-- **WHEN** the benchmark serializes generated MessagePack envelopes around generated V2 payloads, custom V1 payloads, pre-captured payload metadata, and attribute-driven nested envelope payload fields
+- **WHEN** the benchmark serializes generated MessagePack envelopes around generated V2 payloads, custom V1 payloads, same-shape custom V1 payloads, pre-captured payload metadata, and attribute-driven nested envelope payload fields
 - **THEN** it SHALL report throughput/allocation/payload-size signals for capture, wrapper serialization, and recovery paths

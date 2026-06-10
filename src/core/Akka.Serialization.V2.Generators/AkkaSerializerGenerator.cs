@@ -303,13 +303,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         GenerateRegistration(sb, serializer);
         GenerateManifest(sb, topLevelMessages);
         GenerateSerialize(sb, topLevelMessages);
+        GenerateSerializeDirect(sb, topLevelMessages);
         GenerateDeserialize(sb, topLevelMessages);
-        sb.AppendLine("    public override int SizeHint(object obj) => global::Akka.Serialization.SerializerV2.UnknownSize;");
-        sb.AppendLine();
+        GenerateSizeHint(sb, topLevelMessages);
         GenerateCountingBufferWriter(sb);
 
         foreach (var message in reachableMessages)
         {
+            GenerateSizeMessage(sb, message);
             GenerateWriteMessage(sb, message);
             GenerateReadMessage(sb, message);
         }
@@ -351,20 +352,28 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine("    {");
         sb.AppendLine("        var countingWriter = new AkkaGeneratedCountingBufferWriter(writer);");
         sb.AppendLine("        var messagePackWriter = new global::MessagePack.MessagePackWriter(countingWriter);");
+        sb.AppendLine("        SerializeMessagePack(obj, ref messagePackWriter);");
+        sb.AppendLine("        messagePackWriter.Flush();");
+        sb.AppendLine("        return checked((int)countingWriter.BytesWritten);");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateSerializeDirect(StringBuilder sb, ImmutableArray<MessageInfo> messages)
+    {
+        sb.AppendLine("    private void SerializeMessagePack(object obj, ref global::MessagePack.MessagePackWriter writer)");
+        sb.AppendLine("    {");
         sb.AppendLine("        switch (obj)");
         sb.AppendLine("        {");
         foreach (var message in messages)
         {
             sb.Append("            case ").Append(message.FullyQualifiedName).AppendLine(" message:");
-            sb.Append("                Write").Append(GetMessageMethodName(message)).AppendLine("(ref messagePackWriter, message);");
+            sb.Append("                Write").Append(GetMessageMethodName(message)).AppendLine("(ref writer, message);");
             sb.AppendLine("                break;");
         }
         sb.AppendLine("            default:");
         sb.AppendLine("                throw new global::System.ArgumentException($\"Unsupported generated serializer type: {obj.GetType()}\", nameof(obj));");
         sb.AppendLine("        }");
-        sb.AppendLine();
-        sb.AppendLine("        messagePackWriter.Flush();");
-        sb.AppendLine("        return checked((int)countingWriter.BytesWritten);");
         sb.AppendLine("    }");
         sb.AppendLine();
     }
@@ -379,6 +388,20 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         foreach (var message in messages)
             sb.Append("            \"").Append(Escape(message.Manifest)).Append("\" => Read").Append(GetMessageMethodName(message)).AppendLine("(ref reader),");
         sb.AppendLine("            _ => throw new global::System.Runtime.Serialization.SerializationException($\"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].\")");
+        sb.AppendLine("        };");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateSizeHint(StringBuilder sb, ImmutableArray<MessageInfo> messages)
+    {
+        sb.AppendLine("    public override int SizeHint(object obj)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        return obj switch");
+        sb.AppendLine("        {");
+        foreach (var message in messages)
+            sb.Append("            ").Append(message.FullyQualifiedName).Append(" message => SizeOf").Append(GetMessageMethodName(message)).AppendLine("(message),");
+        sb.AppendLine("            _ => global::Akka.Serialization.SerializerV2.UnknownSize");
         sb.AppendLine("        };");
         sb.AppendLine("    }");
         sb.AppendLine();
@@ -414,6 +437,98 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine();
+    }
+
+    private static void GenerateSizeMessage(StringBuilder sb, MessageInfo message)
+    {
+        sb.Append("    private int SizeOf").Append(GetMessageMethodName(message))
+            .Append('(').Append(message.FullyQualifiedName).AppendLine(" message)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        checked");
+        sb.AppendLine("        {");
+        sb.Append("            var size = SizeOfMapHeader(").Append(message.Fields.Length).AppendLine(");");
+        foreach (var field in message.Fields)
+            GenerateSizeField(sb, field);
+        sb.AppendLine("            return size;");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateSizeField(StringBuilder sb, FieldInfo field)
+    {
+        var value = "message." + field.Name;
+        var localName = ToCamelCase(field.Name) + "Size";
+        sb.Append("            size += SizeOfInt32(").Append(field.Index).AppendLine(");");
+        if (TryGetInlineSizeExpression(field, value, out var expression))
+        {
+            sb.Append("            size += ").Append(expression).AppendLine(";");
+            return;
+        }
+
+        sb.Append("            var ").Append(localName).Append(" = ");
+        GenerateSizeExpression(sb, field, value);
+        sb.AppendLine(";");
+        sb.Append("            if (").Append(localName).AppendLine(" < 0)");
+        sb.AppendLine("                return global::Akka.Serialization.SerializerV2.UnknownSize;");
+        sb.Append("            size += ").Append(localName).AppendLine(";");
+    }
+
+    private static bool TryGetInlineSizeExpression(FieldInfo field, string value, out string expression)
+    {
+        if (IsNullableValueField(field))
+        {
+            expression = value + " is null ? SizeOfNil() : " + GetScalarSizeExpression(field.Mapping, value + ".Value");
+            return true;
+        }
+
+        if (field.Mapping.Kind != FieldKind.Object && field.Mapping.Kind != FieldKind.EnvelopePayload)
+        {
+            expression = GetScalarSizeExpression(field.Mapping, value);
+            return true;
+        }
+
+        expression = string.Empty;
+        return false;
+    }
+
+    private static void GenerateSizeExpression(StringBuilder sb, FieldInfo field, string value)
+    {
+        switch (field.Mapping.Kind)
+        {
+            case FieldKind.EnvelopePayload:
+                sb.Append("SizeOfEnvelopePayload(").Append(value).Append(')');
+                break;
+            case FieldKind.Object when field.IsNullable:
+                sb.Append(value).Append(" is null ? SizeOfNil() : SizeOf").Append(GetObjectMethodName(field.Mapping)).Append('(').Append(value).Append(')');
+                break;
+            case FieldKind.Object:
+                sb.Append("SizeOf").Append(GetObjectMethodName(field.Mapping)).Append('(').Append(value).Append(')');
+                break;
+            default:
+                sb.Append(GetScalarSizeExpression(field.Mapping, value));
+                break;
+        }
+    }
+
+    private static string GetScalarSizeExpression(TypeMapping mapping, string value)
+    {
+        return mapping.Kind switch
+        {
+            FieldKind.String => "SizeOfString(" + value + ")",
+            FieldKind.ByteArray => "SizeOfBytes(" + value + ")",
+            FieldKind.Int32 => "SizeOfInt32(" + value + ")",
+            FieldKind.Int64 => "SizeOfInt64(" + value + ")",
+            FieldKind.Boolean => "SizeOfBoolean(" + value + ")",
+            FieldKind.Double => "SizeOfDouble(" + value + ")",
+            FieldKind.Decimal => "SizeOfDecimal(" + value + ")",
+            FieldKind.Guid => "SizeOfGuid(" + value + ")",
+            FieldKind.DateTime => "SizeOfDateTime(" + value + ")",
+            FieldKind.DateTimeOffset => "SizeOfDateTimeOffset(" + value + ")",
+            FieldKind.ActorRef => "SizeOfActorRef(" + value + ")",
+            FieldKind.Enum => "SizeOfEnum((int)" + value + ")",
+            _ => "global::Akka.Serialization.SerializerV2.UnknownSize"
+        };
     }
 
     private static void GenerateWriteMessage(StringBuilder sb, MessageInfo message)

@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Text;
 using Akka.Actor;
 using MessagePack;
 
@@ -20,6 +21,14 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
 {
     protected MessagePackSerializer(ExtendedActorSystem system) : base(system)
     {
+    }
+
+    /// <inheritdoc />
+    public override byte[] ToBinary(object obj)
+    {
+        var writer = new ArrayBufferWriter<byte>();
+        Serialize(obj, writer);
+        return writer.WrittenMemory.ToArray();
     }
 
     protected global::Akka.Actor.IActorRef? ReadActorRef(ref MessagePackReader reader)
@@ -43,30 +52,33 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
 
         var serializer = system.Serialization.FindSerializerFor(payload);
         var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, payload);
-        writer.WriteMapHeader(3);
-        writer.Write(1);
-        writer.Write(serializer.Identifier);
-        writer.Write(2);
-        writer.Write(manifest);
-        writer.Write(3);
 
         if (serializer is global::Akka.Serialization.SerializerV2 serializerV2)
         {
-            var sizeHint = serializerV2.SizeHint(payload);
-            var buffer = sizeHint > 0 ? new ArrayBufferWriter<byte>(sizeHint) : new ArrayBufferWriter<byte>();
+            using var buffer = new AkkaPooledBufferWriter();
             var bytesWritten = serializerV2.Serialize(payload, buffer);
             if (bytesWritten != buffer.WrittenCount)
                 throw new global::System.Runtime.Serialization.SerializationException(
                     $"Serializer [{serializer.GetType()}] reported [{bytesWritten}] bytes but wrote [{buffer.WrittenCount}] bytes.");
-            if (sizeHint >= 0 && bytesWritten != sizeHint)
-                throw new global::System.Runtime.Serialization.SerializationException(
-                    $"Serializer [{serializer.GetType()}] reported exact size hint [{sizeHint}] but wrote [{bytesWritten}] bytes.");
 
+            writer.WriteMapHeader(3);
+            writer.Write(1);
+            writer.Write(serializer.Identifier);
+            writer.Write(2);
+            writer.Write(manifest);
+            writer.Write(3);
             WriteBytes(ref writer, buffer.WrittenSpan);
         }
         else
         {
-            WriteBytes(ref writer, serializer.ToBinary(payload));
+            var bytes = serializer.ToBinary(payload);
+            writer.WriteMapHeader(3);
+            writer.Write(1);
+            writer.Write(serializer.Identifier);
+            writer.Write(2);
+            writer.Write(manifest);
+            writer.Write(3);
+            WriteBytes(ref writer, bytes);
         }
     }
 
@@ -78,7 +90,7 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
         var fieldCount = reader.ReadMapHeader();
         int? serializerId = null;
         var manifest = string.Empty;
-        byte[]? bytes = null;
+        ReadOnlySequence<byte>? bytes = null;
 
         for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)
         {
@@ -92,7 +104,7 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
                     manifest = reader.ReadString() ?? string.Empty;
                     break;
                 case 3:
-                    bytes = reader.ReadBytes()?.ToArray();
+                    bytes = reader.ReadBytes();
                     break;
                 default:
                     reader.Skip();
@@ -105,7 +117,186 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
         if (bytes is null)
             throw new global::System.Runtime.Serialization.SerializationException("Missing envelope payload bytes.");
 
-        return system.Serialization.Deserialize(bytes, serializerId.Value, manifest);
+        return system.Serialization.Deserialize(bytes.Value, serializerId.Value, manifest);
+    }
+
+    protected int SizeOfEnvelopePayload(object? payload)
+    {
+        if (payload is null)
+            return SizeOfNil();
+
+        var serializer = system.Serialization.FindSerializerFor(payload);
+        if (serializer is not global::Akka.Serialization.SerializerV2 serializerV2)
+            return global::Akka.Serialization.SerializerV2.UnknownSize;
+
+        var payloadSize = serializerV2.SizeHint(payload);
+        if (payloadSize < 0)
+            return global::Akka.Serialization.SerializerV2.UnknownSize;
+
+        var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, payload);
+        return checked(
+            SizeOfMapHeader(3) +
+            SizeOfInt32(1) + SizeOfInt32(serializer.Identifier) +
+            SizeOfInt32(2) + SizeOfString(manifest) +
+            SizeOfInt32(3) + SizeOfBinHeader(payloadSize) + payloadSize);
+    }
+
+    protected static int SizeOfNil() => 1;
+
+    protected static int SizeOfBoolean(bool _) => 1;
+
+    protected static int SizeOfDouble(double _) => 9;
+
+    protected static int SizeOfInt32(int value) => MessagePackWriter.GetEncodedLength((long)value);
+
+    protected static int SizeOfInt64(long value) => MessagePackWriter.GetEncodedLength(value);
+
+    protected static int SizeOfEnum(int value) => SizeOfInt32(value);
+
+    protected static int SizeOfMapHeader(int count)
+    {
+        if (count <= 15)
+            return 1;
+        if (count <= ushort.MaxValue)
+            return 3;
+        return 5;
+    }
+
+    protected static int SizeOfArrayHeader(int count)
+    {
+        if (count <= 15)
+            return 1;
+        if (count <= ushort.MaxValue)
+            return 3;
+        return 5;
+    }
+
+    protected static int SizeOfString(string? value)
+    {
+        if (value is null)
+            return SizeOfNil();
+
+        var byteCount = Encoding.UTF8.GetByteCount(value);
+        return checked(SizeOfStringHeader(byteCount) + byteCount);
+    }
+
+    protected static int SizeOfBytes(byte[]? value)
+    {
+        if (value is null)
+            return SizeOfNil();
+
+        return checked(SizeOfBinHeader(value.Length) + value.Length);
+    }
+
+    protected static int SizeOfGuid(Guid _) => SizeOfBinHeader(16) + 16;
+
+    protected static int SizeOfDateTime(DateTime value)
+    {
+        return checked(SizeOfArrayHeader(2) + SizeOfInt64(value.Ticks) + SizeOfInt32((int)value.Kind));
+    }
+
+    protected static int SizeOfDateTimeOffset(DateTimeOffset value)
+    {
+        return checked(SizeOfArrayHeader(2) + SizeOfInt64(value.Ticks) + SizeOfInt32((int)value.Offset.TotalMinutes));
+    }
+
+    protected static int SizeOfDecimal(decimal value)
+    {
+        Span<int> bits = stackalloc int[4];
+        decimal.GetBits(value, bits);
+        return checked(
+            SizeOfArrayHeader(4) +
+            SizeOfInt32(bits[0]) +
+            SizeOfInt32(bits[1]) +
+            SizeOfInt32(bits[2]) +
+            SizeOfInt32(bits[3]));
+    }
+
+    protected static int SizeOfActorRef(global::Akka.Actor.IActorRef? actorRef)
+    {
+        return SizeOfString(global::Akka.Serialization.Serialization.SerializedActorPath(actorRef));
+    }
+
+    protected static int SizeOfBinHeader(int byteCount)
+    {
+        if (byteCount <= byte.MaxValue)
+            return 2;
+        if (byteCount <= ushort.MaxValue)
+            return 3;
+        return 5;
+    }
+
+    private static int SizeOfStringHeader(int byteCount)
+    {
+        if (byteCount <= 31)
+            return 1;
+        if (byteCount <= byte.MaxValue)
+            return 2;
+        if (byteCount <= ushort.MaxValue)
+            return 3;
+        return 5;
+    }
+
+    private sealed class AkkaPooledBufferWriter : IBufferWriter<byte>, IDisposable
+    {
+        private byte[] _buffer;
+        private int _written;
+
+        public AkkaPooledBufferWriter()
+        {
+            _buffer = ArrayPool<byte>.Shared.Rent(256);
+        }
+
+        public int WrittenCount => _written;
+
+        public ReadOnlySpan<byte> WrittenSpan => new(_buffer, 0, _written);
+
+        public void Advance(int count)
+        {
+            if (count < 0 || _written > _buffer.Length - count)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
+            _written += count;
+        }
+
+        public Memory<byte> GetMemory(int sizeHint = 0)
+        {
+            EnsureCapacity(sizeHint);
+            return _buffer.AsMemory(_written);
+        }
+
+        public Span<byte> GetSpan(int sizeHint = 0)
+        {
+            EnsureCapacity(sizeHint);
+            return _buffer.AsSpan(_written);
+        }
+
+        public void Dispose()
+        {
+            var buffer = _buffer;
+            _buffer = Array.Empty<byte>();
+            _written = 0;
+            if (buffer.Length > 0)
+                ArrayPool<byte>.Shared.Return(buffer);
+        }
+
+        private void EnsureCapacity(int sizeHint)
+        {
+            if (sizeHint < 0)
+                throw new ArgumentOutOfRangeException(nameof(sizeHint));
+
+            if (sizeHint == 0)
+                sizeHint = 1;
+
+            if (sizeHint <= _buffer.Length - _written)
+                return;
+
+            var newSize = Math.Max(_buffer.Length * 2, _written + sizeHint);
+            var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+            _buffer.AsSpan(0, _written).CopyTo(newBuffer);
+            ArrayPool<byte>.Shared.Return(_buffer);
+            _buffer = newBuffer;
+        }
     }
 
     protected TPayload ReadEnvelopePayload<TPayload>(ref MessagePackReader reader)

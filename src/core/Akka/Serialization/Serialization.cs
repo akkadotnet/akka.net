@@ -603,7 +603,7 @@ namespace Akka.Serialization
         /// <summary>
         /// Deserializes the given bytes using the V2 serializer contract.
         /// </summary>
-        internal object Deserialize(ReadOnlySequence<byte> bytes, int serializerId, string manifest)
+        public object Deserialize(ReadOnlySequence<byte> bytes, int serializerId, string manifest)
         {
             if (!_serializersById.TryGetValue(serializerId, out var serializer))
                 throw new SerializationException(
