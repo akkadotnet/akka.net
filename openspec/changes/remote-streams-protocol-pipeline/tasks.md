@@ -16,11 +16,11 @@
 
 ## 3. Sequence/Writer PDU Codec Shape
 
-- [ ] 3.1 Introduce internal PDU decode APIs that accept `ReadOnlySequence<byte>` without requiring caller-side `ByteString` materialization.
-- [ ] 3.2 Introduce internal PDU encode APIs that write to caller-owned `IBufferWriter<byte>`.
-- [ ] 3.3 Keep existing `ByteString` PDU APIs as adapters over the new internal codec path.
-- [ ] 3.4 Preserve current protobuf wire output for control PDUs and payload PDUs.
-- [ ] 3.5 Update `AkkaPduCodecBenchmark` to compare legacy adapter calls and sequence/writer calls.
+- [x] 3.1 Introduce internal PDU decode APIs that accept `ReadOnlySequence<byte>` without requiring caller-side `ByteString` materialization.
+- [x] 3.2 Introduce internal PDU encode APIs that write to caller-owned `IBufferWriter<byte>`.
+- [x] 3.3 Keep existing `ByteString` PDU APIs as adapters over the new internal codec path.
+- [x] 3.4 Preserve current protobuf wire output for control PDUs and payload PDUs.
+- [x] 3.5 Update `AkkaPduCodecBenchmark` to compare legacy adapter calls and sequence/writer calls.
 
 ## 4. SerializerV2 Remote Payload Boundary
 

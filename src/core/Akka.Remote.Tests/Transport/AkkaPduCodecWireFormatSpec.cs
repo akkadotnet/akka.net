@@ -8,6 +8,7 @@
 #nullable enable
 
 using System;
+using System.Buffers;
 using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
@@ -72,8 +73,13 @@ namespace Akka.Remote.Tests.Transport
             AssertBytes(DisassociateUnknownHex, _codec.ConstructDisassociate(DisassociateInfo.Unknown));
             AssertBytes(DisassociateShutdownHex, _codec.ConstructDisassociate(DisassociateInfo.Shutdown));
             AssertBytes(DisassociateQuarantinedHex, _codec.ConstructDisassociate(DisassociateInfo.Quarantined));
+            AssertWriterBytes(AssociateHex, writer => _codec.ConstructAssociate(new HandshakeInfo(RemoteAddress, 17), writer));
+            AssertWriterBytes(HeartbeatHex, writer => _codec.ConstructHeartbeat(writer));
+            AssertWriterBytes(DisassociateUnknownHex, writer => _codec.ConstructDisassociate(DisassociateInfo.Unknown, writer));
+            AssertWriterBytes(DisassociateShutdownHex, writer => _codec.ConstructDisassociate(DisassociateInfo.Shutdown, writer));
+            AssertWriterBytes(DisassociateQuarantinedHex, writer => _codec.ConstructDisassociate(DisassociateInfo.Quarantined, writer));
 
-            var associate = Assert.IsType<Associate>(_codec.DecodePdu(FromHex(AssociateHex)));
+            var associate = Assert.IsType<Associate>(_codec.DecodePdu(FromHexSequence(AssociateHex)));
             Assert.Equal(RemoteAddress, associate.Info.Origin);
             Assert.Equal(17, associate.Info.Uid);
 
@@ -90,8 +96,9 @@ namespace Akka.Remote.Tests.Transport
             var payloadBytes = ByteString.CopyFrom(0xAA, 0xBB, 0xCC);
 
             AssertBytes(PayloadHex, _codec.ConstructPayload(payloadBytes));
+            AssertWriterBytes(PayloadHex, writer => _codec.ConstructPayload(payloadBytes, writer));
 
-            var decodedPayload = Assert.IsType<Payload>(_codec.DecodePdu(FromHex(PayloadHex)));
+            var decodedPayload = Assert.IsType<Payload>(_codec.DecodePdu(FromHexSequence(PayloadHex)));
             Assert.Equal(payloadBytes, decodedPayload.Bytes);
         }
 
@@ -107,6 +114,7 @@ namespace Akka.Remote.Tests.Transport
                 Ack());
 
             AssertBytes(PayloadWrappingAckAndMessageHex, _codec.ConstructPayload(envelope));
+            AssertWriterBytes(PayloadWrappingAckAndMessageHex, writer => _codec.ConstructPayload(envelope, writer));
 
             var decodedPayload = Assert.IsType<Payload>(_codec.DecodePdu(FromHex(PayloadWrappingAckAndMessageHex)));
             Assert.Equal(FromHex(AckAndMessageHex), decodedPayload.Bytes);
@@ -116,8 +124,9 @@ namespace Akka.Remote.Tests.Transport
         public void AkkaPduProtobuffCodec_should_preserve_pure_ack_wire_format()
         {
             AssertBytes(PureAckHex, _codec.ConstructPureAck(Ack()));
+            AssertWriterBytes(PureAckHex, writer => _codec.ConstructPureAck(Ack(), writer));
 
-            var decoded = _codec.DecodeMessage(FromHex(PureAckHex), RemoteProvider, LocalAddress);
+            var decoded = _codec.DecodeMessage(FromHexSequence(PureAckHex), RemoteProvider, LocalAddress);
             Assert.Null(decoded.MessageOption);
             AssertAck(decoded.AckOption);
         }
@@ -132,8 +141,16 @@ namespace Akka.Remote.Tests.Transport
                 CreateFixedActorRef("sender"),
                 new SeqNo(42),
                 Ack()));
+            AssertWriterBytes(AckAndMessageHex, writer => _codec.ConstructMessage(
+                LocalAddress,
+                CreateFixedActorRef("recipient"),
+                SerializedPayload(),
+                writer,
+                CreateFixedActorRef("sender"),
+                new SeqNo(42),
+                Ack()));
 
-            var decoded = _codec.DecodeMessage(FromHex(AckAndMessageHex), RemoteProvider, LocalAddress);
+            var decoded = _codec.DecodeMessage(FromHexSequence(AckAndMessageHex), RemoteProvider, LocalAddress);
             AssertAck(decoded.AckOption);
             AssertMessage(decoded.MessageOption, reliableDeliveryEnabled: true);
             Assert.Equal(new SeqNo(42), decoded.MessageOption!.Seq);
@@ -147,8 +164,14 @@ namespace Akka.Remote.Tests.Transport
                 CreateFixedActorRef("recipient"),
                 SerializedPayload(),
                 CreateFixedActorRef("sender")));
+            AssertWriterBytes(UnsequencedMessageHex, writer => _codec.ConstructMessage(
+                LocalAddress,
+                CreateFixedActorRef("recipient"),
+                SerializedPayload(),
+                writer,
+                CreateFixedActorRef("sender")));
 
-            var decoded = _codec.DecodeMessage(FromHex(UnsequencedMessageHex), RemoteProvider, LocalAddress);
+            var decoded = _codec.DecodeMessage(FromHexSequence(UnsequencedMessageHex), RemoteProvider, LocalAddress);
             Assert.Null(decoded.AckOption);
             AssertMessage(decoded.MessageOption, reliableDeliveryEnabled: false);
             Assert.Null(decoded.MessageOption!.Seq);
@@ -209,9 +232,21 @@ namespace Akka.Remote.Tests.Transport
             return ByteString.CopyFrom(Convert.FromHexString(hex));
         }
 
+        private static ReadOnlySequence<byte> FromHexSequence(string hex)
+        {
+            return new ReadOnlySequence<byte>(Convert.FromHexString(hex));
+        }
+
         private static void AssertBytes(string expectedHex, ByteString actual)
         {
             Assert.Equal(expectedHex, Convert.ToHexString(actual.ToByteArray()));
+        }
+
+        private static void AssertWriterBytes(string expectedHex, Action<IBufferWriter<byte>> write)
+        {
+            var writer = new ArrayBufferWriter<byte>();
+            write(writer);
+            Assert.Equal(expectedHex, Convert.ToHexString(writer.WrittenSpan));
         }
 
         private sealed class FixedActorRef : MinimalActorRef
