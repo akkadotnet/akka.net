@@ -1,6 +1,6 @@
 ## Why
 
-Akka.Remote requires TLS support for production deployments. The current implementation relies on DotNetty's `TlsHandler`, which is being removed (Spec 3). With Spec 1 (`modernize-akka-io-tcp`) introducing `IStreamProvider` and replacing `SocketAsyncEventArgs` with `Stream` + `Pipe`, TLS becomes a simple `IStreamProvider` implementation — `TlsStreamProvider` wraps `SslStream` around `NetworkStream`, handshake happens inside `ConnectAsync`, and the TCP connection actor never knows it's encrypted. This was previously impossible because SAEA couldn't work with `SslStream`.
+Akka.Remote requires TLS support for production deployments. The current implementation relies on DotNetty's `TlsHandler`, which cannot be reused by the modern Akka.IO / future Artery TCP path. With `modernize-akka-io-tcp` introducing `IStreamProvider` and replacing `SocketAsyncEventArgs` with `Stream` + `Pipe`, TLS becomes a simple provider implementation: `TlsStreamProvider` wraps `SslStream` around `NetworkStream`, handshake happens inside `ConnectAsync`, and the TCP connection actor never knows it is encrypted. This was previously impossible because SAEA could not work with `SslStream`.
 
 ## What Changes
 

@@ -1,53 +1,69 @@
 ## Context
 
-The RemotePingPong benchmark is the standard throughput measurement for Akka.NET remoting. It measures round-trip messages/second between two ActorSystems. DotNetty's `FlushConsolidationHandler` provides write batching — consolidating multiple `flush()` calls during read loops for reduced syscalls. The new Akka.Streams transport must match or exceed this. The `FrameBufferWriter` + `Stream` + `Pipe` pipeline has fewer copy points than DotNetty, which should provide a baseline advantage, but flush batching and dispatch tuning are needed to maximize throughput.
+The current DotNetty baseline on `dev` is approximately 680K messages/sec in RemotePingPong on the recorded reference machine. Artery TCP must exceed that before it becomes the preferred remoting path.
+
+The performance target changed from a classic-remoting transport swap to a new Artery stack. This means the critical hot paths are:
+
+- Artery binary envelope encode/decode,
+- `SerializerV2` payload serialization,
+- generated MessagePack serializers,
+- TCP framing and batching,
+- bounded outbound queues,
+- control/system stream behavior under ordinary traffic load,
+- actor dispatch after envelope decode.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Establish DotNetty baseline on current `dev` branch (messages/sec, latency percentiles, allocations)
-- New transport MUST exceed DotNetty throughput
-- Implement flush batching (coalesce multiple writes before `stream.FlushAsync()`)
-- Tune `Pipe` backpressure thresholds for throughput
-- Tune `ArrayPool` / `MemoryPool` buffer sizing
-- Profile and optimize hot paths (allocation-free serialization, dispatch overhead)
-- Continuous benchmark tracking as optimizations land
+
+- Preserve DotNetty RemotePingPong baseline for comparison.
+- Prove Artery TCP exceeds DotNetty throughput.
+- Prove Artery TCP allocates less than classic remoting in the common path.
+- Prove bounded queues prevent unbounded memory growth.
+- Tune batching without hiding unacceptable tail latency.
+- Validate generated MessagePack serializers outperform V1 adapter fallback.
 
 **Non-Goals:**
-- QUIC transport benchmarking (future)
-- Benchmarking serialization in isolation (already validated in POC)
-- Micro-benchmarking individual components (focus on end-to-end throughput)
+
+- QUIC benchmarking.
+- TLS benchmarking before plaintext Artery TCP is stable.
+- Optimizing classic remoting beyond compatibility fixes.
+- Treating microbenchmarks as sufficient without RemotePingPong.
 
 ## Decisions
 
-### 1. RemotePingPong as primary benchmark
+### 1. RemotePingPong Remains The Primary Gate
 
-**Decision:** Use the existing RemotePingPong benchmark as the single most important metric. Measure messages/second, P50/P99 latency, and allocation rate (bytes/op).
+RemotePingPong measures the integrated path and remains the main acceptance test.
 
-**Rationale:** This is the benchmark the community knows and uses. It measures the full pipeline: serialization → framing → transport → network → transport → deframing → deserialization. End-to-end numbers are what matter.
+Gate: Artery TCP must exceed the current DotNetty peak baseline on the same hardware and runtime configuration.
 
-### 2. Flush batching in write task
+### 2. Add Envelope Codec Microbenchmarks
 
-**Decision:** The write-to-stream background task SHALL coalesce pending writes before calling `stream.FlushAsync()`. Instead of flushing after every `WriteAsync`, batch writes within a configurable window (e.g., flush after N writes or after a micro-delay if no more writes are pending).
+Artery envelope encode/decode must be benchmarked against the classic protobuf `AkkaPduCodec` path.
 
-**Rationale:** DotNetty's `FlushConsolidationHandler` does this — it defers flushes during read loop execution. Without batching, each `Write` → `FlushAsync` is a syscall. Batching reduces syscalls proportionally to batch size.
+Suggested gate: materially lower allocations and at least 3x throughput improvement in codec-only benchmark before deeper tuning.
 
-### 3. Pipe threshold tuning
+### 3. Add SerializerV2 Payload Benchmarks
 
-**Decision:** Make `Pipe` `pauseWriterThreshold` and `resumeWriterThreshold` configurable via HOCON (`batching.pause-writer-threshold`, `batching.resume-writer-threshold`) and benchmark different values.
+Generated MessagePack V2 serializers should be benchmarked against V1 adapter fallback.
 
-**Rationale:** These thresholds control how much data buffers in the Pipe before backpressure kicks in. Too low = excessive pausing. Too high = memory bloat. The right values depend on message size and throughput characteristics.
+Suggested gate: generated serializers allocate less and are faster than V1 fallback for representative user messages.
 
-### 4. Profile-driven optimization
+### 4. Backpressure Is A Correctness Gate
 
-**Decision:** Use dotnet-trace / JetBrains profiler to identify allocation hot spots and CPU bottlenecks after the initial integration. Optimize based on data, not speculation.
+Bounded queues must be validated under slow receivers and bursty senders. Throughput wins are not acceptable if queue memory can grow unbounded.
 
-**Rationale:** The architecture is designed for performance (zero-copy buffers, pooled arrays, sealed classes for devirtualization). Actual bottlenecks will emerge from profiling the integrated system.
+### 5. Batching Is Configurable
+
+Artery TCP should batch writes by bytes, message count, and/or a short latency budget. Defaults must be benchmark-driven, and low-latency profiles should be possible.
 
 ## Risks / Trade-offs
 
-**[Flush batching adds latency]** → Batching trades latency for throughput. For latency-sensitive use cases, batching can be disabled or configured with aggressive flush thresholds. Measure both throughput and latency percentiles.
+**Throughput vs latency**: batching improves throughput but can hurt P99 latency. Record both.
 
-**[Benchmark results are hardware-dependent]** → Run all comparisons on the same machine in the same session. Document hardware specs. Focus on relative improvement (%) rather than absolute numbers.
+**Benchmark drift**: run comparisons on the same hardware, OS, .NET runtime, and process settings.
 
-**[Regression after optimization]** → Each optimization is a separate commit with before/after numbers. Revert if an optimization regresses other metrics.
+**Queue policy changes user experience**: bounded queues may expose missing flow control. Document behavior clearly.
+
+**False wins from incomplete correctness**: do not benchmark final throughput before control stream and reliable system-message behavior are in place.

@@ -6,6 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Reflection;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
@@ -23,12 +27,57 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class QueueSourceSpec : AkkaSpec
     {
+        private sealed class QueueCompletionRefs
+        {
+            public QueueCompletionRefs(WeakReference queue, WeakReference completionTask)
+            {
+                Queue = queue;
+                CompletionTask = completionTask;
+            }
+
+            public WeakReference Queue { get; }
+
+            public WeakReference CompletionTask { get; }
+        }
+
+        private static readonly FieldInfo QueueCompletionField = typeof(QueueSource<int>.Materialized)
+            .GetField("_completion", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
         private readonly ActorMaterializer _materializer;
         private readonly TimeSpan _pause = TimeSpan.FromMilliseconds(300);
 
         public QueueSourceSpec(ITestOutputHelper output) : base(output)
         {
             _materializer = Sys.Materializer();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private async Task<IReadOnlyList<QueueCompletionRefs>> CreateIssue8210FaultedCompletionTaskRefsAsync(int count)
+        {
+            var refs = new List<QueueCompletionRefs>(count);
+
+            for (var i = 0; i < count; i++)
+            {
+                var tempMat = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys));
+                var queue = (QueueSource<int>.Materialized)Source.Queue<int>(1, OverflowStrategy.Fail)
+                    .To(Sink.Ignore<int>())
+                    .Run(tempMat);
+                var completion = (TaskCompletionSource<object>)QueueCompletionField.GetValue(queue)!;
+                var completionTask = completion.Task;
+
+                refs.Add(new QueueCompletionRefs(new WeakReference(queue), new WeakReference(completionTask)));
+
+                await Task.Delay(50);
+                tempMat.Shutdown();
+
+                for (var attempt = 0; attempt < 30 && !completionTask.IsCompleted; attempt++)
+                    await Task.Delay(10);
+
+                completionTask.IsFaulted.Should().BeTrue(
+                    "QueueSource should fault its internal completion task when the stage is abruptly stopped");
+            }
+
+            return refs;
         }
 
         private static void AssertSuccess(Task<IQueueOfferResult> task)
@@ -287,6 +336,52 @@ namespace Akka.Streams.Tests.Dsl
                 tempMap.Shutdown();
                 await ExpectMsgAsync<Status.Failure>();
             }, _materializer);
+        }
+
+        [Fact]
+        public async Task QueueSource_should_not_trigger_UnobservedTaskException_when_completion_is_not_watched_and_materializer_is_shut_down()
+        {
+            var unobserved = new TaskCompletionSource<AggregateException>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            EventHandler<UnobservedTaskExceptionEventArgs> handler = (_, args) =>
+            {
+                try
+                {
+                    if (args.Exception.Flatten().InnerExceptions.OfType<StreamDetachedException>().Any())
+                        unobserved.TrySetResult(args.Exception);
+                }
+                finally
+                {
+                    args.SetObserved();
+                }
+            };
+
+            TaskScheduler.UnobservedTaskException += handler;
+            try
+            {
+                var refs = await this.AssertAllStagesStoppedAsync(() => CreateIssue8210FaultedCompletionTaskRefsAsync(10), _materializer);
+
+                for (var i = 0; i < 30 && !unobserved.Task.IsCompleted && refs.Any(r => r.Queue.IsAlive || r.CompletionTask.IsAlive); i++)
+                {
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    GC.Collect();
+                    await Task.Delay(100);
+                }
+
+                refs.Count(r => !r.Queue.IsAlive).Should().BeGreaterThan(0,
+                    "the discarded Source.Queue materialized values should become collectible during the repro");
+
+                refs.Count(r => !r.CompletionTask.IsAlive).Should().BeGreaterThan(0,
+                    "the unwatched completion tasks should become collectible during the repro");
+
+                unobserved.Task.IsCompleted.Should().BeFalse(
+                    "discarding Source.Queue completion should not leave an internal faulted task unobserved during abrupt shutdown");
+            }
+            finally
+            {
+                TaskScheduler.UnobservedTaskException -= handler;
+            }
         }
 
         [Fact]

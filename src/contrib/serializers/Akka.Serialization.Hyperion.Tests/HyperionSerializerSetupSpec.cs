@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Serialization;
 using Akka.TestKit;
 using Xunit;
 using FluentAssertions;
@@ -107,7 +108,7 @@ akka.actor {
                     .WithKnownTypeProvider<CustomTypeProvider>());
             
             var sys = ActorSystem.Create("test", actorSetup);
-            var serializer = (HyperionSerializer) sys.Serialization.FindSerializerForType(typeof(object));
+            var serializer = sys.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<HyperionSerializer>().Subject;
             var settings = serializer.Settings;
 
             settings.Surrogates.Should().BeEquivalentTo(surrogate);

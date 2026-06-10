@@ -1,6 +1,6 @@
 ## Context
 
-Spec 1 (`modernize-akka-io-tcp`) introduces `IStreamProvider` — an abstraction that returns a connected `Stream` from connection parameters. `TcpStreamProvider` returns a plain `NetworkStream`. The TCP connection actor reads/writes the `Stream` via `System.IO.Pipelines.Pipe` and never interacts with the socket directly. This design makes TLS a provider swap: `TlsStreamProvider` wraps the `NetworkStream` in `SslStream` and completes the TLS handshake inside `ConnectAsync`, returning an authenticated `Stream`.
+`modernize-akka-io-tcp` introduces `IStreamProvider`, an abstraction that returns a connected `Stream` from connection parameters. `TcpStreamProvider` returns a plain `NetworkStream`. The TCP connection actor reads/writes the `Stream` via `System.IO.Pipelines.Pipe` and never interacts with the socket directly. This design makes TLS a provider swap: `TlsStreamProvider` wraps the `NetworkStream` in `SslStream` and completes the TLS handshake inside `ConnectAsync`, returning an authenticated `Stream`.
 
 The current DotNetty transport supports TLS via `DotNetty.Handlers.Tls.TlsHandler` which itself wraps `SslStream`. The HOCON configuration covers: file-based certificates (`ssl.certificate.path` + `password`), Windows certificate store lookup (`ssl.certificate.thumbprint` + `store-name` + `store-location`), mutual authentication, hostname validation, and validation suppression for development. All of these must continue to work unchanged.
 
@@ -46,7 +46,7 @@ Reference implementation: TurboMQTT `TlsStreamProvider.cs` (~60 lines) and `Fake
 
 **Decision:** Parse `akka.remote.dot-netty.tcp.ssl.*` keys into a new `TlsSettings` class that produces `SslClientAuthenticationOptions` and `SslServerAuthenticationOptions`.
 
-**Rationale:** Zero user configuration changes. The HOCON key names stay the same even though the underlying transport changes from DotNetty to Akka.Streams. Users migrating to Akka.NET 1.6 don't need to rewrite their TLS config.
+**Rationale:** Zero user configuration changes. The HOCON key names stay the same even though the underlying transport moves away from DotNetty-specific TLS machinery. Users migrating to Akka.NET 1.6 don't need to rewrite their TLS config.
 
 Config mapping:
 - `ssl.certificate.path` + `ssl.certificate.password` → `new X509Certificate2(path, password)`

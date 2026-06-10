@@ -392,12 +392,8 @@ namespace Akka.Remote.Tests.Serialization
             var serializer = Sys.Serialization.FindSerializerFor(message);
             serializer.Should().BeOfType<MiscMessageSerializer>();
             var serializedBytes = serializer.ToBinary(message);
-
-            if (serializer is SerializerWithStringManifest serializerManifest)
-            {
-                return (T)serializerManifest.FromBinary(serializedBytes, serializerManifest.Manifest(message));
-            }
-            return (T)serializer.FromBinary(serializedBytes, typeof(T));
+            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, message);
+            return (T)serializer.FromBinary(serializedBytes, manifest);
         }
 
         private void AssertEqual<T>(T message)

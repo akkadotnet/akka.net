@@ -3752,10 +3752,19 @@ namespace Akka.IO
         System.Net.Sockets.SocketAsyncEventArgs Acquire(Akka.Actor.IActorRef actor);
         void Release(System.Net.Sockets.SocketAsyncEventArgs e);
     }
-    public interface IStreamProvider
+    public interface ITransportConnection : System.IAsyncDisposable
     {
-        void Close();
-        System.Threading.Tasks.Task<System.IO.Stream> ConnectAsync(string host, int port, System.Threading.CancellationToken ct);
+        bool HasReadError { get; }
+        System.IO.Pipelines.PipeReader Input { get; }
+        System.Threading.Tasks.Task ReadCompleted { get; }
+        System.Exception? ReadError { get; }
+        System.Threading.Tasks.Task WriteCompleted { get; }
+        void Abort();
+        System.Threading.Tasks.Task CloseAsync();
+        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.Task ShutdownAsync();
+        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.Buffers.ReadOnlySequence<byte> data, System.Threading.CancellationToken ct = default);
+        System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken ct = default);
     }
     public class Inet
     {
@@ -3983,8 +3992,8 @@ namespace Akka.IO
         }
         public sealed class Received : Akka.IO.Tcp.Event
         {
-            public Received(System.ReadOnlyMemory<byte> data) { }
-            public System.ReadOnlyMemory<byte> Data { get; }
+            public Received(System.Buffers.ReadOnlySequence<byte> data) { }
+            public System.Buffers.ReadOnlySequence<byte> Data { get; }
             public override string ToString() { }
         }
         public class Register : Akka.IO.Tcp.Command
@@ -4051,10 +4060,12 @@ namespace Akka.IO
             public static readonly Akka.IO.Tcp.Write Empty;
             public override Akka.IO.Tcp.Event Ack { get; }
             public override long Bytes { get; }
-            public System.ReadOnlyMemory<byte> Data { get; }
+            public System.Buffers.ReadOnlySequence<byte> Data { get; }
             public override string ToString() { }
+            public static Akka.IO.Tcp.Write Create(System.Buffers.ReadOnlySequence<byte> data) { }
             public static Akka.IO.Tcp.Write Create(System.ReadOnlyMemory<byte> data) { }
             public static Akka.IO.Tcp.Write Create(byte[] data) { }
+            public static Akka.IO.Tcp.Write Create(System.Buffers.ReadOnlySequence<byte> data, Akka.IO.Tcp.Event ack) { }
             public static Akka.IO.Tcp.Write Create(System.ReadOnlyMemory<byte> data, Akka.IO.Tcp.Event ack) { }
             public static Akka.IO.Tcp.Write Create(byte[] data, Akka.IO.Tcp.Event ack) { }
         }
@@ -4129,11 +4140,22 @@ namespace Akka.IO
         public static Akka.IO.TcpSettings Create(Akka.Actor.ActorSystem system) { }
         public static Akka.IO.TcpSettings Create(Akka.Configuration.Config config) { }
     }
-    public sealed class TcpStreamProvider : Akka.IO.IStreamProvider
+    public sealed class TcpTransportConnection : Akka.IO.ITransportConnection, System.IAsyncDisposable
     {
-        public TcpStreamProvider() { }
-        public void Close() { }
-        public System.Threading.Tasks.Task<System.IO.Stream> ConnectAsync(string host, int port, System.Threading.CancellationToken ct) { }
+        public TcpTransportConnection(System.Net.Sockets.Socket socket, System.IO.Pipelines.PipeOptions? inputPipeOptions = null, System.IO.Pipelines.PipeOptions? outputPipeOptions = null) { }
+        public TcpTransportConnection(System.Net.Sockets.Socket socket, System.IO.Stream stream, System.IO.Pipelines.PipeOptions? inputPipeOptions = null, System.IO.Pipelines.PipeOptions? outputPipeOptions = null) { }
+        public bool HasReadError { get; }
+        public System.IO.Pipelines.PipeReader Input { get; }
+        public System.Threading.Tasks.Task ReadCompleted { get; }
+        public System.Exception? ReadError { get; }
+        public System.Threading.Tasks.Task WriteCompleted { get; }
+        public void Abort() { }
+        public System.Threading.Tasks.Task CloseAsync() { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> FlushAsync(System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.Task ShutdownAsync() { }
+        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.Buffers.ReadOnlySequence<byte> data, System.Threading.CancellationToken ct = default) { }
+        public System.Threading.Tasks.ValueTask<System.IO.Pipelines.FlushResult> WriteAsync(System.ReadOnlyMemory<byte> data, System.Threading.CancellationToken ct = default) { }
     }
     public class Udp : Akka.Actor.ExtensionIdProvider<Akka.IO.UdpExt>
     {
@@ -5128,11 +5150,15 @@ namespace Akka.Routing
 }
 namespace Akka.Serialization
 {
-    public class ByteArraySerializer : Akka.Serialization.Serializer
+    public class ByteArraySerializer : Akka.Serialization.SerializerV2
     {
         public ByteArraySerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override bool IncludeManifest { get; }
+        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
         public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object obj) { }
+        public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
+        public override int SizeHint(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
     [Akka.Annotations.InternalApi]
@@ -5188,9 +5214,14 @@ namespace Akka.Serialization
         public Serialization(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Actor.ExtendedActorSystem System { get; }
         public void AddSerializationMap(System.Type type, Akka.Serialization.Serializer serializer) { }
+        public void AddSerializationMap(System.Type type, Akka.Serialization.SerializerV2 serializer) { }
         [System.Obsolete("No longer supported. Use the AddSerializer(name, serializer) overload instead.", true)]
         public void AddSerializer(Akka.Serialization.Serializer serializer) { }
+        [System.Obsolete("No longer supported. Use the AddSerializer(name, serializer) overload instead.", true)]
+        public void AddSerializer(Akka.Serialization.SerializerV2 serializer) { }
         public void AddSerializer(string name, Akka.Serialization.Serializer serializer) { }
+        public void AddSerializer(string name, Akka.Serialization.SerializerV2 serializer) { }
+        public object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, int serializerId, string manifest) { }
         public object Deserialize(byte[] bytes, int serializerId, System.Type type) { }
         public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
         public Akka.Actor.IActorRef DeserializeActorRef(string path) { }
@@ -5199,6 +5230,7 @@ namespace Akka.Serialization
         public byte[] Serialize(object o) { }
         public static Akka.Serialization.Information GetCurrentTransportInformation() { }
         public static string ManifestFor(Akka.Serialization.Serializer s, object msg) { }
+        public static string ManifestFor(Akka.Serialization.SerializerV2 s, object msg) { }
         public static string SerializedActorPath(Akka.Actor.IActorRef actorRef) { }
         public static T WithTransport<T>(Akka.Actor.ExtendedActorSystem system, System.Func<T> action) { }
         [System.Obsolete("Obsolete. Use the SerializeWithTransport<T>(ExtendedActorSystem) method instead.")]
@@ -5217,7 +5249,9 @@ namespace Akka.Serialization
         public virtual int Identifier { get; }
         public abstract bool IncludeManifest { get; }
         public abstract object FromBinary(byte[] bytes, System.Type type);
+        public virtual object FromBinary(byte[] bytes, string manifest) { }
         public T FromBinary<T>(byte[] bytes) { }
+        public virtual string Manifest(object obj) { }
         public abstract byte[] ToBinary(object obj);
         public byte[] ToBinaryWithAddress(Akka.Actor.Address address, object obj) { }
     }
@@ -5227,19 +5261,46 @@ namespace Akka.Serialization
         public Akka.Serialization.Serializer Serializer { get; }
         public System.Collections.Immutable.ImmutableHashSet<System.Type> UseFor { get; }
         public static Akka.Serialization.SerializerDetails Create(string alias, Akka.Serialization.Serializer serializer, System.Collections.Immutable.ImmutableHashSet<System.Type> useFor) { }
+        public static Akka.Serialization.SerializerDetails Create(string alias, Akka.Serialization.SerializerV2 serializer, System.Collections.Immutable.ImmutableHashSet<System.Type> useFor) { }
     }
     [Akka.Annotations.InternalApi]
     public static class SerializerIdentifierHelper
     {
         public static int GetSerializerIdentifierFromConfig(System.Type type, Akka.Actor.ExtendedActorSystem system) { }
     }
+    public sealed class SerializerV1Adapter : Akka.Serialization.SerializerV2
+    {
+        public SerializerV1Adapter(Akka.Actor.ExtendedActorSystem system, Akka.Serialization.Serializer inner) { }
+        public override int Identifier { get; }
+        public Akka.Serialization.Serializer Inner { get; }
+        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object obj) { }
+        public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
+        public override int SizeHint(object obj) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+    public abstract class SerializerV2 : Akka.Serialization.Serializer
+    {
+        public const int UnknownSize = -1;
+        protected SerializerV2(Akka.Actor.ExtendedActorSystem system) { }
+        public override sealed bool IncludeManifest { get; }
+        public abstract object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest);
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public abstract override string Manifest(object obj) { }
+        public abstract int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer);
+        public virtual int SizeHint(object obj) { }
+        public override byte[] ToBinary(object obj) { }
+    }
     public abstract class SerializerWithStringManifest : Akka.Serialization.Serializer
     {
         protected SerializerWithStringManifest(Akka.Actor.ExtendedActorSystem system) { }
         public override sealed bool IncludeManifest { get; }
         public override sealed object FromBinary(byte[] bytes, System.Type type) { }
-        public abstract object FromBinary(byte[] bytes, string manifest);
-        public abstract string Manifest(object o);
+        public abstract override object FromBinary(byte[] bytes, string manifest) { }
+        public abstract override string Manifest(object o) { }
     }
 }
 namespace Akka.Util

@@ -18,6 +18,8 @@
     <ProjectReference Include="..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
     <ProjectReference Include="..\..\core\Akka.Persistence\Akka.Persistence.csproj" />
     <ProjectReference Include="..\..\core\Akka.Remote\Akka.Remote.csproj" />
+    <ProjectReference Include="..\..\core\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
+    <ProjectReference Include="..\..\core\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\..\core\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
   </ItemGroup>

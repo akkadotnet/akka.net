@@ -3,14 +3,14 @@
   "isRoot": true,
   "tools": {
     "docfx": {
-      "version": "2.78.3",
+      "version": "2.78.5",
       "commands": [
         "docfx"
       ],
       "rollForward": true
     },
     "incrementalist.cmd": {
-      "version": "1.2.0",
+      "version": "1.2.1",
       "commands": [
         "incrementalist"
       ],

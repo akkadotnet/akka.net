@@ -7,6 +7,7 @@
 
 #nullable enable
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -741,13 +742,12 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
     internal static IEnumerable<ChunkedMessage> CreateChunks(T msg, int chunkSize,
         Serialization.Serialization serialization)
     {
-        var serializer = serialization.FindSerializerFor(msg);
-        var manifest = Serialization.Serialization.ManifestFor(serializer, msg);
-        var serializerId = serializer.Identifier;
-        var bytes = serialization.Serialize(msg);
+        var writer = new ArrayBufferWriter<byte>();
+        var metadata = serialization.Serialize(msg, writer);
+        var bytes = writer.WrittenMemory;
         if (bytes.Length <= chunkSize)
         {
-            var chunkedMessage = new ChunkedMessage(bytes.AsMemory(), true, true, serializerId, manifest);
+            var chunkedMessage = new ChunkedMessage(bytes, true, true, metadata.SerializerId, metadata.Manifest);
             yield return chunkedMessage;
         }
         else
@@ -758,8 +758,8 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             {
                 var isLast = i == chunkCount - 1;
                 var nextChunk = Math.Min(chunkSize, bytes.Length - i * chunkSize); // needs to be the next chunkSize or remaining bytes, whichever is smaller.
-                var chunkedMessage = new ChunkedMessage(bytes.AsMemory(i * chunkSize, nextChunk), first,
-                    isLast, serializerId, manifest);
+                var chunkedMessage = new ChunkedMessage(bytes.Slice(i * chunkSize, nextChunk), first,
+                    isLast, metadata.SerializerId, metadata.Manifest);
 
                 first = false;
                 yield return chunkedMessage;

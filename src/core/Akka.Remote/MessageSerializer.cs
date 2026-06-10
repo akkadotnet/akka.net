@@ -59,18 +59,10 @@ namespace Akka.Remote
                     SerializerId = serializer.Identifier
                 };
 
-                if (serializer is SerializerWithStringManifest serializer2)
+                var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, message);
+                if (!string.IsNullOrEmpty(manifest))
                 {
-                    var manifest = serializer2.Manifest(message);
-                    if (!string.IsNullOrEmpty(manifest))
-                    {
-                        serializedMsg.MessageManifest = ByteString.CopyFromUtf8(manifest);
-                    }
-                }
-                else
-                {
-                    if (serializer.IncludeManifest)
-                        serializedMsg.MessageManifest = ByteString.CopyFromUtf8(message.GetType().TypeQualifiedName());
+                    serializedMsg.MessageManifest = ByteString.CopyFromUtf8(manifest);
                 }
 
                 return serializedMsg;

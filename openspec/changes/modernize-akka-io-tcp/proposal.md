@@ -1,6 +1,6 @@
 ## Why
 
-Akka.NET's TCP I/O layer uses two legacy primitives that block the 1.6 transport and serialization goals: `ByteString` (incompatible with `System.Memory`) and `SocketAsyncEventArgs` (incompatible with `SslStream` for TLS). DotNetty's `ByteBuf` is also incompatible with `System.Memory`, making it a dead end. Modernizing the Akka.IO TCP internals to use `System.Memory` types and `Stream` + `System.IO.Pipelines` is the prerequisite for TLS support, replacing DotNetty, and integrating SerializerV2's `IBufferWriter<byte>` / `ReadOnlySequence<byte>` contract. The TurboMQTT project has already proven this pattern works for both TCP and TLS via the `IStreamProvider` abstraction.
+Akka.NET's TCP I/O layer uses two legacy primitives that block the 1.6 transport and serialization goals: `ByteString` (incompatible with `System.Memory`) and `SocketAsyncEventArgs` (incompatible with `SslStream` for TLS). DotNetty's `ByteBuf` is also incompatible with `System.Memory`, making it a dead end for the future high-throughput path. Modernizing the Akka.IO TCP internals to use `System.Memory` types and `Stream` + `System.IO.Pipelines` is the prerequisite for TLS support, future Artery TCP work, and integrating SerializerV2's `IBufferWriter<byte>` / `ReadOnlySequence<byte>` contract. The TurboMQTT project has already proven this pattern works for both TCP and TLS via the `IStreamProvider` abstraction.
 
 ## What Changes
 
@@ -40,4 +40,4 @@ Akka.NET's TCP I/O layer uses two legacy primitives that block the 1.6 transport
 - **Build system**: `Directory.Build.props` TFM changes (`NetStandardLibVersion`, `NetLibVersion`), possible removal of `Polyfill` package for netstandard2.0
 - **NuGet dependencies**: Add `System.IO.Pipelines` for netstandard2.1 target
 - **Test suites**: All tests referencing `ByteString` need updating. All Akka.IO TCP tests need to pass with new internals.
-- **Downstream enablement**: Spec 2 (TLS via `TlsStreamProvider`), Spec 3 (Akka.Streams transport replacing DotNetty), Spec 4 (SerializerV2), Spec 5 (Performance)
+- **Downstream enablement**: TLS via `TlsStreamProvider`, the `SerializerV2` foundation, and the future Artery TCP remoting path

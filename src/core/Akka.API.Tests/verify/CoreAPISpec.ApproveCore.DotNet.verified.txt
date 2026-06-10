@@ -5150,11 +5150,15 @@ namespace Akka.Routing
 }
 namespace Akka.Serialization
 {
-    public class ByteArraySerializer : Akka.Serialization.Serializer
+    public class ByteArraySerializer : Akka.Serialization.SerializerV2
     {
         public ByteArraySerializer(Akka.Actor.ExtendedActorSystem system) { }
-        public override bool IncludeManifest { get; }
+        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
         public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object obj) { }
+        public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
+        public override int SizeHint(object obj) { }
         public override byte[] ToBinary(object obj) { }
     }
     [Akka.Annotations.InternalApi]
@@ -5210,9 +5214,14 @@ namespace Akka.Serialization
         public Serialization(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Actor.ExtendedActorSystem System { get; }
         public void AddSerializationMap(System.Type type, Akka.Serialization.Serializer serializer) { }
+        public void AddSerializationMap(System.Type type, Akka.Serialization.SerializerV2 serializer) { }
         [System.Obsolete("No longer supported. Use the AddSerializer(name, serializer) overload instead.", true)]
         public void AddSerializer(Akka.Serialization.Serializer serializer) { }
+        [System.Obsolete("No longer supported. Use the AddSerializer(name, serializer) overload instead.", true)]
+        public void AddSerializer(Akka.Serialization.SerializerV2 serializer) { }
         public void AddSerializer(string name, Akka.Serialization.Serializer serializer) { }
+        public void AddSerializer(string name, Akka.Serialization.SerializerV2 serializer) { }
+        public object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, int serializerId, string manifest) { }
         public object Deserialize(byte[] bytes, int serializerId, System.Type type) { }
         public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
         public Akka.Actor.IActorRef DeserializeActorRef(string path) { }
@@ -5221,6 +5230,7 @@ namespace Akka.Serialization
         public byte[] Serialize(object o) { }
         public static Akka.Serialization.Information GetCurrentTransportInformation() { }
         public static string ManifestFor(Akka.Serialization.Serializer s, object msg) { }
+        public static string ManifestFor(Akka.Serialization.SerializerV2 s, object msg) { }
         public static string SerializedActorPath(Akka.Actor.IActorRef actorRef) { }
         public static T WithTransport<T>(Akka.Actor.ExtendedActorSystem system, System.Func<T> action) { }
         [System.Obsolete("Obsolete. Use the SerializeWithTransport<T>(ExtendedActorSystem) method instead.")]
@@ -5239,7 +5249,9 @@ namespace Akka.Serialization
         public virtual int Identifier { get; }
         public abstract bool IncludeManifest { get; }
         public abstract object FromBinary(byte[] bytes, System.Type type);
+        public virtual object FromBinary(byte[] bytes, string manifest) { }
         public T FromBinary<T>(byte[] bytes) { }
+        public virtual string Manifest(object obj) { }
         public abstract byte[] ToBinary(object obj);
         public byte[] ToBinaryWithAddress(Akka.Actor.Address address, object obj) { }
     }
@@ -5249,19 +5261,46 @@ namespace Akka.Serialization
         public Akka.Serialization.Serializer Serializer { get; }
         public System.Collections.Immutable.ImmutableHashSet<System.Type> UseFor { get; }
         public static Akka.Serialization.SerializerDetails Create(string alias, Akka.Serialization.Serializer serializer, System.Collections.Immutable.ImmutableHashSet<System.Type> useFor) { }
+        public static Akka.Serialization.SerializerDetails Create(string alias, Akka.Serialization.SerializerV2 serializer, System.Collections.Immutable.ImmutableHashSet<System.Type> useFor) { }
     }
     [Akka.Annotations.InternalApi]
     public static class SerializerIdentifierHelper
     {
         public static int GetSerializerIdentifierFromConfig(System.Type type, Akka.Actor.ExtendedActorSystem system) { }
     }
+    public sealed class SerializerV1Adapter : Akka.Serialization.SerializerV2
+    {
+        public SerializerV1Adapter(Akka.Actor.ExtendedActorSystem system, Akka.Serialization.Serializer inner) { }
+        public override int Identifier { get; }
+        public Akka.Serialization.Serializer Inner { get; }
+        public override object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest) { }
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public override string Manifest(object obj) { }
+        public override int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer) { }
+        public override int SizeHint(object obj) { }
+        public override byte[] ToBinary(object obj) { }
+    }
+    public abstract class SerializerV2 : Akka.Serialization.Serializer
+    {
+        public const int UnknownSize = -1;
+        protected SerializerV2(Akka.Actor.ExtendedActorSystem system) { }
+        public override sealed bool IncludeManifest { get; }
+        public abstract object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, string manifest);
+        public override object FromBinary(byte[] bytes, System.Type type) { }
+        public override object FromBinary(byte[] bytes, string manifest) { }
+        public abstract override string Manifest(object obj) { }
+        public abstract int Serialize(object obj, System.Buffers.IBufferWriter<byte> writer);
+        public virtual int SizeHint(object obj) { }
+        public override byte[] ToBinary(object obj) { }
+    }
     public abstract class SerializerWithStringManifest : Akka.Serialization.Serializer
     {
         protected SerializerWithStringManifest(Akka.Actor.ExtendedActorSystem system) { }
         public override sealed bool IncludeManifest { get; }
         public override sealed object FromBinary(byte[] bytes, System.Type type) { }
-        public abstract object FromBinary(byte[] bytes, string manifest);
-        public abstract string Manifest(object o);
+        public abstract override object FromBinary(byte[] bytes, string manifest) { }
+        public abstract override string Manifest(object o) { }
     }
 }
 namespace Akka.Util

@@ -56,6 +56,12 @@ namespace Akka.Streams.Tests.IO
         private static async Task ExpectTimeout(Task f, TimeSpan duration) => 
             (await f.AwaitWithTimeout(duration)).Should().BeFalse();
 
+        private static async Task ExpectNextBytesAsync(TestSubscriber.ManualProbe<ReadOnlySequence<byte>> probe, byte[] expected)
+        {
+            var actual = await probe.ExpectNextAsync();
+            actual.ToArray().Should().Equal(expected);
+        }
+
         [Fact]
         public async Task OutputStreamSource_must_read_bytes_from_OutputStream()
         {
@@ -69,7 +75,33 @@ namespace Akka.Streams.Tests.IO
                 await outputStream.WriteAsync(_bytesArray, 0, _bytesArray.Length)
                     .WaitAsync(Timeout);
                 s.Request(1);
-                await probe.ExpectNextAsync(_byteString);
+                await ExpectNextBytesAsync(probe, _bytesArray);
+                outputStream.Dispose();
+                await probe.ExpectCompleteAsync();
+            }, _materializer);
+        }
+
+        [Fact]
+        public async Task OutputStreamSource_must_copy_bytes_from_OutputStream_before_emitting()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var (outputStream, probe) = StreamConverters.AsOutputStream()
+                    .ToMaterialized(this.SinkProbe<ReadOnlySequence<byte>>(), Keep.Both)
+                    .Run(_materializer);
+                var s = await probe.ExpectSubscriptionAsync();
+
+                var buffer = new byte[] { 1, 2, 3 };
+                var expected = buffer.ToArray();
+                await outputStream.WriteAsync(buffer, 0, buffer.Length)
+                    .WaitAsync(Timeout);
+
+                buffer[0] = 9;
+                buffer[1] = 9;
+                buffer[2] = 9;
+
+                s.Request(1);
+                await ExpectNextBytesAsync(probe, expected);
                 outputStream.Dispose();
                 await probe.ExpectCompleteAsync();
             }, _materializer);
@@ -97,7 +129,7 @@ namespace Akka.Streams.Tests.IO
 
                     s.Request(1);
                     await f.WaitAsync(Timeout);
-                    await probe.AsyncBuilder().ExpectNext(_byteString).ExecuteAsync();
+                    await ExpectNextBytesAsync(probe, _bytesArray);
                 }
 
                 await probe.AsyncBuilder().ExpectComplete().ExecuteAsync();
@@ -122,7 +154,7 @@ namespace Akka.Streams.Tests.IO
                     var f = outputStream.FlushAsync();
                     s.Request(1);
                     await f.WaitAsync(Timeout);
-                    await probe.ExpectNextAsync(_byteString);
+                    await ExpectNextBytesAsync(probe, _bytesArray);
 
                     var f2 = outputStream.FlushAsync();
                     await f2.WaitAsync(Timeout);
@@ -158,7 +190,8 @@ namespace Akka.Streams.Tests.IO
 
                     s.Request(17);
                     await f.WaitAsync(Timeout);
-                    await probe.ExpectNextNAsync(Enumerable.Repeat(_byteString, 17).ToList());
+                    for (var i = 0; i < 17; i++)
+                        await ExpectNextBytesAsync(probe, _bytesArray);
                 }
 
                 await probe.ExpectCompleteAsync();
@@ -223,7 +256,7 @@ namespace Akka.Streams.Tests.IO
                 s.Request(1);
                 await sourceProbe.ExpectMsgAsync<GraphStageMessages.Pull>();
 
-                await probe.ExpectNextAsync(_byteString);
+                await ExpectNextBytesAsync(probe, _bytesArray);
 
                 s.Cancel();
                 await sourceProbe.ExpectMsgAsync<GraphStageMessages.DownstreamFinish>();
