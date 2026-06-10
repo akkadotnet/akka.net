@@ -115,6 +115,14 @@ MessagePack `bin` fields require the byte length before payload bytes are writte
 
 The original SerializerV2 proof-of-concept demonstrated a different optimization: inline structural nesting, where a V2 envelope writes serializer id and manifest metadata, then delegates to the inner V2 serializer using the same MessagePack writer so the payload becomes a nested MessagePack value instead of an opaque `bin`. That design is feasible across assemblies if generated MessagePack serializers expose an explicit cross-assembly MessagePack contract and are registered normally, but it is not equivalent to Akka's default serializer boundary. It only works for V2 MessagePack serializers, requires a distinct wire shape or version marker from opaque payload bytes, and custom or V1 serializers still need a binary-blob fallback. Closed generated unions are also feasible across referenced assemblies, but only from explicit user-declared payload sets; they should not rely on runtime assembly scanning or automatic cross-assembly discovery.
 
+### 8.1 Future Built-in Serializer Migration Strategy
+
+Future MessagePack integrations for built-in Akka.Remote, Akka.Persistence, Akka.Delivery, or DistributedData serializers should fork existing serializers instead of changing their wire format in place. Existing serializer IDs must remain available for reads, and new MessagePack/generated serializers must use new unique serializer IDs and manifests. This preserves mixed-version compatibility, persisted journal and snapshot readability, and user applications that depend on custom or legacy serializer bindings.
+
+Read compatibility and write selection should be treated separately. New integrations should read both old and new serializer IDs where practical, while writes should remain controlled by configuration, feature flags, or explicit protocol capability checks. Remoting and cluster features must not emit new serializer IDs to peers that are not known to support them; early releases may require an "all nodes upgraded before enabling" rule rather than automatic negotiation.
+
+Persistence needs the strictest compatibility rule: historical events and snapshots are durable wire contracts. New serializers can be offered for opt-in new writes, but old serializers must remain readable indefinitely unless a separate migration tool and operational process is provided. DistributedData and Akka.Delivery should follow the same serializer-boundary model for arbitrary user payloads, because replicated state and delivery envelopes can carry payloads owned by application serializers outside Akka's control.
+
 ### 9. Early Benchmark POC Stop Point
 
 Before completing the full spec, produce a basic BenchmarkDotNet POC using real C# protocol-family messages. The first benchmark should compare generated MessagePack serialization against current baseline serializer behavior and report throughput/allocation/payload-size signals.
