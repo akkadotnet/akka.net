@@ -2,8 +2,8 @@
 
 - [x] 1.1 Run current `RemotePingPong` baseline on `dev` and record throughput results in this change.
 - [x] 1.2 Run current `AkkaPduCodecBenchmark` baseline and record throughput/allocation results in this change.
-- [ ] 1.3 Map outbound copy/allocation boundaries from `EndpointWriter` through `MessageSerializer`, `AkkaPduCodec`, `AkkaProtocolHandle`, and the transport boundary.
-- [ ] 1.4 Map inbound copy/allocation boundaries from transport frame receipt through `InboundPayload`, `ProtocolStateActor`, `AkkaPduCodec.DecodeMessage`, and `EndpointReader` dispatch.
+- [x] 1.3 Map outbound copy/allocation boundaries from `EndpointWriter` through `MessageSerializer`, `AkkaPduCodec`, `AkkaProtocolHandle`, and the transport boundary.
+- [x] 1.4 Map inbound copy/allocation boundaries from transport frame receipt through `InboundPayload`, `ProtocolStateActor`, `AkkaPduCodec.DecodeMessage`, and `EndpointReader` dispatch.
 - [x] 1.5 Add or update benchmark documentation with baseline commands, environment, and result tables.
 
 ## 2. Wire-Compatibility Fixtures
