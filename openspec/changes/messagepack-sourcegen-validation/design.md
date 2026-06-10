@@ -103,6 +103,12 @@ Initial collection support should cover immutable and read-only collection shape
 
 Generated payloads should be validated inside existing Akka.Delivery and DistributedData wrappers where practical. This proves nested serializer behavior without changing those subsystems' default protobuf wire formats.
 
+Envelope payloads are serializer boundaries, not nested generated schemas. A generated MessagePack envelope should preserve the wrapped payload's Akka serializer id, manifest, and serialized bytes, then recover it through normal Akka deserialization. This matches existing Akka.Remote `WrappedPayloadSupport`, Akka.Delivery payload handling, and DistributedData `OtherMessage` conventions.
+
+Pre-serialized envelope payloads, such as Akka.Delivery `ChunkedMessage`, are a related but distinct shape: they already carry serialized bytes plus serializer id and manifest. Generated envelope support should distinguish object payload fields that require serializer lookup from already-captured serialized payload metadata.
+
+`SerializerV2.SizeHint` is an exact-size contract: non-negative values mean the exact number of bytes `Serialize` will write, while `SerializerV2.UnknownSize` means exact size is not cheaply known. Unknown size is transitive through nested generated values and envelope payloads. If any nested field or payload serializer returns `UnknownSize`, every enclosing generated serializer must return `UnknownSize`. Generated serializers should return `UnknownSize` until exact size calculators can prove the complete encoded size.
+
 ### 9. Early Benchmark POC Stop Point
 
 Before completing the full spec, produce a basic BenchmarkDotNet POC using real C# protocol-family messages. The first benchmark should compare generated MessagePack serialization against current baseline serializer behavior and report throughput/allocation/payload-size signals.

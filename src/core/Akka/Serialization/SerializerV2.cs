@@ -43,7 +43,7 @@ namespace Akka.Serialization
         public abstract override string Manifest(object obj);
 
         /// <summary>
-        /// Returns a best-effort serialized size hint, or <see cref="UnknownSize"/> when unknown.
+        /// Returns the exact serialized size in bytes, or <see cref="UnknownSize"/> when the exact size cannot be cheaply computed.
         /// </summary>
         public virtual int SizeHint(object obj) => UnknownSize;
 

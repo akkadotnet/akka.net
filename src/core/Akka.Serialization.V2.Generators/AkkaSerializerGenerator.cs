@@ -300,7 +300,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         GenerateManifest(sb, topLevelMessages);
         GenerateSerialize(sb, topLevelMessages);
         GenerateDeserialize(sb, topLevelMessages);
-        sb.AppendLine("    public override int SizeHint(object obj) => 128;");
+        sb.AppendLine("    public override int SizeHint(object obj) => global::Akka.Serialization.SerializerV2.UnknownSize;");
         sb.AppendLine();
         GenerateCountingBufferWriter(sb);
 

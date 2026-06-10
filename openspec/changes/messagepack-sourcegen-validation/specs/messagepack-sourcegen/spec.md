@@ -12,6 +12,22 @@ The system SHALL provide an `Akka.Serialization.V2` package containing MessagePa
 - **WHEN** a generated serializer reads a message
 - **THEN** it SHALL read MessagePack bytes from the provided V2 input using a cursor-based `MessagePackReader`
 
+### Requirement: SerializerV2 size hints are exact or unknown
+
+The system SHALL treat a non-negative `SerializerV2.SizeHint` result as the exact serialized byte size and SHALL use `SerializerV2.UnknownSize` when exact sizing cannot be proven cheaply.
+
+#### Scenario: Generated serializer cannot prove exact size
+- **WHEN** a generated serializer cannot compute the exact encoded size of every field it writes
+- **THEN** `SizeHint` SHALL return `SerializerV2.UnknownSize`
+
+#### Scenario: Unknown envelope payload size propagates
+- **WHEN** a generated serializer contains an envelope payload whose payload serializer reports `SerializerV2.UnknownSize`
+- **THEN** every enclosing generated serializer that includes that payload SHALL also report `SerializerV2.UnknownSize`
+
+#### Scenario: Unknown-size serialization fallback
+- **WHEN** `SizeHint` returns `SerializerV2.UnknownSize`
+- **THEN** serialization SHALL still write valid bytes through the V2 `IBufferWriter<byte>` API
+
 ### Requirement: Source generator emits V2 serializers
 
 The system SHALL provide a Roslyn incremental source generator that emits `SerializerV2` implementations for annotated messages.

@@ -24,8 +24,9 @@
 - [x] 3.2 Add generic protocol-scoped serializer base if needed by generator design
 - [x] 3.3 Bridge V2 buffer API to direct MessagePack reader/writer generated hot path
 - [x] 3.4 Validate bytes-written/result behavior
-- [ ] 3.5 Validate unknown-size fallback behavior
+- [x] 3.5 Validate unknown-size fallback behavior
 - [x] 3.6 Validate manifest behavior
+- [x] 3.7 Define exact-or-unknown `SizeHint` semantics
 
 ## 4. Attributes And Diagnostics
 
@@ -51,6 +52,7 @@
 - [x] 5.9 Support explicit cross-assembly composition via per-serializer registrations
 - [ ] 5.10 Support init-only property or field assignment for immutable message shapes
 - [ ] 5.11 Reject unsupported mutable, factory-only, or arbitrary polymorphic message shapes with diagnostics
+- [ ] 5.12 Implement exact generated size calculators for schemas whose full encoded size can be proven
 
 ## 6. Integration Validation
 

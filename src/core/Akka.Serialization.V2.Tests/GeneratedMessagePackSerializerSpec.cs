@@ -247,6 +247,21 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         bytesWritten.Should().BeGreaterThan(0);
     }
 
+    [Fact(DisplayName = "Generated serializer should report unknown size until exact sizing is supported")]
+    public void Generated_serializer_should_report_unknown_size_until_exact_sizing_is_supported()
+    {
+        var required = new RequiredMessage("order-1", 42);
+        var envelope = new OpaqueEnvelope(
+            "envelope-1",
+            new OpaqueSerializedPayload(
+                CustomProtobufPayloadSerializer.IdentifierValue,
+                CustomProtobufPayloadSerializer.ManifestName,
+                Encoding.UTF8.GetBytes("fake-protobuf|payload-1|17")));
+
+        _serializer.SizeHint(required).Should().Be(global::Akka.Serialization.SerializerV2.UnknownSize);
+        _serializer.SizeHint(envelope).Should().Be(global::Akka.Serialization.SerializerV2.UnknownSize);
+    }
+
     [Fact(DisplayName = "Generated serializer should use manifest dispatch")]
     public void Generated_serializer_should_use_manifest_dispatch()
     {
