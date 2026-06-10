@@ -8,11 +8,11 @@
 
 ## 2. Wire-Compatibility Fixtures
 
-- [ ] 2.1 Add golden byte fixtures for `Associate`, `Heartbeat`, and each `DisassociateInfo` control PDU.
-- [ ] 2.2 Add golden byte fixtures for payload PDU wrapping an `AckAndEnvelopeContainer`.
-- [ ] 2.3 Add golden byte fixtures for pure ack, ack plus message, and sequenced reliable-delivery message envelopes.
-- [ ] 2.4 Verify existing `AkkaPduProtobuffCodec` decodes all golden fixtures.
-- [ ] 2.5 Verify existing `AkkaPduProtobuffCodec` emits byte-compatible output for the supported golden fixture shapes.
+- [x] 2.1 Add golden byte fixtures for `Associate`, `Heartbeat`, and each `DisassociateInfo` control PDU.
+- [x] 2.2 Add golden byte fixtures for payload PDU wrapping an `AckAndEnvelopeContainer`.
+- [x] 2.3 Add golden byte fixtures for pure ack, ack plus message, and sequenced reliable-delivery message envelopes.
+- [x] 2.4 Verify existing `AkkaPduProtobuffCodec` decodes all golden fixtures.
+- [x] 2.5 Verify existing `AkkaPduProtobuffCodec` emits byte-compatible output for the supported golden fixture shapes.
 
 ## 3. Sequence/Writer PDU Codec Shape
 
