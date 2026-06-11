@@ -54,7 +54,8 @@ namespace RemotePingPong
             int            NumberOfClients,
             long           TotalMessages,
             long           ThroughputMsgPerSec,
-            double         ElapsedMs);
+            double         ElapsedMs,
+            double         HandshakeMs);
 
         private static readonly (SerializerMode, PayloadMode, TransportMode)[] BattleRoyale =
         [
@@ -357,7 +358,7 @@ namespace RemotePingPong
             Console.WriteLine("Is Server GC:                      {0}", GCSettings.IsServerGC);
             Console.WriteLine("Thread count:                      {0}", Process.GetCurrentProcess().Threads.Count);
             Console.WriteLine();
-            Console.WriteLine("Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads");
+            Console.WriteLine("Num clients, Total [msg], Msgs/sec, Total [ms], Handshake [ms], Start Threads, End Threads");
 
             _firstRun = false;
         }
@@ -420,6 +421,10 @@ namespace RemotePingPong
             List<BenchmarkRunResult>? collector = null)
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
+            
+            // ── Handshake timing: measure from system creation until remote actors are ready ──
+            var handshakeSw = Stopwatch.StartNew();
+            
             var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0, mode, serializerMode));
             var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0, mode, serializerMode));
 
@@ -450,6 +455,8 @@ namespace RemotePingPong
             }
 
             var rsp = await canStart.Ask(new AllStartedActor.AllStarted(), TimeSpan.FromSeconds(10));
+            handshakeSw.Stop();
+            
             var testReady = (bool)rsp;
             if (!testReady)
             {
@@ -498,11 +505,12 @@ namespace RemotePingPong
 
             Console.ForegroundColor = foregroundColor;
             Console.WriteLine(
-                "{0,10},{1,8},{2,10},{3,11}, {4,13}, {5,15}",
+                "{0,10},{1,8},{2,10},{3,11},{4,15}, {5,13}, {6,15}",
                 numberOfClients,
                 totalMessagesReceived,
                 throughput,
                 sw.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture),
+                handshakeSw.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture),
                 startThreads,
                 endThreads);
 
@@ -515,7 +523,8 @@ namespace RemotePingPong
                 numberOfClients,
                 totalMessagesReceived,
                 throughput,
-                sw.Elapsed.TotalMilliseconds));
+                sw.Elapsed.TotalMilliseconds,
+                handshakeSw.Elapsed.TotalMilliseconds));
 
             return (redCount <= 3, bestThroughput, redCount);
         }
@@ -608,17 +617,18 @@ namespace RemotePingPong
             // ── Summary table ──────────────────────────────────────────────
             sb.AppendLine("## Summary — Best Throughput per Combo");
             sb.AppendLine();
-            sb.AppendLine("| Transport | Serializer | Payload | Best Msgs/sec | At Clients |");
-            sb.AppendLine("|-----------|------------|---------|--------------:|:----------:|");
+            sb.AppendLine("| Transport | Serializer | Payload | Best Msgs/sec | At Clients | Avg Handshake (ms) |");
+            sb.AppendLine("|-----------|------------|---------|--------------:|:----------:|-------------------:|");
 
             foreach (var g in results
                          .GroupBy(r => (r.Transport, r.Serializer, r.Payload))
                          .OrderByDescending(g => g.Max(r => r.ThroughputMsgPerSec)))
             {
                 var best = g.MaxBy(r => r.ThroughputMsgPerSec)!;
+                var avgHandshake = g.Average(r => r.HandshakeMs);
                 sb.AppendLine(
                     $"| {TransportLabel(best.Transport)} | {SerializerLabel(best.Serializer)} | {PayloadLabel(best.Payload)} " +
-                    $"| {best.ThroughputMsgPerSec:N0} | {best.NumberOfClients} |");
+                    $"| {best.ThroughputMsgPerSec:N0} | {best.NumberOfClients} | {avgHandshake:F2} |");
             }
 
             sb.AppendLine();
@@ -626,8 +636,8 @@ namespace RemotePingPong
             // ── Detail table ───────────────────────────────────────────────
             sb.AppendLine("## Detail — All Measurements");
             sb.AppendLine();
-            sb.AppendLine("| Transport | Serializer | Payload | Clients | Msgs/sec | Total Msgs | Time (ms) |");
-            sb.AppendLine("|-----------|------------|---------|--------:|---------:|-----------:|----------:|");
+            sb.AppendLine("| Transport | Serializer | Payload | Clients | Msgs/sec | Total Msgs | Time (ms) | Handshake (ms) |");
+            sb.AppendLine("|-----------|------------|---------|--------:|---------:|-----------:|----------:|---------------:|");
 
             // CopilotNotes: Group ordering matches BattleRoyale declaration order, then by client count.
             foreach (var g in results.GroupBy(r => (r.Transport, r.Serializer, r.Payload)))
@@ -637,7 +647,7 @@ namespace RemotePingPong
                     sb.AppendLine(
                         $"| {TransportLabel(row.Transport)} | {SerializerLabel(row.Serializer)} | {PayloadLabel(row.Payload)} " +
                         $"| {row.NumberOfClients} | {row.ThroughputMsgPerSec:N0} | {row.TotalMessages:N0} " +
-                        $"| {row.ElapsedMs:F2} |");
+                        $"| {row.ElapsedMs:F2} | {row.HandshakeMs:F2} |");
                 }
             }
 
