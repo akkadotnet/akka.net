@@ -5221,6 +5221,7 @@ namespace Akka.Serialization
         public void AddSerializer(Akka.Serialization.SerializerV2 serializer) { }
         public void AddSerializer(string name, Akka.Serialization.Serializer serializer) { }
         public void AddSerializer(string name, Akka.Serialization.SerializerV2 serializer) { }
+        public object Deserialize(System.Buffers.ReadOnlySequence<byte> bytes, int serializerId, string manifest) { }
         public object Deserialize(byte[] bytes, int serializerId, System.Type type) { }
         public object Deserialize(byte[] bytes, int serializerId, string manifest) { }
         public Akka.Actor.IActorRef DeserializeActorRef(string path) { }

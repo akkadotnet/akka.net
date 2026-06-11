@@ -87,7 +87,7 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 **Completion criteria**:
 
 - `Akka.Serialization.V2` package exists.
-- Concrete sealed `AkkaWriter` and `AkkaReader` wrap MessagePack directly.
+- Generated serializers use direct MessagePack reader/writer cursors.
 - Source generator emits serializers for `[AkkaSerializable]` / `[AkkaField]` types.
 - Generated serializers round-trip through `Serialization.cs`.
 - Generated serializers send over classic remoting.
