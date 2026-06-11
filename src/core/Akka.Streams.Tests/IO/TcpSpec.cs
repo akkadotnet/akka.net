@@ -95,6 +95,43 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
+        public async Task Outgoing_TCP_stream_must_not_drop_writes_when_remote_reads_slowly()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                const int messageCount = 2048;
+                const int payloadSize = 64;
+                var totalBytes = messageCount * payloadSize;
+                var expected = new byte[totalBytes];
+                var testInput = new List<ReadOnlySequence<byte>>(messageCount);
+
+                for (var i = 0; i < messageCount; i++)
+                {
+                    var payload = new byte[payloadSize];
+                    Array.Fill(payload, (byte)(i & 0xff));
+                    payload.CopyTo(expected, i * payloadSize);
+                    testInput.Add(new ReadOnlySequence<byte>(payload));
+                }
+
+                var server = await new Server(this).InitializeAsync();
+                Source.From(testInput)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                    .To(Sink.Ignore<ReadOnlySequence<byte>>())
+                    .Run(Materializer);
+
+                var serverConnection = await server.WaitAcceptAsync();
+
+                // Do not resume server-side reads until the client has had time to enqueue writes.
+                await Task.Delay(250);
+
+                serverConnection.Read(totalBytes);
+                var received = await serverConnection.WaitReadAsync();
+                received.ToArray().Should().Equal(expected);
+                server.Close();
+            }, Materializer);
+        }
+
+        [Fact]
         public async Task Outgoing_TCP_stream_must_be_able_to_read_a_sequence_of_ByteStrings()
         {
             var server = await new Server(this).InitializeAsync();

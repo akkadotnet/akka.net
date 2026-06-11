@@ -145,6 +145,66 @@ Environment summary from the run:
 
 This removes an avoidable intermediate array allocation/copy for the common inbound frame shape emitted by the stream framing stage.
 
+## Repeat Median Comparison
+
+Commands:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1
+```
+
+Each transport was run 3 times on the same branch and machine. The table reports median `Msgs/sec`.
+
+| Num clients | Stream median | DotNetty median | Delta |
+| ---: | ---: | ---: | ---: |
+| 1 | 98961 | 77370 | +27.9% |
+| 5 | 566573 | 371886 | +52.4% |
+| 10 | 655738 | 521921 | +25.6% |
+| 15 | 696056 | 562009 | +23.9% |
+| 20 | 690013 | 577284 | +19.5% |
+| 25 | 721397 | 594319 | +21.4% |
+| 30 | 740833 | 617031 | +20.1% |
+
+Stream sample `Msgs/sec` values:
+
+| Num clients | Sample 1 | Sample 2 | Sample 3 |
+| ---: | ---: | ---: | ---: |
+| 1 | 102146 | 97944 | 98961 |
+| 5 | 597015 | 566573 | 535046 |
+| 10 | 593648 | 669345 | 655738 |
+| 15 | 696056 | 679348 | 722022 |
+| 20 | 626665 | 702371 | 690013 |
+| 25 | 721397 | 749738 | 717979 |
+| 30 | 740833 | 781352 | 727009 |
+
+DotNetty sample `Msgs/sec` values:
+
+| Num clients | Sample 1 | Sample 2 | Sample 3 |
+| ---: | ---: | ---: | ---: |
+| 1 | 77370 | 72860 | 79555 |
+| 5 | 392004 | 361272 | 371886 |
+| 10 | 521921 | 508389 | 525211 |
+| 15 | 576148 | 562009 | 551572 |
+| 20 | 577284 | 572738 | 584283 |
+| 25 | 610278 | 584796 | 594319 |
+| 30 | 617031 | 618876 | 597372 |
+
+## Validation
+
+Validation run after the TCP stage no-ack and inbound single-segment copy changes:
+
+| Command | Result |
+| --- | --- |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release` | Passed: 378, skipped: 5 |
+| `dotnet test "src/core/Akka.Streams.Tests/Akka.Streams.Tests.csproj" -c Release --filter "FullyQualifiedName~TcpSpec"` | Passed: 20, skipped: 3 |
+| `dotnet test "src/core/Akka.Cluster.Tests/Akka.Cluster.Tests.csproj" -c Release` | Passed: 364 |
+| `openspec validate remote-streams-protocol-pipeline --strict` | Valid |
+
+Additional TCP stream regression coverage:
+
+- `Outgoing_TCP_stream_must_not_drop_writes_when_remote_reads_slowly` delays server-side reads while the client writes 2048 64-byte chunks, then verifies exact byte-for-byte delivery.
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:

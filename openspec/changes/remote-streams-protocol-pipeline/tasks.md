@@ -51,7 +51,7 @@
 ## 7. Validation And Performance Gates
 
 - [x] 7.1 Run focused `Akka.Remote.Tests` covering `AkkaProtocolSpec`, codec tests, and endpoint send/receive behavior.
-- [ ] 7.2 Run relevant `Akka.Cluster.Tests` or multi-node smoke tests in legacy mode.
+- [x] 7.2 Run relevant `Akka.Cluster.Tests` or multi-node smoke tests in legacy mode.
 - [ ] 7.3 Run relevant `Akka.Cluster.Tests` or multi-node smoke tests in the opt-in stream pipeline mode when available.
 - [x] 7.4 Rerun `RemotePingPong` after each implementation milestone and record result deltas.
 - [ ] 7.5 Rerun `AkkaPduCodecBenchmark` after codec milestones and record allocation deltas.
@@ -59,7 +59,7 @@
 
 ## 8. Documentation And Review
 
-- [ ] 8.1 Update OpenSpec notes with baseline and final benchmark tables.
+- [x] 8.1 Update OpenSpec notes with baseline and final benchmark tables.
 - [ ] 8.2 Document rollout behavior, opt-in configuration, and rollback path.
 - [ ] 8.3 Document why Akka.Streams / Akka.IO.Tcp is the substrate and why no standalone PipeTransport is added.
 - [ ] 8.4 Review public or internal API changes for compatibility before opening a PR.
