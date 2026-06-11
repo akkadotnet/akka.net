@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Akka.Streams.Dsl;
-using Akka.Streams.Stage;
 using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
@@ -46,59 +45,8 @@ namespace Akka.Streams.Tests.Implementation
             _materializer = Sys.Materializer();
         }
 
-        /// <summary>
-        /// A source that pushes its element from inside an active producer span, mimicking
-        /// Akka.Streams.Kafka pushing from a consumer callback while a consume span is current.
-        /// Pushing while the span is current arms the outgoing connection's SlotContext.
-        /// </summary>
-        private sealed class TracedSource : GraphStage<SourceShape<int>>
-        {
-            private readonly ActivitySource _producer;
-            private readonly int _value;
-            private readonly TaskCompletionSource<string> _traceId = new();
-
-            public TracedSource(ActivitySource producer, int value)
-            {
-                _producer = producer;
-                _value = value;
-                Shape = new SourceShape<int>(Out);
-            }
-
-            public Outlet<int> Out { get; } = new("TracedSource.out");
-            public override SourceShape<int> Shape { get; }
-
-            /// <summary>The W3C trace id of the "consume" span the element was pushed under.</summary>
-            public Task<string> TraceId => _traceId.Task;
-
-            protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes)
-                => new Logic(this);
-
-            private sealed class Logic : OutGraphStageLogic
-            {
-                private readonly TracedSource _stage;
-                private bool _pushed;
-
-                public Logic(TracedSource stage) : base(stage.Shape)
-                {
-                    _stage = stage;
-                    SetHandler(stage.Out, this);
-                }
-
-                public override void OnPull()
-                {
-                    if (_pushed)
-                    {
-                        CompleteStage();
-                        return;
-                    }
-
-                    _pushed = true;
-                    using var span = _stage._producer.StartActivity("consume", ActivityKind.Consumer);
-                    _stage._traceId.TrySetResult(span?.TraceId.ToString());
-                    Push(_stage.Out, _stage._value);
-                }
-            }
-        }
+        // Uses the shared TracedConsumeSource helper (pushes one element inside a "consume" span,
+        // mirroring an actor-callback source like Akka.Streams.Kafka).
 
         [Fact]
         public async Task Kafka_style_traced_source_pushing_across_async_boundary_should_not_throw_NRE()
@@ -108,7 +56,7 @@ namespace Akka.Streams.Tests.Implementation
 
             // TracedSource pushes directly into the actor-output-boundary connection
             // (InOwner == null) while the "consume" span is current → SlotContext armed.
-            var done = Source.FromGraph(new TracedSource(producers.Source, 41))
+            var done = Source.FromGraph(new TracedConsumeSource(producers.Source, 41))
                 .Async()
                 .RunWith(Sink.Seq<int>(), _materializer);
 
@@ -130,7 +78,7 @@ namespace Akka.Streams.Tests.Implementation
             using var collector = new StreamsActivityCollector();
             using var producers = new ProducerActivityScope("ProducerTest");
 
-            var done = Source.FromGraph(new TracedSource(producers.Source, 41))
+            var done = Source.FromGraph(new TracedConsumeSource(producers.Source, 41))
                 .Select(x => x + 1)   // upstream-shell stage; pushes to the boundary in its span
                 .Async()              // actor boundary (null-InOwner connection)
                 .Select(x => x * 2)   // downstream-shell stage
@@ -163,7 +111,7 @@ namespace Akka.Streams.Tests.Implementation
                 .To(Sink.ForEach<int>(x => delivered.TrySetResult(x)))
                 .Run(_materializer);
 
-            var source = new TracedSource(producers.Source, 7);
+            var source = new TracedConsumeSource(producers.Source, 7);
             Source.FromGraph(source).RunWith(sink, _materializer);
 
             (await source.TraceId).Should().NotBeNullOrEmpty("the producer span must be live");
