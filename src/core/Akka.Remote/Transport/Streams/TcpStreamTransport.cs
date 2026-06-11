@@ -39,6 +39,7 @@ namespace Akka.Remote.Transport.Streams
         private readonly ConcurrentDictionary<StreamAssociationHandle, StreamAssociationHandle> _connections = new();
         private readonly ILoggingAdapter _log;
         private readonly ActorMaterializer _materializer;
+        private readonly int _writeBufferSize;
 
         private StreamTcp.ServerBinding? _binding;
         private volatile bool _shutdown;
@@ -56,6 +57,9 @@ namespace Akka.Remote.Transport.Streams
             SchemeIdentifier = Settings.TransportMode.ToString().ToLowerInvariant();
             _log = Logging.GetLogger(system, GetType());
             _materializer = ActorMaterializer.Create(system);
+            _writeBufferSize = Math.Max(1, config.HasPath("stream-write-buffer-size")
+                ? config.GetInt("stream-write-buffer-size")
+                : 65536);
         }
 
         public DotNettyTransportSettings Settings { get; }
@@ -100,8 +104,9 @@ namespace Akka.Remote.Transport.Streams
 
             var remoteEndpoint = DotNettyTransport.AddressToSocketAddress(remoteAddress);
             StreamAssociationHandle handle = null;
+            var inboundBridge = new DeferredInboundBridge();
 
-            var sink = DecodeFrames().ToMaterialized(Sink.ForEach<ReadOnlySequence<byte>>(frame => handle?.NotifyInbound(frame)), Keep.Right);
+            var sink = DecodeFrames().ToMaterialized(Sink.ForEach<ReadOnlySequence<byte>>(inboundBridge.NotifyInbound), Keep.Right);
             var source = CreateOutboundSource();
             var tcpFlow = System.TcpStream().OutgoingConnection(
                 remoteEndpoint,
@@ -128,6 +133,7 @@ namespace Akka.Remote.Transport.Streams
                     RemoveConnection,
                     _log);
                 TrackConnection(handle, inboundDone);
+                inboundBridge.SetHandle(handle);
                 return handle;
             }
             catch (Exception ex)
@@ -161,7 +167,8 @@ namespace Akka.Remote.Transport.Streams
                     return;
 
                 StreamAssociationHandle handle = null;
-                var sink = DecodeFrames().ToMaterialized(Sink.ForEach<ReadOnlySequence<byte>>(frame => handle?.NotifyInbound(frame)), Keep.Right);
+                var inboundBridge = new DeferredInboundBridge();
+                var sink = DecodeFrames().ToMaterialized(Sink.ForEach<ReadOnlySequence<byte>>(inboundBridge.NotifyInbound), Keep.Right);
                 var source = CreateOutboundSource();
                 var flow = Flow.FromSinkAndSource(sink, source, Keep.Both);
                 var (inboundDone, writer) = connection.HandleWith(flow, _materializer);
@@ -184,13 +191,14 @@ namespace Akka.Remote.Transport.Streams
 
                 handle = new StreamAssociationHandle(localAddress, remoteAddress, writer, RemoveConnection, _log);
                 TrackConnection(handle, inboundDone);
+                inboundBridge.SetHandle(handle);
                 listenerTask.Result.Notify(new InboundAssociation(handle));
             }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         private Source<ReadOnlySequence<byte>, IActorRef> CreateOutboundSource()
         {
-            return Source.ActorRef<ReadOnlySequence<byte>>(128, OverflowStrategy.Fail)
+            return Source.ActorRef<ReadOnlySequence<byte>>(_writeBufferSize, OverflowStrategy.Fail)
                 .Select(EncodeFrame);
         }
 
@@ -234,6 +242,39 @@ namespace Akka.Remote.Transport.Streams
         private void RemoveConnection(StreamAssociationHandle handle)
         {
             _connections.TryRemove(handle, out _);
+        }
+
+        private sealed class DeferredInboundBridge
+        {
+            private readonly object _gate = new();
+            private readonly System.Collections.Generic.Queue<ByteString> _pending = new();
+            private StreamAssociationHandle _handle;
+
+            public void NotifyInbound(ReadOnlySequence<byte> payload)
+            {
+                var bytes = ByteString.CopyFrom(payload.ToArray());
+                lock (_gate)
+                {
+                    if (_handle != null)
+                    {
+                        _handle.NotifyInbound(bytes);
+                    }
+                    else
+                    {
+                        _pending.Enqueue(bytes);
+                    }
+                }
+            }
+
+            public void SetHandle(StreamAssociationHandle handle)
+            {
+                lock (_gate)
+                {
+                    _handle = handle;
+                    while (_pending.Count > 0)
+                        _handle.NotifyInbound(_pending.Dequeue());
+                }
+            }
         }
 
         private sealed class StreamAssociationHandle : AssociationHandle
@@ -293,6 +334,11 @@ namespace Akka.Remote.Transport.Streams
             public void NotifyInbound(ReadOnlySequence<byte> payload)
             {
                 Notify(new InboundPayload(ByteString.CopyFrom(payload.ToArray())));
+            }
+
+            public void NotifyInbound(ByteString payload)
+            {
+                Notify(new InboundPayload(payload));
             }
 
             public void NotifyDisassociated(DisassociateInfo info)

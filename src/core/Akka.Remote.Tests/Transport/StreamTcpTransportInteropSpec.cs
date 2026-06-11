@@ -37,7 +37,7 @@ namespace Akka.Remote.Tests.Transport
                 InitializeLogger(classic);
                 classic.ActorOf(Props.Create<Echo>(), "echo");
 
-                stream = StartStreamSystem(streamPort);
+                stream = StartStreamSystem("stream-sys", streamPort);
 
                 var classicAddress = RARP.For(classic).Provider.DefaultAddress;
                 var streamAddress = RARP.For(stream).Provider.DefaultAddress;
@@ -48,7 +48,7 @@ namespace Akka.Remote.Tests.Transport
                 Shutdown(stream, TimeSpan.FromSeconds(10));
                 stream = null;
 
-                stream = StartStreamSystem(streamPort);
+                stream = StartStreamSystem("stream-sys", streamPort);
                 var restartedStreamAddress = RARP.For(stream).Provider.DefaultAddress;
                 restartedStreamAddress.Should().Be(streamAddress);
 
@@ -64,9 +64,34 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
-        private ActorSystem StartStreamSystem(int port)
+        [Fact]
+        public async Task StreamTcpTransport_should_support_stream_to_stream_remote_messaging()
         {
-            var system = ActorSystem.Create("stream-sys", StreamConfig(port));
+            ActorSystem streamA = null;
+            ActorSystem streamB = null;
+
+            try
+            {
+                streamA = StartStreamSystem("stream-a", GetFreeTcpPort());
+                streamB = StartStreamSystem("stream-b", GetFreeTcpPort());
+                var addressA = RARP.For(streamA).Provider.DefaultAddress;
+                var addressB = RARP.For(streamB).Provider.DefaultAddress;
+
+                await AssertRemoteEcho(streamA, addressB, "stream-a-to-stream-b");
+                await AssertRemoteEcho(streamB, addressA, "stream-b-to-stream-a");
+            }
+            finally
+            {
+                if (streamB != null)
+                    Shutdown(streamB);
+                if (streamA != null)
+                    Shutdown(streamA);
+            }
+        }
+
+        private ActorSystem StartStreamSystem(string systemName, int port)
+        {
+            var system = ActorSystem.Create(systemName, StreamConfig(port));
             InitializeLogger(system);
             system.ActorOf(Props.Create<Echo>(), "echo");
             return system;

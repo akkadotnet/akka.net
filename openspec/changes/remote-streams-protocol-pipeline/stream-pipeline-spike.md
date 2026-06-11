@@ -7,6 +7,7 @@ The first stream transport spike adds an opt-in TCP transport class backed by Ak
 - Transport class: `Akka.Remote.Transport.Streams.TcpStreamTransport, Akka.Remote`
 - Opt-in shape: override `akka.remote.dot-netty.tcp.transport-class` while keeping `akka.remote.enabled-transports = ["akka.remote.dot-netty.tcp"]`
 - Public scheme remains `akka.tcp` because the raw transport scheme remains `tcp` and the existing `AkkaProtocolTransport` wrapper still augments it.
+- Stream write inlet buffering is controlled by `akka.remote.dot-netty.tcp.stream-write-buffer-size` and defaults to `65536` elements for this spike.
 
 This proves a stream-backed TCP substrate can interoperate with classic DotNetty using the same length-framed Akka.Remote PDU bytes.
 
@@ -28,6 +29,34 @@ This spike intentionally keeps the existing classic protocol wrapper in place:
 - Stream TCP node shuts down and restarts on the same address.
 - Classic DotNetty node reconnects to the restarted stream TCP node.
 - Stream TCP node can still send back to the classic DotNetty node after restart.
+- Stream TCP nodes can exchange messages with each other in both directions.
+
+## RemotePingPong Smoke Result
+
+Command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+Environment summary from the run:
+
+- OS: Unix 6.8.0.117
+- Processor count: 8
+- Server GC: true
+- Transport: Akka.Streams TCP
+
+| Num clients | Total messages | Msgs/sec | Total ms | Start threads | End threads |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 200000 | 85361 | 2343.11 | 26 | 50 |
+| 5 | 1000000 | 360621 | 2773.77 | 50 | 54 |
+| 10 | 2000000 | 406092 | 4925.38 | 54 | 54 |
+| 15 | 3000000 | 489158 | 6133.34 | 53 | 52 |
+| 20 | 4000000 | 522194 | 7660.26 | 47 | 45 |
+| 25 | 5000000 | 631712 | 7915.40 | 45 | 45 |
+| 30 | 6000000 | 623377 | 9625.28 | 43 | 43 |
+
+This is a smoke result, not a final benchmark. The stream transport still uses the existing `AkkaProtocolTransport` / `ProtocolStateActor` wrapper and bridges framed payloads through `ByteString`.
 
 ## Deferred Work
 
