@@ -35,7 +35,7 @@
     <MessagePackVersion>3.1.4</MessagePackVersion>
     <MicrosoftCodeAnalysisCSharpVersion>4.13.0</MicrosoftCodeAnalysisCSharpVersion>
     <NetTestVersion>net10.0</NetTestVersion>
-    <FsharpVersion>10.1.300</FsharpVersion>
+    <FsharpVersion>10.1.301</FsharpVersion>
     <NetStandardLibVersion>net10.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
