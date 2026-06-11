@@ -238,9 +238,30 @@ namespace Akka.Persistence.Journal
                             failure: e => new EventReplayFailure(e));
                     return true;
 
+                case SelectEventCount request:
+                    SelectEventCountAsync(request.Tag)
+                        .PipeTo(request.ReplyTo, success: c => new EventCount(c));
+                    return true;
+
                 default:
                     return false;
             }
+        }
+
+        /// <summary>
+        /// Counts the number of stored events that match the supplied <paramref name="tag"/>, or all stored
+        /// events when <paramref name="tag"/> is <c>null</c>. Used to resolve a "from the end" (last N)
+        /// query offset into a concrete starting position.
+        /// </summary>
+        private Task<int> SelectEventCountAsync(string tag)
+        {
+            DrainPendingWrites();
+
+            var count = tag is null
+                ? Storage.EventLog.Count
+                : Storage.EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(tag));
+
+            return Task.FromResult(count);
         }
 
         private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
@@ -336,6 +357,42 @@ namespace Akka.Persistence.Journal
             {
                 AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();
                 HighestOrderingNumber = highestOrderingNumber;
+            }
+        }
+
+        /// <summary>
+        /// Requests the number of stored events matching <see cref="Tag"/>, or all stored events when
+        /// <see cref="Tag"/> is <c>null</c>. Used by the query side to resolve a "from the end" (last N)
+        /// query offset into a concrete starting position.
+        /// </summary>
+        [Serializable]
+        public sealed class SelectEventCount : IJournalRequest
+        {
+            /// <summary>
+            /// The tag to count, or <c>null</c> to count all events.
+            /// </summary>
+            public string Tag { get; }
+
+            public IActorRef ReplyTo { get; }
+
+            public SelectEventCount(string tag, IActorRef replyTo)
+            {
+                Tag = tag;
+                ReplyTo = replyTo;
+            }
+        }
+
+        /// <summary>
+        /// Reply to <see cref="SelectEventCount"/> carrying the number of matching events.
+        /// </summary>
+        [Serializable]
+        public sealed class EventCount : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        {
+            public int Count { get; }
+
+            public EventCount(int count)
+            {
+                Count = count;
             }
         }
 

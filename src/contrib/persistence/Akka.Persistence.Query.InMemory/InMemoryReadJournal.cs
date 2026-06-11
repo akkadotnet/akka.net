@@ -126,21 +126,9 @@ namespace Akka.Persistence.Query.InMemory
         /// </summary>
         public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset)
         {
-            Sequence seq;
-            switch (offset)
-            {
-                case NoOffset:
-                case Sequence { Value: 0 }:
-                    seq = new Sequence(0L);
-                    break;
-                case Sequence s:
-                    seq = new Sequence(s.Value + 1); // since offset is exclusive
-                    break;
-                default:
-                    throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
-            }
-            
-            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, checked((int)seq.Value), int.MaxValue, null, _maxBufferSize, _writeJournalPluginId))
+            var (fromOffset, fromEndCount) = ResolveTagOffset(offset);
+
+            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, fromOffset, int.MaxValue, fromEndCount, null, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named($"CurrentEventsByTag-{tag}");
         }
@@ -186,65 +174,69 @@ namespace Akka.Persistence.Query.InMemory
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset)
         {
-            Sequence seq;
-            switch (offset)
-            {
-                case NoOffset _:
-                case Sequence s when s.Value == 0:
-                    seq = new Sequence(0L);
-                    break;
-                case Sequence s:
-                    seq = new Sequence(s.Value + 1); // since offset is exclusive
-                    break;
-                default:
-                    throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
-            }
-            
-            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, checked((int)seq.Value), int.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+            var (fromOffset, fromEndCount) = ResolveTagOffset(offset);
+
+            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, fromOffset, int.MaxValue, fromEndCount, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named($"EventsByTag-{tag}");
         }
-        
+
         public Source<EventEnvelope, NotUsed> AllEvents(Offset offset = null)
         {
-            Sequence seq;
-            switch (offset)
-            {
-                case null:
-                case NoOffset _:
-                    seq = new Sequence(0L);
-                    break;
-                case Sequence s:
-                    seq = new Sequence(s.Value + 1); // since offset is exclusive
-                    break;
-                default:
-                    throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
-            }
+            var (fromOffset, fromEndCount) = ResolveAllEventsOffset(offset);
 
-            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(checked((int)seq.Value), _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(fromOffset, fromEndCount, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("AllEvents");
         }
 
         public Source<EventEnvelope, NotUsed> CurrentAllEvents(Offset offset)
         {
-            Sequence seq;
+            var (fromOffset, fromEndCount) = ResolveAllEventsOffset(offset);
+
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(fromOffset, fromEndCount, null, _maxBufferSize, _writeJournalPluginId))
+                .MapMaterializedValue(_ => NotUsed.Instance)
+                .Named("CurrentAllEvents");
+        }
+
+        /// <summary>
+        /// Resolves a by-tag query offset into a starting offset and, for <see cref="FromEnd"/>, the number of
+        /// events to read from the end of the tagged stream (resolved to a concrete position by the publisher).
+        /// </summary>
+        private static (int fromOffset, int fromEndCount) ResolveTagOffset(Offset offset)
+        {
             switch (offset)
             {
-                case null:
-                case NoOffset _:
-                    seq = new Sequence(0L);
-                    break;
+                case NoOffset:
+                case Sequence { Value: 0 }:
+                    return (0, 0);
                 case Sequence s:
-                    seq = new Sequence(s.Value + 1); // since offset is exclusive
-                    break;
+                    return (checked((int)(s.Value + 1)), 0); // since offset is exclusive
+                case FromEnd fromEnd:
+                    return (0, fromEnd.Count);
                 default:
                     throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
             }
+        }
 
-            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(checked((int)seq.Value), null, _maxBufferSize, _writeJournalPluginId))
-                .MapMaterializedValue(_ => NotUsed.Instance)
-                .Named("CurrentAllEvents");
+        /// <summary>
+        /// Resolves an all-events query offset into a starting offset and, for <see cref="FromEnd"/>, the number of
+        /// events to read from the end of history (resolved to a concrete position by the publisher).
+        /// </summary>
+        private static (int fromOffset, int fromEndCount) ResolveAllEventsOffset(Offset offset)
+        {
+            switch (offset)
+            {
+                case null:
+                case NoOffset:
+                    return (0, 0);
+                case Sequence s:
+                    return (checked((int)(s.Value + 1)), 0); // since offset is exclusive
+                case FromEnd fromEnd:
+                    return (0, fromEnd.Count);
+                default:
+                    throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
+            }
         }
     }
 }

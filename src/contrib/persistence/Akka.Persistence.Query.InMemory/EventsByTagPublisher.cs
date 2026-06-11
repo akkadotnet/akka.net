@@ -26,11 +26,11 @@ namespace Akka.Persistence.Query.InMemory
             }
         }
 
-        public static Props Props(string tag, int fromOffset, int toOffset, TimeSpan? refreshInterval, int maxBufferSize, string writeJournalPluginId)
+        public static Props Props(string tag, int fromOffset, int toOffset, int fromEndCount, TimeSpan? refreshInterval, int maxBufferSize, string writeJournalPluginId)
         {
             return refreshInterval.HasValue
-                ? Actor.Props.Create(() => new LiveEventsByTagPublisher(tag, fromOffset, toOffset, refreshInterval.Value, maxBufferSize, writeJournalPluginId))
-                : Actor.Props.Create(() => new CurrentEventsByTagPublisher(tag, fromOffset, toOffset, maxBufferSize, writeJournalPluginId));
+                ? Actor.Props.Create(() => new LiveEventsByTagPublisher(tag, fromOffset, toOffset, fromEndCount, refreshInterval.Value, maxBufferSize, writeJournalPluginId))
+                : Actor.Props.Create(() => new CurrentEventsByTagPublisher(tag, fromOffset, toOffset, fromEndCount, maxBufferSize, writeJournalPluginId));
         }
     }
 
@@ -41,11 +41,16 @@ namespace Akka.Persistence.Query.InMemory
         protected readonly DeliveryBuffer<EventEnvelope> Buffer;
         protected readonly IActorRef JournalRef;
         protected int CurrentOffset;
-        
-        protected AbstractEventsByTagPublisher(string tag, int fromOffset, int maxBufferSize, string writeJournalPluginId)
+
+        // When > 0, the query starts at the Nth event from the end of history. The concrete start
+        // offset is resolved lazily on the first request by asking the journal for the matching count.
+        private readonly int _fromEndCount;
+
+        protected AbstractEventsByTagPublisher(string tag, int fromOffset, int fromEndCount, int maxBufferSize, string writeJournalPluginId)
         {
             Tag = tag;
             CurrentOffset = FromOffset = fromOffset;
+            _fromEndCount = fromEndCount;
             MaxBufferSize = maxBufferSize;
             WriteJournalPluginId = writeJournalPluginId;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
@@ -70,10 +75,42 @@ namespace Akka.Persistence.Query.InMemory
             switch (message)
             {
                 case Request _:
-                    ReceiveInitialRequest();
+                    if (_fromEndCount > 0)
+                        ResolveFromEnd();
+                    else
+                        ReceiveInitialRequest();
                     return true;
                 case EventsByTagPublisher.Continue _:
                     // no-op
+                    return true;
+                case Cancel _:
+                    Context.Stop(Self);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        // Resolves a FromEnd(N) offset into a concrete start offset by asking the journal how many events
+        // currently match this tag, then begins the normal forward replay at max(0, count - N).
+        private void ResolveFromEnd()
+        {
+            JournalRef.Tell(new MemoryJournal.SelectEventCount(Tag, Self));
+            Context.Become(ResolvingFromEnd);
+        }
+
+        private bool ResolvingFromEnd(object message)
+        {
+            switch (message)
+            {
+                case MemoryJournal.EventCount count:
+                    CurrentOffset = Math.Max(0, count.Count - _fromEndCount);
+                    ReceiveInitialRequest();
+                    return true;
+                case Request _:
+                    // demand is tracked by ActorPublisher; events are delivered once replay begins
+                    return true;
+                case EventsByTagPublisher.Continue _:
                     return true;
                 case Cancel _:
                     Context.Stop(Self);
@@ -156,8 +193,8 @@ namespace Akka.Persistence.Query.InMemory
     internal sealed class LiveEventsByTagPublisher : AbstractEventsByTagPublisher
     {
         private readonly ICancelable _tickCancelable;
-        public LiveEventsByTagPublisher(string tag, int fromOffset, int toOffset, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
-            : base(tag, fromOffset, maxBufferSize, writeJournalPluginId)
+        public LiveEventsByTagPublisher(string tag, int fromOffset, int toOffset, int fromEndCount, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
+            : base(tag, fromOffset, fromEndCount, maxBufferSize, writeJournalPluginId)
         {
             ToOffset = toOffset;
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, EventsByTagPublisher.Continue.Instance, Self);
@@ -195,8 +232,8 @@ namespace Akka.Persistence.Query.InMemory
 
     internal sealed class CurrentEventsByTagPublisher : AbstractEventsByTagPublisher
     {
-        public CurrentEventsByTagPublisher(string tag, int fromOffset, int toOffset, int maxBufferSize, string writeJournalPluginId)
-            : base(tag, fromOffset, maxBufferSize, writeJournalPluginId)
+        public CurrentEventsByTagPublisher(string tag, int fromOffset, int toOffset, int fromEndCount, int maxBufferSize, string writeJournalPluginId)
+            : base(tag, fromOffset, fromEndCount, maxBufferSize, writeJournalPluginId)
         {
             _toOffset = toOffset;
         }
