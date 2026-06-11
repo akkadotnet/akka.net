@@ -70,7 +70,7 @@ namespace Akka.Streams
         new Task WatchCompletionAsync();
 
         /// <summary>
-        /// Cancellable variant of <see cref="OfferAsync(T)"/>.
+        /// Cancellable variant of <see cref="ISourceQueue{T}.OfferAsync(T)"/>.
         /// Cancelling <paramref name="cancellationToken"/> while the offer is pending under
         /// <see cref="OverflowStrategy.Backpressure"/> removes the pending offer from the stage
         /// and completes the returned task as canceled. If the offer has already completed
