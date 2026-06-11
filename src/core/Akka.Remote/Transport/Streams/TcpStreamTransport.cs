@@ -244,6 +244,13 @@ namespace Akka.Remote.Transport.Streams
             _connections.TryRemove(handle, out _);
         }
 
+        private static ByteString ToByteString(ReadOnlySequence<byte> payload)
+        {
+            return payload.IsSingleSegment
+                ? ByteString.CopyFrom(payload.FirstSpan)
+                : ByteString.CopyFrom(payload.ToArray());
+        }
+
         private sealed class DeferredInboundBridge
         {
             private readonly object _gate = new();
@@ -252,7 +259,7 @@ namespace Akka.Remote.Transport.Streams
 
             public void NotifyInbound(ReadOnlySequence<byte> payload)
             {
-                var bytes = ByteString.CopyFrom(payload.ToArray());
+                var bytes = ToByteString(payload);
                 lock (_gate)
                 {
                     if (_handle != null)
@@ -333,7 +340,7 @@ namespace Akka.Remote.Transport.Streams
 
             public void NotifyInbound(ReadOnlySequence<byte> payload)
             {
-                Notify(new InboundPayload(ByteString.CopyFrom(payload.ToArray())));
+                Notify(new InboundPayload(ToByteString(payload)));
             }
 
             public void NotifyInbound(ByteString payload)

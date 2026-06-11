@@ -115,6 +115,36 @@ Environment summary from the run:
 
 This removes one stage-actor message per outbound TCP write. Current Akka.IO TCP enqueues writes into a pipe and sends the write ack immediately, so the old `WriteAck` roundtrip did not represent socket-flush backpressure. This optimization improves the stream RemotePingPong hot path while keeping stream TCP functional tests passing.
 
+## Inbound Single-Segment Copy Smoke Result
+
+Command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+Environment summary from the run:
+
+- OS: Unix 6.8.0.117
+- Processor count: 8
+- Server GC: true
+- Transport: Akka.Streams TCP
+- Write inlet: `Source.ActorRef`
+- TCP stream stage: `Tcp.NoAck` write path
+- Inbound bridge: single-segment `ReadOnlySequence<byte>` uses `ByteString.CopyFrom(payload.FirstSpan)` instead of `payload.ToArray()`
+
+| Num clients | Total messages | Msgs/sec | Total ms | Start threads | End threads |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 200000 | 101575 | 1969.44 | 27 | 48 |
+| 5 | 1000000 | 586855 | 1704.86 | 48 | 52 |
+| 10 | 2000000 | 674764 | 2964.74 | 52 | 52 |
+| 15 | 3000000 | 747199 | 4015.93 | 51 | 51 |
+| 20 | 4000000 | 746130 | 5361.32 | 51 | 51 |
+| 25 | 5000000 | 754262 | 6629.54 | 51 | 51 |
+| 30 | 6000000 | 776097 | 7731.59 | 51 | 51 |
+
+This removes an avoidable intermediate array allocation/copy for the common inbound frame shape emitted by the stream framing stage.
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:
