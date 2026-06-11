@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
@@ -891,9 +892,9 @@ namespace Akka.Remote.Transport
                 {
                     case Disassociated d:
                         return Stop(new Failure(d.Info));
-                    case InboundPayload p when @event.StateData is OutboundUnderlyingAssociated ola:
+                    case InboundPayload or InboundSequencePayload when @event.StateData is OutboundUnderlyingAssociated ola:
                         {
-                            var pdu = DecodePdu(p.Payload);
+                            var pdu = DecodePdu((IHandleEvent)@event.FsmEvent);
                             /*
                              * This state is used for OutboundProtocolState actors when they receive
                              * a reply back from the inbound end of the association.
@@ -938,9 +939,9 @@ namespace Akka.Remote.Transport
                         return HandleTimers(oua.WrappedHandle);
 
                     // Events for inbound associations
-                    case InboundPayload p when @event.StateData is InboundUnassociated iu:
+                    case InboundPayload or InboundSequencePayload when @event.StateData is InboundUnassociated iu:
                         {
-                            var pdu = DecodePdu(p.Payload);
+                            var pdu = DecodePdu((IHandleEvent)@event.FsmEvent);
                             /*
                              * This state is used by inbound protocol state actors
                              * when they receive an association attempt from the
@@ -999,9 +1000,9 @@ namespace Akka.Remote.Transport
                 {
                     case Disassociated d:
                         return Stop(new Failure(d.Info));
-                    case InboundPayload ip:
+                    case InboundPayload or InboundSequencePayload:
                         {
-                            var pdu = DecodePdu(ip.Payload);
+                            var pdu = DecodePdu((IHandleEvent)@event.FsmEvent);
                             switch (pdu)
                             {
                                 case Disassociate d:
@@ -1297,7 +1298,29 @@ namespace Akka.Remote.Transport
             return readHandlerPromise.Task;
         }
 
+        private IAkkaPdu DecodePdu(IHandleEvent ev)
+        {
+            return ev switch
+            {
+                InboundPayload p => DecodePdu(p.Payload),
+                InboundSequencePayload p => DecodePdu(p.Payload),
+                _ => throw new AkkaProtocolException($"Expected inbound payload event, received [{ev.GetType()}]")
+            };
+        }
+
         private IAkkaPdu DecodePdu(ByteString pdu)
+        {
+            try
+            {
+                return _codec.DecodePdu(pdu);
+            }
+            catch (Exception ex)
+            {
+                throw new AkkaProtocolException($"Error while decoding incoming Akka PDU of length {pdu.Length}", ex);
+            }
+        }
+
+        private IAkkaPdu DecodePdu(ReadOnlySequence<byte> pdu)
         {
             try
             {
@@ -1410,4 +1433,3 @@ namespace Akka.Remote.Transport
         #endregion
     }
 }
-

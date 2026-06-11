@@ -343,7 +343,7 @@ namespace Akka.Remote.Transport.Streams
 
             public void NotifyInbound(ReadOnlySequence<byte> payload)
             {
-                Notify(new InboundPayload(ToByteString(payload)));
+                Notify(new InboundSequencePayload(payload));
             }
 
             public void NotifyInbound(ByteString payload)

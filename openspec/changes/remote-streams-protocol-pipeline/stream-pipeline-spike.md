@@ -439,6 +439,45 @@ Validation:
 | --- | --- |
 | `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release --filter "FullyQualifiedName~RemoteTcpFramingSpec|FullyQualifiedName~StreamTcpTransportInteropSpec"` | Passed: 6 |
 
+## Sequence-Backed Inbound PDU Decode
+
+Implementation summary:
+
+- Added an internal `InboundSequencePayload` event for transports that can expose encoded Akka protocol PDUs as `ReadOnlySequence<byte>`.
+- `ProtocolStateActor` now decodes `InboundPayload` and `InboundSequencePayload` through the same handshake, heartbeat, disassociation, and open-payload branches.
+- The established `TcpStreamTransport` inbound path now notifies the protocol actor with `InboundSequencePayload`, avoiding the prior transport-frame-to-`ByteString` materialization before PDU decode.
+- Startup race buffering remains conservative: frames received before the `StreamAssociationHandle` exists are still copied into `ByteString` and replayed through the classic path.
+- The user payload event exposed after protocol unwrap remains `InboundPayload(ByteString)`; this slice only removes the outer Remote PDU materialization in the established stream inbound path.
+
+RemotePingPong stream smoke command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+Single smoke run on the busy VM:
+
+| Num clients | Msgs/sec |
+| ---: | ---: |
+| 1 | 105486 |
+| 5 | 674764 |
+| 10 | 730995 |
+| 15 | 771209 |
+| 20 | 779272 |
+| 25 | 823181 |
+| 30 | 846741 |
+
+Validation:
+
+| Command | Result |
+| --- | --- |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release --filter "FullyQualifiedName~MessageSerializerV2Spec|FullyQualifiedName~AkkaPduCodecWireFormatSpec|FullyQualifiedName~AkkaProtocolSpec|FullyQualifiedName~StreamTcpTransportInteropSpec|FullyQualifiedName~RemoteTcpFramingSpec"` | Passed: 35 |
+| `dotnet test "src/core/Akka.Streams.Tests/Akka.Streams.Tests.csproj" -c Release --filter "FullyQualifiedName~TcpSpec"` | Passed: 21, skipped: 3 |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release` | Passed: 387, skipped: 5 |
+| `dotnet test "src/core/Akka.Cluster.Tests/Akka.Cluster.Tests.csproj" -c Release` | Passed: 364 |
+| `openspec validate remote-streams-protocol-pipeline --strict` | Valid |
+| `git diff --check` | Passed |
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:
@@ -471,4 +510,4 @@ This experiment was reverted. One in-flight async queue offer per `EndpointWrite
 
 The spike does not yet remove the inbound `ProtocolStateActor` mailbox hop. The future BidiFlow-style protocol replacement should handle the protocol events documented in `protocol-state-machine-map.md` and present the same `AkkaProtocolHandle` / `InboundAssociation` / `InboundPayload` / `Disassociated` behavior to existing remoting actors.
 
-The spike also does not yet integrate the sequence/writer PDU codec into stream framing. Frames are currently bridged through `ByteString` at the classic transport boundary so the old protocol actor can remain authoritative.
+The spike now integrates sequence-backed PDU decode into the established stream inbound path. It does not yet replace outbound PDU construction, inner protobuf `bytes payload` materialization, or the final `InboundPayload(ByteString)` contract consumed by `EndpointReader`, so the old protocol actor can remain authoritative.
