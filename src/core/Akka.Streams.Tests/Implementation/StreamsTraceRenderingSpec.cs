@@ -262,6 +262,50 @@ namespace Akka.Streams.Tests.Implementation
                 collector: collector);
         }
 
+        // ------ scenario: trace continuity across an .Async() actor boundary (#8243) ------
+        [Fact]
+        public async Task Render_async_boundary_continuity()
+        {
+            using var collector = new StreamsActivityCollector();
+            using var producers = new ProducerActivityScope("ProducerTest");
+
+            // TracedConsumeSource → Select → [.Async() actor boundary] → Select → Sink.Seq.
+            var source = new TracedConsumeSource(producers.Source, 21);
+            var done = Source.FromGraph(source)
+                .Select(i => i + 1)
+                .Async()
+                .Select(i => i * 2)
+                .RunWith(Sink.Seq<int>(), _materializer);
+
+            var producerTraceId = await source.TraceId;
+            producerTraceId.Should().NotBeNullOrEmpty("the producer span must be live");
+            await collector.WaitForSpansAsync(
+                atLeast: 1,
+                timeoutSeconds: 10,
+                predicate: snap => snap.Any(a =>
+                    a.OperationName.Contains("SeqStage") && a.TraceId.ToString() == producerTraceId));
+            await done;
+
+            // Guard the rendered artifact: the terminal sink span must actually share the producer
+            // trace, so the committed sample reflects real continuity rather than a stale/empty run.
+            collector.StoppedActivities.Should().Contain(
+                a => a.OperationName.Contains("SeqStage") && a.TraceId.ToString() == producerTraceId,
+                "the rendering must capture genuine end-to-end continuity across the .Async() boundary");
+
+            RenderAndSave(
+                scenario: "async-boundary-continuity",
+                title: "Trace continuity across an `.Async()` actor boundary",
+                description: "A traced source pushes one element while a `consume` span is current. The " +
+                             "stream crosses an `.Async()` boundary — a publisher/subscriber actor hop — " +
+                             "between two `Select` stages. The producer's `ActivityContext` is captured at " +
+                             "the `ActorOutputBoundary`, carried on the boundary's `OnNext` event, and " +
+                             "re-armed on the downstream `BatchingActorInputBoundary`, so the post-boundary " +
+                             "`Select` and the terminal `Seq` sink stay on the SAME TraceId as the " +
+                             "pre-boundary stage. Before #8243 the actor hop dropped the context and the " +
+                             "downstream stages started a fresh, disconnected trace.",
+                collector: collector);
+        }
+
         // ------ scenario: untraced Source.Tick regression guard ------
         [Fact]
         public async Task Render_untraced_source_tick_no_spans()
