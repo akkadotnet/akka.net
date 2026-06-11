@@ -86,6 +86,35 @@ Environment summary from the run:
 
 This restores the faster fire-and-forget stream inlet after the `Source.Queue` experiment below.
 
+## TCP Stage NoAck Smoke Result
+
+Command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+Environment summary from the run:
+
+- OS: Unix 6.8.0.117
+- Processor count: 8
+- Server GC: true
+- Transport: Akka.Streams TCP
+- Write inlet: `Source.ActorRef`
+- TCP stream stage: writes use `Tcp.NoAck` and pull the next upstream element immediately after enqueueing to Akka.IO TCP
+
+| Num clients | Total messages | Msgs/sec | Total ms | Start threads | End threads |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 200000 | 96433 | 2074.60 | 27 | 32 |
+| 5 | 1000000 | 558972 | 1789.18 | 32 | 36 |
+| 10 | 2000000 | 655953 | 3049.72 | 36 | 50 |
+| 15 | 3000000 | 663424 | 4522.44 | 50 | 51 |
+| 20 | 4000000 | 636639 | 6283.79 | 51 | 51 |
+| 25 | 5000000 | 660241 | 7573.99 | 51 | 50 |
+| 30 | 6000000 | 738735 | 8122.63 | 50 | 50 |
+
+This removes one stage-actor message per outbound TCP write. Current Akka.IO TCP enqueues writes into a pipe and sends the write ack immediately, so the old `WriteAck` roundtrip did not represent socket-flush backpressure. This optimization improves the stream RemotePingPong hot path while keeping stream TCP functional tests passing.
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:
