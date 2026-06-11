@@ -116,6 +116,20 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
+    /// INTERNAL API.
+    /// Represents an ordinary payload PDU whose bytes are backed by an owned sequence.
+    /// </summary>
+    internal sealed class SequencePayload : IAkkaPdu
+    {
+        public SequencePayload(ReadOnlySequence<byte> bytes)
+        {
+            Bytes = bytes;
+        }
+
+        public ReadOnlySequence<byte> Bytes { get; }
+    }
+
+    /// <summary>
     /// TBD
     /// </summary>
     internal sealed class Message : IAkkaPdu, IHasSequenceNumber
@@ -245,6 +259,8 @@ namespace Akka.Remote.Transport
             {
                 case Payload p:
                     return ConstructPayload(p.Bytes);
+                case SequencePayload p:
+                    return ConstructPayload(ToByteString(p.Bytes));
                 case Heartbeat h:
                     return ConstructHeartbeat();
                 case Associate a:
@@ -397,6 +413,13 @@ namespace Akka.Remote.Transport
             write(writer);
             return ByteString.CopyFrom(writer.WrittenSpan);
         }
+
+        private static ByteString ToByteString(ReadOnlySequence<byte> bytes)
+        {
+            return bytes.IsSingleSegment
+                ? ByteString.CopyFrom(bytes.FirstSpan)
+                : ByteString.CopyFrom(bytes.ToArray());
+        }
     }
 
     /// <summary>
@@ -404,6 +427,8 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class AkkaPduProtobuffCodec : AkkaPduCodec
     {
+        private const byte PayloadFieldTag = 0x0A;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -421,15 +446,87 @@ namespace Akka.Remote.Transport
         {
             try
             {
+                if (TryDecodePayloadPdu(raw, out var payload))
+                    return payload;
+
                 var pdu = AkkaProtocolMessage.Parser.ParseFrom(raw);
-                if (pdu.Instruction != null) return DecodeControlPdu(pdu.Instruction);
-                else if (!pdu.Payload.IsEmpty) return new Payload(pdu.Payload); // TODO HasPayload
-                else throw new PduCodecException("Error decoding Akka PDU: Neither message nor control message were contained");
+                return DecodePdu(pdu);
             }
             catch (InvalidProtocolBufferException ex)
             {
                 throw new PduCodecException("Decoding PDU failed", ex);
             }
+        }
+
+        public override IAkkaPdu DecodePdu(ByteString raw)
+        {
+            try
+            {
+                var pdu = AkkaProtocolMessage.Parser.ParseFrom(raw);
+                return DecodePdu(pdu);
+            }
+            catch (InvalidProtocolBufferException ex)
+            {
+                throw new PduCodecException("Decoding PDU failed", ex);
+            }
+        }
+
+        private IAkkaPdu DecodePdu(AkkaProtocolMessage pdu)
+        {
+            if (pdu.Instruction != null) return DecodeControlPdu(pdu.Instruction);
+            else if (!pdu.Payload.IsEmpty) return new Payload(pdu.Payload); // TODO HasPayload
+            else throw new PduCodecException("Error decoding Akka PDU: Neither message nor control message were contained");
+        }
+
+        private static bool TryDecodePayloadPdu(ReadOnlySequence<byte> raw, out SequencePayload payload)
+        {
+            payload = null;
+
+            var reader = new SequenceReader<byte>(raw);
+            if (!reader.TryRead(out var tag) || tag != PayloadFieldTag)
+                return false;
+
+            if (!TryReadVarint32(ref reader, out var payloadLength) || payloadLength <= 0)
+                return false;
+
+            if (reader.Remaining != payloadLength)
+                return false;
+
+            payload = new SequencePayload(raw.Slice(reader.Position, payloadLength));
+            return true;
+        }
+
+        private static bool TryReadVarint32(ref SequenceReader<byte> reader, out int value)
+        {
+            long result = 0;
+            var shift = 0;
+
+            while (shift < 35)
+            {
+                if (!reader.TryRead(out var b))
+                {
+                    value = 0;
+                    return false;
+                }
+
+                result |= (long)(b & 0x7F) << shift;
+                if ((b & 0x80) == 0)
+                {
+                    if (result > int.MaxValue)
+                    {
+                        value = 0;
+                        return false;
+                    }
+
+                    value = (int)result;
+                    return true;
+                }
+
+                shift += 7;
+            }
+
+            value = 0;
+            return false;
         }
 
         /// <summary>
@@ -573,7 +670,6 @@ namespace Akka.Remote.Transport
         public override AckAndMessage DecodeMessage(ReadOnlySequence<byte> raw, IRemoteActorRefProvider provider, Address localAddress)
         {
             var ackAndEnvelope = AckAndEnvelopeContainer.Parser.ParseFrom(raw);
-
             Ack ackOption = null;
 
             if (ackAndEnvelope.Ack != null)

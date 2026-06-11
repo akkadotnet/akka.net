@@ -47,10 +47,11 @@
 - [ ] 6.4 Integrate the sequence/writer PDU codec into the stream pipeline.
 - [ ] 6.5 Integrate the SerializerV2 payload boundary into the stream pipeline.
 - [ ] 6.6 Preserve `EndpointWriter`, `EndpointReader`, and reliable-delivery semantics or document any required internal facade.
-- [ ] 6.7 Add a conservative payload-only outer `AkkaProtocolMessage` fast parser over `ReadOnlySequence<byte>`.
-- [ ] 6.8 Fall back to generated protobuf parsing for control PDUs, unknown fields, non-canonical field ordering, and malformed fast-path candidates.
-- [ ] 6.9 Forward sequence-backed payload PDUs from `ProtocolStateActor` to `EndpointReader` without materializing `InboundPayload(ByteString)` on the established stream inbound path.
-- [ ] 6.10 Teach `EndpointReader` to handle `InboundSequencePayload` in both reading and not-reading states while preserving ACK and reliable-delivery behavior.
+- [x] 6.7 Add a conservative payload-only outer `AkkaProtocolMessage` fast parser over `ReadOnlySequence<byte>`.
+- [x] 6.8 Fall back to generated protobuf parsing for control PDUs, unknown fields, non-canonical field ordering, and malformed fast-path candidates.
+- [x] 6.9 Forward sequence-backed payload PDUs from `ProtocolStateActor` to `EndpointReader` without materializing `InboundPayload(ByteString)` on the established stream inbound path.
+- [x] 6.10 Teach `EndpointReader` to handle `InboundSequencePayload` in both reading and not-reading states while preserving ACK and reliable-delivery behavior.
+- [x] 6.11 Evaluate and reject a hand-rolled inner `AckAndEnvelopeContainer` parser after measurements showed no allocation reduction and no clear end-to-end throughput win.
 
 ## 7. Validation And Performance Gates
 
@@ -58,7 +59,7 @@
 - [x] 7.2 Run relevant `Akka.Cluster.Tests` or multi-node smoke tests in legacy mode.
 - [ ] 7.3 Run relevant `Akka.Cluster.Tests` or multi-node smoke tests in the opt-in stream pipeline mode when available.
 - [x] 7.4 Rerun `RemotePingPong` after each implementation milestone and record result deltas.
-- [ ] 7.5 Rerun `AkkaPduCodecBenchmark` after codec milestones and record allocation deltas.
+- [x] 7.5 Rerun `AkkaPduCodecBenchmark` after codec milestones and record allocation deltas.
 - [x] 7.6 Stop before defaulting the stream pipeline on until benchmarks and compatibility tests justify the change.
 
 ## 8. Documentation And Review

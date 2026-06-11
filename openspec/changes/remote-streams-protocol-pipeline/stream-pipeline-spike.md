@@ -507,6 +507,76 @@ Environment summary:
 
 Stream samples stayed in the recent range after the sequence-backed inbound PDU decode change, so this slice does not show an obvious regression. DotNetty sample 2 logged transient disassociations at higher client counts and sample 3 logged one shutdown-time send error, but both runs completed. Treat this as VM smoke data rather than a formal benchmark.
 
+## Payload-Only Outer PDU Fast Parser
+
+Implementation summary:
+
+- Added `SequencePayload`, an internal PDU representation that preserves the decoded outer payload as a `ReadOnlySequence<byte>`.
+- `AkkaPduProtobuffCodec.DecodePdu(ReadOnlySequence<byte>)` now fast-paths only canonical payload-only `AkkaProtocolMessage` frames that start with protobuf tag `0x0A`, contain a valid payload length, and consume the full outer PDU.
+- `DecodePdu(ByteString)` still uses the generated protobuf parser so classic callers keep receiving `Payload(ByteString)`.
+- Control PDUs, unknown fields, non-canonical field ordering, both-fields-present frames, and malformed fast-path candidates fall back to generated protobuf parsing.
+- `ProtocolStateActor` forwards decoded `SequencePayload` values as `InboundSequencePayload` to the registered endpoint listener, including listener-ready and pre-listener buffered cases.
+- `EndpointReader` now handles `InboundSequencePayload` in both reading and not-reading states, preserving ACK forwarding, reliable-delivery buffering, and user-message dispatch behavior.
+- Inner `AckAndEnvelopeContainer` parsing still uses the generated protobuf parser. A hand-rolled inner parser was evaluated and rejected before this slice was finalized.
+
+Validation after the payload-only outer PDU fast parser:
+
+| Command | Result |
+| --- | --- |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release --framework net10.0 --filter "FullyQualifiedName~EndpointReaderSpec|FullyQualifiedName~MessageSerializerV2Spec|FullyQualifiedName~AkkaPduCodecWireFormatSpec|FullyQualifiedName~AkkaProtocolSpec|FullyQualifiedName~StreamTcpTransportInteropSpec|FullyQualifiedName~RemoteTcpFramingSpec" --no-restore` | Passed: 46 |
+| `dotnet test "src/core/Akka.Streams.Tests/Akka.Streams.Tests.csproj" -c Release --framework net10.0 --filter "FullyQualifiedName~TcpSpec" --no-restore` | Passed: 21, skipped: 3 |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release --framework net10.0 --no-restore` | Passed: 398, skipped: 5 |
+| `dotnet test "src/core/Akka.Cluster.Tests/Akka.Cluster.Tests.csproj" -c Release --framework net10.0 --no-restore` | Passed: 364 |
+
+RemotePingPong stream smoke after the payload-only outer PDU fast parser:
+
+| Num clients | Total messages | Msgs/sec | Total ms | Start threads | End threads |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 200000 | 116823 | 1712.24 | 27 | 30 |
+| 5 | 1000000 | 564972 | 1770.70 | 30 | 36 |
+| 10 | 2000000 | 768936 | 2601.71 | 39 | 50 |
+| 15 | 3000000 | 772400 | 3884.10 | 50 | 50 |
+| 20 | 4000000 | 846741 | 4724.27 | 50 | 50 |
+| 25 | 5000000 | 831118 | 6016.38 | 50 | 50 |
+| 30 | 6000000 | 839396 | 7148.40 | 48 | 48 |
+
+## Rejected Inner Envelope Parser
+
+Experiment summary:
+
+- A hand-rolled `AckAndEnvelopeContainer` parser was prototyped for `DecodeMessage(ReadOnlySequence<byte>)`.
+- The parser recognized the common ack/envelope/recipient/payload/sender/sequence-number shape and fell back to generated protobuf parsing for unsupported or malformed shapes.
+- The prototype still had to materialize the existing generated `SerializedMessage` payload, manifest bytes, actor path strings, and Remote wrapper objects to preserve current downstream behavior.
+
+Dry `AkkaPduCodecBenchmark` command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/Akka.Benchmarks/Akka.Benchmarks.csproj" -- --filter "*AkkaPduCodecBenchmark.DecodeMessageOnly*" --job Dry --join
+```
+
+Dry benchmark result from the prototype:
+
+| Method | Mean | Allocated |
+| --- | ---: | ---: |
+| `DecodeMessageOnly` | 4.971 us | 752 B |
+| `DecodeMessageOnlyFromSequence` | 4.656 us | 752 B |
+
+The dry run is directional only, but it showed the important result: allocations stayed unchanged at `752 B/op`. The small sequence-path delta was not enough to justify a large custom protobuf parser.
+
+RemotePingPong stream smoke from the prototype:
+
+| Num clients | Total messages | Msgs/sec | Total ms | Start threads | End threads |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 200000 | 105153 | 1902.71 | 26 | 49 |
+| 5 | 1000000 | 620348 | 1612.80 | 49 | 54 |
+| 10 | 2000000 | 715308 | 2796.45 | 54 | 54 |
+| 15 | 3000000 | 784109 | 3826.01 | 54 | 54 |
+| 20 | 4000000 | 816827 | 4897.45 | 53 | 53 |
+| 25 | 5000000 | 833612 | 5998.19 | 52 | 51 |
+| 30 | 6000000 | 886133 | 6771.20 | 50 | 48 |
+
+The smoke result stayed inside the recent noisy stream range and did not identify a clear end-to-end improvement. Runtime diagnostics instead showed `EndpointReader|InboundSequencePayload` mailbox wait dominating while receive execution and TCP/framing stages remained cheap. The prototype was removed; the next meaningful optimization should reduce endpoint actor mailbox turns, for example by batching inbound payloads into one endpoint turn or removing an established-state actor hop.
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:
@@ -539,4 +609,4 @@ This experiment was reverted. One in-flight async queue offer per `EndpointWrite
 
 The spike does not yet remove the inbound `ProtocolStateActor` mailbox hop. The future BidiFlow-style protocol replacement should handle the protocol events documented in `protocol-state-machine-map.md` and present the same `AkkaProtocolHandle` / `InboundAssociation` / `InboundPayload` / `Disassociated` behavior to existing remoting actors.
 
-The spike now integrates sequence-backed PDU decode into the established stream inbound path. It does not yet replace outbound PDU construction, inner protobuf `bytes payload` materialization, or the final `InboundPayload(ByteString)` contract consumed by `EndpointReader`, so the old protocol actor can remain authoritative.
+The spike now integrates sequence-backed PDU decode into the established stream inbound path through `EndpointReader`. It does not yet replace outbound PDU construction or inner `AckAndEnvelopeContainer` generated protobuf parsing, so the old protocol actor can remain authoritative.

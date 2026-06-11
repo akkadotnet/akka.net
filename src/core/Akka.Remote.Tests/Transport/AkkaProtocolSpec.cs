@@ -225,10 +225,8 @@ namespace Akka.Remote.Tests.Transport
             await AwaitConditionAsync(() => Task.FromResult(LastActivityIsHeartbeat(collaborators.Registry)), DefaultTimeout);
 
             reader.Tell(_testSequencePayload, TestActor);
-            await ExpectMsgAsync<InboundPayload>(inbound =>
-            {
-                Assert.Equal(_testEnvelope, inbound.Payload);
-            }, hint: "expected InboundPayload");
+            await ExpectMsgAsync<InboundSequencePayload>(inbound => AssertSequencePayload(_testEnvelope, inbound),
+                hint: "expected InboundSequencePayload");
         }
 
         [Fact]
@@ -387,10 +385,8 @@ namespace Akka.Remote.Tests.Transport
 
             wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
 
-            await ExpectMsgAsync<InboundPayload>(inbound =>
-            {
-                Assert.Equal(_testEnvelope, inbound.Payload);
-            }, hint: "expected queued InboundPayload after listener registration");
+            await ExpectMsgAsync<InboundSequencePayload>(inbound => AssertSequencePayload(_testEnvelope, inbound),
+                hint: "expected queued InboundSequencePayload after listener registration");
         }
 
         [Fact]
@@ -685,6 +681,11 @@ namespace Akka.Remote.Tests.Transport
         private static IHandleEvent TestSequencePayload(ByteString payload)
         {
             return new InboundSequencePayload(new ReadOnlySequence<byte>(payload.Memory));
+        }
+
+        private static void AssertSequencePayload(ByteString expected, InboundSequencePayload actual)
+        {
+            Assert.Equal(expected, ByteString.CopyFrom(actual.Payload.ToArray()));
         }
 
         private async Task<(Collaborators Collaborators, IActorRef StateActor, AkkaProtocolHandle ProtocolHandle)> OpenOutboundAssociation(

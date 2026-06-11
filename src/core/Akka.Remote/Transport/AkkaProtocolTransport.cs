@@ -637,7 +637,7 @@ namespace Akka.Remote.Transport
         /// <param name="handlerListener">TBD</param>
         /// <param name="wrappedHandle">TBD</param>
         /// <param name="queue">TBD</param>
-        public AssociatedWaitHandler(Task<IHandleEventListener> handlerListener, AssociationHandle wrappedHandle, Queue<ByteString> queue)
+        public AssociatedWaitHandler(Task<IHandleEventListener> handlerListener, AssociationHandle wrappedHandle, Queue<IHandleEvent> queue)
         {
             Queue = queue;
             WrappedHandle = wrappedHandle;
@@ -657,7 +657,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Queue<ByteString> Queue { get; private set; }
+        public Queue<IHandleEvent> Queue { get; private set; }
     }
 
     /// <summary>
@@ -920,7 +920,7 @@ namespace Akka.Remote.Transport
                                                     new AssociatedWaitHandler(
                                                         NotifyOutboundHandler(wrappedHandle, handshakeInfo,
                                                             statusCompletionSource), wrappedHandle,
-                                                        new Queue<ByteString>()));
+                                                        new Queue<IHandleEvent>()));
                                     }
                                 case Disassociate d:
                                     //After receiving Disassociate we MUST NOT send back a Disassociate (loop)
@@ -963,7 +963,7 @@ namespace Akka.Remote.Transport
                                     return GoTo(AssociationState.Open).Using(
                                         new AssociatedWaitHandler(
                                             NotifyInboundHandler(wrappedHandle, a.Info, associationHandler),
-                                            wrappedHandle, new Queue<ByteString>()));
+                                            wrappedHandle, new Queue<IHandleEvent>()));
 
                                 // Got a stray message -- explicitly reset the association (force remote endpoint to reassociate)
                                 default:
@@ -1013,22 +1013,11 @@ namespace Akka.Remote.Transport
                                 case Payload p:
                                     // use incoming ordinary message as alive sign
                                     _failureDetector.HeartBeat();
-                                    switch (@event.StateData)
-                                    {
-                                        case AssociatedWaitHandler awh:
-                                            var nQueue = new Queue<ByteString>(awh.Queue);
-                                            nQueue.Enqueue(p.Bytes);
-                                            return
-                                                Stay()
-                                                    .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
-                                                        nQueue));
-                                        case ListenerReady lr:
-                                            lr.Listener.Notify(new InboundPayload(p.Bytes));
-                                            return Stay();
-                                        default:
-                                            throw new AkkaProtocolException(
-                                                $"Unhandled message in state Open(InboundPayload) with type [{@event.FsmEvent?.GetType()}]");
-                                    }
+                                    return HandlePayload(new InboundPayload(p.Bytes), @event.StateData, @event.FsmEvent);
+                                case SequencePayload p:
+                                    // use incoming ordinary message as alive sign
+                                    _failureDetector.HeartBeat();
+                                    return HandlePayload(new InboundSequencePayload(p.Bytes), @event.StateData, @event.FsmEvent);
                                 default:
                                     return Stay();
                             }
@@ -1063,7 +1052,7 @@ namespace Akka.Remote.Transport
                     case HandleListenerRegistered hlr when @event.StateData is AssociatedWaitHandler awh:
                         foreach (var p in awh.Queue)
                         {
-                            hlr.Listener.Notify(new InboundPayload(p));
+                            hlr.Listener.Notify(p);
                         }
 
                         return Stay().Using(new ListenerReady(hlr.Listener, awh.WrappedHandle));
@@ -1306,6 +1295,23 @@ namespace Akka.Remote.Transport
                 InboundSequencePayload p => DecodePdu(p.Payload),
                 _ => throw new AkkaProtocolException($"Expected inbound payload event, received [{ev.GetType()}]")
             };
+        }
+
+        private State<AssociationState, ProtocolStateData> HandlePayload(IHandleEvent payload, ProtocolStateData stateData, object fsmEvent)
+        {
+            switch (stateData)
+            {
+                case AssociatedWaitHandler awh:
+                    var nQueue = new Queue<IHandleEvent>(awh.Queue);
+                    nQueue.Enqueue(payload);
+                    return Stay().Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle, nQueue));
+                case ListenerReady lr:
+                    lr.Listener.Notify(payload);
+                    return Stay();
+                default:
+                    throw new AkkaProtocolException(
+                        $"Unhandled message in state Open(InboundPayload) with type [{fsmEvent?.GetType()}]");
+            }
         }
 
         private IAkkaPdu DecodePdu(ByteString pdu)

@@ -98,8 +98,38 @@ namespace Akka.Remote.Tests.Transport
             AssertBytes(PayloadHex, _codec.ConstructPayload(payloadBytes));
             AssertWriterBytes(PayloadHex, writer => _codec.ConstructPayload(payloadBytes, writer));
 
-            var decodedPayload = Assert.IsType<Payload>(_codec.DecodePdu(FromHexSequence(PayloadHex)));
+            var decodedPayload = Assert.IsType<Payload>(_codec.DecodePdu(FromHex(PayloadHex)));
             Assert.Equal(payloadBytes, decodedPayload.Bytes);
+
+            var decodedSequencePayload = Assert.IsType<SequencePayload>(_codec.DecodePdu(FromHexSequence(PayloadHex)));
+            AssertSequenceBytes(payloadBytes, decodedSequencePayload.Bytes);
+        }
+
+        [Fact(DisplayName = "AkkaPduProtobuffCodec should fast-path canonical sequence payload PDUs")]
+        public void AkkaPduProtobuffCodec_should_fast_path_canonical_sequence_payload_pdus()
+        {
+            var decodedPayload = Assert.IsType<SequencePayload>(_codec.DecodePdu(SplitSequence(0x0A, 0x03, 0xAA, 0xBB, 0xCC)));
+
+            AssertSequenceBytes(ByteString.CopyFrom(0xAA, 0xBB, 0xCC), decodedPayload.Bytes);
+        }
+
+        [Theory(DisplayName = "AkkaPduProtobuffCodec should fall back from sequence fast path when needed")]
+        [InlineData(HeartbeatHex, typeof(Heartbeat))]
+        [InlineData("18010A03AABBCC", typeof(Payload))]
+        [InlineData("0A03AABBCC1801", typeof(Payload))]
+        [InlineData("120208030A03AABBCC", typeof(Heartbeat))]
+        [InlineData("0A03AABBCC12020803", typeof(Heartbeat))]
+        public void AkkaPduProtobuffCodec_should_fall_back_from_sequence_fast_path_when_needed(string hex, Type expectedPduType)
+        {
+            var decoded = _codec.DecodePdu(FromHexSequence(hex));
+
+            Assert.Equal(expectedPduType, decoded.GetType());
+        }
+
+        [Fact(DisplayName = "AkkaPduProtobuffCodec should reject malformed sequence payload fast path candidates")]
+        public void AkkaPduProtobuffCodec_should_reject_malformed_sequence_payload_fast_path_candidates()
+        {
+            Assert.Throws<PduCodecException>(() => _codec.DecodePdu(FromHexSequence("0A80")));
         }
 
         [Fact(DisplayName = "AkkaPduProtobuffCodec should preserve payload-wrapped envelope wire format")]
@@ -151,6 +181,26 @@ namespace Akka.Remote.Tests.Transport
                 Ack()));
 
             var decoded = _codec.DecodeMessage(FromHexSequence(AckAndMessageHex), RemoteProvider, LocalAddress);
+            AssertAck(decoded.AckOption);
+            AssertMessage(decoded.MessageOption, reliableDeliveryEnabled: true);
+            Assert.Equal(new SeqNo(42), decoded.MessageOption!.Seq);
+        }
+
+        [Fact(DisplayName = "AkkaPduProtobuffCodec should decode reliable delivery envelope from split sequence")]
+        public void AkkaPduProtobuffCodec_should_decode_reliable_delivery_envelope_from_split_sequence()
+        {
+            var decoded = _codec.DecodeMessage(SplitSequence(Convert.FromHexString(AckAndMessageHex)), RemoteProvider, LocalAddress);
+
+            AssertAck(decoded.AckOption);
+            AssertMessage(decoded.MessageOption, reliableDeliveryEnabled: true);
+            Assert.Equal(new SeqNo(42), decoded.MessageOption!.Seq);
+        }
+
+        [Fact(DisplayName = "AkkaPduProtobuffCodec should decode envelopes with unknown fields")]
+        public void AkkaPduProtobuffCodec_should_decode_envelopes_with_unknown_fields()
+        {
+            var decoded = _codec.DecodeMessage(FromHexSequence(AckAndMessageHex + "1801"), RemoteProvider, LocalAddress);
+
             AssertAck(decoded.AckOption);
             AssertMessage(decoded.MessageOption, reliableDeliveryEnabled: true);
             Assert.Equal(new SeqNo(42), decoded.MessageOption!.Seq);
@@ -237,6 +287,23 @@ namespace Akka.Remote.Tests.Transport
             return new ReadOnlySequence<byte>(Convert.FromHexString(hex));
         }
 
+        private static ReadOnlySequence<byte> SplitSequence(params byte[] bytes)
+        {
+            var first = new SequenceSegment(new[] { bytes[0] });
+            var current = first;
+            for (var i = 1; i < bytes.Length; i++)
+            {
+                current = current.Append(new[] { bytes[i] });
+            }
+
+            return new ReadOnlySequence<byte>(first, 0, current, current.Memory.Length);
+        }
+
+        private static void AssertSequenceBytes(ByteString expected, ReadOnlySequence<byte> actual)
+        {
+            Assert.Equal(expected, ByteString.CopyFrom(actual.ToArray()));
+        }
+
         private static void AssertBytes(string expectedHex, ByteString actual)
         {
             Assert.Equal(expectedHex, Convert.ToHexString(actual.ToByteArray()));
@@ -260,6 +327,24 @@ namespace Akka.Remote.Tests.Transport
             public override ActorPath Path { get; }
 
             public override IActorRefProvider Provider { get; }
+        }
+
+        private sealed class SequenceSegment : ReadOnlySequenceSegment<byte>
+        {
+            public SequenceSegment(ReadOnlyMemory<byte> memory)
+            {
+                Memory = memory;
+            }
+
+            public SequenceSegment Append(ReadOnlyMemory<byte> memory)
+            {
+                var segment = new SequenceSegment(memory)
+                {
+                    RunningIndex = RunningIndex + Memory.Length
+                };
+                Next = segment;
+                return segment;
+            }
         }
     }
 }
