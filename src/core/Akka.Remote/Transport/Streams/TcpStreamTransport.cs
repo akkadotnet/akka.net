@@ -10,6 +10,7 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -235,12 +236,20 @@ namespace Akka.Remote.Transport.Streams
 
             public void NotifyInbound(ReadOnlySequence<byte> payload)
             {
+                var handle = Volatile.Read(ref _handle);
+                if (handle != null)
+                {
+                    handle.NotifyInbound(payload);
+                    return;
+                }
+
                 var bytes = ToByteString(payload);
                 lock (_gate)
                 {
-                    if (_handle != null)
+                    handle = _handle;
+                    if (handle != null)
                     {
-                        _handle.NotifyInbound(bytes);
+                        handle.NotifyInbound(bytes);
                     }
                     else
                     {
@@ -253,9 +262,10 @@ namespace Akka.Remote.Transport.Streams
             {
                 lock (_gate)
                 {
-                    _handle = handle;
                     while (_pending.Count > 0)
-                        _handle.NotifyInbound(_pending.Dequeue());
+                        handle.NotifyInbound(_pending.Dequeue());
+
+                    Volatile.Write(ref _handle, handle);
                 }
             }
         }
@@ -292,9 +302,11 @@ namespace Akka.Remote.Transport.Streams
 
                     lock (_gate)
                     {
-                        _listener = task.Result;
+                        var listener = task.Result;
                         while (_pending.Count > 0)
-                            _listener.Notify(_pending.Dequeue());
+                            listener.Notify(_pending.Dequeue());
+
+                        Volatile.Write(ref _listener, listener);
                     }
                 }, TaskContinuationOptions.ExecuteSynchronously);
             }
@@ -354,11 +366,19 @@ namespace Akka.Remote.Transport.Streams
 
             private void Notify(IHandleEvent ev)
             {
+                var listener = Volatile.Read(ref _listener);
+                if (listener != null)
+                {
+                    listener.Notify(ev);
+                    return;
+                }
+
                 lock (_gate)
                 {
-                    if (_listener != null)
+                    listener = _listener;
+                    if (listener != null)
                     {
-                        _listener.Notify(ev);
+                        listener.Notify(ev);
                     }
                     else
                     {

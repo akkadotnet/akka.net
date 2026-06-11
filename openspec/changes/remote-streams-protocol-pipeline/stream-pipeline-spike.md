@@ -361,6 +361,52 @@ Additional regression coverage:
 - `RemoteTcpFraming_should_reject_oversized_frames` verifies frame-size enforcement.
 - `RemoteTcpFraming_should_reject_truncated_final_frame` verifies partial EOF failure behavior.
 
+## Inbound Bridge Lock Fast Path Result
+
+Implementation summary:
+
+- `DeferredInboundBridge` now uses a volatile fast path once the `StreamAssociationHandle` has been installed.
+- `StreamAssociationHandle.Notify` now uses a volatile fast path once the read listener has been registered.
+- Pending inbound frames/events are still drained under the existing locks before the handle/listener is published, preserving ordering for startup races.
+- The established inbound path avoids two uncontended locks per frame: bridge handle lookup and handle listener lookup.
+
+RemotePingPong stream command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+Environment summary:
+
+- OS: Unix 6.8.0.117
+- Processor count: 8
+- Server GC: true
+- Stream transport: Akka.Streams TCP with `Tcp.NoAck`, inbound single-segment copy avoidance, multi-segment outbound frame encoding, Akka.IO TCP no-ack flush batching, Remote-specific TCP frame decoding, and lock-free established inbound bridge notification
+
+| Num clients | Stream sample 1 | Stream sample 2 | Stream sample 3 | Stream median | Prior stream median | Delta vs prior |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 106440 | 102093 | 104987 | 104987 | 108050 | -2.8% |
+| 5 | 648930 | 622666 | 651466 | 648930 | 617284 | +5.1% |
+| 10 | 796496 | 715052 | 773097 | 773097 | 728333 | +6.1% |
+| 15 | 862317 | 753391 | 688706 | 753391 | 774594 | -2.7% |
+| 20 | 907030 | 821187 | 701632 | 821187 | 800962 | +2.5% |
+| 25 | 830979 | 849763 | 756659 | 830979 | 784314 | +5.9% |
+| 30 | 806994 | 861946 | 789059 | 806994 | 829647 | -2.7% |
+
+This is a small hot-path cleanup with mixed benchmark movement on a noisy VM. Treat the table as smoke data, not proof of a precise throughput win. The reason to keep the slice is structural: it removes synchronization from the steady-state inbound path while preserving behavior under focused and full test validation. A fresh DotNetty comparison sample in this pass was noisy at 1 client and logged transient disassociations, so it was not used as the gate for this micro-slice.
+
+Validation after the inbound bridge lock fast path change:
+
+| Command | Result |
+| --- | --- |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release --filter "FullyQualifiedName~RemoteTcpFramingSpec|FullyQualifiedName~StreamTcpTransportInteropSpec"` | Passed: 6 |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release --filter "FullyQualifiedName~MessageSerializerV2Spec|FullyQualifiedName~AkkaPduCodecWireFormatSpec|FullyQualifiedName~AkkaProtocolSpec|FullyQualifiedName~StreamTcpTransportInteropSpec|FullyQualifiedName~RemoteTcpFramingSpec"` | Passed: 30 |
+| `dotnet test "src/core/Akka.Streams.Tests/Akka.Streams.Tests.csproj" -c Release --filter "FullyQualifiedName~TcpSpec"` | Passed: 21, skipped: 3 |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release` | Passed: 382, skipped: 5 |
+| `dotnet test "src/core/Akka.Cluster.Tests/Akka.Cluster.Tests.csproj" -c Release` | Passed: 364 |
+| `openspec validate remote-streams-protocol-pipeline --strict` | Valid |
+| `git diff --check` | Passed |
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:
