@@ -79,9 +79,15 @@ namespace Akka.Remote.Transport.Streams
 
         private static ReadOnlySequence<byte> PrependHeader(byte[] header, ReadOnlySequence<byte> payload)
         {
-            return payload.IsEmpty
-                ? new ReadOnlySequence<byte>(header)
-                : Concat(new ReadOnlySequence<byte>(header), payload);
+            if (payload.IsEmpty)
+                return new ReadOnlySequence<byte>(header);
+
+            var head = new SequenceSegment(header);
+            var tail = head;
+            foreach (var memory in payload)
+                tail = tail.Append(memory);
+
+            return new ReadOnlySequence<byte>(head, 0, tail, tail.Memory.Length);
         }
 
         private sealed class RemoteTcpFrameDecoder : GraphStage<FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>>
@@ -148,11 +154,10 @@ namespace Akka.Remote.Transport.Streams
                             return;
                         }
 
-                        Span<byte> header = stackalloc byte[FrameHeaderBytes];
-                        _buffer.Slice(0, FrameHeaderBytes).CopyTo(header);
-                        var payloadSize = _stage._byteOrder == DotNettyByteOrder.LittleEndian
-                            ? BinaryPrimitives.ReadInt32LittleEndian(header)
-                            : BinaryPrimitives.ReadInt32BigEndian(header);
+                        var firstSpan = _buffer.FirstSpan;
+                        var payloadSize = firstSpan.Length >= FrameHeaderBytes
+                            ? DecodeFrameSize(firstSpan.Slice(0, FrameHeaderBytes), _stage._byteOrder)
+                            : DecodeSplitFrameSize(_buffer, _stage._byteOrder);
 
                         if (payloadSize < 0)
                         {
@@ -192,6 +197,20 @@ namespace Akka.Remote.Transport.Streams
                         FailStage(new Framing.FramingException("Stream finished but there was a truncated final remote frame in the buffer"));
                     else
                         Pull(_stage._in);
+                }
+
+                private static int DecodeSplitFrameSize(ReadOnlySequence<byte> buffer, DotNettyByteOrder byteOrder)
+                {
+                    Span<byte> header = stackalloc byte[FrameHeaderBytes];
+                    buffer.Slice(0, FrameHeaderBytes).CopyTo(header);
+                    return DecodeFrameSize(header, byteOrder);
+                }
+
+                private static int DecodeFrameSize(ReadOnlySpan<byte> header, DotNettyByteOrder byteOrder)
+                {
+                    return byteOrder == DotNettyByteOrder.LittleEndian
+                        ? BinaryPrimitives.ReadInt32LittleEndian(header)
+                        : BinaryPrimitives.ReadInt32BigEndian(header);
                 }
             }
         }

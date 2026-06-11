@@ -407,6 +407,38 @@ Validation after the inbound bridge lock fast path change:
 | `openspec validate remote-streams-protocol-pipeline --strict` | Valid |
 | `git diff --check` | Passed |
 
+## Remote TCP Framing Micro-Optimizations
+
+Implementation summary:
+
+- Outbound frame encoding now prepends the header directly instead of routing through the generic sequence concat helper.
+- Inbound frame decoding now reads the 4-byte length directly from the first span when the header is contiguous, only copying into a stack buffer for split headers.
+- This does not change the wire format or stream topology; it removes per-frame helper work from the common case.
+
+RemotePingPong stream smoke command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+Single smoke run, used only to check for obvious regression on the busy VM:
+
+| Num clients | Msgs/sec |
+| ---: | ---: |
+| 1 | 109470 |
+| 5 | 639387 |
+| 10 | 812348 |
+| 15 | 856409 |
+| 20 | 939629 |
+| 25 | 878735 |
+| 30 | 850100 |
+
+Validation:
+
+| Command | Result |
+| --- | --- |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release --filter "FullyQualifiedName~RemoteTcpFramingSpec|FullyQualifiedName~StreamTcpTransportInteropSpec"` | Passed: 6 |
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:
