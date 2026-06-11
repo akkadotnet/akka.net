@@ -58,6 +58,62 @@ Environment summary from the run:
 
 This is a smoke result, not a final benchmark. The stream transport still uses the existing `AkkaProtocolTransport` / `ProtocolStateActor` wrapper and bridges framed payloads through `ByteString`.
 
+## Source.ActorRef Revert Confirmation
+
+Command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+Environment summary from the run:
+
+- OS: Unix 6.8.0.117
+- Processor count: 8
+- Server GC: true
+- Transport: Akka.Streams TCP
+- Write inlet: `Source.ActorRef`
+
+| Num clients | Total messages | Msgs/sec | Total ms | Start threads | End threads |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 200000 | 89326 | 2239.59 | 25 | 45 |
+| 5 | 1000000 | 541126 | 1848.32 | 45 | 50 |
+| 10 | 2000000 | 590145 | 3389.45 | 50 | 50 |
+| 15 | 3000000 | 460759 | 6511.61 | 48 | 49 |
+| 20 | 4000000 | 625000 | 6400.36 | 47 | 47 |
+| 25 | 5000000 | 617742 | 8094.51 | 47 | 44 |
+| 30 | 6000000 | 618366 | 9703.65 | 44 | 44 |
+
+This restores the faster fire-and-forget stream inlet after the `Source.Queue` experiment below.
+
+## Rejected Queue Write Path Smoke Result
+
+Command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+Environment summary from the run:
+
+- OS: Unix 6.8.0.117
+- Processor count: 8
+- Server GC: true
+- Transport: Akka.Streams TCP
+- Rejected write inlet: `Source.Queue` plus internal async association write seam
+
+| Num clients | Total messages | Msgs/sec | Total ms | Start threads | End threads |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 200000 | 64999 | 3077.24 | 27 | 47 |
+| 5 | 1000000 | 271887 | 3678.56 | 47 | 51 |
+| 10 | 2000000 | 284415 | 7032.90 | 51 | 49 |
+| 15 | 3000000 | 303921 | 9871.47 | 46 | 43 |
+| 20 | 4000000 | 310126 | 12898.89 | 43 | 42 |
+| 25 | 5000000 | 308757 | 16194.15 | 42 | 41 |
+| 30 | 6000000 | 295698 | 20291.62 | 41 | 41 |
+
+This experiment was reverted. One in-flight async queue offer per `EndpointWriter` adds an actor-turn and task-completion cost per payload, reducing throughput from the previous `Source.ActorRef` stream spike. The next performance slice should keep the faster fire-and-forget write inlet or move the protocol/write pump into a purpose-built stream stage or bounded writer pump without per-message `Source.Queue.OfferAsync` acknowledgements on the endpoint hot path.
+
 ## Deferred Work
 
 The spike does not yet remove the inbound `ProtocolStateActor` mailbox hop. The future BidiFlow-style protocol replacement should handle the protocol events documented in `protocol-state-machine-map.md` and present the same `AkkaProtocolHandle` / `InboundAssociation` / `InboundPayload` / `Disassociated` behavior to existing remoting actors.
