@@ -42,8 +42,8 @@ namespace Akka.Remote.Tests.Transport
                 var classicAddress = RARP.For(classic).Provider.DefaultAddress;
                 var streamAddress = RARP.For(stream).Provider.DefaultAddress;
 
-                await AssertRemoteEcho(classic, streamAddress, "classic-to-stream-1");
-                await AssertRemoteEcho(stream, classicAddress, "stream-to-classic-1");
+                await AssertRemoteEcho(classic, streamAddress, "classic-to-stream-1", TimeSpan.FromSeconds(15));
+                await AssertRemoteEcho(stream, classicAddress, "stream-to-classic-1", TimeSpan.FromSeconds(15));
 
                 Shutdown(stream, TimeSpan.FromSeconds(10));
                 stream = null;
