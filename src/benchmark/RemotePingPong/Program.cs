@@ -362,7 +362,7 @@ namespace RemotePingPong
             _firstRun = false;
         }
 
-        const long repeat = 100000L;
+        const long repeat = 50000L;
 
         private static async Task Start(
             uint timesToRun,
