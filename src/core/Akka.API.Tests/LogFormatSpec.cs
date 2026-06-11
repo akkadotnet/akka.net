@@ -109,6 +109,8 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
         text = SanitizeThreadNumber(text);
         // to resolve https://github.com/akkadotnet/akka.net/issues/7421
         text = SanitizeTestEventListener(text);
+        text = SanitizeDefaultLoggersStarted(text);
+        text = SanitizeCustomLoggerRemoved(text);
 
         await Verifier.Verify(text);
     }
@@ -220,7 +222,7 @@ public sealed class DefaultLogFormatSpec : TestKit.Xunit2.TestKit
 
     private static string SanitizeTestEventListener(string logs)
     {
-        var pattern = @"^.*Akka\.TestKit\.TestEventListener.*$";
+        var pattern = @"^.*Akka\.TestKit\.TestEventListener.*$\r?\n?";
         var result = Regex.Replace(logs, pattern, string.Empty, RegexOptions.Multiline);
         return result;
     }
