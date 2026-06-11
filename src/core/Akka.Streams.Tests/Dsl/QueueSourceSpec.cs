@@ -641,6 +641,27 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public async Task QueueSource_should_drop_new_offers_after_complete_was_requested_while_draining()
+        {
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var (source, probe) =
+                    Source.Queue<int>(0, OverflowStrategy.Backpressure)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(_materializer);
+
+                var pendingOffer = source.OfferAsync(1);
+                source.Complete();
+
+                var droppedOffer = await source.OfferAsync(2);
+                droppedOffer.Should().Be(Dropped.Instance);
+
+                await probe.RequestNextAsync(1);
+                AssertSuccess(pendingOffer);
+                await probe.ExpectCompleteAsync();
+            }, _materializer);
+        }
+
+        [Fact]
         public async Task QueueSource_should_cancel_offer_when_token_fires_before_stage_processes_offer()
         {
             await this.AssertAllStagesStoppedAsync(async () => {
