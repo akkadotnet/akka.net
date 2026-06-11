@@ -213,13 +213,26 @@ namespace Akka.Remote.Transport.Streams
             if (payload.Length > Settings.MaxFrameSize)
                 throw new Framing.FramingException($"Remote frame size [{payload.Length}] exceeds maximum frame size [{Settings.MaxFrameSize}]");
 
-            var buffer = new byte[FrameHeaderBytes + (int)payload.Length];
+            var header = new byte[FrameHeaderBytes];
             if (Settings.ByteOrder == DotNettyByteOrder.LittleEndian)
-                BinaryPrimitives.WriteInt32LittleEndian(buffer.AsSpan(0, FrameHeaderBytes), (int)payload.Length);
+                BinaryPrimitives.WriteInt32LittleEndian(header, (int)payload.Length);
             else
-                BinaryPrimitives.WriteInt32BigEndian(buffer.AsSpan(0, FrameHeaderBytes), (int)payload.Length);
-            payload.CopyTo(buffer.AsSpan(FrameHeaderBytes));
-            return new ReadOnlySequence<byte>(buffer);
+                BinaryPrimitives.WriteInt32BigEndian(header, (int)payload.Length);
+
+            return PrependHeader(header, payload);
+        }
+
+        private static ReadOnlySequence<byte> PrependHeader(byte[] header, ReadOnlySequence<byte> payload)
+        {
+            if (payload.IsEmpty)
+                return new ReadOnlySequence<byte>(header);
+
+            var head = new FrameSegment(header);
+            var tail = head;
+            foreach (var segment in payload)
+                tail = tail.Append(segment);
+
+            return new ReadOnlySequence<byte>(head, 0, tail, tail.Memory.Length);
         }
 
         private static AkkaByteOrder ToAkkaByteOrder(DotNettyByteOrder byteOrder)
@@ -249,6 +262,24 @@ namespace Akka.Remote.Transport.Streams
             return payload.IsSingleSegment
                 ? ByteString.CopyFrom(payload.FirstSpan)
                 : ByteString.CopyFrom(payload.ToArray());
+        }
+
+        private sealed class FrameSegment : ReadOnlySequenceSegment<byte>
+        {
+            public FrameSegment(ReadOnlyMemory<byte> memory)
+            {
+                Memory = memory;
+            }
+
+            public FrameSegment Append(ReadOnlyMemory<byte> memory)
+            {
+                var next = new FrameSegment(memory)
+                {
+                    RunningIndex = RunningIndex + Memory.Length
+                };
+                Next = next;
+                return next;
+            }
         }
 
         private sealed class DeferredInboundBridge

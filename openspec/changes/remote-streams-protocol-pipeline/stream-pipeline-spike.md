@@ -205,6 +205,37 @@ Additional TCP stream regression coverage:
 
 - `Outgoing_TCP_stream_must_not_drop_writes_when_remote_reads_slowly` delays server-side reads while the client writes 2048 64-byte chunks, then verifies exact byte-for-byte delivery.
 
+## Multi-Segment Outbound Frame Smoke Result
+
+Command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+Environment summary from the run:
+
+- OS: Unix 6.8.0.117
+- Processor count: 8
+- Server GC: true
+- Transport: Akka.Streams TCP
+- Write inlet: `Source.ActorRef`
+- TCP stream stage: `Tcp.NoAck` write path
+- Inbound bridge: single-segment `ReadOnlySequence<byte>` avoids intermediate `ToArray()`
+- Outbound frame encoder: emits a multi-segment `[4-byte length] + [payload]` `ReadOnlySequence<byte>` instead of allocating and copying `[length + payload]`
+
+| Num clients | Sample 1 msgs/sec | Sample 2 msgs/sec |
+| ---: | ---: | ---: |
+| 1 | 105319 | 119761 |
+| 5 | 597015 | 572410 |
+| 10 | 704226 | 724901 |
+| 15 | 764916 | 731708 |
+| 20 | 784776 | 772350 |
+| 25 | 799106 | 783945 |
+| 30 | 798616 | 846024 |
+
+This removes the outbound payload pre-copy in `TcpStreamTransport.EncodeFrame`. The write path still copies segments into the Akka.IO TCP output pipe, but it no longer builds an intermediate contiguous `[header][payload]` array per frame.
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:
