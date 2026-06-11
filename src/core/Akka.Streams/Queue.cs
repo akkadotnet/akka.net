@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Queue.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -52,12 +52,12 @@ namespace Akka.Streams
     public interface ISourceQueueWithComplete<in T> : ISourceQueue<T>
     {
         /// <summary>
-        /// Complete the stream normally. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation’s success.
+        /// Complete the stream normally. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation's success.
         /// </summary>
         void Complete();
 
         /// <summary>
-        /// Complete the stream with a failure. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation’s success.
+        /// Complete the stream with a failure. Use <see cref="ISourceQueue{T}.WatchCompletionAsync"/> to be notified of this operation's success.
         /// </summary>
         /// <param name="ex">TBD</param>
         void Fail(Exception ex);
@@ -68,16 +68,9 @@ namespace Akka.Streams
         /// </summary>
         /// <returns>Task</returns>
         new Task WatchCompletionAsync();
-    }
 
-    /// <summary>
-    /// This interface adds cancellation-aware offer support to <see cref="ISourceQueueWithComplete{T}"/>.
-    /// </summary>
-    /// <typeparam name="T">TBD</typeparam>
-    public interface ICancellableSourceQueueWithComplete<in T> : ISourceQueueWithComplete<T>
-    {
         /// <summary>
-        /// Cancellable variant of <see cref="ISourceQueue{T}.OfferAsync(T)"/>.
+        /// Cancellable variant of <see cref="OfferAsync(T)"/>.
         /// Cancelling <paramref name="cancellationToken"/> while the offer is pending under
         /// <see cref="OverflowStrategy.Backpressure"/> removes the pending offer from the stage
         /// and completes the returned task as canceled. If the offer has already completed
@@ -88,46 +81,6 @@ namespace Akka.Streams
         /// <param name="cancellationToken">Token used to cancel a pending offer.</param>
         /// <returns>A task that completes with the offer result, fails, or is canceled.</returns>
         Task<IQueueOfferResult> OfferAsync(T element, CancellationToken cancellationToken);
-    }
-
-    /// <summary>
-    /// Extension methods for <see cref="ISourceQueueWithComplete{T}"/>.
-    /// </summary>
-    public static class SourceQueueWithCompleteExtensions
-    {
-        /// <summary>
-        /// Cancellable variant of <see cref="ISourceQueue{T}.OfferAsync(T)"/> for queues that implement
-        /// <see cref="ICancellableSourceQueueWithComplete{T}"/>. If <paramref name="cancellationToken"/> cannot
-        /// be canceled, this method delegates to <see cref="ISourceQueue{T}.OfferAsync(T)"/>.
-        /// </summary>
-        /// <param name="sourceQueue">The source queue.</param>
-        /// <param name="element">Element to send to a stream.</param>
-        /// <param name="cancellationToken">Token used to cancel a pending offer.</param>
-        /// <typeparam name="T">The offered element type.</typeparam>
-        /// <returns>A task that completes with the offer result, fails, or is canceled.</returns>
-        /// <exception cref="NotSupportedException">
-        /// Thrown when <paramref name="sourceQueue"/> does not implement <see cref="ICancellableSourceQueueWithComplete{T}"/>.
-        /// </exception>
-        public static Task<IQueueOfferResult> OfferAsync<T>(
-            this ISourceQueueWithComplete<T> sourceQueue,
-            T element,
-            CancellationToken cancellationToken)
-        {
-            if (sourceQueue is null)
-                throw new ArgumentNullException(nameof(sourceQueue));
-
-            if (cancellationToken.IsCancellationRequested)
-                return Task.FromCanceled<IQueueOfferResult>(cancellationToken);
-
-            if (!cancellationToken.CanBeCanceled)
-                return sourceQueue.OfferAsync(element);
-
-            if (sourceQueue is ICancellableSourceQueueWithComplete<T> cancellableSourceQueue)
-                return cancellableSourceQueue.OfferAsync(element, cancellationToken);
-
-            throw new NotSupportedException(
-                $"{sourceQueue.GetType().FullName} does not support cancellation-aware source queue offers.");
-        }
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="QueueSourceSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -110,6 +110,9 @@ namespace Akka.Streams.Tests.Dsl
                 return Task.FromResult<IQueueOfferResult>(Enqueued.Instance);
             }
 
+            public Task<IQueueOfferResult> OfferAsync(T element, CancellationToken cancellationToken)
+                => OfferAsync(element);
+
             public Task WatchCompletionAsync() => Task.CompletedTask;
 
             public void Complete()
@@ -119,40 +122,6 @@ namespace Akka.Streams.Tests.Dsl
             public void Fail(Exception ex)
             {
             }
-        }
-
-        [Fact]
-        public void SourceQueueWithCompleteExtensions_should_throw_when_source_queue_is_null()
-        {
-            ISourceQueueWithComplete<int> sourceQueue = null;
-
-            var action = () => sourceQueue.OfferAsync(1, CancellationToken.None);
-
-            action.Should().Throw<ArgumentNullException>()
-                .And.ParamName.Should().Be("sourceQueue");
-        }
-
-        [Fact]
-        public void SourceQueueWithCompleteExtensions_should_delegate_when_token_cannot_be_canceled()
-        {
-            var sourceQueue = new LegacySourceQueue<int>();
-
-            AssertSuccess(sourceQueue.OfferAsync(1, CancellationToken.None));
-
-            sourceQueue.OfferCount.Should().Be(1);
-            sourceQueue.LastOfferedElement.Should().Be(1);
-        }
-
-        [Fact]
-        public void SourceQueueWithCompleteExtensions_should_throw_when_source_queue_does_not_support_cancellation()
-        {
-            var sourceQueue = new LegacySourceQueue<int>();
-            using var cts = new CancellationTokenSource();
-
-            var action = () => sourceQueue.OfferAsync(1, cts.Token);
-
-            action.Should().Throw<NotSupportedException>()
-                .And.Message.Should().Contain("does not support cancellation-aware source queue offers");
         }
 
         [Fact]
@@ -512,9 +481,9 @@ namespace Akka.Streams.Tests.Dsl
                     Source.Queue<int>(0, OverflowStrategy.Backpressure)
                         .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
                         .Run(_materializer);
-                var cancellableSource = Assert.IsAssignableFrom<ICancellableSourceQueueWithComplete<int>>(source);
+                var queue = Assert.IsAssignableFrom<ISourceQueueWithComplete<int>>(source);
 
-                var offer = cancellableSource.OfferAsync(1, CancellationToken.None);
+                var offer = queue.OfferAsync(1, CancellationToken.None);
 
                 await probe.RequestNextAsync(1);
                 AssertSuccess(offer);
