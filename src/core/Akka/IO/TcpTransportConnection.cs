@@ -79,22 +79,30 @@ namespace Akka.IO
         private bool _hasReadError;
         private Exception? _readError;
 
-        public ValueTask<FlushResult> WriteAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default)
+        internal void WriteUnflushed(ReadOnlyMemory<byte> data)
         {
-            var writer = _outputPipe.Writer;
-            writer.Write(data.Span);
-            return writer.FlushAsync(ct);
+            _outputPipe.Writer.Write(data.Span);
         }
 
-        public ValueTask<FlushResult> WriteAsync(ReadOnlySequence<byte> data, CancellationToken ct = default)
+        internal void WriteUnflushed(ReadOnlySequence<byte> data)
         {
             var writer = _outputPipe.Writer;
             foreach (var segment in data)
             {
                 writer.Write(segment.Span);
             }
+        }
 
-            return writer.FlushAsync(ct);
+        public ValueTask<FlushResult> WriteAsync(ReadOnlyMemory<byte> data, CancellationToken ct = default)
+        {
+            WriteUnflushed(data);
+            return FlushAsync(ct);
+        }
+
+        public ValueTask<FlushResult> WriteAsync(ReadOnlySequence<byte> data, CancellationToken ct = default)
+        {
+            WriteUnflushed(data);
+            return FlushAsync(ct);
         }
 
         public ValueTask<FlushResult> FlushAsync(CancellationToken ct = default)

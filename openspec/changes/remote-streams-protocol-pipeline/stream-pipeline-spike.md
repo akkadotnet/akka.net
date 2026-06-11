@@ -236,6 +236,73 @@ Environment summary from the run:
 
 This removes the outbound payload pre-copy in `TcpStreamTransport.EncodeFrame`. The write path still copies segments into the Akka.IO TCP output pipe, but it no longer builds an intermediate contiguous `[header][payload]` array per frame.
 
+## Akka.IO TCP NoAck Flush Batching Result
+
+Implementation summary:
+
+- `TcpConnection` batches no-ack writes when the active transport is `TcpTransportConnection`.
+- A batch flushes after 32 no-ack writes, 64 KiB of no-ack payload, an immediate self-message, an acked write, or graceful/confirmed close.
+- Acked writes keep the existing write-and-flush path and also flush any no-ack writes buffered ahead of them.
+- Non-`TcpTransportConnection` implementations keep the existing write-and-flush behavior; no public `ITransportConnection` member was added.
+
+Dedicated Akka.IO TCP benchmark sanity command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/Akka.Benchmarks/Akka.Benchmarks.csproj" -- --filter "*TcpOperationsBenchmarks.ClientServerCommunication*" --job Dry --join
+```
+
+The existing `TcpOperationsBenchmarks` config adds `LongRun`; passing `--job Dry` adds a dry job instead of replacing the configured long job. The run therefore executed the broader parameter matrix and timed out near the later cases after producing partial current-branch data. It was useful as a sanity check that the Akka.IO TCP workload still ran, but it is not used as the comparative gate for this slice.
+
+RemotePingPong stream command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+RemotePingPong DotNetty command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1
+```
+
+Environment summary:
+
+- OS: Unix 6.8.0.117
+- Processor count: 8
+- Server GC: true
+- Stream transport: Akka.Streams TCP with `Tcp.NoAck`, inbound single-segment copy avoidance, multi-segment outbound frame encoding, and Akka.IO TCP no-ack flush batching
+
+Sequential stream samples were used. Two accidentally parallel stream samples were discarded because they interfered with each other.
+
+| Num clients | Stream sample 1 | Stream sample 2 | Stream sample 3 | Stream median | DotNetty sample | Delta vs DotNetty |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 110254 | 108226 | 114091 | 110254 | 75302 | +46.4% |
+| 5 | 630518 | 583091 | 629723 | 629723 | 396983 | +58.6% |
+| 10 | 729395 | 688469 | 706215 | 706215 | 559441 | +26.2% |
+| 15 | 796602 | 754148 | 744787 | 754148 | 603865 | +24.9% |
+| 20 | 814996 | 795704 | 792394 | 795704 | 620733 | +28.2% |
+| 25 | 807494 | 801925 | 777243 | 801925 | 634438 | +26.4% |
+| 30 | 839161 | 841161 | 772400 | 839161 | 679041 | +23.6% |
+
+The current stream medians are generally at or above the previous multi-segment outbound-frame smoke range while preserving the stream transport's lead over DotNetty. One sequential stream run logged a transient `EndpointDisassociatedException` during the benchmark but completed; focused stream remoting tests and the full Remote suite passed afterward.
+
+Validation after the Akka.IO TCP no-ack flush batching change:
+
+| Command | Result |
+| --- | --- |
+| `dotnet test "src/core/Akka.Tests/Akka.Tests.csproj" -c Release --filter "FullyQualifiedName~TcpConnectionBatchingSpec"` | Passed: 2 |
+| `dotnet test "src/core/Akka.Streams.Tests/Akka.Streams.Tests.csproj" -c Release --filter "FullyQualifiedName~TcpSpec"` | Passed: 21, skipped: 3 |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release --filter "FullyQualifiedName~MessageSerializerV2Spec|FullyQualifiedName~AkkaPduCodecWireFormatSpec|FullyQualifiedName~AkkaProtocolSpec|FullyQualifiedName~StreamTcpTransportInteropSpec"` | Passed: 26 |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release` | Passed: 378, skipped: 5 |
+| `dotnet test "src/core/Akka.Cluster.Tests/Akka.Cluster.Tests.csproj" -c Release` | Passed: 364 |
+| `openspec validate remote-streams-protocol-pipeline --strict` | Valid |
+| `git diff --check` | Passed |
+
+Additional regression coverage:
+
+- `TcpConnection_should_batch_no_ack_writes_before_flushing` verifies several no-ack writes are flushed to the stream as one batch.
+- `Outgoing_TCP_stream_must_flush_small_no_ack_batch_when_upstream_completes` verifies a small no-ack batch below the threshold is still delivered when upstream completes.
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:
