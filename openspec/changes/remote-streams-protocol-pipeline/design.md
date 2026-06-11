@@ -64,6 +64,59 @@ This sequencing avoids rewriting transport, codec, serializer, and protocol stat
 
 Before implementation, record current baselines for RemotePingPong, `AkkaPduCodecBenchmark`, allocation counts, and known copy boundaries. Each code slice must update or add a benchmark that proves whether the change helped.
 
+### 7. Inbound Payload Parsing Should Use A Conservative Fast Path
+
+After the stream transport emits `InboundSequencePayload`, the remaining steady-state inbound cost is generated protobuf parsing of the outer `AkkaProtocolMessage`. For ordinary user messages the outer wire shape is simple:
+
+```text
+AkkaProtocolMessage
+  field 1: payload bytes -> AckAndEnvelopeContainer bytes
+```
+
+The next inbound parsing slice should optimize only that payload-only shape and leave control messages on the generated protobuf path.
+
+Recommended first implementation:
+
+- Add an internal sequence-backed payload PDU representation for the decoded outer payload, separate from the existing `Payload(ByteString)` shape or behind an explicit `Payload` owned-sequence API.
+- In `AkkaPduProtobuffCodec.DecodePdu(ReadOnlySequence<byte>)`, attempt a fast path only when the frame starts with protobuf tag `0x0A` (`field 1`, length-delimited payload), has a valid varint length, and the payload field consumes the entire outer PDU.
+- Return a slice of the original `ReadOnlySequence<byte>` for that payload instead of calling `AkkaProtocolMessage.Parser.ParseFrom(raw)`.
+- Fall back to the generated parser for all other shapes, including control messages, unknown fields, non-canonical field ordering, both-fields-present frames, malformed fast-path candidates, or any case where instruction precedence might matter.
+- Keep the old `ByteString` decode path and golden wire fixtures authoritative for compatibility.
+
+This gives the hot path a narrow, auditable parser while avoiding a hand-written full protobuf implementation in the first pass.
+
+The expected data flow becomes:
+
+```text
+TCP frame payload
+  -> InboundSequencePayload(outer AkkaProtocolMessage bytes)
+  -> DecodePdu fast path slices field 1 payload
+  -> ProtocolStateActor forwards InboundSequencePayload(inner AckAndEnvelopeContainer bytes)
+  -> EndpointReader decodes AckAndEnvelopeContainer from ReadOnlySequence<byte>
+```
+
+The classic flow remains unchanged:
+
+```text
+InboundPayload(ByteString outer bytes)
+  -> generated AkkaProtocolMessage parser
+  -> Payload(ByteString inner bytes)
+  -> EndpointReader handles InboundPayload(ByteString)
+```
+
+`EndpointReader` should learn to handle `InboundSequencePayload` beside `InboundPayload` in both reading and not-reading states. The not-reading state must still process ACKs and ignore user messages, matching the current `InboundPayload` behavior.
+
+Ownership rule:
+
+- Today `TcpConnection.ReadPipeChunkAsync` copies pipe memory into an owned array before sending `Tcp.Received`, so sequence slices can safely cross actor boundaries in the current stream transport.
+- A future zero-copy pipe read must not pass borrowed pipe memory through `ProtocolStateActor` or `EndpointReader` unless it introduces an explicit consume/ack ownership protocol or decodes synchronously inside the stage before advancing the pipe reader.
+
+First-slice non-goals:
+
+- Do not manually parse `AkkaControlMessage` or `AkkaHandshakeInfo`; generated protobuf parsing is fine for handshake, heartbeat, and disassociate traffic.
+- Do not rewrite `AckAndEnvelopeContainer` parsing yet; `DecodeMessage(ReadOnlySequence<byte>)` can continue using the generated parser while avoiding the protocol-layer `ByteString` bridge.
+- Do not change public transport SPI or the classic DotNetty inbound `InboundPayload(ByteString)` path.
+
 ## Risks / Trade-offs
 
 **Wire compatibility regressions** -> Add byte-for-byte golden tests for current PDU shapes before replacing codec internals.

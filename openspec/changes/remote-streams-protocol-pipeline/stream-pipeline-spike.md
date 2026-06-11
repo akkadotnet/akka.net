@@ -478,6 +478,35 @@ Validation:
 | `openspec validate remote-streams-protocol-pipeline --strict` | Valid |
 | `git diff --check` | Passed |
 
+Current-commit 3-run comparison after the sequence-backed inbound PDU decode change:
+
+Commands:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1
+```
+
+Environment summary:
+
+- OS: Unix 6.8.0.117
+- Processor count: 8
+- Server GC: true
+- Process priority elevation failed with `Permission denied`; runs used normal priority.
+- Compared commit: `5aed5a8d7 Avoid inbound stream PDU materialization`
+
+| Num clients | Stream sample 1 | Stream sample 2 | Stream sample 3 | Stream median | DotNetty sample 1 | DotNetty sample 2 | DotNetty sample 3 | DotNetty median | Delta vs DotNetty |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 112045 | 127714 | 110804 | 112045 | 81005 | 83543 | 79083 | 81005 | +38.3% |
+| 5 | 643087 | 490437 | 695895 | 643087 | 336701 | 353983 | 328408 | 336701 | +91.0% |
+| 10 | 742391 | 738008 | 759014 | 742391 | 560853 | 531350 | 546150 | 546150 | +35.9% |
+| 15 | 764526 | 787195 | 821918 | 787195 | 622407 | 584454 | 587545 | 587545 | +34.0% |
+| 20 | 838223 | 793494 | 806777 | 806777 | 641129 | 618717 | 607626 | 618717 | +30.4% |
+| 25 | 826857 | 811162 | 824675 | 824675 | 659283 | 633233 | 627511 | 633233 | +30.2% |
+| 30 | 833681 | 857879 | 834029 | 834029 | 675448 | 657607 | 654808 | 657607 | +26.8% |
+
+Stream samples stayed in the recent range after the sequence-backed inbound PDU decode change, so this slice does not show an obvious regression. DotNetty sample 2 logged transient disassociations at higher client counts and sample 3 logged one shutdown-time send error, but both runs completed. Treat this as VM smoke data rather than a formal benchmark.
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:

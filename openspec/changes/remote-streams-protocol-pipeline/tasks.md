@@ -47,6 +47,10 @@
 - [ ] 6.4 Integrate the sequence/writer PDU codec into the stream pipeline.
 - [ ] 6.5 Integrate the SerializerV2 payload boundary into the stream pipeline.
 - [ ] 6.6 Preserve `EndpointWriter`, `EndpointReader`, and reliable-delivery semantics or document any required internal facade.
+- [ ] 6.7 Add a conservative payload-only outer `AkkaProtocolMessage` fast parser over `ReadOnlySequence<byte>`.
+- [ ] 6.8 Fall back to generated protobuf parsing for control PDUs, unknown fields, non-canonical field ordering, and malformed fast-path candidates.
+- [ ] 6.9 Forward sequence-backed payload PDUs from `ProtocolStateActor` to `EndpointReader` without materializing `InboundPayload(ByteString)` on the established stream inbound path.
+- [ ] 6.10 Teach `EndpointReader` to handle `InboundSequencePayload` in both reading and not-reading states while preserving ACK and reliable-delivery behavior.
 
 ## 7. Validation And Performance Gates
 
