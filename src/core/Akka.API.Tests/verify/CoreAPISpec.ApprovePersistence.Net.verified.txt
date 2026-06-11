@@ -1053,6 +1053,11 @@ namespace Akka.Persistence.Journal
             public EventCount(int count) { }
             public int Count { get; }
         }
+        public sealed class EventCountFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+        {
+            public EventCountFailure(System.Exception cause) { }
+            public System.Exception Cause { get; }
+        }
         public sealed class EventReplayFailure
         {
             public EventReplayFailure(System.Exception cause) { }

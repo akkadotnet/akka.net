@@ -172,14 +172,21 @@ namespace Akka.Persistence.Query
     /// Unlike <see cref="Sequence"/> and <see cref="TimeBasedUuid"/>, <see cref="FromEnd"/> is a query
     /// <b>input only</b>: it is never returned in an <see cref="EventEnvelope"/>. Each <see cref="EventEnvelope"/>
     /// still carries a concrete <see cref="Sequence"/> offset, so to resume a stream at a later point you use
-    /// that absolute offset, not a <see cref="FromEnd"/> value.
+    /// that absolute offset, not a <see cref="FromEnd"/> value. Because it is relative rather than absolute,
+    /// <see cref="FromEnd"/> is not orderable and <see cref="CompareTo"/> always throws.
+    /// </para>
+    /// <para>
+    /// The from-the-end position is resolved to a concrete start offset when the query is materialized, by
+    /// reading how many matching events exist at that moment. For a <b>live</b> query (or any backend that
+    /// resolves the count and reads the events in separate steps) this is best-effort: events written between
+    /// resolving the count and reading the first batch may widen the initial window beyond <see cref="Count"/>.
     /// </para>
     /// <para>
     /// Not all read journals support this offset type. Implementations that cannot honor it will throw when it is
     /// supplied, the same way they reject any other unsupported offset type.
     /// </para>
     /// </summary>
-    public sealed class FromEnd : Offset, IComparable<FromEnd>
+    public sealed class FromEnd : Offset
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="FromEnd"/> class.
@@ -199,8 +206,6 @@ namespace Akka.Persistence.Query
         /// </summary>
         public int Count { get; }
 
-        public int CompareTo(FromEnd other) => Count.CompareTo(other.Count);
-
         private bool Equals(FromEnd other) => Count == other.Count;
 
         public override bool Equals(object obj)
@@ -212,12 +217,13 @@ namespace Akka.Persistence.Query
 
         public override int GetHashCode() => Count.GetHashCode();
 
+        /// <summary>
+        /// <see cref="FromEnd"/> is a relative, input-only offset and has no position in the stream, so it cannot
+        /// be ordered against any offset (including another <see cref="FromEnd"/>). Always throws.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Always thrown.</exception>
         public override int CompareTo(Offset other)
-        {
-            return other is FromEnd fromEnd
-                ? CompareTo(fromEnd)
-                : throw new InvalidOperationException($"Can't compare offset of type {GetType()} to offset of type {other.GetType()}");
-        }
+            => throw new InvalidOperationException($"Offsets of type {GetType()} are relative inputs and cannot be compared.");
 
         public override string ToString() => $"FromEnd({Count})";
     }

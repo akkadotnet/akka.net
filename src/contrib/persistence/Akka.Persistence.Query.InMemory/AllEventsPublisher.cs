@@ -32,33 +32,26 @@ namespace Akka.Persistence.Query.InMemory
         }
     }
 
-    internal abstract class AbstractAllEventsPublisher : ActorPublisher<EventEnvelope>
+    internal abstract class AbstractAllEventsPublisher : FromEndResolvingPublisher
     {
         private ILoggingAdapter _log;
-        protected int CurrentOffset;
-
-        // When > 0, the query starts at the Nth event from the end of history. The concrete start
-        // offset is resolved lazily on the first request by asking the journal for the total event count.
-        private readonly int _fromEndCount;
 
         protected AbstractAllEventsPublisher(int fromOffset, int fromEndCount, int maxBufferSize, string writeJournalPluginId)
+            : base(fromOffset, fromEndCount, writeJournalPluginId)
         {
-            CurrentOffset = FromOffset = fromOffset;
-            _fromEndCount = fromEndCount;
+            FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
-            JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
-        protected IActorRef JournalRef { get; }
         protected DeliveryBuffer<EventEnvelope> Buffer { get; }
         protected int FromOffset { get; }
         protected abstract int ToOffset { get; }
         protected int MaxBufferSize { get; }
+        protected override string FromEndTag => null;
         protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentOffset <= ToOffset);
 
-        protected abstract void ReceiveInitialRequest();
         protected abstract void ReceiveIdleRequest();
         protected abstract void ReceiveRecoverySuccess(int highestOrderingNr);
 
@@ -67,7 +60,7 @@ namespace Akka.Persistence.Query.InMemory
             switch (message)
             {
                 case Request _:
-                    if (_fromEndCount > 0)
+                    if (IsFromEnd)
                         ResolveFromEnd();
                     else
                         ReceiveInitialRequest();
@@ -76,35 +69,6 @@ namespace Akka.Persistence.Query.InMemory
                     Context.Stop(Self);
                     return true;
                 case AllEventsPublisher.Continue _:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        // Resolves a FromEnd(N) offset into a concrete start offset by asking the journal for the total
-        // event count, then begins the normal forward replay at max(0, count - N).
-        private void ResolveFromEnd()
-        {
-            JournalRef.Tell(new MemoryJournal.SelectEventCount(null, Self));
-            Context.Become(ResolvingFromEnd);
-        }
-
-        private bool ResolvingFromEnd(object message)
-        {
-            switch (message)
-            {
-                case MemoryJournal.EventCount count:
-                    CurrentOffset = Math.Max(0, count.Count - _fromEndCount);
-                    ReceiveInitialRequest();
-                    return true;
-                case Request _:
-                    // demand is tracked by ActorPublisher; events are delivered once replay begins
-                    return true;
-                case AllEventsPublisher.Continue _:
-                    return true;
-                case Cancel _:
-                    Context.Stop(Self);
                     return true;
                 default:
                     return false;

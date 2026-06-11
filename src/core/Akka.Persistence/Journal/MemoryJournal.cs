@@ -240,7 +240,8 @@ namespace Akka.Persistence.Journal
 
                 case SelectEventCount request:
                     SelectEventCountAsync(request.Tag)
-                        .PipeTo(request.ReplyTo, success: c => new EventCount(c));
+                        .PipeTo(request.ReplyTo, success: c => new EventCount(c),
+                            failure: e => new EventCountFailure(e));
                     return true;
 
                 default:
@@ -256,13 +257,17 @@ namespace Akka.Persistence.Journal
         private Task<int> SelectEventCountAsync(string tag)
         {
             DrainPendingWrites();
+            return Task.FromResult(CountEvents(tag));
+        }
 
-            var count = tag is null
+        /// <summary>
+        /// Counts stored events matching <paramref name="tag"/>, or all stored events when <paramref name="tag"/>
+        /// is <c>null</c>. Callers must have already drained pending writes.
+        /// </summary>
+        private int CountEvents(string tag)
+            => tag is null
                 ? Storage.EventLog.Count
                 : Storage.EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(tag));
-
-            return Task.FromResult(count);
-        }
 
         private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
@@ -287,7 +292,7 @@ namespace Akka.Persistence.Journal
                 .Take(replay.Max)
                 .ToArray();
 
-            var count = Storage.EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
+            var count = CountEvents(replay.Tag);
 
             var index = 0;
             foreach (var persistence in snapshot)
@@ -308,7 +313,7 @@ namespace Akka.Persistence.Journal
                 .Take((int)replay.Max)
                 .ToArray();
 
-            var count = Storage.EventLog.Count;
+            var count = CountEvents(null);
 
             var index = 0;
             foreach (var message in snapshot)
@@ -393,6 +398,21 @@ namespace Akka.Persistence.Journal
             public EventCount(int count)
             {
                 Count = count;
+            }
+        }
+
+        /// <summary>
+        /// Reply to <see cref="SelectEventCount"/> when the count query fails, so the query side can fail the
+        /// stream instead of waiting forever for an <see cref="EventCount"/> that will never arrive.
+        /// </summary>
+        [Serializable]
+        public sealed class EventCountFailure : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        {
+            public Exception Cause { get; }
+
+            public EventCountFailure(Exception cause)
+            {
+                Cause = cause;
             }
         }
 
