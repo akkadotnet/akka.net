@@ -24,26 +24,26 @@
 
 ## 4. SerializerV2 Remote Payload Boundary
 
-- [ ] 4.1 Update Remote payload serialization design so `MessageSerializer` resolves a `SerializerV2` for outbound payloads.
-- [ ] 4.2 Route legacy serializers through `SerializerV1Adapter` rather than adding V1-specific branches in Remote code.
-- [ ] 4.3 Write native V2 payload bytes through `SerializerV2.Serialize` where the current protobuf payload field requires bytes.
-- [ ] 4.4 Read native V2 payload bytes through `Serialization.Deserialize(ReadOnlySequence<byte>, int, string)` where the payload sequence lifetime is valid.
-- [ ] 4.5 Preserve serializer id, manifest, and payload byte semantics for old and new payload serializers.
-- [ ] 4.6 Add tests for V2 payloads and V1-adapted payloads through the Remote message serializer path.
+- [x] 4.1 Update Remote payload serialization design so `MessageSerializer` resolves a `SerializerV2` for outbound payloads.
+- [x] 4.2 Route legacy serializers through `SerializerV1Adapter` rather than adding V1-specific branches in Remote code.
+- [x] 4.3 Write native V2 payload bytes through `SerializerV2.Serialize` where the current protobuf payload field requires bytes.
+- [x] 4.4 Read native V2 payload bytes through `Serialization.Deserialize(ReadOnlySequence<byte>, int, string)` where the payload sequence lifetime is valid.
+- [x] 4.5 Preserve serializer id, manifest, and payload byte semantics for old and new payload serializers.
+- [x] 4.6 Add tests for V2 payloads and V1-adapted payloads through the Remote message serializer path.
 
 ## 5. Protocol State Machine Isolation
 
-- [ ] 5.1 Extract protocol transition scenarios from `ProtocolStateActor` into focused tests for handshake, heartbeat, disassociation, quarantine, `refuseUid`, and listener registration.
-- [ ] 5.2 Identify which `ProtocolStateActor` behavior can be represented as a pure state machine while preserving public remoting behavior.
+- [x] 5.1 Extract protocol transition scenarios from `ProtocolStateActor` into focused tests for handshake, heartbeat, disassociation, quarantine, `refuseUid`, and listener registration.
+- [x] 5.2 Identify which `ProtocolStateActor` behavior can be represented as a pure state machine while preserving public remoting behavior.
 - [ ] 5.3 Add an internal state-machine model or facade that can be exercised without a live actor mailbox.
 - [ ] 5.4 Keep `ProtocolStateActor` authoritative until the extracted model passes equivalence tests.
-- [ ] 5.5 Document any required listener-registration or pre-listener buffering behavior before replacing actor FSM hot-path handling.
+- [x] 5.5 Document any required listener-registration or pre-listener buffering behavior before replacing actor FSM hot-path handling.
 
 ## 6. Stream Protocol Pipeline Spike
 
-- [ ] 6.1 Prototype an opt-in Remote protocol pipeline over Akka.Streams / Akka.IO.Tcp without adding a new raw pipe transport.
-- [ ] 6.2 Use existing Remote protobuf wire format in the opt-in stream pipeline.
-- [ ] 6.3 Ensure stream framing preserves the same length-framed PDU semantics expected by existing Remote tests.
+- [x] 6.1 Prototype an opt-in Remote protocol pipeline over Akka.Streams / Akka.IO.Tcp without adding a new raw pipe transport.
+- [x] 6.2 Use existing Remote protobuf wire format in the opt-in stream pipeline.
+- [x] 6.3 Ensure stream framing preserves the same length-framed PDU semantics expected by existing Remote tests.
 - [ ] 6.4 Integrate the sequence/writer PDU codec into the stream pipeline.
 - [ ] 6.5 Integrate the SerializerV2 payload boundary into the stream pipeline.
 - [ ] 6.6 Preserve `EndpointWriter`, `EndpointReader`, and reliable-delivery semantics or document any required internal facade.

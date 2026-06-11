@@ -5,7 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Buffers;
 using Akka.Actor;
+using Akka.Serialization;
 using Google.Protobuf;
 
 namespace Akka.Remote.Serialization
@@ -25,9 +27,11 @@ namespace Akka.Remote.Serialization
                 return new Proto.Msg.Payload();
 
             var payloadProto = new Proto.Msg.Payload();
-            var serializer = _system.Serialization.FindSerializerFor(payload);
+            var serializer = _system.Serialization.FindSerializerV2For(payload);
+            var writer = CreateWriter(serializer, payload);
+            serializer.Serialize(payload, writer);
 
-            payloadProto.Message = ByteString.CopyFrom(serializer.ToBinary(payload));
+            payloadProto.Message = ByteString.CopyFrom(writer.WrittenSpan);
             payloadProto.SerializerId = serializer.Identifier;
 
             // get manifest
@@ -47,9 +51,17 @@ namespace Akka.Remote.Serialization
                 : string.Empty;
 
             return _system.Serialization.Deserialize(
-                payload.Message.ToByteArray(),
+                new ReadOnlySequence<byte>(payload.Message.Memory),
                 payload.SerializerId,
                 manifest);
+        }
+
+        private static ArrayBufferWriter<byte> CreateWriter(SerializerV2 serializer, object payload)
+        {
+            var sizeHint = serializer.SizeHint(payload);
+            return sizeHint > 0
+                ? new ArrayBufferWriter<byte>(sizeHint)
+                : new ArrayBufferWriter<byte>();
         }
     }
 }

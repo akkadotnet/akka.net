@@ -24,9 +24,11 @@ namespace Akka.Remote.Tests.Serialization
             akka.actor {{
                 serializers {{
                     native-v2 = ""{typeof(NativeV2Serializer).AssemblyQualifiedName}""
+                    legacy-v1 = ""{typeof(LegacyV1Serializer).AssemblyQualifiedName}""
                 }}
                 serialization-bindings {{
                     ""{typeof(NativeV2Message).AssemblyQualifiedName}"" = native-v2
+                    ""{typeof(LegacyV1Message).AssemblyQualifiedName}"" = legacy-v1
                 }}
             }}");
 
@@ -45,6 +47,22 @@ namespace Akka.Remote.Tests.Serialization
 
             serialized.SerializerId.Should().Be(NativeV2Serializer.SerializerId);
             serialized.MessageManifest.ToStringUtf8().Should().Be(NativeV2Serializer.NativeManifest);
+            serialized.Message.ToByteArray().Should().Equal(Encoding.UTF8.GetBytes(message.Value));
+            MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized).Should().Be(message);
+        }
+
+        [Fact]
+        public void Classic_MessageSerializer_should_roundtrip_v1_adapted_payloads()
+        {
+            var message = new LegacyV1Message("classic remoting v1");
+            var address = new Address("akka.tcp", "Sys", "localhost", 2551);
+            var info = new Information(address, Sys);
+
+            Sys.Serialization.FindSerializerV2For(message).Should().BeOfType<SerializerV1Adapter>();
+            var serialized = MessageSerializer.Serialize((ExtendedActorSystem)Sys, info, message);
+
+            serialized.SerializerId.Should().Be(LegacyV1Serializer.SerializerId);
+            serialized.MessageManifest.ToStringUtf8().Should().Be(LegacyV1Serializer.LegacyManifest);
             serialized.Message.ToByteArray().Should().Equal(Encoding.UTF8.GetBytes(message.Value));
             MessageSerializer.Deserialize((ExtendedActorSystem)Sys, serialized).Should().Be(message);
         }
@@ -143,6 +161,61 @@ namespace Akka.Remote.Tests.Serialization
                 if (manifest != NativeManifest)
                     throw new SerializationException($"Unknown manifest [{manifest}]");
                 return new NativeV2Message(Encoding.UTF8.GetString(bytes.ToArray()));
+            }
+        }
+
+        public sealed class LegacyV1Message: IEquatable<LegacyV1Message>
+        {
+            public LegacyV1Message(string value)
+            {
+                Value = value;
+            }
+
+            public string Value { get; }
+
+            public bool Equals(LegacyV1Message other)
+            {
+                if (ReferenceEquals(null, other)) return false;
+                if (ReferenceEquals(this, other)) return true;
+                return Value == other.Value;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                return obj.GetType() == GetType() && Equals((LegacyV1Message)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return Value.GetHashCode();
+            }
+        }
+
+        public sealed class LegacyV1Serializer: SerializerWithStringManifest
+        {
+            public const int SerializerId = 77126;
+            public const string LegacyManifest = "legacy-v1-message";
+
+            public LegacyV1Serializer(ExtendedActorSystem system) : base(system)
+            {
+            }
+
+            public override int Identifier => SerializerId;
+
+            public override string Manifest(object o) => LegacyManifest;
+
+            public override byte[] ToBinary(object obj)
+            {
+                return Encoding.UTF8.GetBytes(((LegacyV1Message)obj).Value);
+            }
+
+            public override object FromBinary(byte[] bytes, string manifest)
+            {
+                if (manifest != LegacyManifest)
+                    throw new SerializationException($"Unknown manifest [{manifest}]");
+                return new LegacyV1Message(Encoding.UTF8.GetString(bytes));
             }
         }
     }
