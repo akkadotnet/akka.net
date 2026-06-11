@@ -7,7 +7,6 @@
 
 using System;
 using System.Buffers;
-using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
@@ -18,9 +17,7 @@ using Akka.Event;
 using Akka.Remote.Transport.DotNetty;
 using Akka.Streams;
 using Akka.Streams.Dsl;
-using Akka.Util.Internal;
 using Google.Protobuf;
-using AkkaByteOrder = Akka.Util.ByteOrder;
 using DotNettyByteOrder = DotNetty.Buffers.ByteOrder;
 using StreamTcp = Akka.Streams.Dsl.Tcp;
 
@@ -33,8 +30,6 @@ namespace Akka.Remote.Transport.Streams
     /// </summary>
     internal sealed class TcpStreamTransport : Transport
     {
-        private const int FrameHeaderBytes = 4;
-
         private readonly TaskCompletionSource<IAssociationEventListener> _associationListenerPromise = new();
         private readonly ConcurrentDictionary<StreamAssociationHandle, StreamAssociationHandle> _connections = new();
         private readonly ILoggingAdapter _log;
@@ -130,6 +125,8 @@ namespace Akka.Remote.Transport.Streams
                     localAddress ?? throw new ConfigurationException($"Unknown local address type [{connection.LocalAddress}]"),
                     remoteAddress,
                     writer,
+                    Settings.MaxFrameSize,
+                    Settings.ByteOrder,
                     RemoveConnection,
                     _log);
                 TrackConnection(handle, inboundDone);
@@ -189,7 +186,7 @@ namespace Akka.Remote.Transport.Streams
                     return;
                 }
 
-                handle = new StreamAssociationHandle(localAddress, remoteAddress, writer, RemoveConnection, _log);
+                handle = new StreamAssociationHandle(localAddress, remoteAddress, writer, Settings.MaxFrameSize, Settings.ByteOrder, RemoveConnection, _log);
                 TrackConnection(handle, inboundDone);
                 inboundBridge.SetHandle(handle);
                 listenerTask.Result.Notify(new InboundAssociation(handle));
@@ -198,46 +195,12 @@ namespace Akka.Remote.Transport.Streams
 
         private Source<ReadOnlySequence<byte>, IActorRef> CreateOutboundSource()
         {
-            return Source.ActorRef<ReadOnlySequence<byte>>(_writeBufferSize, OverflowStrategy.Fail)
-                .Select(EncodeFrame);
+            return Source.ActorRef<ReadOnlySequence<byte>>(_writeBufferSize, OverflowStrategy.Fail);
         }
 
         private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> DecodeFrames()
         {
-            return Framing.LengthField(FrameHeaderBytes, Settings.MaxFrameSize + FrameHeaderBytes, 0, ToAkkaByteOrder(Settings.ByteOrder))
-                .Select(frame => frame.Slice(FrameHeaderBytes));
-        }
-
-        private ReadOnlySequence<byte> EncodeFrame(ReadOnlySequence<byte> payload)
-        {
-            if (payload.Length > Settings.MaxFrameSize)
-                throw new Framing.FramingException($"Remote frame size [{payload.Length}] exceeds maximum frame size [{Settings.MaxFrameSize}]");
-
-            var header = new byte[FrameHeaderBytes];
-            if (Settings.ByteOrder == DotNettyByteOrder.LittleEndian)
-                BinaryPrimitives.WriteInt32LittleEndian(header, (int)payload.Length);
-            else
-                BinaryPrimitives.WriteInt32BigEndian(header, (int)payload.Length);
-
-            return PrependHeader(header, payload);
-        }
-
-        private static ReadOnlySequence<byte> PrependHeader(byte[] header, ReadOnlySequence<byte> payload)
-        {
-            if (payload.IsEmpty)
-                return new ReadOnlySequence<byte>(header);
-
-            var head = new FrameSegment(header);
-            var tail = head;
-            foreach (var segment in payload)
-                tail = tail.Append(segment);
-
-            return new ReadOnlySequence<byte>(head, 0, tail, tail.Memory.Length);
-        }
-
-        private static AkkaByteOrder ToAkkaByteOrder(DotNettyByteOrder byteOrder)
-        {
-            return byteOrder == DotNettyByteOrder.LittleEndian ? AkkaByteOrder.LittleEndian : AkkaByteOrder.BigEndian;
+            return RemoteTcpFraming.Decoder(Settings.MaxFrameSize, Settings.ByteOrder);
         }
 
         private void TrackConnection(StreamAssociationHandle handle, Task<Done> inboundDone)
@@ -262,24 +225,6 @@ namespace Akka.Remote.Transport.Streams
             return payload.IsSingleSegment
                 ? ByteString.CopyFrom(payload.FirstSpan)
                 : ByteString.CopyFrom(payload.ToArray());
-        }
-
-        private sealed class FrameSegment : ReadOnlySequenceSegment<byte>
-        {
-            public FrameSegment(ReadOnlyMemory<byte> memory)
-            {
-                Memory = memory;
-            }
-
-            public FrameSegment Append(ReadOnlyMemory<byte> memory)
-            {
-                var next = new FrameSegment(memory)
-                {
-                    RunningIndex = RunningIndex + Memory.Length
-                };
-                Next = next;
-                return next;
-            }
         }
 
         private sealed class DeferredInboundBridge
@@ -319,6 +264,8 @@ namespace Akka.Remote.Transport.Streams
         {
             private readonly Action<StreamAssociationHandle> _remove;
             private readonly ILoggingAdapter _log;
+            private readonly int _maxFrameSize;
+            private readonly DotNettyByteOrder _byteOrder;
             private readonly object _gate = new();
             private readonly System.Collections.Generic.Queue<IHandleEvent> _pending = new();
             private volatile bool _closed;
@@ -328,10 +275,14 @@ namespace Akka.Remote.Transport.Streams
                 Address localAddress,
                 Address remoteAddress,
                 IActorRef writer,
+                int maxFrameSize,
+                DotNettyByteOrder byteOrder,
                 Action<StreamAssociationHandle> remove,
                 ILoggingAdapter log) : base(localAddress, remoteAddress)
             {
                 Writer = writer;
+                _maxFrameSize = maxFrameSize;
+                _byteOrder = byteOrder;
                 _remove = remove;
                 _log = log;
                 ReadHandlerSource.Task.ContinueWith(task =>
@@ -355,7 +306,16 @@ namespace Akka.Remote.Transport.Streams
                 if (_closed)
                     return false;
 
-                Writer.Tell(new ReadOnlySequence<byte>(payload.Memory));
+                try
+                {
+                    Writer.Tell(RemoteTcpFraming.Encode(new ReadOnlySequence<byte>(payload.Memory), _maxFrameSize, _byteOrder));
+                }
+                catch (Exception ex)
+                {
+                    Writer.Tell(new Status.Failure(ex));
+                    return false;
+                }
+
                 return true;
             }
 

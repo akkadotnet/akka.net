@@ -303,6 +303,64 @@ Additional regression coverage:
 - `TcpConnection_should_batch_no_ack_writes_before_flushing` verifies several no-ack writes are flushed to the stream as one batch.
 - `Outgoing_TCP_stream_must_flush_small_no_ack_batch_when_upstream_completes` verifies a small no-ack batch below the threshold is still delivered when upstream completes.
 
+## Remote TCP Framing Stage Result
+
+Implementation summary:
+
+- Added `RemoteTcpFraming` for DotNetty-compatible 4-byte Remote TCP length framing.
+- Inbound stream path now uses a Remote-specific decoder that emits payload slices directly instead of generic `Framing.LengthField(...).Select(frame => frame.Slice(4))`.
+- Outbound stream path now encodes frames before telling the `Source.ActorRef`, removing the outbound stream `Select(EncodeFrame)` stage.
+- The wire format remains `[4-byte payload length][payload bytes]` using the configured DotNetty byte order.
+
+RemotePingPong stream command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1 stream
+```
+
+RemotePingPong DotNetty command:
+
+```bash
+dotnet run -c Release --project "src/benchmark/RemotePingPong/RemotePingPong.csproj" -- 1
+```
+
+Environment summary:
+
+- OS: Unix 6.8.0.117
+- Processor count: 8
+- Server GC: true
+- Stream transport: Akka.Streams TCP with `Tcp.NoAck`, inbound single-segment copy avoidance, multi-segment outbound frame encoding, Akka.IO TCP no-ack flush batching, and Remote-specific TCP frame decoding
+
+| Num clients | Stream sample 1 | Stream sample 2 | Stream sample 3 | Stream median | DotNetty sample | Delta vs DotNetty |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 101369 | 108050 | 122474 | 108050 | 75586 | +43.0% |
+| 5 | 617284 | 623831 | 541712 | 617284 | 358552 | +72.2% |
+| 10 | 728333 | 740467 | 711238 | 728333 | 548697 | +32.7% |
+| 15 | 774594 | 755288 | 774794 | 774594 | 574713 | +34.8% |
+| 20 | 805640 | 769972 | 800962 | 800962 | 624415 | +28.3% |
+| 25 | 784314 | 804247 | 774234 | 784314 | 649858 | +20.7% |
+| 30 | 829647 | 815883 | 838106 | 829647 | 657247 | +26.2% |
+
+Compared with the prior no-ack batching slice, this change is mostly neutral to modestly positive: 10, 15, 20, and 25 client medians improved, 1, 5, and 30 client medians moved down but stayed within the recent stream smoke range. The main value is removing generic framing and map stages from the stream transport while preserving the stream transport's end-to-end lead over DotNetty.
+
+Validation after the Remote TCP framing stage change:
+
+| Command | Result |
+| --- | --- |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release --filter "FullyQualifiedName~RemoteTcpFramingSpec|FullyQualifiedName~StreamTcpTransportInteropSpec"` | Passed: 6 |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release --filter "FullyQualifiedName~MessageSerializerV2Spec|FullyQualifiedName~AkkaPduCodecWireFormatSpec|FullyQualifiedName~AkkaProtocolSpec|FullyQualifiedName~StreamTcpTransportInteropSpec|FullyQualifiedName~RemoteTcpFramingSpec"` | Passed: 30 |
+| `dotnet test "src/core/Akka.Streams.Tests/Akka.Streams.Tests.csproj" -c Release --filter "FullyQualifiedName~TcpSpec"` | Passed: 21, skipped: 3 |
+| `dotnet test "src/core/Akka.Tests/Akka.Tests.csproj" -c Release --filter "FullyQualifiedName~TcpConnectionBatchingSpec"` | Passed: 2 |
+| `dotnet test "src/core/Akka.Remote.Tests/Akka.Remote.Tests.csproj" -c Release` | Passed: 382, skipped: 5 |
+| `dotnet test "src/core/Akka.Cluster.Tests/Akka.Cluster.Tests.csproj" -c Release` | Passed: 364 |
+
+Additional regression coverage:
+
+- `RemoteTcpFraming_should_decode_multiple_big_endian_frames_from_one_chunk` verifies multiple payload frames, including empty payloads, from one upstream chunk.
+- `RemoteTcpFraming_should_decode_little_endian_frames_split_across_chunks` verifies split header/payload reassembly and byte-order handling.
+- `RemoteTcpFraming_should_reject_oversized_frames` verifies frame-size enforcement.
+- `RemoteTcpFraming_should_reject_truncated_final_frame` verifies partial EOF failure behavior.
+
 ## Rejected Queue Write Path Smoke Result
 
 Command:
