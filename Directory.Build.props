@@ -32,7 +32,7 @@
     <ProtobufVersion>3.35.0</ProtobufVersion>
     <GrpcToolsVersion>2.81.0</GrpcToolsVersion>
     <BenchmarkDotNetVersion>0.15.8</BenchmarkDotNetVersion>
-    <MessagePackVersion>3.1.4</MessagePackVersion>
+    <MessagePackVersion>3.1.7</MessagePackVersion>
     <MicrosoftCodeAnalysisCSharpVersion>4.13.0</MicrosoftCodeAnalysisCSharpVersion>
     <NetTestVersion>net10.0</NetTestVersion>
     <FsharpVersion>10.1.301</FsharpVersion>
