@@ -1,4 +1,21 @@
-#### 1.5.68 May 17th, 2026 ####
+#### 1.5.69 June 12th, 2026 ####
+
+Akka.NET v1.5.69 is a maintenance release with bug fixes for Akka.DistributedData state propagation, Akka.Core message rejection handling, and Akka.Streams tracing reliability and backpressure cancellation.
+
+**Akka.Streams**
+* [Fix: propagate trace context across the `.Async()` actor boundary](https://github.com/akkadotnet/akka.net/pull/8246) - Fixes [#8243](https://github.com/akkadotnet/akka.net/issues/8243): With stream tracing enabled, per-element trace context was dropped at the publisher/subscriber actor boundary introduced by `.Async()`, leaving downstream stages with no ambient `ActivityContext`. Trace context now flows correctly across fused interpreter shells.
+* [Add `OfferAsync(T, CancellationToken)` to `ISourceQueue<T>`](https://github.com/akkadotnet/akka.net/pull/8248) — enables cancellation of backpressured pending offers without emitting the cancelled element.
+
+**Akka.Streams Bug Fixes**
+* [Fix: observe discarded stream task faults](https://github.com/akkadotnet/akka.net/pull/8242) - Fixes [#8241](https://github.com/akkadotnet/akka.net/issues/8241): Resolves a `NullReferenceException` in the `GraphInterpreter` when tracing across actor boundaries — the interpreter now safely handles null activity context references during stream teardown.
+
+**Akka.Core**
+* [Fix: `RejectOnType<TMessage>` should use `Rejection`, not `Failure`](https://github.com/akkadotnet/akka.net/pull/8231) - Fixes [#8231](https://github.com/akkadotnet/akka.net/issues/8231): `RejectOnType` now correctly wraps rejected messages as `Rejection` rather than throwing a `Failure`, matching the expected stream contract.
+
+**Akka.DistributedData**
+* [Fix: propagate full state after pruning](https://github.com/akkadotnet/akka.net/pull/8220) - Fixes [#8220](https://github.com/akkadotnet/akka.net/issues/8220): Resolves a bug where pruning could cause incomplete state propagation in `ORSet` and `LWWDictionary`, leading to data inconsistencies during node merges.
+
+1 contributor since release 1.5.68
 
 Akka.NET v1.5.68 is a maintenance release with bug fixes for Akka.IO TCP connection handling, Akka.Streams stream materialized task faults, and Akka.TestKit xUnit 3 parallel context management.
 
