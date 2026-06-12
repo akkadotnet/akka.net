@@ -8,6 +8,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka.Actor;
 using Akka.Streams.Dsl;
 using Akka.TestKit;
 using FluentAssertions;
@@ -122,6 +123,46 @@ namespace Akka.Streams.Tests.Implementation
             preBoundarySelect.TraceId.ToString().Should().Be(producerTraceId);
 
             (await done).Should().Equal(22);
+        }
+
+        [Fact]
+        public async Task Trace_context_should_cross_Source_ActorRef_ingress_boundary()
+        {
+            using var collector = new StreamsActivityCollector();
+            using var producers = new ProducerActivityScope("ProducerTest");
+
+            // Source.ActorRef enters the graph through the public Reactive Streams
+            // BoundarySubscriber.OnNext path. It needs to capture Activity.Current at Tell time
+            // and carry it through the same boundary-event context channel used by .Async().
+            var (actorRef, done) = Source.ActorRef<int>(8, OverflowStrategy.Fail)
+                .Select(i => i + 1)
+                .ToMaterialized(Sink.Seq<int>(), Keep.Both)
+                .Run(_materializer);
+
+            ActivityTraceId producerTraceId;
+            using (var producer = producers.Start("producer.tell"))
+            {
+                producerTraceId = producer.TraceId;
+                actorRef.Tell(41);
+            }
+
+            actorRef.Tell(new Status.Success(NotUsed.Instance));
+            (await done).Should().Equal(42);
+
+            await collector.WaitForSpansAsync(
+                atLeast: 1,
+                timeoutSeconds: 10,
+                predicate: snap => snap.Any(a =>
+                    a.OperationName.Contains("SeqStage") && a.TraceId == producerTraceId));
+
+            var spans = collector.StoppedActivities.ToArray();
+            foreach (var a in spans)
+                Output.WriteLine($"[span] op='{a.OperationName}' trace={a.TraceId} parent={a.ParentSpanId}");
+
+            spans.Should().Contain(a => a.OperationName.Contains("Select") && a.TraceId == producerTraceId,
+                "the Select stage downstream of Source.ActorRef must share the producer trace id");
+            spans.Should().Contain(a => a.OperationName.Contains("SeqStage") && a.TraceId == producerTraceId,
+                "the terminal sink downstream of Source.ActorRef must share the producer trace id");
         }
 
         private (Task<System.Collections.Immutable.IImmutableList<int>> done, TracedConsumeSource source) MaterializeAsyncBoundary(

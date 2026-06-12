@@ -905,7 +905,12 @@ namespace Akka.Streams.Implementation.Fusing
             public void OnNext(T element)
             {
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
-                _parent.Tell(new OnNext(_shell, _id, element));
+                var context = StreamsDiagnostics.ActivitySource.HasListeners()
+                    ? Activity.Current?.Context
+                    : null;
+                _parent.Tell(context.HasValue
+                    ? new OnNext(_shell, _id, element, context)
+                    : new OnNext(_shell, _id, element));
             }
 
             /// <summary>

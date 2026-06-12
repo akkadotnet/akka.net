@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using Akka.Actor;
 using Akka.Event;
 using Akka.Streams.Actors;
@@ -19,6 +20,30 @@ namespace Akka.Streams.Implementation
     /// <typeparam name="T">TBD</typeparam>
     internal class ActorRefSourceActor<T> : Actors.ActorPublisher<T>
     {
+        internal readonly struct TracedMessage
+        {
+            public TracedMessage(T message, ActivityContext context)
+            {
+                Message = message;
+                Context = context;
+            }
+
+            public T Message { get; }
+            public ActivityContext Context { get; }
+        }
+
+        private readonly struct BufferedMessage
+        {
+            public BufferedMessage(T message, ActivityContext? context)
+            {
+                Message = message;
+                Context = context;
+            }
+
+            public T Message { get; }
+            public ActivityContext? Context { get; }
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -41,7 +66,7 @@ namespace Akka.Streams.Implementation
         /// <summary>
         /// TBD
         /// </summary>
-        protected readonly IBuffer<T>? Buffer;
+        private readonly IBuffer<BufferedMessage>? _buffer;
 
         /// <summary>
         /// TBD
@@ -63,7 +88,7 @@ namespace Akka.Streams.Implementation
         {
             BufferSize = bufferSize;
             OverflowStrategy = overflowStrategy;
-            Buffer = bufferSize > 0 ? Implementation.Buffer.Create<T>(bufferSize, maxFixedBufferSize) : null;
+            _buffer = bufferSize > 0 ? Implementation.Buffer.Create<BufferedMessage>(bufferSize, maxFixedBufferSize) : null;
         }
 
         /// <summary>
@@ -77,7 +102,7 @@ namespace Akka.Streams.Implementation
         /// <param name="message">TBD</param>
         /// <returns>TBD</returns>
         protected override bool Receive(object message)
-            => DefaultReceive(message) || RequestElement(message) || (message is T message1 && ReceiveElement(message1));
+            => DefaultReceive(message) || RequestElement(message) || ReceiveTracedElement(message) || (message is T message1 && ReceiveElement(message1, null));
 
         /// <summary>
         /// TBD
@@ -90,7 +115,7 @@ namespace Akka.Streams.Implementation
                 Context.Stop(Self);
             else if (message is Status.Success)
             {
-                if (Buffer is null || Buffer.IsEmpty)
+                if (_buffer is null || _buffer.IsEmpty)
                     OnCompleteThenStop(); // will complete the stream successfully
                 else
                     Context.Become(DrainBufferThenComplete);
@@ -112,9 +137,9 @@ namespace Akka.Streams.Implementation
             if (message is Request)
             {
                 // totalDemand is tracked by base
-                if (Buffer is not null)
-                    while (TotalDemand > 0L && !Buffer.IsEmpty)
-                        OnNext(Buffer.Dequeue());
+                if (_buffer is not null)
+                    while (TotalDemand > 0L && !_buffer.IsEmpty)
+                        PushElement(_buffer.Dequeue());
 
                 return true;
             }
@@ -122,39 +147,49 @@ namespace Akka.Streams.Implementation
             return false;
         }
 
+        private bool ReceiveTracedElement(object message)
+        {
+            if (message is TracedMessage tracedMessage)
+                return ReceiveElement(tracedMessage.Message, tracedMessage.Context);
+            return false;
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="message">TBD</param>
+        /// <param name="context">TBD</param>
         /// <returns>TBD</returns>
-        protected virtual bool ReceiveElement(T message)
+        protected virtual bool ReceiveElement(T message, ActivityContext? context)
         {
             if (IsActive)
             {
                 if (TotalDemand > 0L)
-                    OnNext(message);
-                else if (Buffer is null)
+                    PushElement(message, context);
+                else if (_buffer is null)
                     Log.Debug("Dropping element because there is no downstream demand: [{0}]", message);
-                else if (!Buffer.IsFull)
-                    Buffer.Enqueue(message);
+                else if (!_buffer.IsFull)
+                {
+                    _buffer.Enqueue(new BufferedMessage(message, context));
+                }
                 else
                 {
                     switch (OverflowStrategy)
                     {
                         case OverflowStrategy.DropHead:
                             Log.Debug("Dropping the head element because buffer is full and overflowStrategy is: [DropHead]");
-                            Buffer.DropHead();
-                            Buffer.Enqueue(message);
+                            _buffer.DropHead();
+                            _buffer.Enqueue(new BufferedMessage(message, context));
                             break;
                         case OverflowStrategy.DropTail:
                             Log.Debug("Dropping the tail element because buffer is full and overflowStrategy is: [DropTail]");
-                            Buffer.DropTail();
-                            Buffer.Enqueue(message);
+                            _buffer.DropTail();
+                            _buffer.Enqueue(new BufferedMessage(message, context));
                             break;
                         case OverflowStrategy.DropBuffer:
                             Log.Debug("Dropping all the buffered elements because buffer is full and overflowStrategy is: [DropBuffer]");
-                            Buffer.Clear();
-                            Buffer.Enqueue(message);
+                            _buffer.Clear();
+                            _buffer.Enqueue(new BufferedMessage(message, context));
                             break;
                         case OverflowStrategy.DropNew:
                             // do not enqueue new element if the buffer is full
@@ -189,23 +224,42 @@ namespace Akka.Streams.Implementation
                 // even if previously valid completion was requested via Status.Success
                 OnErrorThenStop(failure.Cause);
             }
-            else if (message is Request && Buffer is not null)
+            else if (message is Request && _buffer is not null)
             {
                 // totalDemand is tracked by base
-                while (TotalDemand > 0L && !Buffer.IsEmpty)
-                    OnNext(Buffer.Dequeue());
+                while (TotalDemand > 0L && !_buffer.IsEmpty)
+                    PushElement(_buffer.Dequeue());
 
-                if (Buffer.IsEmpty)
+                if (_buffer.IsEmpty)
                     OnCompleteThenStop(); // will complete the stream successfully
             }
             else if (IsActive)
                 Log.Debug(
                     "Dropping element because Status.Success received already, only draining already buffered elements: [{0}] (pending: [{1}])",
-                    message, Buffer?.Used ?? 0);
+                    message, _buffer?.Used ?? 0);
             else
                 return false;
 
             return true;
+        }
+
+        private void PushElement(BufferedMessage element)
+            => PushElement(element.Message, element.Context);
+
+        private void PushElement(T element, ActivityContext? context)
+        {
+            if (context.HasValue && StreamsDiagnostics.ActivitySource.HasListeners())
+            {
+                using var activity = StreamsDiagnostics.ActivitySource.StartActivity(
+                    StreamsDiagnostics.OperationIngress,
+                    ActivityKind.Internal,
+                    context.Value);
+                OnNext(element);
+            }
+            else
+            {
+                OnNext(element);
+            }
         }
     }
 }

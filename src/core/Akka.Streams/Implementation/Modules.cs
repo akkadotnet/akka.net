@@ -6,9 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Annotations;
+using Akka.Dispatch.SysMsg;
 using Akka.Streams.Actors;
 using Reactive.Streams;
 
@@ -415,8 +418,58 @@ namespace Akka.Streams.Implementation
         public override IPublisher<TOut> Create(MaterializationContext context, out IActorRef materializer)
         {
             var mat = ActorMaterializerHelper.Downcast(context.Materializer);
-            materializer = mat.ActorOf(context, ActorRefSourceActor<TOut>.Props(_bufferSize, _overflowStrategy, mat.Settings));
-            return new ActorPublisherImpl<TOut>(materializer);
+            var sourceActor = mat.ActorOf(context, ActorRefSourceActor<TOut>.Props(_bufferSize, _overflowStrategy, mat.Settings));
+            materializer = new TraceCapturingActorRef((IInternalActorRef)sourceActor);
+            return new ActorPublisherImpl<TOut>(sourceActor);
+        }
+
+        private sealed class TraceCapturingActorRef : InternalActorRefBase
+        {
+            private readonly IInternalActorRef _underlying;
+
+            public TraceCapturingActorRef(IInternalActorRef underlying)
+            {
+                _underlying = underlying;
+            }
+
+            public override ActorPath Path => _underlying.Path;
+            public override IInternalActorRef Parent => _underlying.Parent;
+            public override IActorRefProvider Provider => _underlying.Provider;
+            public override bool IsLocal => _underlying.IsLocal;
+
+            [Obsolete("Use Context.Watch and Receive<Terminated> [1.1.0]")]
+#pragma warning disable CS0809
+            public override bool IsTerminated => _underlying.IsTerminated;
+#pragma warning restore CS0809
+
+            public override IActorRef GetChild(IReadOnlyList<string> name) => _underlying.GetChild(name);
+            public override void Resume(Exception causedByFailure = null) => _underlying.Resume(causedByFailure);
+            public override void Start() => _underlying.Start();
+            public override void Stop() => _underlying.Stop();
+            public override void Restart(Exception cause) => _underlying.Restart(cause);
+            public override void Suspend() => _underlying.Suspend();
+            public override void SendSystemMessage(ISystemMessage message) => _underlying.SendSystemMessage(message);
+
+            protected override void TellInternal(object message, IActorRef sender)
+            {
+                if (ShouldCaptureContext(message))
+                {
+                    var context = Activity.Current?.Context;
+                    if (context.HasValue)
+                    {
+                        _underlying.Tell(new ActorRefSourceActor<TOut>.TracedMessage((TOut)message, context.Value), sender);
+                        return;
+                    }
+                }
+
+                _underlying.Tell(message, sender);
+            }
+
+            private static bool ShouldCaptureContext(object message)
+                => StreamsDiagnostics.ActivitySource.HasListeners()
+                   && message is TOut
+                   && message is not Status
+                   && message is not Actors.Cancel;
         }
     }
 }
