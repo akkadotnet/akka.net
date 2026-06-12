@@ -5,7 +5,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("e3bcba88-003c-4cda-8a60-f0c2553fe3c8")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Persistence
 {
     public abstract class AtLeastOnceDeliveryActor : Akka.Persistence.PersistentActor

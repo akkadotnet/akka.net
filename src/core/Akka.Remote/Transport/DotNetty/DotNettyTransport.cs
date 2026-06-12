@@ -21,6 +21,7 @@ using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;
 using DotNetty.Codecs;
+using ByteOrder = DotNetty.Buffers.ByteOrder;
 using DotNetty.Common.Utilities;
 using DotNetty.Handlers.Tls;
 using DotNetty.Transport.Bootstrapping;

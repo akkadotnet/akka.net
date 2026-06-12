@@ -6,6 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Pattern;
@@ -23,6 +28,22 @@ namespace Akka.Streams.Tests.Dsl
 {
     public class QueueSourceSpec : AkkaSpec
     {
+        private sealed class QueueCompletionRefs
+        {
+            public QueueCompletionRefs(WeakReference queue, WeakReference completionTask)
+            {
+                Queue = queue;
+                CompletionTask = completionTask;
+            }
+
+            public WeakReference Queue { get; }
+
+            public WeakReference CompletionTask { get; }
+        }
+
+        private static readonly FieldInfo QueueCompletionField = typeof(QueueSource<int>.Materialized)
+            .GetField("_completion", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
         private readonly ActorMaterializer _materializer;
         private readonly TimeSpan _pause = TimeSpan.FromMilliseconds(300);
 
@@ -31,10 +52,50 @@ namespace Akka.Streams.Tests.Dsl
             _materializer = Sys.Materializer();
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private async Task<IReadOnlyList<QueueCompletionRefs>> CreateIssue8210FaultedCompletionTaskRefsAsync(int count)
+        {
+            var refs = new List<QueueCompletionRefs>(count);
+
+            for (var i = 0; i < count; i++)
+            {
+                var tempMat = ActorMaterializer.Create(Sys, ActorMaterializerSettings.Create(Sys));
+                var queue = (QueueSource<int>.Materialized)Source.Queue<int>(1, OverflowStrategy.Fail)
+                    .To(Sink.Ignore<int>())
+                    .Run(tempMat);
+                var completion = (TaskCompletionSource<object>)QueueCompletionField.GetValue(queue)!;
+                var completionTask = completion.Task;
+
+                refs.Add(new QueueCompletionRefs(new WeakReference(queue), new WeakReference(completionTask)));
+
+                await Task.Delay(50);
+                tempMat.Shutdown();
+
+                for (var attempt = 0; attempt < 30 && !completionTask.IsCompleted; attempt++)
+                    await Task.Delay(10);
+
+                completionTask.IsFaulted.Should().BeTrue(
+                    "QueueSource should fault its internal completion task when the stage is abruptly stopped");
+            }
+
+            return refs;
+        }
+
         private static void AssertSuccess(Task<IQueueOfferResult> task)
         {
             task.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
             task.Result.Should().Be(Enqueued.Instance);
+        }
+
+        private async Task AssertCanceledWithToken(Task<IQueueOfferResult> task, CancellationToken cancellationToken)
+        {
+            await AwaitAssertAsync(
+                () => task.IsCanceled.Should().BeTrue(),
+                TimeSpan.FromSeconds(3),
+                TimeSpan.FromMilliseconds(50));
+
+            var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await task);
+            exception.CancellationToken.Should().Be(cancellationToken);
         }
 
         [Fact]
@@ -290,6 +351,52 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public async Task QueueSource_should_not_trigger_UnobservedTaskException_when_completion_is_not_watched_and_materializer_is_shut_down()
+        {
+            var unobserved = new TaskCompletionSource<AggregateException>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            EventHandler<UnobservedTaskExceptionEventArgs> handler = (_, args) =>
+            {
+                try
+                {
+                    if (args.Exception.Flatten().InnerExceptions.OfType<StreamDetachedException>().Any())
+                        unobserved.TrySetResult(args.Exception);
+                }
+                finally
+                {
+                    args.SetObserved();
+                }
+            };
+
+            TaskScheduler.UnobservedTaskException += handler;
+            try
+            {
+                var refs = await this.AssertAllStagesStoppedAsync(() => CreateIssue8210FaultedCompletionTaskRefsAsync(10), _materializer);
+
+                for (var i = 0; i < 30 && !unobserved.Task.IsCompleted && refs.Any(r => r.Queue.IsAlive || r.CompletionTask.IsAlive); i++)
+                {
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    GC.Collect();
+                    await Task.Delay(100);
+                }
+
+                refs.Count(r => !r.Queue.IsAlive).Should().BeGreaterThan(0,
+                    "the discarded Source.Queue materialized values should become collectible during the repro");
+
+                refs.Count(r => !r.CompletionTask.IsAlive).Should().BeGreaterThan(0,
+                    "the unwatched completion tasks should become collectible during the repro");
+
+                unobserved.Task.IsCompleted.Should().BeFalse(
+                    "discarding Source.Queue completion should not leave an internal faulted task unobserved during abrupt shutdown");
+            }
+            finally
+            {
+                TaskScheduler.UnobservedTaskException -= handler;
+            }
+        }
+
+        [Fact]
         public async Task QueueSource_should_return_false_when_element_was_not_added_to_buffer()
         {
             await this.AssertAllStagesStoppedAsync(async() => {
@@ -337,6 +444,234 @@ namespace Akka.Streams.Tests.Dsl
                 await ExpectMsgAsync<Enqueued>();
 
                 sub.Cancel();
+            }, _materializer);
+        }
+
+        [Fact]
+        public async Task QueueSource_should_offer_with_cancellation_token_none()
+        {
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var (source, probe) =
+                    Source.Queue<int>(0, OverflowStrategy.Backpressure)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(_materializer);
+                var queue = Assert.IsAssignableFrom<ISourceQueueWithComplete<int>>(source);
+
+                var offer = queue.OfferAsync(1, CancellationToken.None);
+
+                await probe.RequestNextAsync(1);
+                AssertSuccess(offer);
+
+                source.Complete();
+                await probe.ExpectCompleteAsync();
+            }, _materializer);
+        }
+
+        [Fact]
+        public async Task QueueSource_should_cancel_pending_offer_when_backpressured_buffer_is_full()
+        {
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var (source, probe) =
+                    Source.Queue<int>(1, OverflowStrategy.Backpressure)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(_materializer);
+
+                AssertSuccess(source.OfferAsync(1));
+
+                using var cts = new CancellationTokenSource();
+                var offer = source.OfferAsync(2, cts.Token);
+                await ExpectNoMsgAsync(_pause);
+
+                cts.Cancel();
+                await AssertCanceledWithToken(offer, cts.Token);
+
+                await probe.RequestNextAsync(1);
+                probe.Request(1);
+                await probe.ExpectNoMsgAsync(_pause);
+
+                source.Complete();
+                await probe.ExpectCompleteAsync();
+            }, _materializer);
+        }
+
+        [Fact]
+        public async Task QueueSource_should_cancel_pending_offer_when_backpressured_without_buffer()
+        {
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var (source, probe) =
+                    Source.Queue<int>(0, OverflowStrategy.Backpressure)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(_materializer);
+
+                using var cts = new CancellationTokenSource();
+                var offer = source.OfferAsync(1, cts.Token);
+                await ExpectNoMsgAsync(_pause);
+
+                cts.Cancel();
+                await AssertCanceledWithToken(offer, cts.Token);
+
+                probe.Request(1);
+                await probe.ExpectNoMsgAsync(_pause);
+
+                source.Complete();
+                await probe.ExpectCompleteAsync();
+            }, _materializer);
+        }
+
+        [Fact]
+        public async Task QueueSource_should_accept_next_backpressured_offer_after_pending_offer_is_canceled()
+        {
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var (source, probe) =
+                    Source.Queue<int>(1, OverflowStrategy.Backpressure)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(_materializer);
+
+                AssertSuccess(source.OfferAsync(1));
+
+                using var canceled = new CancellationTokenSource();
+                var canceledOffer = source.OfferAsync(2, canceled.Token);
+                canceled.Cancel();
+                await AssertCanceledWithToken(canceledOffer, canceled.Token);
+
+                var nextOffer = source.OfferAsync(3);
+
+                await probe.RequestNextAsync(1);
+                AssertSuccess(nextOffer);
+
+                await probe.RequestNextAsync(3);
+
+                source.Complete();
+                await probe.ExpectCompleteAsync();
+            }, _materializer);
+        }
+
+        [Fact]
+        public async Task QueueSource_should_not_enqueue_offer_when_token_is_already_canceled()
+        {
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var (source, probe) =
+                    Source.Queue<int>(0, OverflowStrategy.Backpressure)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(_materializer);
+
+                using var cts = new CancellationTokenSource();
+                cts.Cancel();
+
+                var canceledOffer = source.OfferAsync(1, cts.Token);
+                await AssertCanceledWithToken(canceledOffer, cts.Token);
+
+                var offer = source.OfferAsync(2);
+                await probe.RequestNextAsync(2);
+                AssertSuccess(offer);
+
+                source.Complete();
+                await probe.ExpectCompleteAsync();
+            }, _materializer);
+        }
+
+        [Fact]
+        public async Task QueueSource_should_ignore_cancellation_after_offer_was_enqueued()
+        {
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var (source, probe) =
+                    Source.Queue<int>(1, OverflowStrategy.Backpressure)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(_materializer);
+
+                using var cts = new CancellationTokenSource();
+                var offer = source.OfferAsync(1, cts.Token);
+                AssertSuccess(offer);
+
+                cts.Cancel();
+
+                offer.Status.Should().Be(TaskStatus.RanToCompletion);
+                offer.Result.Should().Be(Enqueued.Instance);
+                await probe.RequestNextAsync(1);
+
+                source.Complete();
+                await probe.ExpectCompleteAsync();
+            }, _materializer);
+        }
+
+        [Fact]
+        public async Task QueueSource_should_ignore_cancellation_after_complete_was_requested_for_pending_offer()
+        {
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var (source, probe) =
+                    Source.Queue<int>(0, OverflowStrategy.Backpressure)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(_materializer);
+
+                using var cts = new CancellationTokenSource();
+                var offer = source.OfferAsync(1, cts.Token);
+                source.Complete();
+                cts.Cancel();
+
+                await probe.RequestNextAsync(1);
+                AssertSuccess(offer);
+                await probe.ExpectCompleteAsync();
+            }, _materializer);
+        }
+
+        [Fact]
+        public async Task QueueSource_should_drop_new_offers_after_complete_was_requested_while_draining()
+        {
+            await this.AssertAllStagesStoppedAsync(async () => {
+                var (source, probe) =
+                    Source.Queue<int>(0, OverflowStrategy.Backpressure)
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(_materializer);
+
+                var pendingOffer = source.OfferAsync(1);
+                source.Complete();
+
+                var droppedOffer = await source.OfferAsync(2);
+                droppedOffer.Should().Be(Dropped.Instance);
+
+                await probe.RequestNextAsync(1);
+                AssertSuccess(pendingOffer);
+                await probe.ExpectCompleteAsync();
+            }, _materializer);
+        }
+
+        [Fact]
+        public async Task QueueSource_should_cancel_offer_when_token_fires_before_stage_processes_offer()
+        {
+            await this.AssertAllStagesStoppedAsync(async () => {
+                using var mapStarted = new ManualResetEventSlim();
+                using var releaseMap = new ManualResetEventSlim();
+
+                var (source, probe) =
+                    Source.Queue<int>(0, OverflowStrategy.Backpressure)
+                        .Select(element =>
+                        {
+                            mapStarted.Set();
+                            releaseMap.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+                            return element;
+                        })
+                        .ToMaterialized(this.SinkProbe<int>(), Keep.Both)
+                        .Run(_materializer);
+
+                probe.Request(1);
+                var firstOffer = source.OfferAsync(1);
+                mapStarted.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
+
+                using var cts = new CancellationTokenSource();
+                var canceledOffer = source.OfferAsync(2, cts.Token);
+                cts.Cancel();
+
+                releaseMap.Set();
+
+                await probe.ExpectNextAsync(1);
+                AssertSuccess(firstOffer);
+                await AssertCanceledWithToken(canceledOffer, cts.Token);
+
+                probe.Request(1);
+                await probe.ExpectNoMsgAsync(_pause);
+
+                source.Complete();
+                await probe.ExpectCompleteAsync();
             }, _materializer);
         }
 

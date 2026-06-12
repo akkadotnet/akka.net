@@ -50,7 +50,7 @@ namespace Akka.DistributedData.LightningDB
 
         private readonly Config _config;
         private readonly Akka.Serialization.Serialization _serialization;
-        private readonly SerializerWithStringManifest _serializer;
+        private readonly Serializer _serializer;
         private readonly string _manifest;
         private readonly long _mapSize;
 
@@ -70,8 +70,8 @@ namespace Akka.DistributedData.LightningDB
             _log = Context.GetLogger();
 
             _serialization = Context.System.Serialization;
-            _serializer = (SerializerWithStringManifest) _serialization.FindSerializerForType(typeof(DurableDataEnvelope));
-            _manifest = _serializer.Manifest(new DurableDataEnvelope(GCounter.Empty));
+            _serializer = _serialization.FindSerializerForType(typeof(DurableDataEnvelope));
+            _manifest = Akka.Serialization.Serialization.ManifestFor(_serializer, new DurableDataEnvelope(GCounter.Empty));
 
             var useWriteBehind = _config.GetString("write-behind-interval", "").ToLowerInvariant();
             _writeBehindInterval = 

@@ -13,7 +13,7 @@
     <!-- 
       xUnit1051 is to suppress xUnit oppinionated cancellation token warning. 
     -->
-    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;xUnit1013;xUnit1031;CS8632;xUnit1051;SYSLIB0050;SYSLIB0051;CS0672;CA2022</NoWarn>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <!-- Set the language version for C# if we're not inside an F# project -->
@@ -29,18 +29,18 @@
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.26.1</ProtobufVersion>
-    <GrpcToolsVersion>2.60.0</GrpcToolsVersion>
-    <BenchmarkDotNetVersion>0.15.4</BenchmarkDotNetVersion>
+    <ProtobufVersion>3.35.0</ProtobufVersion>
+    <GrpcToolsVersion>2.81.0</GrpcToolsVersion>
+    <BenchmarkDotNetVersion>0.15.8</BenchmarkDotNetVersion>
+    <MessagePackVersion>3.1.7</MessagePackVersion>
+    <MicrosoftCodeAnalysisCSharpVersion>4.13.0</MicrosoftCodeAnalysisCSharpVersion>
     <NetTestVersion>net10.0</NetTestVersion>
-    <FsharpVersion>6.0.5</FsharpVersion>
-    <NetFrameworkTestVersion>net48</NetFrameworkTestVersion>
-    <NetStandardLibVersion>netstandard2.0</NetStandardLibVersion>
-    <NetLibVersion>net6.0</NetLibVersion>
+    <FsharpVersion>10.1.301</FsharpVersion>
+    <NetStandardLibVersion>net10.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
-    <FsCheckVersion>2.16.6</FsCheckVersion>
-    <FsCheck3Version>3.3.2</FsCheck3Version>
+    <FsCheckVersion>3.3.3</FsCheckVersion>
+    <FsCheck3Version>3.3.3</FsCheck3Version>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>

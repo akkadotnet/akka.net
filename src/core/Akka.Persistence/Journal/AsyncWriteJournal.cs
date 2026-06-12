@@ -392,15 +392,7 @@ namespace Akka.Persistence.Journal
                 try
                 {
                     var writeResult =
-                        await _breaker.WithCircuitBreaker(
-                            (prepared, awj: this),
-                            async (state, ct) =>
-                            {
-                                // Ensure WriteMessagesAsync is not called in AsyncWriteJournal
-                                // actor context and so doesn't block message handling
-                                await Task.Yield();
-                                return await state.awj.WriteMessagesAsync(state.prepared, ct);
-                            }).ConfigureAwait(false);
+                        await _breaker.WithCircuitBreaker((prepared, awj: this), (state, ct) => state.awj.WriteMessagesAsync(state.prepared, ct)).ConfigureAwait(false);
 
                     ProcessResults(writeResult, atomicWriteCount, message, _resequencer, resequencerCounter, self);
                 }

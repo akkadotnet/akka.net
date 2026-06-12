@@ -5,7 +5,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.DistributedData.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("a05c31e8-0246-46a1-b3bc-4d6fe7a9aa49")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Cluster.Sharding
 {
     public class ClusterSharding : Akka.Actor.IExtension

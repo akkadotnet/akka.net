@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>TestKit for writing tests for Akka.NET using xUnit.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <PackageTags>$(AkkaPackageTags);testkit;xunit</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <Nullable>enable</Nullable>

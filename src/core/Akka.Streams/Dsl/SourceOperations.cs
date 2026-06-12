@@ -1048,7 +1048,7 @@ namespace Akka.Streams.Dsl
 
         ///  <summary>
         /// Allows a faster upstream to progress independently of a slower subscriber by aggregating elements into batches
-        /// until the subscriber is ready to accept them.For example a batch step might concatenate <see cref="ByteString"/>
+        /// until the subscriber is ready to accept them.For example a batch step might concatenate <c>ReadOnlyMemory&lt;byte&gt;</c>
         /// elements up to the allowed max limit if the upstream publisher is faster.
         ///
         /// This element only rolls up elements if the upstream is faster, but if the downstream is faster it will not
@@ -1639,7 +1639,7 @@ namespace Akka.Streams.Dsl
         /// Sends elements downstream with speed limited to <paramref name="cost"/>/<paramref name="per"/>`. Cost is
         /// calculating for each element individually by calling <paramref name="calculateCost"/> function.
         /// This combinator works for streams when elements have different cost(length).
-        /// Streams of <see cref="ByteString"/> for example.
+        /// Streams of <c>ReadOnlyMemory&lt;byte&gt;</c> for example.
         /// 
         /// Throttle implements the token bucket model. There is a bucket with a given token capacity (burst size or maximumBurst).
         /// Tokens drops into the bucket at a given rate and can be spared for later use up to bucket capacity

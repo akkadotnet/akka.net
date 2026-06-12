@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-      <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+      <TargetFramework>$(NetTestVersion)</TargetFramework>
       <RootNamespace>Tutorials</RootNamespace>
       <IsPackable>false</IsPackable>
   </PropertyGroup>

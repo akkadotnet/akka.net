@@ -17,7 +17,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Management.Cluster.Http")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("0e3e691b-0c31-4718-9b1a-d749b93208c9")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Cluster
 {
     [Akka.Annotations.InternalApi]

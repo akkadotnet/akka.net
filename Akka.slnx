@@ -190,6 +190,9 @@
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />
     </Project>
+    <Project Path="src/core/Akka.Serialization.V2.Tests/Akka.Serialization.V2.Tests.csproj" />
+    <Project Path="src/core/Akka.Serialization.V2.Generators/Akka.Serialization.V2.Generators.csproj" />
+    <Project Path="src/core/Akka.Serialization.V2/Akka.Serialization.V2.csproj" />
     <Project Path="src/core/Akka.Streams.TestKit.Tests/Akka.Streams.TestKit.Tests.csproj">
       <Build Solution="*|x64" Project="false" />
       <Build Solution="*|x86" Project="false" />

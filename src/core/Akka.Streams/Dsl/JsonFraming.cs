@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Akka.IO;
+using System.Buffers;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Stage;
@@ -14,13 +14,13 @@ using Akka.Streams.Stage;
 namespace Akka.Streams.Dsl
 {
     /// <summary>
-    /// Provides JSON framing stages that can separate valid JSON objects from incoming <see cref="ByteString"/> objects.
+    /// Provides JSON framing stages that can separate valid JSON objects from incoming <c>ReadOnlySequence&lt;byte&gt;</c> objects.
     /// </summary>
     public static class JsonFraming
     {
         /// <summary>
         /// Returns a Flow that implements a "brace counting" based framing stage for emitting valid JSON chunks.
-        /// It scans the incoming data stream for valid JSON objects and returns chunks of ByteStrings containing only those valid chunks.
+        /// It scans the incoming data stream for valid JSON objects and returns chunks of byte data containing only those valid chunks.
         /// 
         /// Typical examples of data that one may want to frame using this stage include:
         /// 
@@ -45,12 +45,12 @@ namespace Akka.Streams.Dsl
         /// </summary>
         /// <param name="maximumObjectLength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream.</param>
         /// <returns>TBD</returns>
-        public static Flow<ByteString, ByteString, NotUsed> ObjectScanner(int maximumObjectLength)
+        public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> ObjectScanner(int maximumObjectLength)
         {
-            return Flow.Create<ByteString>().Via(new Scanner(maximumObjectLength));
+            return Flow.Create<ReadOnlySequence<byte>>().Via(new Scanner(maximumObjectLength));
         }
 
-        private sealed class Scanner : SimpleLinearGraphStage<ByteString>
+        private sealed class Scanner : SimpleLinearGraphStage<ReadOnlySequence<byte>>
         {
             private sealed class Logic : InAndOutGraphStageLogic
             {

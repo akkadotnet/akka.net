@@ -6,11 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.IO;
@@ -26,7 +26,7 @@ namespace Akka.Streams.Tests.IO
     {
         private static readonly TimeSpan Timeout = TimeSpan.FromMilliseconds(300);
         private readonly ActorMaterializer _materializer;
-        private readonly ByteString _byteString = RandomByteString(3);
+        private readonly ReadOnlySequence<byte> _byteString = RandomByteString(3);
 
         public InputStreamSinkSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
         {
@@ -40,10 +40,10 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(() => {
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
-                var result = ReadN(inputStream, _byteString.Count);
+                var result = ReadN(inputStream, (int)_byteString.Length);
                 inputStream.Dispose();
-                result.Item1.Should().Be(_byteString.Count);
-                result.Item2.Should().BeEquivalentTo(_byteString);
+                result.Item1.Should().Be((int)_byteString.Length);
+                result.Item2.ToArray().SequenceEqual(_byteString.ToArray()).Should().BeTrue();
                 return Task.CompletedTask;
             }, _materializer);
         }
@@ -54,22 +54,26 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(() => {
                 var sinkProbe = CreateTestProbe();
                 var byteString2 = RandomByteString(3);
-                var inputStream = Source.From(new[] { _byteString, byteString2, null })
+                var inputStream = Source.From(new[] { _byteString, byteString2 })
                     .RunWith(TestSink(sinkProbe), _materializer);
 
                 sinkProbe.ExpectMsgAllOf(new[] { GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance });
 
                 var result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
-                result.Item2.Should().BeEquivalentTo(_byteString.Slice(0, 2));
+                result.Item2.ToArray().SequenceEqual(_byteString.Slice(0, 2).ToArray()).Should().BeTrue();
 
                 result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
-                result.Item2.Should().BeEquivalentTo(Enumerable.Concat(_byteString.Slice(2), byteString2.Slice(0, 1)));
+                // _byteString[2..] + byteString2[0..1]
+                var expected2 = new byte[2];
+                _byteString.Slice(2).ToArray().AsSpan().CopyTo(expected2);
+                byteString2.Slice(0, 1).ToArray().AsSpan().CopyTo(expected2.AsSpan(1));
+                result.Item2.ToArray().SequenceEqual(expected2).Should().BeTrue();
 
                 result = ReadN(inputStream, 2);
                 result.Item1.Should().Be(2);
-                result.Item2.Should().BeEquivalentTo(byteString2.Slice(1));
+                result.Item2.ToArray().SequenceEqual(byteString2.Slice(1).ToArray()).Should().BeTrue();
 
                 inputStream.Dispose();
                 return Task.CompletedTask;
@@ -82,13 +86,15 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(() => {
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
 
-                var arr = new byte[_byteString.Count + 1];
+                var arr = new byte[(int)_byteString.Length + 1];
 // CA2022 - testing our own Stream.Read override in InputStreamAdapter
 #pragma warning disable CA2022
                 inputStream.Read(arr, 0, arr.Length).Should().Be(arr.Length - 1);
 #pragma warning restore CA2022
                 inputStream.Dispose();
-                ByteString.FromBytes(arr).Should().BeEquivalentTo(Enumerable.Concat(_byteString, ByteString.FromBytes(new byte[] { 0 })));
+                // arr should contain _byteString bytes followed by a zero byte
+                arr.AsSpan(0, (int)_byteString.Length).SequenceEqual(_byteString.ToArray()).Should().BeTrue();
+                arr[(int)_byteString.Length].Should().Be(0);
                 return Task.CompletedTask;
             }, _materializer);
         }
@@ -98,21 +104,21 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(() => {
                 var run =                                                                             
-                this.SourceProbe<ByteString>()                                                                                 
+                this.SourceProbe<ReadOnlySequence<byte>>()                                                                                 
                 .ToMaterialized(StreamConverters.AsInputStream(), Keep.Both)                                                                                 
                 .Run(_materializer);
                 var probe = run.Item1;
                 var inputStream = run.Item2;
 // CA2022 - testing our own Stream.Read override in InputStreamAdapter
 #pragma warning disable CA2022
-                var f = Task.Run(() => inputStream.Read(new byte[_byteString.Count], 0, _byteString.Count));
+                var f = Task.Run(() => inputStream.Read(new byte[(int)_byteString.Length], 0, (int)_byteString.Length));
 #pragma warning restore CA2022
 
                 f.Wait(Timeout).Should().BeFalse();
 
                 probe.SendNext(_byteString);
                 f.Wait(RemainingOrDefault).Should().BeTrue();
-                f.Result.Should().Be(_byteString.Count);
+                f.Result.Should().Be((int)_byteString.Length);
 
                 probe.SendComplete();
                 inputStream.ReadByte().Should().Be(-1);
@@ -125,8 +131,8 @@ namespace Akka.Streams.Tests.IO
         public async Task InputStreamSink_should_throw_error_when_reactive_stream_is_closed()
         {
             await this.AssertAllStagesStoppedAsync(() => {
-                var t = this.SourceProbe<ByteString>()                                                                                 
-                .ToMaterialized(StreamConverters.AsInputStream(), Keep.Both)                                                                                 
+                var t = this.SourceProbe<ReadOnlySequence<byte>>()
+                .ToMaterialized(StreamConverters.AsInputStream(), Keep.Both)
                 .Run(_materializer);
                 var probe = t.Item1;
                 var inputStream = t.Item2;
@@ -149,7 +155,7 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(() => {
                 var sinkProbe = CreateTestProbe();
-                var t = this.SourceProbe<ByteString>().ToMaterialized(TestSink(sinkProbe), Keep.Both).Run(_materializer);
+                var t = this.SourceProbe<ReadOnlySequence<byte>>().ToMaterialized(TestSink(sinkProbe), Keep.Both).Run(_materializer);
                 var probe = t.Item1;
                 var inputStream = t.Item2;
                 var bytes = RandomByteString(1);
@@ -162,7 +168,7 @@ namespace Akka.Streams.Tests.IO
 
                 var result = ReadN(inputStream, 3);
                 result.Item1.Should().Be(1);
-                result.Item2.Should().BeEquivalentTo(bytes);
+                result.Item2.ToArray().SequenceEqual(bytes.ToArray()).Should().BeTrue();
                 return Task.CompletedTask;
             }, _materializer);
         }
@@ -176,13 +182,13 @@ namespace Akka.Streams.Tests.IO
 
                 while (!bytes.IsEmpty)
                 {
-                    var max = Math.Min(bytes.Count, 3);
+                    var max = (int)Math.Min(bytes.Length, 3);
                     var expected = bytes.Slice(0, max);
                     bytes = bytes.Slice(max);
 
                     var result = ReadN(inputStream, max);
-                    result.Item1.Should().Be(expected.Count);
-                    result.Item2.Should().BeEquivalentTo(expected);
+                    result.Item1.Should().Be((int)expected.Length);
+                    result.Item2.ToArray().SequenceEqual(expected.ToArray()).Should().BeTrue();
                 }
 
                 inputStream.Dispose();
@@ -225,7 +231,10 @@ namespace Akka.Streams.Tests.IO
                 {
                     var r = ReadN(inputStream, 8);
                     r.Item1.Should().Be(8);
-                    r.Item2.Should().BeEquivalentTo(Enumerable.Concat(bytes[i * 2], bytes[i * 2 + 1]));
+                    var combined = new byte[8];
+                    bytes[i * 2].CopyTo(combined.AsSpan());
+                    bytes[i * 2 + 1].CopyTo(combined.AsSpan((int)bytes[i * 2].Length));
+                    r.Item2.ToArray().SequenceEqual(combined).Should().BeTrue();
                 }
 
                 inputStream.Dispose();
@@ -240,18 +249,21 @@ namespace Akka.Streams.Tests.IO
                 var bytes1 = RandomByteString(10);
                 var bytes2 = RandomByteString(10);
                 var sinkProbe = CreateTestProbe();
-                var inputStream = Source.From(new[] { bytes1, bytes2, null }).RunWith(TestSink(sinkProbe), _materializer);
+                var inputStream = Source.From(new[] { bytes1, bytes2 }).RunWith(TestSink(sinkProbe), _materializer);
 
                 //need to wait while both elements arrive to sink
                 sinkProbe.ExpectMsgAllOf(new[] { GraphStageMessages.Push.Instance, GraphStageMessages.Push.Instance });
 
                 var r1 = ReadN(inputStream, 15);
                 r1.Item1.Should().Be(15);
-                r1.Item2.Should().BeEquivalentTo(Enumerable.Concat(bytes1, bytes2.Slice(0, 5)));
+                var expected1 = new byte[15];
+                bytes1.ToArray().AsSpan().CopyTo(expected1);
+                bytes2.Slice(0, 5).ToArray().AsSpan().CopyTo(expected1.AsSpan(10));
+                r1.Item2.ToArray().SequenceEqual(expected1).Should().BeTrue();
 
                 var r2 = ReadN(inputStream, 15);
                 r2.Item1.Should().Be(5);
-                r2.Item2.Should().BeEquivalentTo(bytes2.Slice(5));
+                r2.Item2.ToArray().SequenceEqual(bytes2.Slice(5).ToArray()).Should().BeTrue();
 
                 inputStream.Dispose();
                 return Task.CompletedTask;
@@ -264,9 +276,9 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(() => {
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
 
-                var r = ReadN(inputStream, _byteString.Count);
-                r.Item1.Should().Be(_byteString.Count);
-                r.Item2.Should().BeEquivalentTo(_byteString);
+                var r = ReadN(inputStream, (int)_byteString.Length);
+                r.Item1.Should().Be((int)_byteString.Length);
+                r.Item2.ToArray().SequenceEqual(_byteString.ToArray()).Should().BeTrue();
 
                 inputStream.ReadByte().Should().Be(-1);
                 inputStream.Dispose();
@@ -279,7 +291,7 @@ namespace Akka.Streams.Tests.IO
         {
             await this.AssertAllStagesStoppedAsync(() => {
                 var sinkProbe = CreateTestProbe();
-                var t = this.SourceProbe<ByteString>().ToMaterialized(TestSink(sinkProbe), Keep.Both).Run(_materializer);
+                var t = this.SourceProbe<ReadOnlySequence<byte>>().ToMaterialized(TestSink(sinkProbe), Keep.Both).Run(_materializer);
                 var probe = t.Item1;
                 var inputStream = t.Item2;
                 var ex = new Exception("Stream failed.");
@@ -287,9 +299,9 @@ namespace Akka.Streams.Tests.IO
                 probe.SendNext(_byteString);
                 sinkProbe.ExpectMsg<GraphStageMessages.Push>();
 
-                var r = ReadN(inputStream, _byteString.Count);
-                r.Item1.Should().Be(_byteString.Count);
-                r.Item2.Should().BeEquivalentTo(_byteString);
+                var r = ReadN(inputStream, (int)_byteString.Length);
+                r.Item1.Should().Be((int)_byteString.Length);
+                r.Item2.ToArray().SequenceEqual(_byteString.ToArray()).Should().BeTrue();
 
                 probe.SendError(ex);
                 sinkProbe.ExpectMsg<GraphStageMessages.Failure>().Ex.Should().Be(ex);
@@ -312,7 +324,7 @@ namespace Akka.Streams.Tests.IO
                 var materializer = ActorMaterializer.Create(sys);
                 try
                 {
-                    this.SourceProbe<ByteString>().RunWith(StreamConverters.AsInputStream(), materializer);
+                    this.SourceProbe<ReadOnlySequence<byte>>().RunWith(StreamConverters.AsInputStream(), materializer);
                     (materializer as ActorMaterializerImpl).Supervisor.Tell(StreamSupervisor.GetChildren.Instance, TestActor);
                     var children = ExpectMsg<StreamSupervisor.Children>().Refs;
                     var actorRef = children.First(c => c.Path.ToString().Contains("inputStreamSink"));
@@ -333,9 +345,9 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(() => {
                 var inputStream = Source.Single(_byteString).RunWith(StreamConverters.AsInputStream(), _materializer);
 
-                var r = ReadN(inputStream, _byteString.Count * 2);
-                r.Item1.Should().Be(_byteString.Count);
-                r.Item2.Should().BeEquivalentTo(_byteString);
+                var r = ReadN(inputStream, (int)_byteString.Length * 2);
+                r.Item1.Should().Be((int)_byteString.Length);
+                r.Item2.ToArray().SequenceEqual(_byteString.ToArray()).Should().BeTrue();
 
                 inputStream.Dispose();
                 return Task.CompletedTask;
@@ -347,7 +359,7 @@ namespace Akka.Streams.Tests.IO
         public async Task InputStreamSink_should_read_next_byte_as_an_int_from_InputStream()
         {
             await this.AssertAllStagesStoppedAsync(() => {
-                var bytes = ByteString.CopyFrom(new byte[] { 0, 100, 200, 255 });
+                var bytes = new ReadOnlySequence<byte>(new byte[] { 0, 100, 200, 255 });
                 var inputStream = Source.Single(bytes).RunWith(StreamConverters.AsInputStream(), _materializer);
 
                 Enumerable.Range(1, 5)
@@ -376,31 +388,31 @@ namespace Akka.Streams.Tests.IO
         public void InputStreamSink_should_throw_from_inputstream_read_if_terminated_abruptly()
         {
             var materializer = ActorMaterializer.Create(Sys);
-            var probe = this.CreatePublisherProbe<ByteString>();
+            var probe = this.CreatePublisherProbe<ReadOnlySequence<byte>>();
             var inputStream = Source.FromPublisher(probe).RunWith(StreamConverters.AsInputStream(), materializer);
             materializer.Shutdown();
 
             inputStream.Invoking(i => i.ReadByte()).Should().Throw<AbruptTerminationException>();
         }
 
-        private static ByteString RandomByteString(int size)
+        private static ReadOnlySequence<byte> RandomByteString(int size)
         {
             var a = new byte[size];
             new Random().NextBytes(a);
-            return ByteString.FromBytes(a);
+            return new ReadOnlySequence<byte>(a);
         }
 
-        private (int, ByteString) ReadN(Stream s, int n)
+        private (int, ReadOnlySequence<byte>) ReadN(Stream s, int n)
         {
             var buf = new byte[n];
 // CA2022 - testing our own Stream.Read override in InputStreamAdapter
 #pragma warning disable CA2022
             var r = s.Read(buf, 0, n);
 #pragma warning restore CA2022
-            return (r, ByteString.FromBytes(buf, 0, r));
+            return (r, new ReadOnlySequence<byte>(buf, 0, r));
         }
 
-        private TestSinkStage<ByteString, Stream> TestSink(TestProbe probe)
-            => TestSinkStage<ByteString, Stream>.Create(new InputStreamSinkStage(Timeout), probe);
+        private TestSinkStage<ReadOnlySequence<byte>, Stream> TestSink(TestProbe probe)
+            => TestSinkStage<ReadOnlySequence<byte>, Stream>.Create(new InputStreamSinkStage(Timeout), probe);
     }
 }

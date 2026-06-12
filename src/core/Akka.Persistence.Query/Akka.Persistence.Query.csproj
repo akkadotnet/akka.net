@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>Stream based query interface for persistence journal plugins for Akka.NET</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <PackageTags>$(AkkaPackageTags);persistence;eventsource;query;stream</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>

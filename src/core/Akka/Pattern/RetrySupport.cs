@@ -26,8 +26,8 @@ namespace Akka.Pattern
         /// </para>
         /// If attempts are exhausted the returned Task is simply the result of invoking attempt.
         /// </summary>
-        /// <param name="attempt">TBD</param>
-        /// <param name="attempts">TBD</param>
+        /// <param name="attempt">A function that produces the <see cref="Task{T}"/> to execute on each try.</param>
+        /// <param name="attempts">Maximum number of attempts to make before giving up.</param>
         public static Task<T> Retry<T>(Func<Task<T>> attempt, int attempts) =>
             Retry(attempt, attempts, attempted: 0);
 
@@ -39,8 +39,8 @@ namespace Akka.Pattern
         /// </para>
         /// If attempts are exhausted the returned Task is simply the result of invoking attempt.
         /// </summary>
-        /// <param name="attempt">TBD</param>
-        /// <param name="attempts">TBD</param>
+        /// <param name="attempt">A function that produces the <see cref="Task{T}"/> to execute on each try.</param>
+        /// <param name="attempts">Maximum number of attempts to make before giving up.</param>
         /// <param name="minBackoff">minimum (initial) duration until the child actor will started again, if it is terminated.</param>
         /// <param name="maxBackoff">the exponential back-off is capped to this duration.</param>
         /// <param name="randomFactor">after calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
@@ -63,9 +63,9 @@ namespace Akka.Pattern
         /// </para>
         /// If attempts are exhausted the returned future is simply the result of invoking attempt.
         /// </summary>
-        /// <param name="attempt">TBD</param>
-        /// <param name="attempts">TBD</param>
-        /// <param name="delay">TBD</param>
+        /// <param name="attempt">A function that produces the <see cref="Task{T}"/> to execute on each try.</param>
+        /// <param name="attempts">Maximum number of attempts to make before giving up.</param>
+        /// <param name="delay">The fixed duration to wait between retry attempts.</param>
         /// <param name="scheduler">The scheduler instance to use.</param>
         public static Task<T> Retry<T>(Func<Task<T>> attempt, int attempts, TimeSpan delay, IScheduler scheduler) =>
             Retry(attempt, attempts, _ => delay, scheduler);
@@ -82,9 +82,9 @@ namespace Akka.Pattern
         /// </para>
         /// If attempts are exhausted the returned Task is simply the result of invoking attempt.
         /// </summary>
-        /// <param name="attempt">TBD</param>
-        /// <param name="attempts">TBD</param>
-        /// <param name="delayFunction">TBD</param>
+        /// <param name="attempt">A function that produces the <see cref="Task{T}"/> to execute on each try.</param>
+        /// <param name="attempts">Maximum number of attempts to make before giving up.</param>
+        /// <param name="delayFunction">A function that receives the next attempt number (starting from 1) and returns an <see cref="Option{TimeSpan}"/> delay before that attempt. Return <see cref="Option{TimeSpan}.None"/> for no delay.</param>
         /// <param name="scheduler">The scheduler instance to use.</param>
         public static Task<T> Retry<T>(Func<Task<T>> attempt, int attempts, Func<int, Option<TimeSpan>> delayFunction, IScheduler scheduler) =>
             Retry(attempt, attempts, delayFunction, attempted: 0, scheduler);

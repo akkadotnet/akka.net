@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TcpIncomingConnection.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -6,10 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Pipelines;
 using System.Net.Sockets;
 using Akka.Actor;
-using System;
-using Akka.Util;
+
+#nullable enable
 
 namespace Akka.IO
 {
@@ -20,18 +22,47 @@ namespace Akka.IO
     {
         private readonly IActorRef _bindHandler;
         private readonly IEnumerable<Inet.SocketOption> _options;
-        
-        public TcpIncomingConnection(TcpSettings settings, 
-                                     Socket socket, 
+        private readonly Stream? _stream;
+
+        public TcpIncomingConnection(TcpSettings settings,
+                                     Socket socket,
                                      IActorRef bindHandler,
-                                     IEnumerable<Inet.SocketOption> options, 
+                                     IEnumerable<Inet.SocketOption> options,
                                      bool readThrottling)
+            : this(settings, socket, bindHandler, options, readThrottling, stream: null)
+        {
+        }
+
+        public TcpIncomingConnection(TcpSettings settings,
+                                     Socket socket,
+                                     IActorRef bindHandler,
+                                     IEnumerable<Inet.SocketOption> options,
+                                     bool readThrottling,
+                                     Stream? stream)
             : base(settings, socket, readThrottling)
         {
             _bindHandler = bindHandler;
             _options = options;
+            _stream = stream;
 
             Context.Watch(bindHandler); // sign death pact
+        }
+
+        protected override ITransportConnection CreateTransport()
+        {
+            var inputPipeOptions = new PipeOptions(
+                pauseWriterThreshold: Settings.ReceiveBufferSize * 2,
+                resumeWriterThreshold: Settings.ReceiveBufferSize,
+                useSynchronizationContext: false);
+
+            if (_stream != null)
+            {
+                // Use the provided stream (for TLS or testing)
+                return new TcpTransportConnection(Socket, _stream, inputPipeOptions: inputPipeOptions);
+            }
+
+            // Default: plaintext TCP using the socket directly
+            return new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions);
         }
 
         protected override void PreStart()

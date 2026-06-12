@@ -11,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Supervision;
@@ -162,11 +161,11 @@ namespace Akka.Streams.Tests.Dsl
                     var s = reader.Read(buffer, 0, chunkSize);
 
                     return s > 0
-                        ? ByteString.FromString(buffer.Aggregate("", (s1, c1) => s1 + c1)).Slice(0, s)
-                        : Option<ByteString>.None;
+                        ? (ReadOnlyMemory<byte>)System.Text.Encoding.UTF8.GetBytes(buffer, 0, s)
+                        : Option<ReadOnlyMemory<byte>>.None;
                 }, reader => reader.Dispose())
-                .RunWith(Sink.AsPublisher<ByteString>(false), Materializer);
-                var c = this.CreateManualSubscriberProbe<ByteString>();
+                .RunWith(Sink.AsPublisher<ReadOnlyMemory<byte>>(false), Materializer);
+                var c = this.CreateManualSubscriberProbe<ReadOnlyMemory<byte>>();
 
                 var remaining = ManyLines;
                 Func<string> nextChunk = () =>
@@ -185,7 +184,7 @@ namespace Akka.Streams.Tests.Dsl
                 {
                     sub.Request(1);
                     var next = await c.ExpectNextAsync();
-                    next.ToString().Should().Be(nextChunk());
+                    System.Text.Encoding.UTF8.GetString(next.Span).Should().Be(nextChunk());
                 }
                 
                 sub.Request(1);

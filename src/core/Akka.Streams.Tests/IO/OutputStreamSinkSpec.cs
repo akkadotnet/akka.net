@@ -6,11 +6,12 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.IO;
+using System.Text;
 using Akka.Streams.Dsl;
 using Akka.Streams.IO;
 using Akka.Streams.TestKit;
@@ -57,7 +58,7 @@ namespace Akka.Streams.Tests.IO
             }
 
             public override void Write(byte[] buffer, int offset, int count)
-                => _p.Ref.Tell(ByteString.FromBytes(buffer, offset, count).ToString());
+                => _p.Ref.Tell(Encoding.UTF8.GetString(buffer, offset, count));
 
             public override bool CanRead { get; }
             public override bool CanSeek { get; }
@@ -143,7 +144,7 @@ namespace Akka.Streams.Tests.IO
             }
 
             public override void Write(byte[] buffer, int offset, int count)
-                => _p.Ref.Tell(ByteString.FromBytes(buffer, offset, count).ToString());
+                => _p.Ref.Tell(Encoding.UTF8.GetString(buffer, offset, count));
 
             protected override void Dispose(bool disposing)
             {
@@ -208,19 +209,19 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var p = CreateTestProbe();
-                var datas = new List<ByteString>
+                var datas = new List<ReadOnlySequence<byte>>
                 {
-                    ByteString.FromString("a"),
-                    ByteString.FromString("c"),
-                    ByteString.FromString("c")
+                    new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("a")),
+                    new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("c")),
+                    new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("c"))
                 };
 
                 var completion = Source.From(datas)
                     .RunWith(StreamConverters.FromOutputStream(() => new VoidOutputStream(p)), _materializer);
 
-                await p.ExpectMsgAsync(datas[0].ToString());
-                await p.ExpectMsgAsync(datas[1].ToString());
-                await p.ExpectMsgAsync(datas[2].ToString());
+                await p.ExpectMsgAsync("a");
+                await p.ExpectMsgAsync("c");
+                await p.ExpectMsgAsync("c");
                 await completion.WaitAsync(3.Seconds());
             }, _materializer);
         }
@@ -231,7 +232,7 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var p = CreateTestProbe();
-                var completion = Source.Failed<ByteString>(new Exception("Boom!"))
+                var completion = Source.Failed<ReadOnlySequence<byte>>(new Exception("Boom!"))
                     .RunWith(StreamConverters.FromOutputStream(() => new CloseOutputStream(p)), _materializer);
 
                 await p.ExpectMsgAsync("closed");
@@ -247,7 +248,7 @@ namespace Akka.Streams.Tests.IO
             {
                 await Awaiting(async () =>
                 {
-                    await Source.Failed<ByteString>(new Exception("Boom!"))
+                    await Source.Failed<ReadOnlySequence<byte>>(new Exception("Boom!"))
                         .RunWith(StreamConverters.FromOutputStream(() => new OutputStream()), _materializer)
                         .WaitAsync(3.Seconds());
                 }).Should().ThrowAsync<AbruptIOTerminationException>();
@@ -260,7 +261,7 @@ namespace Akka.Streams.Tests.IO
             await this.AssertAllStagesStoppedAsync(async () =>
             {
                 var p = CreateTestProbe();
-                var completion = Source.Empty<ByteString>()
+                var completion = Source.Empty<ReadOnlySequence<byte>>()
                     .RunWith(StreamConverters.FromOutputStream(() => new CompletionOutputStream(p)), _materializer);
 
                 await p.ExpectMsgAsync("closed");

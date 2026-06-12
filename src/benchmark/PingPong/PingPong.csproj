@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion);net6.0</TargetFrameworks>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -19,12 +19,5 @@
     <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <Reference Include="System.Management" />
-  </ItemGroup>
-
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <DefineConstants>$(DefineConstants);THREADS</DefineConstants>
-  </PropertyGroup>
 
 </Project>

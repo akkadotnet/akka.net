@@ -2,15 +2,11 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>$(NetFrameworkTestVersion)</TargetFramework>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
-  </ItemGroup>
-
-   <ItemGroup>
-    <Reference Include="System.Configuration" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TcpOutgoingConnection.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -14,21 +15,38 @@ using Akka.Actor;
 using Akka.Annotations;
 using Akka.Event;
 
+#nullable enable
+
 namespace Akka.IO
 {
     /// <summary>
     /// An actor handling the connection state machine for an outgoing connection
     /// to be established.
     /// </summary>
-    internal sealed class TcpOutgoingConnection : TcpConnection
+    internal sealed class TcpOutgoingConnection : TcpConnection, IWithTimers
     {
+        private const string RetryConnectTimerKey = "retry-connect";
+
         private readonly IActorRef _commander;
         private readonly Tcp.Connect _connect;
 
-        private SocketAsyncEventArgs _connectArgs;
+        private SocketAsyncEventArgs? _connectArgs;
 
         private readonly ConnectException _finishConnectNeverReturnedTrueException =
             new("Could not establish connection because finishConnect never returned true");
+
+        public ITimerScheduler Timers { get; set; } = null!;
+
+        /// <summary>
+        /// Internal trigger used to re-attempt an outgoing connection from inside the
+        /// actor's own message loop, so connect failures are reported as <see cref="Tcp.CommandFailed"/>
+        /// instead of being swallowed by the scheduler thread.
+        /// </summary>
+        private sealed class RetryConnect
+        {
+            public static readonly RetryConnect Instance = new();
+            private RetryConnect() { }
+        }
 
         public TcpOutgoingConnection(TcpExt tcp, IActorRef commander, Tcp.Connect connect)
             : base(
@@ -49,7 +67,21 @@ namespace Akka.IO
                 Socket.Bind(connect.LocalAddress);
 
             if (connect.Timeout.HasValue)
-                Context.SetReceiveTimeout(connect.Timeout.Value); //Initiate connection timeout if supplied
+                Context.SetReceiveTimeout(connect.Timeout.Value);
+        }
+
+        protected override ITransportConnection CreateTransport()
+        {
+            // NetworkStream requires a blocking socket; the socket was created
+            // non-blocking for the SAEA connect phase — switch to blocking now.
+            Socket.Blocking = true;
+
+            var inputPipeOptions = new PipeOptions(
+                pauseWriterThreshold: Settings.ReceiveBufferSize * 2,
+                resumeWriterThreshold: Settings.ReceiveBufferSize,
+                useSynchronizationContext: false);
+
+            return new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions);
         }
 
         private void ReleaseConnectionSocketArgs()
@@ -64,7 +96,6 @@ namespace Akka.IO
                     _connectArgs.SetBuffer(null, 0, 0);
                     _connectArgs.BufferList = null;
                 }
-                // it can be that for some reason socket is in use and haven't closed yet
                 catch (InvalidOperationException)
                 {
                 }
@@ -104,19 +135,16 @@ namespace Akka.IO
             {
                 if (_connect.RemoteAddress is DnsEndPoint remoteAddress)
                 {
-                    Log.Debug("Resolving {0} before connecting", remoteAddress.Host);
-                    var resolved = Dns.ResolveName(remoteAddress.Host, Context.System, Self);
-                    if (resolved == null)
-                        Become(() => Resolving(remoteAddress));
-                    else if (resolved.Ipv4.Any() && resolved.Ipv6.Any()) // one of both families
-                        Register(new IPEndPoint(resolved.Ipv4.First(), remoteAddress.Port),
-                            new IPEndPoint(resolved.Ipv6.First(), remoteAddress.Port));
-                    else // one or the other
-                        Register(new IPEndPoint(resolved.Addr, remoteAddress.Port), null);
+                    // Pass DnsEndPoint directly to Socket.ConnectAsync — the runtime
+                    // resolves DNS and tries all addresses (IPv4 + IPv6) until one connects.
+                    // This is the only correct approach for dual-stack sockets where we
+                    // don't know what address family the server is bound to.
+                    Log.Debug("Connecting to DNS endpoint [{0}]", remoteAddress);
+                    RegisterEndPoint(remoteAddress);
                 }
                 else if (_connect.RemoteAddress is IPEndPoint point)
                 {
-                    Register(point, null);
+                    Register(point);
                 }
                 else
                     throw new NotSupportedException(
@@ -126,29 +154,8 @@ namespace Akka.IO
 
         protected override void PostStop()
         {
-            // always try to release SocketAsyncEventArgs to avoid memory leaks
             ReleaseConnectionSocketArgs();
-
             base.PostStop();
-        }
-
-        private void Resolving(DnsEndPoint remoteAddress)
-        {
-            Receive<Dns.Resolved>(resolved =>
-            {
-                if (resolved.Ipv4.Any() && resolved.Ipv6.Any()) // multiple addresses
-                {
-                    ReportConnectFailure(() => Register(
-                        new IPEndPoint(resolved.Ipv4.First(), remoteAddress.Port),
-                        new IPEndPoint(resolved.Ipv6.First(), remoteAddress.Port)));
-                }
-                else // only one address family. No fallbacks.
-                {
-                    ReportConnectFailure(() => Register(
-                        new IPEndPoint(resolved.Addr, remoteAddress.Port),
-                        null));
-                }
-            });
         }
 
         private static SocketAsyncEventArgs CreateSocketEventArgs(IActorRef onCompleteNotificationsReceiver)
@@ -174,7 +181,7 @@ namespace Akka.IO
             }
         }
 
-        private void Register(IPEndPoint address, IPEndPoint fallbackAddress)
+        private void RegisterEndPoint(EndPoint address)
         {
             ReportConnectFailure(() =>
             {
@@ -182,16 +189,19 @@ namespace Akka.IO
 
                 _connectArgs = CreateSocketEventArgs(Self);
                 _connectArgs.RemoteEndPoint = address;
-                // we don't setup buffer here, it shouldn't be necessary just for connection
                 if (!Socket.ConnectAsync(_connectArgs))
                     Self.Tell(IO.Tcp.SocketConnected.Instance);
 
-                Become(() => Connecting(Settings.FinishConnectRetries, _connectArgs, fallbackAddress));
+                Become(() => Connecting(Settings.FinishConnectRetries, _connectArgs));
             });
         }
 
-        private void Connecting(int remainingFinishConnectRetries, SocketAsyncEventArgs args,
-            IPEndPoint fallbackAddress)
+        private void Register(IPEndPoint address)
+        {
+            RegisterEndPoint(address);
+        }
+
+        private void Connecting(int remainingFinishConnectRetries, SocketAsyncEventArgs args)
         {
             Receive<Tcp.SocketConnected>(_ =>
             {
@@ -207,29 +217,10 @@ namespace Akka.IO
                 else
                     switch (remainingFinishConnectRetries)
                     {
-                        // used only when we've resolved a DNS endpoint.
-                        case > 0 when fallbackAddress != null:
-                        {
-                            var self = Self;
-                            var previousAddress = (IPEndPoint)args.RemoteEndPoint;
-                            args.RemoteEndPoint = fallbackAddress;
-                            Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
-                            {
-                                if (!Socket.ConnectAsync(args))
-                                    self.Tell(IO.Tcp.SocketConnected.Instance);
-                            });
-                            Become(() => Connecting(remainingFinishConnectRetries - 1, args, previousAddress));
-                            break;
-                        }
                         case > 0:
                         {
-                            var self = Self;
-                            Context.System.Scheduler.Advanced.ScheduleOnce(TimeSpan.FromMilliseconds(1), () =>
-                            {
-                                if (!Socket.ConnectAsync(args))
-                                    self.Tell(IO.Tcp.SocketConnected.Instance);
-                            });
-                            Become(() => Connecting(remainingFinishConnectRetries - 1, args, null));
+                            ScheduleConnectRetry();
+                            Become(() => Connecting(remainingFinishConnectRetries - 1, args));
                             break;
                         }
                         default:
@@ -239,13 +230,28 @@ namespace Akka.IO
                             break;
                     }
             });
+            Receive<RetryConnect>(_ =>
+            {
+                // Re-attempt the connection from within the actor's message loop so that any
+                // exception (e.g. PlatformNotSupportedException on Linux when reusing a socket
+                // after a failed connect attempt) is caught by ReportConnectFailure and reported
+                // to the commander as Tcp.CommandFailed instead of being swallowed by the scheduler.
+                ReportConnectFailure(() =>
+                {
+                    if (!Socket.ConnectAsync(args))
+                        Self.Tell(IO.Tcp.SocketConnected.Instance);
+                });
+            });
             Receive<ReceiveTimeout>(_ =>
             {
-                if (_connect.Timeout.HasValue) Context.SetReceiveTimeout(null); // Clear the timeout
+                if (_connect.Timeout.HasValue) Context.SetReceiveTimeout(null);
                 Log.Debug("Connect timeout expired, could not establish connection to [{0}]", _connect.RemoteAddress);
                 Stop(new ConnectException($"Connect timeout of {_connect.Timeout} expired"));
             });
         }
+
+        private void ScheduleConnectRetry()
+            => Timers.StartSingleTimer(RetryConnectTimerKey, RetryConnect.Instance, TimeSpan.FromMilliseconds(1));
     }
 
     [InternalApi]

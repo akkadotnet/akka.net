@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>Serialization TestKit for Akka.NET</Description>
     <VersionSuffix>beta</VersionSuffix>
-    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <PackageTags>$(AkkaPackageTags);hyperion;serializer;serialize;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>

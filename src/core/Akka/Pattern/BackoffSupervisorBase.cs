@@ -12,7 +12,9 @@ using Akka.Event;
 namespace Akka.Pattern
 {
     /// <summary>
-    /// TBD
+    /// Base class for backoff supervisor actors that manage child actor restarts
+    /// with configurable back-off delays. Handles message forwarding to/from the child,
+    /// restart count tracking, and optional final-stop semantics.
     /// </summary>
     public abstract class BackoffSupervisorBase : ActorBase
     {

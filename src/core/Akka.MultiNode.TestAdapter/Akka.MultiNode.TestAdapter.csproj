@@ -13,7 +13,6 @@
   <ItemGroup>
     <PackageReference Include="TeamCity.ServiceMessages" Version="4.1.1" />
     <PackageReference Include="System.CodeDom" Version="9.0.8" />
-    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageReference Include="xunit.v3.extensibility.core" Version="$(Xunit3Version)" />
   </ItemGroup>
 

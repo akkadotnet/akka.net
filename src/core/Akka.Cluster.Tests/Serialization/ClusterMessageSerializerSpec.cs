@@ -217,7 +217,7 @@ akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "fal
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = (SerializerWithStringManifest) Sys.Serialization.FindSerializerFor(message);
+            var serializer = Sys.Serialization.FindSerializerFor(message);
             serializer.Should().BeOfType<ClusterMessageSerializer>();
             
             var serialized = serializer.ToBinary(message);

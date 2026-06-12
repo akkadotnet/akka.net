@@ -6,11 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.IO;
 using Akka.Util;
@@ -130,10 +130,10 @@ namespace Akka.Streams.Implementation.IO
                 case OnNext next:
                     try
                     {
-                        var byteString = (ByteString)next.Element;
-                        var bytes = byteString.ToArray();
-                        _chan.Write(bytes, 0, bytes.Length);
-                        _bytesWritten += bytes.Length;
+                        var sequence = (ReadOnlySequence<byte>)next.Element;
+                        foreach (var segment in sequence)
+                            _chan.Write(segment.Span);
+                        _bytesWritten += sequence.Length;
                         if (_autoFlush)
                             _chan.Flush(true);
                     }

@@ -6,13 +6,13 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Dispatch;
-using Akka.IO;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 using Akka.Util;
@@ -24,7 +24,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class OutputStreamSourceStage : GraphStageWithMaterializedValue<SourceShape<ByteString>, Stream>
+    internal sealed class OutputStreamSourceStage : GraphStageWithMaterializedValue<SourceShape<ReadOnlySequence<byte>>, Stream>
     {
         #region internal classes
 
@@ -123,12 +123,12 @@ namespace Akka.Streams.Implementation.IO
             private readonly Action<(IAdapterToStageMessage, TaskCompletionSource<NotUsed>)> _upstreamCallback;
             private readonly OnPullRunnable _pullTask;
             private readonly CancellationTokenSource _cancellation = new();
-            private BlockingCollection<ByteString> _dataQueue;
+            private BlockingCollection<ReadOnlySequence<byte>> _dataQueue;
             private TaskCompletionSource<NotUsed> _flush;
             private TaskCompletionSource<NotUsed> _close;
             private MessageDispatcher _dispatcher;
 
-            public Logic(OutputStreamSourceStage stage, BlockingCollection<ByteString> dataQueue,
+            public Logic(OutputStreamSourceStage stage, BlockingCollection<ReadOnlySequence<byte>> dataQueue,
                 AtomicReference<IDownstreamStatus> downstreamStatus, string dispatcherId) : base(stage.Shape)
             {
                 _stage = stage;
@@ -136,12 +136,12 @@ namespace Akka.Streams.Implementation.IO
                 _downstreamStatus = downstreamStatus;
                 _dispatcherId = dispatcherId;
 
-                var downstreamCallback = GetAsyncCallback<Either<ByteString, Exception>>(result =>
+                var downstreamCallback = GetAsyncCallback<Either<ReadOnlySequence<byte>, Exception>>(result =>
                 {
                     if (result.IsLeft)
-                        OnPush(result.Value as ByteString);
+                        OnPush(result.ToLeft().Value);
                     else
-                        FailStage(result.Value as Exception);
+                        FailStage(result.ToRight().Value);
                 });
                 _upstreamCallback =
                     GetAsyncCallback<(IAdapterToStageMessage, TaskCompletionSource<NotUsed>)>(OnAsyncMessage);
@@ -169,12 +169,12 @@ namespace Akka.Streams.Implementation.IO
 
             private sealed class OnPullRunnable : IRunnable
             {
-                private readonly Action<Either<ByteString, Exception>> _callback;
-                private readonly BlockingCollection<ByteString> _dataQueue;
+                private readonly Action<Either<ReadOnlySequence<byte>, Exception>> _callback;
+                private readonly BlockingCollection<ReadOnlySequence<byte>> _dataQueue;
                 private readonly CancellationToken _cancellationToken;
 
-                public OnPullRunnable(Action<Either<ByteString, Exception>> callback,
-                    BlockingCollection<ByteString> dataQueue, CancellationToken cancellationToken)
+                public OnPullRunnable(Action<Either<ReadOnlySequence<byte>, Exception>> callback,
+                    BlockingCollection<ReadOnlySequence<byte>> dataQueue, CancellationToken cancellationToken)
                 {
                     _callback = callback;
                     _dataQueue = dataQueue;
@@ -185,15 +185,15 @@ namespace Akka.Streams.Implementation.IO
                 {
                     try
                     {
-                        _callback(new Left<ByteString, Exception>(_dataQueue.Take(_cancellationToken)));
+                        _callback(new Left<ReadOnlySequence<byte>, Exception>(_dataQueue.Take(_cancellationToken)));
                     }
                     catch (OperationCanceledException)
                     {
-                        _callback(new Left<ByteString, Exception>(ByteString.Empty));
+                        _callback(new Left<ReadOnlySequence<byte>, Exception>(ReadOnlySequence<byte>.Empty));
                     }
                     catch (Exception ex)
                     {
-                        _callback(new Right<ByteString, Exception>(ex));
+                        _callback(new Right<ReadOnlySequence<byte>, Exception>(ex));
                     }
                 }
 
@@ -207,7 +207,7 @@ namespace Akka.Streams.Implementation.IO
 
             public override void OnPull() => _dispatcher.Schedule(_pullTask);
 
-            private void OnPush(ByteString data)
+            private void OnPush(ReadOnlySequence<byte> data)
             {
                 if (_downstreamStatus.Value is Ok)
                 {
@@ -265,7 +265,7 @@ namespace Akka.Streams.Implementation.IO
         #endregion
 
         private readonly TimeSpan _writeTimeout;
-        private readonly Outlet<ByteString> _out = new("OutputStreamSource.out");
+        private readonly Outlet<ReadOnlySequence<byte>> _out = new("OutputStreamSource.out");
 
         /// <summary>
         /// TBD
@@ -274,13 +274,13 @@ namespace Akka.Streams.Implementation.IO
         public OutputStreamSourceStage(TimeSpan writeTimeout)
         {
             _writeTimeout = writeTimeout;
-            Shape = new SourceShape<ByteString>(_out);
+            Shape = new SourceShape<ReadOnlySequence<byte>>(_out);
         }
 
         /// <summary>
         /// TBD
         /// </summary>
-        public override SourceShape<ByteString> Shape { get; }
+        public override SourceShape<ReadOnlySequence<byte>> Shape { get; }
 
         /// <summary>
         /// TBD
@@ -301,7 +301,7 @@ namespace Akka.Streams.Implementation.IO
             if (maxBuffer <= 0)
                 throw new ArgumentException("Buffer size must be greater than 0");
 
-            var dataQueue = new BlockingCollection<ByteString>(maxBuffer);
+            var dataQueue = new BlockingCollection<ReadOnlySequence<byte>>(maxBuffer);
             var downstreamStatus = new AtomicReference<IDownstreamStatus>(Ok.Instance);
 
             var dispatcherId =
@@ -369,7 +369,7 @@ namespace Akka.Streams.Implementation.IO
         private static readonly Exception PublisherClosedException =
             new IOException("Reactive stream is terminated, no writes are possible");
 
-        private readonly BlockingCollection<ByteString> _dataQueue;
+        private readonly BlockingCollection<ReadOnlySequence<byte>> _dataQueue;
         private readonly AtomicReference<IDownstreamStatus> _downstreamStatus;
         private readonly IStageWithCallback _stageWithCallback;
         private readonly TimeSpan _writeTimeout;
@@ -383,7 +383,7 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="downstreamStatus">TBD</param>
         /// <param name="stageWithCallback">TBD</param>
         /// <param name="writeTimeout">TBD</param>
-        public OutputStreamAdapter(BlockingCollection<ByteString> dataQueue,
+        public OutputStreamAdapter(BlockingCollection<ReadOnlySequence<byte>> dataQueue,
             AtomicReference<IDownstreamStatus> downstreamStatus,
             IStageWithCallback stageWithCallback, TimeSpan writeTimeout)
         {
@@ -406,7 +406,7 @@ namespace Akka.Streams.Implementation.IO
                 throw new IOException("OutputStream is closed");
         }
 
-        private void SendData(ByteString data) => Send(() =>
+        private void SendData(ReadOnlySequence<byte> data) => Send(() =>
         {
             _dataQueue.Add(data);
 
@@ -442,7 +442,12 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="offset">TBD</param>
         /// <param name="count">TBD</param>
         public override void Write(byte[] buffer, int offset, int count)
-            => SendData(ByteString.FromBytes(buffer, offset, count));
+        {
+            // Stream.Write returns before downstream demand may consume this chunk, so
+            // copy out of the caller-owned buffer before publishing it to the stream.
+            var source = new ReadOnlyMemory<byte>(buffer, offset, count);
+            SendData(new ReadOnlySequence<byte>(source.ToArray()));
+        }
 
         /// <summary>
         /// TBD

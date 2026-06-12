@@ -143,8 +143,8 @@ namespace Akka.MultiNode.TestAdapter.Internal
             {
                 var configType = ctorWithConfig.GetParameters().First().ParameterType;
                 var args = ConfigConstructorParamValues(configType);
-                var configInstance = (MultiNodeConfig) Activator.CreateInstance(configType, args);
-                return configInstance.Roles;
+                var configInstance = (MultiNodeConfig) Activator.CreateInstance(configType, args)!;
+                return configInstance!.Roles;
             }
             catch (Exception e)
             {

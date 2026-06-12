@@ -339,20 +339,8 @@ namespace Akka.Persistence.Custom.Journal
                                 action: state =>
                                 {
                                     var (thePayload, theSerializer) = state;
-                                    var thisManifest = "";
-                                    
-                                    // There are two kinds of serializer when it comes to manifest
-                                    // support, we have to support both of them for proper payload
-                                    // serialization
-                                    if (theSerializer is SerializerWithStringManifest stringManifest)
-                                    {
-                                        thisManifest = stringManifest.Manifest(thePayload);
-                                    }
-                                    else if (theSerializer.IncludeManifest)
-                                    {
-                                        thisManifest = thePayload.GetType().TypeQualifiedName();
-                                    }
-                                    
+                                    var thisManifest = Akka.Serialization.Serialization.ManifestFor(theSerializer, thePayload);
+
                                     // Return the serialized byte array and the manifest for the
                                     // serialized data
                                     return (theSerializer.ToBinary(thePayload), thisManifest);

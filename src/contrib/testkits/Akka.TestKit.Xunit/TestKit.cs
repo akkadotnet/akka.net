@@ -11,6 +11,7 @@ using Akka.Actor.Internal;
 using Akka.Actor.Setup;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.TestKit.Xunit.Attributes;
 using Akka.TestKit.Xunit.Internals;
 using Xunit;
 
@@ -20,6 +21,7 @@ namespace Akka.TestKit.Xunit;
 /// This class represents an Akka.NET TestKit that uses <a href="https://xunit.github.io/">xUnit</a>
 /// as its testing framework.
 /// </summary>
+[AkkaCleanAmbientContext]
 public class TestKit : TestKitBase, IDisposable
 {
     private class PrefixedOutput : ITestOutputHelper
