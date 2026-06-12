@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -89,6 +90,47 @@ namespace Akka.Remote.Tests.Transport
             }
         }
 
+        [Fact]
+        public async Task StreamTcpTransport_should_terminate_remote_deployments_without_waiting_for_actor_system_timeout()
+        {
+            ActorSystem streamA = null;
+            ActorSystem streamB = null;
+
+            try
+            {
+                streamA = ActorSystem.Create("stream-remote-deploy-a", StreamRemoteDeploymentShutdownConfig(0));
+                InitializeLogger(streamA);
+                streamB = ActorSystem.Create("stream-remote-deploy-b", StreamRemoteDeploymentShutdownConfig(0));
+                InitializeLogger(streamB);
+
+                var remoteAddress = RARP.For(streamB).Provider.DefaultAddress;
+                var echo = streamA.ActorOf(
+                    Props.Create<Echo>().WithDeploy(new Deploy(new RemoteScope(remoteAddress))),
+                    "echo");
+                var probe = CreateTestProbe(streamA);
+                echo.Tell("remote-deploy", probe.Ref);
+                var response = await probe.ExpectMsgAsync<string>(TimeSpan.FromSeconds(5));
+                response.Should().Be("echo:remote-deploy");
+
+                var shutdown = Stopwatch.StartNew();
+                await Task.WhenAll(streamA.Terminate(), streamB.Terminate());
+                shutdown.Stop();
+                streamA.WhenTerminated.IsCompleted.Should().BeTrue();
+                streamB.WhenTerminated.IsCompleted.Should().BeTrue();
+
+                shutdown.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3));
+                streamA = null;
+                streamB = null;
+            }
+            finally
+            {
+                if (streamB != null)
+                    Shutdown(streamB, TimeSpan.FromSeconds(3));
+                if (streamA != null)
+                    Shutdown(streamA, TimeSpan.FromSeconds(3));
+            }
+        }
+
         private ActorSystem StartStreamSystem(string systemName, int port)
         {
             var system = ActorSystem.Create(systemName, StreamConfig(port));
@@ -138,6 +180,13 @@ namespace Akka.Remote.Tests.Transport
                     tcp-reuse-addr = on
                 }}
                 akka.test.single-expect-default = 3s");
+        }
+
+        private static Config StreamRemoteDeploymentShutdownConfig(int port)
+        {
+            return ConfigurationFactory.ParseString(@"
+                akka.coordinated-shutdown.phases.actor-system-terminate.timeout = 1s")
+                .WithFallback(StreamConfig(port));
         }
 
         private static int GetFreeTcpPort()
