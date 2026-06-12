@@ -121,6 +121,15 @@ dotnet docfx build ./docs/docfx.json --warningsAsErrors
 3. Add/update tests for your changes
 4. Run incremental tests before committing
 5. Ensure API compatibility tests pass for core changes
+6. If the change is breaking, record it in `BREAKING_CHANGES_V1.6.md` in the same change (see below)
+
+### Tracking Breaking Changes (v1.6 cycle)
+Until a stable **v1.6.0** ships, **every** change that goes into the `dev` branch and
+introduces a **breaking behavior, wire-format, or public-API change** MUST be documented in
+[`BREAKING_CHANGES_V1.6.md`](BREAKING_CHANGES_V1.6.md) (repo root), in the **same PR** that
+makes the change. Use the entry format described in that file (status, component, type,
+change, migration). This ledger is retired once `v1.6.0` is released, when its contents are
+folded into the release notes / upgrade guide.
 
 ### Target Frameworks
 - **.NET 8.0** - Primary target
