@@ -724,12 +724,12 @@ namespace Akka.Streams
     {
         void Complete();
         void Fail(System.Exception ex);
-        System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(T element, System.Threading.CancellationToken cancellationToken);
         new System.Threading.Tasks.Task WatchCompletionAsync();
     }
     public interface ISourceQueue<in T>
     {
         System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(T element);
+        System.Threading.Tasks.Task<Akka.Streams.IQueueOfferResult> OfferAsync(T element, System.Threading.CancellationToken cancellationToken);
         System.Threading.Tasks.Task WatchCompletionAsync();
     }
     public interface ISourceRef<TOut> : Akka.Util.ISurrogated

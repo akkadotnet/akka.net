@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="QueueSourceSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -96,32 +96,6 @@ namespace Akka.Streams.Tests.Dsl
 
             var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await task);
             exception.CancellationToken.Should().Be(cancellationToken);
-        }
-
-        private sealed class LegacySourceQueue<T> : ISourceQueueWithComplete<T>
-        {
-            public int OfferCount { get; private set; }
-            public T LastOfferedElement { get; private set; }
-
-            public Task<IQueueOfferResult> OfferAsync(T element)
-            {
-                OfferCount++;
-                LastOfferedElement = element;
-                return Task.FromResult<IQueueOfferResult>(Enqueued.Instance);
-            }
-
-            public Task<IQueueOfferResult> OfferAsync(T element, CancellationToken cancellationToken)
-                => OfferAsync(element);
-
-            public Task WatchCompletionAsync() => Task.CompletedTask;
-
-            public void Complete()
-            {
-            }
-
-            public void Fail(Exception ex)
-            {
-            }
         }
 
         [Fact]

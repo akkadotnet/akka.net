@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------
 // <copyright file="Queue.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -38,6 +38,19 @@ namespace Akka.Streams
         Task<IQueueOfferResult> OfferAsync(T element);
 
         /// <summary>
+        /// Cancellable variant of <see cref="OfferAsync(T)"/>.
+        /// Cancelling <paramref name="cancellationToken"/> while the offer is pending under
+        /// <see cref="OverflowStrategy.Backpressure"/> removes the pending offer from the stage
+        /// and completes the returned task as canceled. If the offer has already completed
+        /// (Enqueued, Dropped, QueueClosed, or failed), cancellation is a no-op.
+        /// Awaiters observe an <see cref="OperationCanceledException"/> carrying the supplied token.
+        /// </summary>
+        /// <param name="element">Element to send to a stream.</param>
+        /// <param name="cancellationToken">Token used to cancel a pending offer.</param>
+        /// <returns>A task that completes with the offer result, fails, or is canceled.</returns>
+        Task<IQueueOfferResult> OfferAsync(T element, CancellationToken cancellationToken);
+
+        /// <summary>
         /// Method returns <see cref="Task"/> that will be completed if the stream completes,
         /// or will be failed when the stage faces an internal failure.
         /// </summary>
@@ -68,19 +81,6 @@ namespace Akka.Streams
         /// </summary>
         /// <returns>Task</returns>
         new Task WatchCompletionAsync();
-
-        /// <summary>
-        /// Cancellable variant of <see cref="ISourceQueue{T}.OfferAsync(T)"/>.
-        /// Cancelling <paramref name="cancellationToken"/> while the offer is pending under
-        /// <see cref="OverflowStrategy.Backpressure"/> removes the pending offer from the stage
-        /// and completes the returned task as canceled. If the offer has already completed
-        /// (Enqueued, Dropped, QueueClosed, or failed), cancellation is a no-op.
-        /// Awaiters observe an <see cref="OperationCanceledException"/> carrying the supplied token.
-        /// </summary>
-        /// <param name="element">Element to send to a stream.</param>
-        /// <param name="cancellationToken">Token used to cancel a pending offer.</param>
-        /// <returns>A task that completes with the offer result, fails, or is canceled.</returns>
-        Task<IQueueOfferResult> OfferAsync(T element, CancellationToken cancellationToken);
     }
 
     /// <summary>
