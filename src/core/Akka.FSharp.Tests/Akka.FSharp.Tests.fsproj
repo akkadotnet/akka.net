@@ -28,6 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Bump the SDK-implicit FSharp.Core to match the version pulled in transitively via
+         Akka.Tests.Shared.Internals.Xunit3, otherwise it downgrades and NU1605 fails the restore.
+         Use Update (not Include) so we don't duplicate the implicit reference (NU1504). -->
+    <PackageReference Update="FSharp.Core" Version="$(FsharpVersion)" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(TestSdkVersion)" />
     <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
