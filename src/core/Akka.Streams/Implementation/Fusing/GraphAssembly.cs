@@ -13,6 +13,7 @@ using Akka.Pattern;
 using Akka.Streams.Stage;
 using static Akka.Streams.Implementation.Fusing.GraphInterpreter;
 
+#nullable enable
 namespace Akka.Streams.Implementation.Fusing
 {
     /// <summary>
@@ -165,13 +166,15 @@ namespace Akka.Streams.Implementation.Fusing
         /// <param name="copiedModules">TBD</param>
         /// <param name="materializedValues">TBD</param>
         /// <param name="register">TBD</param>
+        /// <param name="materializer">The materializer in use, made available to stages that build an eager materialized value.</param>
         /// <exception cref="ArgumentException">TBD</exception>
         /// <returns>TBD</returns>
         public (Connection[], GraphStageLogic[]) Materialize(
             Attributes inheritedAttributes,
             IModule[] copiedModules,
             IDictionary<IModule, object> materializedValues,
-            Action<IMaterializedValueSource> register)
+            Action<IMaterializedValueSource> register,
+            IMaterializer? materializer = null)
         {
             var logics = new GraphStageLogic[Stages.Length];
             for (var i = 0; i < Stages.Length; i++)
@@ -209,7 +212,10 @@ namespace Akka.Streams.Implementation.Fusing
                     stage = (IGraphStageWithMaterializedValue<Shape, object>)copy;
                 }
 
-                var logicAndMaterialized = stage.CreateLogicAndMaterializedValue(inheritedAttributes.And(OriginalAttributes[i]));
+                var stageAttributes = inheritedAttributes.And(OriginalAttributes[i]);
+                var logicAndMaterialized = stage is IMaterializerAwareStage eagerStage
+                    ? eagerStage.CreateLogicAndMaterializedValue(stageAttributes, materializer)
+                    : stage.CreateLogicAndMaterializedValue(stageAttributes);
                 materializedValues[copiedModules[i]] = logicAndMaterialized.MaterializedValue;
                 logics[i] = logicAndMaterialized.Logic;
             }
