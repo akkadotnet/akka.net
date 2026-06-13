@@ -8,7 +8,6 @@
 using System;
 using Akka.Actor;
 using Akka.Event;
-using Akka.Pattern;
 using Akka.Streams.Implementation.Stages;
 using Akka.Streams.Stage;
 
@@ -95,7 +94,7 @@ namespace Akka.Streams.Implementation
                 // to a message-only async callback — the sender is unused, so this avoids boxing a (sender, message)
                 // tuple on the per-element ingress path. Messages sent before the interpreter starts are buffered by
                 // the async-callback machinery and delivered once the stage is running.
-                _cell = ResolveSupervisorCell(ActorMaterializerHelper.Downcast(materializer));
+                _cell = ActorMaterializerHelper.GetSupervisorCell(ActorMaterializerHelper.Downcast(materializer));
 
                 var callback = GetAsyncCallback<object>(OnMessage);
                 _functionRef = _cell.AddFunctionRef((_, message) => callback(message), name);
@@ -104,30 +103,6 @@ namespace Akka.Streams.Implementation
             // Stopping the ref terminates any watchers (Watch on the materialized ref yields Terminated when the
             // stream completes, fails, or is cancelled).
             public override void PostStop() => _cell.RemoveFunctionRef(_functionRef);
-
-            // Resolve the stream supervisor's ActorCell to host the FunctionRef. Because the ref is created
-            // eagerly during materialization (before the interpreter), the supervisor — a RepointableActorRef that
-            // starts asynchronously — may not have been pointed yet when a stream is materialized immediately after
-            // the materializer is created; reaching into an UnstartedCell would throw. Force it to start in that
-            // case, mirroring how ActorMaterializerImpl.ActorOf handles the same race for actor-backed sources.
-            private static ActorCell ResolveSupervisorCell(ActorMaterializer materializer)
-            {
-                var supervisor = materializer.Supervisor;
-                switch (supervisor)
-                {
-                    case LocalActorRef r:
-                        return r.Cell;
-                    case RepointableActorRef { IsStarted: true } r:
-                        return (ActorCell)r.Underlying;
-                    case RepointableActorRef r:
-                        var timeout = r.Underlying.System.Settings.CreationTimeout;
-                        r.Ask<ActorIdentity>(new Identify(null), timeout).Wait();
-                        return (ActorCell)r.Underlying;
-                    default:
-                        throw new IllegalStateException(
-                            $"Stream supervisor must be a local actor, was [{supervisor.GetType()}]");
-                }
-            }
 
             public void OnPull()
             {

@@ -3056,14 +3056,7 @@ namespace Akka.Streams.Stage
             _callback = getAsyncCallback(InternalReceive);
             _behavior = initialReceive;
 
-            switch (materializer.Supervisor)
-            {
-                case LocalActorRef r: _cell = r.Cell; break;
-                case RepointableActorRef r: _cell = (ActorCell)r.Underlying; break;
-                default:
-                    throw new IllegalStateException(
-                        $"Stream supervisor must be a local actor, was [{materializer.Supervisor.GetType()}]");
-            }
+            _cell = ActorMaterializerHelper.GetSupervisorCell(materializer);
 
             _functionRef = _cell.AddFunctionRef((sender, message) =>
             {
