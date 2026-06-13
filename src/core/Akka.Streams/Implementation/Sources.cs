@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Akka.Annotations;
 using Akka.Pattern;
@@ -96,6 +97,33 @@ namespace Akka.Streams.Implementation
             /// TBD
             /// </summary>
             public Exception Ex { get; }
+        }
+
+        /// <summary>
+        /// INTERNAL API
+        /// </summary>
+        internal sealed class CancelOffer : IInput
+        {
+            /// <summary>
+            /// INTERNAL API
+            /// </summary>
+            /// <param name="target">The offer to cancel if it is still pending.</param>
+            /// <param name="cancellationToken">The token that canceled the offer.</param>
+            public CancelOffer(Offer<TOut> target, CancellationToken cancellationToken)
+            {
+                Target = target;
+                CancellationToken = cancellationToken;
+            }
+
+            /// <summary>
+            /// INTERNAL API
+            /// </summary>
+            public Offer<TOut> Target { get; }
+
+            /// <summary>
+            /// INTERNAL API
+            /// </summary>
+            public CancellationToken CancellationToken { get; }
         }
 
         #endregion
@@ -318,6 +346,15 @@ namespace Akka.Streams.Implementation
                             _completion.SetException(failure.Ex);
                             FailStage(failure.Ex);
                         }
+
+                        if (input is CancelOffer cancelOffer)
+                        {
+                            if (!_terminating && _pendingOffer != null && ReferenceEquals(_pendingOffer, cancelOffer.Target))
+                            {
+                                _pendingOffer.CompletionSource.NonBlockingTrySetCanceled(cancelOffer.CancellationToken);
+                                _pendingOffer = null;
+                            }
+                        }
                     });
             }
 
@@ -349,9 +386,29 @@ namespace Akka.Streams.Implementation
             /// <param name="element">TBD</param>
             /// <returns>TBD</returns>
             public Task<IQueueOfferResult> OfferAsync(TOut element)
+                => OfferAsync(element, CancellationToken.None);
+
+            /// <summary>
+            /// Cancellable variant of <see cref="OfferAsync(TOut)"/>.
+            /// </summary>
+            /// <param name="element">Element to send to a stream.</param>
+            /// <param name="cancellationToken">Token used to cancel a pending offer.</param>
+            /// <returns>A task that completes with the offer result, fails, or is canceled.</returns>
+            public Task<IQueueOfferResult> OfferAsync(TOut element, CancellationToken cancellationToken)
             {
+                if (cancellationToken.IsCancellationRequested)
+                    return Task.FromCanceled<IQueueOfferResult>(cancellationToken);
+
                 var promise = TaskEx.NonBlockingTaskCompletionSource<IQueueOfferResult>(); // new TaskCompletionSource<IQueueOfferResult>();
-                _invokeLogic(new Offer<TOut>(element, promise));
+                var offer = new Offer<TOut>(element, promise);
+                _invokeLogic(offer);
+
+                if (cancellationToken.CanBeCanceled)
+                {
+                    var registration = cancellationToken.Register(() => _invokeLogic(new CancelOffer(offer, cancellationToken)));
+                    promise.Task.ContinueWith(_ => registration.Dispose(), TaskContinuationOptions.ExecuteSynchronously);
+                }
+
                 return promise.Task;
             }
 

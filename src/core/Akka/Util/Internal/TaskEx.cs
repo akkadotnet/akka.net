@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Akka.Util.Internal
@@ -49,6 +50,16 @@ namespace Akka.Util.Internal
         public static void NonBlockingTrySetException<T>(this TaskCompletionSource<T> taskCompletionSource, Exception exception)
         {
             taskCompletionSource.TrySetException(exception);
+        }
+
+        /// <summary>
+        /// Tries to cancel given <paramref name="taskCompletionSource"/> in asynchronous, non-blocking
+        /// fashion. For safety reasons, this method should be called only on tasks created via
+        /// <see cref="NonBlockingTaskCompletionSource{T}"/> method.
+        /// </summary>
+        public static void NonBlockingTrySetCanceled<T>(this TaskCompletionSource<T> taskCompletionSource, CancellationToken cancellationToken)
+        {
+            taskCompletionSource.TrySetCanceled(cancellationToken);
         }
 
         /// <summary>
