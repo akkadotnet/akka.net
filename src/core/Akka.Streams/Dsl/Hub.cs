@@ -648,7 +648,7 @@ namespace Akka.Streams.Dsl
             // of priorities always fall to a range
             //
             // This wheel tracks the position of Consumers relative to the slowest ones. Every slot
-            // contains a list of Consumers being known at that location (this might be out of date!).
+            // contains Consumers known at that location, keyed by consumer ID.
             // Consumers from time to time send Advance messages to indicate that they have progressed
             // by reading from the broadcast queue. Consumers that are blocked (due to reaching tail) request
             // a wakeup and update their position at the same time.
