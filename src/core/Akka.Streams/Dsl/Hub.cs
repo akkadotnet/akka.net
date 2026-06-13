@@ -15,6 +15,7 @@ using Akka.Annotations;
 using Akka.Streams.Stage;
 using Akka.Util;
 using Akka.Util.Internal;
+using Debug = System.Diagnostics.Debug;
 
 namespace Akka.Streams.Dsl
 {
@@ -779,7 +780,12 @@ namespace Akka.Streams.Dsl
                         // Move the consumer from its last known offset to its new one. Check if we are unblocked.
                         var consumer = FindAndRemoveConsumer(advance.Id, advance.PreviousOffset);
                         if (consumer is null)
+                        {
+                            Debug.Assert(
+                                false,
+                                "BroadcastHub consumer was not found at its previous offset during an Advanced event.");
                             return;
+                        }
 
                         AddConsumer(consumer, newOffset);
                         CheckUnblock(advance.PreviousOffset);
@@ -790,7 +796,12 @@ namespace Akka.Streams.Dsl
                         // Move the consumer from its last known offset to its new one. Check if we are unblocked.
                         var consumer = FindAndRemoveConsumer(wakeup.Id, wakeup.PreviousOffset);
                         if (consumer is null)
+                        {
+                            Debug.Assert(
+                                false,
+                                "BroadcastHub consumer was not found at its previous offset during a NeedWakeup event.");
                             return;
+                        }
 
                         AddConsumer(consumer, wakeup.CurrentOffset);
 
@@ -816,7 +827,9 @@ namespace Akka.Streams.Dsl
                 var open = (Open)State.GetAndSet(new Closed(e));
                 open.Registrations.ForEach(c => c.Callback.Invoke(failMessage));
 
-                // Notify registered consumers
+                // Notify registered consumers. Slot order is not semantically significant: every registered
+                // consumer receives the same terminal signal. Callback invocation enqueues work onto the
+                // consumer stages and does not mutate this wheel synchronously while the dictionary is enumerated.
                 foreach (var slot in _consumerWheel)
                 {
                     if (slot is null)
@@ -892,6 +905,9 @@ namespace Akka.Streams.Dsl
                 if (consumers is null)
                     _consumerWheel[slot] = consumers = new Dictionary<long, Consumer>();
 
+                Debug.Assert(
+                    !consumers.ContainsKey(consumer.Id),
+                    "BroadcastHub consumer is already registered in this wheel slot.");
                 consumers[consumer.Id] = consumer;
             }
 
@@ -912,6 +928,9 @@ namespace Akka.Streams.Dsl
                 if (consumers is null)
                     return;
 
+                // Slot order is not semantically significant: every waiting consumer receives one wakeup.
+                // Callback invocation enqueues work onto the consumer stages and does not mutate this wheel
+                // synchronously while the dictionary is enumerated.
                 foreach (var consumer in consumers.Values)
                     consumer.Callback.Invoke(Wakeup.Instance);
             }

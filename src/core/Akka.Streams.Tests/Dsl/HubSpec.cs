@@ -1050,7 +1050,7 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         private static Sink<int, Task<OrderedCount>> OrderedCountSink()
-            => Sink.Aggregate(new OrderedCount(), (count, element) =>
+            => Sink.Aggregate<int, OrderedCount>(new OrderedCount(), (count, element) =>
             {
                 count.Observe(element);
                 return count;
