@@ -489,6 +489,8 @@ namespace Akka.Streams.Dsl
         /// Every new materialization of the <see cref="Sink{TIn,TMat}"/> results in a new, independent hub, which materializes to its own
         /// <see cref="Source{TOut,TMat}"/> for consuming the <see cref="Sink{TIn,TMat}"/> of that materialization.
         ///
+        /// BroadcastHub fans every element out to every consumer; for keyed routing where each element goes to a single consumer, use <see cref="PartitionHub"/>.
+        ///
         /// If the original <see cref="Sink{TIn,TMat}"/> is failed, then the failure is immediately propagated to all of its materialized
         /// <see cref="Source{TOut,TMat}"/>s (possibly jumping over already buffered elements). If the original <see cref="Sink{TIn,TMat}"/> is completed, then
         /// all corresponding <see cref="Source{TOut,TMat}"/>s are completed. Both failure and normal completion is "remembered" and later
@@ -513,6 +515,8 @@ namespace Akka.Streams.Dsl
         ///
         /// Every new materialization of the <see cref="Sink{TIn,TMat}"/> results in a new, independent hub, which materializes to its own
         /// <see cref="Source{TOut,TMat}"/> for consuming the <see cref="Sink{TIn,TMat}"/> of that materialization.
+        ///
+        /// BroadcastHub fans every element out to every consumer; for keyed routing where each element goes to a single consumer, use <see cref="PartitionHub"/>.
         ///
         /// If the original <see cref="Sink{TIn,TMat}"/> is failed, then the failure is immediately propagated to all of its materialized
         /// <see cref="Source{TOut,TMat}"/>s (possibly jumping over already buffered elements). If the original <see cref="Sink{TIn,TMat}"/> is completed, then
@@ -647,7 +651,7 @@ namespace Akka.Streams.Dsl
             // Consumers from time to time send Advance messages to indicate that they have progressed
             // by reading from the broadcast queue. Consumers that are blocked (due to reaching tail) request
             // a wakeup and update their position at the same time.
-            private readonly ImmutableList<Consumer>[] _consumerWheel;
+            private readonly Dictionary<long, Consumer>[] _consumerWheel;
 
             private int _activeConsumer;
             private bool _initialized;
@@ -658,9 +662,7 @@ namespace Akka.Streams.Dsl
                 _noRegistrationState = new Open(_callbackCompletion.Task, ImmutableList<Consumer>.Empty);
                 State = new AtomicReference<IHubState>(_noRegistrationState);
                 _queue = new object[stage._bufferSize];
-                _consumerWheel = Enumerable.Repeat(0, stage._bufferSize * 2)
-                    .Select(_ => ImmutableList<Consumer>.Empty)
-                    .ToArray();
+                _consumerWheel = new Dictionary<long, Consumer>[stage._bufferSize * 2];
 
                 SetHandler(stage.In, this);
             }
@@ -775,8 +777,11 @@ namespace Akka.Streams.Dsl
                     {
                         var newOffset = advance.PreviousOffset + _stage._demandThreshold;
                         // Move the consumer from its last known offset to its new one. Check if we are unblocked.
-                        var customer = FindAndRemoveConsumer(advance.Id, advance.PreviousOffset);
-                        AddConsumer(customer, newOffset);
+                        var consumer = FindAndRemoveConsumer(advance.Id, advance.PreviousOffset);
+                        if (consumer is null)
+                            return;
+
+                        AddConsumer(consumer, newOffset);
                         CheckUnblock(advance.PreviousOffset);
                         return;
                     }
@@ -784,6 +789,9 @@ namespace Akka.Streams.Dsl
                     {
                         // Move the consumer from its last known offset to its new one. Check if we are unblocked.
                         var consumer = FindAndRemoveConsumer(wakeup.Id, wakeup.PreviousOffset);
+                        if (consumer is null)
+                            return;
+
                         AddConsumer(consumer, wakeup.CurrentOffset);
 
                         // Also check if the consumer is now unblocked since we published an element since it went asleep.
@@ -809,7 +817,14 @@ namespace Akka.Streams.Dsl
                 open.Registrations.ForEach(c => c.Callback.Invoke(failMessage));
 
                 // Notify registered consumers
-                _consumerWheel.SelectMany(x => x).ForEach(c => c.Callback.Invoke(failMessage));
+                foreach (var slot in _consumerWheel)
+                {
+                    if (slot is null)
+                        continue;
+
+                    foreach (var consumer in slot.Values)
+                        consumer.Callback.Invoke(failMessage);
+                }
 
                 FailStage(e);
             }
@@ -824,20 +839,15 @@ namespace Akka.Streams.Dsl
                 // TODO: Try to eliminate modulo division somehow...
                 var wheelSlot = offset & _stage._wheelMask;
                 var consumerInSlot = _consumerWheel[wheelSlot];
-                var remainingConsumersInSlot = new List<Consumer>();
-                Consumer removedConsumer = null;
+                if (consumerInSlot is null)
+                    return null;
 
-                while (!consumerInSlot.IsEmpty)
-                {
-                    var consumer = consumerInSlot.First();
-                    if (consumer.Id != id)
-                        remainingConsumersInSlot.Add(consumer);
-                    else
-                        removedConsumer = consumer;
-                    consumerInSlot = consumerInSlot.Skip(1).ToImmutableList();
-                }
+                if (!consumerInSlot.Remove(id, out var removedConsumer))
+                    return null;
 
-                _consumerWheel[wheelSlot] = remainingConsumersInSlot.ToImmutableList();
+                if (consumerInSlot.Count == 0)
+                    _consumerWheel[wheelSlot] = null;
+
                 return removedConsumer;
             }
 
@@ -864,7 +874,7 @@ namespace Akka.Streams.Dsl
                 {
                     // Try to advance along the wheel. We can skip any wheel slots which have no waiting Consumers, until
                     // we either find a nonempty one, or we reached the end of the buffer.
-                    while (_consumerWheel[_head & _stage._wheelMask].IsEmpty && _head != _tail)
+                    while (IsConsumerWheelSlotEmpty(_head & _stage._wheelMask) && _head != _tail)
                     {
                         _queue[_head & _stage._mask] = null;
                         _head++;
@@ -878,7 +888,17 @@ namespace Akka.Streams.Dsl
             private void AddConsumer(Consumer consumer, int offset)
             {
                 var slot = offset & _stage._wheelMask;
-                _consumerWheel[slot] = _consumerWheel[slot].Insert(0, consumer);
+                var consumers = _consumerWheel[slot];
+                if (consumers is null)
+                    _consumerWheel[slot] = consumers = new Dictionary<long, Consumer>();
+
+                consumers[consumer.Id] = consumer;
+            }
+
+            private bool IsConsumerWheelSlotEmpty(int slot)
+            {
+                var consumers = _consumerWheel[slot];
+                return consumers is null || consumers.Count == 0;
             }
 
             /// <summary>
@@ -887,7 +907,14 @@ namespace Akka.Streams.Dsl
             /// </summary>
             /// <param name="index">TBD</param>
             private void WakeupIndex(int index)
-                => _consumerWheel[index].ForEach(c => c.Callback.Invoke(Wakeup.Instance));
+            {
+                var consumers = _consumerWheel[index];
+                if (consumers is null)
+                    return;
+
+                foreach (var consumer in consumers.Values)
+                    consumer.Callback.Invoke(Wakeup.Instance);
+            }
 
             private void Complete()
             {
