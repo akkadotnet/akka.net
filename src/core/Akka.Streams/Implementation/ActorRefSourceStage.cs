@@ -155,15 +155,18 @@ namespace Akka.Streams.Implementation
                     return;
                 }
 
-                if (_buffer != null)
+                // Fast path: nothing is queued ahead and downstream is waiting — push directly and skip the
+                // buffer enqueue/dequeue round-trip. Only buffer when there is no demand, or elements are
+                // already queued (to preserve FIFO order).
+                if ((_buffer == null || _buffer.IsEmpty) && IsAvailable(_stage.Out))
+                {
+                    Push(_stage.Out, element);
+                }
+                else if (_buffer != null)
                 {
                     BufferElement(element);
                     if (IsAvailable(_stage.Out))
                         Push(_stage.Out, _buffer.Dequeue());
-                }
-                else if (IsAvailable(_stage.Out))
-                {
-                    Push(_stage.Out, element);
                 }
                 else
                 {
