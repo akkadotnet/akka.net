@@ -8,6 +8,7 @@
 using System;
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Akka.Streams.Stage;
@@ -24,7 +25,14 @@ namespace Akka.Remote.Transport.Streams
     {
         private const int FrameHeaderBytes = 4;
 
-        public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> Decoder(
+        /// <summary>
+        /// Decoder that emits, per inbound chunk, ALL complete length-framed PDUs currently buffered as a
+        /// single batch (in wire order). At high throughput many PDUs multiplex over one association
+        /// connection and arrive together in one TCP read (~20-30 frames/chunk measured under RPP load), so
+        /// emitting them as a batch lets the downstream protocol-state actor and endpoint reader process
+        /// many PDUs per mailbox turn instead of one Tell per frame.
+        /// </summary>
+        public static Flow<ReadOnlySequence<byte>, IReadOnlyList<ReadOnlySequence<byte>>, NotUsed> Decoder(
             int maxFrameSize,
             DotNettyByteOrder byteOrder)
         {
@@ -90,21 +98,21 @@ namespace Akka.Remote.Transport.Streams
             return new ReadOnlySequence<byte>(head, 0, tail, tail.Memory.Length);
         }
 
-        private sealed class RemoteTcpFrameDecoder : GraphStage<FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>>
+        private sealed class RemoteTcpFrameDecoder : GraphStage<FlowShape<ReadOnlySequence<byte>, IReadOnlyList<ReadOnlySequence<byte>>>>
         {
             private readonly int _maxFrameSize;
             private readonly DotNettyByteOrder _byteOrder;
             private readonly Inlet<ReadOnlySequence<byte>> _in = new("RemoteTcpFrameDecoder.in");
-            private readonly Outlet<ReadOnlySequence<byte>> _out = new("RemoteTcpFrameDecoder.out");
+            private readonly Outlet<IReadOnlyList<ReadOnlySequence<byte>>> _out = new("RemoteTcpFrameDecoder.out");
 
             public RemoteTcpFrameDecoder(int maxFrameSize, DotNettyByteOrder byteOrder)
             {
                 _maxFrameSize = maxFrameSize;
                 _byteOrder = byteOrder;
-                Shape = new FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(_in, _out);
+                Shape = new FlowShape<ReadOnlySequence<byte>, IReadOnlyList<ReadOnlySequence<byte>>>(_in, _out);
             }
 
-            public override FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>> Shape { get; }
+            public override FlowShape<ReadOnlySequence<byte>, IReadOnlyList<ReadOnlySequence<byte>>> Shape { get; }
 
             protected override Attributes InitialAttributes { get; } = Attributes.CreateName("RemoteTcpFrameDecoder");
 
@@ -115,6 +123,12 @@ namespace Akka.Remote.Transport.Streams
 
             private sealed class Logic : InAndOutGraphStageLogic
             {
+                // [EXPERIMENT] cap frames per emitted batch so the ProtocolStateActor/EndpointReader
+                // two-stage actor pipeline keeps interleaving (a single huge batch serializes the two
+                // stages and was measured to regress mid-concurrency RPP). Tune to trade turn-reduction
+                // against inter-stage parallelism.
+                private const int MaxBatchSize = 8;
+
                 private readonly RemoteTcpFrameDecoder _stage;
                 private ReadOnlySequence<byte> _buffer = ReadOnlySequence<byte>.Empty;
                 private int? _payloadSize;
@@ -128,12 +142,12 @@ namespace Akka.Remote.Transport.Streams
                 public override void OnPush()
                 {
                     _buffer = Concat(_buffer, Grab(_stage._in));
-                    TryPushFrame();
+                    TryPushFrames();
                 }
 
                 public override void OnPull()
                 {
-                    TryPushFrame();
+                    TryPushFrames();
                 }
 
                 public override void OnUpstreamFinish()
@@ -141,51 +155,68 @@ namespace Akka.Remote.Transport.Streams
                     if (_buffer.IsEmpty)
                         CompleteStage();
                     else if (IsAvailable(_stage._out))
-                        TryPushFrame();
+                        TryPushFrames();
                 }
 
-                private void TryPushFrame()
+                // Drain every complete frame currently in the buffer and push them as one batch.
+                private void TryPushFrames()
                 {
-                    if (_payloadSize is null)
+                    if (!IsAvailable(_stage._out))
+                        return;
+
+                    List<ReadOnlySequence<byte>>? frames = null;
+
+                    while (true)
                     {
-                        if (_buffer.Length < FrameHeaderBytes)
+                        if (_payloadSize is null)
                         {
-                            TryPull();
-                            return;
+                            if (_buffer.Length < FrameHeaderBytes)
+                                break;
+
+                            var firstSpan = _buffer.FirstSpan;
+                            var payloadSize = firstSpan.Length >= FrameHeaderBytes
+                                ? DecodeFrameSize(firstSpan.Slice(0, FrameHeaderBytes), _stage._byteOrder)
+                                : DecodeSplitFrameSize(_buffer, _stage._byteOrder);
+
+                            if (payloadSize < 0)
+                            {
+                                FailStage(new Framing.FramingException($"Decoded frame header reported negative size {payloadSize}"));
+                                return;
+                            }
+
+                            if (payloadSize > _stage._maxFrameSize)
+                            {
+                                FailStage(new Framing.FramingException(
+                                    $"Maximum allowed remote frame size is {_stage._maxFrameSize} but decoded frame header reported size {payloadSize}"));
+                                return;
+                            }
+
+                            _payloadSize = payloadSize;
                         }
 
-                        var firstSpan = _buffer.FirstSpan;
-                        var payloadSize = firstSpan.Length >= FrameHeaderBytes
-                            ? DecodeFrameSize(firstSpan.Slice(0, FrameHeaderBytes), _stage._byteOrder)
-                            : DecodeSplitFrameSize(_buffer, _stage._byteOrder);
+                        var frameSize = FrameHeaderBytes + _payloadSize.Value;
+                        if (_buffer.Length < frameSize)
+                            break;
 
-                        if (payloadSize < 0)
-                        {
-                            FailStage(new Framing.FramingException($"Decoded frame header reported negative size {payloadSize}"));
-                            return;
-                        }
+                        var payload = _buffer.Slice(FrameHeaderBytes, _payloadSize.Value);
+                        _buffer = _buffer.Slice(frameSize);
+                        _payloadSize = null;
+                        (frames ??= new List<ReadOnlySequence<byte>>()).Add(payload);
 
-                        if (payloadSize > _stage._maxFrameSize)
-                        {
-                            FailStage(new Framing.FramingException(
-                                $"Maximum allowed remote frame size is {_stage._maxFrameSize} but decoded frame header reported size {payloadSize}"));
-                            return;
-                        }
-
-                        _payloadSize = payloadSize;
+                        // Cap the batch; remaining complete frames stay buffered and are drained on the next
+                        // pull (which arrives immediately since the sink's Tell is non-blocking).
+                        if (frames.Count >= MaxBatchSize)
+                            break;
                     }
 
-                    var frameSize = FrameHeaderBytes + _payloadSize.Value;
-                    if (_buffer.Length < frameSize)
+                    if (frames is { Count: > 0 })
+                    {
+                        Push(_stage._out, frames);
+                    }
+                    else
                     {
                         TryPull();
-                        return;
                     }
-
-                    var payload = _buffer.Slice(FrameHeaderBytes, _payloadSize.Value);
-                    _buffer = _buffer.Slice(frameSize);
-                    _payloadSize = null;
-                    Push(_stage._out, payload);
 
                     if (_buffer.IsEmpty && IsClosed(_stage._in))
                         CompleteStage();

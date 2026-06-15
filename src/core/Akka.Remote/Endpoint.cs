@@ -1826,6 +1826,15 @@ namespace Akka.Remote
         {
             Receive<InboundPayload>(inbound => HandleInboundPayload(inbound.Payload));
             Receive<InboundSequencePayload>(inbound => HandleInboundPayload(inbound.Payload));
+            Receive<InboundSequencePayloadBatch>(batch =>
+            {
+                // Process every PDU decoded from one inbound TCP chunk in a single mailbox turn. Order and
+                // reliable-delivery sequencing are handled per-PDU inside HandleInboundPayload, so looping is
+                // equivalent to receiving each frame as its own InboundSequencePayload, minus the mailbox hops.
+                var payloads = batch.Payloads;
+                for (var i = 0; i < payloads.Count; i++)
+                    HandleInboundPayload(payloads[i]);
+            });
             Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
             Receive<EndpointWriter.StopReading>(stop =>
             {
@@ -1862,6 +1871,15 @@ namespace Akka.Remote
                 var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
                 if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
                     _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
+            });
+            Receive<InboundSequencePayloadBatch>(batch =>
+            {
+                foreach (var payload in batch.Payloads)
+                {
+                    var ackAndMessage = TryDecodeMessageAndAck(payload);
+                    if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
+                        _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
+                }
             });
             ReceiveAny(_ => { }); // ignore
         }

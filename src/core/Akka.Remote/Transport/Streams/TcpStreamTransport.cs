@@ -8,6 +8,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -102,7 +103,7 @@ namespace Akka.Remote.Transport.Streams
             StreamAssociationHandle handle = null;
             var inboundBridge = new DeferredInboundBridge();
 
-            var sink = DecodeFrames().ToMaterialized(Sink.ForEach<ReadOnlySequence<byte>>(inboundBridge.NotifyInbound), Keep.Right);
+            var sink = DecodeFrames().ToMaterialized(Sink.ForEach<IReadOnlyList<ReadOnlySequence<byte>>>(inboundBridge.NotifyInboundBatch), Keep.Right);
             var source = CreateOutboundSource();
             var tcpFlow = System.TcpStream().OutgoingConnection(
                 remoteEndpoint,
@@ -166,7 +167,7 @@ namespace Akka.Remote.Transport.Streams
 
                 StreamAssociationHandle handle = null;
                 var inboundBridge = new DeferredInboundBridge();
-                var sink = DecodeFrames().ToMaterialized(Sink.ForEach<ReadOnlySequence<byte>>(inboundBridge.NotifyInbound), Keep.Right);
+                var sink = DecodeFrames().ToMaterialized(Sink.ForEach<IReadOnlyList<ReadOnlySequence<byte>>>(inboundBridge.NotifyInboundBatch), Keep.Right);
                 var source = CreateOutboundSource();
                 var flow = Flow.FromSinkAndSource(sink, source, Keep.Both);
                 var (inboundDone, writer) = connection.HandleWith(flow, _materializer);
@@ -199,7 +200,7 @@ namespace Akka.Remote.Transport.Streams
             return Source.ActorRef<ReadOnlySequence<byte>>(_writeBufferSize, OverflowStrategy.Fail);
         }
 
-        private Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> DecodeFrames()
+        private Flow<ReadOnlySequence<byte>, IReadOnlyList<ReadOnlySequence<byte>>, NotUsed> DecodeFrames()
         {
             return RemoteTcpFraming.Decoder(Settings.MaxFrameSize, Settings.ByteOrder);
         }
@@ -254,6 +255,32 @@ namespace Akka.Remote.Transport.Streams
                     else
                     {
                         _pending.Enqueue(bytes);
+                    }
+                }
+            }
+
+            public void NotifyInboundBatch(IReadOnlyList<ReadOnlySequence<byte>> payloads)
+            {
+                var handle = Volatile.Read(ref _handle);
+                if (handle != null)
+                {
+                    handle.NotifyInboundBatch(payloads);
+                    return;
+                }
+
+                // Handle not yet attached (brief startup window before SetHandle): fall back to the
+                // per-frame pending queue. Startup is low-volume, well before steady-state batching.
+                lock (_gate)
+                {
+                    handle = _handle;
+                    if (handle != null)
+                    {
+                        handle.NotifyInboundBatch(payloads);
+                    }
+                    else
+                    {
+                        foreach (var payload in payloads)
+                            _pending.Enqueue(ToByteString(payload));
                     }
                 }
             }
@@ -344,6 +371,11 @@ namespace Akka.Remote.Transport.Streams
             public void NotifyInbound(ReadOnlySequence<byte> payload)
             {
                 Notify(new InboundSequencePayload(payload));
+            }
+
+            public void NotifyInboundBatch(IReadOnlyList<ReadOnlySequence<byte>> payloads)
+            {
+                Notify(new InboundSequencePayloadBatch(payloads));
             }
 
             public void NotifyInbound(ByteString payload)

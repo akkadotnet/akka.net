@@ -7,6 +7,7 @@
 
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -158,6 +159,27 @@ namespace Akka.Remote.Transport
         public override string ToString()
         {
             return $"InboundSequencePayload(size = {Payload.Length} bytes)";
+        }
+    }
+
+    /// <summary>
+    /// Batched form of <see cref="InboundSequencePayload"/>: carries several length-framed PDUs that were
+    /// decoded from a single inbound TCP chunk. Lets the protocol-state actor and endpoint reader process
+    /// multiple PDUs per mailbox turn instead of one Tell per frame, which is the dominant inbound cost at
+    /// high throughput (many PDUs multiplex over one association connection). Payloads are in wire order.
+    /// </summary>
+    internal sealed class InboundSequencePayloadBatch : IHandleEvent
+    {
+        public InboundSequencePayloadBatch(IReadOnlyList<ReadOnlySequence<byte>> payloads)
+        {
+            Payloads = payloads;
+        }
+
+        public IReadOnlyList<ReadOnlySequence<byte>> Payloads { get; }
+
+        public override string ToString()
+        {
+            return $"InboundSequencePayloadBatch(count = {Payloads.Count})";
         }
     }
 

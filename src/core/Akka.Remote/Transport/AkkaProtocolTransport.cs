@@ -892,6 +892,12 @@ namespace Akka.Remote.Transport
                 {
                     case Disassociated d:
                         return Stop(new Failure(d.Info));
+                    case InboundSequencePayloadBatch waitBatch:
+                        // During handshake, inbound chunks carry a single PDU; unbatch and reprocess each
+                        // frame individually so the handshake state machine sees them one at a time, in order.
+                        foreach (var raw in waitBatch.Payloads)
+                            Self.Tell(new InboundSequencePayload(raw));
+                        return Stay();
                     case InboundPayload or InboundSequencePayload when @event.StateData is OutboundUnderlyingAssociated ola:
                         {
                             var pdu = DecodePdu((IHandleEvent)@event.FsmEvent);
@@ -1022,6 +1028,11 @@ namespace Akka.Remote.Transport
                                     return Stay();
                             }
                         }
+                    case InboundSequencePayloadBatch payloadBatch:
+                        // Steady-state fast path: decode all PDUs from one inbound TCP chunk and forward the
+                        // sequence payloads to the endpoint reader as a single batch (one mailbox turn instead
+                        // of one Tell per frame). Order preserved; heartbeats feed the failure detector.
+                        return HandleSequenceBatch(payloadBatch, @event.StateData);
                     case HeartbeatTimer ht when @event.StateData is AssociatedWaitHandler awh:
                         return HandleTimers(awh.WrappedHandle);
                     case HeartbeatTimer ht when @event.StateData is ListenerReady lr:
@@ -1295,6 +1306,54 @@ namespace Akka.Remote.Transport
                 InboundSequencePayload p => DecodePdu(p.Payload),
                 _ => throw new AkkaProtocolException($"Expected inbound payload event, received [{ev.GetType()}]")
             };
+        }
+
+        // Batched counterpart of the single-PDU Open-state handling: decode every PDU from one inbound TCP
+        // chunk, feed heartbeats to the failure detector, and forward the data PDUs to the endpoint reader as
+        // a single InboundSequencePayloadBatch. Preserves wire order; a Disassociate flushes prior payloads
+        // then stops. For the stream transport, data PDUs always decode to SequencePayload.
+        private State<AssociationState, ProtocolStateData> HandleSequenceBatch(InboundSequencePayloadBatch batch, ProtocolStateData stateData)
+        {
+            List<ReadOnlySequence<byte>> decoded = null;
+            foreach (var raw in batch.Payloads)
+            {
+                switch (DecodePdu(raw))
+                {
+                    case Disassociate d:
+                        if (decoded != null)
+                            ForwardSequencePayloads(decoded, stateData);
+                        return Stop(new Failure(d.Reason));
+                    case Heartbeat:
+                        _failureDetector.HeartBeat();
+                        break;
+                    case SequencePayload sp:
+                        _failureDetector.HeartBeat();
+                        (decoded ??= new List<ReadOnlySequence<byte>>(batch.Payloads.Count)).Add(sp.Bytes);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return decoded == null ? Stay() : ForwardSequencePayloads(decoded, stateData);
+        }
+
+        private State<AssociationState, ProtocolStateData> ForwardSequencePayloads(List<ReadOnlySequence<byte>> payloads, ProtocolStateData stateData)
+        {
+            var batchEvent = new InboundSequencePayloadBatch(payloads);
+            switch (stateData)
+            {
+                case AssociatedWaitHandler awh:
+                    var nQueue = new Queue<IHandleEvent>(awh.Queue);
+                    nQueue.Enqueue(batchEvent);
+                    return Stay().Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle, nQueue));
+                case ListenerReady lr:
+                    lr.Listener.Notify(batchEvent);
+                    return Stay();
+                default:
+                    throw new AkkaProtocolException(
+                        $"Unhandled message in state Open(InboundSequencePayloadBatch) with type [{stateData?.GetType()}]");
+            }
         }
 
         private State<AssociationState, ProtocolStateData> HandlePayload(IHandleEvent payload, ProtocolStateData stateData, object fsmEvent)
