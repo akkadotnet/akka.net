@@ -250,12 +250,29 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
-        {
-            //connectionTimeout = connectionTimeout ?? TimeSpan.FromMinutes(60);
+            => OutgoingConnection(remoteAddress, TcpConnectionStage.DefaultMaxUnackedWrites, localAddress, options, halfClose, connectionTimeout, idleTimeout);
 
+        /// <summary>
+        /// Same as <see cref="OutgoingConnection(EndPoint,EndPoint,IImmutableList{Inet.SocketOption},bool,System.Nullable{System.TimeSpan},System.Nullable{System.TimeSpan})"/>,
+        /// but lets you tune <paramref name="maxUnackedWrites"/> — the number of unacknowledged outbound writes the stream
+        /// TCP write stage keeps in flight to the Akka.IO connection actor. The default (<c>16</c>) pipelines writes to
+        /// hide the per-write roundtrip latency; <c>1</c> restores a strict one-write-at-a-time discipline. The window is
+        /// bounded, so a slow socket still backpressures upstream.
+        /// </summary>
+        /// <param name="remoteAddress">The remote address to connect to</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight (default 16, minimum 1).</param>
+        /// <param name="localAddress">Optional local address for the connection</param>
+        /// <param name="options">TCP options for the connections, see <see cref="Akka.IO.Tcp"/> for details</param>
+        /// <param name="halfClose">See the primary <see cref="OutgoingConnection(EndPoint,EndPoint,IImmutableList{Inet.SocketOption},bool,System.Nullable{System.TimeSpan},System.Nullable{System.TimeSpan})"/> overload.</param>
+        /// <param name="connectionTimeout">TBD</param>
+        /// <param name="idleTimeout">TBD</param>
+        /// <returns>TBD</returns>
+        public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, int maxUnackedWrites, EndPoint localAddress = null,
+            IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
+        {
             var tcpFlow =
                 Flow.FromGraph(new OutgoingConnectionStage(_system.Tcp(), remoteAddress, localAddress, options,
-                    halfClose, connectionTimeout)).Via(new Detacher<ReadOnlySequence<byte>>());
+                    halfClose, connectionTimeout, maxUnackedWrites)).Via(new Detacher<ReadOnlySequence<byte>>());
 
             if (idleTimeout.HasValue)
                 return tcpFlow.Join(BidiFlow.BidirectionalIdleTimeout<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(idleTimeout.Value));
@@ -277,6 +294,17 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port)
             => OutgoingConnection(CreateEndpoint(host, port));
+
+        /// <summary>
+        /// Same as <see cref="OutgoingConnection(string,int)"/>, but lets you tune <paramref name="maxUnackedWrites"/>
+        /// (the number of unacknowledged outbound writes the TCP write stage keeps in flight; default <c>16</c>, minimum <c>1</c>).
+        /// </summary>
+        /// <param name="host">TBD</param>
+        /// <param name="port">TBD</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight.</param>
+        /// <returns>TBD</returns>
+        public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port, int maxUnackedWrites)
+            => OutgoingConnection(CreateEndpoint(host, port), maxUnackedWrites);
 
         internal static EndPoint CreateEndpoint(string host, int port)
         {

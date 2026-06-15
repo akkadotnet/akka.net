@@ -88,7 +88,7 @@ namespace Akka.Streams.Implementation.IO
                 _connectionFlowsAwaitingInitialization.IncrementAndGet();
 
                 var tcpFlow =
-                    Flow.FromGraph(new IncomingConnectionStage(connection, connected.RemoteAddress, _stage._halfClose))
+                    Flow.FromGraph(new IncomingConnectionStage(connection, connected.RemoteAddress, _stage._halfClose, _stage._maxUnackedWrites))
                     .Via(new Detacher<ReadOnlySequence<byte>>()) // must read ahead for proper completions
                     .MapMaterializedValue(unit =>
                     {
@@ -209,6 +209,7 @@ namespace Akka.Streams.Implementation.IO
         private readonly bool _halfClose;
         private readonly TimeSpan? _idleTimeout;
         private readonly TimeSpan _bindShutdownTimeout;
+        private readonly int _maxUnackedWrites;
         private readonly Outlet<StreamTcp.IncomingConnection> _out = new("IncomingConnections.out");
 
         /// <summary>
@@ -221,9 +222,10 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="halfClose">TBD</param>
         /// <param name="idleTimeout">TBD</param>
         /// <param name="bindShutdownTimeout">TBD</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight per accepted connection.</param>
         public ConnectionSourceStage(IActorRef tcpManager, EndPoint endpoint, int backlog,
             IImmutableList<Inet.SocketOption> options, bool halfClose, TimeSpan? idleTimeout,
-            TimeSpan bindShutdownTimeout)
+            TimeSpan bindShutdownTimeout, int maxUnackedWrites = TcpConnectionStage.DefaultMaxUnackedWrites)
         {
             _tcpManager = tcpManager;
             _endpoint = endpoint;
@@ -232,6 +234,7 @@ namespace Akka.Streams.Implementation.IO
             _halfClose = halfClose;
             _idleTimeout = idleTimeout;
             _bindShutdownTimeout = bindShutdownTimeout;
+            _maxUnackedWrites = maxUnackedWrites;
             Shape = new SourceShape<StreamTcp.IncomingConnection>(_out);
         }
 
@@ -674,6 +677,7 @@ namespace Akka.Streams.Implementation.IO
         private readonly IImmutableList<Inet.SocketOption> _options;
         private readonly bool _halfClose;
         private readonly TimeSpan? _connectionTimeout;
+        private readonly int _maxUnackedWrites;
         private readonly Inlet<ReadOnlySequence<byte>> _bytesIn = new("IncomingTCP.in");
         private readonly Outlet<ReadOnlySequence<byte>> _bytesOut = new("IncomingTCP.out");
 
@@ -686,13 +690,16 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="options">TBD</param>
         /// <param name="halfClose">TBD</param>
         /// <param name="connectionTimeout">TBD</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight to the connection actor.</param>
         public OutgoingConnectionStage(IActorRef tcpManager, EndPoint remoteAddress, EndPoint localAddress = null,
-            IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null)
+            IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null,
+            int maxUnackedWrites = TcpConnectionStage.DefaultMaxUnackedWrites)
         {
             _tcpManager = tcpManager;
             _remoteAddress = remoteAddress;
             _localAddress = localAddress;
             _options = options;
+            _maxUnackedWrites = maxUnackedWrites;
             _halfClose = halfClose;
             _connectionTimeout = connectionTimeout;
             Shape = new FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(_bytesIn, _bytesOut);
@@ -724,7 +731,7 @@ namespace Akka.Streams.Implementation.IO
                     else outgoingConnectionPromise.TrySetResult(new StreamTcp.OutgoingConnection(_remoteAddress, t.Result));
                 }, TaskContinuationOptions.AttachedToParent);
 
-            var logic = new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Outbound(_tcpManager, new Tcp.Connect(_remoteAddress, _localAddress, _options, _connectionTimeout, pullMode: true), localAddressPromise, _halfClose), _remoteAddress, TcpConnectionStage.DefaultMaxUnackedWrites);
+            var logic = new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Outbound(_tcpManager, new Tcp.Connect(_remoteAddress, _localAddress, _options, _connectionTimeout, pullMode: true), localAddressPromise, _halfClose), _remoteAddress, _maxUnackedWrites);
 
             return new LogicAndMaterializedValue<Task<StreamTcp.OutgoingConnection>>(logic, outgoingConnectionPromise.Task);
         }
