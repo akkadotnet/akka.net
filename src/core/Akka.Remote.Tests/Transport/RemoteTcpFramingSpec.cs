@@ -94,6 +94,9 @@ namespace Akka.Remote.Tests.Transport
         {
             return await Source.From(chunks)
                 .Via(RemoteTcpFraming.Decoder(maxFrameSize, byteOrder))
+                // The decoder now emits each chunk's complete frames as one batch; flatten back to
+                // per-frame so these framing-correctness assertions stay frame-oriented.
+                .SelectMany(batch => batch)
                 .RunWith(Sink.Seq<ReadOnlySequence<byte>>(), _materializer)
                 .WaitAsync(TimeSpan.FromSeconds(3));
         }
