@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 #pragma warning disable AK1004
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -1823,45 +1824,8 @@ namespace Akka.Remote
 
         private void Reading()
         {
-           
-            Receive<InboundPayload>(inbound =>
-            {
-                var payload = inbound.Payload;
-                if (payload.Length > Transport.MaximumPayloadBytes)
-                {
-                    var reason = new OversizedPayloadException(
-                        $"Discarding oversized payload received: max allowed size {Transport.MaximumPayloadBytes} bytes, actual size {payload.Length} bytes.");
-                    _log.Error(reason, "Transient error while reading from association (association remains live)");
-                }
-                else
-                {
-                    var ackAndMessage = TryDecodeMessageAndAck(payload);
-                    if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
-                        _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
-                    if (ackAndMessage.MessageOption != null)
-                    {
-                        if (ackAndMessage.MessageOption.ReliableDeliveryEnabled)
-                        {
-                            _ackedReceiveBuffer = _ackedReceiveBuffer.Receive(ackAndMessage.MessageOption);
-                            DeliverAndAck();
-                        }
-                        else
-                        {
-                            try
-                            {
-                                _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
-                                    ackAndMessage.MessageOption.RecipientAddress,
-                                    ackAndMessage.MessageOption.SerializedMessage,
-                                    ackAndMessage.MessageOption.SenderOptional);
-                            }
-                            catch (Exception e)
-                            {
-                                LogTransientSerializationError(ackAndMessage.MessageOption, e);
-                            }
-                        }
-                    }
-                }
-            });
+            Receive<InboundPayload>(inbound => HandleInboundPayload(inbound.Payload));
+            Receive<InboundSequencePayload>(inbound => HandleInboundPayload(inbound.Payload));
             Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
             Receive<EndpointWriter.StopReading>(stop =>
             {
@@ -1888,6 +1852,12 @@ namespace Akka.Remote
             Receive<Disassociated>(disassociated => HandleDisassociated(disassociated.Info));
             Receive<EndpointWriter.StopReading>(stop => stop.ReplyTo.Tell(new EndpointWriter.StoppedReading(stop.Writer)));
             Receive<InboundPayload>(payload =>
+            {
+                var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
+                if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
+                    _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
+            });
+            Receive<InboundSequencePayload>(payload =>
             {
                 var ackAndMessage = TryDecodeMessageAndAck(payload.Payload);
                 if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
@@ -1966,7 +1936,78 @@ namespace Akka.Remote
             deliverable.Deliverables.ForEach(msg => _msgDispatch.Dispatch(msg.Recipient, msg.RecipientAddress, msg.SerializedMessage, msg.SenderOptional));
         }
 
+        private void HandleInboundPayload(ByteString payload)
+        {
+            if (payload.Length > Transport.MaximumPayloadBytes)
+            {
+                LogOversizedPayload(payload.Length);
+            }
+            else
+            {
+                HandleDecodedMessage(TryDecodeMessageAndAck(payload));
+            }
+        }
+
+        private void HandleInboundPayload(ReadOnlySequence<byte> payload)
+        {
+            if (payload.Length > Transport.MaximumPayloadBytes)
+            {
+                LogOversizedPayload(payload.Length);
+            }
+            else
+            {
+                HandleDecodedMessage(TryDecodeMessageAndAck(payload));
+            }
+        }
+
+        private void LogOversizedPayload(long payloadLength)
+        {
+            var reason = new OversizedPayloadException(
+                $"Discarding oversized payload received: max allowed size {Transport.MaximumPayloadBytes} bytes, actual size {payloadLength} bytes.");
+            _log.Error(reason, "Transient error while reading from association (association remains live)");
+        }
+
+        private void HandleDecodedMessage(AckAndMessage ackAndMessage)
+        {
+            if (ackAndMessage.AckOption != null && _reliableDeliverySupervisor != null)
+                _reliableDeliverySupervisor.Tell(ackAndMessage.AckOption);
+            if (ackAndMessage.MessageOption != null)
+            {
+                if (ackAndMessage.MessageOption.ReliableDeliveryEnabled)
+                {
+                    _ackedReceiveBuffer = _ackedReceiveBuffer.Receive(ackAndMessage.MessageOption);
+                    DeliverAndAck();
+                }
+                else
+                {
+                    try
+                    {
+                        _msgDispatch.Dispatch(ackAndMessage.MessageOption.Recipient,
+                            ackAndMessage.MessageOption.RecipientAddress,
+                            ackAndMessage.MessageOption.SerializedMessage,
+                            ackAndMessage.MessageOption.SenderOptional);
+                    }
+                    catch (Exception e)
+                    {
+                        LogTransientSerializationError(ackAndMessage.MessageOption, e);
+                    }
+                }
+            }
+        }
+
         private AckAndMessage TryDecodeMessageAndAck(ByteString pdu)
+        {
+            try
+            {
+                return _codec.DecodeMessage(pdu, _provider, LocalAddress);
+            }
+            catch (Exception ex)
+            {
+                throw new EndpointException("Error while decoding incoming Akka PDU", ex);
+            }
+        }
+
+        private AckAndMessage TryDecodeMessageAndAck(ReadOnlySequence<byte> pdu)
         {
             try
             {

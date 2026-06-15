@@ -323,17 +323,6 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal static class TcpConnectionStage
     {
-        private class WriteAck : Tcp.Event
-        {
-            public static readonly WriteAck Instance = new();
-
-            private WriteAck()
-            {
-
-            }
-
-        }
-
         /// <summary>
         /// TBD
         /// </summary>
@@ -468,7 +457,8 @@ namespace Akka.Streams.Implementation.IO
                     {
                         var elem = Grab(_bytesIn);
                         ReactiveStreamsCompliance.RequireNonNullElement(elem);
-                        _connection.Tell(Tcp.Write.Create(elem, WriteAck.Instance), StageActor.Ref);
+                        _connection.Tell(Tcp.Write.Create(elem), StageActor.Ref);
+                        if (!IsClosed(_bytesIn)) Pull(_bytesIn);
                     },
                     onUpstreamFinish: () =>
                     {
@@ -574,11 +564,6 @@ namespace Akka.Streams.Implementation.IO
                     case Tcp.Received received:
                         Push(_bytesOut, received.Data);
                         break;
-                    case WriteAck:
-                    {
-                        if (!IsClosed(_bytesIn)) Pull(_bytesIn);
-                        break;
-                    }
                     case Terminated:
                         FailStage(new StreamTcpException("The connection actor has terminated. Stopping now."));
                         break;

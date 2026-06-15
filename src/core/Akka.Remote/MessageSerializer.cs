@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using Akka.Actor;
 using Akka.Serialization;
 using Akka.Util;
@@ -30,10 +31,11 @@ namespace Akka.Remote
         public static object Deserialize(ExtendedActorSystem system,
             SerializedMessage messageProtocol)
         {
+            var manifest = !messageProtocol.MessageManifest.IsEmpty ? messageProtocol.MessageManifest.ToStringUtf8() : null;
             return system.Serialization.Deserialize(
-                messageProtocol.Message.ToByteArray(),
+                new ReadOnlySequence<byte>(messageProtocol.Message.Memory),
                 messageProtocol.SerializerId,
-                !messageProtocol.MessageManifest.IsEmpty ? messageProtocol.MessageManifest.ToStringUtf8() : null);
+                manifest);
         }
 
         /// <summary>
@@ -46,16 +48,18 @@ namespace Akka.Remote
         public static SerializedMessage Serialize(ExtendedActorSystem system, Information transportInformation,
             object message)
         {
-            var serializer = system.Serialization.FindSerializerFor(message);
-
             var oldInfo = Akka.Serialization.Serialization.CurrentTransportInformation;
             try
             {
                 Akka.Serialization.Serialization.CurrentTransportInformation = transportInformation;
 
+                var serializer = system.Serialization.FindSerializerV2For(message);
+                var writer = CreateWriter(serializer, message);
+                serializer.Serialize(message, writer);
+
                 var serializedMsg = new SerializedMessage
                 {
-                    Message = ByteString.CopyFrom(serializer.ToBinary(message)),
+                    Message = ByteString.CopyFrom(writer.WrittenSpan),
                     SerializerId = serializer.Identifier
                 };
 
@@ -71,6 +75,14 @@ namespace Akka.Remote
             {
                 Akka.Serialization.Serialization.CurrentTransportInformation = oldInfo;
             }
+        }
+
+        private static ArrayBufferWriter<byte> CreateWriter(SerializerV2 serializer, object message)
+        {
+            var sizeHint = serializer.SizeHint(message);
+            return sizeHint > 0
+                ? new ArrayBufferWriter<byte>(sizeHint)
+                : new ArrayBufferWriter<byte>();
         }
     }
 }

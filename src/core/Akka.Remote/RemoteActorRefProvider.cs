@@ -275,6 +275,12 @@ namespace Akka.Remote
             Transport.Start();
             _remoteWatcher = CreateRemoteWatcher(system);
             _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(system);
+            CoordinatedShutdown.Get(system).AddTask(
+                CoordinatedShutdown.PhaseBeforeActorSystemTerminate,
+                "flush-remote-deployments",
+                () => _remoteDeploymentWatcher.Ask<Done>(
+                    RemoteDeploymentWatcher.FlushRemoteDeployments.Instance,
+                    RemoteSettings.ShutdownTimeout));
         }
 
         /// <summary>
@@ -806,4 +812,3 @@ namespace Akka.Remote
         }
     }
 }
-

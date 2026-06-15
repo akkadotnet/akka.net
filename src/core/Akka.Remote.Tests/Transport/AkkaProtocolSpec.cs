@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,8 +44,12 @@ namespace Akka.Remote.Tests.Transport
 
         private readonly IHandleEvent _testHeartbeat;
         private readonly IHandleEvent _testPayload;
+        private readonly IHandleEvent _testSequenceHeartbeat;
+        private readonly IHandleEvent _testSequencePayload;
         private IHandleEvent TestDisassociate(DisassociateInfo info) => new InboundPayload(_codec.ConstructDisassociate(info));
         private IHandleEvent TestAssociate(int uid) => new InboundPayload(_codec.ConstructAssociate(new HandshakeInfo(_remoteAkkaAddress, uid)));
+        private IHandleEvent TestSequenceDisassociate(DisassociateInfo info) => TestSequencePayload(_codec.ConstructDisassociate(info));
+        private IHandleEvent TestSequenceAssociate(int uid) => TestSequencePayload(_codec.ConstructAssociate(new HandshakeInfo(_remoteAkkaAddress, uid)));
         private TimeSpan DefaultTimeout => Dilated(TestKitSettings.DefaultTimeout);
 
         public AkkaProtocolSpec(ITestOutputHelper helper)
@@ -56,6 +61,8 @@ namespace Akka.Remote.Tests.Transport
 
             _testHeartbeat = new InboundPayload(_codec.ConstructHeartbeat());
             _testPayload = new InboundPayload(_testMsgPdu);
+            _testSequenceHeartbeat = TestSequencePayload(_codec.ConstructHeartbeat());
+            _testSequencePayload = TestSequencePayload(_testMsgPdu);
 
             _config = ConfigurationFactory.ParseString(
                 @"akka{
@@ -116,10 +123,13 @@ namespace Akka.Remote.Tests.Transport
             
             private volatile bool _called;
             public override bool IsMonitoring => _called;
+            private int _heartbeatCount;
+            public int HeartbeatCount => Volatile.Read(ref _heartbeatCount);
 
             public override void HeartBeat()
             {
                 _called = true;
+                Interlocked.Increment(ref _heartbeatCount);
             }
         }
 
@@ -182,6 +192,41 @@ namespace Akka.Remote.Tests.Transport
             {
                 Assert.Equal(_testEnvelope, inbound.Payload);
             }, hint: "expected InboundPayload");
+        }
+
+        [Fact]
+        public async Task ProtocolStateActor_must_in_inbound_mode_accept_sequence_payload_after_Associate_PDU_received()
+        {
+            var collaborators = GetCollaborators();
+            var reader = Sys.ActorOf(ProtocolStateActor.InboundProps(
+                handshakeInfo: new HandshakeInfo(_localAddress, 42),
+                wrappedHandle: collaborators.Handle,
+                associationEventListener: new ActorAssociationEventListener(TestActor),
+                settings: new AkkaProtocolSettings(_config),
+                codec: _codec,
+                failureDetector: collaborators.FailureDetector));
+
+            reader.Tell(TestSequenceAssociate(33), TestActor);
+
+            await AwaitConditionAsync(() => Task.FromResult(collaborators.FailureDetector.IsMonitoring), DefaultTimeout);
+
+            var wrappedHandle = await ExpectMsgOfAsync(DefaultTimeout, "expected InboundAssociation", o =>
+            {
+                var inbound = o.AsInstanceOf<InboundAssociation>();
+                if (inbound == null) return null;
+                var association = (AkkaProtocolHandle)inbound.Association;
+                Assert.Equal(33, association.HandshakeInfo.Uid);
+                return association;
+            });
+            Assert.NotNull(wrappedHandle);
+
+            wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
+
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsHeartbeat(collaborators.Registry)), DefaultTimeout);
+
+            reader.Tell(_testSequencePayload, TestActor);
+            await ExpectMsgAsync<InboundSequencePayload>(inbound => AssertSequencePayload(_testEnvelope, inbound),
+                hint: "expected InboundSequencePayload");
         }
 
         [Fact]
@@ -249,6 +294,135 @@ namespace Akka.Remote.Tests.Transport
                 default:
                     throw new Exception("Did not receive expected AkkaProtocolHandle from handshake");
             }
+        }
+
+        [Fact]
+        public async Task ProtocolStateActor_must_in_outbound_mode_finish_handshake_from_sequence_associate()
+        {
+            var (_, _, wrappedHandle) = await OpenOutboundAssociation(associateFactory: TestSequenceAssociate);
+
+            wrappedHandle.HandshakeInfo.Uid.Should().Be(33);
+            wrappedHandle.RemoteAddress.Should().Be(_remoteAkkaAddress);
+            wrappedHandle.LocalAddress.Should().Be(_localAkkaAddress);
+        }
+
+        [Fact]
+        public async Task ProtocolStateActor_must_refuse_outbound_handshake_when_remote_uid_matches_refuseUid()
+        {
+            var collaborators = GetCollaborators();
+            collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
+
+            var statusPromise = new TaskCompletionSource<AssociationHandle>();
+            var reader = Sys.ActorOf(ProtocolStateActor.OutboundProps(
+                handshakeInfo: new HandshakeInfo(_localAddress, 42),
+                remoteAddress: _remoteAddress,
+                statusCompletionSource: statusPromise,
+                transport: collaborators.Transport,
+                settings: new AkkaProtocolSettings(_config),
+                codec: _codec,
+                failureDetector: collaborators.FailureDetector,
+                refuseUid: 33));
+
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout);
+
+            reader.Tell(TestAssociate(33), TestActor);
+
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsDisassociate(collaborators.Registry, DisassociateInfo.Quarantined)), DefaultTimeout);
+            await Awaiting(() => statusPromise.Task.WithTimeout(DefaultTimeout))
+                .Should().ThrowAsync<AkkaProtocolException>()
+                .WithMessage("*quarantined*");
+        }
+
+        [Fact]
+        public async Task ProtocolStateActor_must_update_failure_detector_when_heartbeat_received()
+        {
+            var (collaborators, reader, wrappedHandle) = await OpenOutboundAssociation(TestActor);
+            var heartbeatCount = collaborators.FailureDetector.HeartbeatCount;
+
+            reader.Tell(_testHeartbeat, TestActor);
+
+            await AwaitConditionAsync(() => Task.FromResult(collaborators.FailureDetector.HeartbeatCount > heartbeatCount), DefaultTimeout);
+            await ExpectNoMsgAsync(Dilated(TimeSpan.FromMilliseconds(100)));
+            wrappedHandle.HandshakeInfo.Uid.Should().Be(33);
+        }
+
+        [Fact]
+        public async Task ProtocolStateActor_must_update_failure_detector_when_sequence_heartbeat_received()
+        {
+            var (collaborators, reader, wrappedHandle) = await OpenOutboundAssociation(TestActor);
+            var heartbeatCount = collaborators.FailureDetector.HeartbeatCount;
+
+            reader.Tell(_testSequenceHeartbeat, TestActor);
+
+            await AwaitConditionAsync(() => Task.FromResult(collaborators.FailureDetector.HeartbeatCount > heartbeatCount), DefaultTimeout);
+            await ExpectNoMsgAsync(Dilated(TimeSpan.FromMilliseconds(100)));
+            wrappedHandle.HandshakeInfo.Uid.Should().Be(33);
+        }
+
+        [Fact]
+        public async Task ProtocolStateActor_must_buffer_payload_until_listener_registration_then_flush()
+        {
+            var (_, reader, wrappedHandle) = await OpenOutboundAssociation();
+
+            reader.Tell(_testPayload, TestActor);
+            await ExpectNoMsgAsync(Dilated(TimeSpan.FromMilliseconds(100)));
+
+            wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
+
+            await ExpectMsgAsync<InboundPayload>(inbound =>
+            {
+                Assert.Equal(_testEnvelope, inbound.Payload);
+            }, hint: "expected queued InboundPayload after listener registration");
+        }
+
+        [Fact]
+        public async Task ProtocolStateActor_must_buffer_sequence_payload_until_listener_registration_then_flush()
+        {
+            var (_, reader, wrappedHandle) = await OpenOutboundAssociation();
+
+            reader.Tell(_testSequencePayload, TestActor);
+            await ExpectNoMsgAsync(Dilated(TimeSpan.FromMilliseconds(100)));
+
+            wrappedHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(TestActor));
+
+            await ExpectMsgAsync<InboundSequencePayload>(inbound => AssertSequencePayload(_testEnvelope, inbound),
+                hint: "expected queued InboundSequencePayload after listener registration");
+        }
+
+        [Fact]
+        public async Task ProtocolStateActor_must_propagate_quarantined_disassociate_to_registered_listener()
+        {
+            var (_, reader, _) = await OpenOutboundAssociation(TestActor);
+
+            reader.Tell(TestDisassociate(DisassociateInfo.Quarantined), TestActor);
+
+            await ExpectMsgOfAsync("expected Disassociated(DisassociateInfo.Quarantined)", o =>
+            {
+                var disassociated = o.AsInstanceOf<Disassociated>();
+
+                Assert.NotNull(disassociated);
+                Assert.Equal(DisassociateInfo.Quarantined, disassociated.Info);
+
+                return disassociated;
+            });
+        }
+
+        [Fact]
+        public async Task ProtocolStateActor_must_propagate_sequence_quarantined_disassociate_to_registered_listener()
+        {
+            var (_, reader, _) = await OpenOutboundAssociation(TestActor);
+
+            reader.Tell(TestSequenceDisassociate(DisassociateInfo.Quarantined), TestActor);
+
+            await ExpectMsgOfAsync("expected Disassociated(DisassociateInfo.Quarantined)", o =>
+            {
+                var disassociated = o.AsInstanceOf<Disassociated>();
+
+                Assert.NotNull(disassociated);
+                Assert.Equal(DisassociateInfo.Quarantined, disassociated.Info);
+
+                return disassociated;
+            });
         }
 
         [Fact]
@@ -504,6 +678,47 @@ namespace Akka.Remote.Tests.Transport
 
         #region Internal helper methods
 
+        private static IHandleEvent TestSequencePayload(ByteString payload)
+        {
+            return new InboundSequencePayload(new ReadOnlySequence<byte>(payload.Memory));
+        }
+
+        private static void AssertSequencePayload(ByteString expected, InboundSequencePayload actual)
+        {
+            Assert.Equal(expected, ByteString.CopyFrom(actual.Payload.ToArray()));
+        }
+
+        private async Task<(Collaborators Collaborators, IActorRef StateActor, AkkaProtocolHandle ProtocolHandle)> OpenOutboundAssociation(
+            IActorRef listener = null,
+            Func<int, IHandleEvent> associateFactory = null)
+        {
+            var collaborators = GetCollaborators();
+            collaborators.Transport.AssociateBehavior.PushConstant(collaborators.Handle);
+            associateFactory ??= TestAssociate;
+
+            var statusPromise = new TaskCompletionSource<AssociationHandle>();
+            var stateActor = Sys.ActorOf(ProtocolStateActor.OutboundProps(
+                handshakeInfo: new HandshakeInfo(_localAddress, 42),
+                remoteAddress: _remoteAddress,
+                statusCompletionSource: statusPromise,
+                transport: collaborators.Transport,
+                settings: new AkkaProtocolSettings(_config),
+                codec: _codec,
+                failureDetector: collaborators.FailureDetector));
+
+            await AwaitConditionAsync(() => Task.FromResult(LastActivityIsAssociate(collaborators.Registry, 42)), DefaultTimeout);
+
+            stateActor.Tell(associateFactory(33), TestActor);
+
+            var association = await statusPromise.Task.WithTimeout(3.Seconds());
+            var protocolHandle = Assert.IsType<AkkaProtocolHandle>(association);
+
+            if (listener != null)
+                protocolHandle.ReadHandlerSource.SetResult(new ActorHandleEventListener(listener));
+
+            return (collaborators, stateActor, protocolHandle);
+        }
+
         private bool LastActivityIsHeartbeat(AssociationRegistry associationRegistry)
         {
             if (associationRegistry.LogSnapshot().Count == 0) return false;
@@ -530,12 +745,18 @@ namespace Akka.Remote.Tests.Transport
 
         private bool LastActivityIsDisassociate(AssociationRegistry associationRegistry)
         {
-            if (associationRegistry.LogSnapshot().Count == 0) return false;
-            if (!(associationRegistry.LogSnapshot().Last() is WriteAttempt attempt)) return false;
-            if (!attempt.Sender.Equals(_localAddress) || !attempt.Recipient.Equals(_remoteAddress)) return false;
+            return LastActivityIsDisassociate(associationRegistry, null);
+        }
+
+        private bool LastActivityIsDisassociate(AssociationRegistry associationRegistry, DisassociateInfo? reason)
+        {
+            var attempt = associationRegistry.LogSnapshot()
+                .OfType<WriteAttempt>()
+                .LastOrDefault(x => x.Sender.Equals(_localAddress) && x.Recipient.Equals(_remoteAddress));
+            if (attempt == null) return false;
             return _codec.DecodePdu(attempt.Payload) switch
             {
-                Disassociate _ => true,
+                Disassociate d => !reason.HasValue || d.Reason == reason.Value,
                 _ => false
             };
         }
@@ -543,4 +764,3 @@ namespace Akka.Remote.Tests.Transport
         #endregion
     }
 }
-

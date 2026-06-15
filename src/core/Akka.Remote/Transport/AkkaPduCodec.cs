@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Linq;
 using Akka.Actor;
 using Google.Protobuf;
@@ -115,6 +116,20 @@ namespace Akka.Remote.Transport
     }
 
     /// <summary>
+    /// INTERNAL API.
+    /// Represents an ordinary payload PDU whose bytes are backed by an owned sequence.
+    /// </summary>
+    internal sealed class SequencePayload : IAkkaPdu
+    {
+        public SequencePayload(ReadOnlySequence<byte> bytes)
+        {
+            Bytes = bytes;
+        }
+
+        public ReadOnlySequence<byte> Bytes { get; }
+    }
+
+    /// <summary>
     /// TBD
     /// </summary>
     internal sealed class Message : IAkkaPdu, IHasSequenceNumber
@@ -219,7 +234,18 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="raw">Encoded raw byte representation of an Akka PDU</param>
         /// <returns>Class representation of a PDU.</returns>
-        public abstract IAkkaPdu DecodePdu(ByteString raw);
+        public virtual IAkkaPdu DecodePdu(ByteString raw)
+        {
+            return DecodePdu(new ReadOnlySequence<byte>(raw.Memory));
+        }
+
+        /// <summary>
+        /// Return an <see cref="IAkkaPdu"/> instance that represents a PDU contained in the raw
+        /// <see cref="ReadOnlySequence{T}"/>.
+        /// </summary>
+        /// <param name="raw">Encoded raw byte representation of an Akka PDU</param>
+        /// <returns>Class representation of a PDU.</returns>
+        public abstract IAkkaPdu DecodePdu(ReadOnlySequence<byte> raw);
 
         /// <summary>
         /// Takes an <see cref="IAkkaPdu"/> representation of an Akka PDU and returns its encoded form
@@ -233,6 +259,8 @@ namespace Akka.Remote.Transport
             {
                 case Payload p:
                     return ConstructPayload(p.Bytes);
+                case SequencePayload p:
+                    return ConstructPayload(ToByteString(p.Bytes));
                 case Heartbeat h:
                     return ConstructHeartbeat();
                 case Associate a:
@@ -249,27 +277,66 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="payload">TBD</param>
         /// <returns>TBD</returns>
-        public abstract ByteString ConstructPayload(ByteString payload);
+        public virtual ByteString ConstructPayload(ByteString payload)
+        {
+            return ConstructByteString(writer => ConstructPayload(payload, writer), payload.Length + 8);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="payload">TBD</param>
+        /// <param name="writer">TBD</param>
+        public abstract void ConstructPayload(ByteString payload, IBufferWriter<byte> writer);
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="info">TBD</param>
         /// <returns>TBD</returns>
-        public abstract ByteString ConstructAssociate(HandshakeInfo info);
+        public virtual ByteString ConstructAssociate(HandshakeInfo info)
+        {
+            return ConstructByteString(writer => ConstructAssociate(info, writer));
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="writer">TBD</param>
+        public abstract void ConstructAssociate(HandshakeInfo info, IBufferWriter<byte> writer);
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="reason">TBD</param>
         /// <returns>TBD</returns>
-        public abstract ByteString ConstructDisassociate(DisassociateInfo reason);
+        public virtual ByteString ConstructDisassociate(DisassociateInfo reason)
+        {
+            return ConstructByteString(writer => ConstructDisassociate(reason, writer));
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="writer">TBD</param>
+        public abstract void ConstructDisassociate(DisassociateInfo reason, IBufferWriter<byte> writer);
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <returns>TBD</returns>
-        public abstract ByteString ConstructHeartbeat();
+        public virtual ByteString ConstructHeartbeat()
+        {
+            return ConstructByteString(ConstructHeartbeat);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="writer">TBD</param>
+        public abstract void ConstructHeartbeat(IBufferWriter<byte> writer);
 
         /// <summary>
         /// TBD
@@ -278,7 +345,19 @@ namespace Akka.Remote.Transport
         /// <param name="provider">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        public abstract AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress);
+        public virtual AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress)
+        {
+            return DecodeMessage(new ReadOnlySequence<byte>(raw.Memory), provider, localAddress);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="raw">TBD</param>
+        /// <param name="provider">TBD</param>
+        /// <param name="localAddress">TBD</param>
+        /// <returns>TBD</returns>
+        public abstract AckAndMessage DecodeMessage(ReadOnlySequence<byte> raw, IRemoteActorRefProvider provider, Address localAddress);
 
         /// <summary>
         /// TBD
@@ -290,15 +369,57 @@ namespace Akka.Remote.Transport
         /// <param name="seqOption">TBD</param>
         /// <param name="ackOption">TBD</param>
         /// <returns>TBD</returns>
-        public abstract ByteString ConstructMessage(Address localAddress, IActorRef recipient,
-            SerializedMessage serializedMessage, IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null);
+        public virtual ByteString ConstructMessage(Address localAddress, IActorRef recipient,
+            SerializedMessage serializedMessage, IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null)
+        {
+            return ConstructByteString(writer => ConstructMessage(localAddress, recipient, serializedMessage, writer, senderOption, seqOption, ackOption));
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="localAddress">TBD</param>
+        /// <param name="recipient">TBD</param>
+        /// <param name="serializedMessage">TBD</param>
+        /// <param name="writer">TBD</param>
+        /// <param name="senderOption">TBD</param>
+        /// <param name="seqOption">TBD</param>
+        /// <param name="ackOption">TBD</param>
+        public abstract void ConstructMessage(Address localAddress, IActorRef recipient, SerializedMessage serializedMessage,
+            IBufferWriter<byte> writer, IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null);
 
         /// <summary>
         /// TBD
         /// </summary>
         /// <param name="ack">TBD</param>
         /// <returns>TBD</returns>
-        public abstract ByteString ConstructPureAck(Ack ack);
+        public virtual ByteString ConstructPureAck(Ack ack)
+        {
+            return ConstructByteString(writer => ConstructPureAck(ack, writer));
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ack">TBD</param>
+        /// <param name="writer">TBD</param>
+        public abstract void ConstructPureAck(Ack ack, IBufferWriter<byte> writer);
+
+        private static ByteString ConstructByteString(Action<IBufferWriter<byte>> write, int initialCapacity = 0)
+        {
+            var writer = initialCapacity > 0
+                ? new ArrayBufferWriter<byte>(initialCapacity)
+                : new ArrayBufferWriter<byte>();
+            write(writer);
+            return ByteString.CopyFrom(writer.WrittenSpan);
+        }
+
+        private static ByteString ToByteString(ReadOnlySequence<byte> bytes)
+        {
+            return bytes.IsSingleSegment
+                ? ByteString.CopyFrom(bytes.FirstSpan)
+                : ByteString.CopyFrom(bytes.ToArray());
+        }
     }
 
     /// <summary>
@@ -306,6 +427,8 @@ namespace Akka.Remote.Transport
     /// </summary>
     internal sealed class AkkaPduProtobuffCodec : AkkaPduCodec
     {
+        private const byte PayloadFieldTag = 0x0A;
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -319,19 +442,91 @@ namespace Akka.Remote.Transport
         /// </ul>
         /// </exception>
         /// <returns>TBD</returns>
-        public override IAkkaPdu DecodePdu(ByteString raw)
+        public override IAkkaPdu DecodePdu(ReadOnlySequence<byte> raw)
         {
             try
             {
+                if (TryDecodePayloadPdu(raw, out var payload))
+                    return payload;
+
                 var pdu = AkkaProtocolMessage.Parser.ParseFrom(raw);
-                if (pdu.Instruction != null) return DecodeControlPdu(pdu.Instruction);
-                else if (!pdu.Payload.IsEmpty) return new Payload(pdu.Payload); // TODO HasPayload
-                else throw new PduCodecException("Error decoding Akka PDU: Neither message nor control message were contained");
+                return DecodePdu(pdu);
             }
             catch (InvalidProtocolBufferException ex)
             {
                 throw new PduCodecException("Decoding PDU failed", ex);
             }
+        }
+
+        public override IAkkaPdu DecodePdu(ByteString raw)
+        {
+            try
+            {
+                var pdu = AkkaProtocolMessage.Parser.ParseFrom(raw);
+                return DecodePdu(pdu);
+            }
+            catch (InvalidProtocolBufferException ex)
+            {
+                throw new PduCodecException("Decoding PDU failed", ex);
+            }
+        }
+
+        private IAkkaPdu DecodePdu(AkkaProtocolMessage pdu)
+        {
+            if (pdu.Instruction != null) return DecodeControlPdu(pdu.Instruction);
+            else if (!pdu.Payload.IsEmpty) return new Payload(pdu.Payload); // TODO HasPayload
+            else throw new PduCodecException("Error decoding Akka PDU: Neither message nor control message were contained");
+        }
+
+        private static bool TryDecodePayloadPdu(ReadOnlySequence<byte> raw, out SequencePayload payload)
+        {
+            payload = null;
+
+            var reader = new SequenceReader<byte>(raw);
+            if (!reader.TryRead(out var tag) || tag != PayloadFieldTag)
+                return false;
+
+            if (!TryReadVarint32(ref reader, out var payloadLength) || payloadLength <= 0)
+                return false;
+
+            if (reader.Remaining != payloadLength)
+                return false;
+
+            payload = new SequencePayload(raw.Slice(reader.Position, payloadLength));
+            return true;
+        }
+
+        private static bool TryReadVarint32(ref SequenceReader<byte> reader, out int value)
+        {
+            long result = 0;
+            var shift = 0;
+
+            while (shift < 35)
+            {
+                if (!reader.TryRead(out var b))
+                {
+                    value = 0;
+                    return false;
+                }
+
+                result |= (long)(b & 0x7F) << shift;
+                if ((b & 0x80) == 0)
+                {
+                    if (result > int.MaxValue)
+                    {
+                        value = 0;
+                        return false;
+                    }
+
+                    value = (int)result;
+                    return true;
+                }
+
+                shift += 7;
+            }
+
+            value = 0;
+            return false;
         }
 
         /// <summary>
@@ -341,7 +536,17 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public override ByteString ConstructPayload(ByteString payload)
         {
-            return new AkkaProtocolMessage() { Payload = payload }.ToByteString();
+            return CreatePayloadPdu(payload).ToByteString();
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="payload">TBD</param>
+        /// <param name="writer">TBD</param>
+        public override void ConstructPayload(ByteString payload, IBufferWriter<byte> writer)
+        {
+            CreatePayloadPdu(payload).WriteTo(writer);
         }
 
         /// <summary>
@@ -366,6 +571,25 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
+        /// <param name="info">TBD</param>
+        /// <param name="writer">TBD</param>
+        /// <exception cref="ArgumentException">
+        /// This exception is thrown when the specified <paramref name="info"/> contains an invalid address.
+        /// </exception>
+        public override void ConstructAssociate(HandshakeInfo info, IBufferWriter<byte> writer)
+        {
+            var handshakeInfo = new AkkaHandshakeInfo()
+            {
+                Origin = SerializeAddress(info.Origin),
+                Uid = (ulong)info.Uid
+            };
+
+            ConstructControlMessagePdu(CommandType.Associate, handshakeInfo, writer);
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
         /// <param name="reason">TBD</param>
         /// <returns>TBD</returns>
         public override ByteString ConstructDisassociate(DisassociateInfo reason)
@@ -379,6 +603,28 @@ namespace Akka.Remote.Transport
                 case DisassociateInfo.Unknown:
                 default:
                     return DISASSOCIATE;
+            }
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="reason">TBD</param>
+        /// <param name="writer">TBD</param>
+        public override void ConstructDisassociate(DisassociateInfo reason, IBufferWriter<byte> writer)
+        {
+            switch (reason)
+            {
+                case DisassociateInfo.Quarantined:
+                    ConstructControlMessagePdu(CommandType.DisassociateQuarantined, null, writer);
+                    break;
+                case DisassociateInfo.Shutdown:
+                    ConstructControlMessagePdu(CommandType.DisassociateShuttingDown, null, writer);
+                    break;
+                case DisassociateInfo.Unknown:
+                default:
+                    ConstructControlMessagePdu(CommandType.Disassociate, null, writer);
+                    break;
             }
         }
 
@@ -399,6 +645,17 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
+        /// Creates a new Heartbeat message instance.
+        /// </summary>
+        /// <param name="writer">The writer receiving the heartbeat message.</param>
+        public override void ConstructHeartbeat(IBufferWriter<byte> writer)
+        {
+            var span = writer.GetSpan(HeartbeatPdu.Length);
+            HeartbeatPdu.Span.CopyTo(span);
+            writer.Advance(HeartbeatPdu.Length);
+        }
+
+        /// <summary>
         /// Indicated RemoteEnvelope.Seq is not defined (order is irrelevant)
         /// </summary>
         private const ulong SeqUndefined = ulong.MaxValue;
@@ -410,10 +667,9 @@ namespace Akka.Remote.Transport
         /// <param name="provider">TBD</param>
         /// <param name="localAddress">TBD</param>
         /// <returns>TBD</returns>
-        public override AckAndMessage DecodeMessage(ByteString raw, IRemoteActorRefProvider provider, Address localAddress)
+        public override AckAndMessage DecodeMessage(ReadOnlySequence<byte> raw, IRemoteActorRefProvider provider, Address localAddress)
         {
             var ackAndEnvelope = AckAndEnvelopeContainer.Parser.ParseFrom(raw);
-
             Ack ackOption = null;
 
             if (ackAndEnvelope.Ack != null)
@@ -464,6 +720,31 @@ namespace Akka.Remote.Transport
             return acki;
         }
 
+        private static AkkaProtocolMessage CreatePayloadPdu(ByteString payload)
+        {
+            return new AkkaProtocolMessage() { Payload = payload };
+        }
+
+        private AckAndEnvelopeContainer CreateAckAndEnvelope(Address localAddress, IActorRef recipient,
+            SerializedMessage serializedMessage, IActorRef senderOption = null, SeqNo? seqOption = null,
+            Ack ackOption = null)
+        {
+            var ackAndEnvelope = new AckAndEnvelopeContainer();
+            var envelope = new RemoteEnvelope() { Recipient = SerializeActorRef(recipient.Path.Address, recipient) };
+            if (senderOption != null && senderOption.Path != null) { envelope.Sender = SerializeActorRef(localAddress, senderOption); }
+            if (seqOption is { } seq) { envelope.Seq = (ulong)seq.RawValue; } else envelope.Seq = SeqUndefined;
+            if (ackOption != null) { ackAndEnvelope.Ack = AckBuilder(ackOption); }
+            envelope.Message = serializedMessage;
+            ackAndEnvelope.Envelope = envelope;
+
+            return ackAndEnvelope;
+        }
+
+        private AckAndEnvelopeContainer CreatePureAck(Ack ack)
+        {
+            return new AckAndEnvelopeContainer() { Ack = AckBuilder(ack) };
+        }
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -477,15 +758,23 @@ namespace Akka.Remote.Transport
         public override ByteString ConstructMessage(Address localAddress, IActorRef recipient, SerializedMessage serializedMessage,
             IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null)
         {
-            var ackAndEnvelope = new AckAndEnvelopeContainer();
-            var envelope = new RemoteEnvelope() { Recipient = SerializeActorRef(recipient.Path.Address, recipient) };
-            if (senderOption != null && senderOption.Path != null) { envelope.Sender = SerializeActorRef(localAddress, senderOption); }
-            if (seqOption is { } seq) { envelope.Seq = (ulong)seq.RawValue; } else envelope.Seq = SeqUndefined;
-            if (ackOption != null) { ackAndEnvelope.Ack = AckBuilder(ackOption); }
-            envelope.Message = serializedMessage;
-            ackAndEnvelope.Envelope = envelope;
+            return CreateAckAndEnvelope(localAddress, recipient, serializedMessage, senderOption, seqOption, ackOption).ToByteString();
+        }
 
-            return ackAndEnvelope.ToByteString();
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="localAddress">TBD</param>
+        /// <param name="recipient">TBD</param>
+        /// <param name="serializedMessage">TBD</param>
+        /// <param name="writer">TBD</param>
+        /// <param name="senderOption">TBD</param>
+        /// <param name="seqOption">TBD</param>
+        /// <param name="ackOption">TBD</param>
+        public override void ConstructMessage(Address localAddress, IActorRef recipient, SerializedMessage serializedMessage,
+            IBufferWriter<byte> writer, IActorRef senderOption = null, SeqNo? seqOption = null, Ack ackOption = null)
+        {
+            CreateAckAndEnvelope(localAddress, recipient, serializedMessage, senderOption, seqOption, ackOption).WriteTo(writer);
         }
 
         /// <summary>
@@ -495,7 +784,17 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public override ByteString ConstructPureAck(Ack ack)
         {
-            return new AckAndEnvelopeContainer() { Ack = AckBuilder(ack) }.ToByteString();
+            return CreatePureAck(ack).ToByteString();
+        }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="ack">TBD</param>
+        /// <param name="writer">TBD</param>
+        public override void ConstructPureAck(Ack ack, IBufferWriter<byte> writer)
+        {
+            CreatePureAck(ack).WriteTo(writer);
         }
 
 #region Internal methods
@@ -542,13 +841,23 @@ namespace Akka.Remote.Transport
 
         private static ByteString ConstructControlMessagePdu(CommandType code, AkkaHandshakeInfo handshakeInfo = null)
         {
+            return CreateControlMessagePdu(code, handshakeInfo).ToByteString();
+        }
+
+        private static void ConstructControlMessagePdu(CommandType code, AkkaHandshakeInfo handshakeInfo, IBufferWriter<byte> writer)
+        {
+            CreateControlMessagePdu(code, handshakeInfo).WriteTo(writer);
+        }
+
+        private static AkkaProtocolMessage CreateControlMessagePdu(CommandType code, AkkaHandshakeInfo handshakeInfo = null)
+        {
             var controlMessage = new AkkaControlMessage() { CommandType = code };
             if (handshakeInfo != null)
             {
                 controlMessage.HandshakeInfo = handshakeInfo;
             }
 
-            return new AkkaProtocolMessage() { Instruction = controlMessage }.ToByteString();
+            return new AkkaProtocolMessage() { Instruction = controlMessage };
         }
 
         private static Address DecodeAddress(AddressData origin)

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -138,6 +139,25 @@ namespace Akka.Remote.Transport
         public override string ToString()
         {
             return $"InboundPayload(size = {Payload.Length} bytes)";
+        }
+    }
+
+    /// <summary>
+    /// Message sent to the internal Akka protocol listener when the underlying transport can expose
+    /// the encoded PDU as a <see cref="ReadOnlySequence{T}"/> without first materializing a <see cref="ByteString"/>.
+    /// </summary>
+    internal sealed class InboundSequencePayload : IHandleEvent
+    {
+        public InboundSequencePayload(ReadOnlySequence<byte> payload)
+        {
+            Payload = payload;
+        }
+
+        public ReadOnlySequence<byte> Payload { get; }
+
+        public override string ToString()
+        {
+            return $"InboundSequencePayload(size = {Payload.Length} bytes)";
         }
     }
 
@@ -429,4 +449,3 @@ namespace Akka.Remote.Transport
         }
     }
 }
-

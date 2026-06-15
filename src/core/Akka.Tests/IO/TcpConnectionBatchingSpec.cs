@@ -190,6 +190,42 @@ namespace Akka.Tests.IO
             await ExpectTerminatedAsync(connection);
         }
 
+        [Fact]
+        public async Task TcpConnection_should_batch_no_ack_writes_before_flushing()
+        {
+            using var socketPair = await ConnectedSocketPair.CreateAsync();
+            await using var stream = new BlockingWriteStream();
+            var bindHandler = CreateTestProbe();
+            var handler = CreateTestProbe();
+            var settings = TcpSettings.Create(Sys);
+
+            var connection = Sys.ActorOf(Props.Create(() => new TcpIncomingConnection(
+                settings,
+                socketPair.Server,
+                bindHandler.Ref,
+                Array.Empty<Inet.SocketOption>(),
+                false,
+                stream)));
+
+            await bindHandler.ExpectMsgAsync<Tcp.Connected>();
+            bindHandler.Send(connection, new Tcp.Register(handler.Ref));
+
+            var writes = new Tcp.WriteCommand[8];
+            for (var i = 0; i < writes.Length; i++)
+                writes[i] = Tcp.Write.Create(new byte[32].AsMemory());
+
+            handler.Send(connection, Tcp.WriteCommand.Create(writes));
+
+            await stream.FirstWriteStarted.WaitAsync(TimeSpan.FromSeconds(3));
+            stream.WriteSizes.Should().Equal(256);
+            stream.ReleaseFirstWrite();
+
+            await WatchAsync(connection);
+            handler.Send(connection, Tcp.Abort.Instance);
+            await handler.ExpectMsgAsync<Tcp.Aborted>();
+            await ExpectTerminatedAsync(connection);
+        }
+
         private sealed class ConnectedSocketPair : IDisposable
         {
             private ConnectedSocketPair(Socket client, Socket server)

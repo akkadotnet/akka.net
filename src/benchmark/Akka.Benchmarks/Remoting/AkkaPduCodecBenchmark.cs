@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -53,8 +54,12 @@ namespace Akka.Benchmarks.Remoting
         private readonly Ack _lastAck = new(-1);
 
         private ByteString _fullDecode;
+        private ReadOnlySequence<byte> _fullDecodeSequence;
         private ByteString _pduDecoded;
+        private ReadOnlySequence<byte> _pduDecodedSequence;
         private Akka.Remote.Serialization.Proto.Msg.Payload _payloadDecoded;
+        private ArrayBufferWriter<byte> _messageWriter;
+        private ArrayBufferWriter<byte> _payloadWriter;
 
         [GlobalSetup]
         public async Task Setup()
@@ -83,8 +88,12 @@ namespace Akka.Benchmarks.Remoting
             _recvCodec = new AkkaPduProtobuffCodec(_sys1);
             _sendCodec = new AkkaPduProtobuffCodec(_sys2);
             _fullDecode = CreatePayloadPdu();
+            _fullDecodeSequence = new ReadOnlySequence<byte>(_fullDecode.Memory);
             _pduDecoded = ((Payload)_recvCodec.DecodePdu(_fullDecode)).Bytes;
+            _pduDecodedSequence = new ReadOnlySequence<byte>(_pduDecoded.Memory);
             _payloadDecoded = _recvCodec.DecodeMessage(_pduDecoded, _rarp, _addr1).MessageOption.SerializedMessage;
+            _messageWriter = new ArrayBufferWriter<byte>(_pduDecoded.Length);
+            _payloadWriter = new ArrayBufferWriter<byte>(_fullDecode.Length);
         }
 
         [GlobalCleanup]
@@ -144,6 +153,26 @@ namespace Akka.Benchmarks.Remoting
             }
         }
 
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public void WriteMessagePduToBufferWriter()
+        {
+            for (var i = 0; i < Operations; i++)
+            {
+                _messageWriter.Clear();
+                CreateMessagePdu(_messageWriter);
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public void WritePayloadPduToBufferWriter()
+        {
+            for (var i = 0; i < Operations; i++)
+            {
+                _payloadWriter.Clear();
+                CreatePayloadPdu(_payloadWriter);
+            }
+        }
+
         /// <summary>
         /// Simulates the read-side of the wire
         /// </summary>
@@ -162,6 +191,20 @@ namespace Akka.Benchmarks.Remoting
         }
 
         [Benchmark(OperationsPerInvoke = Operations)]
+        public void DecodePayloadPduFromSequence()
+        {
+            for (var i = 0; i < Operations; i++)
+            {
+                var pdu = _recvCodec.DecodePdu(_fullDecodeSequence);
+                if (pdu is Payload p)
+                {
+                    var msg = _recvCodec.DecodeMessage(new ReadOnlySequence<byte>(p.Bytes.Memory), _rarp, _addr1);
+                    var deserialize = MessageSerializer.Deserialize(_sys1, msg.MessageOption.SerializedMessage);
+                }
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = Operations)]
         public void DecodePduOnly()
         {
             for (var i = 0; i < Operations; i++)
@@ -171,11 +214,29 @@ namespace Akka.Benchmarks.Remoting
         }
 
         [Benchmark(OperationsPerInvoke = Operations)]
+        public void DecodePduOnlyFromSequence()
+        {
+            for (var i = 0; i < Operations; i++)
+            {
+                var pdu = _recvCodec.DecodePdu(_fullDecodeSequence);
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = Operations)]
         public void DecodeMessageOnly()
         {
             for (var i = 0; i < Operations; i++)
             {
                 var msg = _recvCodec.DecodeMessage(_pduDecoded, _rarp, _addr1);
+            }
+        }
+
+        [Benchmark(OperationsPerInvoke = Operations)]
+        public void DecodeMessageOnlyFromSequence()
+        {
+            for (var i = 0; i < Operations; i++)
+            {
+                var msg = _recvCodec.DecodeMessage(_pduDecodedSequence, _rarp, _addr1);
             }
         }
 
@@ -190,8 +251,24 @@ namespace Akka.Benchmarks.Remoting
 
         private ByteString CreatePayloadPdu()
         {
-            return _sendCodec.ConstructPayload(_sendCodec.ConstructMessage(_remoteReceiveRef.LocalAddressToUse, _remoteReceiveRef,
-                MessageSerializer.Serialize(_sys2, _addr2Info, _message), _senderActorRef, null, _lastAck));
+            return _sendCodec.ConstructPayload(CreateMessagePdu());
+        }
+
+        private void CreatePayloadPdu(IBufferWriter<byte> writer)
+        {
+            _sendCodec.ConstructPayload(CreateMessagePdu(), writer);
+        }
+
+        private ByteString CreateMessagePdu()
+        {
+            return _sendCodec.ConstructMessage(_remoteReceiveRef.LocalAddressToUse, _remoteReceiveRef,
+                MessageSerializer.Serialize(_sys2, _addr2Info, _message), _senderActorRef, null, _lastAck);
+        }
+
+        private void CreateMessagePdu(IBufferWriter<byte> writer)
+        {
+            _sendCodec.ConstructMessage(_remoteReceiveRef.LocalAddressToUse, _remoteReceiveRef,
+                MessageSerializer.Serialize(_sys2, _addr2Info, _message), writer, _senderActorRef, null, _lastAck);
         }
     }
 }

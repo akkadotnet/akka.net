@@ -41,7 +41,7 @@ namespace RemotePingPong
 #endif
         }
 
-        public static Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
+        public static Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port, bool useStreamTransport = false)
         {
             var baseConfig = ConfigurationFactory.ParseString(@"
             akka {
@@ -61,11 +61,19 @@ namespace RemotePingPong
               }
             }");
 
+            var streamTransportConfig = useStreamTransport
+                ? ConfigurationFactory.ParseString(@"
+                    akka.remote.dot-netty.tcp {
+                        transport-class = ""Akka.Remote.Transport.Streams.TcpStreamTransport, Akka.Remote""
+                        stream-write-buffer-size = 65536
+                    }")
+                : ConfigurationFactory.Empty;
+
             var bindingConfig =
                 ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
                     .WithFallback(ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port = " + port));
 
-            return bindingConfig.WithFallback(baseConfig);
+            return streamTransportConfig.WithFallback(bindingConfig).WithFallback(baseConfig);
         }
 
         private static async Task Main(params string[] args)
@@ -83,12 +91,14 @@ namespace RemotePingPong
                 timesToRun = 1u;
             }
 
-            await Start(timesToRun);
+            var useStreamTransport = args.Any(arg => string.Equals(arg, "stream", StringComparison.OrdinalIgnoreCase)
+                                                     || string.Equals(arg, "--stream-transport", StringComparison.OrdinalIgnoreCase));
+            await Start(timesToRun, useStreamTransport);
         }
 
         private static bool _firstRun = true;
 
-        private static void PrintSysInfo(){
+        private static void PrintSysInfo(bool useStreamTransport){
             var processorCount = Environment.ProcessorCount;
             if (processorCount == 0)
             {
@@ -104,6 +114,7 @@ namespace RemotePingPong
             Console.WriteLine("Messages sent/received per client: {0}  ({0:0e0})", repeat*2);
             Console.WriteLine("Is Server GC:                      {0}", GCSettings.IsServerGC);
             Console.WriteLine("Thread count:                      {0}", Process.GetCurrentProcess().Threads.Count);
+            Console.WriteLine("Transport:                         {0}", useStreamTransport ? "Akka.Streams TCP" : "DotNetty TCP");
             Console.WriteLine();
 
             //Print tables
@@ -114,7 +125,7 @@ namespace RemotePingPong
 
         const long repeat = 100000L;
 
-        private static async Task Start(uint timesToRun)
+        private static async Task Start(uint timesToRun, bool useStreamTransport)
         {         
             for (var i = 0; i < timesToRun; i++)
             {
@@ -122,7 +133,7 @@ namespace RemotePingPong
                 var bestThroughput = 0L;
                 foreach (var throughput in GetClientSettings())
                 {
-                    var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount);
+                    var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount, useStreamTransport);
                     bestThroughput = result1.Item2;
                     redCount = result1.Item3;
                 }
@@ -148,12 +159,12 @@ namespace RemotePingPong
             return numberOfClients * numberOfRepeats * 2;
         }
 
-        private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, long bestThroughput, int redCount)
+        private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, long bestThroughput, int redCount, bool useStreamTransport)
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
-            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0));
+            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0, useStreamTransport));
 
-            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0));
+            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0, useStreamTransport));
 
             List<Task<long>> tasks = new List<Task<long>>();
             List<IActorRef> receivers = new List<IActorRef>();
@@ -191,7 +202,7 @@ namespace RemotePingPong
             // now that the dispatchers in both ActorSystems are started, we want to measure thread count and other system
             // metrics here - but only the very first benchmark
             if(_firstRun){
-                PrintSysInfo();
+                PrintSysInfo(useStreamTransport);
             }
 
             var startThreads = Process.GetCurrentProcess().Threads.Count;
