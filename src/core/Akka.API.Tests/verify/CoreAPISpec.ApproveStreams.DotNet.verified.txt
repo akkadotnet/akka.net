@@ -4636,6 +4636,8 @@ namespace Akka.Streams.Implementation.IO
     public class IncomingConnectionStage : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>>>
     {
         public IncomingConnectionStage(Akka.Actor.IActorRef connection, System.Net.EndPoint remoteAddress, bool halfClose) { }
+        [Akka.Annotations.InternalApi]
+        public IncomingConnectionStage(Akka.Actor.IActorRef connection, System.Net.EndPoint remoteAddress, bool halfClose, int maxUnackedWrites) { }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         public override Akka.Streams.FlowShape<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }

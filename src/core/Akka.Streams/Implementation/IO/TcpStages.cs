@@ -268,6 +268,7 @@ namespace Akka.Streams.Implementation.IO
         private readonly IActorRef _connection;
         private readonly EndPoint _remoteAddress;
         private readonly bool _halfClose;
+        private readonly int _maxUnackedWrites;
         private readonly AtomicBoolean _hasBeenCreated = new();
         private readonly Inlet<ReadOnlySequence<byte>> _bytesIn = new("IncomingTCP.in");
         private readonly Outlet<ReadOnlySequence<byte>> _bytesOut = new("IncomingTCP.out");
@@ -279,10 +280,28 @@ namespace Akka.Streams.Implementation.IO
         /// <param name="remoteAddress">TBD</param>
         /// <param name="halfClose">TBD</param>
         public IncomingConnectionStage(IActorRef connection, EndPoint remoteAddress, bool halfClose)
+            : this(connection, remoteAddress, halfClose, TcpConnectionStage.DefaultMaxUnackedWrites)
+        {
+        }
+
+        /// <summary>
+        /// INTERNAL API. Same as the 3-argument constructor, but allows the number of unacknowledged
+        /// outbound writes that may be in flight to the connection actor to be configured. A value of
+        /// <c>1</c> reproduces the historical strict request/ack (credit-1) write discipline; larger
+        /// values pipeline writes into the connection actor's mailbox to hide the per-write roundtrip
+        /// latency while keeping the in-flight write count bounded.
+        /// </summary>
+        /// <param name="connection">TBD</param>
+        /// <param name="remoteAddress">TBD</param>
+        /// <param name="halfClose">TBD</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight.</param>
+        [InternalApi]
+        public IncomingConnectionStage(IActorRef connection, EndPoint remoteAddress, bool halfClose, int maxUnackedWrites)
         {
             _connection = connection;
             _remoteAddress = remoteAddress;
             _halfClose = halfClose;
+            _maxUnackedWrites = maxUnackedWrites;
             Shape = new FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(_bytesIn, _bytesOut);
         }
 
@@ -308,7 +327,7 @@ namespace Akka.Streams.Implementation.IO
                 throw new IllegalStateException("Cannot materialize an incoming connection Flow twice.");
             _hasBeenCreated.Value = true;
 
-            return new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Inbound(_connection, _halfClose), _remoteAddress);
+            return new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Inbound(_connection, _halfClose), _remoteAddress, _maxUnackedWrites);
         }
 
         /// <summary>
@@ -323,6 +342,19 @@ namespace Akka.Streams.Implementation.IO
     /// </summary>
     internal static class TcpConnectionStage
     {
+        /// <summary>
+        /// Default number of unacknowledged outbound writes that the stream TCP write stage allows to be
+        /// in flight to the connection actor at once. The historical behaviour was a strict credit-1
+        /// request/ack roundtrip per element (one stage-actor message out, one ack back, then pull the
+        /// next element). The connection actor acknowledges a write as soon as it has been admitted to its
+        /// output pipe (a memcpy), not after the bytes have drained to the socket, so the ack never
+        /// represented true socket backpressure. Allowing a small, bounded number of writes to pipeline
+        /// hides that roundtrip latency and lets more bytes accumulate in the output pipe between write-pump
+        /// wake-ups (improving socket-write coalescing) without weakening ordering, completion, or failure
+        /// semantics. The window stays bounded, so a slow socket still applies backpressure upstream.
+        /// </summary>
+        internal const int DefaultMaxUnackedWrites = 16;
+
         private class WriteAck : Tcp.Event
         {
             public static readonly WriteAck Instance = new();
@@ -428,11 +460,21 @@ namespace Akka.Streams.Implementation.IO
             private readonly Outlet<ReadOnlySequence<byte>> _bytesOut;
             private IActorRef _connection;
             private readonly OutHandler _readHandler;
-            
-            public TcpStreamLogic(FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>> shape, ITcpRole role, EndPoint remoteAddress) : base(shape)
+
+            // Outbound write windowing: allow up to _maxUnackedWrites writes to be in flight (sent to the
+            // connection actor but not yet acked) before suspending the upstream pull. This pipelines writes
+            // into the connection actor's mailbox instead of waiting for each ack, while keeping the in-flight
+            // count bounded so a slow socket still backpressures upstream. _maxUnackedWrites == 1 reproduces
+            // the historical strict credit-1 request/ack discipline exactly.
+            private readonly int _maxUnackedWrites;
+            private int _unackedWrites;
+            private bool _pullSuspended;
+
+            public TcpStreamLogic(FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>> shape, ITcpRole role, EndPoint remoteAddress, int maxUnackedWrites) : base(shape)
             {
                 _role = role;
                 _remoteAddress = remoteAddress;
+                _maxUnackedWrites = maxUnackedWrites < 1 ? 1 : maxUnackedWrites;
                 _bytesIn = shape.Inlet;
                 _bytesOut = shape.Outlet;
 
@@ -469,6 +511,14 @@ namespace Akka.Streams.Implementation.IO
                         var elem = Grab(_bytesIn);
                         ReactiveStreamsCompliance.RequireNonNullElement(elem);
                         _connection.Tell(Tcp.Write.Create(elem, WriteAck.Instance), StageActor.Ref);
+                        _unackedWrites++;
+
+                        // Pipeline: if the window still has room, immediately pull the next element instead of
+                        // waiting for this write's ack. Otherwise suspend pulling until an ack frees a slot.
+                        if (_unackedWrites < _maxUnackedWrites && !IsClosed(_bytesIn))
+                            Pull(_bytesIn);
+                        else
+                            _pullSuspended = true;
                     },
                     onUpstreamFinish: () =>
                     {
@@ -576,7 +626,16 @@ namespace Akka.Streams.Implementation.IO
                         break;
                     case WriteAck:
                     {
-                        if (!IsClosed(_bytesIn)) Pull(_bytesIn);
+                        if (_unackedWrites > 0) _unackedWrites--;
+
+                        // A slot just freed up. If we suspended pulling because the window was full, resume now.
+                        // (When _maxUnackedWrites == 1 the window is full after every write, so this pulls on
+                        // each ack — identical to the historical credit-1 behaviour.)
+                        if (_pullSuspended && !IsClosed(_bytesIn))
+                        {
+                            _pullSuspended = false;
+                            Pull(_bytesIn);
+                        }
                         break;
                     }
                     case Terminated:
@@ -665,7 +724,7 @@ namespace Akka.Streams.Implementation.IO
                     else outgoingConnectionPromise.TrySetResult(new StreamTcp.OutgoingConnection(_remoteAddress, t.Result));
                 }, TaskContinuationOptions.AttachedToParent);
 
-            var logic = new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Outbound(_tcpManager, new Tcp.Connect(_remoteAddress, _localAddress, _options, _connectionTimeout, pullMode: true), localAddressPromise, _halfClose), _remoteAddress);
+            var logic = new TcpConnectionStage.TcpStreamLogic(Shape, new TcpConnectionStage.Outbound(_tcpManager, new Tcp.Connect(_remoteAddress, _localAddress, _options, _connectionTimeout, pullMode: true), localAddressPromise, _halfClose), _remoteAddress, TcpConnectionStage.DefaultMaxUnackedWrites);
 
             return new LogicAndMaterializedValue<Task<StreamTcp.OutgoingConnection>>(logic, outgoingConnectionPromise.Task);
         }
