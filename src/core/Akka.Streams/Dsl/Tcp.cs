@@ -185,6 +185,26 @@ namespace Akka.Streams.Dsl
         // TODO: this really needs to be an async method
         public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
+            => Bind(host, port, TcpConnectionStage.DefaultMaxUnackedWrites, backlog, options, halfClose, idleTimeout);
+
+        /// <summary>
+        /// Same as <see cref="Bind(string,int,int,IImmutableList{Inet.SocketOption},bool,System.Nullable{System.TimeSpan})"/>,
+        /// but lets you tune <paramref name="maxUnackedWrites"/> — the number of unacknowledged outbound writes each
+        /// accepted connection's TCP write stage keeps in flight (default <c>16</c>, minimum <c>1</c>). Pass it by name,
+        /// e.g. <c>Bind(host, port, maxUnackedWrites: 32)</c> — the third positional argument remains
+        /// <paramref name="backlog"/> for source compatibility with the primary overload.
+        /// </summary>
+        /// <param name="host">The host to listen on</param>
+        /// <param name="port">The port to listen on</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight per accepted connection.</param>
+        /// <param name="backlog">Controls the size of the connection backlog</param>
+        /// <param name="options">TCP options for the connections, see <see cref="Akka.IO.Tcp"/> for details</param>
+        /// <param name="halfClose">See the primary <see cref="Bind(string,int,int,IImmutableList{Inet.SocketOption},bool,System.Nullable{System.TimeSpan})"/> overload.</param>
+        /// <param name="idleTimeout">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
+        public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int maxUnackedWrites, int backlog = 100,
+            IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
             // DnsEndpoint isn't allowed
             var ipAddresses = System.Net.Dns.GetHostAddressesAsync(host).Result;
@@ -192,7 +212,7 @@ namespace Akka.Streams.Dsl
                 throw new ArgumentException($"Couldn't resolve IpAddress for host {host}", nameof(host));
 
             return Source.FromGraph(new ConnectionSourceStage(_system.Tcp(), new IPEndPoint(ipAddresses[0], port), backlog,
-                options, halfClose, idleTimeout, BindShutdownTimeout));
+                options, halfClose, idleTimeout, BindShutdownTimeout, maxUnackedWrites));
         }
 
         /// <summary>
@@ -223,6 +243,29 @@ namespace Akka.Streams.Dsl
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
             return Bind(host, port, backlog, options, halfClose, idleTimeout)
+                .To(Sink.ForEach<Tcp.IncomingConnection>(connection => connection.Flow.Join(handler).Run(materializer)))
+                .Run(materializer);
+        }
+
+        /// <summary>
+        /// Same as <see cref="BindAndHandle(Flow{ReadOnlySequence{byte},ReadOnlySequence{byte},NotUsed},IMaterializer,string,int,int,IImmutableList{Inet.SocketOption},bool,System.Nullable{System.TimeSpan})"/>,
+        /// but lets you tune <paramref name="maxUnackedWrites"/> (default <c>16</c>). Pass it by name, e.g.
+        /// <c>BindAndHandle(handler, mat, host, port, maxUnackedWrites: 32)</c>.
+        /// </summary>
+        /// <param name="handler">A Flow that represents the server logic</param>
+        /// <param name="materializer">TBD</param>
+        /// <param name="host">The host to listen on</param>
+        /// <param name="port">The port to listen on</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight per accepted connection.</param>
+        /// <param name="backlog">Controls the size of the connection backlog</param>
+        /// <param name="options">TCP options for the connections, see <see cref="Akka.IO.Tcp"/> for details</param>
+        /// <param name="halfClose">See the primary BindAndHandle overload.</param>
+        /// <param name="idleTimeout">TBD</param>
+        /// <returns>TBD</returns>
+        public Task<Tcp.ServerBinding> BindAndHandle(Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> handler, IMaterializer materializer, string host, int port, int maxUnackedWrites, int backlog = 100,
+            IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
+        {
+            return Bind(host, port, maxUnackedWrites, backlog, options, halfClose, idleTimeout)
                 .To(Sink.ForEach<Tcp.IncomingConnection>(connection => connection.Flow.Join(handler).Run(materializer)))
                 .Run(materializer);
         }
