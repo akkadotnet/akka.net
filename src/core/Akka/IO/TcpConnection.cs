@@ -219,7 +219,7 @@ namespace Akka.IO
 
         // We've initiated a graceful close (HandleClose has run). Used to fast-fail
         // any further Tcp.Write commands with DroppingWriteBecauseClosingException.
-        private bool _closingGracefully;
+        private volatile bool _closingGracefully;
 
         // The pipe-reader pump task observed completion (EOF or error). Read path
         // gates on this together with _outputShutdown to know when TryFinishClose
@@ -527,9 +527,15 @@ namespace Akka.IO
             });
             Receive<IoTaskFailed>(msg =>
             {
+                // A genuine inbound I/O failure (e.g. the peer reset/aborted) arrived while we
+                // were gracefully closing. Our-own-shutdown faults were already reclassified as
+                // PipeReadCanceled before reaching here, so this is a real error and must win
+                // over the intended graceful close event: report ErrorClosed, not the pending
+                // Closed/ConfirmedClosed. This is what surfaces a remote abort during a
+                // half-close as an error rather than a clean confirmed-close.
                 if (_traceLogging)
                     Log.Debug("I/O task failed during close: {0}", msg.Cause.Message);
-                DoCloseConnection(closeSender, closeEvent);
+                DoCloseConnection(closeSender, new ErrorClosed(msg.Cause.Message));
             });
             SuspendResumeHandlers();
             Receive<HandlerDied>(_ =>
@@ -649,10 +655,61 @@ namespace Akka.IO
                 {
                     self.Tell(PipeReadCanceled.Instance);
                 }
+                catch (Exception ex) when (_closingGracefully && IsOwnShutdownFault(ex))
+                {
+                    // No read pump: when WE deliberately close/abort, the actor disposes the
+                    // transport, which faults the in-flight PipeReader.ReadAsync. The faults
+                    // that OUR OWN teardown produces — ObjectDisposedException (we disposed the
+                    // stream/socket), OperationCanceledException (our CTS), or
+                    // InvalidOperationException (we completed the PipeReader under an in-flight
+                    // read) — are an expected, clean termination, so surface them as a
+                    // cancellation rather than an I/O failure.
+                    //
+                    // A genuine transport error (SocketException / IOException wrapping a
+                    // socket reset) is NOT swallowed even while closing: it falls through to
+                    // the IoTaskFailed branch below so a real reset/abort still surfaces as
+                    // ErrorClosed. This matters for the half-close + error case where the peer
+                    // legitimately errors after we've started shutting down.
+                    self.Tell(PipeReadCanceled.Instance);
+                }
                 catch (Exception ex)
                 {
                     self.Tell(new IoTaskFailed(ex));
                 }
+            }
+        }
+
+        /// <summary>
+        /// Classifies whether a fault raised by an in-flight <see cref="PipeReader.ReadAsync"/>
+        /// was caused by OUR OWN deliberate teardown (and is therefore a clean termination)
+        /// rather than a genuine transport error from the peer.
+        ///
+        /// Our teardown completes the <see cref="PipeReader"/> and disposes the underlying
+        /// stream/socket; that surfaces as <see cref="ObjectDisposedException"/>,
+        /// <see cref="OperationCanceledException"/>, or <see cref="InvalidOperationException"/>
+        /// ("reading is not allowed after the reader was completed"). A real connection reset
+        /// surfaces as a <see cref="SocketException"/> (possibly wrapped in an
+        /// <see cref="IOException"/>) and must NOT be treated as a clean close.
+        /// </summary>
+        private static bool IsOwnShutdownFault(Exception ex)
+        {
+            switch (ex)
+            {
+                case ObjectDisposedException:
+                case OperationCanceledException:
+                case InvalidOperationException:
+                    return true;
+                case IOException io when io.InnerException is SocketException:
+                    // IOException wrapping a socket error is a genuine transport failure
+                    // (e.g. connection reset/aborted) — not our own shutdown.
+                    return false;
+                case IOException io when io.InnerException is ObjectDisposedException:
+                    // IOException wrapping a dispose is our own teardown racing the read.
+                    return true;
+                case SocketException:
+                    return false;
+                default:
+                    return false;
             }
         }
 
