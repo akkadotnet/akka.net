@@ -33,7 +33,9 @@ namespace Akka.Remote.Tests.Transport
     /// </summary>
     public class AkkaPduCodecFastDecodeDifferentialSpec : AkkaSpec
     {
-        // Canonical, interop-committed wire samples (copied from AkkaPduCodecWireFormatSpec).
+        // Frozen canonical wire samples. The Canonical_samples_anchored_to_encoder test below proves these
+        // bytes are exactly what THIS build's codec emits for the corresponding messages (so they pin the
+        // interop wire format); the differential cases then prove DecodeMessageFast == DecodeMessage on them.
         private const string AckAndMessageHex =
             "0A1B090A0000000000000012100B000000000000000C00000000000000128A010A350A33616B6B612E746370" +
             "3A2F2F57697265436F6D706174403132372E302E302E313A323535312F757365722F726563697069656E74" +
@@ -74,6 +76,25 @@ namespace Akka.Remote.Tests.Transport
         public void Fast_matches_oracle_on_canonical_samples(string label, string hex)
         {
             AssertEquivalentBothLayouts(label, Convert.FromHexString(hex));
+        }
+
+        [Fact(DisplayName = "Canonical wire samples are exactly what this build's encoder emits (wire-format anchor)")]
+        public void Canonical_samples_anchored_to_encoder()
+        {
+            // Anchor the frozen hex to THIS build's encoder: ConstructMessage/ConstructPureAck must emit exactly
+            // these bytes for the canonical inputs. This pins the interop wire format (it is frozen — full
+            // interop with classic Akka.Remote nodes), so the differential cases above run over real wire bytes
+            // and not merely whatever the current encoder happens to produce. A failure here means the wire
+            // format drifted.
+            var ack = new Ack(new SeqNo(10), new[] { new SeqNo(11), new SeqNo(12) });
+
+            Assert.Equal(AckAndMessageHex, Convert.ToHexString(_codec.ConstructMessage(
+                LocalAddress, ActorRef("recipient"), Payload(), ActorRef("sender"), new SeqNo(42), ack).ToByteArray()));
+
+            Assert.Equal(UnsequencedMessageHex, Convert.ToHexString(_codec.ConstructMessage(
+                LocalAddress, ActorRef("recipient"), Payload(), ActorRef("sender")).ToByteArray()));
+
+            Assert.Equal(PureAckHex, Convert.ToHexString(_codec.ConstructPureAck(ack).ToByteArray()));
         }
 
         [Fact(DisplayName = "DecodeMessageFast matches DecodeMessage on generated envelopes")]
