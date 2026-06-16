@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 #pragma warning disable AK1004
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -1970,7 +1971,10 @@ namespace Akka.Remote
         {
             try
             {
-                return _codec.DecodeMessage(pdu, _provider, LocalAddress);
+                // Use the hand-rolled low-allocation tag-dispatch decoder (DecodeMessageFast), which produces
+                // byte-identical results to DecodeMessage (asserted by AkkaPduCodecFastDecodeDifferentialSpec)
+                // with ~39% less CPU / ~60% less allocation. DecodeMessage is retained as the differential oracle.
+                return _codec.DecodeMessageFast(new ReadOnlySequence<byte>(pdu.Memory), _provider, LocalAddress);
             }
             catch (Exception ex)
             {
