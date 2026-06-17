@@ -81,6 +81,7 @@ namespace Akka.Tests.IO
                 // segment and parks inside GatedReadStream.ReadAsync — exactly the window the close
                 // path must serialize against.
                 ArgumentOutOfRangeException? readFault = null;
+                Exception? cleanSettle = null;
                 var readTask = Task.Run(async () =>
                 {
                     try
@@ -94,9 +95,12 @@ namespace Akka.Tests.IO
                         // segment. This is what the bug produces and what the fix must prevent.
                         readFault = ex;
                     }
-                    catch (Exception)
+                    catch (Exception settle)
                     {
-                        // Any other outcome (cancelled / completed / disposed) is a clean settle.
+                        // Any other outcome (cancelled / completed / disposed) is a clean settle;
+                        // capture it so a failure surfaces what actually happened — only the
+                        // ArgumentOutOfRangeException above is the corruption this test guards against.
+                        cleanSettle = settle;
                     }
                 });
 
@@ -121,7 +125,8 @@ namespace Akka.Tests.IO
                 await closeTask.WaitAsync(TimeSpan.FromSeconds(5));
 
                 readFault.Should().BeNull(
-                    $"completing the StreamPipeReader must never race an in-flight read (attempt {attempt}): {readFault?.Message}");
+                    $"completing the StreamPipeReader must never race an in-flight read (attempt {attempt}): "
+                    + $"{readFault?.Message} (read settled with {cleanSettle?.GetType().Name ?? "no exception"})");
 
                 await transport.DisposeAsync();
             }

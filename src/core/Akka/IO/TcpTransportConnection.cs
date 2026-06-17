@@ -14,6 +14,7 @@ using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Akka.Event;
 
 namespace Akka.IO
 {
@@ -106,6 +107,14 @@ namespace Akka.IO
         private bool _writeClosed;
         private Exception? _writeError;
 
+        // Optional logger for the expected-but-swallowed exceptions on the teardown paths
+        // (socket already closed/disposed, reader already completed, in-flight read/write
+        // faulting as it is cancelled). Set by the owning TcpConnection actor after construction
+        // via Context.GetLogger(); null in non-actor contexts (e.g. unit tests that build the
+        // transport directly), where those expected exceptions are simply ignored. Kept internal
+        // so the public constructor surface is unchanged.
+        internal ILoggingAdapter? Log { get; set; }
+
         /// <summary>
         /// Creates a transport connection from an already-connected socket.
         /// Inbound reads are driven on demand by the consumer via <see cref="Input"/>;
@@ -129,7 +138,8 @@ namespace Akka.IO
             // segment whose End the resuming read is about to write, throwing
             // ArgumentOutOfRangeException out of BufferSegment.set_End (see ReadGate).
             _inputReader = new ReadGate(
-                PipeReader.Create(_stream, new StreamPipeReaderOptions(bufferSize: ReadBufferSize, leaveOpen: true)));
+                PipeReader.Create(_stream, new StreamPipeReaderOptions(bufferSize: ReadBufferSize, leaveOpen: true)),
+                this);
 
             ReadCompleted = Task.CompletedTask;
             WriteCompleted = _writeCompletedTcs.Task;
@@ -148,7 +158,8 @@ namespace Akka.IO
             // PipeReader (wrapped in a ReadGate for safe close) and the outbound side is a
             // direct double-buffer, so there is no Pipe.
             _inputReader = new ReadGate(
-                PipeReader.Create(_stream, new StreamPipeReaderOptions(bufferSize: ReadBufferSize, leaveOpen: true)));
+                PipeReader.Create(_stream, new StreamPipeReaderOptions(bufferSize: ReadBufferSize, leaveOpen: true)),
+                this);
 
             ReadCompleted = Task.CompletedTask;
             WriteCompleted = _writeCompletedTcs.Task;
@@ -383,7 +394,7 @@ namespace Akka.IO
             }
             catch (OperationCanceledException) when (_cts.IsCancellationRequested)
             {
-                // slopwatch-ignore: SW003 shutdown raced an abort — treat as a clean write completion
+                // Shutdown raced an abort — treat as a clean write completion.
                 CompleteWrite(null);
             }
             catch (Exception ex)
@@ -413,7 +424,7 @@ namespace Akka.IO
             }
 
             inflight.ContinueWith(
-                static t => { _ = t.Exception; }, // slopwatch-ignore: SW003 fault is expected when the abort RSTs the socket
+                static t => { _ = t.Exception; }, // observe the fault expected when the abort RSTs the socket
                 CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
                 TaskScheduler.Default);
@@ -470,8 +481,11 @@ namespace Akka.IO
             {
                 _socket.Shutdown(SocketShutdown.Send);
             }
-            catch (SocketException) { } // slopwatch-ignore: SW003 socket may already be closed by peer or abort
-            catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed by an abort
+            catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+            {
+                // Socket already closed/disposed by the peer or a racing abort — the FIN is moot.
+                Log?.Debug(ex, "Ignoring expected exception during half-close shutdown");
+            }
         }
 
         public async Task CloseAsync()
@@ -491,8 +505,11 @@ namespace Akka.IO
             {
                 _socket.Shutdown(SocketShutdown.Send);
             }
-            catch (SocketException) { } // slopwatch-ignore: SW003 socket may already be closed by peer or abort
-            catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed by an abort
+            catch (Exception ex) when (ex is SocketException or ObjectDisposedException)
+            {
+                // Peer already reset us or an abort raced in — we're closing anyway.
+                Log?.Debug(ex, "Ignoring expected exception during close shutdown");
+            }
 
             // Cancel any straggling write/flush; the inbound reader is consumer-driven, so
             // completing it releases pooled buffers and frees the underlying stream for the
@@ -508,7 +525,11 @@ namespace Akka.IO
 
             // Wait for read completion — no background pump, so this is already complete.
             try { await ReadCompleted.ConfigureAwait(false); }
-            catch (Exception) when (_cts.IsCancellationRequested) { } // slopwatch-ignore: SW003 expected cancellation or I/O error during shutdown
+            catch (Exception ex) when (_cts.IsCancellationRequested)
+            {
+                // Cancellation or I/O error from the read we just cancelled — expected on close.
+                Log?.Debug(ex, "Ignoring expected read-completion fault during close");
+            }
 
             // Drain any inbound bytes the consumer never read (and wait for the peer's FIN,
             // bounded). Without this, closing a socket with unread receive-buffer data makes
@@ -557,7 +578,7 @@ namespace Akka.IO
                     {
                         read = _socket.Receive(buffer, SocketFlags.None);
                     }
-                    catch (SocketException) { break; } // slopwatch-ignore: SW003 peer reset/closed mid-drain — stop, close will be a no-op
+                    catch (SocketException) { break; } // peer reset/closed mid-drain — stop, the close is a no-op
 
                     if (read == 0)
                         break; // peer FIN observed — receive side fully drained
@@ -565,8 +586,11 @@ namespace Akka.IO
                     drained += read;
                 }
             }
-            catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket disposed by a racing abort — nothing to drain
-            catch (SocketException) { } // slopwatch-ignore: SW003 connection already reset — nothing to drain
+            catch (Exception ex) when (ex is ObjectDisposedException or SocketException)
+            {
+                // Socket disposed by a racing abort, or connection already reset — nothing to drain.
+                Log?.Debug(ex, "Ignoring expected exception while draining inbound on close");
+            }
             finally
             {
                 if (buffer != null)
@@ -589,7 +613,12 @@ namespace Akka.IO
 
             // Complete the inbound reader to unblock any pending read.
             // Exception if already completed / mid-read — safe to ignore.
-            try { _inputReader.Complete(); } catch (Exception) { } // slopwatch-ignore: SW003 reader may already be completed / mid-read
+            try { _inputReader.Complete(); }
+            catch (Exception ex)
+            {
+                // Reader may already be completed or mid-read — abort proceeds regardless.
+                Log?.Debug(ex, "Ignoring expected exception completing reader during abort");
+            }
 
             // RST the socket — SocketException/ObjectDisposedException if already closed.
             try
@@ -597,11 +626,19 @@ namespace Akka.IO
                 _socket.LingerState = new LingerOption(true, 0);
                 _socket.Close();
             }
-            catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
-            catch (SocketException) { } // slopwatch-ignore: SW003 socket may already be closed
+            catch (Exception ex) when (ex is ObjectDisposedException or SocketException)
+            {
+                // Socket may already be disposed/closed — the RST is best-effort.
+                Log?.Debug(ex, "Ignoring expected exception closing socket during abort");
+            }
 
             // Dispose the stream — ObjectDisposedException if already disposed.
-            try { _stream.Dispose(); } catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 stream may already be disposed
+            try { _stream.Dispose(); }
+            catch (ObjectDisposedException ex)
+            {
+                // Stream may already be disposed by a racing teardown.
+                Log?.Debug(ex, "Ignoring expected exception disposing stream during abort");
+            }
         }
 
         public async ValueTask DisposeAsync()
@@ -619,15 +656,22 @@ namespace Akka.IO
             }
 
             try { await _inputReader.CompleteAsync().ConfigureAwait(false); }
-            catch (Exception) { } // slopwatch-ignore: SW003 reader may have an in-flight read during disposal
+            catch (Exception ex)
+            {
+                // Reader may have an in-flight read during disposal — DisposeAsync must not throw.
+                Log?.Debug(ex, "Ignoring expected exception completing reader during dispose");
+            }
 
             // Best-effort: let any in-flight write settle so we don't dispose the stream out
             // from under it. It may throw OperationCanceledException / I/O errors during shutdown.
             if (inflight != null)
             {
                 try { await inflight.ConfigureAwait(false); }
-                catch (Exception) when (_cts.IsCancellationRequested) { } // slopwatch-ignore: SW003 expected errors during disposal
-                catch (Exception) { } // slopwatch-ignore: SW003 in-flight write failed during disposal — closing anyway
+                catch (Exception ex)
+                {
+                    // In-flight write cancelled or faulted during disposal — DisposeAsync must not throw.
+                    Log?.Debug(ex, "Ignoring expected exception settling in-flight write during dispose");
+                }
             }
 
             await _stream.DisposeAsync().ConfigureAwait(false);
@@ -665,6 +709,7 @@ namespace Akka.IO
         private sealed class ReadGate : PipeReader
         {
             private readonly PipeReader _inner;
+            private readonly TcpTransportConnection _owner;
             private readonly object _sync = new();
 
             // The in-flight consumer ReadAsync, or null when no read is outstanding. Tracked so the
@@ -680,7 +725,11 @@ namespace Akka.IO
             private Exception? _completeError;
             private bool _innerCompleted;
 
-            public ReadGate(PipeReader inner) => _inner = inner;
+            public ReadGate(PipeReader inner, TcpTransportConnection owner)
+            {
+                _inner = inner;
+                _owner = owner;
+            }
 
             public override async ValueTask<ReadResult> ReadAsync(CancellationToken cancellationToken = default)
             {
@@ -819,11 +868,7 @@ namespace Akka.IO
                     cts = _readCts;
                 }
 
-                if (cts != null)
-                {
-                    try { cts.Cancel(); }
-                    catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 read already settled and disposed its CTS
-                }
+                CancelSafely(cts);
 
                 _inner.CancelPendingRead();
             }
@@ -862,14 +907,14 @@ namespace Akka.IO
                 // Cancel the in-flight read so it unblocks promptly, then wait for it to settle.
                 // The read's own continuation may complete _inner (the deferred path); whichever of
                 // us observes _inflightRead == null && !_innerCompleted does the completion.
-                if (cts != null)
-                {
-                    try { cts.Cancel(); }
-                    catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 read already settled and disposed its CTS
-                }
+                CancelSafely(cts);
 
                 try { await inflight.ConfigureAwait(false); }
-                catch (Exception) { } // slopwatch-ignore: SW003 the read we just cancelled is expected to cancel/fault
+                catch (Exception ex)
+                {
+                    // The read we just cancelled is expected to cancel or fault as it settles.
+                    _owner.Log?.Debug(ex, "Ignoring expected fault from cancelled read during quiesce");
+                }
 
                 bool completeNow;
                 lock (_sync)
@@ -904,11 +949,7 @@ namespace Akka.IO
                         _innerCompleted = true;
                 }
 
-                if (cts != null)
-                {
-                    try { cts.Cancel(); }
-                    catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 read already settled and disposed its CTS
-                }
+                CancelSafely(cts);
 
                 if (completeNow)
                     CompleteInnerSafely(exception);
@@ -917,10 +958,29 @@ namespace Akka.IO
             public override ValueTask CompleteAsync(Exception? exception = null)
                 => new(QuiesceAndCompleteAsync(exception));
 
+            // Cancels the in-flight read's CTS, tolerating the ObjectDisposedException that races
+            // when the read already settled and disposed its own CTS — there is nothing left to
+            // cancel in that case.
+            private void CancelSafely(CancellationTokenSource? cts)
+            {
+                if (cts == null)
+                    return;
+
+                try { cts.Cancel(); }
+                catch (ObjectDisposedException ex)
+                {
+                    _owner.Log?.Debug(ex, "Ignoring expected exception cancelling a settled read");
+                }
+            }
+
             private void CompleteInnerSafely(Exception? exception)
             {
                 try { _inner.Complete(exception); }
-                catch (Exception) { } // slopwatch-ignore: SW003 underlying reader may already be completed
+                catch (Exception ex)
+                {
+                    // The underlying reader may already be completed — completion is idempotent here.
+                    _owner.Log?.Debug(ex, "Ignoring expected exception completing the inner reader");
+                }
             }
         }
     }

@@ -55,14 +55,13 @@ namespace Akka.IO
                 resumeWriterThreshold: Settings.ReceiveBufferSize,
                 useSynchronizationContext: false);
 
-            if (_stream != null)
-            {
+            var transport = _stream != null
                 // Use the provided stream (for TLS or testing)
-                return new TcpTransportConnection(Socket, _stream, inputPipeOptions: inputPipeOptions);
-            }
-
-            // Default: plaintext TCP using the socket directly
-            return new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions);
+                ? new TcpTransportConnection(Socket, _stream, inputPipeOptions: inputPipeOptions)
+                // Default: plaintext TCP using the socket directly
+                : new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions);
+            transport.Log = Log;
+            return transport;
         }
 
         protected override void PreStart()
