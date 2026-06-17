@@ -660,16 +660,30 @@ namespace Akka.IO
                     // No read pump: when WE deliberately close/abort, the actor disposes the
                     // transport, which faults the in-flight PipeReader.ReadAsync. The faults
                     // that OUR OWN teardown produces — ObjectDisposedException (we disposed the
-                    // stream/socket), OperationCanceledException (our CTS), or
+                    // stream/socket), OperationCanceledException (our CTS),
                     // InvalidOperationException (we completed the PipeReader under an in-flight
-                    // read) — are an expected, clean termination, so surface them as a
-                    // cancellation rather than an I/O failure.
+                    // read), or ArgumentOutOfRangeException (a teardown recycled a pooled segment a
+                    // read was mid-commit on) — are an expected, clean termination, so surface them
+                    // as a cancellation rather than an I/O failure.
                     //
                     // A genuine transport error (SocketException / IOException wrapping a
                     // socket reset) is NOT swallowed even while closing: it falls through to
                     // the IoTaskFailed branch below so a real reset/abort still surfaces as
                     // ErrorClosed. This matters for the half-close + error case where the peer
                     // legitimately errors after we've started shutting down.
+                    self.Tell(PipeReadCanceled.Instance);
+                }
+                catch (Exception) when (_closingGracefully && ct.IsCancellationRequested)
+                {
+                    // Defense-in-depth: once we are closing gracefully AND our CTS has been
+                    // cancelled (TryCancelCts runs on every close/abort path), the connection is
+                    // already being torn down deterministically by us. ANY read fault here is a
+                    // teardown artefact, not a peer error — a peer reset that mattered would have
+                    // surfaced before we cancelled. Treat it as a clean cancellation so a
+                    // teardown-induced read fault becomes Closed, never a spurious ErrorClosed that
+                    // the peer (which only handles Tcp.Closed) would silently drop — hanging the
+                    // coordinating Ask forever. ct is _cts.Token, so this is exactly the
+                    // "_closingGracefully && _cts.IsCancellationRequested" condition.
                     self.Tell(PipeReadCanceled.Instance);
                 }
                 catch (Exception ex)
@@ -686,10 +700,13 @@ namespace Akka.IO
         ///
         /// Our teardown completes the <see cref="PipeReader"/> and disposes the underlying
         /// stream/socket; that surfaces as <see cref="ObjectDisposedException"/>,
-        /// <see cref="OperationCanceledException"/>, or <see cref="InvalidOperationException"/>
-        /// ("reading is not allowed after the reader was completed"). A real connection reset
-        /// surfaces as a <see cref="SocketException"/> (possibly wrapped in an
-        /// <see cref="IOException"/>) and must NOT be treated as a clean close.
+        /// <see cref="OperationCanceledException"/>, <see cref="InvalidOperationException"/>
+        /// ("reading is not allowed after the reader was completed"), or — when a teardown
+        /// recycles a pooled <c>BufferSegment</c> a read is mid-commit on —
+        /// <see cref="ArgumentOutOfRangeException"/> out of <c>BufferSegment.set_End</c> /
+        /// <c>BuffersExtensions.CopyTo</c>. A real connection reset surfaces as a
+        /// <see cref="SocketException"/> (possibly wrapped in an <see cref="IOException"/>) and
+        /// must NOT be treated as a clean close.
         /// </summary>
         private static bool IsOwnShutdownFault(Exception ex)
         {
@@ -698,6 +715,15 @@ namespace Akka.IO
                 case ObjectDisposedException:
                 case OperationCanceledException:
                 case InvalidOperationException:
+                    return true;
+                case ArgumentOutOfRangeException:
+                    // Defense-in-depth: completing/recycling a StreamPipeReader's pooled segment
+                    // while an in-flight read is mid-commit throws ArgumentOutOfRangeException
+                    // (Parameter 'start' / 'length') from BufferSegment.set_End or
+                    // BuffersExtensions.CopyTo. The ReadGate now copies bytes out inside the gate so
+                    // this should no longer be reachable, but if a teardown ever re-opens that
+                    // window it is OUR OWN shutdown corrupting the read — not a peer error — so it
+                    // must become a clean PipeReadCanceled → Closed, never an ErrorClosed.
                     return true;
                 case IOException io when io.InnerException is SocketException:
                     // IOException wrapping a socket error is a genuine transport failure
@@ -793,27 +819,20 @@ namespace Akka.IO
             while (true)
             {
                 var result = await reader.ReadAsync(ct).ConfigureAwait(false);
-                var buffer = result.Buffer;
 
-                // We must copy out of the pipe's pooled segments before AdvanceTo because
-                // Tell is non-blocking — the handler may not have consumed the data by the
-                // time the segments are returned to the pool. Zero-copy reads require an
-                // explicit ack protocol with the handler that's out of scope here.
-                // The result is wrapped in ReadOnlySequence<byte> (single-segment in practice)
-                // so downstream Streams stages can chain sequences without further copies.
-                ReadOnlySequence<byte> data;
-                if (buffer.Length > 0)
-                {
-                    var array = new byte[checked((int)buffer.Length)];
-                    buffer.CopyTo(array);
-                    data = new ReadOnlySequence<byte>(array);
-                }
-                else
-                {
-                    data = ReadOnlySequence<byte>.Empty;
-                }
-
-                reader.AdvanceTo(buffer.End);
+                // The transport's ReadGate has already copied the bytes out of the underlying
+                // StreamPipeReader's pooled segments into a fresh, segment-independent array and
+                // advanced the underlying reader past them — all while the read was still tracked
+                // in-flight, so a concurrent Complete() (close/abort) can never recycle those
+                // segments under us. That means the buffer we get here is safe to hand to the
+                // (non-blocking) handler without a second copy: it is NOT backed by recyclable pool
+                // memory. (Before the gate copied internally, copying here OUTSIDE the gate is what
+                // produced the concurrent-close ArgumentOutOfRangeException → spurious ErrorClosed.)
+                //
+                // AdvanceTo is a no-op on the gate (the underlying reader was already advanced
+                // inside it); we call it to honour the PipeReader read/advance contract.
+                var data = result.Buffer;
+                reader.AdvanceTo(data.End);
 
                 if (data.Length > 0 || result.IsCompleted || result.IsCanceled)
                     return new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled);
