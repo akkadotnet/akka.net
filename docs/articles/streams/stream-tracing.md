@@ -7,6 +7,13 @@ title: Stream Tracing with OpenTelemetry
 
 Akka.Streams can propagate [OpenTelemetry](https://opentelemetry.io/) trace context through stream pipelines. When enabled, each stage in a graph emits a `System.Diagnostics.Activity` span parented to the producer's trace. This works across fan-in merges, fan-out broadcasts, and async stage boundaries where `AsyncLocal<Activity>` would normally be lost.
 
+## Watch the Demo
+
+<a href="https://www.youtube.com/watch?v=lUFstRtj5zc" target="_blank">
+  <img src="https://img.youtube.com/vi/lUFstRtj5zc/maxresdefault.jpg" alt="Debug Akka.Streams in Production with OpenTelemetry" style="max-width: 100%; border-radius: 8px;" />
+</a>
+<p style="margin-top: 8px;"><a href="https://www.youtube.com/watch?v=lUFstRtj5zc" target="_blank">▶ Watch on YouTube — Debug Akka.Streams in Production with OpenTelemetry</a></p>
+
 ## Enabling Stream Tracing
 
 Stream tracing is opt-in. Register the `"Akka.Streams"` `ActivitySource` with your OpenTelemetry `TracerProvider`:
