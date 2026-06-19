@@ -283,10 +283,15 @@ namespace Akka.Remote.Tests.Transport
                 var c1 = await t1.Listen();
                 c1.Item2.SetResult(new ActorAssociationEventListener(p1));
 
-                // t1 --> t2 association
+                // t1 --> nowhere: target a valid (0-65535) port where nothing is listening so the
+                // outbound connect fails. Offset down when near the top of the ephemeral range so we
+                // never exceed IPEndPoint.MaxPort (65535) — Windows' dynamic range tops out at 65535,
+                // so a blind "+ 100" can overflow and throw ArgumentOutOfRangeException instead.
+                var boundPort = c1.Item1.Port!.Value;
+                var deadPort = boundPort > 65435 ? boundPort - 100 : boundPort + 100;
                 await Assert.ThrowsAsync<InvalidAssociationException>(async () =>
                 {
-                    var a = await t1.Associate(c1.Item1.WithPort(c1.Item1.Port + 100));
+                    var a = await t1.Associate(c1.Item1.WithPort(deadPort));
                 });
 
 
