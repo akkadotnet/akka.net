@@ -7,6 +7,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Data.SQLite" Version="8.0.4" />
+        <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
     </ItemGroup>
     
     <ItemGroup>
