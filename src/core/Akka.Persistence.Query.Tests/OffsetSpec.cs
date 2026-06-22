@@ -11,6 +11,7 @@ using System.Linq;
 using FluentAssertions;
 using Xunit;
 
+#nullable enable
 namespace Akka.Persistence.Query.Tests
 {
     public class OffsetSpec

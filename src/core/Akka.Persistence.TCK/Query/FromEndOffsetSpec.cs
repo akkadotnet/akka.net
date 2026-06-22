@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Akka;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Query;
@@ -36,7 +38,9 @@ namespace Akka.Persistence.TCK.Query
     /// <para>
     /// Only read journals that support <see cref="T:Akka.Persistence.Query.FromEnd"/> should inherit from this spec.
     /// Backends that cannot resolve a from-the-end position (e.g. those without a global ordering) should not opt in.
-    /// Individual tests are <c>virtual</c> so a backend can override or skip the dimensions it does not implement.
+    /// A backend must also implement the <c>current</c> counterpart of every query it supports here, since the spec
+    /// uses the current queries to confirm writes are visible before resolving a from-end window. Individual tests are
+    /// <c>virtual</c> so a backend can override or skip the dimensions it does not implement.
     /// </para>
     /// </summary>
     public abstract class FromEndOffsetSpec : XTestKit
@@ -58,7 +62,7 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = RequireQuery<ICurrentEventsByTagQuery>();
             await PersistInterleavedFixtureAsync();
-            await WaitForTagEventsAsync(queries, "green", GreenEvents.Length);
+            await WaitForVisibleAsync(() => queries.CurrentEventsByTag("green", NoOffset()), GreenEvents.Length);
 
             var probe = queries.CurrentEventsByTag("green", FromEnd(2))
                 .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -74,7 +78,7 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = RequireQuery<ICurrentEventsByTagQuery>();
             await PersistInterleavedFixtureAsync();
-            await WaitForTagEventsAsync(queries, "green", GreenEvents.Length);
+            await WaitForVisibleAsync(() => queries.CurrentEventsByTag("green", NoOffset()), GreenEvents.Length);
 
             var probe = queries.CurrentEventsByTag("green", FromEnd(100))
                 .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -97,6 +101,26 @@ namespace Akka.Persistence.TCK.Query
             await probe.ExpectCompleteAsync();
         }
 
+        [Fact]
+        public virtual async Task ReadJournal_query_CurrentEventsByTag_with_FromEnd_should_resolve_a_deep_window_in_a_long_history()
+        {
+            var queries = RequireQuery<ICurrentEventsByTagQuery>();
+            // a long single-writer history so the from-end resolution must skip far into the stream, exercising the
+            // "start = count - N" arithmetic at depth and a long forward replay (not just the small interleaved fixture)
+            var a = Sys.ActorOf(Query.TestActor.Props("a"));
+            const int total = 25;
+            for (var i = 1; i <= total; i++)
+                await PersistAsync(a, $"a green apple {i}");
+            await WaitForVisibleAsync(() => queries.CurrentEventsByTag("green", NoOffset()), total);
+
+            var probe = queries.CurrentEventsByTag("green", FromEnd(4))
+                .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
+            probe.Request(20);
+            for (var seqNr = total - 4 + 1; seqNr <= total; seqNr++)
+                await ExpectEnvelopeAsync(probe, "a", seqNr);
+            await probe.ExpectCompleteAsync();
+        }
+
         #endregion
 
         #region by-tag, live
@@ -105,11 +129,11 @@ namespace Akka.Persistence.TCK.Query
         public virtual async Task ReadJournal_live_query_EventsByTag_with_FromEnd_should_return_last_N_then_new_events()
         {
             var queries = RequireQuery<IEventsByTagQuery>();
-            var (_, _, c) = await PersistInterleavedFixtureAsync();
-
-            // stabilize the from-end window before materializing, so the initial batch is exactly the last N
-            if (ReadJournal is ICurrentEventsByTagQuery currentQueries)
-                await WaitForTagEventsAsync(currentQueries, "green", GreenEvents.Length);
+            // the current counterpart is required to deterministically stabilize the from-end window: the window is
+            // resolved once at materialization, so all fixture writes must be visible to the read side beforehand
+            var currentQueries = RequireQuery<ICurrentEventsByTagQuery>();
+            var actors = await PersistInterleavedFixtureAsync();
+            await WaitForVisibleAsync(() => currentQueries.CurrentEventsByTag("green", NoOffset()), GreenEvents.Length);
 
             var probe = queries.EventsByTag("green", FromEnd(2))
                 .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -118,7 +142,7 @@ namespace Akka.Persistence.TCK.Query
             await ExpectEnvelopeAsync(probe, "c", 2);
 
             // a live query must continue to observe newly-persisted matching events past the initial window
-            await PersistAsync(c, "a green pear");
+            await PersistAsync(actors["c"], "a green pear");
             await ExpectEnvelopeAsync(probe, "c", 3);
             probe.Cancel();
         }
@@ -132,7 +156,7 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = RequireQuery<ICurrentAllEventsQuery>();
             await PersistInterleavedFixtureAsync();
-            await WaitForAllEventsAsync(queries, AllEvents.Length);
+            await WaitForVisibleAsync(() => queries.CurrentAllEvents(NoOffset()), AllEvents.Length);
 
             var probe = queries.CurrentAllEvents(FromEnd(2))
                 .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -148,7 +172,7 @@ namespace Akka.Persistence.TCK.Query
         {
             var queries = RequireQuery<ICurrentAllEventsQuery>();
             await PersistInterleavedFixtureAsync();
-            await WaitForAllEventsAsync(queries, AllEvents.Length);
+            await WaitForVisibleAsync(() => queries.CurrentAllEvents(NoOffset()), AllEvents.Length);
 
             var probe = queries.CurrentAllEvents(FromEnd(100))
                 .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -177,10 +201,10 @@ namespace Akka.Persistence.TCK.Query
         public virtual async Task ReadJournal_live_query_AllEvents_with_FromEnd_should_return_last_N_then_new_events()
         {
             var queries = RequireQuery<IAllEventsQuery>();
-            var (a, _, _) = await PersistInterleavedFixtureAsync();
-
-            if (ReadJournal is ICurrentAllEventsQuery currentQueries)
-                await WaitForAllEventsAsync(currentQueries, AllEvents.Length);
+            // see the by-tag live test: the current counterpart stabilizes the from-end window before materialization
+            var currentQueries = RequireQuery<ICurrentAllEventsQuery>();
+            var actors = await PersistInterleavedFixtureAsync();
+            await WaitForVisibleAsync(() => currentQueries.CurrentAllEvents(NoOffset()), AllEvents.Length);
 
             var probe = queries.AllEvents(FromEnd(2))
                 .RunWith(this.SinkProbe<EventEnvelope>(), Materializer);
@@ -189,7 +213,7 @@ namespace Akka.Persistence.TCK.Query
             await ExpectEnvelopeAsync(probe, "c", 2);
 
             // a live all-events query must keep emitting newly-persisted events (tagged or not) past the window
-            await PersistAsync(a, "brand new event");
+            await PersistAsync(actors["a"], "brand new event");
             await ExpectEnvelopeAsync(probe, "a", 4);
             probe.Cancel();
         }
@@ -204,27 +228,26 @@ namespace Akka.Persistence.TCK.Query
             var tagQueries = RequireQuery<ICurrentEventsByTagQuery>();
             var allQueries = RequireQuery<ICurrentAllEventsQuery>();
             await PersistInterleavedFixtureAsync();
-            await WaitForAllEventsAsync(allQueries, AllEvents.Length);
+            // stabilize BOTH read paths: the all-events index and the (separately maintained) green tag index can
+            // settle independently, so waiting only for all-events would let the green window resolve against a
+            // partial tag set on backends whose tag projection lags the global ordering
+            await WaitForVisibleAsync(() => allQueries.CurrentAllEvents(NoOffset()), AllEvents.Length);
+            await WaitForVisibleAsync(() => tagQueries.CurrentEventsByTag("green", NoOffset()), GreenEvents.Length);
 
             var greenLastTwo = await tagQueries.CurrentEventsByTag("green", FromEnd(2))
                 .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
             var allLastTwo = await allQueries.CurrentAllEvents(FromEnd(2))
                 .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
 
+            var green = greenLastTwo.Select(e => (e.PersistenceId, e.SequenceNr)).ToArray();
+            var all = allLastTwo.Select(e => (e.PersistenceId, e.SequenceNr)).ToArray();
+
             // "last 2 green" is resolved against the per-tag count → the last two *tagged* events...
-            Assert.Equal(
-                new[] { ("b", 2L), ("c", 2L) },
-                greenLastTwo.Select(e => (e.PersistenceId, e.SequenceNr)).ToArray());
-
+            Assert.Equal(new[] { ("b", 2L), ("c", 2L) }, green);
             // ...whereas "last 2 of everything" is resolved against the total count → includes the untagged a-3.
-            Assert.Equal(
-                new[] { ("a", 3L), ("c", 2L) },
-                allLastTwo.Select(e => (e.PersistenceId, e.SequenceNr)).ToArray());
-
+            Assert.Equal(new[] { ("a", 3L), ("c", 2L) }, all);
             // a backend that resolved the by-tag window against the global count would return the same window for both
-            Assert.NotEqual(
-                allLastTwo.Select(e => (e.PersistenceId, e.SequenceNr)).ToArray(),
-                greenLastTwo.Select(e => (e.PersistenceId, e.SequenceNr)).ToArray());
+            Assert.NotEqual(all, green);
         }
 
         #endregion
@@ -232,51 +255,72 @@ namespace Akka.Persistence.TCK.Query
         #region fixture
 
         /// <summary>
-        /// The events of <see cref="PersistInterleavedFixtureAsync"/> in global (ordering) order, as
-        /// (persistenceId, sequenceNr) pairs. Three writers are interleaved and several events are untagged.
+        /// The single source of truth for the interleaved fixture: (persistenceId, event) pairs in persist order.
+        /// Three writers (a/b/c) are interleaved and several events are untagged. Tagging is by substring via
+        /// <c>ColorFruitTagger</c>, so any event whose text contains "green" is part of the green tag set.
+        /// </summary>
+        private static readonly (string PersistenceId, string Event)[] Fixture =
+        {
+            ("a", "a green apple"),
+            ("b", "a black car"),
+            ("a", "just plain text"),
+            ("c", "a green banana"),
+            ("b", "a green leaf"),
+            ("a", "more plain text"),
+            ("c", "a green cucumber"),
+        };
+
+        /// <summary>
+        /// <see cref="Fixture"/> enriched with the per-persistence-id sequence number each write produces.
+        /// </summary>
+        private static readonly (string PersistenceId, long SequenceNr, string Event)[] EnrichedFixture = EnrichFixture();
+
+        /// <summary>
+        /// Every fixture event in global (ordering) order, as (persistenceId, sequenceNr) pairs.
         /// </summary>
         protected static readonly (string PersistenceId, long SequenceNr)[] AllEvents =
-        {
-            ("a", 1), // "a green apple"    [green]
-            ("b", 1), // "a black car"      [black]
-            ("a", 2), // "just plain text"  [untagged]
-            ("c", 1), // "a green banana"   [green]
-            ("b", 2), // "a green leaf"     [green]
-            ("a", 3), // "more plain text"  [untagged]
-            ("c", 2), // "a green cucumber" [green]
-        };
+            EnrichedFixture.Select(e => (e.PersistenceId, e.SequenceNr)).ToArray();
 
         /// <summary>
-        /// The subset of <see cref="AllEvents"/> tagged "green", in global order.
+        /// The subset of <see cref="AllEvents"/> tagged "green", in global order — derived from the fixture text so it
+        /// can never drift from the writes.
         /// </summary>
         protected static readonly (string PersistenceId, long SequenceNr)[] GreenEvents =
+            EnrichedFixture.Where(e => e.Event.Contains("green")).Select(e => (e.PersistenceId, e.SequenceNr)).ToArray();
+
+        private static (string PersistenceId, long SequenceNr, string Event)[] EnrichFixture()
         {
-            ("a", 1),
-            ("c", 1),
-            ("b", 2),
-            ("c", 2),
-        };
+            var seqByPid = new Dictionary<string, long>();
+            var enriched = new List<(string, long, string)>(Fixture.Length);
+            foreach (var (pid, evt) in Fixture)
+            {
+                var next = (seqByPid.TryGetValue(pid, out var s) ? s : 0) + 1;
+                seqByPid[pid] = next;
+                enriched.Add((pid, next, evt));
+            }
+
+            return enriched.ToArray();
+        }
 
         /// <summary>
-        /// Persists an interleaved, multi-persistence-id stream that mixes "green"-tagged and untagged events, awaiting
-        /// each write's acknowledgement so the resulting global ordering is deterministic. Returns the three writers so
-        /// live tests can append further events.
+        /// Persists the interleaved fixture, awaiting each write's acknowledgement so the resulting global ordering is
+        /// deterministic. Returns the writers keyed by persistence id so live tests can append further events.
         /// </summary>
-        private async Task<(IActorRef a, IActorRef b, IActorRef c)> PersistInterleavedFixtureAsync()
+        private async Task<IReadOnlyDictionary<string, IActorRef>> PersistInterleavedFixtureAsync()
         {
-            var a = Sys.ActorOf(Query.TestActor.Props("a"));
-            var b = Sys.ActorOf(Query.TestActor.Props("b"));
-            var c = Sys.ActorOf(Query.TestActor.Props("c"));
+            var actors = new Dictionary<string, IActorRef>();
+            foreach (var (pid, evt) in Fixture)
+            {
+                if (!actors.TryGetValue(pid, out var actor))
+                {
+                    actor = Sys.ActorOf(Query.TestActor.Props(pid));
+                    actors[pid] = actor;
+                }
 
-            await PersistAsync(a, "a green apple");
-            await PersistAsync(b, "a black car");
-            await PersistAsync(a, "just plain text");
-            await PersistAsync(c, "a green banana");
-            await PersistAsync(b, "a green leaf");
-            await PersistAsync(a, "more plain text");
-            await PersistAsync(c, "a green cucumber");
+                await PersistAsync(actor, evt);
+            }
 
-            return (a, b, c);
+            return actors;
         }
 
         private async Task PersistAsync(IActorRef pa, string evt)
@@ -294,22 +338,15 @@ namespace Akka.Persistence.TCK.Query
             return envelope;
         }
 
-        private async Task WaitForTagEventsAsync(ICurrentEventsByTagQuery queries, string tag, int expectedCount)
+        /// <summary>
+        /// Polls the supplied current-query until at least <paramref name="expectedCount"/> events are visible, so a
+        /// subsequent from-end query resolves its window against a settled read model.
+        /// </summary>
+        private async Task WaitForVisibleAsync(Func<Source<EventEnvelope, NotUsed>> query, int expectedCount)
         {
             await AwaitConditionAsync(async () =>
             {
-                var events = await queries.CurrentEventsByTag(tag, NoOffset())
-                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
-                return events.Count >= expectedCount;
-            }, max: TimeSpan.FromSeconds(10));
-        }
-
-        private async Task WaitForAllEventsAsync(ICurrentAllEventsQuery queries, int expectedCount)
-        {
-            await AwaitConditionAsync(async () =>
-            {
-                var events = await queries.CurrentAllEvents(NoOffset())
-                    .RunWith(Sink.Seq<EventEnvelope>(), Materializer);
+                var events = await query().RunWith(Sink.Seq<EventEnvelope>(), Materializer);
                 return events.Count >= expectedCount;
             }, max: TimeSpan.FromSeconds(10));
         }

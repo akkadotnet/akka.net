@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
+#nullable enable
 namespace Akka.Persistence.Query.Tests
 {
     public class OffsetCompareSpecs
