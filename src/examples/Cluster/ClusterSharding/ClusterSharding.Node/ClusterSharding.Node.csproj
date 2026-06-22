@@ -4,12 +4,15 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>$(NetTestVersion)</TargetFramework>
     <IsPackable>false</IsPackable>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\contrib\cluster\Akka.Cluster.Sharding\Akka.Cluster.Sharding.csproj" />
     <ProjectReference Include="..\..\..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
   </ItemGroup>
 
   <ItemGroup>
