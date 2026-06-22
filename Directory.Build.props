@@ -45,7 +45,7 @@
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>
     <MsExtVersion>[6.0.*,)</MsExtVersion>
-    <MsExtTestVersion>10.0.5</MsExtTestVersion>
+    <MsExtTestVersion>10.0.9</MsExtTestVersion>
     <AkkaAnalyzerVersion>0.3.3</AkkaAnalyzerVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
