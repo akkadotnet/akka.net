@@ -654,6 +654,7 @@ To [see the full set of changes in Akka.NET v1.5.48, click here](https://github.
 
 * Core: Add `ILoggingAdapter` context enrichment, explicit scopes, and bracketed context output in StandardOutLogger and Xunit logger
 * Akka.Streams: Add cancellation-aware `Source.Queue` offers so backpressured pending offers can be canceled without later emitting the canceled element.
+* Akka.Streams: Fixed `Source.From(IAsyncEnumerable<T>)` cleanup so cancellation waits for any in-flight `MoveNextAsync()` before disposing the async enumerator and its cancellation token source.
 * Build: Bump `MessagePack` to 3.1.7 to address [CVE-2026-48109](https://github.com/advisories/GHSA-hv8m-jj95-wg3x) (LZ4 decompression out-of-bounds read)
 
 #### 1.5.47 August 12th, 2025 ####

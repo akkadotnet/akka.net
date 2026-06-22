@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="HubSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -319,6 +319,54 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public async Task BroadcastHub_must_deliver_all_elements_to_many_consumers()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                const int consumerCount = 200;
+                const int messageCount = 2000;
+
+                var source = Source.From(Enumerable.Range(0, messageCount))
+                    .RunWith(BroadcastHub.Sink<int>(consumerCount, 1024), Materializer);
+
+                var consumers = Enumerable.Range(0, consumerCount)
+                    .Select(_ => source.RunWith(OrderedCountSink(), Materializer))
+                    .ToArray();
+
+                var results = await Task.WhenAll(consumers).WaitAsync(20.Seconds());
+                results.Should().OnlyContain(result => result.Count == messageCount);
+            }, Materializer);
+        }
+
+        [Fact]
+        public async Task BroadcastHub_must_handle_many_consumers_when_some_cancel_mid_stream()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                const int consumerCount = 64;
+                const int cancellingConsumers = 16;
+                const int messageCount = 512;
+                const int cancelAfter = 64;
+
+                var source = Source.From(Enumerable.Range(0, messageCount))
+                    .RunWith(BroadcastHub.Sink<int>(consumerCount, 128), Materializer);
+
+                var consumers = Enumerable.Range(0, consumerCount)
+                    .Select(i =>
+                    {
+                        var consumerSource = i < cancellingConsumers ? source.Take(cancelAfter) : source;
+                        return consumerSource.RunWith(OrderedCountSink(), Materializer);
+                    })
+                    .ToArray();
+
+                var results = await Task.WhenAll(consumers).WaitAsync(10.Seconds());
+
+                results.Take(cancellingConsumers).Should().OnlyContain(result => result.Count == cancelAfter);
+                results.Skip(cancellingConsumers).Should().OnlyContain(result => result.Count == messageCount);
+            }, Materializer);
+        }
+
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -616,14 +664,20 @@ namespace Akka.Streams.Tests.Dsl
                 var upstream = this.CreatePublisherProbe<int>();
                 var hubSource = Source.FromPublisher(upstream).RunWith(BroadcastHub.Sink<int>(4), Materializer);
                 var downstream = this.CreateSubscriberProbe<int>();
-                
-                hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
+
+                // Connect the active downstream subscriber first and ensure it's subscribed
                 hubSource.RunWith(Sink.FromSubscriber(downstream), Materializer);
-                
                 await downstream.EnsureSubscriptionAsync();
-                
                 await downstream.RequestAsync(10);
+
+                // Now connect the immediately-cancelling sink - this tests that the hub
+                // handles a cancelled consumer gracefully without affecting other consumers
+                hubSource.RunWith(Sink.Cancelled<int>(), Materializer);
+
+                // Wait for upstream to receive demand before sending
                 await upstream.ExpectRequestAsync();
+
+                // Verify elements still flow to the active downstream
                 await upstream.SendNextAsync(1);
                 await downstream.ExpectNextAsync(1);
                 await upstream.SendNextAsync(2);
@@ -634,7 +688,7 @@ namespace Akka.Streams.Tests.Dsl
                 await downstream.ExpectNextAsync(4);
                 await upstream.SendNextAsync(5);
                 await downstream.ExpectNextAsync(5);
-                
+
                 await upstream.SendCompleteAsync();
                 await downstream.ExpectCompleteAsync();
             }, Materializer);
@@ -986,6 +1040,26 @@ namespace Akka.Streams.Tests.Dsl
                     await source.RunWith(Sink.Seq<int>(), Materializer);
                 }).Should().ThrowAsync<TestException>().WithMessage("Fail!").WaitAsync(3.Seconds());
             }, Materializer);
+        }
+
+        private static Sink<int, Task<OrderedCount>> OrderedCountSink()
+            => Sink.Aggregate<int, OrderedCount>(new OrderedCount(), (count, element) =>
+            {
+                count.Observe(element);
+                return count;
+            });
+
+        private sealed class OrderedCount
+        {
+            public int Count { get; private set; }
+
+            public void Observe(int element)
+            {
+                if (element != Count)
+                    throw new InvalidOperationException($"Expected element [{Count}], but received [{element}].");
+
+                Count++;
+            }
         }
     }
 
