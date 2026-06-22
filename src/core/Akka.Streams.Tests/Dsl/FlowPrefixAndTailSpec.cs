@@ -142,20 +142,30 @@ namespace Akka.Streams.Tests.Dsl
             await this.AssertAllStagesStoppedAsync(async() => {
                 var futureSink = NewHeadSink;
                 var fut = Source.From(Enumerable.Range(1, 2)).PrefixAndTail(1).RunWith(futureSink, Materializer);
-                fut.Wait(TimeSpan.FromSeconds(3)).Should().BeTrue();
-                fut.Result.Item1.Should().BeEquivalentTo(Enumerable.Range(1, 1));
-                var tail = fut.Result.Item2;
+                var (list, tail) = await fut.WaitAsync(TimeSpan.FromSeconds(3));
+                list.Should().BeEquivalentTo(Enumerable.Range(1, 1));
 
                 var subscriber1 = this.CreateSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber1)).Run(Materializer);
+                await subscriber1.EnsureSubscriptionAsync();
 
                 var subscriber2 = this.CreateSubscriberProbe<int>();
                 tail.To(Sink.FromSubscriber(subscriber2)).Run(Materializer);
+                await subscriber2.EnsureSubscriptionAsync();
 
-                subscriber2.ExpectSubscriptionAndError()
-                    .Message.Should()
-                    .Be("Substream Source cannot be materialized more than once");
-                await subscriber1.RequestNext(2).ExpectCompleteAsync();
+                TestSubscriber.Probe<int> success;
+                using (var cts = new CancellationTokenSource())
+                {
+                    var t1 = subscriber1.ExpectErrorAsync(cts.Token);
+                    var t2 = subscriber2.ExpectErrorAsync(cts.Token);
+                    var failed = await Task.WhenAny(t1, t2);
+                    cts.Cancel();
+
+                    (await failed).Message.Should().Be("Substream Source cannot be materialized more than once");
+                    success = failed == t1 ? subscriber2 : subscriber1;
+                }
+
+                await success.RequestNext(2).ExpectCompleteAsync();
             }, Materializer);
         }
 

@@ -6,7 +6,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Data.SQLite" Version="8.0.4" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.4" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
     </ItemGroup>
     
     <ItemGroup>

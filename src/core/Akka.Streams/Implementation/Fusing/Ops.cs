@@ -4285,14 +4285,22 @@ namespace Akka.Streams.Implementation.Fusing
                             }
                             catch (Exception ex)
                             {
-                                _promise.TrySetException(ex);
+                                if (_promise.TrySetException(ex))
+                                {
+                                    // The materialized task may be discarded; observe the fault to avoid a later UnobservedTaskException.
+                                    _ = _promise.Task.Exception;
+                                }
                                 FailStage(ex);
                             }
                         }
                     }
                     else
                     {
-                        _promise.TrySetException(result.Exception);
+                        if (_promise.TrySetException(result.Exception))
+                        {
+                            // The materialized task may be discarded; observe the fault to avoid a later UnobservedTaskException.
+                            _ = _promise.Task.Exception;
+                        }
                         FailStage(result.Exception);
                     }
                 });
@@ -4304,7 +4312,11 @@ namespace Akka.Streams.Implementation.Fusing
                 }
                 catch (Exception ex)
                 {
-                    _promise.TrySetException(ex);
+                    if (_promise.TrySetException(ex))
+                    {
+                        // The materialized task may be discarded; observe the fault to avoid a later UnobservedTaskException.
+                        _ = _promise.Task.Exception;
+                    }
                     FailStage(ex);
                 }
             }
@@ -4325,7 +4337,11 @@ namespace Akka.Streams.Implementation.Fusing
 
             public override void OnUpstreamFailure(Exception ex)
             {
-                _promise.TrySetException(ex);
+                if (_promise.TrySetException(ex))
+                {
+                    // The materialized task may be discarded; observe the fault to avoid a later UnobservedTaskException.
+                    _ = _promise.Task.Exception;
+                }
                 base.OnUpstreamFailure(ex);
             }
 

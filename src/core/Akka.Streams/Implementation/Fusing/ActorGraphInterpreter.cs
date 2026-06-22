@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -267,7 +268,7 @@ namespace Akka.Streams.Implementation.Fusing
             {
                 case ActorGraphInterpreter.OnNext onNext:
                     if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnNext {onNext.Event} id={onNext.Id}");
-                    _inputs[onNext.Id].OnNext(onNext.Event);
+                    _inputs[onNext.Id].OnNext(onNext.Event, onNext.Context);
                     return RunBatch(eventLimit);
 
                 case ActorGraphInterpreter.RequestMore requestMore:
@@ -524,16 +525,36 @@ namespace Akka.Streams.Implementation.Fusing
             /// </summary>
             public readonly object Event;
             /// <summary>
+            /// The producer's trace context captured at the upstream boundary, carried across the
+            /// actor hop so the downstream stage span parents back to the producer trace. Null when
+            /// tracing is not in use or the element carried no context. See issue #8243.
+            /// Internal so the public boundary-event surface is unchanged.
+            /// </summary>
+            internal readonly ActivityContext? Context;
+            /// <summary>
             /// TBD
             /// </summary>
             /// <param name="shell">TBD</param>
             /// <param name="id">TBD</param>
             /// <param name="event">TBD</param>
             public OnNext(GraphInterpreterShell shell, int id, object @event)
+                : this(shell, id, @event, null)
+            {
+            }
+
+            /// <summary>
+            /// TBD
+            /// </summary>
+            /// <param name="shell">TBD</param>
+            /// <param name="id">TBD</param>
+            /// <param name="event">TBD</param>
+            /// <param name="context">The producer trace context to carry across the boundary.</param>
+            internal OnNext(GraphInterpreterShell shell, int id, object @event, ActivityContext? context)
             {
                 Shell = shell;
                 Id = id;
                 Event = @event;
+                Context = context;
             }
 
             /// <summary>
@@ -886,6 +907,18 @@ namespace Akka.Streams.Implementation.Fusing
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
                 _parent.Tell(new OnNext(_shell, _id, element));
             }
+
+            /// <summary>
+            /// Internal boundary-only overload that carries the producer's trace context across the
+            /// actor hop (issue #8243). Used in place of the Reactive Streams <see cref="OnNext(T)"/>
+            /// only when the producer end is an in-process Akka boundary, so the public RS contract
+            /// is unaffected.
+            /// </summary>
+            internal void OnNext(T element, ActivityContext? context)
+            {
+                ReactiveStreamsCompliance.RequireNonNullElement(element);
+                _parent.Tell(new OnNext(_shell, _id, element, context));
+            }
         }
 
         /// <summary>
@@ -927,6 +960,10 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly int _id;
 
             private readonly object[] _inputBuffer;
+            // Parallel to _inputBuffer, holds the producer trace context carried across the actor
+            // boundary for each buffered element (issue #8243). Lazily allocated only when tracing is
+            // active, so the non-traced hot path allocates nothing.
+            private ActivityContext?[] _inputContextBuffer;
             private readonly int _indexMask;
 
             private ISubscription _upstream;
@@ -1040,13 +1077,18 @@ namespace Akka.Streams.Implementation.Fusing
             /// </summary>
             /// <param name="element">TBD</param>
             /// <exception cref="IllegalStateException">TBD</exception>
-            public void OnNext(object element)
+            public void OnNext(object element) => OnNext(element, null);
+
+            internal void OnNext(object element, ActivityContext? context)
             {
                 if (!_upstreamCompleted)
                 {
                     if (_inputBufferElements == _size)
                         throw new IllegalStateException("Input buffer overrun");
-                    _inputBuffer[(_nextInputElementCursor + _inputBufferElements) & _indexMask] = element;
+                    var idx = (_nextInputElementCursor + _inputBufferElements) & _indexMask;
+                    _inputBuffer[idx] = element;
+                    if (context.HasValue)
+                        (_inputContextBuffer ??= new ActivityContext?[_size])[idx] = context;
                     _inputBufferElements++;
                     if (IsAvailable(_outlet))
                         Push(_outlet, Dequeue());
@@ -1075,6 +1117,20 @@ namespace Akka.Streams.Implementation.Fusing
                     throw new IllegalStateException("Internal queue must never contain a null");
                 _inputBuffer[_nextInputElementCursor] = null;
 
+                // Restore this element's producer trace context (issue #8243) so the immediately
+                // following Push(_outlet, ...) arms the downstream connection's SlotContext with it,
+                // re-parenting downstream stage spans to the producer trace across the boundary.
+                // Always null the slot, but only arm when there is a listener: Push only consumes the
+                // pending context under HasListeners(), so arming it while no one is listening would
+                // leave it set to bleed onto a later element's push.
+                if (_inputContextBuffer != null)
+                {
+                    var context = _inputContextBuffer[_nextInputElementCursor];
+                    _inputContextBuffer[_nextInputElementCursor] = null;
+                    if (context.HasValue && StreamsDiagnostics.ActivitySource.HasListeners())
+                        SetFanInTraceContext(_outlet, context.Value, null);
+                }
+
                 _batchRemaining--;
                 if (_batchRemaining == 0 && !_upstreamCompleted)
                 {
@@ -1090,6 +1146,10 @@ namespace Akka.Streams.Implementation.Fusing
             private void Clear()
             {
                 _inputBuffer.Initialize();
+                // Array.Initialize() is a no-op for Nullable<ActivityContext>[]; use Array.Clear to
+                // actually reset the slots so a discarded element's context can't survive (issue #8243).
+                if (_inputContextBuffer != null)
+                    Array.Clear(_inputContextBuffer, 0, _inputContextBuffer.Length);
                 _inputBufferElements = 0;
             }
 
@@ -1145,7 +1205,14 @@ namespace Akka.Streams.Implementation.Fusing
 
                 public override void OnPush()
                 {
-                    _that.OnNext(_that.Grab(_that._inlet));
+                    // Capture the producer's trace context (issue #8243) before Grab clears it, so
+                    // the OnNext that crosses the actor boundary can carry it to the downstream shell.
+                    // Reading it only when there is a listener keeps the non-traced path allocation-free.
+                    var context = StreamsDiagnostics.ActivitySource.HasListeners()
+                        ? _that.CurrentInletTraceContext(_that._inlet)
+                        : (ActivityContext?)null;
+                    _that.OnNext(_that.Grab(_that._inlet), context);
+
                     if (_that.DownstreamCompleted)
                         _that.Cancel(_that._inlet, _that._downstreamCompletionCause.Value);
                     else if (_that._downstreamDemand > 0)
@@ -1287,10 +1354,21 @@ namespace Akka.Streams.Implementation.Fusing
                 }
             }
 
-            private void OnNext(T element)
+            private void OnNext(T element) => OnNext(element, null);
+
+            private void OnNext(T element, ActivityContext? context)
             {
                 _downstreamDemand--;
-                ReactiveStreamsCompliance.TryOnNext(_subscriber, element);
+                // When the downstream is an in-process Akka boundary, carry the trace context across
+                // the actor hop (issue #8243). External Reactive Streams subscribers go through the
+                // standard interface, which has no context channel. Note: only the direct
+                // BoundarySubscriber<T> case is covered — async boundaries bridged through a
+                // VirtualProcessor or an external IProcessor fall through to TryOnNext and do not yet
+                // carry context (tracked under #8243).
+                if (context.HasValue && _subscriber is BoundarySubscriber<T> boundary)
+                    boundary.OnNext(element, context);
+                else
+                    ReactiveStreamsCompliance.TryOnNext(_subscriber, element);
             }
 
             private void Complete()
