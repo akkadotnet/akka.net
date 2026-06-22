@@ -45,5 +45,21 @@ namespace Akka.Persistence.Query.Tests
             compare1.Should().Throw<InvalidOperationException>();
             compare2.Should().Throw<InvalidOperationException>();
         }
+
+        [Fact]
+        public void FromEnd_offset_should_throw_on_compare()
+        {
+            // FromEnd is a relative, input-only offset with no position in the stream, so it cannot be
+            // ordered against anything, including another FromEnd.
+            Offset fromEnd = new FromEnd(5);
+
+            Action compareToFromEnd = () => fromEnd.CompareTo(new FromEnd(5));
+            Action compareToSequence = () => fromEnd.CompareTo(new Sequence(1L));
+            Action sequenceCompareToFromEnd = () => new Sequence(1L).CompareTo(fromEnd);
+
+            compareToFromEnd.Should().Throw<InvalidOperationException>();
+            compareToSequence.Should().Throw<InvalidOperationException>();
+            sequenceCompareToFromEnd.Should().Throw<InvalidOperationException>();
+        }
     }
 }
