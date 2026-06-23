@@ -14,19 +14,20 @@ namespace Akka.Persistence.Query.InMemory
 {
     /// <summary>
     /// Base for the InMemory query publishers that supports resolving a <see cref="FromEnd"/> ("last N events")
-    /// offset into a concrete forward start offset. When constructed with a positive from-end count, the publisher
-    /// asks the journal how many events currently match the query (via <see cref="MemoryJournal.SelectEventCount"/>)
-    /// and then begins its normal forward replay at <c>max(0, count - N)</c>. Both the by-tag and all-events
-    /// publishers share this handshake so the resolution logic lives in a single place.
+    /// offset into a concrete forward start offset. When the <see cref="ReplayStart"/> is a from-end start, the
+    /// publisher asks the journal how many events currently match the query (via
+    /// <see cref="MemoryJournal.SelectEventCount"/>) and then begins its normal forward replay at
+    /// <c>max(0, count - N)</c>. Both the by-tag and all-events publishers share this handshake so the resolution
+    /// logic lives in a single place.
     /// </summary>
     internal abstract class FromEndResolvingPublisher : ActorPublisher<EventEnvelope>
     {
-        private readonly int _fromEndCount;
+        private readonly ReplayStart _start;
 
-        protected FromEndResolvingPublisher(int fromOffset, int fromEndCount, string writeJournalPluginId)
+        protected FromEndResolvingPublisher(ReplayStart start, string writeJournalPluginId)
         {
-            CurrentOffset = fromOffset;
-            _fromEndCount = fromEndCount;
+            _start = start;
+            CurrentOffset = start.Offset;
             JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
@@ -36,7 +37,7 @@ namespace Akka.Persistence.Query.InMemory
         /// <summary>
         /// True when this query must resolve a <see cref="FromEnd"/> start position before replaying.
         /// </summary>
-        protected bool IsFromEnd => _fromEndCount > 0;
+        protected bool IsFromEnd => _start.IsFromEnd;
 
         /// <summary>
         /// The tag whose events are counted to resolve the from-end position, or <c>null</c> for all events.
@@ -60,7 +61,7 @@ namespace Akka.Persistence.Query.InMemory
             switch (message)
             {
                 case MemoryJournal.EventCount count:
-                    CurrentOffset = Math.Max(0, count.Count - _fromEndCount);
+                    CurrentOffset = Math.Max(0, count.Count - _start.FromEndCount);
                     ReceiveInitialRequest();
                     return true;
                 case MemoryJournal.EventCountFailure failure:

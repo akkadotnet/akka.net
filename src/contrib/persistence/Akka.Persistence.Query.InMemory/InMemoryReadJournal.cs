@@ -126,9 +126,9 @@ namespace Akka.Persistence.Query.InMemory
         /// </summary>
         public Source<EventEnvelope, NotUsed> CurrentEventsByTag(string tag, Offset offset)
         {
-            var (fromOffset, fromEndCount) = ResolveTagOffset(offset);
+            var start = ResolveTagOffset(offset);
 
-            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, fromOffset, int.MaxValue, fromEndCount, null, _maxBufferSize, _writeJournalPluginId))
+            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, start, int.MaxValue, null, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named($"CurrentEventsByTag-{tag}");
         }
@@ -174,69 +174,54 @@ namespace Akka.Persistence.Query.InMemory
         /// </summary>
         public Source<EventEnvelope, NotUsed> EventsByTag(string tag, Offset offset)
         {
-            var (fromOffset, fromEndCount) = ResolveTagOffset(offset);
+            var start = ResolveTagOffset(offset);
 
-            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, fromOffset, int.MaxValue, fromEndCount, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+            return Source.ActorPublisher<EventEnvelope>(EventsByTagPublisher.Props(tag, start, int.MaxValue, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named($"EventsByTag-{tag}");
         }
 
         public Source<EventEnvelope, NotUsed> AllEvents(Offset offset = null)
         {
-            var (fromOffset, fromEndCount) = ResolveAllEventsOffset(offset);
+            var start = ResolveAllEventsOffset(offset);
 
-            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(fromOffset, fromEndCount, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(start, _refreshInterval, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("AllEvents");
         }
 
         public Source<EventEnvelope, NotUsed> CurrentAllEvents(Offset offset)
         {
-            var (fromOffset, fromEndCount) = ResolveAllEventsOffset(offset);
+            var start = ResolveAllEventsOffset(offset);
 
-            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(fromOffset, fromEndCount, null, _maxBufferSize, _writeJournalPluginId))
+            return Source.ActorPublisher<EventEnvelope>(AllEventsPublisher.Props(start, null, _maxBufferSize, _writeJournalPluginId))
                 .MapMaterializedValue(_ => NotUsed.Instance)
                 .Named("CurrentAllEvents");
         }
 
         /// <summary>
-        /// Resolves a by-tag query offset into a starting offset and, for <see cref="FromEnd"/>, the number of
-        /// events to read from the end of the tagged stream (resolved to a concrete position by the publisher).
+        /// Resolves a by-tag query <see cref="Offset"/> into the <see cref="ReplayStart"/> the publisher replays from.
+        /// A <see cref="FromEnd"/> becomes a deferred "last N" start; the publisher resolves it to a concrete position.
         /// </summary>
-        private static (int fromOffset, int fromEndCount) ResolveTagOffset(Offset offset)
+        private static ReplayStart ResolveTagOffset(Offset offset) => offset switch
         {
-            switch (offset)
-            {
-                case NoOffset:
-                case Sequence { Value: 0 }:
-                    return (0, 0);
-                case Sequence s:
-                    return (checked((int)(s.Value + 1)), 0); // since offset is exclusive
-                case FromEnd fromEnd:
-                    return (0, fromEnd.Count);
-                default:
-                    throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
-            }
-        }
+            NoOffset or Sequence { Value: 0 } => ReplayStart.At(0),
+            Sequence s => ReplayStart.At(checked((int)(s.Value + 1))), // since offset is exclusive
+            FromEnd fromEnd => ReplayStart.LastN(fromEnd.Count),
+            _ => throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets")
+        };
 
         /// <summary>
-        /// Resolves an all-events query offset into a starting offset and, for <see cref="FromEnd"/>, the number of
-        /// events to read from the end of history (resolved to a concrete position by the publisher).
+        /// Resolves an all-events query <see cref="Offset"/> into the <see cref="ReplayStart"/> the publisher replays
+        /// from. A <see cref="FromEnd"/> becomes a deferred "last N" start; the publisher resolves it to a concrete
+        /// position.
         /// </summary>
-        private static (int fromOffset, int fromEndCount) ResolveAllEventsOffset(Offset offset)
+        private static ReplayStart ResolveAllEventsOffset(Offset offset) => offset switch
         {
-            switch (offset)
-            {
-                case null:
-                case NoOffset:
-                    return (0, 0);
-                case Sequence s:
-                    return (checked((int)(s.Value + 1)), 0); // since offset is exclusive
-                case FromEnd fromEnd:
-                    return (0, fromEnd.Count);
-                default:
-                    throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets");
-            }
-        }
+            null or NoOffset => ReplayStart.At(0),
+            Sequence s => ReplayStart.At(checked((int)(s.Value + 1))), // since offset is exclusive
+            FromEnd fromEnd => ReplayStart.LastN(fromEnd.Count),
+            _ => throw new ArgumentException($"InMemoryReadJournal does not support {offset.GetType().Name} offsets")
+        };
     }
 }
