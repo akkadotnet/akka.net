@@ -1,3 +1,22 @@
+#### 1.5.70-beta1 June 23rd, 2026 ####
+
+Akka.NET v1.5.70-beta1 is a beta release with a new `Offset.FromEnd` query offset for Akka.Persistence.Query, bug fixes for `Akka.Streams` async enumerable disposal, and a performance improvement for `BroadcastHub` with high consumer counts.
+
+**Akka.Persistence.Query**
+* [Add `Offset.FromEnd(int count)` — "last-N events" query offset](https://github.com/akkadotnet/akka.net/pull/8245): Introduces `Offset.FromEnd(int count)`, a new query-input-only offset type that begins a read journal query at the Nth event from the end of history rather than from the beginning. The offset is resolved at stream materialization into a concrete `Sequence` start position; no interface changes or wire-format changes are required. Includes opt-in TCK spec (`FromEndOffsetSpec`) for plugin authors.
+
+**Akka.Streams Bug Fixes**
+* [Fix: async enumerable source disposal ordering](https://github.com/akkadotnet/akka.net/pull/8265): Fixes a race in `Source.From(IAsyncEnumerable<T>)` where the underlying enumerator could be disposed before all elements were delivered to downstream, causing `ObjectDisposedException` on high-throughput pipelines.
+
+**Akka.Streams Performance**
+* [Improve BroadcastHub high-consumer wheel performance](https://github.com/akkadotnet/akka.net/pull/8264): Reduces per-element cost in `BroadcastHub` when many consumers are attached by optimizing the internal consumer-wheel iteration, yielding measurable throughput improvements at high fan-out.
+
+1 contributor since release 1.5.69
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 3 | 1438 | 180 | Aaron Stannard |
+
 #### 1.5.69 June 12th, 2026 ####
 
 Akka.NET v1.5.69 is a maintenance release with bug fixes for Akka.DistributedData state propagation, Akka.Core message rejection handling, and Akka.Streams tracing reliability and backpressure cancellation.
