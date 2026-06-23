@@ -1085,6 +1085,18 @@ namespace Akka.Persistence.Journal
             public readonly int HighestOrderingNumber;
             public CurrentPersistenceIds(System.Collections.Generic.IEnumerable<string> allPersistenceIds, int highestOrderingNumber) { }
         }
+        [System.Serializable]
+        public sealed class EventCount : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+        {
+            public EventCount(int count) { }
+            public int Count { get; }
+        }
+        [System.Serializable]
+        public sealed class EventCountFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+        {
+            public EventCountFailure(System.Exception cause) { }
+            public System.Exception Cause { get; }
+        }
         public sealed class EventReplayFailure
         {
             public EventReplayFailure(System.Exception cause) { }
@@ -1155,6 +1167,13 @@ namespace Akka.Persistence.Journal
             public SelectCurrentPersistenceIds(int offset, Akka.Actor.IActorRef replyTo) { }
             public int Offset { get; }
             public Akka.Actor.IActorRef ReplyTo { get; }
+        }
+        [System.Serializable]
+        public sealed class SelectEventCount : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+        {
+            public SelectEventCount(string tag, Akka.Actor.IActorRef replyTo) { }
+            public Akka.Actor.IActorRef ReplyTo { get; }
+            public string Tag { get; }
         }
     }
     public class PersistencePluginProxy : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithTimers, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>

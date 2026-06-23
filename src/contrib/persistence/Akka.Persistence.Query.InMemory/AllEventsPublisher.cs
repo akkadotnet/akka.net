@@ -24,36 +24,32 @@ namespace Akka.Persistence.Query.InMemory
             private Continue() { }
         }
 
-        public static Props Props(int fromOffset, TimeSpan? refreshInterval, int maxBufferSize, string writeJournalPluginId)
+        public static Props Props(ReplayStart start, TimeSpan? refreshInterval, int maxBufferSize, string writeJournalPluginId)
         {
             return refreshInterval.HasValue ?
-                Actor.Props.Create(() => new LiveAllEventsPublisher(fromOffset, refreshInterval.Value, maxBufferSize, writeJournalPluginId)) :
-                Actor.Props.Create(() => new CurrentAllEventsPublisher(fromOffset, maxBufferSize, writeJournalPluginId));
+                Actor.Props.Create(() => new LiveAllEventsPublisher(start, refreshInterval.Value, maxBufferSize, writeJournalPluginId)) :
+                Actor.Props.Create(() => new CurrentAllEventsPublisher(start, maxBufferSize, writeJournalPluginId));
         }
     }
 
-    internal abstract class AbstractAllEventsPublisher : ActorPublisher<EventEnvelope>
+    internal abstract class AbstractAllEventsPublisher : FromEndResolvingPublisher
     {
         private ILoggingAdapter _log;
-        protected int CurrentOffset;
 
-        protected AbstractAllEventsPublisher(int fromOffset, int maxBufferSize, string writeJournalPluginId)
+        protected AbstractAllEventsPublisher(ReplayStart start, int maxBufferSize, string writeJournalPluginId)
+            : base(start, writeJournalPluginId)
         {
-            CurrentOffset = FromOffset = fromOffset;
             MaxBufferSize = maxBufferSize;
             Buffer = new DeliveryBuffer<EventEnvelope>(OnNext);
-            JournalRef = Persistence.Instance.Apply(Context.System).JournalFor(writeJournalPluginId);
         }
 
         protected ILoggingAdapter Log => _log ??= Context.GetLogger();
-        protected IActorRef JournalRef { get; }
         protected DeliveryBuffer<EventEnvelope> Buffer { get; }
-        protected int FromOffset { get; }
         protected abstract int ToOffset { get; }
         protected int MaxBufferSize { get; }
+        protected override string FromEndTag => null;
         protected bool IsTimeForReplay => (Buffer.IsEmpty || Buffer.Length <= MaxBufferSize / 2) && (CurrentOffset <= ToOffset);
 
-        protected abstract void ReceiveInitialRequest();
         protected abstract void ReceiveIdleRequest();
         protected abstract void ReceiveRecoverySuccess(int highestOrderingNr);
 
@@ -62,7 +58,10 @@ namespace Akka.Persistence.Query.InMemory
             switch (message)
             {
                 case Request _:
-                    ReceiveInitialRequest();
+                    if (IsFromEnd)
+                        ResolveFromEnd();
+                    else
+                        ReceiveInitialRequest();
                     return true;
                 case Cancel _:
                     Context.Stop(Self);
@@ -142,8 +141,8 @@ namespace Akka.Persistence.Query.InMemory
     internal sealed class LiveAllEventsPublisher : AbstractAllEventsPublisher
     {
         private readonly ICancelable _tickCancelable;
-        public LiveAllEventsPublisher(int fromOffset, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
-            : base(fromOffset, maxBufferSize, writeJournalPluginId)
+        public LiveAllEventsPublisher(ReplayStart start, TimeSpan refreshInterval, int maxBufferSize, string writeJournalPluginId)
+            : base(start, maxBufferSize, writeJournalPluginId)
         {
             _tickCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(refreshInterval, refreshInterval, Self, AllEventsPublisher.Continue.Instance, Self);
         }
@@ -180,8 +179,8 @@ namespace Akka.Persistence.Query.InMemory
 
     internal sealed class CurrentAllEventsPublisher : AbstractAllEventsPublisher
     {
-        public CurrentAllEventsPublisher(int fromOffset, int maxBufferSize, string writeJournalPluginId)
-            : base(fromOffset, maxBufferSize, writeJournalPluginId)
+        public CurrentAllEventsPublisher(ReplayStart start, int maxBufferSize, string writeJournalPluginId)
+            : base(start, maxBufferSize, writeJournalPluginId)
         { }
 
         private int _toOffset = int.MaxValue;
