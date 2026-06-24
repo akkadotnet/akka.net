@@ -351,6 +351,19 @@ namespace Akka.Tests.Pattern
 
     public class CircuitBreakerSpecBase : AkkaSpec
     {
+        public CircuitBreakerSpecBase()
+        {
+            // Pre-warm the thread pool so the breaker's fire-and-forget state-transition
+            // callbacks (dispatched via Task.Factory.StartNew) and the HashedWheelTimer reset
+            // timer are not starved by the runtime's throttled worker-thread injection
+            // (~500ms per new worker above the minimum). Cold-start starvation was
+            // intermittently pushing these transitions past the CountdownEvent latch timeouts
+            // on slower CI agents. Math.Max ensures a previously-raised minimum is never
+            // lowered. Mirrors InMemoryPersistenceSpecConfig.EnsureThreadPoolWarmed().
+            ThreadPool.GetMinThreads(out var minWorker, out var minIo);
+            ThreadPool.SetMinThreads(Math.Max(minWorker, Environment.ProcessorCount * 2), minIo);
+        }
+
         public TimeSpan AwaitTimeout => Dilated(TimeSpan.FromSeconds(2));
 
         public bool CheckLatch(CountdownEvent latch) => latch.Wait(AwaitTimeout);
