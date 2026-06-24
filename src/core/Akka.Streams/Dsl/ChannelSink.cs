@@ -46,8 +46,8 @@ namespace Akka.Streams.Dsl
         /// <param name="singleReader"></param>
         /// <param name="fullMode"></param>
         /// <returns></returns>
-        public static Sink<T, ChannelReader<T>> AsReader<T>(int bufferSize, bool singleReader = false, BoundedChannelFullMode fullMode = BoundedChannelFullMode.Wait) => 
-            Sink.FromGraph(new ChannelReaderSink<T>(bufferSize, singleReader));
+        public static Sink<T, ChannelReader<T>> AsReader<T>(int bufferSize, bool singleReader = false, BoundedChannelFullMode fullMode = BoundedChannelFullMode.Wait) =>
+            Sink.FromGraph(new ChannelReaderSink<T>(bufferSize, singleReader, fullMode));
         
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ThrowArgumentNullException(string name) =>
