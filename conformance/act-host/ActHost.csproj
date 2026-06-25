@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>12.0</LangVersion>
+    <AssemblyName>act-host</AssemblyName>
+    <RootNamespace>Akka.Cluster.Conformance.Host</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\contrib\cluster\Akka.Cluster.Conformance\Akka.Cluster.Conformance.csproj" />
+  </ItemGroup>
+
+</Project>
