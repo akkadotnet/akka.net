@@ -1,0 +1,8 @@
+{
+  "name": "akka-js-worker",
+  "version": "1.0.0",
+  "description": "An Akka.NET cluster worker in JavaScript, certified by ACT (Akka Conformance Tester)",
+  "private": true,
+  "type": "commonjs",
+  "main": "worker.js"
+}
