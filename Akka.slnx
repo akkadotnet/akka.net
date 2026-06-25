@@ -24,6 +24,8 @@
   </Folder>
   <Folder Name="/Contrib/" />
   <Folder Name="/Contrib/Cluster/">
+    <Project Path="src/contrib/cluster/Akka.Cluster.Conformance/Akka.Cluster.Conformance.csproj" />
+    <Project Path="src/contrib/cluster/Akka.Cluster.Conformance.Tests/Akka.Cluster.Conformance.Tests.csproj" />
     <Project Path="src/contrib/cluster/Akka.Cluster.Metrics.Tests.MultiNode/Akka.Cluster.Metrics.Tests.MultiNode.csproj" />
     <Project Path="src/contrib/cluster/Akka.Cluster.Metrics.Tests/Akka.Cluster.Metrics.Tests.csproj" />
     <Project Path="src/contrib/cluster/Akka.Cluster.Metrics/Akka.Cluster.Metrics.csproj" />

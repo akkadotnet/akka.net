@@ -958,6 +958,10 @@ namespace Akka.Cluster
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private ImmutableHashSet<UniqueAddress> _exitingConfirmed = ImmutableHashSet<UniqueAddress>.Empty;
 
+        // Records the membership-protocol exchange this node has with its peers when
+        // 'akka.cluster.protocol-recorder = on'. A no-op (zero overhead) recorder otherwise.
+        private readonly IClusterProtocolRecorder _protocolRecorder;
+
 
         /// <summary>
         /// Creates a new cluster core daemon instance.
@@ -974,6 +978,8 @@ namespace Akka.Cluster
             var settings = _cluster.Settings;
             var scheduler = _cluster.Scheduler;
             _seedNodes = _cluster.Settings.SeedNodes;
+
+            _protocolRecorder = ClusterProtocolRecorderFactory.Create(_cluster, Context.System.EventStream, Context.GetLogger());
 
             _statsEnabled = settings.PublishStatsInterval.HasValue
                             && settings.PublishStatsInterval >= TimeSpan.Zero
@@ -1313,10 +1319,13 @@ namespace Akka.Cluster
             else if (message is InternalClusterAction.InitJoin)
             {
                 _cluster.LogInfo("Received InitJoin message from [{0}] to [{1}]", Sender, _selfUniqueAddress.Address);
+                _protocolRecorder.Record(ClusterProtocolDirection.Inbound, "InitJoin", Sender.Path.Address);
                 InitJoin();
             }
             else if (message is InternalClusterAction.Join @join)
             {
+                _protocolRecorder.Record(ClusterProtocolDirection.Inbound, "Join", @join.Node.Address,
+                    $"roles=[{string.Join(",", @join.Roles)}] version={@join.AppVersion}");
                 Joining(@join.Node, @join.Roles, @join.AppVersion);
             }
             else if (message is ClusterUserAction.Down down)
@@ -1325,6 +1334,7 @@ namespace Akka.Cluster
             }
             else if (message is ClusterUserAction.Leave leave)
             {
+                _protocolRecorder.Record(ClusterProtocolDirection.Inbound, "Leave", leave.Address);
                 Leaving(leave.Address);
             }
             else if (message is InternalClusterAction.SendGossipTo sendGossipTo)
@@ -1350,6 +1360,7 @@ namespace Akka.Cluster
             }
             else if (message is InternalClusterAction.ExitingConfirmed c)
             {
+                _protocolRecorder.Record(ClusterProtocolDirection.Inbound, "ExitingConfirmed", c.Address.Address);
                 ReceiveExitingConfirmed(c.Address);
             }
             else if (ReceiveExitingCompleted(message)) { }
@@ -1390,6 +1401,7 @@ namespace Akka.Cluster
                     Sender);
                 // prevents a Down and Exiting node from being used for joining
                 Sender.Tell(new InternalClusterAction.InitJoinNack(_cluster.SelfAddress));
+                _protocolRecorder.Record(ClusterProtocolDirection.Outbound, "InitJoinNack", Sender.Path.Address);
             }
             else
             {
@@ -1397,6 +1409,7 @@ namespace Akka.Cluster
                 _cluster.LogInfo("Sending InitJoinAck message from node [{0}] to [{1}]", _selfUniqueAddress.Address,
                     Sender);
                 Sender.Tell(new InternalClusterAction.InitJoinAck(_cluster.SelfAddress));
+                _protocolRecorder.Record(ClusterProtocolDirection.Outbound, "InitJoinAck", Sender.Path.Address);
             }
         }
 
@@ -1536,6 +1549,7 @@ namespace Akka.Cluster
                     if (!node.Equals(_selfUniqueAddress))
                     {
                         Sender.Tell(new InternalClusterAction.Welcome(_selfUniqueAddress, LatestGossip));
+                        _protocolRecorder.Record(ClusterProtocolDirection.Outbound, "Welcome", node.Address, "rejoin");
                     }
                 }
                 else if (localMember != null)
@@ -1586,6 +1600,8 @@ namespace Akka.Cluster
                     {
                         _cluster.LogInfo("Node [{0}] is JOINING, roles [{1}], version [{2}]", node.Address, string.Join(",", roles), appVersion);
                         Sender.Tell(new InternalClusterAction.Welcome(_selfUniqueAddress, LatestGossip));
+                        _protocolRecorder.Record(ClusterProtocolDirection.Outbound, "Welcome", node.Address,
+                            $"members={LatestGossip.Members.Count}");
                     }
 
                     PublishMembershipState();
@@ -1794,6 +1810,8 @@ namespace Akka.Cluster
             var from = envelope.From;
             var remoteGossip = envelope.Gossip;
             var localGossip = LatestGossip;
+
+            _protocolRecorder.Record(ClusterProtocolDirection.Inbound, "Gossip", from.Address);
 
             if (remoteGossip.Equals(Gossip.Empty))
             {
@@ -2468,7 +2486,10 @@ namespace Akka.Cluster
         public void GossipTo(UniqueAddress node)
         {
             if (_membershipState.ValidNodeForGossip(node))
+            {
+                _protocolRecorder.Record(ClusterProtocolDirection.Outbound, "Gossip", node.Address);
                 ClusterCore(node.Address).Tell(new GossipEnvelope(_selfUniqueAddress, node, LatestGossip));
+            }
         }
 
         /// <summary>

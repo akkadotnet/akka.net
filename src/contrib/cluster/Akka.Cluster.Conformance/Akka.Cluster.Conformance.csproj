@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <Description>
+            A conformance test harness for Akka.NET clustering. Provides an instrumented "reference"
+            seed node that records the cluster membership protocol exchanged with a node-under-test
+            (worker), plus a checker that validates a worker's join, convergence, graceful leave and
+            clean shutdown against the expected protocol. The worker requires no instrumentation.
+        </Description>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+        <PackageTags>$(AkkaPackageTags);network;cluster;testing;conformance</PackageTags>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\core\Akka.Cluster\Akka.Cluster.csproj" />
+    </ItemGroup>
+
+</Project>

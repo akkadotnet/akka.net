@@ -27,6 +27,8 @@ using System.Runtime.InteropServices;
 [assembly: InternalsVisibleTo("Akka.DistributedData")]
 [assembly: InternalsVisibleTo("Akka.Benchmarks")]
 [assembly: InternalsVisibleTo("Akka.Management.Cluster.Http")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Conformance")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Conformance.Tests")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
