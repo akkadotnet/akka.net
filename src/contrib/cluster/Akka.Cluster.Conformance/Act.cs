@@ -136,6 +136,10 @@ namespace Akka.Cluster.Conformance
             public bool Protocol(string kind) => Trace.Has(kind, Worker, ConformanceSource.Protocol);
             public bool Membership(string kind) => Trace.Has(kind, Worker, ConformanceSource.Membership);
 
+            // Gossip flows both ways; "participation" requires gossip the node-under-test SENT to the
+            // reference node (recorded there as Inbound), not gossip the reference node sent to it.
+            public bool InboundProtocol(string kind) => Trace.HasDirected(kind, ConformanceDirection.Inbound, Worker);
+
             public bool RemovedFromExiting() => Trace.Snapshot().Any(e =>
                 e.Source == ConformanceSource.Membership
                 && e.Kind == nameof(ClusterEvent.MemberRemoved)
@@ -194,7 +198,7 @@ namespace Akka.Cluster.Conformance
                     "adopt its gossip state."),
 
             new("Gossip participation",
-                ctx => ctx.Protocol("Gossip"),
+                ctx => ctx.InboundProtocol("Gossip"),
                 ctx =>
                     "The node under test was welcomed but never took part in the gossip protocol.\n\n" +
                     "WHAT IS REQUIRED:\n" +

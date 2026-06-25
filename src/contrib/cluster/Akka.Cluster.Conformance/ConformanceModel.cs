@@ -150,6 +150,22 @@ namespace Akka.Cluster.Conformance
         }
 
         /// <summary>
+        /// True if any captured event matches the given kind and direction (and optional peer). Used to
+        /// distinguish, e.g., gossip the node-under-test SENT (inbound to the reference node) from gossip
+        /// the reference node sent to it.
+        /// </summary>
+        public bool HasDirected(string kind, ConformanceDirection direction, Address? peer = null)
+        {
+            lock (_gate)
+            {
+                return _events.Any(e =>
+                    string.Equals(e.Kind, kind, StringComparison.Ordinal)
+                    && e.Direction == direction
+                    && (peer is null || Equals(e.Peer, peer)));
+            }
+        }
+
+        /// <summary>
         /// The sequence number of the first event matching <paramref name="kind"/> (and optional peer),
         /// or <c>-1</c> if none. Useful for asserting ordering between protocol phases.
         /// </summary>
