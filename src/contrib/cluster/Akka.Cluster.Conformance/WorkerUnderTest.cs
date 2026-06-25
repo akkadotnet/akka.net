@@ -89,6 +89,8 @@ namespace Akka.Cluster.Conformance
                 }}");
 
             var system = ActorSystem.Create(systemName, config);
+            // Host a routee at /user/echo so a cluster broadcast router can reach this node.
+            system.ActorOf(EchoActor.Props, "echo");
             return new InProcessWorker(system, Cluster.Get(system), simulateCrashOnStop);
         }
 

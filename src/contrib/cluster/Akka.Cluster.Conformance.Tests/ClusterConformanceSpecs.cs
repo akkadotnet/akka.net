@@ -42,8 +42,13 @@ namespace Akka.Cluster.Conformance.Tests
                 Assert.True(await seed.WaitForUpMembersAsync(2, TimeSpan.FromSeconds(20)),
                     "the cluster never converged to two Up members");
 
+                // the cluster broadcast router should reach the worker's /user/echo routee
+                Assert.True(
+                    await WaitUntilAsync(() => seed.Trace.Has("RoutedReply", worker.Address), TimeSpan.FromSeconds(15)),
+                    "the broadcast router never got a reply from the worker's routee");
+
                 // let gossip settle briefly so the membership is stable before leaving
-                await Task.Delay(1500);
+                await Task.Delay(1000);
 
                 // Graceful leave
                 worker.LeaveGracefully();
@@ -88,7 +93,10 @@ namespace Akka.Cluster.Conformance.Tests
                 "the worker never reached the Up state");
             Assert.True(await seed.WaitForUpMembersAsync(2, TimeSpan.FromSeconds(20)),
                 "the cluster never converged to two Up members");
-            await Task.Delay(1000);
+            // ...and even serves the broadcast router (clearing every step up to the graceful leave)...
+            Assert.True(
+                await WaitUntilAsync(() => seed.Trace.Has("RoutedReply", worker.Address), TimeSpan.FromSeconds(15)),
+                "the broadcast router never got a reply from the worker's routee");
 
             // ...then it crashes, never announcing a graceful leave.
             await worker.CrashAsync();
@@ -109,9 +117,9 @@ namespace Akka.Cluster.Conformance.Tests
             Assert.False(result.Passed);
             Assert.Equal("Graceful leave announced (Leaving)", result.FailedStep);
 
-            // It should have certified the earlier phases (connect + converge) before stopping.
-            Assert.True(result.StepsCleared >= 5,
-                $"expected the connect/converge steps to be cleared, but only {result.StepsCleared} were");
+            // It should have certified the earlier phases (connect, converge, broadcast) before stopping.
+            Assert.True(result.StepsCleared >= 6,
+                $"expected the connect/converge/broadcast steps to be cleared, but only {result.StepsCleared} were");
 
             // The teaching message must be protocol-level and explain the crash, language-agnostically.
             Assert.Contains("did not leave the cluster gracefully", result.Message);

@@ -10,7 +10,9 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Cluster.Routing;
 using Akka.Configuration;
+using Akka.Routing;
 
 namespace Akka.Cluster.Conformance
 {
@@ -93,6 +95,21 @@ namespace Akka.Cluster.Conformance
 
             var trace = new ConformanceTrace();
             system.ActorOf(ConformanceRecorderActor.Props(trace), "conformance-recorder");
+
+            // Application-level routing fixture: a routee at /user/echo, a cluster broadcast (Group)
+            // router over /user/echo on every member, and a collector that periodically broadcasts a
+            // ping and records each node's reply. This lets ACT verify a broadcast reaches a routee on
+            // the node-under-test.
+            system.ActorOf(EchoActor.Props, "echo");
+            var broadcastRouter = system.ActorOf(
+                new ClusterRouterGroup(
+                    new BroadcastGroup("/user/echo"),
+                    new ClusterRouterGroupSettings(
+                        totalInstances: 100,
+                        routeesPaths: new[] { "/user/echo" },
+                        allowLocalRoutees: true)).Props(),
+                "act-broadcast-router");
+            system.ActorOf(Props.Create(() => new BroadcastCollectorActor(trace, broadcastRouter)), "act-broadcast-collector");
 
             // Bootstrap as a single-node cluster on the actual bound address.
             cluster.Join(cluster.SelfAddress);

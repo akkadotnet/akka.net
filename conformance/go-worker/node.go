@@ -15,7 +15,13 @@ import (
 const (
 	daemonPath = "/system/cluster/core/daemon"
 	hbRecvPath = "/system/cluster/heartbeatReceiver"
+	echoPath   = "/user/echo"
 )
+
+// isEchoSelection reports whether an ActorSelection path targets our /user/echo routee.
+func isEchoSelection(path []string) bool {
+	return len(path) >= 1 && path[len(path)-1] == "echo"
+}
 
 type Node struct {
 	self Address
@@ -31,6 +37,7 @@ type Node struct {
 	selfStatus           int    // latest observed membership status of ourselves (-1 = unknown)
 	gossipSent           int
 	hbLogged             bool
+	echoLogged           bool
 	exitingConfirmedSent bool
 }
 
@@ -64,9 +71,15 @@ func firstN(b []byte, n int) []byte {
 
 func (n *Node) selfUA() []byte { return uniqueAddress(n.self, n.uid) }
 
-// send writes one actor message over connection A (worker -> seed).
+// send writes one cluster message (serializer 5) over connection A (worker -> seed).
 func (n *Node) send(recipientPath, senderPath, manifest string, msg []byte) error {
-	frame := constructMessage(recipientPath, senderPath, clusterSerializerId, manifest, msg)
+	return n.sendRaw(recipientPath, senderPath, clusterSerializerId, manifest, msg)
+}
+
+// sendRaw writes one actor message with an explicit serializer id over connection A. Used to echo a
+// broadcast back to its sender verbatim, preserving whatever serializer the broadcast used.
+func (n *Node) sendRaw(recipientPath, senderPath string, serializerId int, manifest string, msg []byte) error {
+	frame := constructMessage(recipientPath, senderPath, serializerId, manifest, msg)
 	n.outMu.Lock()
 	defer n.outMu.Unlock()
 	if n.out == nil {
@@ -194,8 +207,25 @@ func (n *Node) handleInbound(conn net.Conn) {
 func (n *Node) dispatch(pdu inboundPdu) {
 	manifest := pdu.manifest
 	message := pdu.message
+	serializerId := pdu.serializerId
+	var selPath []string
 	if pdu.serializerId == messageContainerSerializerId {
-		_, manifest, message, _ = parseSelectionEnvelope(pdu.message)
+		serializerId, manifest, message, selPath = parseSelectionEnvelope(pdu.message)
+	}
+
+	// A cluster broadcast router targets /user/echo on each node; echo the message back to the sender.
+	if isEchoSelection(selPath) {
+		if err := n.sendRaw(pdu.senderPath, n.self.actorPath(echoPath), serializerId, manifest, message); err != nil {
+			logf("echo reply failed: %v", err)
+		}
+		n.mu.Lock()
+		first := !n.echoLogged
+		n.echoLogged = true
+		n.mu.Unlock()
+		if first {
+			logf("A-> Echo reply to broadcast at /user/echo (further ones silent)")
+		}
+		return
 	}
 
 	switch manifest {

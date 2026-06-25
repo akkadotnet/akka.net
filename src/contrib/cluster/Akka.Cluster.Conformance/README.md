@@ -35,10 +35,15 @@ cluster membership protocol. Everything is judged from the reference side.
 | 3 | Join accepted | a `Welcome` sent back to the worker |
 | 4 | Gossip participation | at least one gossip message from the worker |
 | 5 | Convergence to Up | the worker reaching `MemberUp` |
-| 6 | Graceful leave announced | the worker reaching `Leaving` (`MemberLeft`) |
-| 7 | Exiting reached | the worker reaching `Exiting` (`MemberExited`) |
-| 8 | Exit confirmed | an `ExitingConfirmed` from the worker |
-| 9 | Clean removal | `MemberRemoved` from `Exiting`, never `Downed`/unreachable |
+| 6 | Broadcast routee delivery | a reply from the worker's `/user/echo` routee to a cluster broadcast |
+| 7 | Graceful leave announced | the worker reaching `Leaving` (`MemberLeft`) |
+| 8 | Exiting reached | the worker reaching `Exiting` (`MemberExited`) |
+| 9 | Exit confirmed | an `ExitingConfirmed` from the worker |
+| 10 | Clean removal | `MemberRemoved` from `Exiting`, never `Downed`/unreachable |
+
+Step 6 exercises application-level routing: the reference seed runs a cluster `BroadcastGroup` router
+over `/user/echo` on every member, periodically broadcasts a ping, and records each node's reply. A
+conforming node hosts an actor at `/user/echo` that echoes the message back to its sender.
 
 ## Usage (in-process worker)
 

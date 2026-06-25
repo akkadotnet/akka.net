@@ -57,15 +57,21 @@ class ClusterNode {
     this.selfStatus = -1;     // latest observed membership status of ourselves
     this.exitingConfirmedSent = false;
     this.hbLogged = false;
+    this.echoLogged = false;
     this.gossipSent = 0;
   }
 
   selfUA() { return A.uniqueAddress(this.self, this.uid); }
 
-  // send one actor message over connection A (worker -> seed)
+  // send one cluster message (serializer 5) over connection A (worker -> seed)
   send(recipient, sender, manifest, msg) {
+    this.sendRaw(recipient, sender, A.CLUSTER_SERIALIZER_ID, manifest, msg);
+  }
+
+  // send with an explicit serializer id (used to echo a broadcast back verbatim)
+  sendRaw(recipient, sender, serializerId, manifest, msg) {
     if (!this.connA) return;
-    this.connA.write(A.frame(A.constructMessage(recipient, sender, A.CLUSTER_SERIALIZER_ID, manifest, msg)));
+    this.connA.write(A.frame(A.constructMessage(recipient, sender, serializerId, manifest, msg)));
   }
 
   // ---- connection A: outbound to the seed ----
@@ -130,12 +136,26 @@ class ClusterNode {
 
   // a cluster message arrived on conn B; unwrap ActorSelection (serializer 6) first
   dispatch(pdu) {
-    let { manifest, message } = pdu;
+    let { manifest, message, serializerId } = pdu;
+    let selPath = [];
     if (pdu.serializerId === A.MESSAGE_CONTAINER_SERIALIZER_ID) {
       const sel = A.parseSelectionEnvelope(pdu.message);
       manifest = sel.manifest;
       message = sel.message;
+      serializerId = sel.serializerId;
+      selPath = sel.path;
     }
+
+    // A cluster broadcast router targets /user/echo on each node; echo the message back to the sender.
+    if (selPath.length && selPath[selPath.length - 1] === 'echo') {
+      this.sendRaw(pdu.senderPath, A.actorPath(this.self, '/user/echo'), serializerId, manifest, message);
+      if (!this.echoLogged) {
+        this.echoLogged = true;
+        log('A-> Echo reply to broadcast at /user/echo (further ones silent)');
+      }
+      return;
+    }
+
     switch (manifest) {
       case A.MANIFEST.InitJoinAck:
         log('B<- InitJoinAck');

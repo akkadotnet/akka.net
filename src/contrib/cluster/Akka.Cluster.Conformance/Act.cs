@@ -140,6 +140,8 @@ namespace Akka.Cluster.Conformance
             // reference node (recorded there as Inbound), not gossip the reference node sent to it.
             public bool InboundProtocol(string kind) => Trace.HasDirected(kind, ConformanceDirection.Inbound, Worker);
 
+            public bool Routing(string kind) => Trace.Has(kind, Worker, ConformanceSource.Routing);
+
             public bool RemovedFromExiting() => Trace.Snapshot().Any(e =>
                 e.Source == ConformanceSource.Membership
                 && e.Kind == nameof(ClusterEvent.MemberRemoved)
@@ -228,6 +230,22 @@ namespace Akka.Cluster.Conformance
                     "current version and keep gossiping until all reachable members have seen it. Do not reset or drop " +
                     "the seen set, and do not keep producing new versions that never settle — otherwise the leader can " +
                     "never observe convergence and will never move the node to Up."),
+
+            new("Broadcast routee delivery (/user/echo replies)",
+                ctx => ctx.Routing("RoutedReply"),
+                ctx =>
+                    "The node under test is a full member, but a cluster broadcast never reached a routee on it.\n\n" +
+                    "WHAT IS REQUIRED:\n" +
+                    "The reference node runs a cluster broadcast router whose routees are the actors at the path " +
+                    "'/user/echo' on every member node. The node under test must host an actor at '/user/echo'. When the " +
+                    "router broadcasts, the message is delivered to that path on each node (addressed via an actor " +
+                    "selection, so it arrives as a selection-wrapped message naming the path elements [user, echo]); the " +
+                    "receiving actor must send the message back to its sender.\n\n" +
+                    "WHAT WAS OBSERVED:\n  The node reached Up, but the reference node never received a reply to its " +
+                    $"broadcast from a routee on {ctx.Worker}.\n\n" +
+                    "TO PASS:\n" +
+                    "Host a routee at '/user/echo' that, on receiving a message, replies to the sender with that same " +
+                    "message. This proves the broadcast router can place work on the node and that the node processes it."),
 
             new("Graceful leave announced (Leaving)",
                 ctx => ctx.Membership(nameof(ClusterEvent.MemberLeft)),

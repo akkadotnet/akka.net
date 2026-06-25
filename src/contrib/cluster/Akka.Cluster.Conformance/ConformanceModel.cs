@@ -20,7 +20,10 @@ namespace Akka.Cluster.Conformance
         Protocol,
 
         /// <summary>A high-level membership transition observed on the reference node's cluster event stream.</summary>
-        Membership
+        Membership,
+
+        /// <summary>An application-level routing observation (e.g. a reply to a cluster broadcast router).</summary>
+        Routing
     }
 
     /// <summary>Direction of a protocol message relative to the reference node.</summary>
