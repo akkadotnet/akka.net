@@ -26,6 +26,10 @@ const (
 // ClusterMessageSerializer identifier (akka.cluster Cluster.conf serialization-identifiers).
 const clusterSerializerId = 5
 
+// MessageContainerSerializer identifier (Akka.Remote): wraps ActorSelection messages. The seed sends
+// gossip and heartbeats via ActorSelection, so they arrive wrapped in a SelectionEnvelope.
+const messageContainerSerializerId = 6
+
 // Cluster message string manifests (ClusterMessageSerializer).
 const (
 	manifestInitJoin         = "Akka.Cluster.InternalClusterAction+InitJoin, Akka.Cluster"
@@ -152,6 +156,27 @@ func constructPayload(inner []byte) []byte {
 	return pbBytes(1, inner)
 }
 
+// ---- Cluster message bodies ----
+
+// uniqueAddress encodes UniqueAddress{ address=1 (AddressData), uid=2 (uint32) }.
+func uniqueAddress(a Address, uid uint32) []byte {
+	var b []byte
+	b = append(b, pbBytes(1, a.addressData())...)
+	b = append(b, pbVarint(2, uint64(uid))...)
+	return b
+}
+
+// constructJoin encodes Join{ node=1 (UniqueAddress), roles=2 (repeated string), appVersion=3 (string) }.
+func constructJoin(node Address, uid uint32, roles []string, appVersion string) []byte {
+	var b []byte
+	b = append(b, pbBytes(1, uniqueAddress(node, uid))...)
+	for _, r := range roles {
+		b = append(b, pbString(2, r)...)
+	}
+	b = append(b, pbString(3, appVersion)...)
+	return b
+}
+
 // ---- Remote envelope ----
 
 // actorRefData encodes ActorRefData{ path=1 }.
@@ -182,6 +207,282 @@ func constructMessage(recipientPath, senderPath string, serializerId int, manife
 	// AckAndEnvelopeContainer: envelope=2
 	container := pbBytes(2, env)
 	return constructPayload(container)
+}
+
+// ---- Heartbeat (HB) / HeartbeatRsp (HBR) ----
+
+func zigzagDecode(n uint64) int64 { return int64(n>>1) ^ -int64(n&1) }
+
+// parseHeartbeat reads Heartbeat{ from=1 (AddressData), sequenceNr=2 (int64), creationTime=3 (sint64) }.
+func parseHeartbeat(msg []byte) (seq int64, creationTime int64) {
+	f, _ := pbParse(msg)
+	if x := pbGet(f, 2); x != nil {
+		seq = int64(x.val)
+	}
+	if x := pbGet(f, 3); x != nil {
+		creationTime = zigzagDecode(x.val)
+	}
+	return
+}
+
+// buildHeartbeatRsp encodes HeartBeatResponse{ from=1 (UniqueAddress), sequenceNr=2 (int64), creationTime=3 (int64) }.
+func buildHeartbeatRsp(fromUA []byte, seq, creationTime int64) []byte {
+	var b []byte
+	b = append(b, pbBytes(1, fromUA)...)
+	b = append(b, pbVarint(2, uint64(seq))...)
+	b = append(b, pbVarint(3, uint64(creationTime))...)
+	return b
+}
+
+// ---- Welcome / GossipEnvelope ----
+
+// parseWelcome reads Welcome{ from=1 (UniqueAddress), gossip=2 (Gossip) } and returns the raw gossip bytes.
+func parseWelcome(msg []byte) (fromUA, gossip []byte) {
+	f, _ := pbParse(msg)
+	if x := pbGet(f, 1); x != nil {
+		fromUA = x.data
+	}
+	if x := pbGet(f, 2); x != nil {
+		gossip = x.data
+	}
+	return
+}
+
+// parseGossipEnvelope reads GossipEnvelope{ from=1, to=2 (UniqueAddress), serializedGossip=3 (bytes) }.
+func parseGossipEnvelope(msg []byte) (fromUA, toUA, gossip []byte) {
+	f, _ := pbParse(msg)
+	if x := pbGet(f, 1); x != nil {
+		fromUA = x.data
+	}
+	if x := pbGet(f, 2); x != nil {
+		toUA = x.data
+	}
+	if x := pbGet(f, 3); x != nil {
+		gossip = x.data
+	}
+	return
+}
+
+// buildGossipEnvelope encodes GossipEnvelope{ from=1, to=2, serializedGossip=3 }.
+func buildGossipEnvelope(fromUA, toUA, gossip []byte) []byte {
+	var b []byte
+	b = append(b, pbBytes(1, fromUA)...)
+	b = append(b, pbBytes(2, toUA)...)
+	b = append(b, pbBytes(3, gossip)...)
+	return b
+}
+
+// parseSelectionEnvelope unwraps an ActorSelectionMessage (MessageContainerSerializer):
+// SelectionEnvelope{ payload=1 (Payload), pattern=2 (repeated Selection{ type=1, matcher=2 }) }.
+// Returns the inner message's serializer id, manifest, bytes, and the selection path (matchers).
+func parseSelectionEnvelope(msg []byte) (innerSerializerId int, innerManifest string, innerMsg []byte, path []string) {
+	f, _ := pbParse(msg)
+	if p := pbGet(f, 1); p != nil && p.wire == 2 {
+		pf, _ := pbParse(p.data)
+		if m := pbGet(pf, 1); m != nil {
+			innerMsg = m.data
+		}
+		if s := pbGet(pf, 2); s != nil {
+			innerSerializerId = int(s.val)
+		}
+		if mm := pbGet(pf, 3); mm != nil {
+			innerManifest = string(mm.data)
+		}
+	}
+	for _, fld := range f {
+		if fld.num == 2 && fld.wire == 2 {
+			sf, _ := pbParse(fld.data)
+			if mt := pbGet(sf, 2); mt != nil {
+				path = append(path, string(mt.data))
+			}
+		}
+	}
+	return
+}
+
+// ---- Gossip surgery: find our index and mark ourselves "seen" ----
+
+// reemit re-encodes a parsed field back to wire form (used to copy fields verbatim).
+func reemit(f pbField) []byte {
+	switch f.wire {
+	case 0:
+		return pbVarint(f.num, f.val)
+	case 1:
+		return pbFixed64(f.num, f.val)
+	case 2:
+		return pbBytes(f.num, f.data)
+	case 5:
+		b := appendVarint(nil, wireTag(f.num, 5))
+		var x [4]byte
+		binary.LittleEndian.PutUint32(x[:], uint32(f.val))
+		return append(b, x[:]...)
+	}
+	return nil
+}
+
+func parsePackedVarints(b []byte) []uint64 {
+	var out []uint64
+	i := 0
+	for i < len(b) {
+		v, n := uvarint(b[i:])
+		if n <= 0 {
+			break
+		}
+		i += n
+		out = append(out, v)
+	}
+	return out
+}
+
+func packVarints(vals []int) []byte {
+	var b []byte
+	for _, v := range vals {
+		b = appendVarint(b, uint64(v))
+	}
+	return b
+}
+
+// Member statuses (ClusterMessages.proto Member.MemberStatus).
+const (
+	statusJoining  = 0
+	statusUp       = 1
+	statusLeaving  = 2
+	statusExiting  = 3
+	statusDown     = 4
+	statusRemoved  = 5
+	statusWeaklyUp = 6
+)
+
+func statusName(s int) string {
+	switch s {
+	case statusJoining:
+		return "Joining"
+	case statusUp:
+		return "Up"
+	case statusLeaving:
+		return "Leaving"
+	case statusExiting:
+		return "Exiting"
+	case statusDown:
+		return "Down"
+	case statusRemoved:
+		return "Removed"
+	case statusWeaklyUp:
+		return "WeaklyUp"
+	default:
+		return fmt.Sprintf("status(%d)", s)
+	}
+}
+
+// gossipMemberStatus returns the status of the member with the given allAddresses index.
+// Member{ addressIndex=1, upNumber=2, status=3, ... }.
+func gossipMemberStatus(gossip []byte, addressIndex int) (int, bool) {
+	f, _ := pbParse(gossip)
+	for _, fld := range f {
+		if fld.num != 4 || fld.wire != 2 { // Member
+			continue
+		}
+		mf, _ := pbParse(fld.data)
+		ai := -1
+		st := 0
+		if x := pbGet(mf, 1); x != nil {
+			ai = int(x.val)
+		}
+		if x := pbGet(mf, 3); x != nil {
+			st = int(x.val)
+		}
+		if ai == addressIndex {
+			return st, true
+		}
+	}
+	return 0, false
+}
+
+// gossipAddressIndex finds the index of (host, port, uid) within the gossip's allAddresses (field 1).
+func gossipAddressIndex(gossip []byte, host string, port int, uid uint32) int {
+	f, _ := pbParse(gossip)
+	idx := 0
+	for _, fld := range f {
+		if fld.num != 1 || fld.wire != 2 {
+			continue
+		}
+		ua, _ := pbParse(fld.data)
+		var uaUID uint32
+		var uaHost string
+		var uaPort int
+		if u := pbGet(ua, 2); u != nil {
+			uaUID = uint32(u.val)
+		}
+		if a := pbGet(ua, 1); a != nil {
+			ad, _ := pbParse(a.data)
+			if h := pbGet(ad, 2); h != nil {
+				uaHost = string(h.data)
+			}
+			if p := pbGet(ad, 3); p != nil {
+				uaPort = int(p.val)
+			}
+		}
+		if uaHost == host && uaPort == port && uaUID == uid {
+			return idx
+		}
+		idx++
+	}
+	return -1
+}
+
+// patchGossipSeen returns the gossip bytes with workerIndex added to overview.seen, leaving the
+// version (vector clock), members and everything else byte-identical so the reference node treats
+// it as the same version and simply unions the seen sets (achieving convergence).
+func patchGossipSeen(gossip []byte, workerIndex int) []byte {
+	f, _ := pbParse(gossip)
+	var out []byte
+	overviewDone := false
+	for _, fld := range f {
+		if fld.num == 5 && fld.wire == 2 { // GossipOverview
+			out = append(out, pbBytes(5, patchOverviewSeen(fld.data, workerIndex))...)
+			overviewDone = true
+		} else {
+			out = append(out, reemit(fld)...)
+		}
+	}
+	if !overviewDone {
+		out = append(out, pbBytes(5, pbBytes(1, packVarints([]int{workerIndex})))...)
+	}
+	return out
+}
+
+// patchOverviewSeen adds workerIndex to the seen set (field 1, packed int32) of a GossipOverview.
+func patchOverviewSeen(ov []byte, workerIndex int) []byte {
+	f, _ := pbParse(ov)
+	seen := map[int]bool{}
+	var order []int
+	var others []byte
+	for _, fld := range f {
+		if fld.num == 1 {
+			if fld.wire == 2 {
+				for _, v := range parsePackedVarints(fld.data) {
+					if !seen[int(v)] {
+						seen[int(v)] = true
+						order = append(order, int(v))
+					}
+				}
+			} else if fld.wire == 0 {
+				if !seen[int(fld.val)] {
+					seen[int(fld.val)] = true
+					order = append(order, int(fld.val))
+				}
+			}
+		} else {
+			others = append(others, reemit(fld)...)
+		}
+	}
+	if !seen[workerIndex] {
+		order = append(order, workerIndex)
+	}
+	var out []byte
+	out = append(out, pbBytes(1, packVarints(order))...) // re-encode seen as packed
+	out = append(out, others...)
+	return out
 }
 
 // ---- Parsing inbound PDUs ----

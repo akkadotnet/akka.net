@@ -1,16 +1,14 @@
 package main
 
 // A minimal Akka.NET-compatible cluster worker, written in Go, driven step by step by the
-// ACT (Akka Conformance Tester) reference seed. This is intentionally grown one conformance
-// step at a time. Current target: ACT step 1 (initial contact) — associate with the seed and
-// send InitJoin so the reference node records InitJoin + replies InitJoinAck.
+// ACT (Akka Conformance Tester) reference seed. It joins the C# seed, participates in gossip and
+// heartbeats so it genuinely converges to Up, then (optionally) leaves gracefully.
 
 import (
 	"crypto/rand"
 	"encoding/binary"
 	"flag"
 	"fmt"
-	"net"
 	"os"
 	"time"
 )
@@ -19,10 +17,12 @@ func logf(format string, args ...any) {
 	fmt.Printf("[%s] go-worker: "+format+"\n", append([]any{time.Now().Format("15:04:05.000")}, args...)...)
 }
 
-func randUid() uint64 {
-	var b [8]byte
+// randUid returns a non-zero 32-bit uid. The cluster UniqueAddress.uid is uint32, so we keep the
+// node uid 32-bit and present the same value in the remoting handshake (as a fixed64) for consistency.
+func randUid() uint32 {
+	var b [4]byte
 	_, _ = rand.Read(b[:])
-	u := binary.LittleEndian.Uint64(b[:])
+	u := binary.LittleEndian.Uint32(b[:])
 	if u == 0 {
 		u = 1
 	}
@@ -33,14 +33,14 @@ func main() {
 	seedFlag := flag.String("seed", "", "seed node URI, e.g. akka.tcp://ConformanceCluster@127.0.0.1:5110")
 	host := flag.String("host", "127.0.0.1", "advertised host of this worker")
 	port := flag.Int("port", 6000, "advertised port of this worker")
-	runSecs := flag.Int("run", 12, "seconds to stay connected")
+	runSecs := flag.Int("run", 20, "seconds to stay in the cluster when not leaving gracefully")
+	leave := flag.Bool("leave", true, "leave the cluster gracefully before exiting")
 	flag.Parse()
 
 	if *seedFlag == "" {
 		fmt.Fprintln(os.Stderr, "missing --seed")
 		os.Exit(2)
 	}
-
 	seed, err := parseAddress(*seedFlag)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "bad --seed:", err)
@@ -48,97 +48,81 @@ func main() {
 	}
 
 	self := Address{Protocol: "akka.tcp", System: seed.System, Host: *host, Port: *port}
-	uid := randUid()
-	logf("self=%s uid=%d  seed=%s", self, uid, seed)
+	n := newNode(self, seed, randUid())
+	logf("self=%s uid=%d  seed=%s", self, n.uid, seed)
 
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", seed.Host, seed.Port), 5*time.Second)
-	if err != nil {
-		logf("DIAL FAILED: %v", err)
+	// 1) Listen first, so the seed can dial back to deliver InitJoinAck / Welcome / gossip / heartbeats.
+	if err := n.listen(); err != nil {
+		logf("listen failed: %v", err)
 		os.Exit(1)
 	}
-	defer conn.Close()
-	logf("TCP connected to seed")
 
-	assocCh := make(chan Address, 1)
-	go readLoop(conn, assocCh)
-
-	// 1) Send our ASSOCIATE handshake.
-	if err := writeFrame(conn, constructAssociate(self, uid)); err != nil {
-		logf("send ASSOCIATE failed: %v", err)
+	// 2) Associate outbound with the seed.
+	if err := n.connectOutbound(); err != nil {
+		logf("connect failed: %v", err)
 		os.Exit(1)
 	}
-	logf("-> ASSOCIATE sent (origin=%s uid=%d)", self, uid)
 
-	// 2) Wait for the seed's ASSOCIATE reply on this connection.
-	select {
-	case o := <-assocCh:
-		logf("<- ASSOCIATE received from seed (origin=%s)", o)
-	case <-time.After(5 * time.Second):
-		logf("WARNING: no ASSOCIATE reply within 5s; sending InitJoin anyway")
-	}
-
-	// 3) Send InitJoin to the seed's cluster core daemon.
-	daemon := "/system/cluster/core/daemon"
-	initJoin := constructMessage(
-		seed.actorPath(daemon),
-		self.actorPath(daemon),
-		clusterSerializerId, manifestInitJoin,
-		[]byte{}, // InitJoin serializes to an empty protobuf
-	)
-	if err := writeFrame(conn, initJoin); err != nil {
-		logf("send InitJoin failed: %v", err)
+	// 3) InitJoin (ACT step 1).
+	if err := n.send(seed.actorPath(daemonPath), self.actorPath(daemonPath), manifestInitJoin, []byte{}); err != nil {
+		logf("InitJoin failed: %v", err)
 		os.Exit(1)
 	}
-	logf("-> InitJoin sent to %s (sender=%s)", seed.actorPath(daemon), self.actorPath(daemon))
+	logf("A-> InitJoin")
 
-	// 4) Keep the connection alive, sending heartbeats, so the seed can process InitJoin.
-	hb := time.NewTicker(1 * time.Second)
-	defer hb.Stop()
-	deadline := time.After(time.Duration(*runSecs) * time.Second)
-	for {
-		select {
-		case <-hb.C:
-			if err := writeFrame(conn, constructHeartbeat()); err != nil {
-				logf("heartbeat failed: %v", err)
-				return
-			}
-		case <-deadline:
-			logf("run window elapsed; closing")
-			return
-		}
+	// 4) Join (ACT step 2). A real node sends this after InitJoinAck; the inbound ack arrives on
+	// conn B and is logged, but we proceed promptly.
+	time.Sleep(300 * time.Millisecond)
+	roles := []string{"worker"}
+	const appVersion = "1.5.60"
+	if err := n.send(seed.actorPath(daemonPath), self.actorPath(daemonPath), manifestJoin,
+		constructJoin(self, n.uid, roles, appVersion)); err != nil {
+		logf("Join failed: %v", err)
+		os.Exit(1)
 	}
+	logf("A-> Join (roles=%v version=%s uid=%d)", roles, appVersion, n.uid)
+
+	// 5) Wait until the leader has moved us to Up (real convergence via gossip + heartbeats).
+	if !waitFor(func() bool { return n.SelfStatus() == statusUp }, 20*time.Second) {
+		logf("WARNING: never observed self = Up")
+	} else {
+		logf("*** worker is UP and a full member of the cluster ***")
+	}
+
+	if !*leave {
+		time.Sleep(time.Duration(*runSecs) * time.Second)
+		logf("run window elapsed; exiting (no graceful leave requested)")
+		return
+	}
+
+	// 6) Settle briefly, then leave gracefully (ACT steps 6-9).
+	time.Sleep(2 * time.Second)
+	logf("--- initiating graceful leave ---")
+	if err := n.sendLeave(); err != nil {
+		logf("Leave failed: %v", err)
+	} else {
+		logf("A-> Leave(self)")
+	}
+
+	// 7) Stay alive through Leaving -> Exiting; onStatus sends ExitingConfirmed when we reach Exiting.
+	if !waitFor(n.ExitingConfirmedSent, 20*time.Second) {
+		logf("WARNING: never observed self = Exiting; sending ExitingConfirmed as a fallback")
+		_ = n.send(seed.actorPath(daemonPath), self.actorPath(daemonPath), manifestExitingConfirmed, n.selfUA())
+	}
+
+	// 8) Linger so the leader records our clean removal (Removed, from Exiting), then exit.
+	time.Sleep(5 * time.Second)
+	logf("--- graceful leave complete; exiting ---")
 }
 
-func readLoop(conn net.Conn, assocCh chan<- Address) {
-	for {
-		frame, err := readFrame(conn)
-		if err != nil {
-			logf("read loop ended: %v", err)
-			return
+// waitFor polls cond until it returns true or the timeout elapses.
+func waitFor(cond func() bool, timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if cond() {
+			return true
 		}
-		pdu, err := parsePdu(frame)
-		if err != nil {
-			logf("<- [unparseable frame %d bytes]: %v", len(frame), err)
-			continue
-		}
-		if pdu.isControl {
-			switch pdu.commandType {
-			case cmdASSOCIATE:
-				select {
-				case assocCh <- pdu.origin:
-				default:
-				}
-				logf("<- control ASSOCIATE (origin=%s uid=%d)", pdu.origin, pdu.uid)
-			case cmdHEARTBEAT:
-				logf("<- control HEARTBEAT")
-			case cmdDISASSOCIATE, cmdDISASSOCIATE_SHUTTINGDOWN, cmdDISASSOCIATE_QUARANTINED:
-				logf("<- control DISASSOCIATE (type=%d)", pdu.commandType)
-			default:
-				logf("<- control type=%d", pdu.commandType)
-			}
-			continue
-		}
-		logf("<- PAYLOAD recipient=%s sender=%s serializer=%d manifest=%q (%d bytes)",
-			pdu.recipientPath, pdu.senderPath, pdu.serializerId, pdu.manifest, len(pdu.message))
+		time.Sleep(200 * time.Millisecond)
 	}
+	return cond()
 }
