@@ -8,6 +8,7 @@ your own machine (macOS incl. Apple Silicon / M3, or Linux).
   the ACT verdict (the 10-step ladder) and the full captured trace.
 - **`go-worker/`** — a from-scratch Akka.NET cluster node in Go.
 - **`js-worker/`** — the same in JavaScript (Node.js).
+- **`py-worker/`** — the same in Python, with a Flask-like `@app.actor` interface for its actors.
 
 Each worker speaks the real Akka.NET remoting + cluster wire protocol and is driven through:
 join → converge → **broadcast routee delivery** → graceful leave → clean shutdown (10 steps).
@@ -62,6 +63,10 @@ cd conformance/go-worker && go build -o go-worker .
 # or JavaScript
 cd conformance/js-worker
 node worker.js --seed=akka.tcp://ConformanceCluster@127.0.0.1:5110 --port=6100
+
+# or Python (Flask-like)
+cd conformance/py-worker
+python3 worker.py --seed=akka.tcp://ConformanceCluster@127.0.0.1:5110 --port=6300
 ```
 
 Terminal 1 prints `CONFORMANCE PASSED — all 10 steps satisfied` plus the ordered protocol/membership/

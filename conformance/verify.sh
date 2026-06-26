@@ -41,14 +41,15 @@ need() {
 
 say "Preflight"
 missing=0
-need dotnet dotnet || missing=1
-need go go         || missing=1
-need node node     || missing=1
+need dotnet  dotnet || missing=1
+need go      go     || missing=1
+need node    node   || missing=1
+need python3 python || missing=1
 if [ "$missing" -ne 0 ]; then
-  bad "Install the missing toolchain(s) above, then re-run. (macOS: \`brew install dotnet go node\`)"
+  bad "Install the missing toolchain(s) above, then re-run. (macOS: \`brew install dotnet go node python\`)"
   exit 1
 fi
-echo "dotnet $(dotnet --version) | $(go version) | node $(node --version)"
+echo "dotnet $(dotnet --version) | $(go version) | node $(node --version) | $(python3 --version 2>&1)"
 
 # --- build ---
 say "Building reference seed (act-host) — first build also compiles the modified Akka.Cluster"
@@ -82,6 +83,7 @@ run_worker() {
   case "$kind" in
     go) ( cd "$ROOT/conformance/go-worker" && ./go-worker --seed="$seed_uri" --port="$work_port" "$@" ) >"$wlog" 2>&1 ;;
     js) ( cd "$ROOT/conformance/js-worker" && node worker.js --seed="$seed_uri" --port="$work_port" "$@" ) >"$wlog" 2>&1 ;;
+    py) ( cd "$ROOT/conformance/py-worker" && python3 worker.py --seed="$seed_uri" --port="$work_port" "$@" ) >"$wlog" 2>&1 ;;
   esac
 
   wait "$host_pid" 2>/dev/null   # the seed self-terminates once the worker has left (or after HOST_SECONDS)
@@ -107,13 +109,17 @@ go_status="PASS"; run_worker go 5210 6200 go --run=30 || go_status="FAIL"
 say "JavaScript worker — full 10-step ladder"
 js_status="PASS"; run_worker js 5211 6201 js --run=30 || js_status="FAIL"
 
+say "Python worker — full 10-step ladder"
+py_status="PASS"; run_worker py 5212 6202 py --run=30 || py_status="FAIL"
+
 # --- summary ---
 say "Summary"
 printf '  C# (in-process) : %s\n' "$cs_status"
 printf '  Go              : %s\n' "$go_status"
 printf '  JavaScript      : %s\n' "$js_status"
+printf '  Python          : %s\n' "$py_status"
 echo "  logs: $WORK"
-if [ "$cs_status" = PASS ] && [ "$go_status" = PASS ] && [ "$js_status" = PASS ]; then
+if [ "$cs_status" = PASS ] && [ "$go_status" = PASS ] && [ "$js_status" = PASS ] && [ "$py_status" = PASS ]; then
   ok "ALL WORKERS PASSED the 10-step ACT conformance ladder."
   exit 0
 fi
