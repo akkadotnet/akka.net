@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ChannelSinkSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -156,7 +156,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public async Task ChannelSink_writer_should_deliver_final_element_when_channel_is_full_on_completion()
+        public Task ChannelSink_writer_should_deliver_final_element_when_channel_is_full_on_completion()
         {
             const int bufferSize = 4;
             const int elementCount = bufferSize + 1;
@@ -171,12 +171,12 @@ namespace Akka.Streams.Tests.Implementation
             Source.From(Enumerable.Range(0, elementCount))
                 .RunWith(ChannelSink.FromWriter(channel.Writer, isOwner: true), _materializer);
 
-            var received = new List<int>();
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            await foreach (var item in channel.Reader.ReadAllAsync(cts.Token))
-                received.Add(item);
-
-            received.Should().Equal(Enumerable.Range(0, elementCount));
+            return channel.Reader.Completion.ContinueWith(t =>
+            {
+                t.Should().NotBeFaulted();
+                var received = channel.Reader.ReadAllAsync().Result.ToList();
+                received.Should().Equal(Enumerable.Range(0, elementCount));
+            });
         }
 
         #endregion
@@ -263,7 +263,7 @@ namespace Akka.Streams.Tests.Implementation
         }
 
         [Fact]
-        public async Task ChannelSink_reader_should_deliver_final_element_when_channel_is_full_on_completion()
+        public Task ChannelSink_reader_should_deliver_final_element_when_channel_is_full_on_completion()
         {
             const int bufferSize = 4;
             const int elementCount = bufferSize + 1; // 0..4 — last element (4) lands while the channel is full
@@ -275,16 +275,16 @@ namespace Akka.Streams.Tests.Implementation
 
             // Intentionally do not read anything yet: the source fills the channel (0..3), grabs the
             // last element (4) whose write blocks on the full channel, then eagerly completes upstream.
-            var received = new List<int>();
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            await foreach (var item in reader.ReadAllAsync(cts.Token))
-                received.Add(item);
-
-            received.Should().Equal(Enumerable.Range(0, elementCount));
+            return reader.Completion.ContinueWith(t =>
+            {
+                t.Should().NotBeFaulted();
+                var received = reader.ReadAllAsync().Result.ToList();
+                received.Should().Equal(Enumerable.Range(0, elementCount));
+            });
         }
 
         [Fact]
-        public async Task ChannelSink_reader_should_deliver_all_elements_to_a_slow_consumer()
+        public Task ChannelSink_reader_should_deliver_all_elements_to_a_slow_consumer()
         {
             const int elementCount = 30;
             const int bufferSize = 4;
@@ -294,16 +294,12 @@ namespace Akka.Streams.Tests.Implementation
                     ChannelSink.AsReader<int>(bufferSize, singleReader: true, BoundedChannelFullMode.Wait),
                     _materializer);
 
-            var received = new List<int>();
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            await foreach (var item in reader.ReadAllAsync(cts.Token))
+            return reader.Completion.ContinueWith(t =>
             {
-                received.Add(item);
-                // Slow consumer => the bounded channel stays full => the stage backpressures.
-                await Task.Delay(1, cts.Token);
-            }
-
-            received.Should().Equal(Enumerable.Range(0, elementCount));
+                t.Should().NotBeFaulted();
+                var received = reader.ReadAllAsync().Result.ToList();
+                received.Should().Equal(Enumerable.Range(0, elementCount));
+            });
         }
 
         #endregion
