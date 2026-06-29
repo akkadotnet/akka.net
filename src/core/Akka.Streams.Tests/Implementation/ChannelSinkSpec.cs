@@ -173,8 +173,9 @@ namespace Akka.Streams.Tests.Implementation
 
             var received = new List<int>();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            await foreach (var item in channel.Reader.ReadAllAsync(cts.Token))
-                received.Add(item);
+            while (await channel.Reader.WaitToReadAsync(cts.Token))
+                while (channel.Reader.TryRead(out var item))
+                    received.Add(item);
 
             received.Should().Equal(Enumerable.Range(0, elementCount));
         }
@@ -277,8 +278,9 @@ namespace Akka.Streams.Tests.Implementation
             // last element (4) whose write blocks on the full channel, then eagerly completes upstream.
             var received = new List<int>();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            await foreach (var item in reader.ReadAllAsync(cts.Token))
-                received.Add(item);
+            while (await reader.WaitToReadAsync(cts.Token))
+                while (reader.TryRead(out var item))
+                    received.Add(item);
 
             received.Should().Equal(Enumerable.Range(0, elementCount));
         }
@@ -296,8 +298,9 @@ namespace Akka.Streams.Tests.Implementation
 
             var received = new List<int>();
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            await foreach (var item in reader.ReadAllAsync(cts.Token))
-                received.Add(item);
+            while (await reader.WaitToReadAsync(cts.Token))
+                while (reader.TryRead(out var item))
+                    received.Add(item);
 
             received.Should().Equal(Enumerable.Range(0, elementCount));
         }
