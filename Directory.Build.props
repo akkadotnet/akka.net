@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.70-beta1</VersionPrefix>
+    <VersionPrefix>1.5.70-beta2</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -54,22 +54,17 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.70-beta1 is a beta release with a new `Offset.FromEnd` query offset for Akka.Persistence.Query, bug fixes for `Akka.Streams` async enumerable disposal, and a performance improvement for `BroadcastHub` with high consumer counts.
-
-**Akka.Persistence.Query**
-* [Add `Offset.FromEnd(int count)` — "last-N events" query offset](https://github.com/akkadotnet/akka.net/pull/8245): Introduces `Offset.FromEnd(int count)`, a new query-input-only offset type that begins a read journal query at the Nth event from the end of history rather than from the beginning. The offset is resolved at stream materialization into a concrete `Sequence` start position; no interface changes or wire-format changes are required. Includes opt-in TCK spec (`FromEndOffsetSpec`) for plugin authors.
+    <PackageReleaseNotes>Akka.NET v1.5.70-beta2 is a beta release with a bug fix for `ChannelSink` dropping the final element under backpressure.
 
 **Akka.Streams Bug Fixes**
-* [Fix: async enumerable source disposal ordering](https://github.com/akkadotnet/akka.net/pull/8265): Fixes a race in `Source.From(IAsyncEnumerable&lt;T&gt;)` where the underlying enumerator could be disposed before all elements were delivered to downstream, causing `ObjectDisposedException` on high-throughput pipelines.
+* [Fix: `ChannelSink` drops final element on backpressure](https://github.com/akkadotnet/akka.net/pull/8291) - Fixes [#8285](https://github.com/akkadotnet/akka.net/issues/8285): `ChannelSink` was discarding the last element in a sequence whenever the downstream `Channel&lt;T&gt;` applied backpressure during completion. The sink now correctly delivers all elements before signaling completion.
 
-**Akka.Streams Performance**
-* [Improve BroadcastHub high-consumer wheel performance](https://github.com/akkadotnet/akka.net/pull/8264): Reduces per-element cost in `BroadcastHub` when many consumers are attached by optimizing the internal consumer-wheel iteration, yielding measurable throughput improvements at high fan-out.
-
-1 contributor since release 1.5.69
+2 contributors since release 1.5.70-beta1
 
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 3 | 1438 | 180 | Aaron Stannard |</PackageReleaseNotes>
+| 2 | 115 | 15 | Aaron Stannard |
+| 1 | 97 | 3 | beminee |</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />

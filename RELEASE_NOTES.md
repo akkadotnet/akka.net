@@ -1,3 +1,17 @@
+#### 1.5.70-beta2 June 30th, 2026 ####
+
+Akka.NET v1.5.70-beta2 is a beta release with a bug fix for `ChannelSink` dropping the final element under backpressure.
+
+**Akka.Streams Bug Fixes**
+* [Fix: `ChannelSink` drops final element on backpressure](https://github.com/akkadotnet/akka.net/pull/8291) - Fixes [#8285](https://github.com/akkadotnet/akka.net/issues/8285): `ChannelSink` was discarding the last element in a sequence whenever the downstream `Channel<T>` applied backpressure during completion. The sink now correctly delivers all elements before signaling completion.
+
+2 contributors since release 1.5.70-beta1
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 2 | 115 | 15 | Aaron Stannard |
+| 1 | 97 | 3 | beminee |
+
 #### 1.5.70-beta1 June 23rd, 2026 ####
 
 Akka.NET v1.5.70-beta1 is a beta release with a new `Offset.FromEnd` query offset for Akka.Persistence.Query, bug fixes for `Akka.Streams` async enumerable disposal, and a performance improvement for `BroadcastHub` with high consumer counts.
