@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -173,17 +172,12 @@ namespace Akka.Routing
         /// <returns>A new instance of this hash ring with the given node added.</returns>
         public static ConsistentHash<T> operator +(ConsistentHash<T> hash, T node)
         {
-            var nodeHash = ConsistentHash.HashFor(node.ToString());
-            var nodes = new SortedDictionary<int, T>(hash._nodes);
-            for (var r = 1; r <= hash._virtualNodesFactor; r++)
-            {
-                var key = ConsistentHash.ConcatenateNodeHash(nodeHash, r);
-                // linear-probe on a 32-bit hash collision instead of throwing, consistent with Create (#8031)
-                while (nodes.ContainsKey(key))
-                    key = unchecked(key + 1);
-                nodes.Add(key, node);
-            }
-            return new ConsistentHash<T>(nodes, hash._virtualNodesFactor);
+            // Rebuild deterministically from the full node set so the result is byte-identical to
+            // ConsistentHash.Create(...) - same canonical ordering and collision handling (#8031).
+            // In particular this keeps `Create(S) + x == Create(S with x)`, resolves collisions in
+            // the same canonical order as Create (not insertion order), and makes adding a node that
+            // is already present a no-op instead of silently duplicating its virtual nodes.
+            return ConsistentHash.Create(hash._nodes.Values.Append(node).Distinct(), hash._virtualNodesFactor);
         }
 
         /// <summary>
@@ -197,8 +191,12 @@ namespace Akka.Routing
         /// <returns>A new instance of this hash ring with the given node removed.</returns>
         public static ConsistentHash<T> operator -(ConsistentHash<T> hash, T node)
         {
-            var nodeHash = ConsistentHash.HashFor(node.ToString());
-            return new ConsistentHash<T>(hash._nodes.CopyAndRemove(Enumerable.Range(1, hash._virtualNodesFactor).Select(r => new KeyValuePair<int, T>(ConsistentHash.ConcatenateNodeHash(nodeHash, r), node))),
+            // Rebuild from the full node set minus the removed node. Rebuilding (rather than deleting
+            // the node's natural virtual-node keys) is required because Create may have relocated a
+            // colliding virtual node to a probed slot; a key-based delete would miss it and leave a
+            // phantom entry that still routes to the removed node (#8031).
+            return ConsistentHash.Create(
+                hash._nodes.Values.Where(n => !EqualityComparer<T>.Default.Equals(n, node)).Distinct(),
                 hash._virtualNodesFactor);
         }
 

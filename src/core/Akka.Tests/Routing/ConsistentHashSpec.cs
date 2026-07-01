@@ -160,6 +160,45 @@ namespace Akka.Tests.Routing
         }
 
         [Fact]
+        public void Operator_plus_must_produce_the_same_ring_as_Create_including_across_a_collision()
+        {
+            // Create(S) + x == Create(S ∪ {x}), even when x collides with a node already in S.
+            // The incremental Add must resolve the collision in the SAME canonical order as Create,
+            // not in insertion order, otherwise rings built by different paths would diverge.
+            var incremental = ConsistentHash.Create(new[] { CollisionA }, CollisionFactor) + CollisionB;
+            var fromScratch = ConsistentHash.Create(new[] { CollisionA, CollisionB }, CollisionFactor);
+
+            AssertSameRing(Ring(fromScratch), Ring(incremental));
+        }
+
+        [Fact]
+        public void Operator_plus_must_be_idempotent_for_a_node_already_in_the_ring()
+        {
+            // Re-adding a present node must NOT duplicate its virtual nodes (which would skew the
+            // distribution toward it and grow the ring unbounded across repeated adds).
+            var baseRing = ConsistentHash.Create(new[] { CollisionA, CollisionB }, CollisionFactor);
+            var afterReadd = baseRing + CollisionA;
+
+            AssertSameRing(Ring(baseRing), Ring(afterReadd));
+            Ring(afterReadd).Values.Count(v => v == CollisionA).Should().Be(CollisionFactor);
+        }
+
+        [Fact]
+        public void Operator_minus_must_drop_every_ring_entry_for_the_node_including_probed_slots()
+        {
+            // "7681" sorts after "2842", so its colliding virtual node is the one relocated to a
+            // probed slot. Removing it must leave NO phantom entry behind (the add/remove asymmetry
+            // the review caught), and must equal Create of the remaining node set.
+            var full = ConsistentHash.Create(new[] { CollisionA, CollisionB }, CollisionFactor);
+            var afterRemove = full - CollisionB;
+
+            var ring = Ring(afterRemove);
+            ring.Values.Should().NotContain(CollisionB, "all entries for the removed node, probed slots included, must be gone");
+            ring.Count.Should().Be(CollisionFactor);
+            AssertSameRing(Ring(ConsistentHash.Create(new[] { CollisionA }, CollisionFactor)), ring);
+        }
+
+        [Fact]
         public void The_legacy_algorithm_reproduces_the_original_crash_on_the_collision_fixture()
         {
             // Sanity check that our before/after harness reproduces the exact failure #8031 reported,
