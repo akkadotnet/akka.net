@@ -405,17 +405,17 @@ namespace Akka.TestKit
         public System.Collections.Generic.IReadOnlyCollection<T> ExpectMsgAllOf<T>(System.Collections.Generic.IReadOnlyCollection<T> messages, System.Threading.CancellationToken cancellationToken = null) { }
         public System.Collections.Generic.IReadOnlyCollection<T> ExpectMsgAllOf<T>(System.TimeSpan max, params T[] messages) { }
         public System.Collections.Generic.IReadOnlyCollection<T> ExpectMsgAllOf<T>(System.TimeSpan max, System.Collections.Generic.IReadOnlyCollection<T> messages, System.Threading.CancellationToken cancellationToken = null) { }
-        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ExpectMsgAllOfAsync>d__158<T>))]
+        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ExpectMsgAllOfAsync>d__160<T>))]
         public System.Collections.Generic.IAsyncEnumerable<T> ExpectMsgAllOfAsync<T>(System.Collections.Generic.IReadOnlyCollection<T> messages, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
-        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ExpectMsgAllOfAsync>d__161<T>))]
+        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ExpectMsgAllOfAsync>d__163<T>))]
         public System.Collections.Generic.IAsyncEnumerable<T> ExpectMsgAllOfAsync<T>(System.TimeSpan max, System.Collections.Generic.IReadOnlyCollection<T> messages, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
         public System.Collections.Generic.IReadOnlyCollection<object> ExpectMsgAllOfMatchingPredicates(params Akka.TestKit.PredicateInfo[] predicates) { }
         public System.Collections.Generic.IReadOnlyCollection<object> ExpectMsgAllOfMatchingPredicates(System.Collections.Generic.IReadOnlyCollection<Akka.TestKit.PredicateInfo> predicates, System.Threading.CancellationToken cancellationToken) { }
         public System.Collections.Generic.IReadOnlyCollection<object> ExpectMsgAllOfMatchingPredicates(System.TimeSpan max, params Akka.TestKit.PredicateInfo[] predicates) { }
         public System.Collections.Generic.IReadOnlyCollection<object> ExpectMsgAllOfMatchingPredicates(System.TimeSpan max, System.Collections.Generic.IReadOnlyCollection<Akka.TestKit.PredicateInfo> predicates, System.Threading.CancellationToken cancellationToken) { }
-        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ExpectMsgAllOfMatchingPredicatesAsync>d__168))]
+        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ExpectMsgAllOfMatchingPredicatesAsync>d__170))]
         public System.Collections.Generic.IAsyncEnumerable<object> ExpectMsgAllOfMatchingPredicatesAsync(System.Collections.Generic.IReadOnlyCollection<Akka.TestKit.PredicateInfo> predicates, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
-        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ExpectMsgAllOfMatchingPredicatesAsync>d__171))]
+        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ExpectMsgAllOfMatchingPredicatesAsync>d__173))]
         public System.Collections.Generic.IAsyncEnumerable<object> ExpectMsgAllOfMatchingPredicatesAsync(System.TimeSpan max, System.Collections.Generic.IReadOnlyCollection<Akka.TestKit.PredicateInfo> predicates, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
         public T ExpectMsgAnyOf<T>(System.Collections.Generic.IEnumerable<T> messages, System.Threading.CancellationToken cancellationToken = null) { }
         public System.Threading.Tasks.ValueTask<T> ExpectMsgAnyOfAsync<T>(System.Collections.Generic.IEnumerable<T> messages, System.Threading.CancellationToken cancellationToken = null) { }
@@ -470,9 +470,9 @@ namespace Akka.TestKit
         public System.Threading.Tasks.ValueTask<object> PeekOneAsync(System.Threading.CancellationToken cancellationToken) { }
         public System.Collections.Generic.IReadOnlyCollection<object> ReceiveN(int numberOfMessages, System.Threading.CancellationToken cancellationToken = null) { }
         public System.Collections.Generic.IReadOnlyCollection<object> ReceiveN(int numberOfMessages, System.TimeSpan max, System.Threading.CancellationToken cancellationToken = null) { }
-        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ReceiveNAsync>d__217))]
-        public System.Collections.Generic.IAsyncEnumerable<object> ReceiveNAsync(int numberOfMessages, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
         [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ReceiveNAsync>d__219))]
+        public System.Collections.Generic.IAsyncEnumerable<object> ReceiveNAsync(int numberOfMessages, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
+        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ReceiveNAsync>d__221))]
         public System.Collections.Generic.IAsyncEnumerable<object> ReceiveNAsync(int numberOfMessages, System.TimeSpan max, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
         public object ReceiveOne(System.Nullable<System.TimeSpan> max = null, System.Threading.CancellationToken cancellationToken = null) { }
         public System.Threading.Tasks.ValueTask<object> ReceiveOneAsync(System.Nullable<System.TimeSpan> max = null, System.Threading.CancellationToken cancellationToken = null) { }
@@ -480,19 +480,21 @@ namespace Akka.TestKit
         public System.Collections.Generic.IReadOnlyList<T> ReceiveWhile<T>(System.Nullable<System.TimeSpan> max, System.Nullable<System.TimeSpan> idle, System.Func<object, T> filter, int msgs = 2147483647, System.Threading.CancellationToken cancellationToken = null) { }
         public System.Collections.Generic.IReadOnlyList<T> ReceiveWhile<T>(System.Func<object, T> filter, System.Nullable<System.TimeSpan> max = null, System.Nullable<System.TimeSpan> idle = null, int msgs = 2147483647, System.Threading.CancellationToken cancellationToken = null) { }
         public System.Collections.Generic.IReadOnlyList<T> ReceiveWhile<T>(System.Predicate<T> shouldContinue, System.Nullable<System.TimeSpan> max = null, System.Nullable<System.TimeSpan> idle = null, int msgs = 2147483647, bool shouldIgnoreOtherMessageTypes = True, System.Threading.CancellationToken cancellationToken = null) { }
-        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ReceiveWhileAsync>d__208<T>))]
-        public System.Collections.Generic.IAsyncEnumerable<T> ReceiveWhileAsync<T>(System.Nullable<System.TimeSpan> max, System.Func<object, T> filter, int msgs = 2147483647, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
         [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ReceiveWhileAsync>d__210<T>))]
-        public System.Collections.Generic.IAsyncEnumerable<T> ReceiveWhileAsync<T>(System.Nullable<System.TimeSpan> max, System.Nullable<System.TimeSpan> idle, System.Func<object, T> filter, int msgs = 2147483647, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
+        public System.Collections.Generic.IAsyncEnumerable<T> ReceiveWhileAsync<T>(System.Nullable<System.TimeSpan> max, System.Func<object, T> filter, int msgs = 2147483647, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
         [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ReceiveWhileAsync>d__212<T>))]
-        public System.Collections.Generic.IAsyncEnumerable<T> ReceiveWhileAsync<T>(System.Func<object, T> filter, System.Nullable<System.TimeSpan> max = null, System.Nullable<System.TimeSpan> idle = null, int msgs = 2147483647, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
+        public System.Collections.Generic.IAsyncEnumerable<T> ReceiveWhileAsync<T>(System.Nullable<System.TimeSpan> max, System.Nullable<System.TimeSpan> idle, System.Func<object, T> filter, int msgs = 2147483647, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
         [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ReceiveWhileAsync>d__214<T>))]
+        public System.Collections.Generic.IAsyncEnumerable<T> ReceiveWhileAsync<T>(System.Func<object, T> filter, System.Nullable<System.TimeSpan> max = null, System.Nullable<System.TimeSpan> idle = null, int msgs = 2147483647, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
+        [System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute(typeof(Akka.TestKit.TestKitBase.<ReceiveWhileAsync>d__216<T>))]
         public System.Collections.Generic.IAsyncEnumerable<T> ReceiveWhileAsync<T>(System.Predicate<T> shouldContinue, System.Nullable<System.TimeSpan> max = null, System.Nullable<System.TimeSpan> idle = null, int msgs = 2147483647, bool shouldIgnoreOtherMessageTypes = True, [System.Runtime.CompilerServices.EnumeratorCancellationAttribute()] System.Threading.CancellationToken cancellationToken = null) { }
         protected System.TimeSpan RemainingOr(System.TimeSpan duration) { }
         public System.TimeSpan RemainingOrDilated(System.Nullable<System.TimeSpan> duration) { }
         public void SetAutoPilot(Akka.TestKit.AutoPilot pilot) { }
         public virtual void Shutdown(System.Nullable<System.TimeSpan> duration = null, bool verifySystemShutdown = False) { }
         protected virtual void Shutdown(Akka.Actor.ActorSystem system, System.Nullable<System.TimeSpan> duration = null, bool verifySystemShutdown = False) { }
+        public virtual System.Threading.Tasks.Task ShutdownAsync(System.Nullable<System.TimeSpan> duration = null, bool verifySystemShutdown = False) { }
+        protected virtual System.Threading.Tasks.Task ShutdownAsync(Akka.Actor.ActorSystem system, System.Nullable<System.TimeSpan> duration = null, bool verifySystemShutdown = False) { }
         public bool TryPeekOne(out Akka.TestKit.MessageEnvelope envelope, System.Nullable<System.TimeSpan> max, System.Threading.CancellationToken cancellationToken) { }
         [return: System.Runtime.CompilerServices.TupleElementNamesAttribute(new string[] {
                 "success",

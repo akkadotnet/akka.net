@@ -591,6 +591,53 @@ namespace Akka.TestKit
         }
 
         /// <summary>
+        /// Asynchronously shuts down this system. Unlike <c>Shutdown</c>, this does not block the
+        /// calling thread while waiting for the <see cref="ActorSystem"/> to terminate.
+        /// On failure debug output will be logged about the remaining actors in the system.
+        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
+        /// </summary>
+        /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
+        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <exception cref="TimeoutException">TBD</exception>
+        public virtual Task ShutdownAsync(
+            TimeSpan? duration = null,
+            bool verifySystemShutdown = false)
+            => ShutdownAsync(_testState.System, duration, verifySystemShutdown);
+
+        /// <summary>
+        /// Asynchronously shuts down the specified system. Unlike <c>Shutdown</c>, this does not block
+        /// the calling thread while waiting for the <see cref="ActorSystem"/> to terminate.
+        /// On failure debug output will be logged about the remaining actors in the system.
+        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
+        /// </summary>
+        /// <param name="system">The system to shutdown.</param>
+        /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
+        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <exception cref="TimeoutException">TBD</exception>
+        protected virtual async Task ShutdownAsync(
+            ActorSystem system,
+            TimeSpan? duration = null,
+            bool verifySystemShutdown = false)
+        {
+            system ??= _testState.System;
+
+            var durationValue = duration.GetValueOrDefault(Dilated(TimeSpan.FromSeconds(5)).Min(TimeSpan.FromSeconds(10)));
+
+            var terminateTask = system.Terminate();
+            var wasShutdownDuringWait = await Task.WhenAny(terminateTask, Task.Delay(durationValue)) == terminateTask;
+            if(!wasShutdownDuringWait)
+            {
+                // Forcefully close the ActorSystem to make sure we exit the test cleanly
+                ((ExtendedActorSystem) system).Guardian.Stop();
+
+                const string msg = "Failed to stop [{0}] within [{1}]. ActorSystem is being forcefully shut down.\n{2}";
+                if(verifySystemShutdown)
+                    throw new TimeoutException(string.Format(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree()));
+                system.Log.Warning(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree());
+            }
+        }
+
+        /// <summary>
         /// Spawns an actor as a child of this test actor, and returns the child's IActorRef
         /// </summary>
         /// <param name="props">Child actor props</param>
