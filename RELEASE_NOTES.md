@@ -1,3 +1,10 @@
+#### 1.5.70-beta3 TBD ####
+
+Akka.NET v1.5.70-beta3 is a beta release that hardens the consistent-hashing router against 32-bit hash-ring collisions.
+
+**Akka.Core Bug Fixes**
+* [Fix: consistent-hashing router could wedge cluster-wide after a 32-bit hash collision](https://github.com/akkadotnet/akka.net/issues/8031) - Fixes [#8031](https://github.com/akkadotnet/akka.net/issues/8031): When two virtual nodes collided in the 32-bit consistent-hash ring (increasingly likely at high routee counts, e.g. when the ring was rebuilt after a node was downed), `ConsistentHash.Create` threw `"An entry with the same key already exists"`. The consistent-hashing router swallowed the exception and returned `NoRoutee` for **every** subsequent message until a manual restart. The ring now linear-probes to the next free slot on a collision instead of throwing. This keeps the hash distribution unchanged and produces a byte-identical ring to prior versions whenever no collision occurs (safe for rolling upgrades), and also protects `Akka.Cluster.Tools`' `ClusterReceptionist`, which builds the same ring.
+
 #### 1.5.70-beta2 June 30th, 2026 ####
 
 Akka.NET v1.5.70-beta2 is a beta release with a bug fix for `ChannelSink` dropping the final element under backpressure.

@@ -74,6 +74,19 @@ namespace Akka.Tests.Routing
             public object Key { get; private set; }
         }
 
+        /// <summary>
+        /// A minimal <see cref="Routee"/> whose <see cref="ToString"/> we control, so a test can force
+        /// two routees whose virtual nodes collide in the 32-bit ring (see #8031).
+        /// </summary>
+        public sealed class NamedRoutee : Routee
+        {
+            private readonly string _name;
+
+            public NamedRoutee(string name) => _name = name;
+
+            public override string ToString() => _name;
+        }
+
         #endregion
 
         private readonly IActorRef _router1;
@@ -225,6 +238,24 @@ namespace Akka.Tests.Routing
             var destinationC = await ExpectMsgAsync<IActorRef>();
             router4.Tell(new ConsistentHashableEnvelope("CC", new MsgKey("c")));
             await ExpectMsgAsync(destinationC);
+        }
+
+        [Fact]
+        public void Consistent_hashing_routing_logic_must_not_wedge_when_routees_collide_in_the_ring()
+        {
+            // "2842" and "7681" have colliding virtual nodes at virtual-nodes-factor 10. Before #8031
+            // this threw inside ConsistentHash.Create, was swallowed by Select, and every message
+            // routed to NoRoutee cluster-wide until a manual restart. The ring now probes past the
+            // collision, so Select must resolve to one of the real routees.
+            var routeeA = new NamedRoutee("2842");
+            var routeeB = new NamedRoutee("7681");
+            var routees = new Routee[] { routeeA, routeeB };
+            var logic = new ConsistentHashingRoutingLogic(Sys, 10, ConsistentHashingRouter.EmptyConsistentHashMapping);
+
+            var selected = logic.Select(new ConsistentHashableEnvelope("payload", "some-key"), routees);
+
+            selected.Should().NotBeSameAs(Routee.NoRoutee, "a 32-bit collision must no longer wedge the router");
+            selected.Should().Match<Routee>(r => ReferenceEquals(r, routeeA) || ReferenceEquals(r, routeeB));
         }
     }
 }

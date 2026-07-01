@@ -174,8 +174,16 @@ namespace Akka.Routing
         public static ConsistentHash<T> operator +(ConsistentHash<T> hash, T node)
         {
             var nodeHash = ConsistentHash.HashFor(node.ToString());
-            return new ConsistentHash<T>(hash._nodes.CopyAndAdd(Enumerable.Range(1, hash._virtualNodesFactor).Select(r => new KeyValuePair<int, T>(ConsistentHash.ConcatenateNodeHash(nodeHash, r), node))),
-                hash._virtualNodesFactor);
+            var nodes = new SortedDictionary<int, T>(hash._nodes);
+            for (var r = 1; r <= hash._virtualNodesFactor; r++)
+            {
+                var key = ConsistentHash.ConcatenateNodeHash(nodeHash, r);
+                // linear-probe on a 32-bit hash collision instead of throwing, consistent with Create (#8031)
+                while (nodes.ContainsKey(key))
+                    key = unchecked(key + 1);
+                nodes.Add(key, node);
+            }
+            return new ConsistentHash<T>(nodes, hash._virtualNodesFactor);
         }
 
         /// <summary>
@@ -212,13 +220,25 @@ namespace Akka.Routing
         public static ConsistentHash<T> Create<T>(IEnumerable<T> nodes, int virtualNodesFactor)
         {
             var sortedDict = new SortedDictionary<int, T>();
-            foreach (var node in nodes)
+            // Build the ring in a canonical (node string) order so that every node in the
+            // cluster produces an identical ring. This matters because the collision handling
+            // below is order-sensitive: without a stable order two nodes could resolve the same
+            // 32-bit hash collision differently and disagree on routing. See #8031.
+            foreach (var entry in nodes.Select(n => (Node: n, Key: n.ToString()))
+                         .OrderBy(x => x.Key, StringComparer.Ordinal))
             {
-                var nodeHash = HashFor(node.ToString());
-                var vnodes = Enumerable.Range(1, virtualNodesFactor)
-                    .Select(x => ConcatenateNodeHash(nodeHash, x)).ToList();
-                foreach(var vnode in vnodes)
-                    sortedDict.Add(vnode, node);
+                var nodeHash = HashFor(entry.Key);
+                for (var vnode = 1; vnode <= virtualNodesFactor; vnode++)
+                {
+                    var key = ConcatenateNodeHash(nodeHash, vnode);
+                    // The ring key space is only 32 bits wide, so two virtual nodes can hash to the
+                    // same slot. Rather than throwing (which used to wedge the entire router until a
+                    // restart - #8031), linear-probe to the next free slot. This keeps every node's
+                    // virtual-node count intact, so the hash distribution is effectively unchanged.
+                    while (sortedDict.ContainsKey(key))
+                        key = unchecked(key + 1);
+                    sortedDict.Add(key, entry.Node);
+                }
             }
 
             return new ConsistentHash<T>(sortedDict, virtualNodesFactor);
