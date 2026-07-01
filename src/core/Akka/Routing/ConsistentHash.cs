@@ -176,7 +176,10 @@ namespace Akka.Routing
             // ToString() (the ring's node identity), so this is byte-identical to
             // ConsistentHash.Create(all nodes): collisions resolve in canonical order, and adding a
             // node already present (by ToString) is a no-op rather than a duplicated vnode set (#8031).
-            return ConsistentHash.Create(hash._nodes.Values.Append(node), hash._virtualNodesFactor);
+            // Values repeats each node virtualNodesFactor times; Distinct() (reference equality on the
+            // stored instances) collapses that back to N so Create sorts N nodes, not N*V - Create's
+            // ToString de-dup remains the correctness guarantee.
+            return ConsistentHash.Create(hash._nodes.Values.Distinct().Append(node), hash._virtualNodesFactor);
         }
 
         /// <summary>
@@ -196,8 +199,10 @@ namespace Akka.Routing
             // (the ring's node identity) - rather than T.Equals - avoids dropping a different node
             // that merely compares Equals-equal to the target (#8031).
             var nodeKey = node.ToString();
+            // Distinct() first (reference equality collapses the virtualNodesFactor repeats in Values
+            // to N distinct nodes) so the ToString filter and Create's sort run over N, not N*V.
             return ConsistentHash.Create(
-                hash._nodes.Values.Where(n => !string.Equals(n.ToString(), nodeKey, StringComparison.Ordinal)),
+                hash._nodes.Values.Distinct().Where(n => !string.Equals(n.ToString(), nodeKey, StringComparison.Ordinal)),
                 hash._virtualNodesFactor);
         }
 
@@ -240,10 +245,20 @@ namespace Akka.Routing
                     var key = ConcatenateNodeHash(nodeHash, vnode);
                     // The ring key space is only 32 bits wide, so two virtual nodes can hash to the
                     // same slot. Rather than throwing (which used to wedge the entire router until a
-                    // restart - #8031), linear-probe to the next free slot. This keeps every node's
-                    // virtual-node count intact, so the hash distribution is effectively unchanged.
-                    while (sortedDict.ContainsKey(key))
-                        key = unchecked(key + 1);
+                    // restart - #8031), relocate the loser. We re-hash it to a well-distributed slot
+                    // rather than taking the adjacent key+1: an adjacent slot would leave the relocated
+                    // virtual node a near-zero-width ring segment and starve that node of ~1/factor of
+                    // its traffic, whereas a re-hashed slot lands in a sparse region and keeps a
+                    // full-width segment, preserving the node's share of the ring. A short linear probe
+                    // from there guarantees termination in the (astronomically rare) event the
+                    // re-hashed slot is itself taken. The whole sequence is a pure function of the node
+                    // hash, so every cluster node builds an identical ring.
+                    if (sortedDict.ContainsKey(key))
+                    {
+                        key = ConcatenateNodeHash(nodeHash, unchecked(vnode + virtualNodesFactor));
+                        while (sortedDict.ContainsKey(key))
+                            key = unchecked(key + 1);
+                    }
                     sortedDict.Add(key, entry.Node);
                 }
             }
