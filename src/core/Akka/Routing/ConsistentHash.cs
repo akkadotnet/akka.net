@@ -172,12 +172,11 @@ namespace Akka.Routing
         /// <returns>A new instance of this hash ring with the given node added.</returns>
         public static ConsistentHash<T> operator +(ConsistentHash<T> hash, T node)
         {
-            // Rebuild deterministically from the full node set so the result is byte-identical to
-            // ConsistentHash.Create(...) - same canonical ordering and collision handling (#8031).
-            // In particular this keeps `Create(S) + x == Create(S with x)`, resolves collisions in
-            // the same canonical order as Create (not insertion order), and makes adding a node that
-            // is already present a no-op instead of silently duplicating its virtual nodes.
-            return ConsistentHash.Create(hash._nodes.Values.Append(node).Distinct(), hash._virtualNodesFactor);
+            // Rebuild via Create from the existing nodes plus the new one. Create de-duplicates by
+            // ToString() (the ring's node identity), so this is byte-identical to
+            // ConsistentHash.Create(all nodes): collisions resolve in canonical order, and adding a
+            // node already present (by ToString) is a no-op rather than a duplicated vnode set (#8031).
+            return ConsistentHash.Create(hash._nodes.Values.Append(node), hash._virtualNodesFactor);
         }
 
         /// <summary>
@@ -191,12 +190,14 @@ namespace Akka.Routing
         /// <returns>A new instance of this hash ring with the given node removed.</returns>
         public static ConsistentHash<T> operator -(ConsistentHash<T> hash, T node)
         {
-            // Rebuild from the full node set minus the removed node. Rebuilding (rather than deleting
-            // the node's natural virtual-node keys) is required because Create may have relocated a
-            // colliding virtual node to a probed slot; a key-based delete would miss it and leave a
-            // phantom entry that still routes to the removed node (#8031).
+            // Rebuild via Create from the existing nodes minus every entry whose ToString() matches
+            // the removed node. Rebuilding is required because Create may have relocated a colliding
+            // virtual node to a probed slot that a key-based delete would miss. Matching by ToString()
+            // (the ring's node identity) - rather than T.Equals - avoids dropping a different node
+            // that merely compares Equals-equal to the target (#8031).
+            var nodeKey = node.ToString();
             return ConsistentHash.Create(
-                hash._nodes.Values.Where(n => !EqualityComparer<T>.Default.Equals(n, node)).Distinct(),
+                hash._nodes.Values.Where(n => !string.Equals(n.ToString(), nodeKey, StringComparison.Ordinal)),
                 hash._virtualNodesFactor);
         }
 
@@ -222,9 +223,17 @@ namespace Akka.Routing
             // cluster produces an identical ring. This matters because the collision handling
             // below is order-sensitive: without a stable order two nodes could resolve the same
             // 32-bit hash collision differently and disagree on routing. See #8031.
+            //
+            // Nodes are identified by ToString() - the same value their ring keys are derived from
+            // (the class requires ToString to be distinct per node). De-duplicating by it means a
+            // node supplied more than once contributes a single set of virtual nodes instead of
+            // having its duplicates probed into extra slots, which would skew routing toward it.
+            var seenNodes = new HashSet<string>(StringComparer.Ordinal);
             foreach (var entry in nodes.Select(n => (Node: n, Key: n.ToString()))
                          .OrderBy(x => x.Key, StringComparer.Ordinal))
             {
+                if (!seenNodes.Add(entry.Key))
+                    continue;
                 var nodeHash = HashFor(entry.Key);
                 for (var vnode = 1; vnode <= virtualNodesFactor; vnode++)
                 {

@@ -35,6 +35,18 @@ namespace Akka.Tests.Routing
         private const string CollisionB = "7681";
         private const int CollisionFactor = 10;
 
+        /// <summary>
+        /// A reference type identified only by <see cref="ToString"/> (no <c>Equals</c> override),
+        /// matching how <see cref="ConsistentHash{T}"/> is documented to identify nodes. Used to prove
+        /// ring identity is ToString-based, not reference/Default-equality based.
+        /// </summary>
+        private sealed class NamedNode
+        {
+            private readonly string _name;
+            public NamedNode(string name) => _name = name;
+            public override string ToString() => _name;
+        }
+
         #region Helpers
 
         /// <summary>
@@ -196,6 +208,45 @@ namespace Akka.Tests.Routing
             ring.Values.Should().NotContain(CollisionB, "all entries for the removed node, probed slots included, must be gone");
             ring.Count.Should().Be(CollisionFactor);
             AssertSameRing(Ring(ConsistentHash.Create(new[] { CollisionA }, CollisionFactor)), ring);
+        }
+
+        [Fact]
+        public void Create_must_identify_nodes_by_ToString_and_dedupe_duplicates()
+        {
+            // Same value listed twice must yield a single set of virtual nodes, not a probed-in
+            // second set that skews the distribution toward it (#8031).
+            var byValue = Ring(ConsistentHash.Create(new[] { CollisionA, CollisionA }, CollisionFactor));
+            byValue.Count.Should().Be(CollisionFactor);
+            byValue.Values.Should().OnlyContain(v => v == CollisionA);
+
+            // Two distinct instances with the same ToString (no Equals override) are the same node
+            // to the ring - identity is ToString-based, not reference-based.
+            var ring = Ring(ConsistentHash.Create(new[] { new NamedNode("srv1"), new NamedNode("srv1") }, CollisionFactor));
+            ring.Count.Should().Be(CollisionFactor, "nodes are identified by ToString(), not reference identity");
+        }
+
+        [Fact]
+        public void Operator_plus_must_be_idempotent_by_ToString_for_reference_types()
+        {
+            var ring = ConsistentHash.Create(new[] { new NamedNode("srv1") }, CollisionFactor);
+
+            // Fresh instance, same ToString: re-adding must be a no-op, not an unbounded duplication.
+            var afterReadd = ring + new NamedNode("srv1");
+
+            Ring(afterReadd).Count.Should().Be(CollisionFactor, "re-adding by ToString identity must be a no-op");
+        }
+
+        [Fact]
+        public void Operator_minus_must_match_by_ToString_not_reference_or_Equals()
+        {
+            var ring = ConsistentHash.Create(new[] { new NamedNode("a"), new NamedNode("b") }, CollisionFactor);
+
+            // Remove via a DIFFERENT instance whose ToString is "a": must drop a's entries (ToString
+            // identity - reference equality would match nothing) and must NOT drop "b".
+            var afterRemove = Ring(ring - new NamedNode("a"));
+
+            afterRemove.Count.Should().Be(CollisionFactor);
+            afterRemove.Values.Should().OnlyContain(n => n.ToString() == "b");
         }
 
         [Fact]
