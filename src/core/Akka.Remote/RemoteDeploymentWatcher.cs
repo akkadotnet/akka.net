@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Linq;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
@@ -43,6 +44,38 @@ namespace Akka.Remote
                     _supervisors.Remove(t.ActorRef);
                 }
             });
+
+            Receive<RemotingShutdownEvent>(_ => NotifyRemoteDeploymentsTerminated());
+            Receive<FlushRemoteDeployments>(_ =>
+            {
+                NotifyRemoteDeploymentsTerminated();
+                Sender.Tell(Done.Instance);
+            });
+        }
+
+        protected override void PreStart()
+        {
+            Context.System.EventStream.Subscribe(Self, typeof(RemotingShutdownEvent));
+        }
+
+        protected override void PostStop()
+        {
+            Context.System.EventStream.Unsubscribe(Self);
+        }
+
+        private void NotifyRemoteDeploymentsTerminated()
+        {
+            // Local shutdown cannot wait for remote DeathWatch round-trips; release local supervisors first.
+            foreach (var deployment in _supervisors.ToArray())
+            {
+                deployment.Value.SendSystemMessage(new DeathWatchNotification(
+                    deployment.Key,
+                    existenceConfirmed: true,
+                    addressTerminated: true));
+                Context.Unwatch(deployment.Key);
+            }
+
+            _supervisors.Clear();
         }
 
         /// <summary>
@@ -69,6 +102,15 @@ namespace Akka.Remote
             /// TBD
             /// </summary>
             public IInternalActorRef Supervisor { get; private set; }
+        }
+
+        internal sealed class FlushRemoteDeployments
+        {
+            public static readonly FlushRemoteDeployments Instance = new();
+
+            private FlushRemoteDeployments()
+            {
+            }
         }
     }
 }

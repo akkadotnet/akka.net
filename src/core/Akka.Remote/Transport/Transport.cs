@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -138,6 +140,46 @@ namespace Akka.Remote.Transport
         public override string ToString()
         {
             return $"InboundPayload(size = {Payload.Length} bytes)";
+        }
+    }
+
+    /// <summary>
+    /// Message sent to the internal Akka protocol listener when the underlying transport can expose
+    /// the encoded PDU as a <see cref="ReadOnlySequence{T}"/> without first materializing a <see cref="ByteString"/>.
+    /// </summary>
+    internal sealed class InboundSequencePayload : IHandleEvent
+    {
+        public InboundSequencePayload(ReadOnlySequence<byte> payload)
+        {
+            Payload = payload;
+        }
+
+        public ReadOnlySequence<byte> Payload { get; }
+
+        public override string ToString()
+        {
+            return $"InboundSequencePayload(size = {Payload.Length} bytes)";
+        }
+    }
+
+    /// <summary>
+    /// Batched form of <see cref="InboundSequencePayload"/>: carries several length-framed PDUs that were
+    /// decoded from a single inbound TCP chunk. Lets the protocol-state actor and endpoint reader process
+    /// multiple PDUs per mailbox turn instead of one Tell per frame, which is the dominant inbound cost at
+    /// high throughput (many PDUs multiplex over one association connection). Payloads are in wire order.
+    /// </summary>
+    internal sealed class InboundSequencePayloadBatch : IHandleEvent
+    {
+        public InboundSequencePayloadBatch(IReadOnlyList<ReadOnlySequence<byte>> payloads)
+        {
+            Payloads = payloads;
+        }
+
+        public IReadOnlyList<ReadOnlySequence<byte>> Payloads { get; }
+
+        public override string ToString()
+        {
+            return $"InboundSequencePayloadBatch(count = {Payloads.Count})";
         }
     }
 
@@ -429,4 +471,3 @@ namespace Akka.Remote.Transport
         }
     }
 }
-

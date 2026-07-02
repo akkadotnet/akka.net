@@ -143,6 +143,12 @@ namespace Akka.IO
             public TransportOperationFailed(Exception cause) { Cause = cause; }
         }
 
+        private sealed class FlushPendingWrites : INoSerializationVerificationNeeded
+        {
+            public static readonly FlushPendingWrites Instance = new();
+            private FlushPendingWrites() { }
+        }
+
         private sealed class CommanderDied : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public static readonly CommanderDied Instance = new();
@@ -168,6 +174,9 @@ namespace Akka.IO
         private const int ShutdownNone = 0;
         private const int ShutdownInitiated = 1;
 
+        private const int NoAckWriteFlushThreshold = 32;
+        private const int NoAckByteFlushThreshold = 64 * 1024;
+
         #endregion
 
         protected readonly TcpSettings Settings;
@@ -180,6 +189,10 @@ namespace Akka.IO
 
         // Transport connection — owns pipes, pump loops, stream
         private ITransportConnection? _transport;
+
+        // TCP transport supports non-flushing writes; other transport implementations
+        // keep the existing write-and-flush behavior.
+        private TcpTransportConnection? _batchingTransport;
 
         // CTS for pipe read cancellation
         private CancellationTokenSource? _cts;
@@ -199,6 +212,10 @@ namespace Akka.IO
         private int _pendingRegistrationBytes;
 
         private readonly Queue<WriteCommand> _pendingRegistrationWrites = new();
+
+        private int _unflushedWriteCount;
+        private long _unflushedBytes;
+        private bool _writeFlushScheduled;
 
         #region Connection state flags
         // Transient flags that survive a Become(...) and together describe where this
@@ -336,6 +353,7 @@ namespace Akka.IO
         protected void StartTransport(ITransportConnection transport)
         {
             _transport = transport;
+            _batchingTransport = transport as TcpTransportConnection;
             _cts = new CancellationTokenSource();
 
             // Monitor the read pump for completion/errors
@@ -423,6 +441,7 @@ namespace Akka.IO
         private void OpenBehaviour()
         {
             Receive<Tcp.WriteCommand>(HandleWrite);
+            Receive<FlushPendingWrites>(_ => FlushPendingWritesNow());
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             Receive<ReadPumpFailed>(msg => HandleReadPumpFailed(msg));
             Receive<ReadPumpCompleted>(_ => HandleReadPumpCompleted());
@@ -442,6 +461,7 @@ namespace Akka.IO
         {
             // Peer closed their write side, but we can still write
             Receive<Tcp.WriteCommand>(HandleWrite);
+            Receive<FlushPendingWrites>(_ => FlushPendingWritesNow());
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
             Receive<ReadPumpFailed>(msg => HandleReadPumpFailed(msg));
             Receive<ReadPumpCompleted>(_ => HandleReadPumpCompleted());
@@ -468,6 +488,7 @@ namespace Akka.IO
             {
                 Sender.Tell(w.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
             });
+            Receive<FlushPendingWrites>(_ => FlushPendingWritesNow());
             Receive<Abort>(c => HandleClose(Sender, c.Event));
             Receive<ReadPumpFailed>(msg =>
             {
@@ -875,16 +896,67 @@ namespace Akka.IO
             // Handle empty writes immediately
             if (byteCount == 0)
             {
+                if (write.WantsAck)
+                    FlushPendingWritesNow();
+
                 if (write.WantsAck) sender.Tell(write.Ack);
                 return;
             }
 
-            // Write directly to transport — pipe handles buffering and batching.
-            // The pipe absorbs writes into its internal buffer (memcpy, not syscall).
-            // The write pump flushes the buffer to the socket asynchronously.
-            _transport!.WriteAsync(write.Data, _cts!.Token);
+            if (write.WantsAck)
+            {
+                // Acked writes preserve the existing write-and-flush path. This also
+                // flushes any no-ack writes buffered ahead of this write.
+                _transport!.WriteAsync(write.Data, _cts!.Token);
+                ResetPendingWriteFlush();
+                sender.Tell(write.Ack);
+                return;
+            }
 
-            if (write.WantsAck) sender.Tell(write.Ack);
+            // No-ack writes are the hot path for Streams TCP. Buffer a small burst
+            // before flushing the pipe so the write pump wakes up once per batch.
+            if (_batchingTransport is null)
+            {
+                _transport!.WriteAsync(write.Data, _cts!.Token);
+                return;
+            }
+
+            _batchingTransport.WriteUnflushed(write.Data);
+            _unflushedWriteCount++;
+            _unflushedBytes += byteCount;
+
+            if (_unflushedWriteCount >= NoAckWriteFlushThreshold || _unflushedBytes >= NoAckByteFlushThreshold)
+                FlushPendingWritesNow();
+            else
+                SchedulePendingWriteFlush();
+        }
+
+        private void SchedulePendingWriteFlush()
+        {
+            if (_writeFlushScheduled)
+                return;
+
+            _writeFlushScheduled = true;
+            Self.Tell(FlushPendingWrites.Instance);
+        }
+
+        private void FlushPendingWritesNow()
+        {
+            if (_unflushedWriteCount == 0)
+            {
+                _writeFlushScheduled = false;
+                return;
+            }
+
+            _transport!.FlushAsync(_cts!.Token);
+            ResetPendingWriteFlush();
+        }
+
+        private void ResetPendingWriteFlush()
+        {
+            _unflushedWriteCount = 0;
+            _unflushedBytes = 0;
+            _writeFlushScheduled = false;
         }
 
         /* ================================================================= */
@@ -931,6 +1003,7 @@ namespace Akka.IO
         private void HandleGracefulClose(IActorRef closeSender, ConnectionClosed closeEvent)
         {
             _closingGracefully = true;
+            FlushPendingWritesNow();
 
             // Ask the transport to close (flushes writes, closes connection)
             if (_transport != null)
@@ -971,6 +1044,7 @@ namespace Akka.IO
         private void HandleConfirmedClose(IActorRef closeSender)
         {
             _closingGracefully = true;
+            FlushPendingWritesNow();
 
             // Ask the transport to shutdown (flush writes, send FIN, keep reading)
             if (_transport != null)

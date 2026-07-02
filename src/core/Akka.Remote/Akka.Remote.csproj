@@ -8,6 +8,7 @@
     <ItemGroup>
         <EmbeddedResource Include="Configuration\Remote.conf" />
         <ProjectReference Include="..\Akka\Akka.csproj" />
+        <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="DotNetty.Handlers" Version="0.7.6" />

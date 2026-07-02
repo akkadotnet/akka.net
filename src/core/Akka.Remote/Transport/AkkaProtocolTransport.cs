@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
@@ -636,7 +637,7 @@ namespace Akka.Remote.Transport
         /// <param name="handlerListener">TBD</param>
         /// <param name="wrappedHandle">TBD</param>
         /// <param name="queue">TBD</param>
-        public AssociatedWaitHandler(Task<IHandleEventListener> handlerListener, AssociationHandle wrappedHandle, Queue<ByteString> queue)
+        public AssociatedWaitHandler(Task<IHandleEventListener> handlerListener, AssociationHandle wrappedHandle, Queue<IHandleEvent> queue)
         {
             Queue = queue;
             WrappedHandle = wrappedHandle;
@@ -656,7 +657,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public Queue<ByteString> Queue { get; private set; }
+        public Queue<IHandleEvent> Queue { get; private set; }
     }
 
     /// <summary>
@@ -891,9 +892,15 @@ namespace Akka.Remote.Transport
                 {
                     case Disassociated d:
                         return Stop(new Failure(d.Info));
-                    case InboundPayload p when @event.StateData is OutboundUnderlyingAssociated ola:
+                    case InboundSequencePayloadBatch waitBatch:
+                        // During handshake, inbound chunks carry a single PDU; unbatch and reprocess each
+                        // frame individually so the handshake state machine sees them one at a time, in order.
+                        foreach (var raw in waitBatch.Payloads)
+                            Self.Tell(new InboundSequencePayload(raw));
+                        return Stay();
+                    case InboundPayload or InboundSequencePayload when @event.StateData is OutboundUnderlyingAssociated ola:
                         {
-                            var pdu = DecodePdu(p.Payload);
+                            var pdu = DecodePdu((IHandleEvent)@event.FsmEvent);
                             /*
                              * This state is used for OutboundProtocolState actors when they receive
                              * a reply back from the inbound end of the association.
@@ -919,7 +926,7 @@ namespace Akka.Remote.Transport
                                                     new AssociatedWaitHandler(
                                                         NotifyOutboundHandler(wrappedHandle, handshakeInfo,
                                                             statusCompletionSource), wrappedHandle,
-                                                        new Queue<ByteString>()));
+                                                        new Queue<IHandleEvent>()));
                                     }
                                 case Disassociate d:
                                     //After receiving Disassociate we MUST NOT send back a Disassociate (loop)
@@ -938,9 +945,9 @@ namespace Akka.Remote.Transport
                         return HandleTimers(oua.WrappedHandle);
 
                     // Events for inbound associations
-                    case InboundPayload p when @event.StateData is InboundUnassociated iu:
+                    case InboundPayload or InboundSequencePayload when @event.StateData is InboundUnassociated iu:
                         {
-                            var pdu = DecodePdu(p.Payload);
+                            var pdu = DecodePdu((IHandleEvent)@event.FsmEvent);
                             /*
                              * This state is used by inbound protocol state actors
                              * when they receive an association attempt from the
@@ -962,7 +969,7 @@ namespace Akka.Remote.Transport
                                     return GoTo(AssociationState.Open).Using(
                                         new AssociatedWaitHandler(
                                             NotifyInboundHandler(wrappedHandle, a.Info, associationHandler),
-                                            wrappedHandle, new Queue<ByteString>()));
+                                            wrappedHandle, new Queue<IHandleEvent>()));
 
                                 // Got a stray message -- explicitly reset the association (force remote endpoint to reassociate)
                                 default:
@@ -999,9 +1006,9 @@ namespace Akka.Remote.Transport
                 {
                     case Disassociated d:
                         return Stop(new Failure(d.Info));
-                    case InboundPayload ip:
+                    case InboundPayload or InboundSequencePayload:
                         {
-                            var pdu = DecodePdu(ip.Payload);
+                            var pdu = DecodePdu((IHandleEvent)@event.FsmEvent);
                             switch (pdu)
                             {
                                 case Disassociate d:
@@ -1012,26 +1019,20 @@ namespace Akka.Remote.Transport
                                 case Payload p:
                                     // use incoming ordinary message as alive sign
                                     _failureDetector.HeartBeat();
-                                    switch (@event.StateData)
-                                    {
-                                        case AssociatedWaitHandler awh:
-                                            var nQueue = new Queue<ByteString>(awh.Queue);
-                                            nQueue.Enqueue(p.Bytes);
-                                            return
-                                                Stay()
-                                                    .Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle,
-                                                        nQueue));
-                                        case ListenerReady lr:
-                                            lr.Listener.Notify(new InboundPayload(p.Bytes));
-                                            return Stay();
-                                        default:
-                                            throw new AkkaProtocolException(
-                                                $"Unhandled message in state Open(InboundPayload) with type [{@event.FsmEvent?.GetType()}]");
-                                    }
+                                    return HandlePayload(new InboundPayload(p.Bytes), @event.StateData, @event.FsmEvent);
+                                case SequencePayload p:
+                                    // use incoming ordinary message as alive sign
+                                    _failureDetector.HeartBeat();
+                                    return HandlePayload(new InboundSequencePayload(p.Bytes), @event.StateData, @event.FsmEvent);
                                 default:
                                     return Stay();
                             }
                         }
+                    case InboundSequencePayloadBatch payloadBatch:
+                        // Steady-state fast path: decode all PDUs from one inbound TCP chunk and forward the
+                        // sequence payloads to the endpoint reader as a single batch (one mailbox turn instead
+                        // of one Tell per frame). Order preserved; heartbeats feed the failure detector.
+                        return HandleSequenceBatch(payloadBatch, @event.StateData);
                     case HeartbeatTimer ht when @event.StateData is AssociatedWaitHandler awh:
                         return HandleTimers(awh.WrappedHandle);
                     case HeartbeatTimer ht when @event.StateData is ListenerReady lr:
@@ -1062,7 +1063,7 @@ namespace Akka.Remote.Transport
                     case HandleListenerRegistered hlr when @event.StateData is AssociatedWaitHandler awh:
                         foreach (var p in awh.Queue)
                         {
-                            hlr.Listener.Notify(new InboundPayload(p));
+                            hlr.Listener.Notify(p);
                         }
 
                         return Stay().Using(new ListenerReady(hlr.Listener, awh.WrappedHandle));
@@ -1297,7 +1298,94 @@ namespace Akka.Remote.Transport
             return readHandlerPromise.Task;
         }
 
+        private IAkkaPdu DecodePdu(IHandleEvent ev)
+        {
+            return ev switch
+            {
+                InboundPayload p => DecodePdu(p.Payload),
+                InboundSequencePayload p => DecodePdu(p.Payload),
+                _ => throw new AkkaProtocolException($"Expected inbound payload event, received [{ev.GetType()}]")
+            };
+        }
+
+        // Batched counterpart of the single-PDU Open-state handling: decode every PDU from one inbound TCP
+        // chunk, feed heartbeats to the failure detector, and forward the data PDUs to the endpoint reader as
+        // a single InboundSequencePayloadBatch. Preserves wire order; a Disassociate flushes prior payloads
+        // then stops. For the stream transport, data PDUs always decode to SequencePayload.
+        private State<AssociationState, ProtocolStateData> HandleSequenceBatch(InboundSequencePayloadBatch batch, ProtocolStateData stateData)
+        {
+            List<ReadOnlySequence<byte>> decoded = null;
+            foreach (var raw in batch.Payloads)
+            {
+                switch (DecodePdu(raw))
+                {
+                    case Disassociate d:
+                        if (decoded != null)
+                            ForwardSequencePayloads(decoded, stateData);
+                        return Stop(new Failure(d.Reason));
+                    case Heartbeat:
+                        _failureDetector.HeartBeat();
+                        break;
+                    case SequencePayload sp:
+                        _failureDetector.HeartBeat();
+                        (decoded ??= new List<ReadOnlySequence<byte>>(batch.Payloads.Count)).Add(sp.Bytes);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            return decoded == null ? Stay() : ForwardSequencePayloads(decoded, stateData);
+        }
+
+        private State<AssociationState, ProtocolStateData> ForwardSequencePayloads(List<ReadOnlySequence<byte>> payloads, ProtocolStateData stateData)
+        {
+            var batchEvent = new InboundSequencePayloadBatch(payloads);
+            switch (stateData)
+            {
+                case AssociatedWaitHandler awh:
+                    var nQueue = new Queue<IHandleEvent>(awh.Queue);
+                    nQueue.Enqueue(batchEvent);
+                    return Stay().Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle, nQueue));
+                case ListenerReady lr:
+                    lr.Listener.Notify(batchEvent);
+                    return Stay();
+                default:
+                    throw new AkkaProtocolException(
+                        $"Unhandled message in state Open(InboundSequencePayloadBatch) with type [{stateData?.GetType()}]");
+            }
+        }
+
+        private State<AssociationState, ProtocolStateData> HandlePayload(IHandleEvent payload, ProtocolStateData stateData, object fsmEvent)
+        {
+            switch (stateData)
+            {
+                case AssociatedWaitHandler awh:
+                    var nQueue = new Queue<IHandleEvent>(awh.Queue);
+                    nQueue.Enqueue(payload);
+                    return Stay().Using(new AssociatedWaitHandler(awh.HandlerListener, awh.WrappedHandle, nQueue));
+                case ListenerReady lr:
+                    lr.Listener.Notify(payload);
+                    return Stay();
+                default:
+                    throw new AkkaProtocolException(
+                        $"Unhandled message in state Open(InboundPayload) with type [{fsmEvent?.GetType()}]");
+            }
+        }
+
         private IAkkaPdu DecodePdu(ByteString pdu)
+        {
+            try
+            {
+                return _codec.DecodePdu(pdu);
+            }
+            catch (Exception ex)
+            {
+                throw new AkkaProtocolException($"Error while decoding incoming Akka PDU of length {pdu.Length}", ex);
+            }
+        }
+
+        private IAkkaPdu DecodePdu(ReadOnlySequence<byte> pdu)
         {
             try
             {
@@ -1410,4 +1498,3 @@ namespace Akka.Remote.Transport
         #endregion
     }
 }
-
