@@ -17,40 +17,40 @@ namespace Akka.Benchmarks.Utils
     public class ConsistentHashBenchmarks
     {
 
-        private string testString;
-        private byte[] testBinary;
+        private string _testString;
+        private byte[] _testBinary;
 
         [GlobalSetup]
         public void Setup()
         {
-            testString = Guid.NewGuid().ToString("D");
-            testBinary = new byte[100];
+            _testString = Guid.NewGuid().ToString("D");
+            _testBinary = new byte[100];
 
-            ThreadLocalRandom.Current.NextBytes(testBinary);
+            ThreadLocalRandom.Current.NextBytes(_testBinary);
         }
 
         [Benchmark]
         public int Murmur_string_hash()
         {
-            return MurmurHash.StringHash(testString);
+            return MurmurHash.StringHash(_testString);
         }
 
         [Benchmark]
         public uint Jenkins_string_hash()
         {
-            return Jenkins.Hash(testString);
+            return Jenkins.Hash(_testString);
         }
 
         [Benchmark]
         public int Murmur_binary_hash()
         {
-            return MurmurHash.ByteHash(testBinary);
+            return MurmurHash.ByteHash(_testBinary);
         }
 
         [Benchmark]
         public uint Jenkins_binary_hash()
         {
-            return Jenkins.Hash(testBinary);
+            return Jenkins.Hash(_testBinary);
         }
 
         #region Jenkins
