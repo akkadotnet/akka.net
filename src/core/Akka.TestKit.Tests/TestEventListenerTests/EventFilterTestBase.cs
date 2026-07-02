@@ -24,17 +24,19 @@ namespace Akka.TestKit.Tests.TestEventListenerTests
         {
         }
 
-        public ValueTask InitializeAsync()
+        public async ValueTask InitializeAsync()
         {
             //We send a ForwardAllEventsTo containing message to the TestEventListenerToForwarder logger (configured as a logger above).
             //It should respond with an "OK" message when it has received the message.
             var initLoggerMessage = new ForwardAllEventsTestEventListener.ForwardAllEventsTo(TestActor);
-            
-            SendRawLogEventMessage(initLoggerMessage);
-            ExpectMsg("OK");
+
+            //The logger may not have finished subscribing yet, so retry until it acknowledges.
+            await AwaitAssertAsync(async () =>
+            {
+                SendRawLogEventMessage(initLoggerMessage);
+                await ExpectMsgAsync("OK", TimeSpan.FromSeconds(1));
+            }, TimeSpan.FromSeconds(10), TimeSpan.FromMilliseconds(200));
             //From now on we know that all messages will be forwarded to TestActor
-            
-            return new ValueTask(Task.CompletedTask);
         }
 
         public ValueTask DisposeAsync()
