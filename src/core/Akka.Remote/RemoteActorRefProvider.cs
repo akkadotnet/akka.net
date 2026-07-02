@@ -275,6 +275,16 @@ namespace Akka.Remote
             Transport.Start();
             _remoteWatcher = CreateRemoteWatcher(system);
             _remoteDeploymentWatcher = CreateRemoteDeploymentWatcher(system);
+            var coordinatedShutdown = CoordinatedShutdown.Get(system);
+            coordinatedShutdown.AddTask(
+                CoordinatedShutdown.PhaseBeforeActorSystemTerminate,
+                "flush-remote-deployments",
+                // Bound the flush Ask to the shutdown phase's own timeout rather than the
+                // (longer) remote shutdown-timeout, so a backed-up watcher can never stall
+                // CoordinatedShutdown beyond the phase it runs in.
+                () => _remoteDeploymentWatcher.Ask<Done>(
+                    RemoteDeploymentWatcher.FlushRemoteDeployments.Instance,
+                    coordinatedShutdown.Timeout(CoordinatedShutdown.PhaseBeforeActorSystemTerminate)));
         }
 
         /// <summary>
@@ -806,4 +816,3 @@ namespace Akka.Remote
         }
     }
 }
-
