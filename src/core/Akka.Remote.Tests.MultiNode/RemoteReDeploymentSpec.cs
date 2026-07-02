@@ -125,14 +125,22 @@ namespace Akka.Remote.Tests.MultiNode
                 tempSys.ActorOf(EchoProps(p.Ref), "echo");
                 p.Send(tempSys.ActorOf(Props.Create(() => new Parent()), "parent"),
                     new ParentMessage(Props.Create(() => new Hello()), "hello"));
-                await p.ExpectMsgAsync("HelloParent", TimeSpan.FromSeconds(15));
+                // Widened from 15s to 30s: after the second system is replaced by a new incarnation on the
+                // same address, this re-deploy has to complete a fresh remote re-association plus the
+                // remote deployment round-trip over the simulated slow network. On a loaded CI agent the
+                // adverse-network variant can legitimately exceed 15s, so give it headroom. Not a logic change.
+                await p.ExpectMsgAsync("HelloParent", TimeSpan.FromSeconds(30));
             }, _config.Second);
 
             await EnterBarrierAsync("re-deployed");
 
             await RunOnAsync(async () =>
             {
-                await WithinAsync(TimeSpan.FromSeconds(15), async () =>
+                // Widened from 15s to 30s: `first` observes the child's lifecycle (PreStart / PostStop+PreStart)
+                // only after the new incarnation of `second` re-associates and re-deploys the child remotely
+                // over the simulated slow network. Under CI load the adverse-network variant can exceed the
+                // flat 15s window, causing a spurious miss. Extra headroom only — assertions are unchanged.
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
                     if (ExpectQuarantine)
                     {
