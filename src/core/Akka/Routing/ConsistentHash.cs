@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -173,9 +172,14 @@ namespace Akka.Routing
         /// <returns>A new instance of this hash ring with the given node added.</returns>
         public static ConsistentHash<T> operator +(ConsistentHash<T> hash, T node)
         {
-            var nodeHash = ConsistentHash.HashFor(node.ToString());
-            return new ConsistentHash<T>(hash._nodes.CopyAndAdd(Enumerable.Range(1, hash._virtualNodesFactor).Select(r => new KeyValuePair<int, T>(ConsistentHash.ConcatenateNodeHash(nodeHash, r), node))),
-                hash._virtualNodesFactor);
+            // Rebuild via Create from the existing nodes plus the new one. Create de-duplicates by
+            // ToString() (the ring's node identity), so this is byte-identical to
+            // ConsistentHash.Create(all nodes): collisions resolve in canonical order, and adding a
+            // node already present (by ToString) is a no-op rather than a duplicated vnode set (#8031).
+            // Values repeats each node virtualNodesFactor times; Distinct() (reference equality on the
+            // stored instances) collapses that back to N so Create sorts N nodes, not N*V - Create's
+            // ToString de-dup remains the correctness guarantee.
+            return ConsistentHash.Create(hash._nodes.Values.Distinct().Append(node), hash._virtualNodesFactor);
         }
 
         /// <summary>
@@ -189,8 +193,16 @@ namespace Akka.Routing
         /// <returns>A new instance of this hash ring with the given node removed.</returns>
         public static ConsistentHash<T> operator -(ConsistentHash<T> hash, T node)
         {
-            var nodeHash = ConsistentHash.HashFor(node.ToString());
-            return new ConsistentHash<T>(hash._nodes.CopyAndRemove(Enumerable.Range(1, hash._virtualNodesFactor).Select(r => new KeyValuePair<int, T>(ConsistentHash.ConcatenateNodeHash(nodeHash, r), node))),
+            // Rebuild via Create from the existing nodes minus every entry whose ToString() matches
+            // the removed node. Rebuilding is required because Create may have relocated a colliding
+            // virtual node to a probed slot that a key-based delete would miss. Matching by ToString()
+            // (the ring's node identity) - rather than T.Equals - avoids dropping a different node
+            // that merely compares Equals-equal to the target (#8031).
+            var nodeKey = node.ToString();
+            // Distinct() first (reference equality collapses the virtualNodesFactor repeats in Values
+            // to N distinct nodes) so the ToString filter and Create's sort run over N, not N*V.
+            return ConsistentHash.Create(
+                hash._nodes.Values.Distinct().Where(n => !string.Equals(n.ToString(), nodeKey, StringComparison.Ordinal)),
                 hash._virtualNodesFactor);
         }
 
@@ -212,13 +224,43 @@ namespace Akka.Routing
         public static ConsistentHash<T> Create<T>(IEnumerable<T> nodes, int virtualNodesFactor)
         {
             var sortedDict = new SortedDictionary<int, T>();
-            foreach (var node in nodes)
+            // Build the ring in a canonical (node string) order so that every node in the
+            // cluster produces an identical ring. This matters because the collision handling
+            // below is order-sensitive: without a stable order two nodes could resolve the same
+            // 32-bit hash collision differently and disagree on routing. See #8031.
+            //
+            // Nodes are identified by ToString() - the same value their ring keys are derived from
+            // (the class requires ToString to be distinct per node). De-duplicating by it means a
+            // node supplied more than once contributes a single set of virtual nodes instead of
+            // having its duplicates probed into extra slots, which would skew routing toward it.
+            var seenNodes = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var entry in nodes.Select(n => (Node: n, Key: n.ToString()))
+                         .OrderBy(x => x.Key, StringComparer.Ordinal))
             {
-                var nodeHash = HashFor(node.ToString());
-                var vnodes = Enumerable.Range(1, virtualNodesFactor)
-                    .Select(x => ConcatenateNodeHash(nodeHash, x)).ToList();
-                foreach(var vnode in vnodes)
-                    sortedDict.Add(vnode, node);
+                if (!seenNodes.Add(entry.Key))
+                    continue;
+                var nodeHash = HashFor(entry.Key);
+                for (var vnode = 1; vnode <= virtualNodesFactor; vnode++)
+                {
+                    var key = ConcatenateNodeHash(nodeHash, vnode);
+                    // The ring key space is only 32 bits wide, so two virtual nodes can hash to the
+                    // same slot. Rather than throwing (which used to wedge the entire router until a
+                    // restart - #8031), relocate the loser. We re-hash it to a well-distributed slot
+                    // rather than taking the adjacent key+1: an adjacent slot would leave the relocated
+                    // virtual node a near-zero-width ring segment and starve that node of ~1/factor of
+                    // its traffic, whereas a re-hashed slot lands in a sparse region and keeps a
+                    // full-width segment, preserving the node's share of the ring. A short linear probe
+                    // from there guarantees termination in the (astronomically rare) event the
+                    // re-hashed slot is itself taken. The whole sequence is a pure function of the node
+                    // hash, so every cluster node builds an identical ring.
+                    if (sortedDict.ContainsKey(key))
+                    {
+                        key = ConcatenateNodeHash(nodeHash, unchecked(vnode + virtualNodesFactor));
+                        while (sortedDict.ContainsKey(key))
+                            key = unchecked(key + 1);
+                    }
+                    sortedDict.Add(key, entry.Node);
+                }
             }
 
             return new ConsistentHash<T>(sortedDict, virtualNodesFactor);
