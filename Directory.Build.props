@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Copyright>Copyright © 2013-$([System.DateTime]::Now.Year) Akka.NET Team</Copyright>
     <Authors>Akka.NET Team</Authors>
-    <VersionPrefix>1.5.70-beta2</VersionPrefix>
+    <VersionPrefix>1.5.70</VersionPrefix>
     <PackageIcon>akkalogo.png</PackageIcon>
     <PackageProjectUrl>https://getakka.net/</PackageProjectUrl>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -54,17 +54,29 @@
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <PropertyGroup>
-    <PackageReleaseNotes>Akka.NET v1.5.70-beta2 is a beta release with a bug fix for `ChannelSink` dropping the final element under backpressure.
+    <PackageReleaseNotes>Akka.NET v1.5.70 is a maintenance release that adds a new "last-N" query offset to Akka.Persistence.Query, resolves two Akka.Streams reliability issues and improves `BroadcastHub` performance under high consumer counts, and fixes a consistent-hashing router bug that could wedge an entire cluster after a 32-bit hash collision.
+
+**Akka.Persistence.Query**
+* [Add `Offset.FromEnd(int count)` — "last-N events" query offset](https://github.com/akkadotnet/akka.net/pull/8245): Introduces `Offset.FromEnd(int count)`, a new query-input-only offset type that begins a read journal query at the Nth event from the end of history rather than from the beginning. The offset is resolved at stream materialization into a concrete `Sequence` start position; no interface changes or wire-format changes are required. Includes opt-in TCK spec (`FromEndOffsetSpec`) for plugin authors.
 
 **Akka.Streams Bug Fixes**
+* [Fix: async enumerable source disposal ordering](https://github.com/akkadotnet/akka.net/pull/8265): Fixes a race in `Source.From(IAsyncEnumerable&lt;T&gt;)` where the underlying enumerator could be disposed before all elements were delivered to downstream, causing `ObjectDisposedException` on high-throughput pipelines.
 * [Fix: `ChannelSink` drops final element on backpressure](https://github.com/akkadotnet/akka.net/pull/8291) - Fixes [#8285](https://github.com/akkadotnet/akka.net/issues/8285): `ChannelSink` was discarding the last element in a sequence whenever the downstream `Channel&lt;T&gt;` applied backpressure during completion. The sink now correctly delivers all elements before signaling completion.
 
-2 contributors since release 1.5.70-beta1
+**Akka.Streams Performance**
+* [Improve BroadcastHub high-consumer wheel performance](https://github.com/akkadotnet/akka.net/pull/8264): Reduces per-element cost in `BroadcastHub` when many consumers are attached by optimizing the internal consumer-wheel iteration, yielding measurable throughput improvements at high fan-out.
+
+**Akka.Core Bug Fixes**
+* [Fix: consistent-hashing router could wedge cluster-wide after a 32-bit hash collision](https://github.com/akkadotnet/akka.net/pull/8294) - Fixes [#8031](https://github.com/akkadotnet/akka.net/issues/8031): When two virtual nodes collided in the 32-bit consistent-hash ring (increasingly likely at high routee counts, e.g. when the ring was rebuilt after a node was downed), `ConsistentHash.Create` threw `"An entry with the same key already exists"`. The consistent-hashing router swallowed the exception and returned `NoRoutee` for **every** subsequent message until a manual restart. The ring now linear-probes to the next free slot on a collision instead of throwing. This keeps the hash distribution unchanged and produces a byte-identical ring to prior versions whenever no collision occurs (safe for rolling upgrades), and also protects `Akka.Cluster.Tools`' `ClusterReceptionist`, which builds the same ring.
+
+2 contributors since release 1.5.69
 
 | COMMITS | LOC+ | LOC- | AUTHOR |
 | --- | --- | --- | --- |
-| 2 | 115 | 15 | Aaron Stannard |
-| 1 | 97 | 3 | beminee |</PackageReleaseNotes>
+| 22 | 2274 | 332 | Aaron Stannard |
+| 1 | 97 | 4 | beminee |
+
+To see the full set of changes in Akka.NET v1.5.70, [click here](https://github.com/akkadotnet/akka.net/milestone/153?closed=1).</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Label="Analyzers" Condition="'$(MSBuildProjectName)' != 'Akka'">
     <PackageReference Include="Akka.Analyzers" Version="$(AkkaAnalyzerVersion)" PrivateAssets="all" />
