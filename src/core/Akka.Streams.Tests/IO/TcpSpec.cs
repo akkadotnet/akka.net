@@ -483,37 +483,55 @@ namespace Akka.Streams.Tests.IO
             var system2 = ActorSystem.Create("system2", Sys.Settings.Config);
             try
             {
-                InitializeLogger(system2);
+                InitializeLogger(system2, "[SYS2]");
                 var mat2 = ActorMaterializer.Create(system2);
 
                 var serverAddress = TestUtils.TemporaryServerAddress();
                 var binding = system2.TcpStream()
                     .BindAndHandle(Flow.Create<ByteString>(), mat2, serverAddress.Address.ToString(), serverAddress.Port);
 
-                var result = Source.Maybe<ByteString>()
+                // Ensure server is bound before creating client connection
+                await binding.WaitAsync(TimeSpan.FromSeconds(3));
+
+                // Build a client stream with a controllable upstream and an echo gate to ensure full registration
+                var tapped = Source.Queue<ByteString>(16, OverflowStrategy.Backpressure)
                     .Via(system2.TcpStream().OutgoingConnection(serverAddress))
-                    .RunAggregate(0, (i, s) => i + s.Count, mat2);
+                    .AlsoToMaterialized(Sink.First<ByteString>(), Keep.Both);
 
-                // give some time for all TCP stream actor parties to actually 
-                // get initialized, otherwise Kill command may run into the void
-                await Task.Delay(500);
+                var ((queue, firstEcho), result) = tapped
+                    .ToMaterialized(Sink.Aggregate<ByteString, int>(0, (i, s) => i + s.Count), Keep.Both)
+                    .Run(mat2);
 
-                await Awaiting(async () =>
-                    {
-                        await WithinAsync(TimeSpan.FromSeconds(15), async () =>
-                        {
-                            await AwaitAssertAsync(async () =>
-                            {
-                                // Getting rid of existing connection actors by using a blunt instrument
-                                system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*").Tell(Kill.Instance);
-                            
-                                await result.WaitAsync(3.Seconds());
-                            }, interval:TimeSpan.FromSeconds(4));
-                        });
-                        
-                        
-                    })
-                    .Should().ThrowAsync<StreamTcpException>();
+                // Send a ping and wait for the echo to guarantee Connected+Registered+Watched state
+                (await queue.OfferAsync(ByteString.FromString("ping"))).Should().BeOfType<QueueOfferResult.Enqueued>();
+                await firstEcho.WaitAsync(5.Seconds());
+
+                // Resolve the actual connection actor reference and watch it
+                IActorRef connectionActor = null;
+                await AwaitAssertAsync(async () =>
+                {
+                    connectionActor = await system2.ActorSelection(system2.Tcp().Path / "tcp-client-connection-*")
+                        .ResolveOne(TimeSpan.FromMilliseconds(100));
+                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
+
+                var probe = CreateTestProbe(system2);
+                await probe.WatchAsync(connectionActor);
+
+                // Kill the specific connection actor
+                connectionActor.Tell(Kill.Instance);
+
+                // Wait for the actor to actually terminate
+                var terminated = await probe.ExpectMsgAsync<Terminated>(TimeSpan.FromSeconds(3));
+                terminated.ActorRef.Should().Be(connectionActor);
+
+                // Verify the stream fails deterministically with StreamTcpException
+                await AwaitAssertAsync(() =>
+                {
+                    result.IsFaulted.Should().BeTrue();
+                    var flattened = result.Exception?.Flatten();
+                    flattened.Should().NotBeNull();
+                    flattened!.InnerExceptions.Should().Contain(e => e is StreamTcpException);
+                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(200));
 
                 await binding.Result.Unbind().WaitAsync(3.Seconds());
             }
