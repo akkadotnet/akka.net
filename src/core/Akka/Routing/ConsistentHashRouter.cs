@@ -114,7 +114,7 @@ namespace Akka.Routing
     public sealed class ConsistentHashingRoutingLogic : RoutingLogic
     {
         private readonly Lazy<ILoggingAdapter> _log;
-        private ConsistentHashMapping _hashMapping;
+        private readonly ConsistentHashMapping _hashMapping;
         private readonly ActorSystem _system;
 
         private readonly AtomicReference<Tuple<Routee[], ConsistentHash<ConsistentRoutee>>> _consistentHashRef =

@@ -114,8 +114,7 @@ namespace Akka.Routing
             if (obj.GetType() != this.GetType()) return false;
             return Equals((ActorRefRoutee)obj);
         }
-
-        /// <inheritdoc/>
+        
         protected bool Equals(ActorRefRoutee other) => Equals(Actor, other.Actor);
 
         
@@ -158,8 +157,7 @@ namespace Akka.Routing
             if (obj.GetType() != this.GetType()) return false;
             return Equals((ActorSelectionRoutee)obj);
         }
-
-        /// <inheritdoc/>
+        
         protected bool Equals(ActorSelectionRoutee other) => Equals(Selection, other.Selection);
 
         
@@ -265,7 +263,7 @@ namespace Akka.Routing
         {
             if (routees == null || routees.Length == 0)
             {
-                _routees = new []{ Routee.FromActorRef(routee) };
+                _routees = [Routee.FromActorRef(routee)];
             }
             else
             {
@@ -294,7 +292,7 @@ namespace Akka.Routing
         /// <param name="routees">TBD</param>
         public Router(RoutingLogic logic, params Routee[] routees)
         {
-            _routees = routees ?? Array.Empty<Routee>();
+            _routees = routees ?? [];
             RoutingLogic = logic;
         }
         
@@ -372,7 +370,7 @@ namespace Akka.Routing
         /// <returns>A new <see cref="Router"/> instance with this routee added.</returns>
         public virtual Router AddRoutee(Routee routee)
         {
-            return new Router(RoutingLogic, _routees.Union(new[]{routee}).ToArray());
+            return new Router(RoutingLogic, _routees.Union([routee]).ToArray());
         }
 
         /// <summary>
