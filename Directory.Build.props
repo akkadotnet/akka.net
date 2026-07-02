@@ -25,7 +25,7 @@
     <Xunit3Version>3.2.2</Xunit3Version>
     <Xunit3RunnerVersion>3.1.5</Xunit3RunnerVersion>
     <XunitRunnerVersion>2.8.1</XunitRunnerVersion>
-    <TestSdkVersion>17.9.0</TestSdkVersion>
+    <TestSdkVersion>18.7.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
