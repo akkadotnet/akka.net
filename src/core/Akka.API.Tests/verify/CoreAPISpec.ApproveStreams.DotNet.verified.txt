@@ -2432,9 +2432,13 @@ namespace Akka.Streams.Dsl
         [Akka.Annotations.InternalApi]
         public TcpExt(Akka.Actor.ExtendedActorSystem system) { }
         public Akka.Streams.Dsl.Source<Akka.Streams.Dsl.Tcp.IncomingConnection, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
+        public Akka.Streams.Dsl.Source<Akka.Streams.Dsl.Tcp.IncomingConnection, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding>> Bind(string host, int port, int maxUnackedWrites, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
         public System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding> BindAndHandle(Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> handler, Akka.Streams.IMaterializer materializer, string host, int port, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
+        public System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.ServerBinding> BindAndHandle(Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, Akka.NotUsed> handler, Akka.Streams.IMaterializer materializer, string host, int port, int maxUnackedWrites, int backlog = 100, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = false, System.TimeSpan? idleTimeout = default) { }
         public Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(string host, int port) { }
+        public Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(string host, int port, int maxUnackedWrites) { }
         public Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(System.Net.EndPoint remoteAddress, System.Net.EndPoint localAddress = null, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = true, System.TimeSpan? connectionTimeout = default, System.TimeSpan? idleTimeout = default) { }
+        public Akka.Streams.Dsl.Flow<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>, System.Threading.Tasks.Task<Akka.Streams.Dsl.Tcp.OutgoingConnection>> OutgoingConnection(System.Net.EndPoint remoteAddress, int maxUnackedWrites, System.Net.EndPoint localAddress = null, System.Collections.Immutable.IImmutableList<Akka.IO.Inet.SocketOption> options = null, bool halfClose = true, System.TimeSpan? connectionTimeout = default, System.TimeSpan? idleTimeout = default) { }
     }
     public sealed class TcpIdleTimeoutException : System.TimeoutException
     {
@@ -4636,6 +4640,8 @@ namespace Akka.Streams.Implementation.IO
     public class IncomingConnectionStage : Akka.Streams.Stage.GraphStage<Akka.Streams.FlowShape<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>>>
     {
         public IncomingConnectionStage(Akka.Actor.IActorRef connection, System.Net.EndPoint remoteAddress, bool halfClose) { }
+        [Akka.Annotations.InternalApi]
+        public IncomingConnectionStage(Akka.Actor.IActorRef connection, System.Net.EndPoint remoteAddress, bool halfClose, int maxUnackedWrites) { }
         protected override Akka.Streams.Attributes InitialAttributes { get; }
         public override Akka.Streams.FlowShape<System.Buffers.ReadOnlySequence<byte>, System.Buffers.ReadOnlySequence<byte>> Shape { get; }
         protected override Akka.Streams.Stage.GraphStageLogic CreateLogic(Akka.Streams.Attributes inheritedAttributes) { }

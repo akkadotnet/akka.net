@@ -185,6 +185,26 @@ namespace Akka.Streams.Dsl
         // TODO: this really needs to be an async method
         public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
+            => Bind(host, port, TcpConnectionStage.DefaultMaxUnackedWrites, backlog, options, halfClose, idleTimeout);
+
+        /// <summary>
+        /// Same as <see cref="Bind(string,int,int,IImmutableList{Inet.SocketOption},bool,System.Nullable{System.TimeSpan})"/>,
+        /// but lets you tune <paramref name="maxUnackedWrites"/> — the number of unacknowledged outbound writes each
+        /// accepted connection's TCP write stage keeps in flight (default <c>16</c>, minimum <c>1</c>). Pass it by name,
+        /// e.g. <c>Bind(host, port, maxUnackedWrites: 32)</c> — the third positional argument remains
+        /// <paramref name="backlog"/> for source compatibility with the primary overload.
+        /// </summary>
+        /// <param name="host">The host to listen on</param>
+        /// <param name="port">The port to listen on</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight per accepted connection.</param>
+        /// <param name="backlog">Controls the size of the connection backlog</param>
+        /// <param name="options">TCP options for the connections, see <see cref="Akka.IO.Tcp"/> for details</param>
+        /// <param name="halfClose">See the primary <see cref="Bind(string,int,int,IImmutableList{Inet.SocketOption},bool,System.Nullable{System.TimeSpan})"/> overload.</param>
+        /// <param name="idleTimeout">TBD</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        /// <returns>TBD</returns>
+        public Source<Tcp.IncomingConnection, Task<Tcp.ServerBinding>> Bind(string host, int port, int maxUnackedWrites, int backlog = 100,
+            IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
             // DnsEndpoint isn't allowed
             var ipAddresses = System.Net.Dns.GetHostAddressesAsync(host).Result;
@@ -192,7 +212,7 @@ namespace Akka.Streams.Dsl
                 throw new ArgumentException($"Couldn't resolve IpAddress for host {host}", nameof(host));
 
             return Source.FromGraph(new ConnectionSourceStage(_system.Tcp(), new IPEndPoint(ipAddresses[0], port), backlog,
-                options, halfClose, idleTimeout, BindShutdownTimeout));
+                options, halfClose, idleTimeout, BindShutdownTimeout, maxUnackedWrites));
         }
 
         /// <summary>
@@ -228,6 +248,29 @@ namespace Akka.Streams.Dsl
         }
 
         /// <summary>
+        /// Same as <see cref="BindAndHandle(Flow{ReadOnlySequence{byte},ReadOnlySequence{byte},NotUsed},IMaterializer,string,int,int,IImmutableList{Inet.SocketOption},bool,System.Nullable{System.TimeSpan})"/>,
+        /// but lets you tune <paramref name="maxUnackedWrites"/> (default <c>16</c>). Pass it by name, e.g.
+        /// <c>BindAndHandle(handler, mat, host, port, maxUnackedWrites: 32)</c>.
+        /// </summary>
+        /// <param name="handler">A Flow that represents the server logic</param>
+        /// <param name="materializer">TBD</param>
+        /// <param name="host">The host to listen on</param>
+        /// <param name="port">The port to listen on</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight per accepted connection.</param>
+        /// <param name="backlog">Controls the size of the connection backlog</param>
+        /// <param name="options">TCP options for the connections, see <see cref="Akka.IO.Tcp"/> for details</param>
+        /// <param name="halfClose">See the primary BindAndHandle overload.</param>
+        /// <param name="idleTimeout">TBD</param>
+        /// <returns>TBD</returns>
+        public Task<Tcp.ServerBinding> BindAndHandle(Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> handler, IMaterializer materializer, string host, int port, int maxUnackedWrites, int backlog = 100,
+            IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
+        {
+            return Bind(host, port, maxUnackedWrites, backlog, options, halfClose, idleTimeout)
+                .To(Sink.ForEach<Tcp.IncomingConnection>(connection => connection.Flow.Join(handler).Run(materializer)))
+                .Run(materializer);
+        }
+
+        /// <summary>
         /// Creates a <see cref="Tcp.OutgoingConnection"/> instance representing a prospective TCP client connection to the given endpoint.
         /// <para>
         /// Note that the <c>ReadOnlySequence&lt;byte&gt;</c> chunk boundaries are not retained across the network,
@@ -250,12 +293,29 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
-        {
-            //connectionTimeout = connectionTimeout ?? TimeSpan.FromMinutes(60);
+            => OutgoingConnection(remoteAddress, TcpConnectionStage.DefaultMaxUnackedWrites, localAddress, options, halfClose, connectionTimeout, idleTimeout);
 
+        /// <summary>
+        /// Same as <see cref="OutgoingConnection(EndPoint,EndPoint,IImmutableList{Inet.SocketOption},bool,System.Nullable{System.TimeSpan},System.Nullable{System.TimeSpan})"/>,
+        /// but lets you tune <paramref name="maxUnackedWrites"/> — the number of unacknowledged outbound writes the stream
+        /// TCP write stage keeps in flight to the Akka.IO connection actor. The default (<c>16</c>) pipelines writes to
+        /// hide the per-write roundtrip latency; <c>1</c> restores a strict one-write-at-a-time discipline. The window is
+        /// bounded, so a slow socket still backpressures upstream.
+        /// </summary>
+        /// <param name="remoteAddress">The remote address to connect to</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight (default 16, minimum 1).</param>
+        /// <param name="localAddress">Optional local address for the connection</param>
+        /// <param name="options">TCP options for the connections, see <see cref="Akka.IO.Tcp"/> for details</param>
+        /// <param name="halfClose">See the primary <see cref="OutgoingConnection(EndPoint,EndPoint,IImmutableList{Inet.SocketOption},bool,System.Nullable{System.TimeSpan},System.Nullable{System.TimeSpan})"/> overload.</param>
+        /// <param name="connectionTimeout">TBD</param>
+        /// <param name="idleTimeout">TBD</param>
+        /// <returns>TBD</returns>
+        public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, int maxUnackedWrites, EndPoint localAddress = null,
+            IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
+        {
             var tcpFlow =
                 Flow.FromGraph(new OutgoingConnectionStage(_system.Tcp(), remoteAddress, localAddress, options,
-                    halfClose, connectionTimeout)).Via(new Detacher<ReadOnlySequence<byte>>());
+                    halfClose, connectionTimeout, maxUnackedWrites)).Via(new Detacher<ReadOnlySequence<byte>>());
 
             if (idleTimeout.HasValue)
                 return tcpFlow.Join(BidiFlow.BidirectionalIdleTimeout<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(idleTimeout.Value));
@@ -277,6 +337,17 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port)
             => OutgoingConnection(CreateEndpoint(host, port));
+
+        /// <summary>
+        /// Same as <see cref="OutgoingConnection(string,int)"/>, but lets you tune <paramref name="maxUnackedWrites"/>
+        /// (the number of unacknowledged outbound writes the TCP write stage keeps in flight; default <c>16</c>, minimum <c>1</c>).
+        /// </summary>
+        /// <param name="host">TBD</param>
+        /// <param name="port">TBD</param>
+        /// <param name="maxUnackedWrites">Maximum number of unacknowledged outbound writes allowed in flight.</param>
+        /// <returns>TBD</returns>
+        public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port, int maxUnackedWrites)
+            => OutgoingConnection(CreateEndpoint(host, port), maxUnackedWrites);
 
         internal static EndPoint CreateEndpoint(string host, int port)
         {
