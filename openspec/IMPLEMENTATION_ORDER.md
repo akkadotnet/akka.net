@@ -36,7 +36,7 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 
 **What it did**: Modernized Akka.IO TCP around `ReadOnlySequence<byte>`, `System.IO.Pipelines`, and `ITransportConnection`.
 
-**Relevant outcome**: This work is useful for Artery and for user-facing Akka.Streams TCP, but the Artery MVP should not route its hot path through materialized Akka.Streams TCP.
+**Relevant outcome**: This work underpins the Artery transport substrate. Per design Decision 2 (revised), Artery TCP **does** use `Akka.Streams.IO.Tcp` (`Tcp().Bind` / `Tcp().OutgoingConnection`) as its socket + framing substrate — canonical Artery, verified against Pekko — gated on an early materializer-throughput validation against the 680K baseline. A raw `System.IO.Pipelines` substrate is the documented fallback only if that gate fails. (Note: "not through classic `EndpointWriter`/`AkkaProtocolTransport`" still holds — Artery is its own stack; that is different from *not using Akka.Streams TCP as the socket layer*.)
 
 ---
 
