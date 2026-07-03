@@ -19,8 +19,8 @@ using BenchmarkDotNet.Attributes;
 namespace Akka.Benchmarks.Remoting.Artery
 {
     /// <summary>
-    /// <b>Task 0.3 — Config 3: lane streams.</b> Drain-many source → LengthField framing →
-    /// header decode → <c>Partition(N)</c> by recipient hash → per-lane <c>.Async()</c>
+    /// <b>Task 0.3 — Config 3: lane streams.</b> <c>ChannelSource.FromReader</c> (drain-many
+    /// source) → LengthField framing → header decode → <c>Partition(N)</c> by recipient hash → per-lane <c>.Async()</c>
     /// deserialize island → per-recipient dispatch. The serial decode/partition island stays
     /// light (framing + fixed-offset header reads + a recipient hash); the deserialize knob —
     /// the expensive step — runs on the lanes. Sweeping N ∈ {1,2,4,8,16} answers gate G0's
@@ -86,7 +86,7 @@ namespace Akka.Benchmarks.Remoting.Artery
 
             RunnableGraph.FromGraph(GraphDsl.Create(b =>
             {
-                var source = b.Add(Source.FromGraph(new ChannelDrainSource<ReadOnlySequence<byte>>(_channel.Reader)));
+                var source = b.Add(ChannelSource.FromReader(_channel.Reader));
                 var framing = b.Add(Framing.LengthField(
                     ArteryEnvelopeCodec.FrameLengthFieldLength,
                     ArterySubstrateFixture.MaxFrameLength,

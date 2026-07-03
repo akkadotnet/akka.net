@@ -26,6 +26,8 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 
 **Peak: ~680K msgs/sec.** The new Artery TCP transport must exceed this before it can replace DotNetty as the preferred remoting path.
 
+> **Baseline is machine-relative (re-pinned 2026-07-03).** The table above was captured on 8-core hardware. On the current dev box (AMD Ryzen 9 9900X, 12 physical cores, .NET 10.0.8) the same benchmark peaks at **~1.39M msgs/sec** (naked, N=3: 1.375M / 1.388M / 1.479M; single-connection ~290K). The M5 gate means "exceeds the DotNetty baseline **measured on the same hardware, same run**" — never compare against this table across machines. See `openspec/changes/artery-tcp-remoting/task0-results.md`.
+
 ## Milestones
 
 ### Milestone 1: `modernize-akka-io-tcp`

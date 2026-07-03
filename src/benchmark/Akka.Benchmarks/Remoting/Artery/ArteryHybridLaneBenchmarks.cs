@@ -87,7 +87,7 @@ namespace Akka.Benchmarks.Remoting.Artery
             var lanes = _lanes;
             var laneCount = Lanes;
 
-            Source.FromGraph(new ChannelDrainSource<ReadOnlySequence<byte>>(_channel.Reader))
+            ChannelSource.FromReader(_channel.Reader)
                 .Via(Framing.LengthField(
                     ArteryEnvelopeCodec.FrameLengthFieldLength,
                     ArterySubstrateFixture.MaxFrameLength,

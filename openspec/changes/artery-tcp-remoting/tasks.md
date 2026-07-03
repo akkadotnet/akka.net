@@ -8,7 +8,7 @@ BenchmarkDotNet harness (naked, baseline-first, `MemoryDiagnoser` on), socket by
 - [x] 0.3b **Config 4 — hybrid island + actor lanes** (added after smoke runs measured the `.Async()` boundary at ~500ns/msg, non-recoverable via deeper boundary buffers): fused island (framing+decode) → `Sink.ForEach` `Tell` to N lane actors → recipients; tests whether the cheaper mailbox hop restores lane scaling
 - [x] 0.4 Run configs 2/3 with stock `Source.Queue` vs. the custom drain-many source to quantify the ingress-hop penalty
 - [x] 0.5 Measure: sustained msgs/sec, CPU-ns/msg vs cores, allocations/msg (~1 boxing/msg per boundary; steady-state near-zero otherwise), the config-2 serial ceiling, lane-scaling linearity, and reproduce the ~+30% tax vs config-1
-- [ ] 0.6 **Gate decision**: proceed with `Akka.Streams.IO.Tcp` only if (i) the single decode/partition island clears 680K with margin AND (ii) lanes recover the +30% within the core budget at realistic deserialize cost. Else → materializer/stage surgery, or a `System.IO.Pipelines` substrate fallback (Artery protocol/stages unchanged). No number of lanes fixes a serial-island ceiling
+- [x] 0.6 **Gate decision**: proceed with `Akka.Streams.IO.Tcp` only if (i) the single decode/partition island clears 680K with margin AND (ii) lanes recover the +30% within the core budget at realistic deserialize cost. Else → materializer/stage surgery, or a `System.IO.Pipelines` substrate fallback (Artery protocol/stages unchanged). No number of lanes fixes a serial-island ceiling
 
 ## 1. Configuration And Entry Point
 

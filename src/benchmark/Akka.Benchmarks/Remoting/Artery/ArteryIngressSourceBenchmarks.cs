@@ -19,12 +19,19 @@ namespace Akka.Benchmarks.Remoting.Artery
     /// <summary>
     /// <b>Task 0.4 — per-message ingress-hop penalty.</b> The outbound path's shape: one
     /// stream element per MESSAGE (not per chunk), pushed from outside the stream — exactly
-    /// where Artery's <c>SendQueue</c> lives. Compares the custom drain-many channel source
-    /// (hot path: zero mailbox hops per element) against stock <c>Source.Queue</c> (verified
-    /// in design.md: one mailbox hop per offer, plus a <c>Task</c> allocation per offer from
-    /// its async API). Bare source → <c>Sink.Ignore</c> so the ingress cost dominates.
-    /// The chunk-granularity comparison (where the hop is amortized ~1,700×) lives in
-    /// <see cref="ArterySingleIslandBenchmarks"/>.
+    /// where Artery's <c>SendQueue</c> lives. Compares stock <c>ChannelSource.FromReader</c>
+    /// (drain-many hot path: sync <c>TryRead</c> per pull, one coalesced async wakeup on
+    /// empty) against stock <c>Source.Queue</c> (verified in design.md: one mailbox hop per
+    /// offer, plus a <c>Task</c> allocation per offer from its async API). Bare source →
+    /// <c>Sink.Ignore</c> so the ingress cost dominates. The chunk-granularity comparison
+    /// (where the hop is amortized ~1,700×) lives in <see cref="ArterySingleIslandBenchmarks"/>.
+    ///
+    /// <para>
+    /// A custom drain-many channel-source prototype was measured head-to-head against
+    /// <c>ChannelSource.FromReader</c> and removed after landing identically (67–74ns/msg,
+    /// 1B/msg both; N=3 on 2026-07-03) — the stock core infrastructure already does the job,
+    /// so the prototype was redundant.
+    /// </para>
     /// </summary>
     [Config(typeof(ArterySubstrateConfig))]
     public class ArteryIngressSourceBenchmarks
@@ -52,39 +59,6 @@ namespace Akka.Benchmarks.Remoting.Artery
             _system.Dispose();
         }
 
-        [IterationSetup(Target = nameof(ChannelDrain_PerMessage))]
-        public void SetupChannelDrain()
-        {
-            // MPSC (SingleWriter = false): production senders are N actor threads → one queue.
-            _channel = Channel.CreateBounded<InboundFrame>(
-                new BoundedChannelOptions(ArterySubstrateFixture.MessageChannelCapacity)
-                {
-                    SingleReader = true,
-                    SingleWriter = false
-                });
-
-            _streamDone = Source.FromGraph(new ChannelDrainSource<InboundFrame>(_channel.Reader))
-                .RunWith(Sink.Ignore<InboundFrame>(), _materializer);
-        }
-
-        [Benchmark(OperationsPerInvoke = ArterySubstrateFixture.TotalMessages)]
-        public Task ChannelDrain_PerMessage()
-        {
-            var writer = _channel.Writer;
-            var frames = _corpus.DecodedFrames;
-            for (var r = 0; r < ArterySubstrateFixture.Repeat; r++)
-            {
-                for (var i = 0; i < frames.Length; i++)
-                {
-                    while (!writer.TryWrite(frames[i]))
-                        Thread.SpinWait(16);
-                }
-            }
-
-            writer.Complete();
-            return _streamDone;
-        }
-
         [IterationSetup(Target = nameof(SourceQueue_PerMessage))]
         public void SetupSourceQueue()
         {
@@ -108,6 +82,44 @@ namespace Akka.Benchmarks.Remoting.Artery
 
             _queue.Complete();
             await _streamDone;
+        }
+
+        [IterationSetup(Target = nameof(ChannelSourceFromReader_PerMessage))]
+        public void SetupChannelSourceFromReader()
+        {
+            _channel = Channel.CreateBounded<InboundFrame>(
+                new BoundedChannelOptions(ArterySubstrateFixture.MessageChannelCapacity)
+                {
+                    SingleReader = true,
+                    SingleWriter = false
+                });
+
+            _streamDone = ChannelSource.FromReader(_channel.Reader)
+                .RunWith(Sink.Ignore<InboundFrame>(), _materializer);
+        }
+
+        /// <summary>
+        /// Head-to-head against <see cref="SourceQueue_PerMessage"/>: this benchmark drives the
+        /// EXISTING core <c>ChannelSource.FromReader</c> (backed by <c>ChannelSourceLogic</c>)
+        /// through the per-message ingress workload. Artery can just use the stock
+        /// <c>ChannelSource</c> for its drain-many ingress.
+        /// </summary>
+        [Benchmark(OperationsPerInvoke = ArterySubstrateFixture.TotalMessages)]
+        public Task ChannelSourceFromReader_PerMessage()
+        {
+            var writer = _channel.Writer;
+            var frames = _corpus.DecodedFrames;
+            for (var r = 0; r < ArterySubstrateFixture.Repeat; r++)
+            {
+                for (var i = 0; i < frames.Length; i++)
+                {
+                    while (!writer.TryWrite(frames[i]))
+                        Thread.SpinWait(16);
+                }
+            }
+
+            writer.Complete();
+            return _streamDone;
         }
     }
 

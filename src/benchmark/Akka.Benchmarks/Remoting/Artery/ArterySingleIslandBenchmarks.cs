@@ -19,8 +19,8 @@ using BenchmarkDotNet.Attributes;
 namespace Akka.Benchmarks.Remoting.Artery
 {
     /// <summary>
-    /// <b>Task 0.2 — Config 2: single-island streams.</b> Drain-many source → LengthField
-    /// framing → header decode → deserialize → per-recipient dispatch, all fused into ONE
+    /// <b>Task 0.2 — Config 2: single-island streams.</b> <c>ChannelSource.FromReader</c> (drain-many
+    /// source) → LengthField framing → header decode → deserialize → per-recipient dispatch, all fused into ONE
     /// interpreter island (no <c>.Async()</c> anywhere). Read against config 1 this yields the
     /// raw interpreter tax; on its own it is the <b>serial-island ceiling — the single most
     /// important number of gate G0</b>: it bounds what one connection's inbound decode island
@@ -97,7 +97,7 @@ namespace Akka.Benchmarks.Remoting.Artery
                     SingleWriter = true
                 });
 
-            Source.FromGraph(new ChannelDrainSource<ReadOnlySequence<byte>>(_channel.Reader))
+            ChannelSource.FromReader(_channel.Reader)
                 .Via(BuildIslandFlow())
                 .RunWith(BuildDispatchSink(), _materializer);
         }

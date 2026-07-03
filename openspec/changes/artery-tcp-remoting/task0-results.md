@@ -62,14 +62,15 @@ Producer → decode actor → N lane actors → recipients, no interpreter. Peak
 
 ## Task 0.4 — ingress-hop penalty, per-message (outbound `SendQueue` shape)
 
-One element per message, bare source → `Sink.Ignore`, N=3:
+One element per message, bare source → `Sink.Ignore`. Initial N=3 used a custom drain-many prototype; a follow-up 3-run head-to-head added the **existing core `ChannelSource.FromReader`** (`ChannelSourceLogic`), which was found to already implement the identical drain-many hot path (sync `TryRead` per pull, coalesced wakeup on empty), plus better completion handling (#7940 race guard):
 
-| Ingress | ns/msg | msgs/s | alloc/msg |
+| Ingress | ns/msg (N=3) | msgs/s | alloc/msg |
 |---|---|---|---|
-| Custom drain-many channel source | 101 / 83 / 67 | 9.9M / 12.0M / 14.8M | **1 B** |
-| Stock `Source.Queue` (`OfferAsync`) | 1,148 / 1,172 / 1,229 | 871K / 853K / 814K | **384 B** |
+| **Existing `ChannelSource.FromReader`** | 69 / 68 / 71 | 14.5M / 14.7M / 14.1M | **1 B** |
+| Custom drain-many prototype (retired) | 74 / 70 / 69 | 13.5M / 14.3M / 14.5M | 1 B |
+| Stock `Source.Queue` (`OfferAsync`) | 1,198 / 1,164 / 1,145 | 834K / 859K / 873K | **384 B** |
 
-**12–15× throughput, ~400× allocation difference.** Stock `Source.Queue` alone would cap the outbound path below the local DotNetty baseline; the drain-many source makes ingress a non-factor. Design Decision 9's "NOT `Source.Queue`" is confirmed as load-bearing, not an optimization.
+**The stock `ChannelSource.FromReader` ties the prototype exactly (12–15× faster than `Source.Queue`, ~400× less allocation), so the prototype was deleted and the harness re-based onto the existing core source** — improving existing infrastructure instead of adding parallel stages. A confirming full-suite pass (run 4) on the stock source reproduced all N=3 results within noise (single island 1.72M/1.58M @32/128; hybrid @1024: 947K → 1.51M → 2.73M across 1→2→4 lanes). `Source.Queue` alone would cap the outbound path below the local DotNetty baseline: Decision 9's "NOT `Source.Queue`" is load-bearing, not an optimization.
 
 ## Gate G0 assessment (decision 0.6 is the maintainer's)
 
@@ -78,10 +79,12 @@ Design.md G0 criteria, restated against the re-pinned local baseline:
 1. **Serial decode/partition island clears the baseline with margin:** PASS — the decode island sustains ~3.1M msgs/s with deserialize off-island (2.2× the 1.39M local DotNetty peak; the documented 680K bar is exceeded 4.5×). Even with heavy deserialize left inline it holds ~870K–1.7M.
 2. **Lanes recover the interpreter tax within the core budget:** PASS **only via actor-lane fan-out** (hybrid config): heavy deserialize scales 3.6× by 4 lanes and the measured interpreter tax is ~5–8%. The canonical-Artery `Partition + .Async()` lane graph FAILS this criterion on .NET (negative scaling; ~520ns/msg per-element boundary cost; not buffer-fixable) and must not be used for per-message fan-out.
 
-**Recommendation:** proceed with `Akka.Streams.IO.Tcp` as the substrate (Decision 2 stands; no `System.IO.Pipelines` fallback needed), with two binding amendments to the design's graph rules:
+**Verdict (maintainer, 2026-07-03): PASS with amendments** — proceed with `Akka.Streams.IO.Tcp` as the substrate (Decision 2 stands; no `System.IO.Pipelines` fallback needed). The amendments follow the project preference for fixing existing infrastructure over adding new components:
 
-- **Amend rule (3):** inbound lane fan-out is actor-based (island sink `Tell`s to lane actors by recipient hash), not `Partition + .Async()`. Per-recipient ordering is preserved identically (same recipient → same lane actor → mailbox FIFO). Interior `.Async()` boundaries remain banned on the hot path.
-- **Rule (2) upgraded from "should" to "must":** the outbound queue source is the custom drain-many `ChannelReader` GraphStage; stock `Source.Queue` is disqualified by measurement.
-- Default inbound lanes: 4 (matches Pekko; past 4–8 the box contends).
+- **Rule (3) amended:** interior `.Async()` on the hot path is disqualified *as the boundary is currently implemented* (`ActorOutputBoundary.OnNext` = one actor message + one `OnNext` allocation per element — **#8314**). Inbound lane fan-out is actor-based for now (island sink `Tell`s to lane actors by recipient hash; per-recipient ordering preserved: same recipient → same lane actor → mailbox FIFO). The `ActorGraphInterpreter` element-batching fix (#8314) is its own OpenSpec change sequenced **before G5**; config 3 is re-measured then, and the canonical Pekko stream-lane shape is re-adopted if the fixed boundary reaches mailbox-class cost. Decided by measurement, preferring the infrastructure fix over the workaround.
+- **Rule (2) upgraded from "should" to "must", targeting existing infrastructure:** the outbound queue source is the **existing `ChannelSource.FromReader`** (measured identical to the drain-many prototype, which was deleted); stock `Source.Queue` is disqualified by measurement.
+- Default inbound lanes: 4 (matches Pekko; past 4–8 the box contends). Lane-actor mailbox bounding is an explicit G4 work item (an actor mailbox does not backpressure the island the way a stream lane would).
 
-Raw BDN artifacts: 3 passes retained during the session (`artery-run{1,2,3}` under the session scratchpad); all tables above are transcribed from BDN's own `-report-github.md` files.
+Baseline propagation: `IMPLEMENTATION_ORDER.md` now records that the DotNetty baseline is machine-relative (~1.39M on this box) and that M5 must compare same-hardware, same-run.
+
+Raw BDN artifacts: 4 passes retained during the session (`artery-run{1,2,3}`, `artery-run4-stocksource`, `ingress3way-run{1,2,3}` under the session scratchpad); all tables above are transcribed from BDN's own `-report-github.md` files.
