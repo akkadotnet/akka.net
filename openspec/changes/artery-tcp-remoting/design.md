@@ -143,6 +143,67 @@ Little-endian throughout. **✓ = verified from Pekko source; ◇ = our design d
 
 **Open sub-decisions (◇) to close in envelope design (#34):** flags bit assignments; literal length/encoding; optional metadata-container format (+ verify against Pekko); absent-sender/recipient sentinel; final field order/sizes given V2 non-CLR manifests.
 
+## Handshake + association/UID (gate G2)
+
+Verified against Pekko `Handshake.scala` / `Association.scala` / `ArteryTransport.scala` + Akka.NET classic `AkkaProtocolTransport.cs` / `RemoteActorRefProvider.cs`.
+
+**`ProtocolStateActor` has NO Artery analogue — the FSM is replaced by stream stages.** Classic's per-connection handshake FSM (`AkkaProtocolTransport.ProtocolStateActor`, Closed→WaitHandshake→Open, `HandshakeInfo{Origin, Uid:int}`) is not used by Artery (it stays for classic remoting). Artery does the handshake as **`OutboundHandshake` / `InboundHandshake` GraphStages** over the control stream, with state in a lock-free `AssociationState` object.
+
+**Handshake protocol:** `HandshakeReq(from: UniqueAddress, to: Address)` + `HandshakeRsp(from: UniqueAddress)` over the **control stream** (streamId 1); `UniqueAddress = (Address, uid)`; both sides exchange full address + UID.
+- **OutboundHandshake stage** — Start → ReqInProgress → Completed. On the first user element it injects `HandshakeReq` and **holds the element (`pendingMessage`) without pulling further** — user traffic queues behind the stage, never dropped. Retry timers (`handshake-retry-interval` / `inject-handshake-interval` = 1s); `handshake-timeout` = 20s → `HandshakeTimeoutException` fails the outbound stream (association retries). On completion it emits the pending element, then passes through transparently.
+- **InboundHandshake stage** — validates `to == localAddress`, `completeHandshake(from)` registers the peer UID, replies `HandshakeRsp` over control; drops envelopes from unknown origin (`isKnownOrigin`).
+
+**Association state machine:** `AssociationRegistry` keyed by remote **Address** (one Association per address, CAS-materialized) + an `association(uid)` reverse lookup (None until handshake completes). Per-association `AssociationState` (volatile, CAS-swapped) with `uniqueRemoteAddress`: **Associating** (UID unknown — gates OutboundHandshake) → **Associated** (`completeHandshake` sets it) → **Quarantined**. A **different** incoming UID (remote restart) → `newIncarnation` + atomic swap + clear outbound compression (UID-change → reset); the old UID is not auto-quarantined.
+
+**Quarantine (UID-scoped):** acts only if the uid matches the current `uniqueRemoteAddress().uid` (stale-UID request ignored); swaps `newQuarantined`, emits `QuarantinedEvent`, clears compression, sends `ClearSystemMessageDelivery(incarnation)`. Only `ActorSelectionMessage` + `ClearSystemMessageDelivery` pierce. A **new incarnation re-associates** (keyed by Address; a new UID installs a fresh non-quarantined incarnation while the old UID stays quarantined). Prune after `remove-quarantined-association-after` = 1h.
+
+**Provider integration:** the `RemoteTransport` seam already exists — `RemoteActorRef.Tell → Remote.Send`; the provider creates refs via `new RemoteActorRef(Transport,…)`; `DefaultAddress` / `LocalAddressForRemote` / `Quarantine` all delegate to the transport. So `ArteryRemoting : RemoteTransport` implements **8 abstract members** and needs **no change** to `RemoteActorRef` or the ref-creation path. **The one wiring change:** `RemoteActorRefProvider.CreateInternals()` hard-codes `new Remoting(…)` — add a config switch (`akka.remote.artery.enabled = on` → `ArteryRemoting`, else classic) by making it read `RemoteSettings` or overriding in a subclass. **Two nodes must run the same transport** (wire + scheme differ: classic `akka.tcp://`, Artery `akka://`) — homogeneous cluster; fail fast on a mixed config.
+
+**Reuse:** the `RemoteTransport`/`RemoteActorRef` seam (no change), `QuarantinedEvent` + lifecycle events (Cluster already consumes them), `AddressUidExtension` (but see UID width), Akka.Streams `GraphStage`. **Build new:** `AssociationState` (immutable + `Interlocked.CompareExchange`), `Association`, Address-keyed `AssociationRegistry` + uid reverse index, `InboundContext`, the two handshake stages, `HandshakeReq/Rsp` proto + framing.
+
+### UID width — DECIDED: widen Akka.NET to 64-bit UID (v1.6-wide)
+
+Akka.NET's classic UID is a 32-bit `int` (`AddressUidExtension.Uid` → `int`; `Cluster.SelfUniqueAddress` is built from it; `MiscMessageSerializer` even has a `// TODO: change to uint32`). Pekko/Artery's UID is a 64-bit `long`.
+
+**DECISION (maintainer, v1.6): widen Akka.NET's UID to 64-bit** — make it the v1.6 baseline, not an Artery-only concern. Rationale: adopting Artery already requires a full-cluster restart (homogeneous transport; no classic↔Artery interop), so the breaking UID change rides that same downtime; it matches Pekko's wire; and the widening is independently wanted (the `MiscMessageSerializer` TODO).
+
+**This is a v1.6 FOUNDATION change, bigger than Artery — and a prerequisite for it.** It touches `AddressUidExtension`, `Cluster.SelfUniqueAddress`, gossip, `RemoteWatcher`, the quarantine API (`RemoteTransport.Quarantine(Address, int? uid)` → add a `long`-uid overload, extend-only), and the affected serializers / wire formats. It needs its own scoping (task #39), likely **its own OpenSpec change/milestone sequenced before Artery**, plus a `BREAKING_CHANGES_V1.6.md` entry. Blast-radius scoping is the immediate next task.
+
+**G2 correctness suite:** happy-path associate (UID both ways; `association(uid)` None→Some); traffic-stall buffering (pre-completion messages delivered in order, zero drops); timeout + retry cadence; incarnation change (new UID resets association, ordering preserved); quarantine (+ new-UID re-associate, stale-UID ignored, pruning); InboundHandshake guards (wrong `to`, unknown origin); **Cluster integration — `SelfUniqueAddress` UID == observed handshake UID (the test that pins the int/long decision)**; config switch + coexistence (mixed-transport fails fast).
+
+## Reliable system-message delivery (gate G3)
+
+Verified against Pekko `SystemMessageDelivery.scala` + Akka.NET `AckedDelivery.cs` / `Endpoint.cs`.
+
+**Protocol decision: port the Artery protocol (new code); reuse only `SeqNo`.** Two protocols exist — Akka.NET *classic* (`AckedDelivery`) is a heavyweight selective-NACK + inbound reorder-buffer scheme; Pekko *Artery* is deliberately simpler for the stream model: one strictly-monotonic seqNo per message, single-point `Ack(n)`/`Nack(n)`, **no inbound reorder buffer** (out-of-order is dropped + NACK'd; the *sender* re-sends in order). Reuse Akka.NET's wrap-safe `SeqNo`; build the two GraphStages new. Do **not** bolt the classic reorder buffers onto Artery.
+
+- **Outbound `SystemMessageDelivery` stage (control stream):** per-incarnation seqNo; wrap each msg `SystemMessageEnvelope(msg, seqNo, ackReplyTo)`; bounded `unacknowledged` deque (`system-message-buffer-size` = 20000); resend timer (`system-message-resend-interval`); `Ack(n)` pops seq ≤ n; `Nack(n)` pops prefix + immediate tail resend; **give-up → quarantine** on buffer overflow OR `give-up-system-message-after` timeout (bypasses the restart counter); `ClearSystemMessageDelivery(incarnation)` resets seqNo + empties the buffer.
+- **Inbound `SystemMessageAcker` stage (control stream):** per-sender-**UID** expected-seq map; `n == expected` → deliver + `Ack(n)`; `n < expected` → duplicate, drop, re-`Ack(expected-1)`; `n > expected` → gap, drop, `Nack(expected-1)`. No inbound buffering — the sender restores order.
+- **Semantics:** at-least-once on the wire (resend) + inbound dedup ⇒ **effectively exactly-once, strictly in-order** to the destination actor. `Ack`/`Nack` are best-effort control-stream replies (loss covered by the resend timer); only the `SystemMessageEnvelope` is reliable.
+- **What rides it:** the DeathWatch triple (`Watch`/`Unwatch`/`DeathWatchNotification`) + `Terminate` — correctness-critical (a lost `Watch` → no `Terminated` → broken Cluster failure detection / Singleton / Sharding). **Remote deploy does NOT ride it** — `DaemonMsgCreate` is an ordinary message; only the DeathWatch on the deployed child must be reliable. Don't over-scope the reliable layer to remote deploy.
+
+**Invariants (must preserve):** (1) exactly-once, strictly in-order to the destination; (2) per-incarnation seqNo reset, inbound state keyed by sender UID, new incarnation → expected restarts at 1; (3) **stale-ACK guard (mandatory):** a late `Ack` from a *prior* association (seq > current max) must NEVER quarantine — `isFromCurrentRemote` UID check (= Akka.NET #6414's `CumulativeAck > MaxSeq` fix); (4) give-up (overflow OR timeout) → quarantine, never a silent drop; (5) control lane dedicated + un-starvable, system messages NEVER hashed onto ordinary lanes (hard constraint on the lanes work); (6) Ack/Nack best-effort — correctness rests only on the resend timer + inbound dedup.
+
+**Open decisions:** inbound expected-seq map needs an eviction policy (Pekko has an unbounded-growth `TODO`); wire-format scope (.NET-native vs Pekko-protobuf for future JVM interop — freeze extend-only in `BREAKING_CHANGES_V1.6.md`); default divergence (Pekko give-up 6 h vs classic ~3 m — pick deliberately); give-up vs Cluster failure-detector interplay; graceful-shutdown for in-flight system messages (dead-letter vs quarantine).
+
+**G3 correctness suite:** happy-path; ACK-loss (resend + dedup, no dupes); gap → NACK → in-order restore; reordering (proves no inbound buffer needed); buffer-overflow → quarantine; give-up-timeout → quarantine; new-incarnation + stale-ACK regression (#6414); control-lane non-starvation under ordinary-lane load; DeathWatch end-to-end under loss; idempotent `Clear`; graceful-shutdown.
+
+## Actor-ref / manifest compression (deferred — post-MVP)
+
+Verified against Pekko `compress/*`. **Deferred**, but researched now to confirm the envelope accommodates it and to have the design ready.
+
+**MVP obligation (the only now-work):** the envelope already reserves the two table-version header bytes (actorRef @off 2, manifest @off 3) and the compressed-index-or-literal tag scheme — **verified byte-for-byte compatible with Pekko** (`TagTypeMask 0xFF000000` top byte = compressed, `TagValueMask 0x0000FFFF` low 16 = index). Writing version `0` + all-literal tags is the forward-safe no-compression encoding; **not reserving these would be a guaranteed wire break** when compression lands, so they stay in the MVP header. One derived constraint: keep `maximum-frame-size` **well under 16 MB** so literal offsets stay < `0x00FFFFFF` (the tag discriminator depends on it).
+
+**The scheme (receiver-driven, per-UID, versioned string interning):** the *receiver* observes its heavy-hitter refs/manifests, builds a `value → int` table, and **advertises it to the sender over the CONTROL stream**; the sender then writes a 16-bit index instead of the literal and stamps the table version into the header byte. Decode = bounds-checked array index (O(1), alloc-free). Ownership is inverted — receiver builds (holds `int → ActorRef` resolution), sender encodes. Max 65,536 entries/table (16-bit index; never a real limit).
+
+- **Heavy-hitters:** CountMinSketch (approx frequency) + fixed top-K `TopHeavyHitters` (open-addressing hash + min-heap). **Adaptive sampling** (effectively off < 1000 msg/s, then ~every 64th/128th/256th) keeps it off the per-message hot path — port the sampling, do not count every message.
+- **Advertisement protocol:** `ActorRefCompressionAdvertisement` / `ClassManifestCompressionAdvertisement` (+ Acks) over control; receiver builds → advertises (resend ≤3), sender adopts → acks, receiver confirms → promotes (`nextTable → activeTable`, retains ≤3 old tables so in-flight messages on the prior version still decode). Header version byte selects the table (active / ≤3 old / next); **no match → drop the message, do not reset the stream**.
+- **UID-scoped lifecycle:** keyed by originUid; remote restart = new UID = fresh table (v0), old dead; `close(originUid)` on quarantine/removal. Outbound compression is disabled for handshake/system traffic (avoids desync across restart).
+
+**.NET mapping:** `DecompressionTable<T>` = `T?[]` + originUid + version, `Get` = bounds-check + index (zero alloc); table-selection = linear scan over a ≤5-entry immutable snapshot; cache the per-association `InboundCompression` on the association to skip a per-message dictionary hit; outbound table = `FrozenDictionary<TKey,int>` (.NET 8) built once on advertisement; port `TopHeavyHitters` + `CountMinSketch` (fixed-size, sampled); funnel advertise/confirm mutations onto the single owning stage via async callback (single-threaded, lock-free).
+
+**Open decisions:** the interning KEY for `IActorRef` — Pekko uses object identity, but we should likely key on the serialized path string (`RemoteActorRef`/`RepointableActorRef` identity is historically thorny in Akka.NET); table-selection structure; sampling thresholds; lifecycle wiring; and mirror Pekko's "don't reserve index 0 / skip temporary (ask) refs".
+
 ## Invariants to preserve
 
 - **Outbound queue is Association-owned and survives stream restart** (not stream-owned); the consumer re-attaches on reconnect.
