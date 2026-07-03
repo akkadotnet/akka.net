@@ -100,6 +100,25 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 
 ---
 
+### Milestone 3.5: `widen-system-uid-to-64bit`
+
+**OpenSpec change**: `openspec/changes/widen-system-uid-to-64bit/`
+**Depends on**: none (rolling-upgrade-safe). **Prerequisite for**: Milestone 4 (Artery).
+
+**What it does**: Widens the address/system UID from 32-bit `int` to 64-bit `long` across Akka.Remote + Akka.Cluster (hard API break, v1.6), as a prerequisite for Artery's 64-bit frame UID. On the wire only `ClusterMessages.proto` `UniqueAddress.uid` widens (`uint32 → uint64`, varint-compatible for ≤32-bit values); handshake / RemoteWatcher heartbeat / DistributedData are already 64-bit. The CLR type is widened everywhere but value-generation is gated to int-range for rolling-upgrade safety.
+
+**Completion criteria**:
+
+- Address/system UID is `long` across `AddressUid`, `UniqueAddress`, `QuarantinedEvent`, `RemoteWatcher`, the quarantine API, and the remoting state machine.
+- `ClusterMessages.proto` `UniqueAddress.uid` is `uint64`; narrowing casts removed where the wire is already 64-bit.
+- Default uid generation stays in int-range; full 64-bit generation behind a config switch (documented "all nodes v1.6 first").
+- API-approval files updated (hard break); `dotnet build -warnaserror` clean; Remote + Cluster + DistributedData tests green.
+- Rolling-upgrade test (v1.5 ↔ v1.6 gossip, int-range uids) passes; `BREAKING_CHANGES_V1.6.md` entry added.
+
+**After completion**: Review with human. Archive via `openspec archive widen-system-uid-to-64bit`.
+
+---
+
 ### Milestone 4: `artery-tcp-remoting`
 
 **Branch**: `feature/spec4-artery-tcp-remoting`
