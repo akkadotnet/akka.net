@@ -18,8 +18,8 @@ namespace Akka.Remote
     /// </summary>
     internal sealed class EndpointRegistry
     {
-        private Dictionary<Address, (int, Deadline)> _addressToRefuseUid = new();
-        private readonly Dictionary<Address, (IActorRef, int)> _addressToReadonly = new();
+        private Dictionary<Address, (long, Deadline)> _addressToRefuseUid = new();
+        private readonly Dictionary<Address, (IActorRef, long)> _addressToReadonly = new();
 
         private Dictionary<Address, EndpointManager.EndpointPolicy> _addressToWritable = new();
 
@@ -38,7 +38,7 @@ namespace Akka.Remote
         /// in the registry.
         /// </exception>
         /// <returns>The <paramref name="endpoint"/> actor reference.</returns>
-        public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, int? uid)
+        public IActorRef RegisterWritableEndpoint(Address address, IActorRef endpoint, long? uid)
         {
             if (_addressToWritable.TryGetValue(address, out var existing))
             {
@@ -60,7 +60,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="remoteAddress">The address of the remote system.</param>
         /// <param name="uid">The UID of the remote system.</param>
-        public void RegisterWritableEndpointUid(Address remoteAddress, int uid)
+        public void RegisterWritableEndpointUid(Address remoteAddress, long uid)
         {
             if (_addressToWritable.TryGetValue(remoteAddress, out var existing))
             {
@@ -76,7 +76,7 @@ namespace Akka.Remote
         /// <param name="remoteAddress">The remote address of the quarantined system.</param>
         /// <param name="refuseUid">The refused UID of the remote system.</param>
         /// <param name="timeOfRelease">The timeframe for releasing quarantine.</param>
-        public void RegisterWritableEndpointRefuseUid(Address remoteAddress, int refuseUid, Deadline timeOfRelease)
+        public void RegisterWritableEndpointRefuseUid(Address remoteAddress, long refuseUid, Deadline timeOfRelease)
         {
             _addressToRefuseUid[remoteAddress] = (refuseUid, timeOfRelease);
         }
@@ -88,7 +88,7 @@ namespace Akka.Remote
         /// <param name="endpoint">The local endpoint actor who owns this connection.</param>
         /// <param name="uid">The UID of the remote actor system. Can be <c>null</c>.</param>
         /// <returns>The <paramref name="endpoint"/> actor reference.</returns>
-        public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint, int uid)
+        public IActorRef RegisterReadOnlyEndpoint(Address address, IActorRef endpoint, long uid)
         {
             _addressToReadonly[address] = (endpoint, uid);
             _readonlyToAddress[endpoint] = address;
@@ -138,7 +138,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="address">The remote address to check.</param>
         /// <returns>A tuple containing the actor reference and the remote system UID, if they exist. Otherwise <c>null</c>.</returns>
-        public (IActorRef, int)? ReadOnlyEndpointFor(Address address)
+        public (IActorRef, long)? ReadOnlyEndpointFor(Address address)
         {
             if (!_addressToReadonly.TryGetValue(address, out var tmp))
                 return null;
@@ -172,7 +172,7 @@ namespace Akka.Remote
         /// <param name="address">The address to check.</param>
         /// <param name="uid">The current UID of <paramref name="address"/>.</param>
         /// <returns><c>true</c> if this system is under quarantine with its current UID, <c>false</c> otherwise.</returns>
-        public bool IsQuarantined(Address address, int uid)
+        public bool IsQuarantined(Address address, long uid)
         {
             // timeOfRelease is only used for garbage collection. If an address is still probed, we should report the
             // known fact that it is quarantined.
@@ -196,7 +196,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="address">The address to check.</param>
         /// <returns>The refused UID if one exists for this address; otherwise <c>null</c>.</returns>
-        public int? RefuseUid(Address address)
+        public long? RefuseUid(Address address)
         {
             // timeOfRelease is only used for garbage collection. If an address is still probed, we should report the
             // known fact that it is quarantined.
@@ -280,7 +280,7 @@ namespace Akka.Remote
         /// <param name="address">The address to quarantine.</param>
         /// <param name="uid">The UID of the current address.</param>
         /// <param name="timeOfRelease">The timeframe to release the quarantine.</param>
-        public void MarkAsQuarantined(Address address, int uid, Deadline timeOfRelease)
+        public void MarkAsQuarantined(Address address, long uid, Deadline timeOfRelease)
         {
             _addressToWritable[address] = new EndpointManager.Quarantined(uid, timeOfRelease);
             _addressToRefuseUid[address] = (uid, timeOfRelease);

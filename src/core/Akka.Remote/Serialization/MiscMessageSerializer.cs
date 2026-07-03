@@ -283,14 +283,14 @@ namespace Akka.Remote.Serialization
         private byte[] HeartbeatRspToProto(RemoteWatcher.HeartbeatRsp heartbeatRsp)
         {
             var message = new Proto.Msg.RemoteWatcherHeartbeatResponse();
-            message.Uid = (ulong)heartbeatRsp.AddressUid; // TODO: change to uint32
+            message.Uid = (ulong)heartbeatRsp.AddressUid;
             return message.ToByteArray();
         }
 
         private RemoteWatcher.HeartbeatRsp HearthbeatRspFromProto(byte[] bytes)
         {
             var message = Proto.Msg.RemoteWatcherHeartbeatResponse.Parser.ParseFrom(bytes);
-            return new RemoteWatcher.HeartbeatRsp((int)message.Uid);
+            return new RemoteWatcher.HeartbeatRsp((long)message.Uid);
         }
         
         //

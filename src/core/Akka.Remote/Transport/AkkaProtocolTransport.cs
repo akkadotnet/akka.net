@@ -161,7 +161,7 @@ namespace Akka.Remote.Transport
         /// <param name="remoteAddress">TBD</param>
         /// <param name="refuseUid">TBD</param>
         /// <returns>TBD</returns>
-        public async Task<AkkaProtocolHandle> Associate(Address remoteAddress, int? refuseUid)
+        public async Task<AkkaProtocolHandle> Associate(Address remoteAddress, long? refuseUid)
         {
             // Prepare a Task and pass its completion source to the manager
             var statusPromise = new TaskCompletionSource<AssociationHandle>();
@@ -261,7 +261,7 @@ namespace Akka.Remote.Transport
         }
 
         private void CreateOutboundStateActor(Address remoteAddress,
-            TaskCompletionSource<AssociationHandle> statusPromise, int? refuseUid)
+            TaskCompletionSource<AssociationHandle> statusPromise, long? refuseUid)
         {
             var stateActorLocalAddress = LocalAddress;
             var stateActorSettings = _settings;
@@ -298,7 +298,7 @@ namespace Akka.Remote.Transport
         /// <param name="remoteAddress">TBD</param>
         /// <param name="statusCompletionSource">TBD</param>
         /// <param name="refuseUid">TBD</param>
-        public AssociateUnderlyingRefuseUid(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusCompletionSource, int? refuseUid = null)
+        public AssociateUnderlyingRefuseUid(Address remoteAddress, TaskCompletionSource<AssociationHandle> statusCompletionSource, long? refuseUid = null)
         {
             RefuseUid = refuseUid;
             StatusCompletionSource = statusCompletionSource;
@@ -318,7 +318,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public int? RefuseUid { get; private set; }
+        public long? RefuseUid { get; private set; }
     }
 
     /// <summary>
@@ -331,7 +331,7 @@ namespace Akka.Remote.Transport
         /// </summary>
         /// <param name="origin">TBD</param>
         /// <param name="uid">TBD</param>
-        public HandshakeInfo(Address origin, int uid)
+        public HandshakeInfo(Address origin, long uid)
         {
             Origin = origin;
             Uid = uid;
@@ -345,7 +345,7 @@ namespace Akka.Remote.Transport
         /// <summary>
         /// TBD
         /// </summary>
-        public int Uid { get; private set; }
+        public long Uid { get; private set; }
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
@@ -725,7 +725,7 @@ namespace Akka.Remote.Transport
         private readonly ILoggingAdapter _log = Context.GetLogger();
         private readonly InitialProtocolStateData _initialData;
         private readonly HandshakeInfo _localHandshakeInfo;
-        private readonly int? _refuseUid;
+        private readonly long? _refuseUid;
         private readonly AkkaProtocolSettings _settings;
         private readonly Address _localAddress;
         private readonly AkkaPduCodec _codec;
@@ -746,7 +746,7 @@ namespace Akka.Remote.Transport
         /// <param name="refuseUid">TBD</param>
         public ProtocolStateActor(HandshakeInfo handshakeInfo, Address remoteAddress,
             TaskCompletionSource<AssociationHandle> statusCompletionSource, Transport transport,
-            AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid = null)
+            AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, long? refuseUid = null)
             : this(
                 new OutboundUnassociated(remoteAddress, statusCompletionSource, transport), handshakeInfo, settings, codec, failureDetector,
                 refuseUid)
@@ -811,7 +811,7 @@ namespace Akka.Remote.Transport
         ///   </dd>
         /// </dl>
         /// </exception>
-        private ProtocolStateActor(InitialProtocolStateData initialData, HandshakeInfo localHandshakeInfo, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid)
+        private ProtocolStateActor(InitialProtocolStateData initialData, HandshakeInfo localHandshakeInfo, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, long? refuseUid)
         {
             _initialData = initialData;
             _localHandshakeInfo = localHandshakeInfo;
@@ -1386,7 +1386,7 @@ namespace Akka.Remote.Transport
         /// <returns>TBD</returns>
         public static Props OutboundProps(HandshakeInfo handshakeInfo, Address remoteAddress,
             TaskCompletionSource<AssociationHandle> statusCompletionSource,
-            Transport transport, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, int? refuseUid = null)
+            Transport transport, AkkaProtocolSettings settings, AkkaPduCodec codec, FailureDetector failureDetector, long? refuseUid = null)
         {
             return Props.Create(() => new ProtocolStateActor(handshakeInfo, remoteAddress, statusCompletionSource, transport, settings, codec, failureDetector, refuseUid));
         }

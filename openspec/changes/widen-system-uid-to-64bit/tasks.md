@@ -1,8 +1,8 @@
 ## 1. Core type + generation
 
-- [ ] 1.1 Widen `AddressUid.Uid` (field) + `AddressUidExtension.Uid(ActorSystem)` `int → long`
-- [ ] 1.2 Add a netstandard2.0-safe 64-bit RNG; default generation stays in `[0, int.MaxValue]`
-- [ ] 1.3 Config switch to enable full 64-bit uid generation (default off; documented "all nodes v1.6 first" precondition)
+- [x] 1.1 Widen `AddressUid.Uid` (field) + `AddressUidExtension.Uid(ActorSystem)` `int → long`
+- [x] 1.2 Add a netstandard2.0-safe 64-bit RNG; default generation stays in `[0, int.MaxValue]`
+- [x] 1.3 Config switch to enable full 64-bit uid generation (default off; documented "all nodes v1.6 first" precondition) — `akka.remote.use-64bit-system-uids`
 
 ## 2. Cluster
 
@@ -12,27 +12,27 @@
 
 ## 3. Remoting state machine (internal `int → long`)
 
-- [ ] 3.1 `HandshakeInfo` ctor + `Uid`; `AkkaProtocolTransport` refuseUid path
-- [ ] 3.2 `EndpointRegistry` (register/quarantine/refuseUid)
-- [ ] 3.3 `Endpoint.cs`: `HopelessAssociation`, `ReliableDeliverySupervisor`, `GotUid`, `EndpointWriter` uid fields/params
-- [ ] 3.4 `EndpointManager` messages: `Pass`, `Quarantined`, `Quarantine`, `ResendState`
+- [x] 3.1 `HandshakeInfo` ctor + `Uid`; `AkkaProtocolTransport` refuseUid path
+- [x] 3.2 `EndpointRegistry` (register/quarantine/refuseUid)
+- [x] 3.3 `Endpoint.cs`: `HopelessAssociation`, `ReliableDeliverySupervisor`, `GotUid`, `EndpointWriter` uid fields/params
+- [x] 3.4 `EndpointManager` messages: `Pass`, `Quarantined`, `Quarantine`, `ResendState`
 
 ## 4. RemoteWatcher
 
-- [ ] 4.1 `HeartbeatRsp(long addressUid)` + `long AddressUid`; `_addressUids: Dictionary<Address,long>`; `ReceiveHeartbeatRsp`
-- [ ] 4.2 `Quarantine(Address, long? addressUid)`
+- [x] 4.1 `HeartbeatRsp(long addressUid)` + `long AddressUid`; `_addressUids: Dictionary<Address,long>`; `ReceiveHeartbeatRsp`
+- [x] 4.2 `Quarantine(Address, long? addressUid)`
 
 ## 5. Quarantine API (hard re-type)
 
-- [ ] 5.1 `IRemoteActorRefProvider.Quarantine(Address, long? uid)`
-- [ ] 5.2 `RemoteActorRefProvider.Quarantine`, `RemoteTransport.Quarantine`, `Remoting.Quarantine`
-- [ ] 5.3 `QuarantinedEvent(Address, long uid)` + `long Uid`
+- [x] 5.1 `IRemoteActorRefProvider.Quarantine(Address, long? uid)`
+- [x] 5.2 `RemoteActorRefProvider.Quarantine`, `RemoteTransport.Quarantine`, `Remoting.Quarantine`
+- [x] 5.3 `QuarantinedEvent(Address, long uid)` + `long Uid`
 
 ## 6. Wire + serializers
 
 - [ ] 6.1 `ClusterMessages.proto` `UniqueAddress.uid` `uint32 → uint64`; regenerate
 - [ ] 6.2 Remove narrowing casts: `ClusterMessageSerializer`, `MiscMessageSerializer`, `AkkaPduCodec`, DData `SerializationSupport.UniqueAddressFromProto`
-- [ ] 6.3 Coordinate `serializer-v2` schema to emit/read 64-bit uid
+- [x] 6.3 Coordinate `serializer-v2` schema to emit/read 64-bit uid (Decision 11 in serializer-v2 design.md)
 
 ## 7. API approval + build
 

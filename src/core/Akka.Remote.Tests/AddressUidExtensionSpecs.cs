@@ -23,7 +23,7 @@ namespace Akka.Remote.Tests
         [Fact]
         public void AddressUidExtension_should_always_report_same_value()
         {
-            var values = new ConcurrentBag<int>();
+            var values = new ConcurrentBag<long>();
             var parallelOps = 1000;
             var loop = Parallel.For(0, parallelOps, _ =>
             {

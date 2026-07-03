@@ -77,7 +77,7 @@ namespace Akka.Remote.Tests
 
             public class Quarantined
             {
-                public Quarantined(Address address, int? uid)
+                public Quarantined(Address address, long? uid)
                 {
                     Address = address;
                     Uid = uid;
@@ -85,7 +85,7 @@ namespace Akka.Remote.Tests
 
                 public Address Address { get; }
 
-                public int? Uid { get; }
+                public long? Uid { get; }
 
                 protected bool Equals(Quarantined other)
                 {
@@ -139,7 +139,7 @@ namespace Akka.Remote.Tests
                 Context.System.EventStream.Publish(new AddressTerm(address));
             }
 
-            protected override void Quarantine(Address address, int? addressUid)
+            protected override void Quarantine(Address address, long? addressUid)
             {
                 // don't quarantine in remoting, but publish a testable message
                 Context.System.EventStream.Publish(new Quarantined(address, addressUid));
@@ -182,7 +182,7 @@ namespace Akka.Remote.Tests
         private readonly Address _remoteAddress;
         private readonly RemoteWatcher.HeartbeatRsp _heartbeatRspB;
 
-        private int RemoteAddressUid
+        private long RemoteAddressUid
         {
             get { return AddressUidExtension.Uid(_remoteSystem); }
         }

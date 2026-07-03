@@ -98,7 +98,7 @@ namespace Akka.Remote
         /// <param name="uid">UID of the remote system, if the uid is not defined it will not be a strong quarantine but
         /// the current endpoint writer will be stopped (dropping system messages) and the address will be gated
         /// </param>
-        void Quarantine(Address address, int? uid);
+        void Quarantine(Address address, long? uid);
     }
 
     /// <summary>
@@ -634,7 +634,7 @@ namespace Akka.Remote
         /// <param name="uid">UID of the remote system, if the uid is not defined it will not be a strong quarantine but
         /// the current endpoint writer will be stopped (dropping system messages) and the address will be gated
         /// </param>
-        public void Quarantine(Address address, int? uid)
+        public void Quarantine(Address address, long? uid)
         {
             Transport.Quarantine(address, uid);
         }

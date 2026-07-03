@@ -882,7 +882,7 @@ namespace Akka.Remote.Transport
                     var handshakeInfo = controlPdu.HandshakeInfo;
                     if (handshakeInfo != null) // HasHandshakeInfo
                     {
-                        return new Associate(new HandshakeInfo(DecodeAddress(handshakeInfo.Origin), (int)handshakeInfo.Uid));
+                        return new Associate(new HandshakeInfo(DecodeAddress(handshakeInfo.Origin), (long)handshakeInfo.Uid));
                     }
                     break;
                 case CommandType.Disassociate:
