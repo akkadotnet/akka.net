@@ -6,9 +6,9 @@
 
 ## 2. Cluster
 
-- [ ] 2.1 `UniqueAddress(Address, long uid)` + `long Uid`; fix identity/sort/hash (`Member`)
-- [ ] 2.2 Verify gossip vector-clock node name (`VclockName` = address + "-" + uid decimal string) — behavior unchanged
-- [ ] 2.3 `ClusterDaemon` `Quarantined(new UniqueAddress(addr, long uid))`
+- [x] 2.1 `UniqueAddress(Address, long uid)` + `long Uid`; fix identity/sort/hash (`Member`)
+- [x] 2.2 Verify gossip vector-clock node name (`VclockName` = address + "-" + uid decimal string) — behavior unchanged (string-only, `ClusterDaemon.VclockName`; hash also value-identical for int-range uids)
+- [x] 2.3 `ClusterDaemon` `Quarantined(new UniqueAddress(addr, long uid))`
 
 ## 3. Remoting state machine (internal `int → long`)
 
@@ -30,8 +30,8 @@
 
 ## 6. Wire + serializers
 
-- [ ] 6.1 `ClusterMessages.proto` `UniqueAddress.uid` `uint32 → uint64`; regenerate
-- [ ] 6.2 Remove narrowing casts: `ClusterMessageSerializer`, `MiscMessageSerializer`, `AkkaPduCodec`, DData `SerializationSupport.UniqueAddressFromProto`
+- [x] 6.1 `ClusterMessages.proto` `UniqueAddress.uid` `uint32 → uint64`; regenerate (Grpc.Tools at build time)
+- [x] 6.2 Remove narrowing casts: `ClusterMessageSerializer`, `MiscMessageSerializer`, `AkkaPduCodec`, DData `SerializationSupport.UniqueAddressFromProto`
 - [x] 6.3 Coordinate `serializer-v2` schema to emit/read 64-bit uid (Decision 11 in serializer-v2 design.md)
 
 ## 7. API approval + build

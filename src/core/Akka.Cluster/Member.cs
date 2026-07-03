@@ -474,14 +474,14 @@ namespace Akka.Cluster
         /// <summary>
         /// A random long integer used to signal the incarnation of this cluster instance.
         /// </summary>
-        public int Uid { get; }
+        public long Uid { get; }
 
         /// <summary>
         /// Creates a new unique address instance.
         /// </summary>
         /// <param name="address">The original Akka <see cref="Address"/></param>
         /// <param name="uid">The UID for the cluster instance.</param>
-        public UniqueAddress(Address address, int uid)
+        public UniqueAddress(Address address, long uid)
         {
             Uid = uid;
             Address = address;
@@ -506,7 +506,7 @@ namespace Akka.Cluster
         
         public override int GetHashCode()
         {
-            return Uid;
+            return Uid.GetHashCode();
         }
 
         /// <summary>

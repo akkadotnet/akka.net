@@ -578,14 +578,14 @@ namespace Akka.Cluster.Serialization
         {
             var message = new Proto.Msg.UniqueAddress();
             message.Address = AddressToProto(uniqueAddress.Address);
-            message.Uid = (uint)uniqueAddress.Uid;
+            message.Uid = (ulong)uniqueAddress.Uid;
             return message;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static UniqueAddress UniqueAddressFrom(Proto.Msg.UniqueAddress uniqueAddressProto)
         {
-            return new UniqueAddress(AddressFrom(uniqueAddressProto.Address), (int)uniqueAddressProto.Uid);
+            return new UniqueAddress(AddressFrom(uniqueAddressProto.Address), (long)uniqueAddressProto.Uid);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

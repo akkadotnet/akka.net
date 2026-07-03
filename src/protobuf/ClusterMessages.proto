@@ -173,7 +173,7 @@ message VectorClock {
 // Defines a remote address with uid.
 message UniqueAddress {
   Akka.Remote.Serialization.Proto.Msg.AddressData address = 1;
-  uint32 uid = 2;
+  uint64 uid = 2;
 }
 
 /****************************************

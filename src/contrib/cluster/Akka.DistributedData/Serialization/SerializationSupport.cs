@@ -142,7 +142,7 @@ namespace Akka.DistributedData.Serialization
 
         public UniqueAddress UniqueAddressFromProto(Proto.Msg.UniqueAddress address)
         {
-            return new UniqueAddress(AddressFromProto(address.Address), (int)address.Uid);
+            return new UniqueAddress(AddressFromProto(address.Address), address.Uid);
         }
 
         public static Proto.Msg.VersionVector VersionVectorToProto(VersionVector versionVector)
