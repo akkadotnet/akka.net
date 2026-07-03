@@ -13,7 +13,7 @@ namespace Akka.Persistence.Query
     /// Used in <see cref="IEventsByTagQuery"/> implementations to signal to Akka.Persistence.Query
     /// where to begin and end event by tag queries.
     ///
-    /// For concrete implementations, see <see cref="Sequence"/> and <see cref="NoOffset"/>.
+    /// For concrete implementations, see <see cref="Sequence"/>, <see cref="NoOffset"/> and <see cref="Query.FromEnd"/>.
     /// </summary>
     public abstract class Offset : IComparable<Offset>
     {
@@ -31,6 +31,13 @@ namespace Akka.Persistence.Query
         /// Factory to create an offset of type <see cref="TimeBasedUuid"/>
         /// </summary>
         public static Offset TimeBasedUuid(Guid value) => new TimeBasedUuid(value);
+
+        /// <summary>
+        /// Factory to create an offset of type <see cref="Query.FromEnd"/>, which begins the query at the
+        /// <paramref name="count"/>-th event from the end of history (inclusive), e.g. "the last 10 events".
+        /// </summary>
+        /// <param name="count">The number of events to read from the end of history. Must be greater than zero.</param>
+        public static Offset FromEnd(int count) => new FromEnd(count);
 
         /// <summary>
         /// Used to compare to other <see cref="Offset"/> implementations.
@@ -156,5 +163,68 @@ namespace Akka.Persistence.Query
         }
 
         public override string ToString() => "0";
+    }
+
+    /// <summary>
+    /// Corresponds to a relative offset that begins the query at the <see cref="Count"/>-th event from the
+    /// end of history (inclusive), e.g. "give me the last 10 events" for a tag or across all events.
+    /// <para>
+    /// Unlike <see cref="Sequence"/> and <see cref="TimeBasedUuid"/>, <see cref="FromEnd"/> is a query
+    /// <b>input only</b>: it is never returned in an <see cref="EventEnvelope"/>. Each <see cref="EventEnvelope"/>
+    /// still carries a concrete <see cref="Sequence"/> offset, so to resume a stream at a later point you use
+    /// that absolute offset, not a <see cref="FromEnd"/> value. Because it is relative rather than absolute,
+    /// <see cref="FromEnd"/> is not orderable and <see cref="CompareTo"/> always throws.
+    /// </para>
+    /// <para>
+    /// The from-the-end position is resolved to a concrete start offset when the query is materialized, by
+    /// reading how many matching events exist at that moment. For a <b>live</b> query (or any backend that
+    /// resolves the count and reads the events in separate steps) this is best-effort: events written between
+    /// resolving the count and reading the first batch may widen the initial window beyond <see cref="Count"/>.
+    /// </para>
+    /// <para>
+    /// Not all read journals support this offset type. Implementations that cannot honor it will throw when it is
+    /// supplied, the same way they reject any other unsupported offset type.
+    /// </para>
+    /// </summary>
+    public sealed class FromEnd : Offset
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FromEnd"/> class.
+        /// </summary>
+        /// <param name="count">The number of events to read from the end of history. Must be greater than zero.</param>
+        /// <exception cref="ArgumentException">Thrown when <paramref name="count"/> is less than or equal to zero.</exception>
+        public FromEnd(int count)
+        {
+            if (count <= 0)
+                throw new ArgumentException("FromEnd offset count must be greater than zero.", nameof(count));
+
+            Count = count;
+        }
+
+        /// <summary>
+        /// The number of events to read from the end of history.
+        /// </summary>
+        public int Count { get; }
+
+        private bool Equals(FromEnd other) => Count == other.Count;
+
+        public override bool Equals(object obj)
+        {
+            if (obj is null) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            return obj is FromEnd fromEnd && Equals(fromEnd);
+        }
+
+        public override int GetHashCode() => Count.GetHashCode();
+
+        /// <summary>
+        /// <see cref="FromEnd"/> is a relative, input-only offset and has no position in the stream, so it cannot
+        /// be ordered against any offset (including another <see cref="FromEnd"/>). Always throws.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Always thrown.</exception>
+        public override int CompareTo(Offset other)
+            => throw new InvalidOperationException($"Offsets of type {GetType()} are relative inputs and cannot be compared.");
+
+        public override string ToString() => $"FromEnd({Count})";
     }
 }

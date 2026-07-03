@@ -238,10 +238,36 @@ namespace Akka.Persistence.Journal
                             failure: e => new EventReplayFailure(e));
                     return true;
 
+                case SelectEventCount request:
+                    SelectEventCountAsync(request.Tag)
+                        .PipeTo(request.ReplyTo, success: c => new EventCount(c),
+                            failure: e => new EventCountFailure(e));
+                    return true;
+
                 default:
                     return false;
             }
         }
+
+        /// <summary>
+        /// Counts the number of stored events that match the supplied <paramref name="tag"/>, or all stored
+        /// events when <paramref name="tag"/> is <c>null</c>. Used to resolve a "from the end" (last N)
+        /// query offset into a concrete starting position.
+        /// </summary>
+        private Task<int> SelectEventCountAsync(string tag)
+        {
+            DrainPendingWrites();
+            return Task.FromResult(CountEvents(tag));
+        }
+
+        /// <summary>
+        /// Counts stored events matching <paramref name="tag"/>, or all stored events when <paramref name="tag"/>
+        /// is <c>null</c>. Callers must have already drained pending writes.
+        /// </summary>
+        private int CountEvents(string tag)
+            => tag is null
+                ? Storage.EventLog.Count
+                : Storage.EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(tag));
 
         private Task<(IEnumerable<string> Ids, int LastOrdering)> SelectAllPersistenceIdsAsync(int offset)
         {
@@ -266,7 +292,7 @@ namespace Akka.Persistence.Journal
                 .Take(replay.Max)
                 .ToArray();
 
-            var count = Storage.EventLog.Count(e => e.Payload is Tagged tagged && tagged.Tags.Contains(replay.Tag));
+            var count = CountEvents(replay.Tag);
 
             var index = 0;
             foreach (var persistence in snapshot)
@@ -287,7 +313,7 @@ namespace Akka.Persistence.Journal
                 .Take((int)replay.Max)
                 .ToArray();
 
-            var count = Storage.EventLog.Count;
+            var count = CountEvents(null);
 
             var index = 0;
             foreach (var message in snapshot)
@@ -336,6 +362,57 @@ namespace Akka.Persistence.Journal
             {
                 AllPersistenceIds = allPersistenceIds.ToImmutableHashSet();
                 HighestOrderingNumber = highestOrderingNumber;
+            }
+        }
+
+        /// <summary>
+        /// Requests the number of stored events matching <see cref="Tag"/>, or all stored events when
+        /// <see cref="Tag"/> is <c>null</c>. Used by the query side to resolve a "from the end" (last N)
+        /// query offset into a concrete starting position.
+        /// </summary>
+        [Serializable]
+        public sealed class SelectEventCount : IJournalRequest
+        {
+            /// <summary>
+            /// The tag to count, or <c>null</c> to count all events.
+            /// </summary>
+            public string Tag { get; }
+
+            public IActorRef ReplyTo { get; }
+
+            public SelectEventCount(string tag, IActorRef replyTo)
+            {
+                Tag = tag;
+                ReplyTo = replyTo;
+            }
+        }
+
+        /// <summary>
+        /// Reply to <see cref="SelectEventCount"/> carrying the number of matching events.
+        /// </summary>
+        [Serializable]
+        public sealed class EventCount : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        {
+            public int Count { get; }
+
+            public EventCount(int count)
+            {
+                Count = count;
+            }
+        }
+
+        /// <summary>
+        /// Reply to <see cref="SelectEventCount"/> when the count query fails, so the query side can fail the
+        /// stream instead of waiting forever for an <see cref="EventCount"/> that will never arrive.
+        /// </summary>
+        [Serializable]
+        public sealed class EventCountFailure : INoSerializationVerificationNeeded, IDeadLetterSuppression
+        {
+            public Exception Cause { get; }
+
+            public EventCountFailure(Exception cause)
+            {
+                Cause = cause;
             }
         }
 

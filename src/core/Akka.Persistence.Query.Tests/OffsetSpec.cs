@@ -11,6 +11,7 @@ using System.Linq;
 using FluentAssertions;
 using Xunit;
 
+#nullable enable
 namespace Akka.Persistence.Query.Tests
 {
     public class OffsetSpec
@@ -56,6 +57,44 @@ namespace Akka.Persistence.Query.Tests
         public void NoOffset_must_log_zero()
         {
             Assert.Equal("0", NoOffset.Instance.ToString());
+        }
+
+        [Fact]
+        public void FromEnd_factory_must_create_a_FromEnd_offset_with_the_given_count()
+        {
+            var offset = Offset.FromEnd(5);
+            var fromEnd = Assert.IsType<FromEnd>(offset);
+            fromEnd.Count.Should().Be(5);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        [InlineData(int.MinValue)]
+        public void FromEnd_must_reject_a_non_positive_count(int count)
+        {
+            Assert.Throws<ArgumentException>(() => new FromEnd(count));
+            Assert.Throws<ArgumentException>(() => Offset.FromEnd(count));
+        }
+
+        [Fact]
+        public void FromEnd_must_log_value_correctly()
+        {
+            Assert.Equal("FromEnd(10)", new FromEnd(10).ToString());
+        }
+
+        [Fact]
+        public void FromEnd_offsets_with_the_same_count_must_be_equal()
+        {
+            var three = new FromEnd(3);
+            var alsoThree = new FromEnd(3);
+            var four = new FromEnd(4);
+
+            // assert via Equals/GetHashCode directly: FromEnd is not orderable, so any comparison-based
+            // equality path (e.g. FluentAssertions' Should().Be on an IComparable) would throw.
+            three.Equals(alsoThree).Should().BeTrue();
+            three.GetHashCode().Should().Be(alsoThree.GetHashCode());
+            three.Equals(four).Should().BeFalse();
         }
     }
 }

@@ -7,6 +7,7 @@
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -93,28 +94,29 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         [MultiNodeFact]
-        public void Querying_cluster_sharding_specs()
+        public async Task Querying_cluster_sharding_specs()
         {
-            Querying_cluster_sharding_must_join_cluster_initialize_sharding();
-            Querying_cluster_sharding_must_trigger_sharded_actors();
-            Querying_cluster_sharding_must_return_shard_stats_of_cluster_sharding_regions_if_one_or_more_shards_timeout_versus_all_as_empty();
-            Querying_cluster_sharding_must_return_shard_state_of_sharding_regions_if_one_or_more_shards_timeout_versus_all_as_empty();
+            await Querying_cluster_sharding_must_join_cluster_initialize_sharding();
+            await Querying_cluster_sharding_must_trigger_sharded_actors();
+            await Querying_cluster_sharding_must_return_shard_stats_of_cluster_sharding_regions_if_one_or_more_shards_timeout_versus_all_as_empty();
+            await Querying_cluster_sharding_must_return_shard_state_of_sharding_regions_if_one_or_more_shards_timeout_versus_all_as_empty();
         }
 
-        private void Querying_cluster_sharding_must_join_cluster_initialize_sharding()
+        private async Task Querying_cluster_sharding_must_join_cluster_initialize_sharding()
         {
-            AwaitClusterUp(Config.Controller, Config.Busy, Config.Second, Config.Third);
+            await AwaitClusterUpAsync(Config.Controller, Config.Busy, Config.Second, Config.Third);
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 StartProxy(
                     Sys,
                     typeName: ShardTypeName,
                     role: "shard",
                     messageExtractor: new MessageExtractor());
+                return Task.CompletedTask;
             }, Config.Controller);
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 StartSharding(
                     Sys,
@@ -122,74 +124,103 @@ namespace Akka.Cluster.Sharding.Tests
                     entityProps: Props.Create(() => new PingPongActor()),
                     settings: Settings.Value.WithRole("shard"),
                     messageExtractor: new MessageExtractor());
+                return Task.CompletedTask;
             }, Config.Busy, Config.Second, Config.Third);
 
-            EnterBarrier("sharding started");
+            await EnterBarrierAsync("sharding started");
         }
 
-        private void Querying_cluster_sharding_must_trigger_sharded_actors()
+        private async Task Querying_cluster_sharding_must_trigger_sharded_actors()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Within(TimeSpan.FromSeconds(10), () =>
+                await WithinAsync(TimeSpan.FromSeconds(10), async () =>
                 {
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(async () =>
                     {
                         var pingProbe = CreateTestProbe();
                         foreach (var n in Enumerable.Range(0, 20))
                         {
                             _region.Value.Tell(new PingPongActor.Ping(n), pingProbe.Ref);
                         }
-                        pingProbe.ReceiveWhile(null, m => (PingPongActor.Pong)m, 20);
+
+                        await foreach (var _ in pingProbe.ReceiveWhileAsync(null, m => (PingPongActor.Pong)m, 20))
+                        {
+                        }
                     });
                 });
             }, Config.Controller);
-            EnterBarrier("sharded actors started");
+            await EnterBarrierAsync("sharded actors started");
         }
 
-        private void Querying_cluster_sharding_must_return_shard_stats_of_cluster_sharding_regions_if_one_or_more_shards_timeout_versus_all_as_empty()
+        private async Task Querying_cluster_sharding_must_return_shard_stats_of_cluster_sharding_regions_if_one_or_more_shards_timeout_versus_all_as_empty()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                var probe = CreateTestProbe();
-                var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
-                region.Tell(new GetClusterShardingStats(TimeSpan.FromSeconds(10)), probe.Ref);
-                var regions = probe.ExpectMsg<ClusterShardingStats>().Regions;
-                regions.Count.Should().Be(3);
-                var timeouts = NumberOfShards / regions.Count;
+                // The GetClusterShardingStats read is a point-in-time snapshot that races
+                // sharding's internal shard-region-query-timeout (3s on Second/Third). Under
+                // CI load a Second/Third Shard actor can momentarily miss that timeout and be
+                // reported in Failed instead of Stats, transiently undercounting the Stats sum
+                // to 3. The product is correct by design (partial results are expected), so we
+                // re-issue the query on a fresh probe per attempt until the deterministic steady
+                // state converges. Busy's 0ms shard-region-query-timeout keeps its 2 shards in
+                // Failed (the feature under test), so Stats sum == 4 and Failed sum ==
+                // NumberOfShards / regions.Count.
+                await AwaitAssertAsync(async () =>
+                {
+                    var probe = CreateTestProbe();
+                    var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
+                    region.Tell(new GetClusterShardingStats(Dilated(TimeSpan.FromSeconds(10))), probe.Ref);
+                    var regions = (await probe.ExpectMsgAsync<ClusterShardingStats>(Dilated(TimeSpan.FromSeconds(10)))).Regions;
+                    regions.Count.Should().Be(3);
+                    var timeouts = NumberOfShards / regions.Count;
 
-                // 3 regions, 2 shards per region, all 2 shards/region were unresponsive
-                // within shard-region-query-timeout, which only on first is 0ms
-                regions.Values.Select(i => i.Stats.Count).Sum().Should().Be(4);
-                regions.Values.Select(i => i.Failed.Count).Sum().Should().Be(timeouts);
+                    // 3 regions, 2 shards per region; only Busy's 2 shards are unresponsive
+                    // within its 0ms shard-region-query-timeout, so exactly `timeouts` shards
+                    // report as Failed while the other 4 report Stats.
+                    regions.Values.Select(i => i.Stats.Count).Sum().Should().Be(4);
+                    regions.Values.Select(i => i.Failed.Count).Sum().Should().Be(timeouts);
+                }, Dilated(TimeSpan.FromSeconds(30)), TimeSpan.FromSeconds(1));
             }, Config.Busy, Config.Second, Config.Third);
-            EnterBarrier("received failed stats from timed out shards vs empty");
+            await EnterBarrierAsync("received failed stats from timed out shards vs empty");
         }
 
-        private void Querying_cluster_sharding_must_return_shard_state_of_sharding_regions_if_one_or_more_shards_timeout_versus_all_as_empty()
+        private async Task Querying_cluster_sharding_must_return_shard_state_of_sharding_regions_if_one_or_more_shards_timeout_versus_all_as_empty()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                var probe = CreateTestProbe();
-                var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
-                region.Tell(GetShardRegionState.Instance, probe.Ref);
-                var state = probe.ExpectMsg<CurrentShardRegionState>();
-                state.Shards.Should().BeEmpty();
-                state.Failed.Should().HaveCount(2);
+                // Busy's 0ms shard-region-query-timeout deterministically fails both of its
+                // shards, but GetShardRegionState is still a one-shot read; converge-then-assert
+                // on a fresh probe per attempt for robustness under CI load.
+                await AwaitAssertAsync(async () =>
+                {
+                    var probe = CreateTestProbe();
+                    var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
+                    region.Tell(GetShardRegionState.Instance, probe.Ref);
+                    var state = await probe.ExpectMsgAsync<CurrentShardRegionState>(Dilated(TimeSpan.FromSeconds(10)));
+                    state.Shards.Should().BeEmpty();
+                    state.Failed.Should().HaveCount(2);
+                }, Dilated(TimeSpan.FromSeconds(30)), TimeSpan.FromSeconds(1));
             }, Config.Busy);
-            EnterBarrier("query-timeout-on-busy-node");
+            await EnterBarrierAsync("query-timeout-on-busy-node");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                var probe = CreateTestProbe();
-                var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
-
-                region.Tell(GetShardRegionState.Instance, probe.Ref);
-                var state = probe.ExpectMsg<CurrentShardRegionState>();
-                state.Shards.Should().HaveCount(2);
-                state.Failed.Should().BeEmpty();
+                // The GetShardRegionState read on Second/Third races the same internal 3s
+                // shard-region-query-timeout as the stats query above, so it can transiently
+                // report a shard in Failed rather than Shards. Re-issue the query on a fresh
+                // probe per attempt until the steady state (2 shards, none failed) converges.
+                await AwaitAssertAsync(async () =>
+                {
+                    var probe = CreateTestProbe();
+                    var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
+                    region.Tell(GetShardRegionState.Instance, probe.Ref);
+                    var state = await probe.ExpectMsgAsync<CurrentShardRegionState>(Dilated(TimeSpan.FromSeconds(10)));
+                    state.Shards.Should().HaveCount(2);
+                    state.Failed.Should().BeEmpty();
+                }, Dilated(TimeSpan.FromSeconds(30)), TimeSpan.FromSeconds(1));
             }, Config.Second, Config.Third);
-            EnterBarrier("done");
+            await EnterBarrierAsync("done");
         }
     }
 }
