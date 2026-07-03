@@ -145,6 +145,28 @@ namespace Akka.Remote.Tests.Transport
                 recipient: "alice", sender: "bob", seq: new SeqNo(1), payload: Payload(7, "m", 9), ack: Ack(3));
         }
 
+        // ===================== handshake PDU: address/system UID round-trip =====================
+
+        [Theory(DisplayName = "Should_round_trip_a_64_bit_system_uid_When_encoding_and_decoding_an_Associate_PDU")]
+        [InlineData(12345L)]
+        [InlineData(long.MaxValue)]
+        [InlineData(unchecked((long)0x8000_0000_0000_0001))] // negative
+        [InlineData(1L << 40)]
+        public void Should_round_trip_a_64_bit_system_uid_When_encoding_and_decoding_an_Associate_PDU(long uid)
+        {
+            // The handshake's system/address uid is carried on the wire as WireFormats.proto's
+            // AkkaHandshakeInfo.uid (already fixed64 before the widen-system-uid-to-64bit change - only the
+            // C# narrowing casts were removed), so >32-bit uids must round-trip cleanly through
+            // ConstructAssociate -> DecodePdu.
+            var wire = _codec.ConstructAssociate(new HandshakeInfo(LocalAddress, uid));
+
+            var pdu = _codec.DecodePdu(wire);
+
+            var associate = Assert.IsType<Associate>(pdu);
+            Assert.Equal(LocalAddress, associate.Info.Origin);
+            Assert.Equal(uid, associate.Info.Uid);
+        }
+
         // ===================== frozen interop wire bytes (golden) =====================
 
         // The exact bytes classic Akka.Remote puts on the wire for the documented messages below.

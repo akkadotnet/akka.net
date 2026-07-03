@@ -42,6 +42,6 @@
 
 ## 8. Compatibility + docs
 
-- [ ] 8.1 Rolling-upgrade test: v1.5 ↔ v1.6 gossip with int-range uids — no truncation, cluster forms
-- [ ] 8.2 Full-range generation test (all-v1.6) — >32-bit uids round-trip
-- [ ] 8.3 Add `BREAKING_CHANGES_V1.6.md` entry (API + Wire rows)
+- [x] 8.1 Rolling-upgrade test: v1.5 ↔ v1.6 gossip with int-range uids — no truncation, cluster forms (wire-level simulation via uint32/uint64 varint cross-parse in `UniqueAddressWireCompatSpec`; a live mixed-version cluster cannot be exercised in-repo)
+- [x] 8.2 Full-range generation test (all-v1.6) — >32-bit uids round-trip (gossip, heartbeat, handshake PDU, DData; generation range tests in `AddressUidExtensionSpecs`)
+- [x] 8.3 Add `BREAKING_CHANGES_V1.6.md` entry (API + Wire rows)
