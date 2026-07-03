@@ -133,6 +133,76 @@ namespace Akka.Tests.IO
             }
         }
 
+        private sealed class TrackingDisposeStream : Stream
+        {
+            private readonly Stream _inner;
+            private int _disposeCount;
+            private int _disposeAsyncCount;
+
+            public TrackingDisposeStream(Stream inner)
+            {
+                _inner = inner;
+            }
+
+            public int DisposeCount => Volatile.Read(ref _disposeCount);
+            public int DisposeAsyncCount => Volatile.Read(ref _disposeAsyncCount);
+
+            public override bool CanRead => _inner.CanRead;
+            public override bool CanSeek => _inner.CanSeek;
+            public override bool CanWrite => _inner.CanWrite;
+            public override long Length => _inner.Length;
+
+            public override long Position
+            {
+                get => _inner.Position;
+                set => _inner.Position = value;
+            }
+
+            public override void Flush() => _inner.Flush();
+
+            public override Task FlushAsync(CancellationToken cancellationToken) =>
+                _inner.FlushAsync(cancellationToken);
+
+            public override int Read(byte[] buffer, int offset, int count) =>
+                _inner.Read(buffer, offset, count);
+
+            public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+                _inner.ReadAsync(buffer, offset, count, cancellationToken);
+
+            public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+                _inner.ReadAsync(buffer, cancellationToken);
+
+            public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+
+            public override void SetLength(long value) => _inner.SetLength(value);
+
+            public override void Write(byte[] buffer, int offset, int count) =>
+                _inner.Write(buffer, offset, count);
+
+            public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+                _inner.WriteAsync(buffer, offset, count, cancellationToken);
+
+            public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) =>
+                _inner.WriteAsync(buffer, cancellationToken);
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    Interlocked.Increment(ref _disposeCount);
+                    _inner.Dispose();
+                }
+
+                base.Dispose(disposing);
+            }
+
+            public override async ValueTask DisposeAsync()
+            {
+                Interlocked.Increment(ref _disposeAsyncCount);
+                await _inner.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
         public TcpConnectionBatchingSpec(ITestOutputHelper output)
             : base(@"akka.loglevel = DEBUG
                      akka.io.tcp.trace-logging = true", output: output)
@@ -188,6 +258,97 @@ namespace Akka.Tests.IO
             handler.Send(connection, Tcp.Abort.Instance);
             await handler.ExpectMsgAsync<Tcp.Aborted>();
             await ExpectTerminatedAsync(connection);
+        }
+
+        [Fact]
+        public async Task TcpConnection_should_finalize_transport_via_DisposeAsync_after_confirmed_close()
+        {
+            using var socketPair = await ConnectedSocketPair.CreateAsync();
+            var trackingStream = new TrackingDisposeStream(new NetworkStream(socketPair.Server, ownsSocket: false));
+            var bindHandler = CreateTestProbe();
+            var handler = CreateTestProbe();
+            var settings = TcpSettings.Create(Sys);
+
+            var connection = Sys.ActorOf(Props.Create(() => new TcpIncomingConnection(
+                settings,
+                socketPair.Server,
+                bindHandler.Ref,
+                Array.Empty<Inet.SocketOption>(),
+                false,
+                trackingStream)));
+
+            await bindHandler.ExpectMsgAsync<Tcp.Connected>();
+            bindHandler.Send(connection, new Tcp.Register(handler.Ref));
+            await WatchAsync(connection);
+
+            handler.Send(connection, Tcp.ConfirmedClose.Instance);
+            socketPair.Client.Shutdown(SocketShutdown.Send);
+
+            await handler.ExpectMsgAsync<Tcp.ConfirmedClosed>();
+            await ExpectTerminatedAsync(connection);
+
+            trackingStream.DisposeAsyncCount.Should().Be(1);
+            trackingStream.DisposeCount.Should().Be(0);
+        }
+
+        [Fact]
+        public async Task TcpConnection_should_finalize_transport_during_graceful_close()
+        {
+            using var socketPair = await ConnectedSocketPair.CreateAsync();
+            var trackingStream = new TrackingDisposeStream(new NetworkStream(socketPair.Server, ownsSocket: false));
+            var bindHandler = CreateTestProbe();
+            var handler = CreateTestProbe();
+            var settings = TcpSettings.Create(Sys);
+
+            var connection = Sys.ActorOf(Props.Create(() => new TcpIncomingConnection(
+                settings,
+                socketPair.Server,
+                bindHandler.Ref,
+                Array.Empty<Inet.SocketOption>(),
+                false,
+                trackingStream)));
+
+            await bindHandler.ExpectMsgAsync<Tcp.Connected>();
+            bindHandler.Send(connection, new Tcp.Register(handler.Ref));
+            await WatchAsync(connection);
+
+            handler.Send(connection, Tcp.Close.Instance);
+
+            await handler.ExpectMsgAsync<Tcp.Closed>();
+            await ExpectTerminatedAsync(connection);
+
+            trackingStream.DisposeAsyncCount.Should().Be(1);
+            trackingStream.DisposeCount.Should().Be(0);
+        }
+
+        [Fact]
+        public async Task TcpConnection_should_fall_back_to_abort_cleanup_when_stopped_unexpectedly()
+        {
+            using var socketPair = await ConnectedSocketPair.CreateAsync();
+            var trackingStream = new TrackingDisposeStream(new NetworkStream(socketPair.Server, ownsSocket: false));
+            var bindHandler = CreateTestProbe();
+            var handler = CreateTestProbe();
+            var settings = TcpSettings.Create(Sys);
+
+            var connection = Sys.ActorOf(Props.Create(() => new TcpIncomingConnection(
+                settings,
+                socketPair.Server,
+                bindHandler.Ref,
+                Array.Empty<Inet.SocketOption>(),
+                false,
+                trackingStream)));
+
+            await bindHandler.ExpectMsgAsync<Tcp.Connected>();
+            bindHandler.Send(connection, new Tcp.Register(handler.Ref));
+            await WatchAsync(connection);
+
+            handler.Send(connection, PoisonPill.Instance);
+
+            await handler.ExpectMsgAsync<Tcp.Aborted>();
+            await ExpectTerminatedAsync(connection);
+
+            trackingStream.DisposeAsyncCount.Should().Be(0);
+            trackingStream.DisposeCount.Should().BeGreaterThan(0);
         }
 
         private sealed class ConnectedSocketPair : IDisposable

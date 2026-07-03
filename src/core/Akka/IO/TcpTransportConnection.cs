@@ -28,6 +28,13 @@ namespace Akka.IO
         private readonly Pipe _inputPipe;
         private readonly Pipe _outputPipe;
         private readonly CancellationTokenSource _cts = new();
+        private Task? _disposeTask;
+        private int _transportCancellationRequested;
+        private int _outputWriterCompleted;
+        private int _sendShutdownApplied;
+        private int _streamDisposed;
+        private int _socketClosed;
+        private int _ctsDisposed;
 
         /// <summary>
         /// Creates a transport connection from an already-connected socket.
@@ -105,80 +112,197 @@ namespace Akka.IO
         public async Task ShutdownAsync()
         {
             // Complete the output pipe — write pump will drain and exit
-            await _outputPipe.Writer.CompleteAsync().ConfigureAwait(false);
+            await CompleteOutputWriterAsync().ConfigureAwait(false);
 
             // Wait for write pump to finish flushing
             await WriteCompleted.ConfigureAwait(false);
 
             // Half-close the socket (send FIN).
             // SocketException is expected if the peer already reset the connection.
-            try
-            {
-                _socket.Shutdown(SocketShutdown.Send);
-            }
-            catch (SocketException) { } // slopwatch-ignore: SW003 socket may already be closed by peer or abort
+            TryShutdownSend();
         }
 
         public async Task CloseAsync()
         {
             // Complete the output pipe — write pump will drain and exit
-            await _outputPipe.Writer.CompleteAsync().ConfigureAwait(false);
+            await CompleteOutputWriterAsync().ConfigureAwait(false);
 
             // Wait for write pump to finish flushing
             await WriteCompleted.ConfigureAwait(false);
 
             // Cancel to unblock the read pump (which may be blocked on stream.ReadAsync)
-            _cts.Cancel();
+            CancelTransport();
 
             // Wait for read pump to exit — it may throw OperationCanceledException (from CTS cancel)
             // or IOException/SocketException (from stream close). Both are expected during shutdown.
             try { await ReadCompleted.ConfigureAwait(false); }
-            catch (Exception) when (_cts.IsCancellationRequested) { } // slopwatch-ignore: SW003 expected cancellation or I/O error during shutdown
+            catch (Exception) when (IsTransportCancellationRequested) { } // slopwatch-ignore: SW003 expected cancellation or I/O error during shutdown
 
-            // Close the stream and socket
-            await _stream.DisposeAsync().ConfigureAwait(false);
-            _socket.Close();
+            await DisposeAsync().ConfigureAwait(false);
         }
 
         public void Abort()
         {
             // Cancel pumps immediately
-            _cts.Cancel();
+            CancelTransport();
 
             // Complete pipes to unblock any pending reads/writes on them.
             // InvalidOperationException if already completed — safe to ignore.
-            try { _outputPipe.Writer.Complete(); } catch (InvalidOperationException) { } // slopwatch-ignore: SW003 pipe may already be completed
-            try { _inputPipe.Writer.Complete(); } catch (InvalidOperationException) { } // slopwatch-ignore: SW003 pipe may already be completed
+            TryCompleteOutputWriter();
 
             // RST the socket — SocketException/ObjectDisposedException if already closed.
-            try
-            {
-                _socket.LingerState = new LingerOption(true, 0);
-                _socket.Close();
-            }
-            catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
-            catch (SocketException) { } // slopwatch-ignore: SW003 socket may already be closed
+            CloseSocket(abortive: true);
 
             // Dispose the stream — ObjectDisposedException if already disposed.
-            try { _stream.Dispose(); } catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 stream may already be disposed
+            DisposeStream();
         }
 
         public async ValueTask DisposeAsync()
         {
-            _cts.Cancel();
+            var disposeTask = Volatile.Read(ref _disposeTask);
+            if (disposeTask is null)
+            {
+                var created = DisposeCoreAsync();
+                disposeTask = Interlocked.CompareExchange(ref _disposeTask, created, null) ?? created;
+            }
 
-            await _outputPipe.Writer.CompleteAsync().ConfigureAwait(false);
-            await _inputPipe.Writer.CompleteAsync().ConfigureAwait(false);
+            await disposeTask.ConfigureAwait(false);
+        }
+
+        private async Task DisposeCoreAsync()
+        {
+            CancelTransport();
+
+            await CompleteOutputWriterAsync().ConfigureAwait(false);
 
             // Wait for pump tasks — they may throw OperationCanceledException or I/O errors during shutdown.
             try
             {
                 await Task.WhenAll(ReadCompleted, WriteCompleted).ConfigureAwait(false);
             }
-            catch (Exception) when (_cts.IsCancellationRequested) { } // slopwatch-ignore: SW003 expected errors during disposal
+            catch (Exception) when (IsTransportCancellationRequested) { } // slopwatch-ignore: SW003 expected errors during disposal
 
-            await _stream.DisposeAsync().ConfigureAwait(false);
-            _socket.Dispose();
+            await DisposeStreamAsync().ConfigureAwait(false);
+            CloseSocket();
+            DisposeCancellationSource();
+        }
+
+        private bool IsTransportCancellationRequested => Volatile.Read(ref _transportCancellationRequested) == 1;
+
+        private void CancelTransport()
+        {
+            if (Interlocked.Exchange(ref _transportCancellationRequested, 1) != 0)
+                return;
+
+            try
+            {
+                _cts.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // The CTS was already disposed by another shutdown path.
+                return;
+            }
+        }
+
+        private async Task CompleteOutputWriterAsync()
+        {
+            if (Interlocked.CompareExchange(ref _outputWriterCompleted, 1, 0) != 0)
+                return;
+
+            try
+            {
+                await _outputPipe.Writer.CompleteAsync().ConfigureAwait(false);
+            }
+            catch (InvalidOperationException)
+            {
+                // Another shutdown path already completed the writer.
+                return;
+            }
+        }
+
+        private void TryCompleteOutputWriter()
+        {
+            if (Interlocked.CompareExchange(ref _outputWriterCompleted, 1, 0) != 0)
+                return;
+
+            try
+            {
+                _outputPipe.Writer.Complete();
+            }
+            catch (InvalidOperationException)
+            {
+                // Another shutdown path already completed the writer.
+                return;
+            }
+        }
+
+        private void TryShutdownSend()
+        {
+            if (Interlocked.CompareExchange(ref _sendShutdownApplied, 1, 0) != 0)
+                return;
+
+            try
+            {
+                _socket.Shutdown(SocketShutdown.Send);
+            }
+            catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
+            catch (SocketException) { } // slopwatch-ignore: SW003 socket may already be closed by peer or abort
+        }
+
+        private async Task DisposeStreamAsync()
+        {
+            if (Interlocked.CompareExchange(ref _streamDisposed, 1, 0) != 0)
+                return;
+
+            try
+            {
+                await _stream.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException)
+            {
+                // Another shutdown path already disposed the stream.
+                return;
+            }
+        }
+
+        private void DisposeStream()
+        {
+            if (Interlocked.CompareExchange(ref _streamDisposed, 1, 0) != 0)
+                return;
+
+            try
+            {
+                _stream.Dispose();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Another shutdown path already disposed the stream.
+                return;
+            }
+        }
+
+        private void CloseSocket(bool abortive = false)
+        {
+            if (Interlocked.CompareExchange(ref _socketClosed, 1, 0) != 0)
+                return;
+
+            try
+            {
+                if (abortive)
+                    _socket.LingerState = new LingerOption(true, 0);
+
+                _socket.Close();
+            }
+            catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
+            catch (SocketException) { } // slopwatch-ignore: SW003 socket may already be closed
+        }
+
+        private void DisposeCancellationSource()
+        {
+            if (Interlocked.CompareExchange(ref _ctsDisposed, 1, 0) != 0)
+                return;
+
             _cts.Dispose();
         }
 
