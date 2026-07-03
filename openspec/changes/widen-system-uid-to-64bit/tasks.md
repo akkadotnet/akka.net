@@ -36,8 +36,8 @@
 
 ## 7. API approval + build
 
-- [ ] 7.1 Update `Akka.API.Tests` approved files (`ApproveRemote.*`, `ApproveCluster.*`) for the hard break
-- [ ] 7.2 `dotnet build -warnaserror` clean
+- [x] 7.1 Update `Akka.API.Tests` approved files (`ApproveRemote.*`, `ApproveCluster.*`) for the hard break
+- [x] 7.2 `dotnet build -warnaserror` clean
 - [ ] 7.3 Akka.Remote + Akka.Cluster + DistributedData tests green
 
 ## 8. Compatibility + docs

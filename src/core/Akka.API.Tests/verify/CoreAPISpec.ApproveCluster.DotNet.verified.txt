@@ -285,9 +285,9 @@ namespace Akka.Cluster
     }
     public class UniqueAddress : System.IComparable, System.IComparable<Akka.Cluster.UniqueAddress>, System.IEquatable<Akka.Cluster.UniqueAddress>
     {
-        public UniqueAddress(Akka.Actor.Address address, int uid) { }
+        public UniqueAddress(Akka.Actor.Address address, long uid) { }
         public Akka.Actor.Address Address { get; }
-        public int Uid { get; }
+        public long Uid { get; }
         public int CompareTo(Akka.Cluster.UniqueAddress uniqueAddress) { }
         public bool Equals(Akka.Cluster.UniqueAddress other) { }
         public override bool Equals(object obj) { }
