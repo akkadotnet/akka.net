@@ -38,7 +38,7 @@
 
 - [x] 7.1 Update `Akka.API.Tests` approved files (`ApproveRemote.*`, `ApproveCluster.*`) for the hard break
 - [x] 7.2 `dotnet build -warnaserror` clean
-- [ ] 7.3 Akka.Remote + Akka.Cluster + DistributedData tests green
+- [x] 7.3 Akka.Remote + Akka.Cluster + DistributedData tests green (391 / 376 / 190 passed, 0 failed, net10.0 Release)
 
 ## 8. Compatibility + docs
 
