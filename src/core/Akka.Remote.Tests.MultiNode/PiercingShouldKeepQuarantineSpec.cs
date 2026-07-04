@@ -78,7 +78,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 // Communicate with second system
                 Sys.ActorSelection(Node(_config.Second) / "user" / "subject").Tell("getuid");
-                var uid = ExpectMsg<int>(TimeSpan.FromSeconds(10));
+                var uid = ExpectMsg<long>(TimeSpan.FromSeconds(10));
                 EnterBarrier("actor-identified");
 
                 // Manually Quarantine the other system

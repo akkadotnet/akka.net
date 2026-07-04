@@ -60,10 +60,10 @@ namespace Akka.Remote.Tests.MultiNode
             _specConfig = specConfig;
         }
 
-        private (int, IActorRef) Identify(RoleName role, string actorName)
+        private (long, IActorRef) Identify(RoleName role, string actorName)
         {
             Sys.ActorSelection(Node(role) / "user" / actorName).Tell("identify");
-            return ExpectMsg<(int, IActorRef)>();
+            return ExpectMsg<(long, IActorRef)>();
         }
 
         [MultiNodeFact]
@@ -81,7 +81,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 // Acquire ActorRef from first system
                 var tuple = Identify(_specConfig.Second, "subject");
-                int uidFirst = tuple.Item1;
+                long uidFirst = tuple.Item1;
                 IActorRef subjectFirst = tuple.Item2;
                 EnterBarrier("actor-identified");
 
@@ -102,7 +102,7 @@ namespace Akka.Remote.Tests.MultiNode
                     AwaitAssert(() =>
                     {
                         Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject").Tell("identify");
-                        var tuple2 = ExpectMsg<(int, IActorRef)>(TimeSpan.FromSeconds(1));
+                        var tuple2 = ExpectMsg<(long, IActorRef)>(TimeSpan.FromSeconds(1));
                         tuple2.Item1.Should().NotBe(uidFirst);
                         tuple2.Item2.Should().NotBe(subjectFirst);
                     });

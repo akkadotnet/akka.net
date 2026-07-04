@@ -60,7 +60,7 @@ namespace Akka.Remote.Tests.MultiNode
     public class RemoteRestartedQuarantinedSpec : MultiNodeSpec
     {
         private readonly RemoteRestartedQuarantinedMultiNetSpec _config;
-        private readonly Func<RoleName, string, (int, IActorRef)> _identifyWithUid;
+        private readonly Func<RoleName, string, (long, IActorRef)> _identifyWithUid;
 
         public RemoteRestartedQuarantinedSpec()
             : this(new RemoteRestartedQuarantinedMultiNetSpec())
@@ -75,7 +75,7 @@ namespace Akka.Remote.Tests.MultiNode
             _identifyWithUid = (role, actorName) =>
             {
                 Sys.ActorSelection(Node(role) / "user" / actorName).Tell("identify");
-                return ExpectMsg<(int, IActorRef)>();
+                return ExpectMsg<(long, IActorRef)>();
             };
         }
 
