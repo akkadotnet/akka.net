@@ -7,9 +7,11 @@
 
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Channels;
 using Akka.Actor;
 
 namespace Akka.Remote.Artery
@@ -18,18 +20,34 @@ namespace Akka.Remote.Artery
     /// INTERNAL API.
     ///
     /// Owns the lock-free <see cref="AssociationState"/> snapshot for one remote
-    /// <see cref="Actor.Address"/> and provides the CAS retry loops that transition it.
-    /// Transport/queue wiring (the outbound send queue, lanes, etc.) is added by a later chunk —
-    /// at G2 this class holds only association state.
+    /// <see cref="Actor.Address"/>, the CAS retry loops that transition it, AND (G2 transport chunk)
+    /// the association's bounded outbound queue + once-only outbound-stream materialization
+    /// lifecycle (design.md Decision 7/9: a bounded <c>Channel</c>, externally owned so it survives
+    /// stream restart -- reconnect re-attaches a new consumer to the SAME channel).
     /// </summary>
     internal sealed class Association
     {
-        private volatile AssociationState _state;
+        /// <summary>
+        /// Default capacity for <see cref="OutboundReader"/>'s bounded channel (Decision 7/9). A
+        /// sane constant rather than a new <c>ArterySettings</c>/<c>Remote.conf</c> key -- see the
+        /// G2 transport-chunk task report for why.
+        /// </summary>
+        public const int DefaultOutboundQueueCapacity = 3072;
 
-        public Association(Address remoteAddress)
+        private volatile AssociationState _state;
+        private readonly Channel<ArteryOutboundElement> _outboundChannel;
+        private int _outboundMaterializeStarted;
+
+        public Association(Address remoteAddress, int outboundQueueCapacity = DefaultOutboundQueueCapacity)
         {
             RemoteAddress = remoteAddress;
             _state = AssociationState.Create();
+            _outboundChannel = Channel.CreateBounded<ArteryOutboundElement>(new BoundedChannelOptions(outboundQueueCapacity)
+            {
+                SingleReader = true,
+                SingleWriter = false,
+                FullMode = BoundedChannelFullMode.Wait
+            });
         }
 
         /// <summary>
@@ -41,6 +59,49 @@ namespace Akka.Remote.Artery
         /// The current immutable state snapshot. Safe to read from any thread.
         /// </summary>
         public AssociationState CurrentState => _state;
+
+        /// <summary>
+        /// The reading side of this association's bounded outbound queue. Consumed by exactly one
+        /// materialized outbound stream (<see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/>),
+        /// per <see cref="EnsureOutboundMaterialized"/>.
+        /// </summary>
+        public ChannelReader<ArteryOutboundElement> OutboundReader => _outboundChannel.Reader;
+
+        /// <summary>
+        /// Whether <see cref="EnsureOutboundMaterialized"/> has already started (or finished)
+        /// materializing this association's outbound stream. A cheap check callers can use to skip
+        /// allocating a materialize callback on the (post-first-call) steady-state path.
+        /// </summary>
+        public bool IsOutboundMaterialized => Volatile.Read(ref _outboundMaterializeStarted) != 0;
+
+        /// <summary>
+        /// Attempts to enqueue <paramref name="element"/> for the outbound stream to send.
+        /// Non-blocking (<see cref="ChannelWriter{T}.TryWrite"/>) -- NEVER awaits/blocks a producing
+        /// actor thread on a slow remote (Decision 7). Returns <see langword="false"/> when the
+        /// bounded queue is full; the caller (<c>ArteryRemoting</c>) applies the overflow policy
+        /// (ordinary messages -> dead letters).
+        /// </summary>
+        public bool TryEnqueueOutbound(ArteryOutboundElement element) => _outboundChannel.Writer.TryWrite(element);
+
+        /// <summary>
+        /// Ensures this association's outbound stream is materialized exactly once, no matter how
+        /// many threads call this concurrently -- only the FIRST caller's <paramref name="materialize"/>
+        /// callback executes (CAS-gated on an internal flag). The callback is supplied by the
+        /// transport (<c>ArteryRemoting</c>), which owns the Tcp extension / materializer / settings
+        /// this pure state type deliberately does not know about.
+        /// </summary>
+        public void EnsureOutboundMaterialized(Action<Association> materialize)
+        {
+            if (Interlocked.CompareExchange(ref _outboundMaterializeStarted, 1, 0) == 0)
+                materialize(this);
+        }
+
+        /// <summary>
+        /// Marks the outbound channel complete (no further writes accepted) so its materialized
+        /// <see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/> consumer finishes gracefully.
+        /// Called on transport shutdown.
+        /// </summary>
+        public void CompleteOutbound() => _outboundChannel.Writer.TryComplete();
 
         /// <summary>
         /// CAS loop applying <see cref="AssociationState.CompleteHandshake"/>. Returns both the
@@ -118,13 +179,27 @@ namespace Akka.Remote.Artery
     {
         private readonly ConcurrentDictionary<Address, Association> _byAddress = new();
         private readonly ConcurrentDictionary<long, Association> _byUid = new();
+        private readonly int _outboundQueueCapacity;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AssociationRegistry"/> class.
+        /// </summary>
+        /// <param name="outboundQueueCapacity">
+        /// Capacity of every materialized <see cref="Association"/>'s bounded outbound channel
+        /// (see <see cref="Association.DefaultOutboundQueueCapacity"/>).
+        /// </param>
+        public AssociationRegistry(int outboundQueueCapacity = Association.DefaultOutboundQueueCapacity)
+        {
+            _outboundQueueCapacity = outboundQueueCapacity;
+        }
 
         /// <summary>
         /// Returns the <see cref="Association"/> for <paramref name="remoteAddress"/>, creating
         /// it (via <see cref="ConcurrentDictionary{TKey,TValue}.GetOrAdd(TKey, System.Func{TKey,TValue})"/>)
         /// if this is the first reference to that address.
         /// </summary>
-        public Association AssociationFor(Address remoteAddress) => _byAddress.GetOrAdd(remoteAddress, static addr => new Association(addr));
+        public Association AssociationFor(Address remoteAddress) =>
+            _byAddress.GetOrAdd(remoteAddress, (addr, capacity) => new Association(addr, capacity), _outboundQueueCapacity);
 
         /// <summary>
         /// Looks up the association currently known to own <paramref name="uid"/>. Returns
@@ -132,6 +207,12 @@ namespace Akka.Remote.Artery
         /// superseded it (see the reverse-index policy in the type remarks).
         /// </summary>
         public Association? TryGetByUid(long uid) => _byUid.TryGetValue(uid, out var association) ? association : null;
+
+        /// <summary>
+        /// A point-in-time snapshot of every association currently known to this registry. Used by
+        /// <c>ArteryRemoting.Shutdown</c> to complete every association's outbound channel.
+        /// </summary>
+        public ICollection<Association> AllAssociations => _byAddress.Values;
 
         /// <summary>
         /// Completes the handshake for <paramref name="remoteAddress"/> with peer

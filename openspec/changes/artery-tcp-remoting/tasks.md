@@ -52,13 +52,13 @@ BenchmarkDotNet harness (naked, baseline-first, `MemoryDiagnoser` on), socket by
 
 ## 5. Plaintext TCP Transport
 
-- [ ] 5.1 Implement TCP listener for inbound Artery connections (via `Akka.Streams.IO.Tcp` `Tcp().Bind`)
-- [ ] 5.2 Implement outbound TCP connection creation (via `Tcp().OutgoingConnection`)
-- [ ] 5.3 Attach inbound connection to stream by stream ID
-- [ ] 5.4 Add ordinary stream send path
-- [ ] 5.5 Add ordinary stream receive path
-- [ ] 5.6 Dispatch decoded messages to recipients
-- [ ] 5.7 Add basic two-ActorSystem remoting test over Artery TCP
+- [x] 5.1 Implement TCP listener for inbound Artery connections (via `Akka.Streams.IO.Tcp` `Tcp().Bind`; `halfClose: true` required — accepted connections are read-only)
+- [x] 5.2 Implement outbound TCP connection creation (via `Tcp().OutgoingConnection`)
+- [x] 5.3 Attach inbound connection to stream by stream ID (G2: Ordinary accepted; control/large logged + dropped until G3/large work)
+- [x] 5.4 Add ordinary stream send path
+- [x] 5.5 Add ordinary stream receive path
+- [x] 5.6 Dispatch decoded messages to recipients
+- [x] 5.7 Add basic two-ActorSystem remoting test over Artery TCP
 
 ## 6. Control Stream
 
