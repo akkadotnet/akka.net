@@ -119,31 +119,34 @@ Little-endian throughout. **✓ = verified from Pekko source; ◇ = our design d
 
 - **Connection preamble** (once per TCP connection) ✓: `AKKA` magic (4B) + stream id (1B: 1=control, 2=ordinary, 3=large).
 - **Per frame** ✓: `[ frame length u32 LE ][ envelope ]`; length = header + payload, **back-patched from bytes-written, not predicted** (no `SizeHint` dependency — see below).
-- **Envelope fixed header — 28 bytes** ✓ (offsets):
+- **Envelope fixed header — 32 bytes** (offsets; the 28-byte draft was REVISED at G1, 2026-07-04: an explicit **payload-offset** field was added at offset 28. The draft derived the payload as `frame_length − header_length`, which breaks whenever a literal tail is present; the explicit offset makes the payload slice O(1) and position-independent of the tail. Cost: 4 B/frame; on the warm hot path it is the constant 32.):
 
 ```
  off  sz  field
-  0   1   version
-  1   1   flags                         (bitfield: bit M = optional metadata section present ◇)
-  2   1   actorRef  compression-table version
-  3   1   manifest  compression-table version
+  0   1   version                 (= 1; decoder rejects any other value)
+  1   1   flags                   (bit 0 = metadata section present; bits 1–7 reserved-must-be-zero, decoder rejects)
+  2   1   actorRef  compression-table version   (= 0 in MVP)
+  3   1   manifest  compression-table version   (= 0 in MVP)
   4   8   origin UID              int64 LE
  12   4   serializer id           int32 LE
- 16   4   sender    ref  TAG
- 20   4   recipient ref  TAG
- 24   4   manifest       TAG
- 28  ..   variable / optional tail
+ 16   4   sender    ref  TAG      u32 LE
+ 20   4   recipient ref  TAG      u32 LE
+ 24   4   manifest       TAG      u32 LE
+ 28   4   payload offset          u32 LE  (== 32 when no metadata section and no literals)
+ 32  ..   [metadata section iff flags.0: u32 LE length + bytes][literals]*
+ payloadOffset .. frame end       payload
 ```
 
-- **32-bit TAG** (sender / recipient / manifest) ✓ masks: top byte `0xFF000000` == 0 → LITERAL (string in tail); != 0 → COMPRESSED, low 16 bits `0x0000FFFF` = compression-table index. ◇ reserve one value = ABSENT (no-sender / no-recipient); ◇ literal length encoding.
-- **Variable / optional tail** @28 ◇ (verify vs Pekko): optional metadata container (present iff `flags.M`) then length-prefixed literals — sender path, recipient path, manifest — for any LITERAL tag.
-- **Payload**: V2-serialized bytes (msgpack where the type uses the generator); length = `frame_length − header_length`.
-- **Hot path** (compression warm): `[ len ][ 28B fixed hdr, all tags compressed ][ payload N ]` = 32 + N bytes, zero tail, every metadata field an O(1) offset read.
+- **32-bit TAG** (sender / recipient / manifest) ✓ masks, CLOSED at G1: tag == `0x00000000` → **ABSENT** (no-sender / no-recipient / empty manifest — unambiguous because a literal offset is always ≥ 32); top byte `0xFF000000` != 0 → **COMPRESSED**, encoder writes `0xFF000000 | index`, low 16 bits `0x0000FFFF` = table index; else → **LITERAL**, tag value = absolute byte offset of the literal from envelope offset 0 (≥ 32, < `0x00FFFFFF`).
+- **Literal encoding** (CLOSED at G1): u16 LE byte length + UTF-8 bytes; encode rejects a path/manifest over 64 KB.
+- **Variable / optional tail** @32 (CLOSED at G1): optional metadata container (present iff flags bit 0; u32 LE length + bytes; MVP never writes one, the decoder skips it), then the length-prefixed literals for any LITERAL tag. Tags carry absolute offsets, so literal placement is not load-bearing; the encoder's convention is sender, recipient, manifest. All literals sit in `[32, payloadOffset)`.
+- **Payload**: V2-serialized bytes (msgpack where the type uses the generator); slice = `[payloadOffset, frame end)` — explicit, O(1), independent of the tail. **Single-pass encode is possible because `SerializerV2.Manifest(object)` is available UPFRONT** (verified: abstract on `SerializerV2`): look up serializer → id + manifest known → write header + literals → `Serialize(obj, IBufferWriter)` streams the payload directly into the frame buffer → back-patch the frame length only.
+- **Hot path** (compression warm): `[ len ][ 32B fixed hdr, all tags compressed, payloadOffset=32 ][ payload N ]` = 36 + N bytes, zero tail, every metadata field an O(1) offset read.
 - **Manifest = V2 non-CLR token** — the manifest TAG behaves exactly like the ref tags (compressed index or literal string), no CLR-type coupling. This is the one intended divergence from Pekko's encoding.
 
 **Decode order (structural, not an optimization).** The header is parsed *before* any payload deserialization, because it carries the recipient (→ which lane) and the serializer-id + manifest (→ how to deserialize). Flow: `TcpFraming → header parse + ref/manifest decompression on the SERIAL decode island → partition to lane by recipient hash → payload deserialization on the lane (parallel)`. The header parse is on the serial critical path, so it must stay O(1)/sub-microsecond — which is exactly why it is a fixed-offset binary header, and why keeping it cheap protects the serial-island ceiling (Decision 2).
 
-**Open sub-decisions (◇) to close in envelope design (#34):** flags bit assignments; literal length/encoding; optional metadata-container format (+ verify against Pekko); absent-sender/recipient sentinel; final field order/sizes given V2 non-CLR manifests.
+**Sub-decisions CLOSED at G1 (2026-07-04):** version = 1 (reject others); flags bit 0 = metadata present, bits 1–7 reserved-must-be-zero (reject — silently tolerating an unknown semantic flag would misparse; layout changes bump the version); ABSENT = tag `0x0`; literal = u16 LE length + UTF-8 at an absolute offset; metadata container = u32 LE length + bytes at offset 32; payload boundary = explicit payload-offset header field (see layout note). The byte layout deliberately diverges from Pekko's `EnvelopeBuffer` (payload-offset field, V2 non-CLR manifests) per Decision 4 — semantics transfer, bytes do not.
 
 ## Handshake + association/UID (gate G2)
 
