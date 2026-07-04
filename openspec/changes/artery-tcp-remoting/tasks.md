@@ -41,14 +41,14 @@ BenchmarkDotNet harness (naked, baseline-first, `MemoryDiagnoser` on), socket by
 
 ## 4. Association State And Handshake
 
-- [ ] 4.1 Add association registry keyed by remote address
-- [ ] 4.2 Track remote UID and association incarnation
-- [ ] 4.3 Implement outbound handshake request
-- [ ] 4.4 Implement inbound handshake response
-- [ ] 4.5 Reject wrong target address during handshake
-- [ ] 4.6 Reset UID-scoped state on remote UID change
-- [ ] 4.7 Add handshake timeout and retry behavior
-- [ ] 4.8 Add quarantine state keyed by UID
+- [x] 4.1 Add association registry keyed by remote address
+- [x] 4.2 Track remote UID and association incarnation
+- [x] 4.3 Implement outbound handshake request
+- [x] 4.4 Implement inbound handshake response
+- [x] 4.5 Reject wrong target address during handshake
+- [x] 4.6 Reset UID-scoped state on remote UID change
+- [x] 4.7 Add handshake timeout and retry behavior
+- [x] 4.8 Add quarantine state keyed by UID
 
 ## 5. Plaintext TCP Transport
 

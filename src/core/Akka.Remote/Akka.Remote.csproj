@@ -8,6 +8,12 @@
     <ItemGroup>
         <EmbeddedResource Include="Configuration\Remote.conf" />
         <ProjectReference Include="..\Akka\Akka.csproj" />
+        <!-- Artery's OutboundHandshakeStage/InboundHandshakeStage (src/core/Akka.Remote/Artery) are
+             Akka.Streams GraphStages - see openspec/changes/artery-tcp-remoting/design.md
+             ("Handshake + association/UID (gate G2)"). Akka.Streams only depends on Akka.csproj,
+             so this does not introduce a cycle. -->
+        <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
+        <ProjectReference Include="..\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="DotNetty.Handlers" Version="0.7.6" />
