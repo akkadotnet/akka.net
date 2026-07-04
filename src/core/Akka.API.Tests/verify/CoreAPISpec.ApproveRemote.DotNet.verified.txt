@@ -23,14 +23,14 @@ namespace Akka.Remote
 {
     public class AddressUid : Akka.Actor.IExtension
     {
-        public readonly int Uid;
+        public readonly long Uid;
         public AddressUid() { }
     }
     public class AddressUidExtension : Akka.Actor.ExtensionIdProvider<Akka.Remote.AddressUid>
     {
         public AddressUidExtension() { }
         public override Akka.Remote.AddressUid CreateExtension(Akka.Actor.ExtendedActorSystem system) { }
-        public static int Uid(Akka.Actor.ActorSystem system) { }
+        public static long Uid(Akka.Actor.ActorSystem system) { }
     }
     public class AkkaProtocolSettings
     {
@@ -143,7 +143,7 @@ namespace Akka.Remote
         bool HasAddress(Akka.Actor.Address address);
         Akka.Actor.IActorRef InternalResolveActorRef(string path);
         Akka.Actor.Deploy LookUpRemotes(System.Collections.Generic.IEnumerable<string> p);
-        void Quarantine(Akka.Actor.Address address, int? uid);
+        void Quarantine(Akka.Actor.Address address, long? uid);
         Akka.Actor.IInternalActorRef ResolveActorRefWithLocalAddress(string path, Akka.Actor.Address localAddress);
         void UseActorOnNode(Akka.Remote.RemoteActorRef actor, Akka.Actor.Props props, Akka.Actor.Deploy deploy, Akka.Actor.IInternalActorRef supervisor);
     }
@@ -161,9 +161,9 @@ namespace Akka.Remote
     }
     public sealed class QuarantinedEvent : Akka.Remote.RemotingLifecycleEvent
     {
-        public QuarantinedEvent(Akka.Actor.Address address, int uid) { }
+        public QuarantinedEvent(Akka.Actor.Address address, long uid) { }
         public Akka.Actor.Address Address { get; }
-        public int Uid { get; }
+        public long Uid { get; }
         public override Akka.Event.LogLevel LogLevel() { }
         public override string ToString() { }
     }
@@ -219,7 +219,7 @@ namespace Akka.Remote
         public virtual void Init(Akka.Actor.Internal.ActorSystemImpl system) { }
         public Akka.Actor.IActorRef InternalResolveActorRef(string path) { }
         public Akka.Actor.Deploy LookUpRemotes(System.Collections.Generic.IEnumerable<string> p) { }
-        public void Quarantine(Akka.Actor.Address address, int? uid) { }
+        public void Quarantine(Akka.Actor.Address address, long? uid) { }
         public void RegisterTempActor(Akka.Actor.IInternalActorRef actorRef, Akka.Actor.ActorPath path) { }
         public Akka.Actor.IActorRef ResolveActorRef(Akka.Actor.ActorPath actorPath) { }
         public Akka.Actor.IActorRef ResolveActorRef(string path) { }
@@ -286,7 +286,7 @@ namespace Akka.Remote
         public abstract Akka.Actor.Address LocalAddressForRemote(Akka.Actor.Address remote);
         public abstract System.Threading.Tasks.Task<bool> ManagementCommand(object cmd);
         public abstract System.Threading.Tasks.Task<bool> ManagementCommand(object cmd, System.Threading.CancellationToken cancellationToken);
-        public abstract void Quarantine(Akka.Actor.Address address, int? uid);
+        public abstract void Quarantine(Akka.Actor.Address address, long? uid);
         public abstract void Send(object message, Akka.Actor.IActorRef sender, Akka.Remote.RemoteActorRef recipient);
         public abstract System.Threading.Tasks.Task Shutdown();
         public abstract void Start();
@@ -308,7 +308,7 @@ namespace Akka.Remote
         protected override void OnReceive(object message) { }
         protected override void PostStop() { }
         protected virtual void PublishAddressTerminated(Akka.Actor.Address address) { }
-        protected virtual void Quarantine(Akka.Actor.Address address, int? addressUid) { }
+        protected virtual void Quarantine(Akka.Actor.Address address, long? addressUid) { }
         protected void RemoveWatch(Akka.Actor.IInternalActorRef watchee, Akka.Actor.IInternalActorRef watcher) { }
         protected void RemoveWatchee(Akka.Actor.IInternalActorRef watchee) { }
         protected void UnwatchNode(Akka.Actor.Address watcheeAddress) { }
@@ -325,8 +325,8 @@ namespace Akka.Remote
         }
         public class HeartbeatRsp
         {
-            public HeartbeatRsp(int addressUid) { }
-            public int AddressUid { get; }
+            public HeartbeatRsp(long addressUid) { }
+            public long AddressUid { get; }
         }
         public class HeartbeatTick
         {

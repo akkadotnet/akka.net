@@ -60,7 +60,7 @@ namespace Akka.Remote.Tests.MultiNode
     public class RemoteRestartedQuarantinedSpec : MultiNodeSpec
     {
         private readonly RemoteRestartedQuarantinedMultiNetSpec _config;
-        private readonly Func<RoleName, string, (int, IActorRef)> _identifyWithUid;
+        private readonly Func<RoleName, string, Task<(long, IActorRef)>> _identifyWithUid;
 
         public RemoteRestartedQuarantinedSpec()
             : this(new RemoteRestartedQuarantinedMultiNetSpec())
@@ -72,10 +72,10 @@ namespace Akka.Remote.Tests.MultiNode
         {
             _config = config;
 
-            _identifyWithUid = (role, actorName) =>
+            _identifyWithUid = async (role, actorName) =>
             {
                 Sys.ActorSelection(Node(role) / "user" / actorName).Tell("identify");
-                return ExpectMsg<(int, IActorRef)>();
+                return await ExpectMsgAsync<(long, IActorRef)>();
             };
         }
 
@@ -90,7 +90,7 @@ namespace Akka.Remote.Tests.MultiNode
             await RunOnAsync(async () =>
             {
                 var secondAddress = Node(_config.Second).Address;
-                var uid = _identifyWithUid(_config.Second, "subject").Item1;
+                var uid = (await _identifyWithUid(_config.Second, "subject")).Item1;
 
                 RARP.For(Sys).Provider.Transport.Quarantine(Node(_config.Second).Address, uid);
 
@@ -118,7 +118,7 @@ namespace Akka.Remote.Tests.MultiNode
                 var firstAddress = Node(_config.First).Address;
                 Sys.EventStream.Subscribe(TestActor, typeof (ThisActorSystemQuarantinedEvent));
 
-                var actorRef = _identifyWithUid(_config.First, "subject").Item2;
+                var actorRef = (await _identifyWithUid(_config.First, "subject")).Item2;
 
                 await EnterBarrierAsync("quarantined");
 

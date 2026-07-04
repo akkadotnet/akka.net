@@ -359,6 +359,19 @@ namespace Akka.Remote.Tests.Serialization
             AssertAndReturn(heartbeatRsp).AddressUid.Should().Be(heartbeatRsp.AddressUid); //TODO: add Equals to RemoteWatcher.HeartbeatRsp
         }
 
+        // RemoteWatcher.HeartbeatRsp.AddressUid is carried on the wire as ContainerFormats.proto's uint64
+        // (already 64-bit before the widen-system-uid-to-64bit change - only the C# narrowing casts were
+        // removed), so >32-bit uids must round-trip cleanly through MiscMessageSerializer.
+        [Theory(DisplayName = "Should_round_trip_a_greater_than_32_bit_addressUid_When_serializing_RemoteWatcher_HeartbeatRsp")]
+        [InlineData(long.MaxValue)]
+        [InlineData(unchecked((long)0x8000_0000_0000_0001))] // negative
+        [InlineData(1L << 40)]
+        public void Should_round_trip_a_greater_than_32_bit_addressUid_When_serializing_RemoteWatcher_HeartbeatRsp(long addressUid)
+        {
+            var heartbeatRsp = new RemoteWatcher.HeartbeatRsp(addressUid);
+            AssertAndReturn(heartbeatRsp).AddressUid.Should().Be(heartbeatRsp.AddressUid);
+        }
+
         [Fact]
         public void Can_serialize_RemoteScope()
         {

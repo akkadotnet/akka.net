@@ -105,6 +105,12 @@ Source-generated MessagePack serializers should be implemented only after this f
 
 Rationale: sourcegen validates the V2 API through real serialization, classic remoting, and persistence paths before Artery envelopes depend on it.
 
+### 11. System UID Is 64-Bit In Any V2 Schema
+
+Any V2 or sourcegen schema that carries the address/system UID (`UniqueAddress`, quarantine, heartbeat, handshake, Artery envelope origin) MUST emit and read it as a 64-bit integer (`long`). No V2 schema may introduce a 32-bit uid field.
+
+Rationale: `widen-system-uid-to-64bit` (Milestone 3.5) re-types the system UID to `long` end-to-end as a prerequisite for Artery, whose frame header carries a 64-bit origin UID. This change does not block on serializer-v2, but constrains its schema (see that change's design.md, Decision 4).
+
 ## Risks / Trade-offs
 
 **Compatibility inheritance tension**: `SerializerV2` being usable as `Serializer` keeps this PR compatible, but permits awkward compositions such as wrapping V2 with `SerializerV1Adapter`. Guardrails should be added before native V2 serializers become common.

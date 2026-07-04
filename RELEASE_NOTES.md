@@ -6,6 +6,7 @@
 * Akka.Streams: Add cancellation-aware `Source.Queue` offers so backpressured pending offers can be canceled without later emitting the canceled element.
 * Akka.Streams: Fixed `Source.From(IAsyncEnumerable<T>)` cleanup so cancellation waits for any in-flight `MoveNextAsync()` before disposing the async enumerator and its cancellation token source.
 * Build: Bump `MessagePack` to 3.1.7 to address [CVE-2026-48109](https://github.com/advisories/GHSA-hv8m-jj95-wg3x) (LZ4 decompression out-of-bounds read)
+* [Core: Fix consistent-hashing router could wedge cluster-wide after a 32-bit hash collision](https://github.com/akkadotnet/akka.net/issues/8031) - Fixes [#8031](https://github.com/akkadotnet/akka.net/issues/8031) (forward-port of [#8294](https://github.com/akkadotnet/akka.net/pull/8294)): When two virtual nodes collided in the 32-bit consistent-hash ring (increasingly likely at high routee counts, e.g. when the ring was rebuilt after a node was downed), `ConsistentHash.Create` threw `"An entry with the same key already exists"`. The consistent-hashing router swallowed the exception and returned `NoRoutee` for **every** subsequent message until a manual restart. The ring now re-hashes and linear-probes to the next free slot on a collision instead of throwing. This keeps the hash distribution unchanged and produces a byte-identical ring to prior versions whenever no collision occurs (safe for rolling upgrades), and also protects `Akka.Cluster.Tools`' `ClusterReceptionist`, which builds the same ring.
 
 #### 1.5.47 August 12th, 2025 ####
 

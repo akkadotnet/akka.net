@@ -305,7 +305,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="address">TBD</param>
         /// <param name="uid">TBD</param>
-        public QuarantinedEvent(Address address, int uid)
+        public QuarantinedEvent(Address address, long uid)
         {
             Uid = uid;
             Address = address;
@@ -319,7 +319,7 @@ namespace Akka.Remote
         /// <summary>
         /// TBD
         /// </summary>
-        public int Uid { get; private set; }
+        public long Uid { get; private set; }
 
         /// <summary>
         /// TBD

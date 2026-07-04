@@ -140,13 +140,13 @@ namespace Akka.Remote
         /// </summary>
         public class HeartbeatRsp : IPriorityMessage
         {
-            readonly int _addressUid;
+            readonly long _addressUid;
 
             /// <summary>
             /// TBD
             /// </summary>
             /// <param name="addressUid">TBD</param>
-            public HeartbeatRsp(int addressUid)
+            public HeartbeatRsp(long addressUid)
             {
                 _addressUid = addressUid;
             }
@@ -154,7 +154,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public int AddressUid
+            public long AddressUid
             {
                 get { return _addressUid; }
             }
@@ -387,7 +387,7 @@ namespace Akka.Remote
         /// </summary>
         protected HashSet<Address> Unreachable { get; } = new();
 
-        private readonly Dictionary<Address, int> _addressUids = new();
+        private readonly Dictionary<Address, long> _addressUids = new();
 
         private readonly ICancelable _heartbeatCancelable;
         private readonly ICancelable _failureDetectorReaperCancelable;
@@ -465,7 +465,7 @@ namespace Akka.Remote
             Sender.Tell(_selfHeartbeatRspMsg);
         }
 
-        private void ReceiveHeartbeatRsp(int uid)
+        private void ReceiveHeartbeatRsp(long uid)
         {
             var from = Sender.Path.Address;
 
@@ -476,7 +476,7 @@ namespace Akka.Remote
 
             if (WatcheeByNodes.ContainsKey(from) && !Unreachable.Contains(from))
             {
-                if (!_addressUids.TryGetValue(from, out int addressUid) || addressUid != uid)
+                if (!_addressUids.TryGetValue(from, out long addressUid) || addressUid != uid)
                     ReWatch(from);
 
                 _addressUids[from] = uid;
@@ -492,7 +492,7 @@ namespace Akka.Remote
                 {
                     Log.Warning("Detected unreachable: [{0}]", a);
                     var nullableAddressUid =
-                        _addressUids.TryGetValue(a, out int addressUid) ? new int?(addressUid) : null;
+                        _addressUids.TryGetValue(a, out long addressUid) ? new long?(addressUid) : null;
 
                     Quarantine(a, nullableAddressUid);
                     PublishAddressTerminated(a);
@@ -515,7 +515,7 @@ namespace Akka.Remote
         /// </summary>
         /// <param name="address">TBD</param>
         /// <param name="addressUid">TBD</param>
-        protected virtual void Quarantine(Address address, int? addressUid)
+        protected virtual void Quarantine(Address address, long? addressUid)
         {
             _remoteProvider.Quarantine(address, addressUid);
         }
