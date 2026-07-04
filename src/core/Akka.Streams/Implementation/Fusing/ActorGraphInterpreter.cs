@@ -272,7 +272,6 @@ namespace Akka.Streams.Implementation.Fusing
                     return RunBatch(eventLimit);
 
                 case ActorGraphInterpreter.OnNextBatch onNextBatch:
-                    if (IsDebug) Console.WriteLine($"{Interpreter.Name}  OnNextBatch count={onNextBatch.Events.Length} id={onNextBatch.Id}");
                     _inputs[onNextBatch.Id].OnNextBatch(onNextBatch.Events, onNextBatch.Contexts);
                     return RunBatch(eventLimit);
 
