@@ -20,24 +20,24 @@ BenchmarkDotNet harness (naked, baseline-first, `MemoryDiagnoser` on), socket by
 
 ## 2. TCP Framing Foundation
 
-- [ ] 2.1 Define stream IDs for control, ordinary, and future large-message streams
-- [ ] 2.2 Implement connection header: `AKKA` magic + 1-byte stream ID
-- [ ] 2.3 Implement 4-byte little-endian frame length encoder
-- [ ] 2.4 Implement frame parser over `ReadOnlySequence<byte>`
-- [ ] 2.5 Enforce maximum frame size
-- [ ] 2.6 Add framing tests for complete, partial, multiple, and oversized frames
+- [x] 2.1 Define stream IDs for control, ordinary, and future large-message streams
+- [x] 2.2 Implement connection header: `AKKA` magic + 1-byte stream ID
+- [x] 2.3 Implement 4-byte little-endian frame length encoder
+- [x] 2.4 Implement frame parser over `ReadOnlySequence<byte>`
+- [x] 2.5 Enforce maximum frame size (hard cap 0x00FFFFFF protects the 24-bit literal-offset tag space)
+- [x] 2.6 Add framing tests for complete, partial, multiple, and oversized frames
 
 ## 3. Artery Envelope Codec
 
-- [ ] 3.1 Define MVP envelope header fields
-- [ ] 3.2 Encode protocol version and flags
-- [ ] 3.3 Encode origin UID
-- [ ] 3.4 Encode serializer ID and manifest literal
-- [ ] 3.5 Encode recipient actor ref literal or no-recipient marker
-- [ ] 3.6 Encode sender actor ref literal or no-sender marker
-- [ ] 3.7 Encode payload using `SerializerV2`
-- [ ] 3.8 Decode envelope metadata without deserializing payload first
-- [ ] 3.9 Add envelope codec tests, including multi-segment input
+- [x] 3.1 Define MVP envelope header fields (32-byte fixed header; ◇ sub-decisions closed — see design.md)
+- [x] 3.2 Encode protocol version and flags
+- [x] 3.3 Encode origin UID
+- [x] 3.4 Encode serializer ID and manifest literal
+- [x] 3.5 Encode recipient actor ref literal or no-recipient marker
+- [x] 3.6 Encode sender actor ref literal or no-sender marker
+- [x] 3.7 Encode payload using `SerializerV2` (single-pass: manifest upfront, payload streamed via `IBufferWriter`, frame length back-patched)
+- [x] 3.8 Decode envelope metadata without deserializing payload first
+- [x] 3.9 Add envelope codec tests, including multi-segment input
 
 ## 4. Association State And Handshake
 
