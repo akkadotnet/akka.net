@@ -99,7 +99,7 @@ BenchmarkDotNet harness (naked, baseline-first, `MemoryDiagnoser` on), socket by
 
 ## 10. Deferred Follow-Ups
 
-- [ ] 10.1 Add ordinary message lanes after ordering tests are designed
+- [ ] 10.1 Add ordinary message lanes after ordering tests are designed (hub-based fan-out per design rule 3; G5-entry re-baseline decides stock `PartitionHub` vs fixed-size hub port vs bounded actor lanes)
 - [ ] 10.2 Add large-message stream
 - [ ] 10.3 Add actor ref compression
 - [ ] 10.4 Add manifest compression
