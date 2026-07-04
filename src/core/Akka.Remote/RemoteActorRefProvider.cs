@@ -16,6 +16,7 @@ using Akka.Annotations;
 using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Remote.Artery;
 using Akka.Remote.Configuration;
 using Akka.Remote.Serialization;
 using Akka.Serialization;
@@ -138,8 +139,18 @@ namespace Akka.Remote
 
         private Internals CreateInternals()
         {
+            // Artery TCP remoting (EXPERIMENTAL) is opt-in via `akka.remote.artery.enabled = on`;
+            // classic DotNetty remoting (`Remoting`) remains the default. Read the flag directly
+            // off `RemoteSettings.Config` rather than adding a new `RemoteSettings` property, to
+            // avoid perturbing the approved public API surface (see design.md, "Provider
+            // integration").
+            var arteryEnabled = RemoteSettings.Config.GetBoolean("akka.remote.artery.enabled", false);
+            RemoteTransport transport = arteryEnabled
+                ? new ArteryRemoting(_system, this)
+                : new Remoting(_system, this);
+
             var internals =
-                new Internals(new Remoting(_system, this), _system.Serialization,
+                new Internals(transport, _system.Serialization,
                     new RemoteSystemDaemon(_system, RootPath / "remote", RootGuardian, _remotingTerminator, _log));
             _local.RegisterExtraName("remote", internals.RemoteDaemon);
             return internals;
