@@ -152,12 +152,36 @@ public sealed class FormatterEscapeHatchSpec : IAsyncLifetime
         roundTripped.Path.ToString().Should().Be(message.Path.ToString());
         _serializer.SizeHint(message).Should().Be(_serializer.ToBinary(message).Length);
 
-        var parsedOnly = new MirrorActorPathMessage(ActorPath.Parse("akka://sys/user/foo"));
-        RoundTrip(parsedOnly).Path.ToString().Should().Be(parsedOnly.Path.ToString());
+        // A path whose address already carries host+port is preserved as-is.
+        var remotePath = new MirrorActorPathMessage(ActorPath.Parse("akka://sys@localhost:2552/user/foo"));
+        RoundTrip(remotePath).Path.ToString().Should().Be(remotePath.Path.ToString());
     }
 
-    [Fact(DisplayName = "Generator should use the ExtendedActorSystem constructor for formatters that need it")]
-    public async Task Generator_should_use_the_ExtendedActorSystem_constructor_for_formatters_that_need_it()
+    [Fact(DisplayName = "System-constructed ActorPathFormatter should anchor non-transport writes to the system's default address")]
+    public void System_constructed_ActorPathFormatter_should_anchor_non_transport_writes_to_the_default_address()
+    {
+        // The generated serializer prefers ActorPathFormatter's ExtendedActorSystem ctor, so a
+        // local path serialized OUTSIDE any transport scope is written with the system's
+        // Provider.DefaultAddress (matching Serialization.SerializedActorPath semantics) and
+        // stays remotely resolvable.
+        var actorRef = _system.ActorOf(Props.Create<NoopActor>(), "default-address-target");
+        var message = new MirrorActorPathMessage(actorRef.Path);
+        var defaultAddress = ((ExtendedActorSystem)_system).Provider.DefaultAddress;
+
+        var bytes = _serializer.ToBinary(message);
+        var reader = new MessagePackReader(new ReadOnlySequence<byte>(bytes));
+        reader.ReadMapHeader().Should().Be(1);
+        reader.ReadInt32().Should().Be(1);
+        var writtenPath = reader.ReadString();
+
+        writtenPath.Should().NotBeNull();
+        writtenPath.Should().StartWith(defaultAddress.ToString());
+        ActorPath.Parse(writtenPath!).Address.Should().Be(defaultAddress);
+        ActorPath.Parse(writtenPath!).ToString().Should().Be(actorRef.Path.ToString());
+    }
+
+    [Fact(DisplayName = "Generator should prefer the ExtendedActorSystem constructor when a formatter also has a parameterless one")]
+    public async Task Generator_should_prefer_the_ExtendedActorSystem_constructor_when_a_formatter_also_has_a_parameterless_one()
     {
         var system = ActorSystem.Create("system-formatter-spec");
         try
@@ -179,7 +203,12 @@ public sealed class FormatterEscapeHatchSpec : IAsyncLifetime
         var reader = new MessagePackReader(new ReadOnlySequence<byte>(bytes));
         reader.ReadMapHeader().Should().Be(1);
         reader.ReadInt32().Should().Be(1);
-        reader.ReadString().Should().Be($"{system.Name}|hello");
+        // SystemTaggedValueFormatter has BOTH a public parameterless ctor (sentinel tag) and a
+        // public (ExtendedActorSystem) ctor: seeing the system name (not the sentinel) proves
+        // the system ctor won.
+        var tagged = reader.ReadString();
+        tagged.Should().Be($"{system.Name}|hello");
+        tagged.Should().NotBe($"{SystemTaggedValueFormatter.NoSystemTag}|hello");
 
         var deserialized = serializer.FromBinary(bytes, SystemTaggedMessage.ManifestName)
             .Should().BeOfType<SystemTaggedMessage>().Subject;
@@ -355,22 +384,30 @@ public interface ISystemFormatterProtocol
 public sealed record SystemTaggedValue(string Value);
 
 /// <summary>
-/// Test-only formatter that proves the generator picks the <see cref="ExtendedActorSystem"/>
-/// constructor overload when one is registered: it tags the written value with the owning
-/// system's name so the test can assert the real system instance was injected.
+/// Test-only formatter that proves the generator PREFERS the <see cref="ExtendedActorSystem"/>
+/// constructor overload when both it and a public parameterless constructor exist: it tags the
+/// written value with the owning system's name (or a sentinel when constructed without a system)
+/// so the test can assert the real system instance was injected.
 /// </summary>
 public sealed class SystemTaggedValueFormatter : IAkkaMessagePackFormatter<SystemTaggedValue>
 {
-    private readonly ExtendedActorSystem _system;
+    public const string NoSystemTag = "no-system";
+
+    private readonly string _tag;
+
+    public SystemTaggedValueFormatter()
+    {
+        _tag = NoSystemTag;
+    }
 
     public SystemTaggedValueFormatter(ExtendedActorSystem system)
     {
-        _system = system;
+        _tag = system.Name;
     }
 
     public void Write(ref MessagePackWriter writer, SystemTaggedValue value)
     {
-        writer.Write($"{_system.Name}|{value.Value}");
+        writer.Write($"{_tag}|{value.Value}");
     }
 
     public SystemTaggedValue Read(ref MessagePackReader reader)

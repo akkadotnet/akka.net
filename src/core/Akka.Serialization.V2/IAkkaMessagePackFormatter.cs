@@ -44,6 +44,12 @@ public interface IAkkaMessagePackFormatter<T>
     /// <summary>
     /// Writes <paramref name="value"/> to <paramref name="writer"/>.
     /// </summary>
+    /// <remarks>
+    /// Write MUST produce exactly ONE top-level MessagePack value; wrap multiple values in a
+    /// single array or map. The generated map framing and the unknown-field forward-compatibility
+    /// path (<c>reader.Skip()</c>) both depend on one field id mapping to one MessagePack value —
+    /// multiple top-level values desync older readers during rolling upgrades.
+    /// </remarks>
     /// <param name="writer">The MessagePack writer cursor.</param>
     /// <param name="value">The value to write. Never null/absent for non-nullable fields.</param>
     void Write(ref MessagePackWriter writer, T value);
@@ -59,6 +65,14 @@ public interface IAkkaMessagePackFormatter<T>
     /// <see cref="Akka.Serialization.SerializerV2.UnknownSize"/> when the exact size cannot be
     /// cheaply computed.
     /// </summary>
+    /// <remarks>
+    /// For transport-sensitive formatters (anything whose encoding consults the thread-static
+    /// transport context, such as <see cref="ActorPathFormatter"/>), <see cref="SizeOf"/> and
+    /// <see cref="Write"/> read that context independently: both calls must run under the same
+    /// transport scope on the same thread for the exact-size contract to hold. The generated
+    /// serializers and the Artery encode path satisfy this naturally by sizing and writing within
+    /// one serialization scope.
+    /// </remarks>
     /// <param name="value">The value whose encoded size is being computed.</param>
     int SizeOf(T value);
 }

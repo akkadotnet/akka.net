@@ -384,6 +384,86 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG011" && diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
+    [Fact(DisplayName = "Generator should report AKKASG003 when a generic field type shares its name with a non-generic formatter target")]
+    public void Generator_should_report_AKKASG003_when_generic_field_type_shares_name_with_formatter_target()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+            using MessagePack;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            public sealed class Result
+            {
+            }
+
+            public sealed class Result<T>
+            {
+            }
+
+            public sealed class ResultFormatter : IAkkaMessagePackFormatter<Result>
+            {
+                public void Write(ref MessagePackWriter writer, Result value) => writer.WriteNil();
+                public Result Read(ref MessagePackReader reader) { reader.ReadNil(); return new Result(); }
+                public int SizeOf(Result value) => Akka.Serialization.SerializerV2.UnknownSize;
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120608)]
+            [AkkaSerializerFormatter(typeof(Result), typeof(ResultFormatter))]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] Result<int> Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // The Result<int> field must NOT match the formatter registered for the non-generic
+        // Result (formatter matching is on the arity-less type name): it stays unsupported and
+        // fails with AKKASG003 instead of emitting ill-typed formatter code (CS1503).
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG003" && diagnostic.Severity == DiagnosticSeverity.Error);
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "CS1503");
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG011 when a formatter target argument is null")]
+    public void Generator_should_report_AKKASG011_when_formatter_target_argument_is_null()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120609)]
+            [AkkaSerializerFormatter(null!, typeof(AddressFormatter))]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG011" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);

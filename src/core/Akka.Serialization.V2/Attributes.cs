@@ -84,9 +84,12 @@ public sealed class AkkaSerializerFormatterAttribute : Attribute
     /// </summary>
     /// <param name="serializedType">The foreign type handled by <paramref name="formatterType"/>.</param>
     /// <param name="formatterType">
-    /// A non-abstract class implementing <see cref="IAkkaMessagePackFormatter{T}"/> for
-    /// <paramref name="serializedType"/>, with either a public parameterless constructor or a
-    /// public constructor taking an <see cref="Akka.Actor.ExtendedActorSystem"/>.
+    /// A non-abstract, non-generic class implementing <see cref="IAkkaMessagePackFormatter{T}"/>
+    /// for <paramref name="serializedType"/>, with either a public parameterless constructor or a
+    /// public constructor taking an <see cref="Akka.Actor.ExtendedActorSystem"/>. When both
+    /// constructors are present, the generated serializer prefers the
+    /// <see cref="Akka.Actor.ExtendedActorSystem"/> constructor: the serializer always has the
+    /// system in hand, and system context is why a formatter declares that constructor.
     /// </param>
     public AkkaSerializerFormatterAttribute(Type serializedType, Type formatterType)
     {

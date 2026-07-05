@@ -86,7 +86,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor InvalidFormatterType = new(
         "AKKASG008",
         "Formatter type is invalid",
-        "Formatter '{0}' on serializer '{1}' must be a non-abstract class implementing IAkkaMessagePackFormatter<{2}>",
+        "Formatter '{0}' on serializer '{1}' must be a non-abstract, non-generic class implementing IAkkaMessagePackFormatter<{2}>",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -246,24 +246,26 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             if (attribute.ConstructorArguments.Length != 2)
                 continue;
 
-            if (attribute.ConstructorArguments[0].Value is not ITypeSymbol targetTypeSymbol ||
-                attribute.ConstructorArguments[1].Value is not ITypeSymbol formatterTypeSymbol)
-                continue;
+            // Never silently drop a registration: malformed arguments (null, or something that is
+            // not a type at all) are recorded as invalid entries so a diagnostic fires instead of
+            // the registration silently doing nothing.
+            var targetTypeSymbol = attribute.ConstructorArguments[0].Value as ITypeSymbol;
+            var formatterTypeSymbol = attribute.ConstructorArguments[1].Value as ITypeSymbol;
 
             // Formatter targets must be plain named types: arrays are not INamedTypeSymbol, and
             // generic targets (open or closed) would collide on the arity-less fully-qualified
-            // name used for field matching. Record them (rather than skipping) so AKKASG011 fires
-            // instead of the registration silently doing nothing.
+            // name used for field matching. Null/non-type targets are equally unsupported.
+            // All of these are recorded with IsTargetSupported = false so AKKASG011 fires.
             var targetNamedType = targetTypeSymbol as INamedTypeSymbol;
             var isTargetSupported = targetNamedType is { IsGenericType: false };
             var targetTypeFullName = isTargetSupported
                 ? GetFullyQualifiedTypeName(targetNamedType!)
-                : targetTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                : targetTypeSymbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? "<null>";
 
             var formatterNamedType = formatterTypeSymbol as INamedTypeSymbol;
             var formatterTypeFullName = formatterNamedType != null
                 ? GetFullyQualifiedTypeName(formatterNamedType)
-                : formatterTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                : formatterTypeSymbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? "<null>";
 
             var implementsInterface = isTargetSupported &&
                 formatterInterfaceType != null &&
@@ -279,7 +281,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
             builder.Add(new FormatterInfo(
                 targetTypeFullName,
-                targetTypeSymbol.IsValueType,
+                targetTypeSymbol?.IsValueType ?? false,
                 formatterTypeFullName,
                 implementsInterface,
                 ctorKind,
@@ -305,10 +307,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 hasSystemCtor = true;
         }
 
-        if (hasParameterlessCtor)
-            return FormatterCtorKind.Parameterless;
+        // Prefer the ExtendedActorSystem constructor when both are present: the generated
+        // serializer always has the system in hand, and system context (transport addresses,
+        // provider state) is why a formatter declares that constructor in the first place.
+        if (hasSystemCtor)
+            return FormatterCtorKind.System;
 
-        return hasSystemCtor ? FormatterCtorKind.System : FormatterCtorKind.None;
+        return hasParameterlessCtor ? FormatterCtorKind.Parameterless : FormatterCtorKind.None;
     }
 
     private static bool ValidateFormatters(SourceProductionContext context, SerializerInfo serializer)
@@ -1038,8 +1043,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         if (TryGetNullableValueType(type, out var underlyingType))
             return MapType(underlyingType, knownTypes);
 
+        // Only attach the fallback underlying-type name for NON-GENERIC named types:
+        // GetFullyQualifiedTypeName is arity-less, so stamping it onto a generic field type
+        // (e.g. Result<int>) would let it match a formatter registered for a same-named
+        // non-generic type (Result) and emit ill-typed code. Generic field types keep an empty
+        // mapping name, can never match a formatter, and still fail with AKKASG003.
         var mapping = MapTypeCore(type, knownTypes);
-        if (mapping.TypeFullName.Length == 0 && type is INamedTypeSymbol namedType)
+        if (mapping.TypeFullName.Length == 0 && type is INamedTypeSymbol { IsGenericType: false } namedType)
             return new TypeMapping(mapping.Kind, GetFullyQualifiedTypeName(namedType));
 
         return mapping;
@@ -1164,18 +1174,19 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static string SanitizeTypeName(string typeFullName)
     {
+        // Escape literal underscores FIRST so sanitization is collision-free:
+        // 'My.Ns.Foo_Bar' -> 'My_Ns_Foo__Bar' and 'My.Ns.Foo.Bar' -> 'My_Ns_Foo_Bar' stay
+        // distinct instead of both collapsing to 'My_Ns_Foo_Bar' (duplicate generated members).
         return typeFullName
             .Replace("global::", string.Empty)
+            .Replace("_", "__")
             .Replace(".", "_")
             .Replace("+", "_");
     }
 
     private static string GetMessageMethodName(MessageInfo message)
     {
-        return message.FullyQualifiedName
-            .Replace("global::", string.Empty)
-            .Replace(".", "_")
-            .Replace("+", "_");
+        return SanitizeTypeName(message.FullyQualifiedName);
     }
 
     private static string GetFullyQualifiedTypeName(INamedTypeSymbol symbol)
