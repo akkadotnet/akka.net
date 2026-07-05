@@ -12,6 +12,11 @@
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
+    <!-- Needed to exercise the G2 handshake GraphStages (Akka.Remote.Artery.OutboundHandshakeStage /
+         InboundHandshakeStage) with TestSource/TestSink - see ArteryHandshakeSpec. First-party
+         project references only, no new NuGet packages; Akka.Remote already references
+         Akka.Streams (see Akka.Remote.csproj). -->
+    <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
 
     <None Include="Resources\akka-validcert.pfx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -131,12 +131,14 @@ namespace Akka.Remote.Artery
         /// <param name="recipientPath">The recipient ref's path, or <see langword="null"/>/empty for no recipient.</param>
         /// <param name="message">The message to serialize as the envelope's payload.</param>
         /// <returns>
-        /// A <see cref="PooledFrameWriter"/> owning the encoded frame
-        /// (<c>[u32 LE frame length][envelope]</c> in <see cref="PooledFrameWriter.WrittenSpan"/>).
-        /// The caller MUST <see cref="IDisposable.Dispose"/> it to return the rented buffer.
+        /// A <see cref="Akka.Serialization.PooledPayloadWriter"/> owning the encoded frame
+        /// (<c>[u32 LE frame length][envelope]</c> in <see cref="Akka.Serialization.PooledPayloadWriter.WrittenSpan"/>).
+        /// The caller MUST <see cref="IDisposable.Dispose"/> it to return the rented buffer -- or call
+        /// <see cref="Akka.Serialization.PooledPayloadWriter.Detach"/> to hand ownership of the encoded
+        /// bytes to a transport without an intermediate copy.
         /// </returns>
         /// <exception cref="ArteryEnvelopeException">A sender/recipient/manifest literal's UTF-8 form exceeds 64KB - 1 bytes.</exception>
-        public static PooledFrameWriter Encode(
+        public static Akka.Serialization.PooledPayloadWriter Encode(
             Akka.Serialization.Serialization serialization,
             long originUid,
             string? senderPath,
@@ -157,7 +159,7 @@ namespace Akka.Remote.Artery
                 var capacityHint = reservedPrefixLength
                     + LiteralWireSize(senderPath) + LiteralWireSize(recipientPath) + LiteralWireSize(manifest);
 
-                var writer = new PooledFrameWriter(capacityHint);
+                var writer = new Akka.Serialization.PooledPayloadWriter(capacityHint);
                 try
                 {
                     // Reserve the frame-length field + fixed header; both are back-patched below
@@ -326,8 +328,8 @@ namespace Akka.Remote.Artery
             return (uint)tagOffset;
         }
 
-        /// <summary>Writes a LITERAL tag's length-prefixed UTF-8 bytes into a growable <see cref="PooledFrameWriter"/>.</summary>
-        private static uint WriteLiteral(PooledFrameWriter writer, string? value)
+        /// <summary>Writes a LITERAL tag's length-prefixed UTF-8 bytes into a growable <see cref="Akka.Serialization.PooledPayloadWriter"/>.</summary>
+        private static uint WriteLiteral(Akka.Serialization.PooledPayloadWriter writer, string? value)
         {
             if (string.IsNullOrEmpty(value))
                 return ArteryEnvelopeHeader.AbsentTag;
