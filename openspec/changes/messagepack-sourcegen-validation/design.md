@@ -160,6 +160,19 @@ Two options were evaluated:
 
    As a related but independently useful fix in the same change, the generator now emits the serializer partial class with the **declared accessibility of the user's serializer symbol** (`public` or `internal`) instead of hardcoding `public`. This has no direct dependency on the formatter escape hatch, but it was required to exercise `[AkkaSerializerFormatter]` against `internal` serializers (the shape Akka.Remote's own control-message serializer would need if it were later migrated to the generator), and there was no reason to gate it behind a separate change.
 
+### 12. Oversized-Payload Determinism
+
+Oversized-payload failure is deterministic and happens at encode time. The contract: a caller-imposed cap — a transport's maximum-frame-size expressed as `PooledPayloadWriter.maxCapacity` — makes any payload whose encoding would exceed that cap fail *during* `Serialize` with a typed `Akka.Serialization.PayloadSizeExceededException` carrying the attempted size and the configured cap. A truncated or corrupt frame is never observed downstream: the writer refuses the write that would cross the boundary, so no partial frame larger than the cap ever exists to hand to a transport.
+
+The writer-side mechanism is serializer-v2 design.md Decision 12 (`PooledPayloadWriter` + ownership contract): every `GetSpan`/`GetMemory`/`Advance` that would push the written count past `maxCapacity` throws, and writer mechanics are covered by `Akka.Tests.Serialization.PooledPayloadWriterSpec`. What this change pins (`OversizedPayloadDeterminismSpec`, task 6.8) is the *serializer-side* half of the contract:
+
+- The exception propagates out of the generated serializer's `Serialize` call, for both plain generated messages and `[AkkaEnvelopePayload]`-carrying envelopes whose staged payload bytes push the outer writer past its cap.
+- Generated serializers are stateless, so a mid-write failure leaves the serializer instance fully reusable — the same instance round-trips the next message with no cleanup.
+- The writer is reusable after `Reset()`: the transport's dead-letter-then-reuse pattern (translate the exception into a dead-letter for that send, reset the pooled writer, encode the next message into the same buffer) works without re-renting.
+- The written count never exceeds the cap after a failure, so the encode-time boundary is hard, not advisory.
+
+Exact generated `SizeHint` (task 5.12, extended to formatter-backed fields by Decision 11) is the complementary happy-path tool: callers can pre-size `initialCapacityHint` from `SizeHint` so the exception path is reserved for genuinely oversized messages rather than being a common-case growth mechanism.
+
 ## Risks / Trade-offs
 
 **Generator complexity**: keep diagnostics focused and add incrementally.
