@@ -18,9 +18,10 @@ namespace Akka.Remote.Artery
     ///
     /// Outbound half of the Artery handshake, faithful to
     /// <c>openspec/changes/artery-tcp-remoting/design.md</c>
-    /// ("Handshake + association/UID (gate G2)"). A <c>GraphStage&lt;FlowShape&lt;object, object&gt;&gt;</c>
-    /// — see the element-type note on <see cref="IInboundContext"/> for why <c>object</c> rather
-    /// than a dedicated envelope type.
+    /// ("Handshake + association/UID (gate G2)"). A
+    /// <c>GraphStage&lt;FlowShape&lt;IOutboundEnvelope, IOutboundEnvelope&gt;&gt;</c> -- the injected
+    /// <see cref="HandshakeReq"/> is wrapped in an <see cref="OutboundEnvelope"/> (no sender/recipient
+    /// path, <see cref="IOutboundEnvelope.IsControl"/> true) instead of flowing as a naked object.
     ///
     /// <para><b>States.</b> <c>Start</c> → <c>ReqInProgress</c> → <c>Completed</c>. On
     /// materialization (or the first relevant event) the stage injects a <see cref="HandshakeReq"/>
@@ -62,7 +63,7 @@ namespace Akka.Remote.Artery
     /// ("track last-injection time; if a message flows and it's been &gt; inject-handshake-interval
     /// since the last injection, inject another ahead of it").</para>
     /// </summary>
-    internal sealed class OutboundHandshakeStage : GraphStage<FlowShape<object, object>>
+    internal sealed class OutboundHandshakeStage : GraphStage<FlowShape<IOutboundEnvelope, IOutboundEnvelope>>
     {
         /// <summary>
         /// The lifecycle states this stage's logic moves through.
@@ -94,7 +95,7 @@ namespace Akka.Remote.Artery
             RetryInterval = retryInterval;
             HandshakeTimeout = handshakeTimeout;
             InjectHandshakeInterval = injectHandshakeInterval;
-            Shape = new FlowShape<object, object>(In, Out);
+            Shape = new FlowShape<IOutboundEnvelope, IOutboundEnvelope>(In, Out);
         }
 
         public IOutboundContext Context { get; }
@@ -102,10 +103,10 @@ namespace Akka.Remote.Artery
         public TimeSpan HandshakeTimeout { get; }
         public TimeSpan InjectHandshakeInterval { get; }
 
-        public Inlet<object> In { get; } = new("OutboundHandshake.in");
-        public Outlet<object> Out { get; } = new("OutboundHandshake.out");
+        public Inlet<IOutboundEnvelope> In { get; } = new("OutboundHandshake.in");
+        public Outlet<IOutboundEnvelope> Out { get; } = new("OutboundHandshake.out");
 
-        public override FlowShape<object, object> Shape { get; }
+        public override FlowShape<IOutboundEnvelope, IOutboundEnvelope> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
@@ -113,7 +114,7 @@ namespace Akka.Remote.Artery
         {
             private readonly OutboundHandshakeStage _stage;
             private State _state = State.Start;
-            private object? _pendingMessage;
+            private IOutboundEnvelope? _pendingMessage;
             private DateTime _lastInject = DateTime.MinValue;
 
             public Logic(OutboundHandshakeStage stage) : base(stage.Shape)
@@ -281,7 +282,8 @@ namespace Akka.Remote.Artery
                 return _lastInject == DateTime.MinValue || now - _lastInject >= _stage.InjectHandshakeInterval;
             }
 
-            private HandshakeReq BuildReq() => new(_stage.Context.LocalAddress, _stage.Context.RemoteAddress);
+            private IOutboundEnvelope BuildReq() =>
+                new OutboundEnvelope(new HandshakeReq(_stage.Context.LocalAddress, _stage.Context.RemoteAddress), null, null);
         }
     }
 }

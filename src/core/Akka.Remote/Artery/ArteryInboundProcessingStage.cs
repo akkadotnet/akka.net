@@ -23,9 +23,11 @@ namespace Akka.Remote.Artery
     /// parses the 5-byte connection preamble (<see cref="ArteryConnectionHeader"/>) exactly once,
     /// then incrementally frames (<see cref="ArteryFrameParser"/>), decodes
     /// (<see cref="ArteryEnvelopeCodec"/>), and deserializes the payload of every subsequent frame,
-    /// classifying each into either a bare <see cref="IArteryControlMessage"/> (handshake) or an
-    /// <see cref="ArteryInboundEnvelope"/> (ordinary user message) -- see design.md "G2 staging" and
-    /// "Decode order (structural, not an optimization)".
+    /// wrapping each in an <see cref="IInboundEnvelope"/> -- a control envelope
+    /// (<see cref="IInboundEnvelope.IsControl"/> true, <see cref="IInboundEnvelope.RecipientPath"/>
+    /// <see langword="null"/>) for a handshake message, or an ordinary envelope (recipient/sender
+    /// paths resolved) for a user message -- see design.md "G2 staging" and "Decode order
+    /// (structural, not an optimization)".
     ///
     /// <para>
     /// <b>Why one combined stage instead of separate preamble/framing/decode stages.</b> All three
@@ -34,8 +36,8 @@ namespace Akka.Remote.Artery
     /// in a single fused island on the hot path). Splitting them into multiple
     /// <see cref="GraphStage{TShape}"/>s would add nothing but ceremony at G2. Only classification
     /// (control vs. ordinary) happens here; <see cref="InboundHandshakeStage"/> itself is NOT
-    /// reimplemented or forked -- it is composed downstream, unmodified, over this stage's <c>object</c>
-    /// output (see the element-type note on <see cref="IInboundContext"/>).
+    /// reimplemented or forked -- it is composed downstream, unmodified, over this stage's
+    /// <see cref="IInboundEnvelope"/> output.
     /// </para>
     ///
     /// <para>
@@ -55,22 +57,22 @@ namespace Akka.Remote.Artery
     /// speaking the protocol correctly.
     /// </para>
     /// </summary>
-    internal sealed class ArteryInboundProcessingStage : GraphStage<FlowShape<ReadOnlySequence<byte>, object>>
+    internal sealed class ArteryInboundProcessingStage : GraphStage<FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>>
     {
         public ArteryInboundProcessingStage(int maxFrameLength, Akka.Serialization.Serialization serialization)
         {
             MaxFrameLength = maxFrameLength;
             Serialization = serialization;
-            Shape = new FlowShape<ReadOnlySequence<byte>, object>(In, Out);
+            Shape = new FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>(In, Out);
         }
 
         public int MaxFrameLength { get; }
         public Akka.Serialization.Serialization Serialization { get; }
 
         public Inlet<ReadOnlySequence<byte>> In { get; } = new("ArteryInboundProcessing.in");
-        public Outlet<object> Out { get; } = new("ArteryInboundProcessing.out");
+        public Outlet<IInboundEnvelope> Out { get; } = new("ArteryInboundProcessing.out");
 
-        public override FlowShape<ReadOnlySequence<byte>, object> Shape { get; }
+        public override FlowShape<ReadOnlySequence<byte>, IInboundEnvelope> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
@@ -78,7 +80,7 @@ namespace Akka.Remote.Artery
         {
             private readonly ArteryInboundProcessingStage _stage;
             private readonly ArteryFrameParser _frameParser;
-            private readonly Queue<object> _pending = new();
+            private readonly Queue<IInboundEnvelope> _pending = new();
 
             private readonly byte[] _preambleBuffer = new byte[ArteryConnectionHeader.Length];
             private int _preambleFilled;
@@ -195,7 +197,7 @@ namespace Akka.Remote.Artery
             {
                 while (_frameParser.TryReadFrame(out var frameBody))
                 {
-                    object? element;
+                    IInboundEnvelope? element;
                     try
                     {
                         element = DecodeFrame(frameBody);
@@ -211,7 +213,7 @@ namespace Akka.Remote.Artery
                 }
             }
 
-            private object? DecodeFrame(ReadOnlySequence<byte> frameBody)
+            private IInboundEnvelope? DecodeFrame(ReadOnlySequence<byte> frameBody)
             {
                 var decoded = ArteryEnvelopeCodec.Decode(frameBody);
 
@@ -224,7 +226,7 @@ namespace Akka.Remote.Artery
                 var payload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
 
                 if (payload is IArteryControlMessage)
-                    return payload;
+                    return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId);
 
                 if (!decoded.TryGetRecipientPath(out var recipientPath))
                 {
@@ -242,7 +244,7 @@ namespace Akka.Remote.Artery
                 }
 
                 var senderPath = decoded.TryGetSenderPath(out var s) ? s : null;
-                return new ArteryInboundEnvelope(payload, senderPath, recipientPath);
+                return new InboundEnvelope(payload, senderPath, recipientPath, decoded.Header.OriginUid, decoded.Header.SerializerId);
             }
 
             private void DeliverOrPull()

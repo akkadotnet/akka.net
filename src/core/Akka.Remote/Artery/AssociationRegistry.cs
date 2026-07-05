@@ -35,14 +35,21 @@ namespace Akka.Remote.Artery
         public const int DefaultOutboundQueueCapacity = 3072;
 
         private volatile AssociationState _state;
-        private readonly Channel<ArteryOutboundElement> _outboundChannel;
+
+        // Typed as the IOutboundEnvelope INTERFACE (not the concrete OutboundEnvelope record) so
+        // ChannelSource.FromReader(OutboundReader) yields a Source<IOutboundEnvelope, _> that feeds
+        // OutboundHandshakeStage's Inlet<IOutboundEnvelope> directly -- no upcast .Select needed
+        // between the channel and the handshake stage (design.md Decision 9's ChannelSource.FromReader
+        // mandate; see the G3 opening-refactor task report for why the interface, not the concrete
+        // type, is the channel's type parameter).
+        private readonly Channel<IOutboundEnvelope> _outboundChannel;
         private int _outboundMaterializeStarted;
 
         public Association(Address remoteAddress, int outboundQueueCapacity = DefaultOutboundQueueCapacity)
         {
             RemoteAddress = remoteAddress;
             _state = AssociationState.Create();
-            _outboundChannel = Channel.CreateBounded<ArteryOutboundElement>(new BoundedChannelOptions(outboundQueueCapacity)
+            _outboundChannel = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(outboundQueueCapacity)
             {
                 SingleReader = true,
                 SingleWriter = false,
@@ -65,7 +72,7 @@ namespace Akka.Remote.Artery
         /// materialized outbound stream (<see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/>),
         /// per <see cref="EnsureOutboundMaterialized"/>.
         /// </summary>
-        public ChannelReader<ArteryOutboundElement> OutboundReader => _outboundChannel.Reader;
+        public ChannelReader<IOutboundEnvelope> OutboundReader => _outboundChannel.Reader;
 
         /// <summary>
         /// Whether <see cref="EnsureOutboundMaterialized"/> has already started (or finished)
@@ -81,7 +88,7 @@ namespace Akka.Remote.Artery
         /// bounded queue is full; the caller (<c>ArteryRemoting</c>) applies the overflow policy
         /// (ordinary messages -> dead letters).
         /// </summary>
-        public bool TryEnqueueOutbound(ArteryOutboundElement element) => _outboundChannel.Writer.TryWrite(element);
+        public bool TryEnqueueOutbound(IOutboundEnvelope element) => _outboundChannel.Writer.TryWrite(element);
 
         /// <summary>
         /// Ensures this association's outbound stream is materialized exactly once, no matter how

@@ -22,14 +22,13 @@ namespace Akka.Remote.Artery
     /// mirrors the role Pekko's <c>InboundContext</c> plays for the handshake stage.
     ///
     /// <para>
-    /// <b>Element-type note.</b> The handshake stages are declared over <c>object</c> elements
-    /// (<c>GraphStage&lt;FlowShape&lt;object, object&gt;&gt;</c>) rather than dedicated
-    /// <c>OutboundEnvelope</c> / <c>InboundEnvelope</c> carrier types. G2 does not yet need
-    /// recipient/sender routing metadata on the element itself — that arrives with the queueing
-    /// and lane-routing work in a later chunk, which owns the decision of what the real envelope
-    /// shape looks like. Using <c>object</c> now avoids designing (and later having to redesign)
-    /// a carrier type prematurely, per the task's own "prefer generic/object elements if simpler"
-    /// guidance.
+    /// <b>Element-type note (G3).</b> <see cref="SendControl"/> takes the raw control message
+    /// (e.g. a <see cref="HandshakeRsp"/>), not a stream element -- the caller
+    /// (<c>ArteryRemoting.SendControlToAddress</c>) is what wraps it in an
+    /// <see cref="OutboundEnvelope"/> before it re-enters the outbound pipeline. The handshake
+    /// stages themselves are now typed <c>GraphStage&lt;FlowShape&lt;IInboundEnvelope, IInboundEnvelope&gt;&gt;</c>
+    /// / <c>GraphStage&lt;FlowShape&lt;IOutboundEnvelope, IOutboundEnvelope&gt;&gt;</c> -- see
+    /// <see cref="InboundHandshakeStage"/> / <see cref="OutboundHandshakeStage"/>.
     /// </para>
     /// </summary>
     internal interface IInboundContext

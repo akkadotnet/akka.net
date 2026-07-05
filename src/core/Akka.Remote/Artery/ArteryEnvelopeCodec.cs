@@ -124,6 +124,15 @@ namespace Akka.Remote.Artery
         /// (find serializer -&gt; resolve manifest -&gt; serialize) is uniformly both the native-V2 path
         /// AND the classic-serializer compatibility path.
         /// </para>
+        /// <para>
+        /// <b>Capacity hint, not a framing dependency.</b> The pooled writer's initial rented
+        /// capacity also folds in <c>serializer.SizeHint(message)</c> when it isn't
+        /// <see cref="Akka.Serialization.SerializerV2.UnknownSize"/>, so a serializer that can
+        /// cheaply predict its own payload size avoids an extra grow-and-copy. This is purely a
+        /// sizing optimization for the initial rent -- the frame length written to the wire is
+        /// still back-patched from the actual bytes written after <c>Serialize</c> runs, never
+        /// predicted from the hint.
+        /// </para>
         /// </remarks>
         /// <param name="serialization">The actor system's <see cref="Akka.Serialization.Serialization"/> extension.</param>
         /// <param name="originUid">The sending system's UID.</param>
@@ -158,6 +167,13 @@ namespace Akka.Remote.Artery
                 const int reservedPrefixLength = ArteryEnvelopeHeader.FrameLengthFieldLength + ArteryEnvelopeHeader.HeaderLength;
                 var capacityHint = reservedPrefixLength
                     + LiteralWireSize(senderPath) + LiteralWireSize(recipientPath) + LiteralWireSize(manifest);
+
+                // Fold in the serializer's own size hint (a hint only -- the frame length is still
+                // back-patched from actual bytes written below, never predicted) so the pooled
+                // writer's initial rent is sized for the payload too, not just the header/literals.
+                var payloadSizeHint = serializer.SizeHint(message);
+                if (payloadSizeHint != Akka.Serialization.SerializerV2.UnknownSize)
+                    capacityHint += payloadSizeHint;
 
                 var writer = new Akka.Serialization.PooledPayloadWriter(capacityHint);
                 try

@@ -207,7 +207,7 @@ namespace Akka.Remote.Artery
             var inboundSink = Flow.Create<ReadOnlySequence<byte>>()
                 .Via(new ArteryInboundProcessingStage(_settings.MaximumFrameSize, System.Serialization))
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!)))
-                .To(Sink.ForEach<object>(DispatchInbound));
+                .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));
 
             // The accepted (inbound) connection is read-only at G2: Artery uses SEPARATE
             // per-direction connections, so any reply (starting with the HandshakeRsp) goes out over
@@ -216,13 +216,13 @@ namespace Akka.Remote.Artery
             connection.HandleWith(Flow.FromSinkAndSource(inboundSink, Source.Empty<ReadOnlySequence<byte>>()), _materializer!);
         }
 
-        private void DispatchInbound(object elem)
+        private void DispatchInbound(IInboundEnvelope env)
         {
-            if (elem is not ArteryInboundEnvelope env)
+            if (env.IsControl || env.RecipientPath is null)
             {
-                // InboundHandshakeStage swallows HandshakeReq/HandshakeRsp; nothing else is expected
-                // to reach this point.
-                _log.Warning("Dropping unexpected inbound Artery element of type [{0}]", elem?.GetType());
+                // InboundHandshakeStage swallows HandshakeReq/HandshakeRsp (and any other control
+                // envelope); nothing else is expected to reach this point.
+                _log.Warning("Dropping unexpected inbound Artery control envelope carrying [{0}]", env.Message.GetType());
                 return;
             }
 
@@ -245,7 +245,7 @@ namespace Akka.Remote.Artery
             if (!association.IsOutboundMaterialized)
                 association.EnsureOutboundMaterialized(a => MaterializeOutbound(remoteAddress, a));
 
-            if (!association.TryEnqueueOutbound(new ArteryOutboundElement(message, senderPath, recipientPath)))
+            if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, recipientPath)))
             {
                 _log.Warning(
                     "Outbound Artery queue to [{0}] is full (capacity {1}); dropping message of type [{2}] to dead letters.",
@@ -281,7 +281,6 @@ namespace Akka.Remote.Artery
                 ?? throw new RemoteTransportException($"Cannot open an Artery outbound connection to [{remoteAddress}]: missing port.");
 
             var frames = ChannelSource.FromReader(association.OutboundReader)
-                .Select(elem => (object)elem)
                 .Via(Flow.FromGraph(handshakeStage))
                 .Select(EncodeOutboundElement);
 
@@ -302,22 +301,9 @@ namespace Akka.Remote.Artery
             }, TaskContinuationOptions.ExecuteSynchronously);
         }
 
-        private ReadOnlySequence<byte> EncodeOutboundElement(object elem)
+        private ReadOnlySequence<byte> EncodeOutboundElement(IOutboundEnvelope elem)
         {
-            object message = elem;
-            string? senderPath = null;
-            string? recipientPath = null;
-
-            if (elem is ArteryOutboundElement wrapped)
-            {
-                message = wrapped.Message;
-                senderPath = wrapped.SenderPath;
-                recipientPath = wrapped.RecipientPath;
-            }
-
-            // elem may also be a bare IArteryControlMessage (a HandshakeReq OutboundHandshakeStage
-            // injected itself) -- encoded identically, with both paths null/absent.
-            using var writer = ArteryEnvelopeCodec.Encode(System.Serialization, _localUniqueAddress.Uid, senderPath, recipientPath, message);
+            using var writer = ArteryEnvelopeCodec.Encode(System.Serialization, _localUniqueAddress.Uid, elem.SenderPath, elem.RecipientPath, elem.Message);
 
             // Copy off the pooled buffer before disposing it -- the Tcp connection stage may not
             // consume this element synchronously, so we cannot return the writer's own (rented, about

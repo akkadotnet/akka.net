@@ -20,8 +20,10 @@ namespace Akka.Remote.Artery
     ///
     /// Inbound half of the Artery handshake, faithful to
     /// <c>openspec/changes/artery-tcp-remoting/design.md</c>
-    /// ("Handshake + association/UID (gate G2)"). A <c>GraphStage&lt;FlowShape&lt;object, object&gt;&gt;</c>
-    /// — see the element-type note on <see cref="IInboundContext"/>.
+    /// ("Handshake + association/UID (gate G2)"). A
+    /// <c>GraphStage&lt;FlowShape&lt;IInboundEnvelope, IInboundEnvelope&gt;&gt;</c> -- dispatch is on
+    /// <see cref="IInboundEnvelope.IsControl"/> plus a pattern match on <see cref="IInboundEnvelope.Message"/>
+    /// inside the envelope, not a raw <c>is</c> type-test on the stream element itself.
     ///
     /// <para>
     /// One instance of this stage sees the inbound elements for ONE remote peer connection (per
@@ -46,25 +48,29 @@ namespace Akka.Remote.Artery
     /// propagated downstream).
     /// </description></item>
     /// <item><description>
-    /// Any other (ordinary) element: dropped with a debug log while the origin is unknown;
+    /// Any other control envelope: dropped with a debug log (no other control-message types exist
+    /// yet at G3 -- reliable system-message delivery lands in a later chunk).
+    /// </description></item>
+    /// <item><description>
+    /// Any ordinary (non-control) envelope: dropped with a debug log while the origin is unknown;
     /// passed through once known.
     /// </description></item>
     /// </list>
     /// </summary>
-    internal sealed class InboundHandshakeStage : GraphStage<FlowShape<object, object>>
+    internal sealed class InboundHandshakeStage : GraphStage<FlowShape<IInboundEnvelope, IInboundEnvelope>>
     {
         public InboundHandshakeStage(IInboundContext context)
         {
             Context = context;
-            Shape = new FlowShape<object, object>(In, Out);
+            Shape = new FlowShape<IInboundEnvelope, IInboundEnvelope>(In, Out);
         }
 
         public IInboundContext Context { get; }
 
-        public Inlet<object> In { get; } = new("InboundHandshake.in");
-        public Outlet<object> Out { get; } = new("InboundHandshake.out");
+        public Inlet<IInboundEnvelope> In { get; } = new("InboundHandshake.in");
+        public Outlet<IInboundEnvelope> Out { get; } = new("InboundHandshake.out");
 
-        public override FlowShape<object, object> Shape { get; }
+        public override FlowShape<IInboundEnvelope, IInboundEnvelope> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
@@ -83,31 +89,40 @@ namespace Akka.Remote.Artery
 
             public void OnPush()
             {
-                var elem = Grab(_stage.In);
+                var envelope = Grab(_stage.In);
 
-                switch (elem)
+                if (envelope.IsControl)
                 {
-                    case HandshakeReq req:
-                        HandleReq(req);
-                        Pull(_stage.In);
-                        return;
+                    switch (envelope.Message)
+                    {
+                        case HandshakeReq req:
+                            HandleReq(req);
+                            break;
 
-                    case HandshakeRsp rsp:
-                        HandleRsp(rsp);
-                        Pull(_stage.In);
-                        return;
+                        case HandshakeRsp rsp:
+                            HandleRsp(rsp);
+                            break;
 
-                    default:
-                        if (!_isKnownOrigin)
-                        {
-                            Log.Debug("Dropping inbound message [{0}] from unknown origin (no completed handshake on this connection yet).", elem.GetType());
-                            Pull(_stage.In);
-                            return;
-                        }
+                        default:
+                            // No other control-message types exist yet at G3 -- reliable
+                            // system-message delivery (Ack/Nack/SystemMessageEnvelope) lands in a
+                            // later chunk.
+                            Log.Debug("Dropping inbound control envelope of unknown message type [{0}].", envelope.Message.GetType());
+                            break;
+                    }
 
-                        Push(_stage.Out, elem);
-                        return;
+                    Pull(_stage.In);
+                    return;
                 }
+
+                if (!_isKnownOrigin)
+                {
+                    Log.Debug("Dropping inbound message [{0}] from unknown origin (no completed handshake on this connection yet).", envelope.Message.GetType());
+                    Pull(_stage.In);
+                    return;
+                }
+
+                Push(_stage.Out, envelope);
             }
 
             public void OnPull() => Pull(_stage.In);
