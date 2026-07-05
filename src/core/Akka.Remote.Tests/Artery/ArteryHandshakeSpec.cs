@@ -310,7 +310,7 @@ namespace Akka.Remote.Tests.Artery
 
             // Deterministic gate: wait until the inbound stage's CompleteHandshake has actually
             // been recorded before expecting the outbound stage to observe it.
-            await AwaitConditionAsync(() => registry.TryGetByUid(remoteUniqueAddress.Uid) != null,
+            await AwaitConditionAsync(() => Task.FromResult(registry.TryGetByUid(remoteUniqueAddress.Uid) != null),
                 TimeSpan.FromSeconds(3));
 
             // The SAME AssociationRegistry backs both contexts, so the outbound stage's polling
