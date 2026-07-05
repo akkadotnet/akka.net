@@ -7,6 +7,7 @@
 
 #nullable enable
 
+using System;
 using System.Buffers;
 using Akka.Actor.Setup;
 
@@ -55,9 +56,21 @@ namespace Akka.Remote.Artery
         /// <see langword="null"/> (the default -- and the value used when no
         /// <see cref="ArteryTransportSetup"/> is present at all) means <see cref="ArrayPool{T}.Shared"/>.
         /// </param>
-        public ArteryTransportSetup(ArrayPool<byte>? encodeBufferPool = null)
+        /// <param name="dropOutboundControlMessage">
+        /// Fault-injection test hook (design.md gate G3's G3 correctness suite -- "DeathWatch
+        /// end-to-end under loss": induced ack loss, without which deterministically dropping just
+        /// the peer's <see cref="Ack"/>/<see cref="Nack"/> replies -- while leaving handshake/heartbeat/
+        /// <see cref="SystemMessageEnvelope"/> traffic alone -- would require reaching into the TCP
+        /// socket layer). When non-null, <see cref="ArteryRemoting.EnqueueControl"/> calls it for
+        /// every outbound CONTROL message before enqueueing; a <see langword="true"/> result silently
+        /// drops that one message (never enqueued -- simulating loss on the wire) instead of sending
+        /// it. <see langword="null"/> (the default, and the only production value) disables this
+        /// entirely -- every control message is enqueued normally.
+        /// </param>
+        public ArteryTransportSetup(ArrayPool<byte>? encodeBufferPool = null, Func<object, bool>? dropOutboundControlMessage = null)
         {
             EncodeBufferPool = encodeBufferPool;
+            DropOutboundControlMessage = dropOutboundControlMessage;
         }
 
         /// <summary>
@@ -66,5 +79,12 @@ namespace Akka.Remote.Artery
         /// means <see cref="ArrayPool{T}.Shared"/>.
         /// </summary>
         public ArrayPool<byte>? EncodeBufferPool { get; }
+
+        /// <summary>
+        /// Fault-injection test hook: when it returns <see langword="true"/> for a given outbound
+        /// CONTROL message, that message is silently dropped (never enqueued) instead of being sent.
+        /// <see langword="null"/> (the default) disables this -- see the constructor parameter docs.
+        /// </summary>
+        public Func<object, bool>? DropOutboundControlMessage { get; }
     }
 }

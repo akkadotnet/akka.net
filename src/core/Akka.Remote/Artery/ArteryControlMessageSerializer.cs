@@ -75,9 +75,42 @@ namespace Akka.Remote.Artery
         /// </summary>
         public const string QuarantinedManifest = "QRN";
 
+        /// <summary>
+        /// The manifest for <see cref="Ack"/> (design.md gate G3, reliable system-message delivery).
+        /// </summary>
+        public const string AckManifest = "SA";
+
+        /// <summary>
+        /// The manifest for <see cref="Nack"/>.
+        /// </summary>
+        public const string NackManifest = "SN";
+
+        /// <summary>
+        /// The manifest for <see cref="SystemMessageEnvelope"/>.
+        /// </summary>
+        public const string SystemMessageEnvelopeManifest = "SME";
+
+        /// <summary>
+        /// The manifest for <see cref="ClearSystemMessageDelivery"/>.
+        /// </summary>
+        public const string ClearSystemMessageDeliveryManifest = "SCL";
+
         private const int FromFieldId = 1;
         private const int ToFieldId = 2;
         private const int QuarantinedUidFieldId = 2;
+
+        // Ack / Nack share an identical wire shape.
+        private const int AckSeqNoFieldId = 1;
+        private const int AckFromFieldId = 2;
+
+        // SystemMessageEnvelope
+        private const int SmeSeqNoFieldId = 1;
+        private const int SmeAckReplyToFieldId = 2;
+        private const int SmeRecipientPathFieldId = 3;
+        private const int SmePayloadFieldId = 4;
+
+        // ClearSystemMessageDelivery
+        private const int ClearIncarnationFieldId = 1;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ArteryControlMessageSerializer"/> class.
@@ -105,6 +138,10 @@ namespace Akka.Remote.Artery
             ArteryHeartbeat => HeartbeatManifest,
             ArteryHeartbeatRsp => HeartbeatRspManifest,
             ArteryQuarantined => QuarantinedManifest,
+            Ack => AckManifest,
+            Nack => NackManifest,
+            SystemMessageEnvelope => SystemMessageEnvelopeManifest,
+            ClearSystemMessageDelivery => ClearSystemMessageDeliveryManifest,
             _ => throw new ArgumentException($"Unsupported Artery control message type: {obj.GetType()}", nameof(obj))
         };
 
@@ -116,6 +153,15 @@ namespace Akka.Remote.Artery
             ArteryHeartbeat => SizeOfMapHeader(0),
             ArteryHeartbeatRsp => SizeOfMapHeader(0),
             ArteryQuarantined q => SizeOfQuarantined(q),
+            Ack ack => SizeOfAckOrNack(ack.SeqNo, ack.From),
+            Nack nack => SizeOfAckOrNack(nack.SeqNo, nack.From),
+            ClearSystemMessageDelivery clear => SizeOfMapHeader(1) + SizeOfInt32(ClearIncarnationFieldId) + SizeOfInt32(clear.Incarnation),
+            // SystemMessageEnvelope's inner payload size depends on the nested serializer's OWN
+            // SizeHint, which is not necessarily known cheaply (SizeOfEnvelopePayload returns
+            // UnknownSize when it isn't) -- rather than duplicate that fallback logic here, this
+            // type simply defers to UnknownSize; it is not the hot path (control-stream volume only,
+            // and PooledPayloadWriter grows on demand regardless).
+            SystemMessageEnvelope => UnknownSize,
             _ => UnknownSize
         };
 
@@ -142,6 +188,20 @@ namespace Akka.Remote.Artery
                 case ArteryQuarantined quarantined:
                     WriteQuarantined(ref messagePackWriter, quarantined);
                     break;
+                case Ack ack:
+                    WriteAckOrNack(ref messagePackWriter, ack.SeqNo, ack.From);
+                    break;
+                case Nack nack:
+                    WriteAckOrNack(ref messagePackWriter, nack.SeqNo, nack.From);
+                    break;
+                case SystemMessageEnvelope sme:
+                    WriteSystemMessageEnvelope(ref messagePackWriter, sme);
+                    break;
+                case ClearSystemMessageDelivery clear:
+                    messagePackWriter.WriteMapHeader(1);
+                    messagePackWriter.Write(ClearIncarnationFieldId);
+                    messagePackWriter.Write(clear.Incarnation);
+                    break;
                 default:
                     throw new ArgumentException($"Unsupported Artery control message type: {obj.GetType()}", nameof(obj));
             }
@@ -161,6 +221,10 @@ namespace Akka.Remote.Artery
                 HeartbeatManifest => ReadEmpty<ArteryHeartbeat>(ref reader, new ArteryHeartbeat()),
                 HeartbeatRspManifest => ReadEmpty<ArteryHeartbeatRsp>(ref reader, new ArteryHeartbeatRsp()),
                 QuarantinedManifest => ReadQuarantined(ref reader),
+                AckManifest => ReadAck(ref reader),
+                NackManifest => ReadNack(ref reader),
+                SystemMessageEnvelopeManifest => ReadSystemMessageEnvelope(ref reader),
+                ClearSystemMessageDeliveryManifest => ReadClearSystemMessageDelivery(ref reader),
                 _ => throw new SerializationException($"Unknown Artery control message manifest [{manifest}].")
             };
         }
@@ -275,6 +339,152 @@ namespace Akka.Remote.Artery
                 throw new SerializationException($"Missing required field [QuarantinedUid] with index [{QuarantinedUidFieldId}] for [{QuarantinedManifest}].");
 
             return new ArteryQuarantined(from.Value, quarantinedUid.Value);
+        }
+
+        /// <summary>
+        /// Shared writer for <see cref="Ack"/> and <see cref="Nack"/> -- identical wire shape
+        /// (design.md gate G3).
+        /// </summary>
+        private static void WriteAckOrNack(ref MessagePackWriter writer, long seqNo, UniqueAddress from)
+        {
+            writer.WriteMapHeader(2);
+            writer.Write(AckSeqNoFieldId);
+            writer.Write(seqNo);
+            writer.Write(AckFromFieldId);
+            WriteUniqueAddress(ref writer, from);
+        }
+
+        private static Ack ReadAck(ref MessagePackReader reader)
+        {
+            var (seqNo, from) = ReadAckOrNack(ref reader, AckManifest);
+            return new Ack(seqNo, from);
+        }
+
+        private static Nack ReadNack(ref MessagePackReader reader)
+        {
+            var (seqNo, from) = ReadAckOrNack(ref reader, NackManifest);
+            return new Nack(seqNo, from);
+        }
+
+        private static (long SeqNo, UniqueAddress From) ReadAckOrNack(ref MessagePackReader reader, string manifestForErrors)
+        {
+            var fieldCount = reader.ReadMapHeader();
+            long? seqNo = null;
+            UniqueAddress? from = null;
+
+            for (var i = 0; i < fieldCount; i++)
+            {
+                var fieldId = reader.ReadInt32();
+                switch (fieldId)
+                {
+                    case AckSeqNoFieldId:
+                        seqNo = reader.ReadInt64();
+                        break;
+                    case AckFromFieldId:
+                        from = ReadUniqueAddress(ref reader);
+                        break;
+                    default:
+                        reader.Skip();
+                        break;
+                }
+            }
+
+            if (seqNo is null)
+                throw new SerializationException($"Missing required field [SeqNo] with index [{AckSeqNoFieldId}] for [{manifestForErrors}].");
+            if (from is null)
+                throw new SerializationException($"Missing required field [From] with index [{AckFromFieldId}] for [{manifestForErrors}].");
+
+            return (seqNo.Value, from.Value);
+        }
+
+        private static int SizeOfAckOrNack(long seqNo, UniqueAddress from) =>
+            SizeOfMapHeader(2) +
+            SizeOfInt32(AckSeqNoFieldId) + SizeOfInt64(seqNo) +
+            SizeOfInt32(AckFromFieldId) + SizeOfUniqueAddress(from);
+
+        private void WriteSystemMessageEnvelope(ref MessagePackWriter writer, SystemMessageEnvelope sme)
+        {
+            writer.WriteMapHeader(4);
+            writer.Write(SmeSeqNoFieldId);
+            writer.Write(sme.SeqNo);
+            writer.Write(SmeAckReplyToFieldId);
+            WriteUniqueAddress(ref writer, sme.AckReplyTo);
+            writer.Write(SmeRecipientPathFieldId);
+            writer.Write(sme.RecipientPath);
+            writer.Write(SmePayloadFieldId);
+            // Nest the inner ISystemMessage recursively via the classic Serialization extension
+            // (serializer id + manifest + raw bytes) -- see the type-level "How the inner message
+            // is nested" remarks on SystemMessageEnvelope for why this existing V2 helper (built for
+            // exactly this "nest an arbitrary payload" purpose) is reused rather than hand-rolled.
+            WriteEnvelopePayload(ref writer, sme.Message);
+        }
+
+        private SystemMessageEnvelope ReadSystemMessageEnvelope(ref MessagePackReader reader)
+        {
+            var fieldCount = reader.ReadMapHeader();
+            long? seqNo = null;
+            UniqueAddress? ackReplyTo = null;
+            string? recipientPath = null;
+            Akka.Dispatch.SysMsg.ISystemMessage? message = null;
+
+            for (var i = 0; i < fieldCount; i++)
+            {
+                var fieldId = reader.ReadInt32();
+                switch (fieldId)
+                {
+                    case SmeSeqNoFieldId:
+                        seqNo = reader.ReadInt64();
+                        break;
+                    case SmeAckReplyToFieldId:
+                        ackReplyTo = ReadUniqueAddress(ref reader);
+                        break;
+                    case SmeRecipientPathFieldId:
+                        recipientPath = reader.ReadString();
+                        break;
+                    case SmePayloadFieldId:
+                        message = ReadEnvelopePayload<Akka.Dispatch.SysMsg.ISystemMessage>(ref reader);
+                        break;
+                    default:
+                        reader.Skip();
+                        break;
+                }
+            }
+
+            if (seqNo is null)
+                throw new SerializationException($"Missing required field [SeqNo] with index [{SmeSeqNoFieldId}] for [{SystemMessageEnvelopeManifest}].");
+            if (ackReplyTo is null)
+                throw new SerializationException($"Missing required field [AckReplyTo] with index [{SmeAckReplyToFieldId}] for [{SystemMessageEnvelopeManifest}].");
+            if (recipientPath is null)
+                throw new SerializationException($"Missing required field [RecipientPath] with index [{SmeRecipientPathFieldId}] for [{SystemMessageEnvelopeManifest}].");
+            if (message is null)
+                throw new SerializationException($"Missing required field [Message] with index [{SmePayloadFieldId}] for [{SystemMessageEnvelopeManifest}].");
+
+            return new SystemMessageEnvelope(message, seqNo.Value, ackReplyTo.Value, recipientPath);
+        }
+
+        private static ClearSystemMessageDelivery ReadClearSystemMessageDelivery(ref MessagePackReader reader)
+        {
+            var fieldCount = reader.ReadMapHeader();
+            int? incarnation = null;
+
+            for (var i = 0; i < fieldCount; i++)
+            {
+                var fieldId = reader.ReadInt32();
+                switch (fieldId)
+                {
+                    case ClearIncarnationFieldId:
+                        incarnation = reader.ReadInt32();
+                        break;
+                    default:
+                        reader.Skip();
+                        break;
+                }
+            }
+
+            if (incarnation is null)
+                throw new SerializationException($"Missing required field [Incarnation] with index [{ClearIncarnationFieldId}] for [{ClearSystemMessageDeliveryManifest}].");
+
+            return new ClearSystemMessageDelivery(incarnation.Value);
         }
 
         /// <summary>

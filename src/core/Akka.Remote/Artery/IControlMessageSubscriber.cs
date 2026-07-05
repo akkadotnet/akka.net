@@ -27,9 +27,15 @@ namespace Akka.Remote.Artery
     /// <see cref="ArteryQuarantined"/> (publish <see cref="ThisActorSystemQuarantinedEvent"/>).
     /// </para>
     /// <para>
-    /// <b>GROUP7:</b> reliable system-message delivery's <c>SystemMessageAcker</c>/ACK-NACK
-    /// stages are expected to subscribe here too, once they land -- this hook is deliberately
-    /// generic (uid + raw message) rather than tailored to any one consumer.
+    /// <b>GROUP7 RESOLVED (design.md gate G3):</b> <see cref="SystemMessageDeliveryStage"/> (the
+    /// OUTBOUND half of reliable system-message delivery) subscribes here too, to observe
+    /// <see cref="Ack"/>/<see cref="Nack"/> replies -- bridged into its own single-threaded
+    /// <c>GraphStageLogic</c> execution via <c>GetAsyncCallback</c>, since notifications arrive from
+    /// a different stream's execution context. <see cref="SystemMessageAckerStage"/> (the INBOUND
+    /// half) does NOT subscribe here -- it is composed directly into the inbound pipeline instead,
+    /// since it needs to see EVERY inbound envelope (including ordinary ones, to pass them through)
+    /// rather than just the non-handshake control subset this hook exposes. This hook's generic
+    /// shape (uid + raw message) needed no changes to support the new subscriber.
     /// </para>
     /// </summary>
     internal interface IControlMessageSubscriber

@@ -96,6 +96,37 @@ namespace Akka.Remote.Artery
         public TimeSpan ControlHeartbeatInterval { get; }
 
         /// <summary>
+        /// Maximum number of unacknowledged system-message envelopes <see cref="SystemMessageDeliveryStage"/>
+        /// buffers for possible resend before giving up (and quarantining the association) --
+        /// design.md gate G3, "Reliable system-message delivery". Matches Pekko's default.
+        /// </summary>
+        public int SystemMessageBufferSize { get; }
+
+        /// <summary>
+        /// How often <see cref="SystemMessageDeliveryStage"/> resends its whole unacknowledged
+        /// window while any entry remains unacked.
+        /// </summary>
+        public TimeSpan SystemMessageResendInterval { get; }
+
+        /// <summary>
+        /// How long the OLDEST unacknowledged system-message envelope may wait before
+        /// <see cref="SystemMessageDeliveryStage"/> gives up and quarantines the association.
+        ///
+        /// <para>
+        /// <b>Default divergence from classic remoting (deliberate design.md open decision, now
+        /// DECIDED).</b> Classic Akka.NET's analogous <c>akka.remote.retry-gate-closed-for</c>-style
+        /// timeouts are on the order of ~3 minutes; Pekko's Artery <c>give-up-system-message-after</c>
+        /// defaults to 6 HOURS. This port takes Pekko's 6h default deliberately: system-message
+        /// delivery backs DeathWatch, and giving up (and thereby losing the ability to ever detect a
+        /// remote actor's termination for this association) after only ~3 minutes of network trouble
+        /// would be far too eager -- classic's short timeout is a documented historical wart, not a
+        /// property to preserve. Tests shrink this value explicitly (design.md's G3 correctness
+        /// suite -- "give-up-timeout -&gt; quarantine (shrink the timeout in test config)").
+        /// </para>
+        /// </summary>
+        public TimeSpan GiveUpSystemMessageAfter { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ArterySettings"/> class from the
         /// <c>akka.remote.artery</c> sub-config.
         /// </summary>
@@ -144,6 +175,14 @@ namespace Akka.Remote.Artery
             HandshakeRetryInterval = GetPositiveTimeSpan(arteryConfig, "advanced.handshake-retry-interval", TimeSpan.FromSeconds(1));
             InjectHandshakeInterval = GetPositiveTimeSpan(arteryConfig, "advanced.inject-handshake-interval", TimeSpan.FromSeconds(1));
             ControlHeartbeatInterval = GetPositiveTimeSpan(arteryConfig, "advanced.control-heartbeat-interval", TimeSpan.FromSeconds(5));
+
+            SystemMessageBufferSize = arteryConfig.GetInt("advanced.system-message-buffer-size", 20_000);
+            if (SystemMessageBufferSize <= 0)
+                throw new ConfigurationException(
+                    $"akka.remote.artery.advanced.system-message-buffer-size must be greater than 0, but was [{SystemMessageBufferSize}].");
+
+            SystemMessageResendInterval = GetPositiveTimeSpan(arteryConfig, "advanced.system-message-resend-interval", TimeSpan.FromSeconds(1));
+            GiveUpSystemMessageAfter = GetPositiveTimeSpan(arteryConfig, "advanced.give-up-system-message-after", TimeSpan.FromHours(6));
         }
 
         private static TimeSpan GetPositiveTimeSpan(Config config, string path, TimeSpan @default)

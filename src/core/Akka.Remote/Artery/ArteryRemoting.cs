@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Streams;
 using Akka.Streams.Dsl;
@@ -29,12 +30,17 @@ namespace Akka.Remote.Artery
     /// under active development -- see <c>openspec/changes/artery-tcp-remoting/design.md</c>).
     ///
     /// <para>
-    /// This now hosts task group 6, "Control Stream" (design.md): each association materializes
-    /// TWO independent outbound streams -- ordinary (user messages) and control (handshake,
-    /// heartbeat, quarantine notice) -- each on its own bounded queue and its own TCP connection
-    /// (see <see cref="MaterializeOutboundStream"/>). The G2 "handshake rides the ordinary
-    /// connection" staging note is retired: handshake Req/Rsp now travel over control (task 6.3).
-    /// Message sent -> received -> dispatched to the correct actor; classic remoting is unaffected.
+    /// This now hosts task group 7, "Reliable System Messages" (design.md gate G3), on top of task
+    /// group 6's control stream: each association materializes TWO independent outbound streams --
+    /// ordinary (user messages) and control (handshake, heartbeat, quarantine notice, AND -- new at
+    /// group 7 -- reliably-delivered system messages + their Ack/Nack replies) -- each on its own
+    /// bounded queue and its own TCP connection (see <see cref="MaterializeOutboundStream"/>). The
+    /// DeathWatch triple (Watch/Unwatch/DeathWatchNotification) + Terminate now ride the control
+    /// stream through <see cref="SystemMessageDeliveryStage"/> (outbound) /
+    /// <see cref="SystemMessageAckerStage"/> (inbound) for exactly-once, strictly-in-order delivery;
+    /// every other system message type is unaffected (there are none at this layer -- remote deploy's
+    /// <c>DaemonMsgCreate</c> stays an ORDINARY message, per design.md's explicit non-scope). Message
+    /// sent -> received -> dispatched to the correct actor; classic remoting is unaffected.
     /// </para>
     ///
     /// <para>
@@ -91,6 +97,13 @@ namespace Akka.Remote.Artery
         private ArrayPool<byte>? _encodeBufferPool;
 
         /// <summary>
+        /// Fault-injection test hook (design.md gate G3) -- see <see cref="ArteryTransportSetup.DropOutboundControlMessage"/>.
+        /// Read once from <see cref="ArteryTransportSetup"/> in <see cref="Start"/>; <see langword="null"/>
+        /// (production default) disables it entirely.
+        /// </summary>
+        private Func<object, bool>? _dropOutboundControlMessage;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ArteryRemoting"/> class.
         /// </summary>
         /// <param name="system">TBD</param>
@@ -113,15 +126,15 @@ namespace Akka.Remote.Artery
         {
             _log.Info("Starting Artery TCP remoting on [{0}:{1}]", _settings.CanonicalHostname, _settings.CanonicalPort);
             _log.Warning(
-                "Artery TCP remoting is EXPERIMENTAL and under active development -- task group 6 (control " +
-                "stream: separate control + ordinary connections per association, no lanes/compression yet). " +
+                "Artery TCP remoting is EXPERIMENTAL and under active development -- task group 7 (reliable " +
+                "system-message delivery: seq/Ack/Nack/resend over the control stream; no lanes/compression yet). " +
                 "Do not use in production.");
 
             _materializer = ActorMaterializer.Create(System);
             _tcp = System.TcpStream();
-            _encodeBufferPool = System.Settings.Setup.Get<ArteryTransportSetup>()
-                .Select(s => s.EncodeBufferPool)
-                .GetOrElse(null);
+            var arteryTransportSetup = System.Settings.Setup.Get<ArteryTransportSetup>();
+            _encodeBufferPool = arteryTransportSetup.Select(s => s.EncodeBufferPool).GetOrElse(null);
+            _dropOutboundControlMessage = arteryTransportSetup.Select(s => s.DropOutboundControlMessage).GetOrElse(null);
 
             // halfClose: true is essential here, not cosmetic. Every accepted (inbound) connection's
             // WRITE side is `Source.Empty` (Artery uses separate per-direction connections -- see the
@@ -192,19 +205,29 @@ namespace Akka.Remote.Artery
             var remoteAddress = recipient.Path.Address;
             var association = _registry.AssociationFor(remoteAddress);
 
-            // Quarantine gating at the send-routing layer (design.md Invariants; task 6.6):
-            // ordinary messages to a quarantined association are dropped to dead letters, logged
-            // ONCE per association (not per message). Control messages never go through Send --
-            // they always flow via EnqueueControl -- so this gate cannot affect them; the control
-            // stream "pierces quarantine" by construction, not by an exception carved out here.
+            // Quarantine gating at the send-routing layer (design.md Invariants; task 6.6, resolved
+            // for group 7 below): a quarantined association drops BOTH ordinary AND system-message
+            // sends, logged ONCE per association (not per message) -- the sole carve-out is
+            // ActorSelectionMessage (design.md "Blocked under quarantine except ActorSelectionMessage
+            // / ClearSystemMessageDelivery"). Control HOUSEKEEPING messages (handshake/heartbeat/
+            // quarantine-notice/Ack/Nack) never go through Send at all -- they always flow via
+            // EnqueueControl -- so this gate cannot affect them; that is how the control channel
+            // "pierces quarantine", not an exception carved out here.
             //
-            // GROUP7: ActorSelectionMessage / ClearSystemMessageDelivery are supposed to ALSO
-            // pierce quarantine for ordinary sends (design.md "Blocked under quarantine except
-            // ActorSelectionMessage / ClearSystemMessageDelivery") -- that carve-out is deferred
-            // to reliable system-message delivery (group 7), which is what actually needs
-            // ClearSystemMessageDelivery to reach a quarantined peer. At task group 6, every
-            // ordinary message to a quarantined association is dropped, no exceptions.
-            if (association.CurrentState.UniqueRemoteAddress is { } peer && association.IsQuarantined(peer.Uid))
+            // GROUP7 RESOLVED: ClearSystemMessageDelivery does NOT need a Send()-level pierce in
+            // this implementation -- it is issued directly by Quarantine() via EnqueueControl (the
+            // SAME path ArteryQuarantined already uses), never through Send, so it is unaffected by
+            // this gate by construction. System messages do NOT pierce quarantine either (unlike
+            // control housekeeping traffic): once an incarnation's system-message delivery has been
+            // quarantined (whether by an external Quarantine() call or by
+            // SystemMessageDeliveryStage's own give-up), further Watch/Unwatch/DeathWatchNotification/
+            // Terminate sends to that SAME (now-defunct) uid are pointless and are dropped here, same
+            // as ordinary messages -- see SystemMessageDeliveryStage's give-up remarks for why this
+            // is safe (nothing more will be sent under the given-up incarnation, so its immediate
+            // local seqNo/buffer reset cannot desync a still-active peer).
+            if (association.CurrentState.UniqueRemoteAddress is { } peer &&
+                association.IsQuarantined(peer.Uid) &&
+                message is not ActorSelectionMessage)
             {
                 if (association.ShouldLogQuarantineDrop(peer.Uid))
                     _log.Warning(
@@ -216,6 +239,16 @@ namespace Akka.Remote.Artery
             }
 
             var recipientPath = recipient.Path.ToSerializationFormatWithAddress(remoteAddress);
+
+            if (message is ISystemMessage systemMessage)
+            {
+                // Reliable system-message delivery (design.md gate G3) rides the CONTROL stream,
+                // wrapped by SystemMessageDeliveryStage -- never the ordinary stream/lanes (design.md
+                // invariant 5: "system messages NEVER hashed onto ordinary lanes").
+                EnqueueSystemMessage(remoteAddress, systemMessage, recipientPath);
+                return;
+            }
+
             var senderPath = sender.IsNobody() ? null : sender.Path.ToSerializationFormatWithAddress(DefaultAddress);
 
             EnqueueOutbound(remoteAddress, message, senderPath, recipientPath);
@@ -256,6 +289,15 @@ namespace Akka.Remote.Artery
                     // Quarantine()") -- control "pierces quarantine", so this always flows even
                     // though ordinary sends to `address` are now gated off in Send().
                     EnqueueControl(address, new ArteryQuarantined(_localUniqueAddress, u));
+
+                    // GROUP7 RESOLVED: design.md's "Quarantine (UID-scoped)" calls for sending
+                    // ClearSystemMessageDelivery(incarnation) alongside the quarantine notice --
+                    // this resets THIS association's OWN outbound SystemMessageDeliveryStage
+                    // (seqNo back to 1, unacked buffer emptied) via the SAME control-queue plumbing
+                    // ArteryQuarantined just used. It is local-only in this implementation (consumed
+                    // by that stage, never forwarded to the wire) -- see ClearSystemMessageDelivery's
+                    // type-level remarks for the full rationale/simplification.
+                    EnqueueControl(address, new ClearSystemMessageDelivery(association.CurrentState.Incarnation));
                 }
             }
             else
@@ -278,9 +320,15 @@ namespace Akka.Remote.Artery
             // Both Ordinary and Control connections feed this SAME inbound shape (task 6.2) --
             // ArteryInboundProcessingStage accepts either preamble; routing downstream is purely
             // by the decoded envelope's IsControl flag, not by which connection carried it.
+            // SystemMessageAckerStage (design.md gate G3) sits right after InboundHandshakeStage,
+            // mirroring the reference "InboundHandshake -> InboundQuarantineCheck ->
+            // [control only: SystemMessageAcker]" pipeline -- it is a no-op pass-through for every
+            // element that is not a SystemMessageEnvelope, so composing it unconditionally here
+            // (rather than only for control-preamble connections) is correct and simpler.
             var inboundSink = Flow.Create<ReadOnlySequence<byte>>()
                 .Via(new ArteryInboundProcessingStage(_settings.MaximumFrameSize, System.Serialization))
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!)))
+                .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
                 .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));
 
             // Every accepted (inbound) connection is read-only: Artery uses SEPARATE per-direction
@@ -308,6 +356,18 @@ namespace Akka.Remote.Artery
             }
 
             var recipient = Provider.ResolveActorRefWithLocalAddress(env.RecipientPath, DefaultAddress);
+
+            if (env.Message is ISystemMessage systemMessage)
+            {
+                // Reliable system-message delivery (design.md gate G3): SystemMessageAckerStage has
+                // already deduplicated/ordered this -- dispatch via SendSystemMessage, mirroring
+                // classic's DefaultMessageDispatcher system-message path, NOT Tell. System messages
+                // never carry a sender in practice (RemoteActorRef.SendSystemMessage always sends
+                // with sender: null) -- see SystemMessageEnvelope's type-level remarks.
+                recipient.SendSystemMessage(systemMessage);
+                return;
+            }
+
             var sender = env.SenderPath is { } senderPath
                 ? Provider.ResolveActorRefWithLocalAddress(senderPath, DefaultAddress)
                 : (IActorRef)System.DeadLetters;
@@ -397,29 +457,90 @@ namespace Akka.Remote.Artery
 
         /// <summary>
         /// Enqueues <paramref name="message"/> onto <paramref name="remoteAddress"/>'s CONTROL
-        /// outbound queue, materializing that association's control stream on first use (task
-        /// group 6, task 6.1). This is the ONE path every control message travels: handshake
-        /// Req/Rsp (via <see cref="OutboundHandshakeStage"/> / <see cref="InboundHandshakeStage"/>),
-        /// heartbeats (<see cref="ArteryHeartbeatStage"/>), and quarantine notices
-        /// (<see cref="Quarantine"/>) all funnel through here.
+        /// outbound queue for RELIABLE delivery (design.md gate G3): the raw
+        /// <see cref="ISystemMessage"/> plus its resolved recipient path travel together (as an
+        /// <see cref="OutboundEnvelope"/> whose <see cref="IOutboundEnvelope.RecipientPath"/> is
+        /// populated, unlike every other control message) onto the SAME control channel handshake/
+        /// heartbeat/quarantine-notice traffic uses. <see cref="SystemMessageDeliveryStage"/> --
+        /// materialized ONLY on the control stream -- is what wraps it into a seq-numbered
+        /// <see cref="SystemMessageEnvelope"/>; this method never constructs one directly.
         /// </summary>
-        private void EnqueueControl(Address remoteAddress, object message)
+        private void EnqueueSystemMessage(Address remoteAddress, ISystemMessage message, string recipientPath)
         {
             var association = _registry.AssociationFor(remoteAddress);
             if (!association.IsControlOutboundMaterialized)
                 association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a));
 
-            if (!association.TryEnqueueControl(new OutboundEnvelope(message, null, null)))
+            if (!association.TryEnqueueControl(new OutboundEnvelope(message, null, recipientPath)))
+                HandleControlOverflow(remoteAddress, association, message);
+        }
+
+        /// <summary>
+        /// Enqueues <paramref name="message"/> onto <paramref name="remoteAddress"/>'s CONTROL
+        /// outbound queue, materializing that association's control stream on first use (task
+        /// group 6, task 6.1). This is the ONE path every HOUSEKEEPING control message travels:
+        /// handshake Req/Rsp (via <see cref="OutboundHandshakeStage"/> / <see cref="InboundHandshakeStage"/>),
+        /// heartbeats (<see cref="ArteryHeartbeatStage"/>), quarantine notices + <see cref="ClearSystemMessageDelivery"/>
+        /// (<see cref="Quarantine"/>), and system-message <see cref="Ack"/>/<see cref="Nack"/> replies
+        /// (<see cref="SystemMessageAckerStage"/>, via <see cref="SendControlToAddress"/>) all funnel
+        /// through here. See <see cref="EnqueueSystemMessage"/> for the SEPARATE path a raw
+        /// <see cref="ISystemMessage"/> destined for reliable delivery takes (also this same queue,
+        /// but with its recipient path attached).
+        /// </summary>
+        private void EnqueueControl(Address remoteAddress, object message)
+        {
+            // Fault-injection test hook (design.md gate G3 correctness suite -- induced ack loss /
+            // DeathWatch-under-loss). Production default is null (disabled) -- see
+            // ArteryTransportSetup.DropOutboundControlMessage.
+            if (_dropOutboundControlMessage?.Invoke(message) == true)
             {
-                // GROUP7: design.md Decision 7 calls for control/system overflow to QUARANTINE
-                // (not drop) -- the full asymmetric policy needs the reliable system-message layer
-                // (group 7) to have a "give up" concept to quarantine FOR. At task group 6, a full
-                // control queue logs + dead-letters, same as ordinary.
-                _log.Error(
-                    "Outbound Artery CONTROL queue to [{0}] is full (capacity {1}); dropping control message of " +
-                    "type [{2}] to dead letters.", remoteAddress, Association.DefaultControlQueueCapacity, message.GetType());
-                System.DeadLetters.Tell(message, ActorRefs.NoSender);
+                _log.Debug(
+                    "Test hook: dropping outbound Artery control message of type [{0}] to [{1}] (simulated loss).",
+                    message.GetType(), remoteAddress);
+                return;
             }
+
+            var association = _registry.AssociationFor(remoteAddress);
+            if (!association.IsControlOutboundMaterialized)
+                association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a));
+
+            if (!association.TryEnqueueControl(new OutboundEnvelope(message, null, null)))
+                HandleControlOverflow(remoteAddress, association, message);
+        }
+
+        /// <summary>
+        /// GROUP7 RESOLVED: design.md Decision 7 calls for control/system overflow to QUARANTINE
+        /// (not merely drop) -- a control channel backed up enough to overflow (default capacity
+        /// 256; low-volume housekeeping traffic plus whatever system-message volume is in flight)
+        /// signals real trouble with this association, matching the same "give up, never a silent
+        /// drop" philosophy <see cref="SystemMessageDeliveryStage"/>'s OWN (much larger,
+        /// reliability-window-sized) internal buffer overflow uses. The overflowing message itself
+        /// cannot be queued, so it is logged + dead-lettered either way.
+        ///
+        /// <para>
+        /// <b>Re-entrancy guard.</b> <see cref="Quarantine"/> itself calls back into
+        /// <see cref="EnqueueControl"/> (to send <see cref="ArteryQuarantined"/> +
+        /// <see cref="ClearSystemMessageDelivery"/>) -- onto the SAME already-full channel, which
+        /// would otherwise recurse straight back into this method forever. Only calling
+        /// <see cref="Quarantine"/> when the uid is NOT already quarantined breaks the cycle: by the
+        /// time <c>Quarantine</c>'s own follow-up <c>EnqueueControl</c> calls (possibly) overflow in
+        /// turn, the CAS state flip has already happened, so the second re-entry's guard is false.
+        /// </para>
+        /// </summary>
+        private void HandleControlOverflow(Address remoteAddress, Association association, object message)
+        {
+            var peer = association.CurrentState.UniqueRemoteAddress;
+            var shouldQuarantine = peer is { } p && !association.IsQuarantined(p.Uid);
+
+            _log.Error(
+                "Outbound Artery CONTROL queue to [{0}] is full (capacity {1}); dropping control message of " +
+                "type [{2}] to dead letters{3}.",
+                remoteAddress, Association.DefaultControlQueueCapacity, message.GetType(),
+                shouldQuarantine ? " and quarantining the association" : "");
+            System.DeadLetters.Tell(message, ActorRefs.NoSender);
+
+            if (shouldQuarantine)
+                Quarantine(remoteAddress, peer!.Value.Uid);
         }
 
         private void MaterializeOutbound(Address remoteAddress, Association association) =>
@@ -461,7 +582,10 @@ namespace Akka.Remote.Artery
                 _registry,
                 _localUniqueAddress,
                 remoteAddress,
-                message => EnqueueControl(remoteAddress, message));
+                sendControl: message => EnqueueControl(remoteAddress, message),
+                subscribeControl: SubscribeControl,
+                unsubscribeControl: UnsubscribeControl,
+                quarantine: (address, uid) => Quarantine(address, uid));
 
             var handshakeStage = new OutboundHandshakeStage(
                 outboundContext, _settings.HandshakeRetryInterval, _settings.HandshakeTimeout,
@@ -484,7 +608,18 @@ namespace Akka.Remote.Artery
                 ? source.Via(Flow.FromGraph(new ArteryHeartbeatStage(_settings.ControlHeartbeatInterval)))
                 : source;
 
-            var frames = withHeartbeat
+            // SystemMessageDeliveryStage (design.md gate G3) is CONTROL-STREAM ONLY (invariant 5:
+            // system messages are never hashed onto ordinary lanes) and sits UPSTREAM of the
+            // handshake stage -- so a freshly-wrapped SystemMessageEnvelope is gated by handshake
+            // completion exactly like every other control-stream element (held behind
+            // OutboundHandshakeStage's pendingMessage until the association completes, never
+            // dropped) -- see that stage's own type-level placement remarks.
+            var withSystemMessageDelivery = isControlStream
+                ? withHeartbeat.Via(Flow.FromGraph(new SystemMessageDeliveryStage(
+                    outboundContext, _settings.SystemMessageBufferSize, _settings.SystemMessageResendInterval, _settings.GiveUpSystemMessageAfter)))
+                : withHeartbeat;
+
+            var frames = withSystemMessageDelivery
                 .Via(Flow.FromGraph(handshakeStage))
                 .Via(Flow.FromGraph(encodeStage));
 

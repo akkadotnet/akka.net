@@ -15,10 +15,16 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Actor.Setup;
 using Akka.Configuration;
+using Akka.Dispatch.SysMsg;
 using Akka.Remote.Artery;
 using Akka.Serialization;
 using FluentAssertions;
 using Xunit;
+// Akka.Remote.SysAck/Akka.Remote.SysNack (classic AckedDelivery.cs) are enclosing-namespace types of
+// Akka.Remote.Tests.Artery and would otherwise shadow Akka.Remote.Artery.SysAck/SysNack (design.md gate
+// G3) in unqualified lookups -- alias to the Artery ones explicitly.
+using SysAck = Akka.Remote.Artery.Ack;
+using SysNack = Akka.Remote.Artery.Nack;
 
 namespace Akka.Remote.Tests.Artery
 {
@@ -126,6 +132,74 @@ namespace Akka.Remote.Tests.Artery
             var quarantined = new ArteryQuarantined(from, quarantinedUid);
 
             RoundTrip(quarantined).Should().Be(quarantined);
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip SysAck (design.md gate G3)")]
+        public void Should_round_trip_Ack()
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L);
+            var ack = new SysAck(7L, from);
+
+            RoundTrip(ack).Should().Be(ack);
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip SysNack (design.md gate G3)")]
+        public void Should_round_trip_Nack()
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-b", "host-b", 2552), 99L);
+            var nack = new SysNack(3L, from);
+
+            RoundTrip(nack).Should().Be(nack);
+        }
+
+        [Theory(DisplayName = "ArteryControlMessageSerializer should round-trip SysAck/SysNack across negative, zero, and boundary seq/uid values")]
+        [InlineData(0L, 0L)]
+        [InlineData(1L, 1L)]
+        [InlineData(-1L, -1L)]
+        [InlineData(long.MinValue, long.MinValue)]
+        [InlineData(long.MaxValue, long.MaxValue)]
+        public void Should_round_trip_Ack_and_Nack_extreme_values(long seqNo, long uid)
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), uid);
+
+            RoundTrip(new SysAck(seqNo, from)).Should().Be(new SysAck(seqNo, from));
+            RoundTrip(new SysNack(seqNo, from)).Should().Be(new SysNack(seqNo, from));
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip ClearSystemMessageDelivery (design.md gate G3)")]
+        public void Should_round_trip_ClearSystemMessageDelivery()
+        {
+            var clear = new ClearSystemMessageDelivery(5);
+
+            RoundTrip(clear).Should().Be(clear);
+        }
+
+        private sealed class NopActor : ActorBase
+        {
+            protected override bool Receive(object message) => true;
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip SystemMessageEnvelope wrapping a Watch, nesting the inner system message via the classic Serialization extension (design.md gate G3)")]
+        public void Should_round_trip_SystemMessageEnvelope_wrapping_Watch()
+        {
+            var watchee = (IInternalActorRef)_system.ActorOf(Props.Create<NopActor>());
+            var watcher = (IInternalActorRef)_system.ActorOf(Props.Create<NopActor>());
+            var ackReplyTo = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L);
+
+            var envelope = new SystemMessageEnvelope(new Watch(watchee, watcher), 1L, ackReplyTo, "akka://sys-b@host-b:2552/user/target");
+
+            // WriteEnvelopePayload/ReadEnvelopePayload's serialize/deserialize of the inner Watch
+            // (which carries IActorRef fields) requires CurrentTransportInformation to be set --
+            // exactly like the outer envelope encode/decode path in ArteryEnvelopeCodec.
+            var roundTripped = Akka.Serialization.Serialization.WithTransport(
+                (ExtendedActorSystem)_system, () => RoundTrip(envelope));
+
+            roundTripped.SeqNo.Should().Be(1L);
+            roundTripped.AckReplyTo.Should().Be(ackReplyTo);
+            roundTripped.RecipientPath.Should().Be("akka://sys-b@host-b:2552/user/target");
+            roundTripped.Message.Should().BeOfType<Watch>();
+            ((Watch)roundTripped.Message).Watchee.Path.ToStringWithAddress().Should().Be(watchee.Path.ToStringWithAddress());
+            ((Watch)roundTripped.Message).Watcher.Path.ToStringWithAddress().Should().Be(watcher.Path.ToStringWithAddress());
         }
 
         [Fact(DisplayName = "ArteryControlMessageSerializer should report bytes-written matching the buffer")]

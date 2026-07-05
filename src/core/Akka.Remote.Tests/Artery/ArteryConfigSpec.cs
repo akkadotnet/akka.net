@@ -82,6 +82,12 @@ namespace Akka.Remote.Tests.Artery
             settings.HandshakeRetryInterval.Should().Be(1.Seconds());
             settings.InjectHandshakeInterval.Should().Be(1.Seconds());
             settings.ControlHeartbeatInterval.Should().Be(5.Seconds());
+
+            // Reliable system-message delivery (design.md gate G3).
+            settings.SystemMessageBufferSize.Should().Be(20_000);
+            settings.SystemMessageResendInterval.Should().Be(1.Seconds());
+            settings.GiveUpSystemMessageAfter.Should().Be(6.Hours(),
+                "Pekko's Artery default (NOT classic Akka.NET's much shorter ~3-minute analogue) -- see ArterySettings.GiveUpSystemMessageAfter's remarks");
         }
 
         [Theory(DisplayName = "Should_ThrowConfigurationException_When_ArterySettingIsInvalid")]
@@ -90,6 +96,9 @@ namespace Akka.Remote.Tests.Artery
         [InlineData("akka.remote.artery.advanced.inbound-lanes = 0")]
         [InlineData("akka.remote.artery.advanced.outbound-lanes = 0")]
         [InlineData("akka.remote.artery.transport = aeron")]
+        [InlineData("akka.remote.artery.advanced.system-message-buffer-size = 0")]
+        [InlineData("akka.remote.artery.advanced.system-message-resend-interval = 0s")]
+        [InlineData("akka.remote.artery.advanced.give-up-system-message-after = 0s")]
         public void Should_ThrowConfigurationException_When_ArterySettingIsInvalid(string overrideHocon)
         {
             var arteryConfig = ConfigurationFactory.ParseString(overrideHocon)
