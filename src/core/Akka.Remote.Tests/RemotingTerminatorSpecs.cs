@@ -91,9 +91,18 @@ namespace Akka.Remote.Tests
             var actorIdentity = await associated.Ask<ActorIdentity>(new Identify("foo"), RemainingOrDefault);
             actorIdentity.MessageId.ShouldBe("foo");
 
-            // terminate the DEPLOYED system
-            Assert.True(await _sys2.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");
-            await ExpectTerminatedAsync(associated); // expect that the remote deployed actor is dead
+            // terminate the DEPLOYED system and observe the remote-deployed actor's death.
+            // The `Terminated` for a remote DeathWatch normally arrives in milliseconds via the
+            // graceful disassociation, but if that fast path is delayed under load it falls back to
+            // the phi-accrual failure detector (akka.remote.watch-failure-detector.acceptable-heartbeat-pause = 10s).
+            // Give it the same 10s budget the sibling test uses instead of the 3s
+            // akka.test.single-expect-default, which a loaded CI agent can exceed.
+            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+            {
+                var terminationTask = _sys2.Terminate(); // start termination of the deployed system
+                await ExpectTerminatedAsync(associated);  // expect that the remote deployed actor is dead
+                Assert.True(await terminationTask.AwaitWithTimeout(RemainingOrDefault), "Expected to terminate within 10 seconds, but didn't.");
+            });
 
             // now terminate the DEPLOYER system
             Assert.True(await Sys.Terminate().AwaitWithTimeout(10.Seconds()), "Expected to terminate within 10 seconds, but didn't.");

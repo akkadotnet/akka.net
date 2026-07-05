@@ -6,10 +6,11 @@
 - [x] 1.4 Define direct manifest API for all V2 serializers
 - [ ] 1.5 Define `SizeHint` with explicit unknown-size support
 - [ ] 1.6 Decide and implement bytes-written/result reporting for `Serialize`
-- [ ] 1.7 Decide sync vs async V2 API shape before downstream sourcegen and Artery work
+- [x] 1.7 Decide sync vs async V2 API shape before downstream sourcegen and Artery work (design.md Decision 13: sync for all of 1.6 — ref-struct msgpack cursors, transport owns the async boundary via `PooledPayloadWriter.Detach()`, serial decode island, V1 bridge deadlock hazard; async deferred to a post-1.6 opt-in interface)
 - [ ] 1.8 Add `ToBinary` / `FromBinary` bridge methods for compatibility paths
 - [ ] 1.9 Add unit tests for native V2 serializer round-trip, manifest, size hint, and bridge methods
 - [x] 1.10 Require new native V2 serializers to emit non-empty non-CLR manifests; allow legacy serializer-id ports and `SerializerV1Adapter` to preserve empty legacy manifests
+- [x] 1.11 Pin the Manifest invariant (design.md Decision 14: cheap, stable, derivable without serializing, bounded) with spec tests
 
 ## 2. SerializerV1Adapter
 

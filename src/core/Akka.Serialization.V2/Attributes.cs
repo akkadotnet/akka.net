@@ -63,3 +63,48 @@ public sealed class AkkaFieldAttribute : Attribute
 public sealed class AkkaEnvelopePayloadAttribute : Attribute
 {
 }
+
+/// <summary>
+/// Registers a hand-written <see cref="IAkkaMessagePackFormatter{T}"/> for a foreign type that
+/// cannot be annotated with <see cref="AkkaSerializableAttribute"/> (for example, a core Akka type
+/// that cannot reference <c>Akka.Serialization.V2</c>).
+/// </summary>
+/// <remarks>
+/// Apply to the <c>[AkkaSerializer]</c> partial class. The registration is serializer-scoped: the
+/// same foreign type may be handled by different formatters (or not at all) in different
+/// serializers. A formatter registration overrides every field-kind resolution the generator would
+/// otherwise infer for <see cref="SerializedType"/> (including <c>Nullable&lt;T&gt;</c> of a value
+/// type), except an <see cref="AkkaEnvelopePayloadAttribute"/>-marked field, which always wins.
+/// </remarks>
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
+public sealed class AkkaSerializerFormatterAttribute : Attribute
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AkkaSerializerFormatterAttribute"/> class.
+    /// </summary>
+    /// <param name="serializedType">The foreign type handled by <paramref name="formatterType"/>.</param>
+    /// <param name="formatterType">
+    /// A non-abstract, non-generic class implementing <see cref="IAkkaMessagePackFormatter{T}"/>
+    /// for <paramref name="serializedType"/>, with either a public parameterless constructor or a
+    /// public constructor taking an <see cref="Akka.Actor.ExtendedActorSystem"/>. When both
+    /// constructors are present, the generated serializer prefers the
+    /// <see cref="Akka.Actor.ExtendedActorSystem"/> constructor: the serializer always has the
+    /// system in hand, and system context is why a formatter declares that constructor.
+    /// </param>
+    public AkkaSerializerFormatterAttribute(Type serializedType, Type formatterType)
+    {
+        SerializedType = serializedType;
+        FormatterType = formatterType;
+    }
+
+    /// <summary>
+    /// The foreign type handled by <see cref="FormatterType"/>.
+    /// </summary>
+    public Type SerializedType { get; }
+
+    /// <summary>
+    /// The formatter type implementing <see cref="IAkkaMessagePackFormatter{T}"/> for
+    /// <see cref="SerializedType"/>.
+    /// </summary>
+    public Type FormatterType { get; }
+}
