@@ -67,7 +67,7 @@
 - [ ] 6.5 Persist and recover generated event payload
 - [ ] 6.6 Save and load generated snapshot payload
 - [x] 6.7 Verify V1 and generated V2 serializers coexist
-- [ ] 6.8 Verify oversized payload behavior is deterministic
+- [x] 6.8 Verify oversized payload behavior is deterministic (OversizedPayloadDeterminismSpec: encode-time PayloadSizeExceededException via PooledPayloadWriter maxCapacity — see design.md Decision 12 here and serializer-v2 design.md Decision 12 for the writer mechanism)
 - [ ] 6.9 Validate generated payloads inside Akka.Delivery wrappers
 - [ ] 6.10 Validate generated payloads inside DistributedData wrappers
 - [x] 6.11 Validate opaque non-MessagePack payload metadata inside a generated MessagePack wrapper
@@ -105,6 +105,6 @@ Nested envelope benchmark evidence: real BenchmarkDotNet run for `*GeneratedMess
 - [x] 8.4 Run focused generated serialization tests
 - [ ] 8.5 Run focused Akka.Remote tests using generated serializers
 - [ ] 8.6 Run focused Akka.Persistence tests using generated serializers
-- [ ] 8.7 Record any V2 API changes required before Artery starts
+- [x] 8.7 Record any V2 API changes required before Artery starts (recorded: foreign-type formatter escape hatch + public `MessagePackSizes` + declared-accessibility emission [design.md Decision 11], encode-time oversized-payload determinism [design.md Decision 12], sync-for-1.6 API sign-off [serializer-v2 design.md Decision 13], Manifest invariant [serializer-v2 design.md Decision 14]; the `PooledPayloadWriter` buffer/ownership contract landed separately as serializer-v2 Decision 12, PR #8322)
 - [ ] 8.8 Add Akka.Hosting registration extension after Akka.Hosting is inlined into the main Akka.NET repository
 - [ ] 8.9 Package runtime and generator assets as one user-facing NuGet package

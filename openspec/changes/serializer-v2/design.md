@@ -129,6 +129,26 @@ This contract was first invented privately as Artery G1's internal `PooledFrameW
 
 Rationale: SerializerV2 is unshipped, so this refactor is free. Landing the pooled-writer contract in core now -- rather than after Artery G2 or sourcegen depend on their own private copies -- avoids the exact duplication (`PooledFrameWriter`) this decision retires, and gives sourcegen task 6.8 a typed, encode-time failure mode to build on instead of inventing its own.
 
+### 13. V2 API Stays Synchronous For 1.6 (task 1.7 sign-off)
+
+`SerializerV2.Serialize` / `Deserialize` remain synchronous for the entire 1.6 cycle. This is a validated decision, not a default:
+
+- **The hot path is structurally synchronous.** Generated and hand-written MessagePack serializers drive `MessagePack.MessagePackWriter` / `MessagePackReader`, which are `ref struct` cursors — they cannot cross an `await` boundary. An async `Serialize` signature would still have to stage every byte synchronously and could only await a flush the serializer does not own.
+- **The transport already owns the async boundary.** Artery's single async step is the socket write, and the `PooledPayloadWriter.Detach()` ownership contract (Decision 12) exists precisely to decouple that from the synchronous encode. Async serialization would re-solve a problem the buffer contract already solved, at the cost of `ValueTask` machinery per message.
+- **The decode side is throughput-critical and serial.** Artery parses envelope headers on a serial decode island (artery-tcp-remoting design.md, Decision 2); introducing awaits there lowers the serial-island ceiling that bounds total inbound throughput.
+- **V1 compatibility forbids it.** `SerializerV1Adapter` and the classic remoting/persistence bridges expose synchronous `ToBinary`/`FromBinary`. An async V2 core would force sync-over-async at every bridge, which this codebase bans as a deadlock hazard.
+
+Persistence scenarios that genuinely want asynchrony (e.g. claim-check serializers that fetch external payloads) are a plugin-layer concern: journals and snapshot stores already run async around synchronous serialization. If a truly async serializer contract is ever needed, it arrives post-1.6 as a separate opt-in interface (e.g. `IAsyncSerializerV2`) under extend-only rules — it must not change the sync V2 contract that Artery and sourcegen build against. This closes the "Async API uncertainty" risk below.
+
+### 14. Manifest Is A Documented Invariant: Cheap, Stable, Derivable Without Serializing
+
+`SerializerV2.Manifest(object)` is load-bearing beyond lookup dispatch: Artery's single-pass envelope encode writes the header — including the manifest literal or compression tag — *before* the payload is serialized (artery-tcp-remoting design.md, "Envelope wire layout"), and manifest compression tables key on the manifest string. The following are therefore a documented contract for every V2 serializer, pinned by spec test:
+
+- **Derivable without serializing**: `Manifest(object)` must not require a prior or accompanying `Serialize` call (the signature enforces this structurally — it receives no buffer).
+- **Cheap**: type-dispatch cost only (no allocation beyond the returned string, which should be a constant); it runs once per message on the remoting hot path before any payload work.
+- **Stable**: the same runtime type through the same serializer returns the same manifest string on every call, in every process, across versions — manifests are wire and persistence contracts (see Decision 5 for the non-empty/non-CLR rules and legacy exemptions).
+- **Bounded**: the UTF-8 encoding of a manifest must fit in Artery's envelope literal encoding — hard limit 65,535 bytes (u16 length prefix); in practice manifests should be short tokens, since every uncompressed occurrence rides the wire.
+
 ## Risks / Trade-offs
 
 **Compatibility inheritance tension**: `SerializerV2` being usable as `Serializer` keeps this PR compatible, but permits awkward compositions such as wrapping V2 with `SerializerV1Adapter`. Guardrails should be added before native V2 serializers become common.
