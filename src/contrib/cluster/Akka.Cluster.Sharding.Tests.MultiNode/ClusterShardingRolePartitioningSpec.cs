@@ -202,19 +202,23 @@ namespace Akka.Cluster.Sharding.Tests
 
             await RunOnAsync(async () =>
             {
-                // wait for all regions registered
+                // Wait for all regions to register. Use an explicit, generous window here:
+                // during the initial 5-node join the shard-coordinator singleton can still be
+                // migrating between R1 nodes, so region (re-)registration routinely takes longer
+                // than the default 5s AwaitAssert budget on a busy CI agent. See MNTR flakiness
+                // where this asserted 2 regions instead of 3 before convergence completed.
                 await AwaitAssertAsync(async () =>
                 {
                     var region = ClusterSharding.Get(Sys).ShardRegion(E1.TypeKey);
                     region.Tell(GetCurrentRegions.Instance);
                     (await ExpectMsgAsync<CurrentRegions>()).Regions.Count.Should().Be(3);
-                });
+                }, TimeSpan.FromSeconds(30));
                 await AwaitAssertAsync(async () =>
                 {
                     var region = ClusterSharding.Get(Sys).ShardRegion(E2.TypeKey);
                     region.Tell(GetCurrentRegions.Instance);
                     (await ExpectMsgAsync<CurrentRegions>()).Regions.Count.Should().Be(2);
-                });
+                }, TimeSpan.FromSeconds(30));
             }, Config.Fourth);
 
             await EnterBarrierAsync($"{Roles.Count}-up");
@@ -237,11 +241,14 @@ namespace Akka.Cluster.Sharding.Tests
                 // buffered. The ShardRegion only retries GetShardHome on its retry interval (default 2-10s),
                 // which can exceed our ExpectMsg timeout.
                 // By wrapping the first message in AwaitAssert, we retry until the coordinator is fully ready.
+                // Use an explicit 30s window: the ShardRegion only retries GetShardHome on its retry
+                // interval (2-10s), so the default 5s AwaitAssert budget allows barely one or two 3s
+                // ExpectMsg attempts - not enough headroom on a busy CI agent (source of MNTR flakiness).
                 await AwaitAssertAsync(async () =>
                 {
                     region.Tell(1);
                     await ExpectMsgAsync(1, TimeSpan.FromSeconds(3));
-                });
+                }, TimeSpan.FromSeconds(30));
 
                 // After the first message succeeds, the shard is allocated and subsequent messages
                 // to the same or new shards should succeed without delay (coordinator is ready)
