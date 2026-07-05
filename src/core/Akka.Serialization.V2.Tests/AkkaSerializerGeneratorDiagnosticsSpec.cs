@@ -464,6 +464,141 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG011" && diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
+    [Fact(DisplayName = "Generator should still report AKKASG004 for a fieldless message that does not opt into AllowEmpty")]
+    public void Generator_should_report_AKKASG004_for_fieldless_message_without_AllowEmpty()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120701)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "heartbeat-v1")]
+            public sealed record ArteryHeartbeatRepro : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // The AllowEmpty opt-in exists specifically so this guardrail can stay strict by default:
+        // a fieldless type is almost always a forgotten [AkkaField], so AKKASG004 must still fire
+        // unless the author deliberately opts in.
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG004" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("AllowEmpty", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG004 and should compile cleanly when a fieldless message opts into AllowEmpty")]
+    public void Generator_should_not_report_AKKASG004_when_fieldless_message_opts_into_AllowEmpty()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120703)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "heartbeat-v1", AllowEmpty = true)]
+            public sealed record ArteryHeartbeatRepro : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG004");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should not emit CS1503 for a required [AkkaSerializable] struct nested field")]
+    public void Generator_should_not_emit_CS1503_for_required_struct_nested_field()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120702)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] Inner InnerValue) : IProtocol;
+
+            [AkkaSerializable]
+            public readonly record struct Inner([property: AkkaField(1)] string Value);
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // IsReferenceLike used to return true unconditionally for FieldKind.Object, generating an
+        // `Inner?`-vs-`Inner` mismatch (CS1503) for a value-type nested message used as a required
+        // field. It must now thread the annotated type's is-value-type through, exactly like the
+        // formatter escape hatch already does for FieldKind.Formatted.
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "CS1503");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should not emit CS1503 for an optional [AkkaSerializable] struct nested field")]
+    public void Generator_should_not_emit_CS1503_for_optional_struct_nested_field()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120704)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] Inner? InnerValue) : IProtocol;
+
+            [AkkaSerializable]
+            public readonly record struct Inner([property: AkkaField(1)] string Value);
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "CS1503");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);

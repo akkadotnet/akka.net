@@ -37,6 +37,16 @@ public sealed class AkkaSerializableAttribute : Attribute
     /// Stable serializer-owned manifest for top-level protocol messages.
     /// </summary>
     public string? Manifest { get; init; }
+
+    /// <summary>
+    /// Opts a deliberately fieldless message into codegen. By default, an <see cref="AkkaSerializableAttribute"/>
+    /// type with no <see cref="AkkaFieldAttribute"/> properties is rejected (AKKASG004): almost always a mistake
+    /// (a forgotten <see cref="AkkaFieldAttribute"/>), but some protocol messages are legitimately fieldless --
+    /// for example, a heartbeat whose arrival IS the signal, with no payload to carry. Set this to
+    /// <see langword="true"/> to generate an empty-map write and a skip-loop read (tolerating unknown fields for
+    /// forward compatibility) instead of failing compilation.
+    /// </summary>
+    public bool AllowEmpty { get; init; }
 }
 
 /// <summary>

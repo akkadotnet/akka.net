@@ -54,7 +54,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor MissingFields = new(
         "AKKASG004",
         "No serializable fields",
-        "[AkkaSerializable] type '{0}' must declare at least one [AkkaField] property",
+        "[AkkaSerializable] type '{0}' must declare at least one [AkkaField] property, or set AllowEmpty = true if the message is deliberately fieldless",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -363,10 +363,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var attribute = context.Attributes[0];
         var knownTypes = KnownTypes.From(context.SemanticModel.Compilation);
         var manifest = string.Empty;
+        var allowEmpty = false;
         foreach (var argument in attribute.NamedArguments)
         {
             if (argument.Key == "Manifest" && argument.Value.Value is string value)
                 manifest = value;
+            else if (argument.Key == "AllowEmpty" && argument.Value.Value is bool allowEmptyValue)
+                allowEmpty = allowEmptyValue;
         }
 
         var fields = new List<FieldInfo>();
@@ -390,7 +393,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             GetFullyQualifiedTypeName(symbol),
             manifest,
             fields.OrderBy(f => f.Index).ToImmutableArray(),
-            symbol.AllInterfaces.ToImmutableArray());
+            symbol.AllInterfaces.ToImmutableArray(),
+            allowEmpty);
     }
 
     private static ImmutableDictionary<string, MessageInfo> ResolveMessages(
@@ -468,7 +472,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         foreach (var message in reachableMessages)
         {
-            if (message.Fields.Length == 0)
+            if (message.Fields.Length == 0 && !message.AllowEmpty)
             {
                 context.ReportDiagnostic(Diagnostic.Create(MissingFields, Location.None, message.FullyQualifiedName));
                 isValid = false;
@@ -735,7 +739,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static bool TryGetInlineSizeExpression(FieldInfo field, string value, out string expression)
     {
-        if (field.Mapping.Kind == FieldKind.Formatted)
+        // Object and EnvelopePayload always route through the general GenerateSizeExpression path
+        // below (they call a generated SizeOfXxx/SizeOfEnvelopePayload method, not a scalar
+        // MessagePackSizes helper) -- including when the field is a nullable [AkkaSerializable]
+        // struct, which would otherwise match IsNullableValueField below and get an inline scalar
+        // expression that GetScalarSizeExpression cannot produce for FieldKind.Object.
+        if (field.Mapping.Kind is FieldKind.Formatted or FieldKind.Object or FieldKind.EnvelopePayload)
         {
             expression = string.Empty;
             return false;
@@ -747,14 +756,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             return true;
         }
 
-        if (field.Mapping.Kind != FieldKind.Object && field.Mapping.Kind != FieldKind.EnvelopePayload)
-        {
-            expression = GetScalarSizeExpression(field.Mapping, value);
-            return true;
-        }
-
-        expression = string.Empty;
-        return false;
+        expression = GetScalarSizeExpression(field.Mapping, value);
+        return true;
     }
 
     private static void GenerateSizeExpression(StringBuilder sb, FieldInfo field, string value)
@@ -763,6 +766,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             case FieldKind.EnvelopePayload:
                 sb.Append("SizeOfEnvelopePayload(").Append(value).Append(')');
+                break;
+            case FieldKind.Object when IsNullableValueField(field):
+                sb.Append(value).Append(" is null ? SizeOfNil() : SizeOf").Append(GetObjectMethodName(field.Mapping)).Append('(').Append(value).Append(".Value)");
                 break;
             case FieldKind.Object when field.IsNullable:
                 sb.Append(value).Append(" is null ? SizeOfNil() : SizeOf").Append(GetObjectMethodName(field.Mapping)).Append('(').Append(value).Append(')');
@@ -930,7 +936,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 sb.Append(indent).Append("writer.Write((int)").Append(value).AppendLine(");");
                 break;
             case FieldKind.Object:
-                if (field.IsNullable)
+                // Mirrors FieldKind.Formatted below: when the nested type is a value type, a
+                // nullable field was already unwrapped to its non-nullable .Value by the caller
+                // (GenerateWriteField's IsNullableValueField branch), so no further null-check is
+                // possible (or needed) here -- only a genuinely nullable REFERENCE nested type
+                // needs the runtime "is null" guard.
+                if (field.IsNullable && IsReferenceLike(field))
                 {
                     sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
                     sb.Append(indent).AppendLine("    writer.WriteNil();");
@@ -970,7 +981,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             return;
         }
 
-        var isNullableReferenceLikeSlot = field.Mapping.Kind is FieldKind.Object or FieldKind.EnvelopePayload
+        var isNullableReferenceLikeSlot = field.Mapping.Kind == FieldKind.EnvelopePayload
+            || (field.Mapping.Kind == FieldKind.Object && IsReferenceLike(field))
             || (field.Mapping.Kind == FieldKind.Formatted && IsReferenceLike(field));
 
         if (isNullableReferenceLikeSlot && field.IsNullable)
@@ -1064,7 +1076,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             return new TypeMapping(FieldKind.ByteArray);
 
         if (type is INamedTypeSymbol namedType && namedType.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
-            return new TypeMapping(FieldKind.Object, GetFullyQualifiedTypeName(namedType));
+            return new TypeMapping(FieldKind.Object, GetFullyQualifiedTypeName(namedType), namedType.IsValueType);
 
         var mapping = type.SpecialType switch
         {
@@ -1106,7 +1118,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             FieldKind.Decimal => "0m",
             FieldKind.ActorRef => "global::Akka.Actor.ActorRefs.NoSender",
             FieldKind.EnvelopePayload => "null",
-            FieldKind.Object => "null",
+            // A required (non-nullable) [AkkaSerializable] struct nested field gets a non-nullable
+            // local (see GetLocalType/IsReferenceLike): "null" would not compile for it, so fall
+            // back to "default" the same way every other non-reference-like kind does below.
+            FieldKind.Object => IsReferenceLike(field) ? "null" : "default",
             _ => "default"
         };
     }
@@ -1126,7 +1141,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         if (field.Mapping.Kind == FieldKind.Formatted)
             return field.Formatter is { IsTargetValueType: false };
 
-        return field.Mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload or FieldKind.Object;
+        // Mirrors the Formatted case above: an [AkkaSerializable] nested type used as a required
+        // field can be a value type (a readonly record struct), in which case it behaves like a
+        // scalar (non-nullable local/constructor argument, no null-check) rather than a reference.
+        if (field.Mapping.Kind == FieldKind.Object)
+            return !field.Mapping.IsValueType;
+
+        return field.Mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload;
     }
 
     private static bool IsNullableValueField(FieldInfo field)
@@ -1293,13 +1314,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private sealed class MessageInfo
     {
-        public MessageInfo(string simpleName, string fullyQualifiedName, string manifest, ImmutableArray<FieldInfo> fields, ImmutableArray<INamedTypeSymbol> protocols)
+        public MessageInfo(string simpleName, string fullyQualifiedName, string manifest, ImmutableArray<FieldInfo> fields, ImmutableArray<INamedTypeSymbol> protocols, bool allowEmpty)
         {
             SimpleName = simpleName;
             FullyQualifiedName = fullyQualifiedName;
             Manifest = manifest;
             Fields = fields;
             Protocols = protocols;
+            AllowEmpty = allowEmpty;
         }
 
         public string SimpleName { get; }
@@ -1307,10 +1329,11 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string Manifest { get; }
         public ImmutableArray<FieldInfo> Fields { get; }
         public ImmutableArray<INamedTypeSymbol> Protocols { get; }
+        public bool AllowEmpty { get; }
 
         public MessageInfo WithFields(ImmutableArray<FieldInfo> fields)
         {
-            return new MessageInfo(SimpleName, FullyQualifiedName, Manifest, fields, Protocols);
+            return new MessageInfo(SimpleName, FullyQualifiedName, Manifest, fields, Protocols, AllowEmpty);
         }
     }
 
@@ -1341,14 +1364,23 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private readonly struct TypeMapping
     {
-        public TypeMapping(FieldKind kind, string typeFullName = "")
+        public TypeMapping(FieldKind kind, string typeFullName = "", bool isValueType = false)
         {
             Kind = kind;
             TypeFullName = typeFullName;
+            IsValueType = isValueType;
         }
 
         public FieldKind Kind { get; }
         public string TypeFullName { get; }
+
+        /// <summary>
+        /// For <see cref="FieldKind.Object"/>: whether the annotated <c>[AkkaSerializable]</c> nested
+        /// type is a value type (for example, a <c>readonly record struct</c>). Mirrors
+        /// <see cref="FormatterInfo.IsTargetValueType"/>, which threads the same distinction for
+        /// <see cref="FieldKind.Formatted"/> foreign-type formatter targets. Unused for every other kind.
+        /// </summary>
+        public bool IsValueType { get; }
     }
 
     /// <summary>

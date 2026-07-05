@@ -108,3 +108,19 @@ Nested envelope benchmark evidence: real BenchmarkDotNet run for `*GeneratedMess
 - [x] 8.7 Record any V2 API changes required before Artery starts (recorded: foreign-type formatter escape hatch + public `MessagePackSizes` + declared-accessibility emission [design.md Decision 11], encode-time oversized-payload determinism [design.md Decision 12], sync-for-1.6 API sign-off [serializer-v2 design.md Decision 13], Manifest invariant [serializer-v2 design.md Decision 14]; the `PooledPayloadWriter` buffer/ownership contract landed separately as serializer-v2 Decision 12, PR #8322)
 - [ ] 8.8 Add Akka.Hosting registration extension after Akka.Hosting is inlined into the main Akka.NET repository
 - [ ] 8.9 Package runtime and generator assets as one user-facing NuGet package
+
+## 9. Post-#8325 Gaps
+
+Found while attempting to swap Artery's control messages (`ArteryControlMessageSerializer`) onto
+generated serializers: a deliberately fieldless heartbeat message and an `[AkkaSerializable]`
+struct used as a nested field both broke codegen. Both gaps are now closed.
+
+- [x] 9.1 Add `AllowEmpty` opt-in to `[AkkaSerializable]` so a deliberately fieldless top-level
+      protocol message (Artery's `ArteryHeartbeat`/`ArteryHeartbeatRsp` -- "arrival IS the signal")
+      is not hard-rejected by AKKASG004; the guardrail still fires by default for messages that
+      don't opt in
+- [x] 9.2 Fix `IsReferenceLike`/`GetLocalType`/`GetConstructorArgument`/`DefaultValue`/size-and-write
+      codegen to thread the annotated type's is-value-type through for `FieldKind.Object`, mirroring
+      the formatter escape hatch's `IsTargetValueType`, so an `[AkkaSerializable] readonly record
+      struct` (mirroring Artery's `UniqueAddress`) can be used as a required or optional nested field
+      without generating an `Inner?`-vs-`Inner` mismatch (CS1503)
