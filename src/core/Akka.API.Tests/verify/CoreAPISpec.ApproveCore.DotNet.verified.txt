@@ -5221,7 +5221,7 @@ namespace Akka.Serialization
     }
     public sealed class PooledPayloadWriter : System.Buffers.IBufferWriter<byte>, System.IDisposable
     {
-        public PooledPayloadWriter(int initialCapacityHint = 256, int maxCapacity = 2147483647) { }
+        public PooledPayloadWriter(int initialCapacityHint = 256, int maxCapacity = 2147483647, System.Buffers.ArrayPool<byte>? pool = null) { }
         public int WrittenCount { get; }
         public System.ReadOnlyMemory<byte> WrittenMemory { get; }
         public System.ReadOnlySpan<byte> WrittenSpan { get; }

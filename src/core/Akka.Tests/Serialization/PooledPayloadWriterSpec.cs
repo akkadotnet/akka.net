@@ -213,6 +213,62 @@ namespace Akka.Tests.Serialization
             Assert.Throws<ArgumentOutOfRangeException>(() => new PooledPayloadWriter(maxCapacity: -1));
         }
 
+        // ===================== injectable buffer source =====================
+
+        [Fact(DisplayName = "Should_route_every_rent_and_return_through_the_injected_pool_When_growing_then_detaching")]
+        public void Should_route_every_rent_and_return_through_the_injected_pool_When_growing_then_detaching()
+        {
+            var pool = new TrackingArrayPool();
+            var writer = new PooledPayloadWriter(initialCapacityHint: 8, pool: pool);
+
+            // Write in chunks to force several growth re-rents past the tiny initial rent.
+            var expected = new List<byte>();
+            for (var i = 0; i < 10; i++)
+            {
+                var chunk = MakeBytes(100, seed: 100 + i);
+                chunk.CopyTo(writer.GetSpan(chunk.Length));
+                writer.Advance(chunk.Length);
+                expected.AddRange(chunk);
+            }
+
+            Assert.True(pool.RentCount > 1, "expected at least one growth re-rent through the injected pool");
+            Assert.Equal(pool.RentCount - 1, pool.ReturnCount); // every growth returned its old array; the live one is outstanding
+            Assert.Equal(1, pool.Outstanding);
+
+            using (var owner = writer.Detach())
+            {
+                Assert.Equal(expected.ToArray(), owner.Memory.ToArray());
+            }
+
+            // The detached owner's dispose returned the array to the SAME injected pool -- not Shared.
+            Assert.Equal(pool.RentCount, pool.ReturnCount);
+            Assert.Equal(0, pool.Outstanding);
+            Assert.False(pool.SawForeignReturn, "an array was returned to the injected pool that it never rented out");
+        }
+
+        [Fact(DisplayName = "Should_return_the_buffer_to_the_injected_pool_When_disposed_without_a_prior_Detach")]
+        public void Should_return_the_buffer_to_the_injected_pool_When_disposed_without_a_prior_Detach()
+        {
+            var pool = new TrackingArrayPool();
+            var writer = new PooledPayloadWriter(initialCapacityHint: 8, pool: pool);
+
+            for (var i = 0; i < 10; i++)
+            {
+                var chunk = MakeBytes(100, seed: 200 + i);
+                chunk.CopyTo(writer.GetSpan(chunk.Length));
+                writer.Advance(chunk.Length);
+            }
+
+            Assert.True(pool.RentCount > 1, "expected at least one growth re-rent through the injected pool");
+
+            writer.Dispose();
+            writer.Dispose(); // idempotent -- must not double-return to the pool
+
+            Assert.Equal(pool.RentCount, pool.ReturnCount);
+            Assert.Equal(0, pool.Outstanding);
+            Assert.False(pool.SawForeignReturn, "an array was returned to the injected pool that it never rented out");
+        }
+
         // ===================== Reset =====================
 
         [Fact(DisplayName = "Should_reuse_the_writer_for_new_content_When_Reset_is_called")]
@@ -255,6 +311,40 @@ namespace Akka.Tests.Serialization
             var bytes = new byte[length];
             new Random(seed).NextBytes(bytes);
             return bytes;
+        }
+
+        /// <summary>
+        /// An <see cref="ArrayPool{T}"/> that counts rents/returns and tracks array identity, so tests
+        /// can prove the writer routes its ENTIRE buffer lifecycle -- initial rent, growth, dispose,
+        /// and the detached owner's return -- through the injected pool rather than
+        /// <see cref="ArrayPool{T}.Shared"/>.
+        /// </summary>
+        private sealed class TrackingArrayPool : ArrayPool<byte>
+        {
+            private readonly ArrayPool<byte> _inner = Create();
+            private readonly HashSet<byte[]> _outstanding = new();
+
+            public int RentCount { get; private set; }
+            public int ReturnCount { get; private set; }
+            public int Outstanding => _outstanding.Count;
+            public bool SawForeignReturn { get; private set; }
+
+            public override byte[] Rent(int minimumLength)
+            {
+                var array = _inner.Rent(minimumLength);
+                RentCount++;
+                _outstanding.Add(array);
+                return array;
+            }
+
+            public override void Return(byte[] array, bool clearArray = false)
+            {
+                if (!_outstanding.Remove(array))
+                    SawForeignReturn = true;
+
+                ReturnCount++;
+                _inner.Return(array, clearArray);
+            }
         }
     }
 }

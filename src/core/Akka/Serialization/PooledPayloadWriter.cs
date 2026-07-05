@@ -35,9 +35,12 @@ namespace Akka.Serialization
     /// </para>
     /// <list type="bullet">
     /// <item><description>
-    /// A freshly constructed writer owns one array rented from <see cref="ArrayPool{T}.Shared"/>. It
-    /// grows by renting a bigger array, copying the already-written prefix, and returning the old
-    /// array -- never by copying on every write.
+    /// A freshly constructed writer owns one array rented from its buffer source: the
+    /// <see cref="ArrayPool{T}"/> passed to the constructor, or <see cref="ArrayPool{T}.Shared"/>
+    /// when none is given. It grows by renting a bigger array, copying the already-written prefix,
+    /// and returning the old array -- never by copying on every write. EVERY rent and return in the
+    /// writer's lifetime -- the initial rent, growth, <see cref="Dispose"/>, and the disposal of the
+    /// owner returned by <see cref="Detach"/> -- goes through that same pool.
     /// </description></item>
     /// <item><description>
     /// <see cref="Dispose"/> (without a prior <see cref="Detach"/>) returns the current backing array
@@ -58,6 +61,16 @@ namespace Akka.Serialization
     /// valid while the writer is still alive (neither disposed nor detached).
     /// </description></item>
     /// </list>
+    ///
+    /// <para>
+    /// <b>Why <see cref="ArrayPool{T}"/> and not a custom buffer-source abstraction (or
+    /// <see cref="MemoryPool{T}"/>)?</b> Deliberate: <see cref="ArrayPool{T}"/> is the narrowest
+    /// standard type that covers every buffer-source strategy this writer needs -- the shared pool,
+    /// a dedicated per-transport pool, and POH-pinned arrays via a custom <see cref="ArrayPool{T}"/>
+    /// subclass (artery design.md, Decision 9: POH-pinned buffers only if pinning churn shows up in
+    /// measurement). A bespoke interface would duplicate it; <see cref="MemoryPool{T}"/> would force
+    /// <see cref="Memory{T}"/>-based internals and give up the raw array the patch/growth paths rely on.
+    /// </para>
     /// </summary>
     public sealed class PooledPayloadWriter : IBufferWriter<byte>, IDisposable
     {
@@ -65,6 +78,7 @@ namespace Akka.Serialization
         private const int DefaultInitialCapacityHint = 256;
 
         private readonly int _maxCapacity;
+        private readonly ArrayPool<byte> _pool;
         private byte[]? _buffer;
         private int _written;
         private bool _detached;
@@ -83,15 +97,24 @@ namespace Akka.Serialization
         /// past this bound throws <see cref="PayloadSizeExceededException"/>. Defaults to
         /// <see cref="int.MaxValue"/> (effectively unbounded).
         /// </param>
+        /// <param name="pool">
+        /// The buffer source for every rent and return in this writer's lifetime (initial rent,
+        /// growth, <see cref="Dispose"/>, and the disposal of the owner returned by
+        /// <see cref="Detach"/>). <see langword="null"/> (the default) means
+        /// <see cref="ArrayPool{T}.Shared"/>. Pass a dedicated pool -- or a custom
+        /// <see cref="ArrayPool{T}"/> subclass over POH-pinned arrays -- to control buffer placement
+        /// without changing this type.
+        /// </param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxCapacity"/> is not positive.</exception>
-        public PooledPayloadWriter(int initialCapacityHint = DefaultInitialCapacityHint, int maxCapacity = int.MaxValue)
+        public PooledPayloadWriter(int initialCapacityHint = DefaultInitialCapacityHint, int maxCapacity = int.MaxValue, ArrayPool<byte>? pool = null)
         {
             if (maxCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maxCapacity), maxCapacity, "Max capacity must be positive.");
 
             _maxCapacity = maxCapacity;
+            _pool = pool ?? ArrayPool<byte>.Shared;
             var initial = Math.Min(Math.Max(initialCapacityHint, MinimumCapacity), maxCapacity);
-            _buffer = ArrayPool<byte>.Shared.Rent(initial);
+            _buffer = _pool.Rent(initial);
         }
 
         /// <summary>The number of bytes written so far.</summary>
@@ -194,8 +217,10 @@ namespace Akka.Serialization
         /// <summary>
         /// Detaches ownership of the backing buffer from this writer: returns an
         /// <see cref="IMemoryOwner{T}"/> whose <see cref="IMemoryOwner{T}.Memory"/> is exactly the
-        /// written slice. Disposing the returned owner returns the underlying array to
-        /// <see cref="ArrayPool{T}.Shared"/>.
+        /// written slice. Disposing the returned owner returns the underlying array to the SAME pool
+        /// this writer rented it from (the constructor's <c>pool</c>, or <see cref="ArrayPool{T}.Shared"/>).
+        /// The <see cref="IMemoryOwner{T}"/> return type deliberately leaves room for a future
+        /// pooled-owner implementation (Pekko <c>EnvelopeBufferPool</c>-style) without an API change.
         ///
         /// <para>
         /// After this call the writer is SPENT: every member except <see cref="Dispose"/> throws
@@ -210,7 +235,7 @@ namespace Akka.Serialization
         {
             ThrowIfSpent();
 
-            var owner = new RentedMemoryOwner(_buffer!, _written);
+            var owner = new RentedMemoryOwner(_pool, _buffer!, _written);
             _buffer = null;
             _detached = true;
             return owner;
@@ -229,7 +254,7 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// Returns the rented buffer to <see cref="ArrayPool{T}.Shared"/>. A no-op if this writer has
+        /// Returns the rented buffer to the pool it was rented from. A no-op if this writer has
         /// already been detached (ownership moved to the <see cref="IMemoryOwner{T}"/> returned by
         /// <see cref="Detach"/>) or already disposed.
         /// </summary>
@@ -239,7 +264,7 @@ namespace Akka.Serialization
                 return;
 
             _disposed = true;
-            ArrayPool<byte>.Shared.Return(_buffer!);
+            _pool.Return(_buffer!);
             _buffer = null;
             _written = 0;
         }
@@ -256,9 +281,9 @@ namespace Akka.Serialization
             var grownSize = Math.Max((long)_buffer.Length * 2, neededTotal);
             var newSize = (int)Math.Min(grownSize, _maxCapacity);
 
-            var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+            var newBuffer = _pool.Rent(newSize);
             _buffer.AsSpan(0, _written).CopyTo(newBuffer);
-            ArrayPool<byte>.Shared.Return(_buffer);
+            _pool.Return(_buffer);
             _buffer = newBuffer;
         }
 
@@ -273,15 +298,18 @@ namespace Akka.Serialization
 
         /// <summary>
         /// The <see cref="IMemoryOwner{T}"/> returned by <see cref="Detach"/>: owns the rented array
-        /// that backed the writer and returns it to <see cref="ArrayPool{T}.Shared"/> on disposal.
+        /// that backed the writer and, on disposal, returns it to the SAME pool the writer rented it
+        /// from -- never to a pool the array did not come from.
         /// </summary>
         private sealed class RentedMemoryOwner : IMemoryOwner<byte>
         {
+            private readonly ArrayPool<byte> _pool;
             private byte[]? _array;
             private readonly int _length;
 
-            public RentedMemoryOwner(byte[] array, int length)
+            public RentedMemoryOwner(ArrayPool<byte> pool, byte[] array, int length)
             {
+                _pool = pool;
                 _array = array;
                 _length = length;
             }
@@ -293,7 +321,7 @@ namespace Akka.Serialization
                 if (_array is null)
                     return;
 
-                ArrayPool<byte>.Shared.Return(_array);
+                _pool.Return(_array);
                 _array = null;
             }
         }
