@@ -139,6 +139,16 @@ namespace Akka.Remote.Artery
         /// <param name="senderPath">The sender ref's path, or <see langword="null"/>/empty for no sender.</param>
         /// <param name="recipientPath">The recipient ref's path, or <see langword="null"/>/empty for no recipient.</param>
         /// <param name="message">The message to serialize as the envelope's payload.</param>
+        /// <param name="pool">
+        /// The <see cref="ArrayPool{T}"/> the returned writer rents its backing array from (and
+        /// returns it to, on <see cref="IDisposable.Dispose"/> or on disposal of the
+        /// <see cref="IMemoryOwner{T}"/> returned by <see cref="Akka.Serialization.PooledPayloadWriter.Detach"/>).
+        /// <see langword="null"/> (the default) means <see cref="ArrayPool{T}.Shared"/> -- see
+        /// <see cref="Akka.Serialization.PooledPayloadWriter"/>'s constructor. Exposed (INTERNAL,
+        /// minimal surface) purely so a test can substitute a pool that scribbles over a returned
+        /// array, turning a buffer-lifetime bug into a loud, deterministic assertion failure instead
+        /// of a silent race -- see the G3 opening-refactor Task 2 "poison pool" test.
+        /// </param>
         /// <returns>
         /// A <see cref="Akka.Serialization.PooledPayloadWriter"/> owning the encoded frame
         /// (<c>[u32 LE frame length][envelope]</c> in <see cref="Akka.Serialization.PooledPayloadWriter.WrittenSpan"/>).
@@ -152,7 +162,8 @@ namespace Akka.Remote.Artery
             long originUid,
             string? senderPath,
             string? recipientPath,
-            object message)
+            object message,
+            ArrayPool<byte>? pool = null)
         {
             if (serialization is null)
                 throw new ArgumentNullException(nameof(serialization));
@@ -175,7 +186,7 @@ namespace Akka.Remote.Artery
                 if (payloadSizeHint != Akka.Serialization.SerializerV2.UnknownSize)
                     capacityHint += payloadSizeHint;
 
-                var writer = new Akka.Serialization.PooledPayloadWriter(capacityHint);
+                var writer = new Akka.Serialization.PooledPayloadWriter(capacityHint, pool: pool);
                 try
                 {
                     // Reserve the frame-length field + fixed header; both are back-patched below

@@ -53,6 +53,18 @@ namespace Akka.Remote.Artery
         private volatile HashSet<Address>? _addresses;
         private volatile Address? _defaultAddress;
 
+        /// <summary>
+        /// TEST-ONLY HOOK (INTERNAL API). Overrides the <see cref="ArrayPool{T}"/> that every
+        /// subsequently-materialized outbound stream's <see cref="ArteryEncodeStage"/> rents its
+        /// encode buffers from. Always <see langword="null"/> in production -- meaning
+        /// <see cref="ArrayPool{T}.Shared"/>, <see cref="ArteryEnvelopeCodec.Encode(Akka.Serialization.Serialization,long,string?,string?,object,ArrayPool{byte}?)"/>'s
+        /// own default. Exists solely so a poison-pool test (see the G3 opening-refactor Task 2
+        /// "poison pool" test in <c>ArteryTransportSpec</c>) can substitute a pool that scribbles
+        /// over a returned array, proving <see cref="ArteryEncodeStage"/> never touches a rented
+        /// buffer after it has been returned to the pool.
+        /// </summary>
+        internal static ArrayPool<byte>? EncodePoolOverrideForTests;
+
         private ActorMaterializer? _materializer;
         private TcpExt? _tcp;
         private Tcp.ServerBinding? _binding;
@@ -280,9 +292,11 @@ namespace Akka.Remote.Artery
             var port = remoteAddress.Port
                 ?? throw new RemoteTransportException($"Cannot open an Artery outbound connection to [{remoteAddress}]: missing port.");
 
+            var encodeStage = new ArteryEncodeStage(System.Serialization, _localUniqueAddress.Uid, EncodePoolOverrideForTests);
+
             var frames = ChannelSource.FromReader(association.OutboundReader)
                 .Via(Flow.FromGraph(handshakeStage))
-                .Select(EncodeOutboundElement);
+                .Via(Flow.FromGraph(encodeStage));
 
             var completion = Source.Single(BuildOrdinaryPreamble())
                 .Concat(frames)
@@ -299,16 +313,6 @@ namespace Akka.Remote.Artery
                 else
                     _log.Debug("Artery outbound connection to [{0}] completed.", remoteAddress);
             }, TaskContinuationOptions.ExecuteSynchronously);
-        }
-
-        private ReadOnlySequence<byte> EncodeOutboundElement(IOutboundEnvelope elem)
-        {
-            using var writer = ArteryEnvelopeCodec.Encode(System.Serialization, _localUniqueAddress.Uid, elem.SenderPath, elem.RecipientPath, elem.Message);
-
-            // Copy off the pooled buffer before disposing it -- the Tcp connection stage may not
-            // consume this element synchronously, so we cannot return the writer's own (rented, about
-            // to be returned to the pool) memory.
-            return new ReadOnlySequence<byte>(writer.WrittenSpan.ToArray());
         }
 
         private static ReadOnlySequence<byte> BuildOrdinaryPreamble()
