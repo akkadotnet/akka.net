@@ -124,12 +124,31 @@ namespace Akka.Remote.Artery
         /// (find serializer -&gt; resolve manifest -&gt; serialize) is uniformly both the native-V2 path
         /// AND the classic-serializer compatibility path.
         /// </para>
+        /// <para>
+        /// <b>Capacity hint, not a framing dependency.</b> The pooled writer's initial rented
+        /// capacity also folds in <c>serializer.SizeHint(message)</c> when it isn't
+        /// <see cref="Akka.Serialization.SerializerV2.UnknownSize"/>, so a serializer that can
+        /// cheaply predict its own payload size avoids an extra grow-and-copy. This is purely a
+        /// sizing optimization for the initial rent -- the frame length written to the wire is
+        /// still back-patched from the actual bytes written after <c>Serialize</c> runs, never
+        /// predicted from the hint.
+        /// </para>
         /// </remarks>
         /// <param name="serialization">The actor system's <see cref="Akka.Serialization.Serialization"/> extension.</param>
         /// <param name="originUid">The sending system's UID.</param>
         /// <param name="senderPath">The sender ref's path, or <see langword="null"/>/empty for no sender.</param>
         /// <param name="recipientPath">The recipient ref's path, or <see langword="null"/>/empty for no recipient.</param>
         /// <param name="message">The message to serialize as the envelope's payload.</param>
+        /// <param name="pool">
+        /// The <see cref="ArrayPool{T}"/> the returned writer rents its backing array from (and
+        /// returns it to, on <see cref="IDisposable.Dispose"/> or on disposal of the
+        /// <see cref="IMemoryOwner{T}"/> returned by <see cref="Akka.Serialization.PooledPayloadWriter.Detach"/>).
+        /// <see langword="null"/> (the default) means <see cref="ArrayPool{T}.Shared"/> -- see
+        /// <see cref="Akka.Serialization.PooledPayloadWriter"/>'s constructor. Exposed (INTERNAL,
+        /// minimal surface) purely so a test can substitute a pool that scribbles over a returned
+        /// array, turning a buffer-lifetime bug into a loud, deterministic assertion failure instead
+        /// of a silent race -- see the G3 opening-refactor Task 2 "poison pool" test.
+        /// </param>
         /// <returns>
         /// A <see cref="Akka.Serialization.PooledPayloadWriter"/> owning the encoded frame
         /// (<c>[u32 LE frame length][envelope]</c> in <see cref="Akka.Serialization.PooledPayloadWriter.WrittenSpan"/>).
@@ -143,7 +162,8 @@ namespace Akka.Remote.Artery
             long originUid,
             string? senderPath,
             string? recipientPath,
-            object message)
+            object message,
+            ArrayPool<byte>? pool = null)
         {
             if (serialization is null)
                 throw new ArgumentNullException(nameof(serialization));
@@ -159,7 +179,14 @@ namespace Akka.Remote.Artery
                 var capacityHint = reservedPrefixLength
                     + LiteralWireSize(senderPath) + LiteralWireSize(recipientPath) + LiteralWireSize(manifest);
 
-                var writer = new Akka.Serialization.PooledPayloadWriter(capacityHint);
+                // Fold in the serializer's own size hint (a hint only -- the frame length is still
+                // back-patched from actual bytes written below, never predicted) so the pooled
+                // writer's initial rent is sized for the payload too, not just the header/literals.
+                var payloadSizeHint = serializer.SizeHint(message);
+                if (payloadSizeHint != Akka.Serialization.SerializerV2.UnknownSize)
+                    capacityHint += payloadSizeHint;
+
+                var writer = new Akka.Serialization.PooledPayloadWriter(capacityHint, pool: pool);
                 try
                 {
                     // Reserve the frame-length field + fixed header; both are back-patched below

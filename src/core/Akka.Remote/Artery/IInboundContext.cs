@@ -22,14 +22,13 @@ namespace Akka.Remote.Artery
     /// mirrors the role Pekko's <c>InboundContext</c> plays for the handshake stage.
     ///
     /// <para>
-    /// <b>Element-type note.</b> The handshake stages are declared over <c>object</c> elements
-    /// (<c>GraphStage&lt;FlowShape&lt;object, object&gt;&gt;</c>) rather than dedicated
-    /// <c>OutboundEnvelope</c> / <c>InboundEnvelope</c> carrier types. G2 does not yet need
-    /// recipient/sender routing metadata on the element itself — that arrives with the queueing
-    /// and lane-routing work in a later chunk, which owns the decision of what the real envelope
-    /// shape looks like. Using <c>object</c> now avoids designing (and later having to redesign)
-    /// a carrier type prematurely, per the task's own "prefer generic/object elements if simpler"
-    /// guidance.
+    /// <b>Element-type note (G3).</b> <see cref="SendControl"/> takes the raw control message
+    /// (e.g. a <see cref="HandshakeRsp"/>), not a stream element -- the caller
+    /// (<c>ArteryRemoting.SendControlToAddress</c>) is what wraps it in an
+    /// <see cref="OutboundEnvelope"/> before it re-enters the outbound pipeline. The handshake
+    /// stages themselves are now typed <c>GraphStage&lt;FlowShape&lt;IInboundEnvelope, IInboundEnvelope&gt;&gt;</c>
+    /// / <c>GraphStage&lt;FlowShape&lt;IOutboundEnvelope, IOutboundEnvelope&gt;&gt;</c> -- see
+    /// <see cref="InboundHandshakeStage"/> / <see cref="OutboundHandshakeStage"/>.
     /// </para>
     /// </summary>
     internal interface IInboundContext
@@ -53,6 +52,17 @@ namespace Akka.Remote.Artery
         /// Used by <see cref="InboundHandshakeStage"/> to reply with a <see cref="HandshakeRsp"/>.
         /// </summary>
         void SendControl(Address to, object message);
+
+        /// <summary>
+        /// Whether <paramref name="originUid"/> is a known (handshake-completed) association,
+        /// per the SHARED <see cref="AssociationRegistry"/> reverse index — NOT a per-connection
+        /// flag. This is what lets <see cref="InboundHandshakeStage"/> gate ordinary-stream
+        /// envelopes on a connection that never itself carried a <see cref="HandshakeReq"/>/
+        /// <see cref="HandshakeRsp"/> (task group 6, "Control Stream": handshake messages travel
+        /// over a SEPARATE control connection once 6.3 lands, so the ordinary connection's own
+        /// <see cref="InboundHandshakeStage"/> instance would otherwise never observe one).
+        /// </summary>
+        bool IsKnownOrigin(long originUid);
     }
 
     /// <summary>
@@ -90,5 +100,8 @@ namespace Akka.Remote.Artery
 
         /// <inheritdoc/>
         public void SendControl(Address to, object message) => _sendControl(to, message);
+
+        /// <inheritdoc/>
+        public bool IsKnownOrigin(long originUid) => _registry.TryGetByUid(originUid) is not null;
     }
 }

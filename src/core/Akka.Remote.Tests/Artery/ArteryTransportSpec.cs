@@ -8,10 +8,12 @@
 #nullable enable
 
 using System;
+using System.Buffers;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Remote.Artery;
 using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using FluentAssertions;
@@ -208,6 +210,85 @@ namespace Akka.Remote.Tests.Artery
                 // test) if either system fails to terminate within the timeout.
                 await systemA.Terminate().AwaitWithTimeout(10.Seconds());
                 await systemB.Terminate().AwaitWithTimeout(10.Seconds());
+            }
+        }
+
+        /// <summary>
+        /// <see cref="ArrayPool{T}"/> that scribbles <c>0xDE</c> over every array it hands back to
+        /// its (privately owned, test-only) inner pool. Used by
+        /// <see cref="Should_Not_Corrupt_Payloads_When_Outbound_Encode_Buffers_Are_Returned_Early"/>
+        /// to turn a buffer-lifetime-safety regression in <c>ArteryEncodeStage</c> into a loud,
+        /// deterministic assertion failure instead of a silent, timing-dependent race: if
+        /// <c>ArteryEncodeStage</c> ever disposed a pending owner before the TCP write path's
+        /// synchronous copy actually ran, the poisoned bytes would clobber the in-flight frame and
+        /// the echoed payload would come back garbled. This is exactly the tripwire that caught the
+        /// naive "dispose at this stage's own very next <c>OnPull</c>" design during development --
+        /// see <c>ArteryEncodeStage</c>'s "empirical finding" remarks for the full story and why it
+        /// now keeps two generations of buffers alive instead of one.
+        /// A dedicated <see cref="ArrayPool{T}.Create()"/> instance is used for rent/return (never
+        /// <see cref="ArrayPool{T}.Shared"/>) so poisoning never leaks into unrelated code running in
+        /// the same process.
+        /// </summary>
+        private sealed class PoisoningArrayPool : ArrayPool<byte>
+        {
+            private const byte PoisonByte = 0xDE;
+            private readonly ArrayPool<byte> _inner = Create();
+
+            public override byte[] Rent(int minimumLength) => _inner.Rent(minimumLength);
+
+            public override void Return(byte[] array, bool clearArray = false)
+            {
+                Array.Fill(array, PoisonByte);
+                _inner.Return(array, clearArray: false);
+            }
+        }
+
+        [Fact(DisplayName = "Poison-pool tripwire: outbound encode buffers are never touched after ArteryEncodeStage returns them to the pool")]
+        public async Task Should_Not_Corrupt_Payloads_When_Outbound_Encode_Buffers_Are_Returned_Early()
+        {
+            var poisonPool = new PoisoningArrayPool();
+
+            // ArteryTransportSetup (not a mutable static field) carries the pool override --
+            // scoped to just these two ActorSystems, so a concurrently-running test elsewhere in
+            // the suite can never race this one over a shared static. See ArteryTransportSetup's
+            // remarks for the full rationale (this replaces the former
+            // ArteryRemoting.EncodePoolOverrideForTests static field).
+            var setup = BootstrapSetup.Create().WithConfig(ArteryConfig()).And(new ArteryTransportSetup(poisonPool));
+
+            ActorSystem? systemA = null;
+            ActorSystem? systemB = null;
+            try
+            {
+                systemA = ActorSystem.Create("ArteryPoisonPoolA", setup);
+                systemB = ActorSystem.Create("ArteryPoisonPoolB", setup);
+
+                systemB.ActorOf(Props.Create(() => new Echo()), "echo");
+
+                var echoRef = await systemA.ActorSelection(EchoSelectionPath(systemB, "echo")).ResolveOne(TimeSpan.FromSeconds(10));
+                var probe = CreateTestProbe(systemA);
+
+                // N=150 sequential, distinct-payload round trips: every message flows through BOTH
+                // directions' ArteryEncodeStage (A->B ordinary send, B->A echo reply), each direction
+                // repeatedly exercising its two-generation buffer-disposal cycle against the poisoned
+                // pool.
+                const int messageCount = 150;
+                for (var i = 0; i < messageCount; i++)
+                {
+                    var payload = $"poison-pool-msg-{i:D4}-" + new string((char)('a' + i % 26), 64);
+
+                    echoRef.Tell(payload, probe.Ref);
+                    var echoed = await probe.ExpectMsgAsync<string>(TimeSpan.FromSeconds(10));
+
+                    echoed.Should().Be(payload,
+                        "message {0}'s outbound encode buffer must not have been reused/poisoned before its bytes were safely copied into the TCP pipe", i);
+                }
+            }
+            finally
+            {
+                if (systemA is not null)
+                    await systemA.Terminate().AwaitWithTimeout(10.Seconds());
+                if (systemB is not null)
+                    await systemB.Terminate().AwaitWithTimeout(10.Seconds());
             }
         }
     }

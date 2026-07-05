@@ -418,6 +418,33 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         RoundTrip(message).Should().Be(message);
     }
 
+    [Fact(DisplayName = "Generated serializer should round-trip a live IActorRef through Akka serialization")]
+    public async Task Generated_serializer_should_round_trip_a_live_IActorRef_through_Akka_serialization()
+    {
+        var setup = ActorSystemSetup.Create(GeneratedTestSerializer.CreateRegistration().CreateSetup());
+        var system = ActorSystem.Create("generated-messagepack-live-ref-spec", setup);
+        try
+        {
+            var actorRef = system.ActorOf(Props.Empty, "live-ref-target");
+            var message = new ReplyMessage("order-1", actorRef);
+
+            var serializer = system.Serialization.FindSerializerFor(message);
+            var bytes = system.Serialization.Serialize(message);
+            var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, message);
+            var deserialized = system.Serialization.Deserialize(bytes, serializer.Identifier, manifest)
+                .Should().BeOfType<ReplyMessage>().Subject;
+
+            deserialized.ReplyTo.Should().NotBeNull();
+            deserialized.ReplyTo.Should().NotBe(ActorRefs.NoSender);
+            deserialized.ReplyTo!.Path.ToString().Should().Be(actorRef.Path.ToString());
+            deserialized.ReplyTo.Should().Be(actorRef);
+        }
+        finally
+        {
+            await system.Terminate();
+        }
+    }
+
     [Fact(DisplayName = "Generated serializer should round-trip nested value objects without manifests")]
     public void Generated_serializer_should_round_trip_nested_value_objects_without_manifests()
     {
