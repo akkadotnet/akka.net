@@ -293,8 +293,13 @@ namespace Akka.Remote.Tests.Artery
             var req = await outSub.ExpectNextAsync(TimeSpan.FromSeconds(2));
             req.Should().BeOfType<HandshakeReq>();
 
+            // Deliberately grant NO downstream demand during the hold window: with zero demand the
+            // stage cannot emit anything (a push would be a Reactive Streams violation the probe
+            // catches), so this window is immune to retry-timer phase. Granting demand here made
+            // the assertion a timer-phase coin flip — the 200ms retry interval races the 200ms
+            // window and a (legal, idempotent) retry HandshakeReq lands inside it on slow CI
+            // agents; see PR #8320 CI failure.
             await outPub.SendNextAsync("payload-1");
-            await outSub.RequestAsync(1);
             await outSub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
             // Feed the (simulated) remote peer's Rsp into OUR inbound pipeline.
@@ -303,11 +308,32 @@ namespace Akka.Remote.Tests.Artery
             await inPub.SendNextAsync(new HandshakeRsp(remoteUniqueAddress));
             await inSub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
-            registry.TryGetByUid(remoteUniqueAddress.Uid).Should().NotBeNull();
+            // Deterministic gate: wait until the inbound stage's CompleteHandshake has actually
+            // been recorded before expecting the outbound stage to observe it.
+            await AwaitConditionAsync(() => registry.TryGetByUid(remoteUniqueAddress.Uid) != null,
+                TimeSpan.FromSeconds(3));
 
             // The SAME AssociationRegistry backs both contexts, so the outbound stage's polling
-            // of AssociationState observes the completion the inbound stage just recorded.
-            var delivered = await outSub.ExpectNextAsync(TimeSpan.FromSeconds(3));
+            // of AssociationState observes the completion the inbound stage just recorded. Retry
+            // HandshakeReqs queued while demand was withheld may drain first — they are legal
+            // protocol traffic (requests are idempotent); only the held payload's release order
+            // relative to OTHER USER MESSAGES matters, so skip Reqs while fishing.
+            object delivered;
+            var drainedRetries = 0;
+            while (true)
+            {
+                await outSub.RequestAsync(1);
+                delivered = await outSub.ExpectNextAsync(TimeSpan.FromSeconds(3));
+                if (delivered is HandshakeReq)
+                {
+                    drainedRetries++;
+                    drainedRetries.Should().BeLessThan(10, "retry HandshakeReqs must stop once the handshake completes");
+                    continue;
+                }
+
+                break;
+            }
+
             delivered.Should().Be("payload-1");
         }
 
