@@ -81,6 +81,7 @@ namespace Akka.Remote.Tests.Artery
             settings.HandshakeTimeout.Should().Be(20.Seconds());
             settings.HandshakeRetryInterval.Should().Be(1.Seconds());
             settings.InjectHandshakeInterval.Should().Be(1.Seconds());
+            settings.ControlHeartbeatInterval.Should().Be(5.Seconds());
         }
 
         [Theory(DisplayName = "Should_ThrowConfigurationException_When_ArterySettingIsInvalid")]

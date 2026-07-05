@@ -19,7 +19,11 @@ namespace Akka.Remote.Artery
     /// INTERNAL API.
     ///
     /// Hand-rolled V2 MessagePack serializer for the Artery control/handshake messages
-    /// (<see cref="HandshakeReq"/> / <see cref="HandshakeRsp"/>).
+    /// (<see cref="HandshakeReq"/> / <see cref="HandshakeRsp"/> / <see cref="ArteryHeartbeat"/> /
+    /// <see cref="ArteryHeartbeatRsp"/> / <see cref="ArteryQuarantined"/> -- the latter three
+    /// added at task group 6, "Control Stream", task 6.4/6.5, extending the SAME hand-rolled
+    /// serializer found on this branch rather than replacing it with sourcegen; see the task
+    /// report for why sourcegen still cannot be used here).
     ///
     /// <para>
     /// Design.md ("Handshake + association/UID (gate G2)") pins handshake message encoding to
@@ -56,8 +60,24 @@ namespace Akka.Remote.Artery
         /// </summary>
         public const string HandshakeRspManifest = "HSRsp";
 
+        /// <summary>
+        /// The manifest for <see cref="ArteryHeartbeat"/>.
+        /// </summary>
+        public const string HeartbeatManifest = "HB";
+
+        /// <summary>
+        /// The manifest for <see cref="ArteryHeartbeatRsp"/>.
+        /// </summary>
+        public const string HeartbeatRspManifest = "HBR";
+
+        /// <summary>
+        /// The manifest for <see cref="ArteryQuarantined"/>.
+        /// </summary>
+        public const string QuarantinedManifest = "QRN";
+
         private const int FromFieldId = 1;
         private const int ToFieldId = 2;
+        private const int QuarantinedUidFieldId = 2;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ArteryControlMessageSerializer"/> class.
@@ -82,6 +102,9 @@ namespace Akka.Remote.Artery
         {
             HandshakeReq => HandshakeReqManifest,
             HandshakeRsp => HandshakeRspManifest,
+            ArteryHeartbeat => HeartbeatManifest,
+            ArteryHeartbeatRsp => HeartbeatRspManifest,
+            ArteryQuarantined => QuarantinedManifest,
             _ => throw new ArgumentException($"Unsupported Artery control message type: {obj.GetType()}", nameof(obj))
         };
 
@@ -90,6 +113,9 @@ namespace Akka.Remote.Artery
         {
             HandshakeReq req => SizeOfReq(req),
             HandshakeRsp rsp => SizeOfRsp(rsp),
+            ArteryHeartbeat => SizeOfMapHeader(0),
+            ArteryHeartbeatRsp => SizeOfMapHeader(0),
+            ArteryQuarantined q => SizeOfQuarantined(q),
             _ => UnknownSize
         };
 
@@ -107,6 +133,15 @@ namespace Akka.Remote.Artery
                 case HandshakeRsp rsp:
                     WriteRsp(ref messagePackWriter, rsp);
                     break;
+                case ArteryHeartbeat:
+                case ArteryHeartbeatRsp:
+                    // No fields -- an empty map is forward-compatible (an unknown-field skip loop
+                    // handles any fields a future version might add).
+                    messagePackWriter.WriteMapHeader(0);
+                    break;
+                case ArteryQuarantined quarantined:
+                    WriteQuarantined(ref messagePackWriter, quarantined);
+                    break;
                 default:
                     throw new ArgumentException($"Unsupported Artery control message type: {obj.GetType()}", nameof(obj));
             }
@@ -123,6 +158,9 @@ namespace Akka.Remote.Artery
             {
                 HandshakeReqManifest => ReadReq(ref reader),
                 HandshakeRspManifest => ReadRsp(ref reader),
+                HeartbeatManifest => ReadEmpty<ArteryHeartbeat>(ref reader, new ArteryHeartbeat()),
+                HeartbeatRspManifest => ReadEmpty<ArteryHeartbeatRsp>(ref reader, new ArteryHeartbeatRsp()),
+                QuarantinedManifest => ReadQuarantined(ref reader),
                 _ => throw new SerializationException($"Unknown Artery control message manifest [{manifest}].")
             };
         }
@@ -199,6 +237,65 @@ namespace Akka.Remote.Artery
             return new HandshakeRsp(from.Value);
         }
 
+        private static void WriteQuarantined(ref MessagePackWriter writer, ArteryQuarantined quarantined)
+        {
+            writer.WriteMapHeader(2);
+            writer.Write(FromFieldId);
+            WriteUniqueAddress(ref writer, quarantined.From);
+            writer.Write(QuarantinedUidFieldId);
+            writer.Write(quarantined.QuarantinedUid);
+        }
+
+        private static ArteryQuarantined ReadQuarantined(ref MessagePackReader reader)
+        {
+            var fieldCount = reader.ReadMapHeader();
+            UniqueAddress? from = null;
+            long? quarantinedUid = null;
+
+            for (var i = 0; i < fieldCount; i++)
+            {
+                var fieldId = reader.ReadInt32();
+                switch (fieldId)
+                {
+                    case FromFieldId:
+                        from = ReadUniqueAddress(ref reader);
+                        break;
+                    case QuarantinedUidFieldId:
+                        quarantinedUid = reader.ReadInt64();
+                        break;
+                    default:
+                        reader.Skip();
+                        break;
+                }
+            }
+
+            if (from is null)
+                throw new SerializationException($"Missing required field [From] with index [{FromFieldId}] for [{QuarantinedManifest}].");
+            if (quarantinedUid is null)
+                throw new SerializationException($"Missing required field [QuarantinedUid] with index [{QuarantinedUidFieldId}] for [{QuarantinedManifest}].");
+
+            return new ArteryQuarantined(from.Value, quarantinedUid.Value);
+        }
+
+        /// <summary>
+        /// Reads (and discards, forward-compatibly) a MessagePack map for a fieldless control
+        /// message (<see cref="ArteryHeartbeat"/> / <see cref="ArteryHeartbeatRsp"/>), returning
+        /// <paramref name="instance"/>. A shared helper since both messages have identical
+        /// (empty) wire shapes.
+        /// </summary>
+        private static TMessage ReadEmpty<TMessage>(ref MessagePackReader reader, TMessage instance)
+            where TMessage : IArteryControlMessage
+        {
+            var fieldCount = reader.ReadMapHeader();
+            for (var i = 0; i < fieldCount; i++)
+            {
+                reader.ReadInt32();
+                reader.Skip();
+            }
+
+            return instance;
+        }
+
         private static void WriteAddress(ref MessagePackWriter writer, Address address)
         {
             writer.WriteArrayHeader(4);
@@ -266,6 +363,11 @@ namespace Akka.Remote.Artery
         private static int SizeOfRsp(HandshakeRsp rsp) =>
             SizeOfMapHeader(1) +
             SizeOfInt32(FromFieldId) + SizeOfUniqueAddress(rsp.From);
+
+        private static int SizeOfQuarantined(ArteryQuarantined quarantined) =>
+            SizeOfMapHeader(2) +
+            SizeOfInt32(FromFieldId) + SizeOfUniqueAddress(quarantined.From) +
+            SizeOfInt32(QuarantinedUidFieldId) + SizeOfInt64(quarantined.QuarantinedUid);
 
         /// <summary>
         /// Counts bytes advanced through an inner <see cref="IBufferWriter{T}"/> so

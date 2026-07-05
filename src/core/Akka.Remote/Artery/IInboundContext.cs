@@ -52,6 +52,17 @@ namespace Akka.Remote.Artery
         /// Used by <see cref="InboundHandshakeStage"/> to reply with a <see cref="HandshakeRsp"/>.
         /// </summary>
         void SendControl(Address to, object message);
+
+        /// <summary>
+        /// Whether <paramref name="originUid"/> is a known (handshake-completed) association,
+        /// per the SHARED <see cref="AssociationRegistry"/> reverse index — NOT a per-connection
+        /// flag. This is what lets <see cref="InboundHandshakeStage"/> gate ordinary-stream
+        /// envelopes on a connection that never itself carried a <see cref="HandshakeReq"/>/
+        /// <see cref="HandshakeRsp"/> (task group 6, "Control Stream": handshake messages travel
+        /// over a SEPARATE control connection once 6.3 lands, so the ordinary connection's own
+        /// <see cref="InboundHandshakeStage"/> instance would otherwise never observe one).
+        /// </summary>
+        bool IsKnownOrigin(long originUid);
     }
 
     /// <summary>
@@ -89,5 +100,8 @@ namespace Akka.Remote.Artery
 
         /// <inheritdoc/>
         public void SendControl(Address to, object message) => _sendControl(to, message);
+
+        /// <inheritdoc/>
+        public bool IsKnownOrigin(long originUid) => _registry.TryGetByUid(originUid) is not null;
     }
 }

@@ -90,6 +90,12 @@ namespace Akka.Remote.Artery
         public TimeSpan InjectHandshakeInterval { get; }
 
         /// <summary>
+        /// How often the control stream sends a liveness <c>ArteryHeartbeat</c> while otherwise
+        /// idle (task group 6, "Control Stream" -- task 6.4). See <see cref="ArteryHeartbeatStage"/>.
+        /// </summary>
+        public TimeSpan ControlHeartbeatInterval { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ArterySettings"/> class from the
         /// <c>akka.remote.artery</c> sub-config.
         /// </summary>
@@ -137,6 +143,7 @@ namespace Akka.Remote.Artery
             HandshakeTimeout = GetPositiveTimeSpan(arteryConfig, "advanced.handshake-timeout", TimeSpan.FromSeconds(20));
             HandshakeRetryInterval = GetPositiveTimeSpan(arteryConfig, "advanced.handshake-retry-interval", TimeSpan.FromSeconds(1));
             InjectHandshakeInterval = GetPositiveTimeSpan(arteryConfig, "advanced.inject-handshake-interval", TimeSpan.FromSeconds(1));
+            ControlHeartbeatInterval = GetPositiveTimeSpan(arteryConfig, "advanced.control-heartbeat-interval", TimeSpan.FromSeconds(5));
         }
 
         private static TimeSpan GetPositiveTimeSpan(Config config, string path, TimeSpan @default)

@@ -51,9 +51,15 @@ namespace Akka.Remote.Tests.Artery
 
         private static Address NewRemote() => new("akka", "remote-sys", "remote-host", 2552);
 
-        /// <summary>An ordinary (non-control) inbound test envelope. OriginUid/SerializerId are not exercised by these stages, so arbitrary placeholder values are used.</summary>
-        private static IInboundEnvelope OrdinaryInbound(object message, string? senderPath = null, string recipientPath = "akka://remote-sys@remote-host:2552/user/recipient") =>
-            new InboundEnvelope(message, senderPath, recipientPath, OriginUid: 0L, SerializerId: 0, Manifest: "test-manifest");
+        /// <summary>
+        /// An ordinary (non-control) inbound test envelope. SerializerId is not exercised by these
+        /// stages, so an arbitrary placeholder value is used. <c>originUid</c> DOES matter as of
+        /// task group 6 (control stream): <see cref="InboundHandshakeStage"/> now gates ordinary
+        /// envelopes on <see cref="IInboundContext.IsKnownOrigin"/>, a registry lookup keyed by
+        /// this exact value -- see that stage's "Known origin is now a SHARED-registry check" remarks.
+        /// </summary>
+        private static IInboundEnvelope OrdinaryInbound(object message, string? senderPath = null, string recipientPath = "akka://remote-sys@remote-host:2552/user/recipient", long originUid = 0L) =>
+            new InboundEnvelope(message, senderPath, recipientPath, originUid, SerializerId: 0, Manifest: "test-manifest");
 
         /// <summary>A control inbound test envelope wrapping a handshake message.</summary>
         private static IInboundEnvelope ControlInbound(IArteryControlMessage message, long originUid) =>
@@ -224,6 +230,94 @@ namespace Akka.Remote.Tests.Artery
             error.Should().BeOfType<HandshakeTimeoutException>();
         }
 
+        [Fact(DisplayName = "OutboundHandshakeStage (isControlStream: false) should route the injected HandshakeReq via Context.SendControl instead of its own Out (task 6.3: ordinary stream's Req travels over the control channel)")]
+        public async Task OutboundHandshakeStage_non_control_should_route_req_via_send_control()
+        {
+            var registry = new AssociationRegistry();
+            var localAddress = NewLocal();
+            var remoteAddress = NewRemote();
+            var sentControl = new System.Collections.Generic.List<object>();
+            var context = new AssociationRegistryOutboundContext(registry, localAddress, remoteAddress, sentControl.Add);
+            var stage = new OutboundHandshakeStage(
+                context,
+                retryInterval: TimeSpan.FromMilliseconds(150),
+                handshakeTimeout: TimeSpan.FromSeconds(30),
+                injectHandshakeInterval: TimeSpan.FromSeconds(30),
+                isControlStream: false);
+
+            var materializer = ActorMaterializer.Create(Sys);
+            var (pub, sub) = this.SourceProbe<IOutboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(stage), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IOutboundEnvelope>(), Keep.Both)
+                .Run(materializer);
+
+            // Request demand and wait long enough for at least one retry-interval tick to have
+            // fired -- the Req must NOT appear on this stage's own Out (it travels via SendControl
+            // instead), so nothing should be delivered here even though the stage is actively
+            // (re)injecting on the side channel the whole time.
+            await sub.RequestAsync(1);
+            await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(400));
+
+            await AwaitConditionAsync(() => Task.FromResult(sentControl.Count > 0), TimeSpan.FromSeconds(2));
+            sentControl.Should().AllBeOfType<HandshakeReq>("the ordinary stream's injected Req must travel via the control side channel, not inline");
+            ((HandshakeReq)sentControl[0]).From.Should().Be(localAddress);
+            ((HandshakeReq)sentControl[0]).To.Should().Be(remoteAddress);
+
+            // A user element sent while incomplete is still held (never dropped) -- gating
+            // behavior is unchanged by the control-routing change.
+            await pub.SendNextAsync(new OutboundEnvelope("user-message", null, null));
+            await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
+
+            registry.CompleteHandshake(remoteAddress, new UniqueAddress(remoteAddress, 555L));
+
+            var delivered = await sub.ExpectNextAsync(TimeSpan.FromSeconds(3));
+            delivered.Message.Should().Be("user-message");
+        }
+
+        [Fact(DisplayName = "OutboundHandshakeStage (isControlStream: false) should flow a user element through immediately on liveness re-injection, without holding it (task 6.3: the Req no longer competes for this stream's Out slot)")]
+        public async Task OutboundHandshakeStage_non_control_should_not_hold_elements_for_liveness_reinject()
+        {
+            var registry = new AssociationRegistry();
+            var localAddress = NewLocal();
+            var remoteAddress = NewRemote();
+            var sentControl = new System.Collections.Generic.List<object>();
+            var context = new AssociationRegistryOutboundContext(registry, localAddress, remoteAddress, sentControl.Add);
+
+            // Already-associated at PreStart (Completed immediately) -- exercises the
+            // "ShouldReinjectForLiveness" path directly rather than the initial handshake path.
+            registry.CompleteHandshake(remoteAddress, new UniqueAddress(remoteAddress, 777L));
+
+            var stage = new OutboundHandshakeStage(
+                context,
+                retryInterval: TimeSpan.FromSeconds(30),
+                handshakeTimeout: TimeSpan.FromSeconds(30),
+                injectHandshakeInterval: TimeSpan.FromMilliseconds(20), // "due" for reinjection well before the delay below elapses
+                isControlStream: false);
+
+            var materializer = ActorMaterializer.Create(Sys);
+            var (pub, sub) = this.SourceProbe<IOutboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(stage), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IOutboundEnvelope>(), Keep.Both)
+                .Run(materializer);
+
+            await sub.RequestAsync(1);
+
+            // Deterministically clear the injectHandshakeInterval window (set at PreStart, since
+            // the association is already completed) before sending -- otherwise this assertion
+            // would race PreStart's timestamp against however fast the test harness happens to
+            // shuttle the SourceProbe/SinkProbe round trip on a given run.
+            await Task.Delay(TimeSpan.FromMilliseconds(100));
+
+            await pub.SendNextAsync(new OutboundEnvelope("immediate-payload", null, null));
+
+            // The user element flows through on THIS pull -- it is not held behind a Req that
+            // would otherwise have shared this stream's Out slot.
+            var delivered = await sub.ExpectNextAsync(TimeSpan.FromSeconds(2));
+            delivered.Message.Should().Be("immediate-payload");
+
+            sentControl.Should().ContainSingle().Which.Should().BeOfType<HandshakeReq>("liveness re-injection still fires, just via the control side channel");
+        }
+
         #endregion
 
         #region InboundHandshakeStage
@@ -301,17 +395,59 @@ namespace Akka.Remote.Tests.Artery
 
             await sub.RequestAsync(1);
 
-            await pub.SendNextAsync(OrdinaryInbound("ordinary-before-handshake"));
+            var peer = new UniqueAddress(NewRemote(), 222L);
+
+            // Task group 6: "known origin" is now a shared-registry lookup keyed by the envelope's
+            // OWN OriginUid (see OrdinaryInbound's remarks) -- NOT a per-connection flag set only
+            // by seeing a Req/Rsp on this exact stage instance (that was the G2 shape, when
+            // handshake still rode the ordinary connection). So this envelope's uid (222L, matching
+            // `peer`) is unknown to the registry until the HandshakeReq below completes it.
+            await pub.SendNextAsync(OrdinaryInbound("ordinary-before-handshake", originUid: peer.Uid));
             await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
 
-            var peer = new UniqueAddress(NewRemote(), 222L);
             await pub.SendNextAsync(ControlInbound(new HandshakeReq(peer, localAddress.Address), peer.Uid));
             await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
 
-            await pub.SendNextAsync(OrdinaryInbound("ordinary-after-handshake"));
+            await pub.SendNextAsync(OrdinaryInbound("ordinary-after-handshake", originUid: peer.Uid));
             var delivered = await sub.ExpectNextAsync(TimeSpan.FromSeconds(2));
             delivered.IsControl.Should().BeFalse();
             delivered.Message.Should().Be("ordinary-after-handshake");
+        }
+
+        [Fact(DisplayName = "InboundHandshakeStage should gate on the envelope's OWN OriginUid, not on which connection carried the handshake (task 6.2/6.3: handshake now travels on a SEPARATE control connection from ordinary traffic)")]
+        public async Task InboundHandshakeStage_should_gate_by_registry_not_by_owning_connection()
+        {
+            // Simulates task group 6's actual topology: ONE InboundHandshakeStage instance for an
+            // ORDINARY connection that NEVER itself sees a HandshakeReq/Rsp (those arrive on a
+            // separate CONTROL connection, processed by a DIFFERENT stage instance sharing the
+            // SAME AssociationRegistry). Proves the ordinary connection's own stage instance still
+            // gates correctly via the shared registry.
+            var registry = new AssociationRegistry();
+            var localAddress = NewLocal();
+            var ordinaryContext = new AssociationRegistryInboundContext(registry, localAddress, (_, _) => { });
+            var ordinaryStage = new InboundHandshakeStage(ordinaryContext);
+
+            var materializer = ActorMaterializer.Create(Sys);
+            var (pub, sub) = this.SourceProbe<IInboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(ordinaryStage), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IInboundEnvelope>(), Keep.Both)
+                .Run(materializer);
+
+            await sub.RequestAsync(1);
+
+            var peer = new UniqueAddress(NewRemote(), 333L);
+            await pub.SendNextAsync(OrdinaryInbound("too-early", originUid: peer.Uid));
+            await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+
+            // The handshake completes via the SHARED REGISTRY directly -- standing in for a
+            // separate control connection's own InboundHandshakeStage instance calling
+            // Context.CompleteHandshake. This ordinary-connection stage instance never itself
+            // processes a HandshakeReq/Rsp.
+            registry.CompleteHandshake(peer.Address, peer);
+
+            await pub.SendNextAsync(OrdinaryInbound("now-known", originUid: peer.Uid));
+            var delivered = await sub.ExpectNextAsync(TimeSpan.FromSeconds(2));
+            delivered.Message.Should().Be("now-known");
         }
 
         [Fact(DisplayName = "InboundHandshakeStage should complete the handshake on HandshakeRsp and swallow it (never propagated)")]
@@ -335,6 +471,30 @@ namespace Akka.Remote.Tests.Artery
 
             await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
             registry.TryGetByUid(peer.Uid).Should().NotBeNull();
+        }
+
+        [Fact(DisplayName = "InboundHandshakeStage should pass through a non-handshake control message unchanged (task 6.2: heartbeat/quarantine dispatch to IControlMessageSubscriber happens downstream)")]
+        public async Task InboundHandshakeStage_should_pass_through_other_control_messages()
+        {
+            var registry = new AssociationRegistry();
+            var localAddress = NewLocal();
+            var context = new AssociationRegistryInboundContext(registry, localAddress, (_, _) => { });
+            var stage = new InboundHandshakeStage(context);
+
+            var materializer = ActorMaterializer.Create(Sys);
+            var (pub, sub) = this.SourceProbe<IInboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(stage), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IInboundEnvelope>(), Keep.Both)
+                .Run(materializer);
+
+            await sub.RequestAsync(1);
+
+            var peer = new UniqueAddress(NewRemote(), 444L);
+            await pub.SendNextAsync(ControlInbound(new ArteryHeartbeat(), peer.Uid));
+
+            var delivered = await sub.ExpectNextAsync(TimeSpan.FromSeconds(2));
+            delivered.IsControl.Should().BeTrue("a non-handshake control message is still a control envelope");
+            delivered.Message.Should().BeOfType<ArteryHeartbeat>();
         }
 
         #endregion
