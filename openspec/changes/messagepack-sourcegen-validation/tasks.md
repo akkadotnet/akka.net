@@ -55,6 +55,8 @@
 - [ ] 5.11 Reject unsupported mutable, factory-only, or arbitrary polymorphic message shapes with diagnostics
 - [x] 5.12 Implement exact generated size calculators for schemas whose full encoded size can be proven
 - [x] 5.13 Support `[AkkaEnvelopePayload]` fields through runtime Akka serializer lookup
+- [x] 5.14 Support foreign-type formatters via [AkkaSerializerFormatter] escape hatch (AddressFormatter/ActorPathFormatter built-ins, byte-compatible with Artery control-message wire format)
+- [x] 5.15 Honor declared accessibility of serializer partial classes (internal serializers)
 
 ## 6. Integration Validation
 
