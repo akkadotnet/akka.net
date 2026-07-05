@@ -116,6 +116,24 @@ namespace Akka.Remote.Artery
         /// </summary>
         private readonly ConcurrentDictionary<long, bool> _quarantineDropLogged = new();
 
+        /// <summary>
+        /// Same latch shape as <see cref="_quarantineDropLogged"/>, applied to the ORDINARY
+        /// outbound queue's overflow-drop warning (a flooded producer can otherwise log once PER
+        /// DROPPED MESSAGE -- thousands of formatted log lines during a burst -- which was itself
+        /// an amplifier of unrelated ThreadPool starvation observed under CI load). Keyed by uid
+        /// for the same reason: a reconnect (new incarnation) gets its own fresh unlogged state,
+        /// rather than a stale latch from a prior incarnation permanently silencing the warning.
+        /// Sends observed before the handshake resolves a peer uid all share the reserved
+        /// <see cref="PreHandshakeOverflowUid"/> bucket.
+        /// </summary>
+        private readonly ConcurrentDictionary<long, bool> _ordinaryOverflowDropLogged = new();
+
+        /// <summary>
+        /// Reserved uid bucket for <see cref="ShouldLogOrdinaryOverflowDrop"/> calls that occur
+        /// before this association's handshake has resolved a real peer uid.
+        /// </summary>
+        private const long PreHandshakeOverflowUid = long.MinValue;
+
         public Association(
             Address remoteAddress,
             int outboundQueueCapacity = DefaultOutboundQueueCapacity,
@@ -226,6 +244,17 @@ namespace Akka.Remote.Artery
         /// silent).
         /// </summary>
         public bool ShouldLogQuarantineDrop(long uid) => _quarantineDropLogged.TryAdd(uid, true);
+
+        /// <summary>
+        /// Records ("log once per association, not per message" -- same discipline as
+        /// <see cref="ShouldLogQuarantineDrop"/>) that an ORDINARY outbound queue overflow-drop
+        /// warning has been logged for <paramref name="uid"/> (or, pre-handshake, the reserved
+        /// <see cref="PreHandshakeOverflowUid"/> bucket). Returns <see langword="true"/> the FIRST
+        /// time it is called for a given uid (the caller should log), and <see langword="false"/>
+        /// every subsequent call for that same uid (the caller should stay silent and just drop).
+        /// </summary>
+        public bool ShouldLogOrdinaryOverflowDrop(long? uid) =>
+            _ordinaryOverflowDropLogged.TryAdd(uid ?? PreHandshakeOverflowUid, true);
 
         /// <summary>
         /// CAS loop applying <see cref="AssociationState.CompleteHandshake"/>. Returns both the

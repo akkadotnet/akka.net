@@ -448,9 +448,16 @@ namespace Akka.Remote.Artery
 
             if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, recipientPath)))
             {
-                _log.Warning(
-                    "Outbound Artery queue to [{0}] is full (capacity {1}); dropping message of type [{2}] to dead letters.",
-                    remoteAddress, Association.DefaultOutboundQueueCapacity, message.GetType());
+                // Log-once-per-association (mirrors HandleControlOverflow's sibling
+                // ShouldLogQuarantineDrop latch): a flooded producer can otherwise overflow this
+                // queue thousands of times in a row, and logging (format + write) on EVERY
+                // dropped message was itself an amplifier of unrelated ThreadPool starvation
+                // observed under CI load -- see AssociationRegistry.ShouldLogOrdinaryOverflowDrop.
+                if (association.ShouldLogOrdinaryOverflowDrop(association.CurrentState.UniqueRemoteAddress?.Uid))
+                    _log.Warning(
+                        "Outbound Artery queue to [{0}] is full (capacity {1}); dropping message of type [{2}] to " +
+                        "dead letters. Further drops for this association/uid will not be logged individually.",
+                        remoteAddress, Association.DefaultOutboundQueueCapacity, message.GetType());
                 System.DeadLetters.Tell(message, ActorRefs.NoSender);
             }
         }
