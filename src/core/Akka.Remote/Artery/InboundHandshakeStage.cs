@@ -20,16 +20,29 @@ namespace Akka.Remote.Artery
     ///
     /// Inbound half of the Artery handshake, faithful to
     /// <c>openspec/changes/artery-tcp-remoting/design.md</c>
-    /// ("Handshake + association/UID (gate G2)"). A
-    /// <c>GraphStage&lt;FlowShape&lt;IInboundEnvelope, IInboundEnvelope&gt;&gt;</c> -- dispatch is on
-    /// <see cref="IInboundEnvelope.IsControl"/> plus a pattern match on <see cref="IInboundEnvelope.Message"/>
-    /// inside the envelope, not a raw <c>is</c> type-test on the stream element itself.
+    /// ("Handshake + association/UID (gate G2)"; routing changes per task group 6, "Control
+    /// Stream", task 6.2). A <c>GraphStage&lt;FlowShape&lt;IInboundEnvelope, IInboundEnvelope&gt;&gt;</c>
+    /// -- dispatch is on <see cref="IInboundEnvelope.IsControl"/> plus a pattern match on
+    /// <see cref="IInboundEnvelope.Message"/> inside the envelope, not a raw <c>is</c> type-test
+    /// on the stream element itself.
     ///
     /// <para>
-    /// One instance of this stage sees the inbound elements for ONE remote peer connection (per
-    /// design.md's "Connection cardinality" note: at G2 the handshake stages ride the single
-    /// ordinary connection, and the receiver sees one ordinary connection per remote peer) — so
-    /// <c>isKnownOrigin</c> is per-stage-instance state, not global.
+    /// <b>"Known origin" is now a SHARED-registry check, not per-connection state (task 6.2/6.3).</b>
+    /// One instance of this stage sees the inbound elements for ONE physical TCP connection. At
+    /// G2 (single ordinary connection carrying both handshake and user traffic) that made a
+    /// per-instance <c>isKnownOrigin</c> flag correct: the Req/Rsp that completed the handshake
+    /// necessarily flowed through the SAME instance before any user traffic could. Once 6.3 routes
+    /// handshake messages onto a SEPARATE control connection, an ordinary connection's own
+    /// <see cref="InboundHandshakeStage"/> instance would never itself observe a Req/Rsp and would
+    /// perpetually gate/drop everything. So the gate is now <see cref="IInboundContext.IsKnownOrigin"/>
+    /// — a lookup against the SHARED <see cref="AssociationRegistry"/> keyed by the envelope's own
+    /// <see cref="IInboundEnvelope.OriginUid"/> (always present in the decoded header, regardless
+    /// of which connection/stream carried the envelope). This is safe because the SENDING side's
+    /// <see cref="OutboundHandshakeStage"/> holds all ordinary/large traffic behind its own
+    /// handshake-completion gate, which — by construction — cannot complete before the RECEIVING
+    /// side has already processed the peer's <see cref="HandshakeReq"/> (registering the uid) and
+    /// sent its <see cref="HandshakeRsp"/>. So by the time a receiver's ordinary connection ever
+    /// delivers a real user envelope for some uid, that uid is already registered.
     /// </para>
     ///
     /// <list type="bullet">
@@ -37,23 +50,25 @@ namespace Akka.Remote.Artery
     /// On <see cref="HandshakeReq"/>: if <c>req.To</c> does not match the local address, logs a
     /// warning and DROPS the message — it does NOT fail the stream (a misdirected/stale request
     /// must not tear down an otherwise-healthy connection). Otherwise, completes the handshake for
-    /// the requester via <see cref="IInboundContext.CompleteHandshake"/>, marks the origin known,
-    /// and replies with a <see cref="HandshakeRsp"/> via <see cref="IInboundContext.SendControl"/>.
-    /// The request itself is never propagated downstream.
+    /// the requester via <see cref="IInboundContext.CompleteHandshake"/> and replies with a
+    /// <see cref="HandshakeRsp"/> via <see cref="IInboundContext.SendControl"/>. The request
+    /// itself is never propagated downstream.
     /// </description></item>
     /// <item><description>
     /// On <see cref="HandshakeRsp"/>: completes the handshake for the responder (this is what lets
     /// the peer's <see cref="OutboundHandshakeStage"/> observe completion — see that type's
-    /// notification-mechanism note), marks the origin known, and swallows the message (never
-    /// propagated downstream).
+    /// notification-mechanism note) and swallows the message (never propagated downstream).
     /// </description></item>
     /// <item><description>
-    /// Any other control envelope: dropped with a debug log (no other control-message types exist
-    /// yet at G3 -- reliable system-message delivery lands in a later chunk).
+    /// Any OTHER control envelope (task 6.2: <c>ArteryHeartbeat</c>/<c>ArteryHeartbeatRsp</c>/
+    /// <c>ArteryQuarantined</c>, and later reliable system-message ACK/NACK): NOT handshake-internal
+    /// -- pushed downstream unchanged (still <see cref="IInboundEnvelope.IsControl"/> true) so
+    /// <c>ArteryRemoting.DispatchInbound</c> can hand it to the registered
+    /// <see cref="IControlMessageSubscriber"/>s.
     /// </description></item>
     /// <item><description>
     /// Any ordinary (non-control) envelope: dropped with a debug log while the origin is unknown;
-    /// passed through once known.
+    /// passed through once known (per the registry-based check above).
     /// </description></item>
     /// </list>
     /// </summary>
@@ -77,8 +92,6 @@ namespace Akka.Remote.Artery
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
         {
             private readonly InboundHandshakeStage _stage;
-            private bool _isKnownOrigin;
-            private Address? _originAddress;
 
             public Logic(InboundHandshakeStage stage) : base(stage.Shape)
             {
@@ -97,27 +110,28 @@ namespace Akka.Remote.Artery
                     {
                         case HandshakeReq req:
                             HandleReq(req);
-                            break;
+                            Pull(_stage.In);
+                            return;
 
                         case HandshakeRsp rsp:
                             HandleRsp(rsp);
-                            break;
+                            Pull(_stage.In);
+                            return;
 
                         default:
-                            // No other control-message types exist yet at G3 -- reliable
-                            // system-message delivery (Ack/Nack/SystemMessageEnvelope) lands in a
-                            // later chunk.
-                            Log.Debug("Dropping inbound control envelope of unknown message type [{0}].", envelope.Message.GetType());
-                            break;
+                            // Not handshake-internal (heartbeat, quarantine notice, future
+                            // system-message ACK/NACK, ...) -- pass through so ArteryRemoting can
+                            // dispatch to its registered IControlMessageSubscribers (task 6.2).
+                            Push(_stage.Out, envelope);
+                            return;
                     }
-
-                    Pull(_stage.In);
-                    return;
                 }
 
-                if (!_isKnownOrigin)
+                if (!_stage.Context.IsKnownOrigin(envelope.OriginUid))
                 {
-                    Log.Debug("Dropping inbound message [{0}] from unknown origin (no completed handshake on this connection yet).", envelope.Message.GetType());
+                    Log.Debug(
+                        "Dropping inbound message [{0}] from unknown origin uid [{1}] (no completed handshake for this uid yet).",
+                        envelope.Message.GetType(), envelope.OriginUid);
                     Pull(_stage.In);
                     return;
                 }
@@ -144,21 +158,10 @@ namespace Akka.Remote.Artery
                 }
 
                 _stage.Context.CompleteHandshake(req.From);
-                MarkKnownOrigin(req.From.Address);
                 _stage.Context.SendControl(req.From.Address, new HandshakeRsp(_stage.Context.LocalAddress));
             }
 
-            private void HandleRsp(HandshakeRsp rsp)
-            {
-                _stage.Context.CompleteHandshake(rsp.From);
-                MarkKnownOrigin(rsp.From.Address);
-            }
-
-            private void MarkKnownOrigin(Address origin)
-            {
-                _isKnownOrigin = true;
-                _originAddress = origin;
-            }
+            private void HandleRsp(HandshakeRsp rsp) => _stage.Context.CompleteHandshake(rsp.From);
         }
     }
 }

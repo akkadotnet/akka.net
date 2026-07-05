@@ -93,6 +93,41 @@ namespace Akka.Remote.Tests.Artery
             RoundTrip(rsp).Should().Be(rsp);
         }
 
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip ArteryHeartbeat (task group 6, task 6.4)")]
+        public void Should_round_trip_ArteryHeartbeat()
+        {
+            RoundTrip(new ArteryHeartbeat()).Should().Be(new ArteryHeartbeat());
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip ArteryHeartbeatRsp (task group 6, task 6.4)")]
+        public void Should_round_trip_ArteryHeartbeatRsp()
+        {
+            RoundTrip(new ArteryHeartbeatRsp()).Should().Be(new ArteryHeartbeatRsp());
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip ArteryQuarantined (task group 6, task 6.5)")]
+        public void Should_round_trip_ArteryQuarantined()
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 123456789L);
+            var quarantined = new ArteryQuarantined(from, QuarantinedUid: 987654321L);
+
+            RoundTrip(quarantined).Should().Be(quarantined);
+        }
+
+        [Theory(DisplayName = "ArteryControlMessageSerializer should round-trip ArteryQuarantined across negative, zero, and boundary uid values")]
+        [InlineData(0L)]
+        [InlineData(1L)]
+        [InlineData(-1L)]
+        [InlineData(long.MinValue)]
+        [InlineData(long.MaxValue)]
+        public void Should_round_trip_ArteryQuarantined_extreme_uid_values(long quarantinedUid)
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L);
+            var quarantined = new ArteryQuarantined(from, quarantinedUid);
+
+            RoundTrip(quarantined).Should().Be(quarantined);
+        }
+
         [Fact(DisplayName = "ArteryControlMessageSerializer should report bytes-written matching the buffer")]
         public void Should_report_bytes_written()
         {
@@ -107,16 +142,22 @@ namespace Akka.Remote.Tests.Artery
             written.Should().BeGreaterThan(0);
         }
 
-        [Fact(DisplayName = "ArteryControlMessageSerializer should report exact size hints for both message types")]
+        [Fact(DisplayName = "ArteryControlMessageSerializer should report exact size hints for all message types")]
         public void Should_report_exact_size_hints()
         {
             var req = new HandshakeReq(
                 new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L),
                 new Address("akka", "sys-b", "host-b", 2552));
             var rsp = new HandshakeRsp(new UniqueAddress(new Address("akka", "sys-b", "host-b", 2552), -5L));
+            var heartbeat = new ArteryHeartbeat();
+            var heartbeatRsp = new ArteryHeartbeatRsp();
+            var quarantined = new ArteryQuarantined(new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L), 99L);
 
             _serializer.SizeHint(req).Should().Be(_serializer.ToBinary(req).Length);
             _serializer.SizeHint(rsp).Should().Be(_serializer.ToBinary(rsp).Length);
+            _serializer.SizeHint(heartbeat).Should().Be(_serializer.ToBinary(heartbeat).Length);
+            _serializer.SizeHint(heartbeatRsp).Should().Be(_serializer.ToBinary(heartbeatRsp).Length);
+            _serializer.SizeHint(quarantined).Should().Be(_serializer.ToBinary(quarantined).Length);
         }
 
         [Fact(DisplayName = "ArteryControlMessageSerializer should dispatch by manifest and reject an unknown manifest")]
@@ -127,6 +168,10 @@ namespace Akka.Remote.Tests.Artery
                 new Address("akka", "sys-b", "host-b", 2552));
 
             _serializer.Manifest(req).Should().Be(ArteryControlMessageSerializer.HandshakeReqManifest);
+            _serializer.Manifest(new ArteryHeartbeat()).Should().Be(ArteryControlMessageSerializer.HeartbeatManifest);
+            _serializer.Manifest(new ArteryHeartbeatRsp()).Should().Be(ArteryControlMessageSerializer.HeartbeatRspManifest);
+            _serializer.Manifest(new ArteryQuarantined(new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 1L), 2L))
+                .Should().Be(ArteryControlMessageSerializer.QuarantinedManifest);
 
             var bytes = _serializer.ToBinary(req);
             Action deserializeUnknown = () => _serializer.FromBinary(bytes, "unknown-manifest");

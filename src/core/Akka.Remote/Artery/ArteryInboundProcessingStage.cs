@@ -41,10 +41,13 @@ namespace Akka.Remote.Artery
     /// </para>
     ///
     /// <para>
-    /// <b>Non-Ordinary connection preamble.</b> G2 only implements the ordinary stream; a connection
-    /// whose preamble declares <see cref="ArteryStreamId.Control"/> or <see cref="ArteryStreamId.Large"/>
-    /// is logged and the connection is dropped (stage failure) -- control/large streams land at G3/G7
-    /// per the design's milestone table.
+    /// <b>Accepted connection preambles.</b> As of task group 6 ("Control Stream"), both
+    /// <see cref="ArteryStreamId.Ordinary"/> and <see cref="ArteryStreamId.Control"/> connections
+    /// are accepted -- routing downstream is by the decoded envelope's <see cref="IInboundEnvelope.IsControl"/>
+    /// flag (message type), not by which physical connection carried it (both preambles feed the
+    /// identical inbound shape: framing -&gt; decode -&gt; deserialize -&gt; <see cref="InboundHandshakeStage"/>
+    /// -&gt; dispatch). A connection whose preamble declares <see cref="ArteryStreamId.Large"/> is
+    /// logged and the connection is dropped (stage failure) -- the large stream lands at G7.
     /// </para>
     ///
     /// <para>
@@ -164,13 +167,13 @@ namespace Akka.Remote.Artery
 
                 ArteryConnectionHeader.TryParse(new ReadOnlySequence<byte>(_preambleBuffer), out var streamId, out _);
 
-                if (streamId != ArteryStreamId.Ordinary)
+                if (streamId != ArteryStreamId.Ordinary && streamId != ArteryStreamId.Control)
                 {
                     Log.Warning(
                         "Dropping inbound Artery connection: preamble declared stream id [{0}], but only " +
-                        "the Ordinary stream is implemented at G2 (control/large land at G3/G7).", streamId);
+                        "Ordinary and Control are implemented at task group 6 (large lands at G7).", streamId);
                     FailStage(new ArteryFramingException(
-                        $"Unsupported Artery connection stream id [{streamId}] (only Ordinary is accepted at G2)."));
+                        $"Unsupported Artery connection stream id [{streamId}] (only Ordinary/Control are accepted)."));
                     return false;
                 }
 
