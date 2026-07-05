@@ -226,7 +226,7 @@ namespace Akka.Remote.Artery
                 var payload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
 
                 if (payload is IArteryControlMessage)
-                    return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId);
+                    return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
 
                 if (!decoded.TryGetRecipientPath(out var recipientPath))
                 {
@@ -244,7 +244,7 @@ namespace Akka.Remote.Artery
                 }
 
                 var senderPath = decoded.TryGetSenderPath(out var s) ? s : null;
-                return new InboundEnvelope(payload, senderPath, recipientPath, decoded.Header.OriginUid, decoded.Header.SerializerId);
+                return new InboundEnvelope(payload, senderPath, recipientPath, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
             }
 
             private void DeliverOrPull()

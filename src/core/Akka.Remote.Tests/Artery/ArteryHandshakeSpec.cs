@@ -53,11 +53,11 @@ namespace Akka.Remote.Tests.Artery
 
         /// <summary>An ordinary (non-control) inbound test envelope. OriginUid/SerializerId are not exercised by these stages, so arbitrary placeholder values are used.</summary>
         private static IInboundEnvelope OrdinaryInbound(object message, string? senderPath = null, string recipientPath = "akka://remote-sys@remote-host:2552/user/recipient") =>
-            new InboundEnvelope(message, senderPath, recipientPath, OriginUid: 0L, SerializerId: 0);
+            new InboundEnvelope(message, senderPath, recipientPath, OriginUid: 0L, SerializerId: 0, Manifest: "test-manifest");
 
         /// <summary>A control inbound test envelope wrapping a handshake message.</summary>
         private static IInboundEnvelope ControlInbound(IArteryControlMessage message, long originUid) =>
-            new InboundEnvelope(message, null, null, originUid, SerializerId: 0);
+            new InboundEnvelope(message, null, null, originUid, SerializerId: 0, Manifest: "test-manifest");
 
         #region OutboundHandshakeStage
 

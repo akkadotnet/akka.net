@@ -247,14 +247,20 @@ namespace Akka.Remote.Tests.Artery
         public async Task Should_Not_Corrupt_Payloads_When_Outbound_Encode_Buffers_Are_Returned_Early()
         {
             var poisonPool = new PoisoningArrayPool();
-            ArteryRemoting.EncodePoolOverrideForTests = poisonPool;
+
+            // ArteryTransportSetup (not a mutable static field) carries the pool override --
+            // scoped to just these two ActorSystems, so a concurrently-running test elsewhere in
+            // the suite can never race this one over a shared static. See ArteryTransportSetup's
+            // remarks for the full rationale (this replaces the former
+            // ArteryRemoting.EncodePoolOverrideForTests static field).
+            var setup = BootstrapSetup.Create().WithConfig(ArteryConfig()).And(new ArteryTransportSetup(poisonPool));
 
             ActorSystem? systemA = null;
             ActorSystem? systemB = null;
             try
             {
-                systemA = ActorSystem.Create("ArteryPoisonPoolA", ArteryConfig());
-                systemB = ActorSystem.Create("ArteryPoisonPoolB", ArteryConfig());
+                systemA = ActorSystem.Create("ArteryPoisonPoolA", setup);
+                systemB = ActorSystem.Create("ArteryPoisonPoolB", setup);
 
                 systemB.ActorOf(Props.Create(() => new Echo()), "echo");
 
@@ -279,8 +285,6 @@ namespace Akka.Remote.Tests.Artery
             }
             finally
             {
-                ArteryRemoting.EncodePoolOverrideForTests = null;
-
                 if (systemA is not null)
                     await systemA.Terminate().AwaitWithTimeout(10.Seconds());
                 if (systemB is not null)

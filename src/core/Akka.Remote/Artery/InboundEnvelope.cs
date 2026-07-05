@@ -60,6 +60,18 @@ namespace Akka.Remote.Artery
         int SerializerId { get; }
 
         /// <summary>
+        /// The manifest string decoded from the envelope's header (resolved BEFORE payload
+        /// deserialization -- design.md's "Decode order (structural, not an optimization)"), used
+        /// to deserialize <see cref="Message"/>. Retained on the envelope (not just consumed and
+        /// discarded once <see cref="Message"/> is produced) because the G5 lane model
+        /// deserializes AFTER partitioning to a lane -- the envelope has to carry the manifest
+        /// (and, eventually, the raw payload bytes) across that lane boundary. Also useful for
+        /// dead-letter/debug fidelity in the meantime (a decode/dispatch failure can still report
+        /// what manifest was on the wire).
+        /// </summary>
+        string Manifest { get; }
+
+        /// <summary>
         /// Cheap, precomputed (at construction, not re-tested per stage) flag: <see langword="true"/>
         /// when <see cref="Message"/> is an <see cref="IArteryControlMessage"/>. Stages dispatch on
         /// this instead of re-running an <c>is</c> type-test on every element at every stage.
@@ -80,7 +92,8 @@ namespace Akka.Remote.Artery
     /// <param name="RecipientPath">The recipient's wire-format path, or <see langword="null"/> for a control envelope.</param>
     /// <param name="OriginUid">The sending system's UID.</param>
     /// <param name="SerializerId">The serializer id used to deserialize <see cref="Message"/>.</param>
-    internal sealed record InboundEnvelope(object Message, string? SenderPath, string? RecipientPath, long OriginUid, int SerializerId) : IInboundEnvelope
+    /// <param name="Manifest">The manifest string decoded from the envelope's header -- see <see cref="IInboundEnvelope.Manifest"/>.</param>
+    internal sealed record InboundEnvelope(object Message, string? SenderPath, string? RecipientPath, long OriginUid, int SerializerId, string Manifest) : IInboundEnvelope
     {
         /// <inheritdoc/>
         public bool IsControl { get; } = Message is IArteryControlMessage;
