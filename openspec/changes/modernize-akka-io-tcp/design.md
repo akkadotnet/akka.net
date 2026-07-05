@@ -84,6 +84,29 @@ Current target frameworks are `netstandard2.0` + `net6.0`. The `netstandard2.0` 
 
 **Rationale:** `IStreamProvider.ConnectAsync()` is a client-side abstraction (DNS resolution, connection initiation). For accepted server-side connections, the socket is already connected. The `Stream` wrapping happens at the accept point, then `TcpIncomingConnection` uses the same Pipe-based I/O loop as outgoing connections.
 
+### 8. Ownership-carrying Tcp.Write (dispose at the pipe-copy point)
+
+**Motivation:** The `ReadOnlySequence<byte>` write surface (Decisions 1–5) enables pooled callers, but ownership of a pooled buffer is inexpressible on the wire type — nothing says who is responsible for returning it, or when. Two incidents demonstrate this is a real, not theoretical, gap:
+
+- **(a) `TcpConnection`'s pre-registration write queue retained caller buffers by reference.** A `Tcp.Write` arriving before `Register` was queued for up to `RegisterTimeout` actor turns with no copy taken in the turn that received it — a pooled/reusable-buffer caller could mutate its buffer while the bytes were still sitting unread in the queue. This was real corruption, fixed defensively by copying at enqueue in PR #8323. That copy **remains** in place under this design as the fallback for *borrowed* (owner-less) writes — it is not removed.
+- **(b) Artery's zero-copy encode stage (`ArteryEncodeStage`) has to *guess* when the pipe copy has happened** from upstream ack/pull signals, because there is no explicit ownership-transfer point on `Tcp.Write` to hook. A static audit concluded it was safe to dispose a pushed frame's pooled buffer on the stage's own very next `OnPull` (reasoning that the TCP write stage only pulls after a `WriteAck`, which is only sent after `TcpConnection.EnqueueWrite` has synchronously copied the frame into the output pipe). An empirical poison-pool stress test (real `ActorSystem`s, 300 back-to-back messages, pool arrays scribbled on return) **proved the audit wrong**: the pull this stage receives is not 1:1 with "the previous frame's bytes have left the buffer" under sustained load — 1–4 of 300 messages corrupted on every run. The shipped workaround holds **two** buffer generations alive (disposing two pulls back, not one) to survive the observed one-generation pull-ahead. Lifetime inference at a distance from the actual copy is fragile by construction; this decision replaces inference with an explicit contract.
+
+**Decision:** `Tcp.Write` (and the Akka.Streams TCP write path) can optionally carry an `IMemoryOwner<byte>` alongside its `ReadOnlySequence<byte>` payload. Passing an owner transfers ownership to the connection on send — the caller MUST NOT touch the buffer again once sent. `TcpConnection` disposes the owner at the exact point the payload has been copied into the output pipe (`TcpTransportConnection.WriteAsync` returning — same actor turn, open/registered path), and on every non-success path as well:
+
+- **Pre-registration queueing** keeps the owner alive until the deferred `FlushPendingRegistrationWrites` → `EnqueueWrite` copy runs, then disposes it (the #8323 copy-at-enqueue fallback still applies to *borrowed* writes queued this way; an *owned* write queued pre-registration is disposed once its own deferred copy completes, not eagerly).
+- **Queue-full rejection / `Tcp.CommandFailed`** disposes the owner before signaling failure to the sender — the buffer never reached the pipe, so nothing downstream can be reading it.
+- **`PostStop` / connection drain** disposes every owner still held by queued (pending-registration or pending-write) commands.
+
+Borrowed (owner-less) writes are unaffected and keep today's semantics, including the #8323 pre-registration copy. `NoAck` + owned is safe by construction: disposal is driven by the copy having happened, not by acknowledgment.
+
+**Alternative considered:** Keep the static lifetime-inference approach (dispose on next pull/ack, as `ArteryEncodeStage` did originally) and harden it further (e.g., a longer generation lag, or a stronger audited contract). Rejected — the poison-pool test already falsified the "one generation is enough" audit once; inference at a distance from the actual copy has no principled bound on how many generations of lag are enough, only empirically-discovered ones. Disposal belongs at the place the copy happens, not wherever a consumer happens to infer it must have happened by now.
+
+**Explicitly NOT in scope:** eliminating the pipe-staging copy itself. Benchmarked N=3 on the 9900X (branch `bench/write-path-copy-costs`, commit `5b081dc7e`): the pipe copy costs ~197ns / 0B alloc at 256B and ~561ns at 4KB, versus ~987ns / ~843ns + 120B for a bounded-channel direct-write handoff reference implementation — the copy **wins** below the 4KB–64KB crossover. Zero-copy-to-socket is deferred to the future large-message-stream work, with the burden of proof on a byte-aware handoff (cf. `experiment/akka-io-spsc-output`). This decision is about **lifetime semantics** — who disposes what, and when — not about removing the copy or improving throughput.
+
+**Consumers:** `ArteryEncodeStage` swaps its two-generation disposal lag for direct owner-passthrough on `Tcp.Write`, deleting the pull/ack inference entirely. Any other pooled Akka.IO caller (present or future) gets the same explicit transfer-of-ownership contract instead of having to reinvent generation-lag bookkeeping.
+
+**Constraint:** This must land before v1.6 ships — the write surface goes extend-only once v1.6 is out, so the ownership-carrying overload needs to exist at the same time as the rest of the `ReadOnlySequence<byte>` write surface, not bolted on afterward.
+
 ## Risks / Trade-offs
 
 **[Massive compilation breakage from ByteString deletion]** → Methodical approach: change TFMs first, then delete ByteString and fix compilation errors module by module (Akka.IO → Akka.Streams → Akka.Remote → Cluster → Contrib). Use compiler errors as the migration guide.
@@ -95,3 +118,5 @@ Current target frameworks are `netstandard2.0` + `net6.0`. The `netstandard2.0` 
 **[MemoryPool fragmentation under high load]** → `MemoryPool<byte>.Shared` uses `ArrayPool` internally, which handles fragmentation well. Monitor in benchmarks. If needed, custom pool with fixed-size slabs.
 
 **[Akka.Streams TCP bridging complexity]** → `TcpStages.cs` currently bridges actor messages ↔ stream elements using `ByteString`. Changing to `ReadOnlyMemory<byte>` is a type swap in the stage handlers — the bridging pattern doesn't change.
+
+**[Ownership-carrying Tcp.Write disposal matrix is easy to get wrong]** → `TcpConnection` has several non-success exit paths for a queued write (queue-full rejection, `CommandFailed`, pre-registration deferral, `PostStop`/drain) in addition to the open-path copy point. Missing a path either leaks the owner (never disposed) or disposes it too early (corrupts an in-flight write) — exactly the failure mode the Artery poison-pool test caught once already. Mitigation: enumerate every path explicitly as its own task (see tasks.md §9) and cover each with a poison-pool style corruption test, not just the open-path happy case.
