@@ -71,3 +71,12 @@
 - [ ] 8.3 Verify Akka.Streams `Tcp.Bind()` and `Tcp.OutgoingConnection()` work end-to-end
 - [ ] 8.4 Verify Akka.Remote remoting works (messages sent between two ActorSystems)
 - [ ] 8.5 Run `dotnet test -c Release src/core/Akka.API.Tests` — update API approval baselines for breaking changes
+
+## 9. Ownership-Carrying Tcp.Write (Buffer Disposal at the Copy Point)
+
+- [ ] 9.1 Write the `system-memory-io` spec delta for Decision 8: `IMemoryOwner<byte>`-carrying `Tcp.Write`, ownership-transfer-on-send semantics, and the "dispose at the copy point, on every path" invariant
+- [ ] 9.2 API shape review: optional `IMemoryOwner<byte>` overloads on `Tcp.Write` / `Tcp.SimpleWriteCommand` factory methods and the equivalent Streams TCP write-side surface (`TcpStages.cs`) — confirm extend-only against existing `Tcp.Write.Create()` overloads, no break to borrowed-write callers
+- [ ] 9.3 Implement the `TcpConnection` disposal matrix: dispose at `TcpTransportConnection.WriteAsync` return (open/registered path, same actor turn); dispose-after-copy on the deferred pre-registration flush; dispose-before-signal on queue-full rejection and `Tcp.CommandFailed`; dispose-all on `PostStop`/drain of queued pre-registration and pending writes
+- [ ] 9.4 Add poison-pool style corruption tests (pattern: the `ArteryTransportSpec` poison-pool harness) for owned writes on every path in 9.3 — assert no premature dispose (corrupted in-flight write) and no leaked owner (never disposed) on each
+- [ ] 9.5 `TcpStages.cs` pass-through: propagate an `IMemoryOwner<byte>` from a Streams TCP write-side element straight through to `Tcp.Write`/`Tcp.CompoundWrite` without an intermediate copy
+- [ ] 9.6 Artery adoption: swap `ArteryEncodeStage`'s two-generation disposal lag for direct owner-passthrough on `Tcp.Write`; delete the two-generation workaround (`_pendingDispose`/`_pendingDisposeOlder`) and its pull/ack inference now that disposal has an explicit hook
