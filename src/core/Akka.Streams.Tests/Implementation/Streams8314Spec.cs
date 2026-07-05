@@ -139,6 +139,31 @@ namespace Akka.Streams.Tests.Implementation
             }, Materializer);
         }
 
+        [Fact(DisplayName = "Should deliver elements produced before an upstream stage failure")]
+        public async Task Should_deliver_elements_produced_before_stage_failure()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                // A stage emits 1 and 2, then throws on 3 - all upstream of the boundary in one run.
+                // The pre-batching design Tell'd each element immediately, so 1 and 2 crossed the
+                // boundary before the OnError. Batching must preserve that: the elements produced
+                // before the failure are delivered, then the error. (Regression guard for the
+                // ClearBatch-on-fail data loss found in review.)
+                var boom = new TestException("boom");
+                var downstream = this.CreateSubscriberProbe<int>();
+
+                Source.From(new[] { 1, 2, 3 })
+                    .Select(x => x == 3 ? throw boom : x)
+                    .Async()
+                    .RunWith(Sink.FromSubscriber(downstream), Materializer);
+
+                downstream.Request(10);
+                await downstream.ExpectNextAsync(1);
+                await downstream.ExpectNextAsync(2);
+                (await downstream.ExpectErrorAsync()).Should().BeSameAs(boom);
+            }, Materializer);
+        }
+
         [Fact(DisplayName = "Should propagate cancellation upstream when cancelled mid-flight")]
         public async Task Should_handle_cancel_mid_batch()
         {

@@ -288,11 +288,12 @@ namespace Akka.Streams.Implementation.Fusing
 
                 case ActorGraphInterpreter.AsyncInput asyncInput:
                     Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Promise, asyncInput.Handler);
-                    // An async callback can push elements to an output boundary; flush any that
-                    // accumulated (issue #8314) before we potentially park without a RunBatch below.
-                    FlushOutputs();
                     if (eventLimit == 1 && _interpreter.IsSuspended)
                     {
+                        // Parking here without a RunBatch — flush any elements the async callback
+                        // pushed to an output boundary so they aren't stranded until the next event
+                        // (issue #8314). The fall-through path flushes inside RunBatch after Execute.
+                        FlushOutputs();
                         SendResume(true);
                         return 0;
                     }
@@ -1432,20 +1433,31 @@ namespace Akka.Streams.Implementation.Fusing
             /// <param name="reason">TBD</param>
             public void Fail(Exception reason)
             {
-                // Reactive Streams allows onError to preempt buffered elements; drop the pending batch
-                // rather than deliver elements after the failure.
-                ClearBatch();
-
                 // No need to fail if had already been cancelled, or we closed earlier
                 if (!(DownstreamCompleted || _upstreamCompleted))
                 {
                     _upstreamCompleted = true;
                     _upstreamFailed = reason;
 
+                    // Elements produced before the failure crossed the boundary in the pre-batching
+                    // design (one Tell per element, delivered ahead of the OnError). Preserve that:
+                    // flush the pending batch before signalling the error rather than dropping it.
+                    // A spec violation suppresses OnError entirely, so there's nothing to order those
+                    // elements against — drop them instead.
+                    if (reason is ISpecViolation)
+                        ClearBatch();
+                    else
+                        FlushBatch();
+
                     if (!ReferenceEquals(_exposedPublisher, null))
                         _exposedPublisher.Shutdown(reason);
                     if (!ReferenceEquals(_subscriber, null) && !(reason is ISpecViolation))
                         ReactiveStreamsCompliance.TryOnError(_subscriber, reason);
+                }
+                else
+                {
+                    // Already terminal (cancelled / completed) — nothing left to deliver.
+                    ClearBatch();
                 }
             }
 
@@ -1469,6 +1481,11 @@ namespace Akka.Streams.Implementation.Fusing
 
             private void Accumulate(T element, ActivityContext? context)
             {
+                // Reject nulls at the producer boundary, per element, matching the single-element
+                // path (boundary.OnNext) and the pre-batching behavior — otherwise a null in a
+                // multi-element batch only surfaces as a confusing overrun error on the consumer.
+                ReactiveStreamsCompliance.RequireNonNullElement(element);
+
                 if (_batchElements == null)
                     _batchElements = new object[InitialBatchCapacity];
                 else if (_batchCount == _batchElements.Length)
