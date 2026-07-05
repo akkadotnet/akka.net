@@ -8,6 +8,7 @@
 #nullable enable
 
 using Akka.Actor;
+using Akka.Serialization.V2;
 
 namespace Akka.Remote.Artery
 {
@@ -36,7 +37,10 @@ namespace Akka.Remote.Artery
     /// rejects (drops, does not fail the stream) a request whose <paramref name="To"/> does not
     /// match the local address.
     /// </param>
-    internal sealed record HandshakeReq(UniqueAddress From, Address To) : IArteryControlMessage;
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.HandshakeReqManifest)]
+    internal sealed record HandshakeReq(
+        [property: AkkaField(1)] UniqueAddress From,
+        [property: AkkaField(2)] Address To) : IArteryControlMessage;
 
     /// <summary>
     /// INTERNAL API.
@@ -45,5 +49,7 @@ namespace Akka.Remote.Artery
     /// <see cref="HandshakeReq"/>, completing the requester's knowledge of the responder's UID.
     /// </summary>
     /// <param name="From">The responder's own unique address (address + UID).</param>
-    internal sealed record HandshakeRsp(UniqueAddress From) : IArteryControlMessage;
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.HandshakeRspManifest)]
+    internal sealed record HandshakeRsp(
+        [property: AkkaField(1)] UniqueAddress From) : IArteryControlMessage;
 }

@@ -8,6 +8,7 @@
 #nullable enable
 
 using Akka.Dispatch.SysMsg;
+using Akka.Serialization.V2;
 
 namespace Akka.Remote.Artery
 {
@@ -55,7 +56,10 @@ namespace Akka.Remote.Artery
     /// </summary>
     /// <param name="SeqNo">The highest sequence number received (and every sequence number below it).</param>
     /// <param name="From">The acking system's own unique address (see the stale-ack guard remarks above).</param>
-    internal sealed record Ack(long SeqNo, UniqueAddress From) : IArterySystemMessageDeliveryMessage;
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.AckManifest)]
+    internal sealed record Ack(
+        [property: AkkaField(1)] long SeqNo,
+        [property: AkkaField(2)] UniqueAddress From) : IArterySystemMessageDeliveryMessage;
 
     /// <summary>
     /// INTERNAL API.
@@ -72,7 +76,10 @@ namespace Akka.Remote.Artery
     /// </summary>
     /// <param name="SeqNo">The highest contiguous sequence number actually delivered so far.</param>
     /// <param name="From">The nacking system's own unique address.</param>
-    internal sealed record Nack(long SeqNo, UniqueAddress From) : IArterySystemMessageDeliveryMessage;
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.NackManifest)]
+    internal sealed record Nack(
+        [property: AkkaField(1)] long SeqNo,
+        [property: AkkaField(2)] UniqueAddress From) : IArterySystemMessageDeliveryMessage;
 
     /// <summary>
     /// INTERNAL API.
@@ -109,12 +116,30 @@ namespace Akka.Remote.Artery
     /// dispatch path always resolves the sender as dead letters for delivered system messages,
     /// mirroring today's ordinary-message fallback for an absent sender.
     /// </para>
+    /// <para>
+    /// <b>Sourcegen swap field-id note.</b> <see cref="Message"/> is marked
+    /// <see cref="AkkaEnvelopePayloadAttribute"/>, routing it through the generated serializer's
+    /// <c>WriteEnvelopePayload</c>/<c>ReadEnvelopePayload</c> calls -- the SAME
+    /// <see cref="Akka.Serialization.V2.MessagePackSerializer{TProtocol}"/> base-class helpers the
+    /// prior hand-rolled <see cref="ArteryControlMessageSerializer"/> used, confirming the generator
+    /// has no gap here. The generator emits the record's constructor call positionally by ASCENDING
+    /// <see cref="AkkaFieldAttribute"/> index (not by declared parameter order), so field indices
+    /// are assigned in this record's declared parameter order (Message=1, SeqNo=2, AckReplyTo=3,
+    /// RecipientPath=4) rather than the hand-rolled serializer's old wire ids (SeqNo=1,
+    /// AckReplyTo=2, RecipientPath=3, Message=4) -- a deliberate wire-format change, harmless
+    /// because Artery is unreleased, pre-stable, internal-only wire protocol.
+    /// </para>
     /// </summary>
     /// <param name="Message">The system message being reliably delivered.</param>
     /// <param name="SeqNo">This envelope's monotonic sequence number (1-based per incarnation).</param>
     /// <param name="AckReplyTo">The sender's own unique address -- where the receiver routes its Ack/Nack.</param>
     /// <param name="RecipientPath">The resolved wire-format path of the recipient actor.</param>
-    internal sealed record SystemMessageEnvelope(ISystemMessage Message, long SeqNo, UniqueAddress AckReplyTo, string RecipientPath) : IArterySystemMessageDeliveryMessage;
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.SystemMessageEnvelopeManifest)]
+    internal sealed record SystemMessageEnvelope(
+        [property: AkkaField(1), AkkaEnvelopePayload] ISystemMessage Message,
+        [property: AkkaField(2)] long SeqNo,
+        [property: AkkaField(3)] UniqueAddress AckReplyTo,
+        [property: AkkaField(4)] string RecipientPath) : IArterySystemMessageDeliveryMessage;
 
     /// <summary>
     /// INTERNAL API.
@@ -151,5 +176,7 @@ namespace Akka.Remote.Artery
     /// </para>
     /// </summary>
     /// <param name="Incarnation">The association incarnation this reset applies to.</param>
-    internal sealed record ClearSystemMessageDelivery(int Incarnation) : IArterySystemMessageDeliveryMessage;
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.ClearSystemMessageDeliveryManifest)]
+    internal sealed record ClearSystemMessageDelivery(
+        [property: AkkaField(1)] int Incarnation) : IArterySystemMessageDeliveryMessage;
 }

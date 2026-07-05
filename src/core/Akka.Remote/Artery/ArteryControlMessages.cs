@@ -7,6 +7,8 @@
 
 #nullable enable
 
+using Akka.Serialization.V2;
+
 namespace Akka.Remote.Artery
 {
     /// <summary>
@@ -18,7 +20,13 @@ namespace Akka.Remote.Artery
     /// (task group 6, "Control Stream", tasks 6.4/6.6). Carries no payload; its mere arrival is
     /// the signal. The receiver replies with <see cref="ArteryHeartbeatRsp"/>
     /// (<c>ArteryRemoting</c>'s own <c>IControlMessageSubscriber</c>).
+    ///
+    /// <para>
+    /// Deliberately fieldless: opts into codegen via <see cref="AkkaSerializableAttribute.AllowEmpty"/>
+    /// (sourcegen gap fix #8331) -- arrival IS the signal, with nothing to carry.
+    /// </para>
     /// </summary>
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.HeartbeatManifest, AllowEmpty = true)]
     internal sealed record ArteryHeartbeat : IArteryControlMessage;
 
     /// <summary>
@@ -28,6 +36,7 @@ namespace Akka.Remote.Artery
     /// any subscribed <see cref="IControlMessageSubscriber"/> at task group 6 -- a
     /// missed-heartbeat failure detector is later (group 7+) work.
     /// </summary>
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.HeartbeatRspManifest, AllowEmpty = true)]
     internal sealed record ArteryHeartbeatRsp : IArteryControlMessage;
 
     /// <summary>
@@ -46,5 +55,8 @@ namespace Akka.Remote.Artery
     /// when it matches the receiver's OWN current uid -- a notification about a stale/superseded
     /// incarnation of the receiver must not be acted on.
     /// </param>
-    internal sealed record ArteryQuarantined(UniqueAddress From, long QuarantinedUid) : IArteryControlMessage;
+    [AkkaSerializable(Manifest = ArteryControlMessageSerializer.QuarantinedManifest)]
+    internal sealed record ArteryQuarantined(
+        [property: AkkaField(1)] UniqueAddress From,
+        [property: AkkaField(2)] long QuarantinedUid) : IArteryControlMessage;
 }

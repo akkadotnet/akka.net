@@ -1,54 +1,59 @@
 //-----------------------------------------------------------------------
 // <copyright file="ArteryControlMessageSerializer.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
-//     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
+//     Copyright (C) 2013-2026 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
 //-----------------------------------------------------------------------
 
 #nullable enable
 
-using System;
-using System.Buffers;
-using System.Runtime.Serialization;
 using Akka.Actor;
-using MessagePack;
+using Akka.Serialization.V2;
 
 namespace Akka.Remote.Artery
 {
     /// <summary>
     /// INTERNAL API.
     ///
-    /// Hand-rolled V2 MessagePack serializer for the Artery control/handshake messages
-    /// (<see cref="HandshakeReq"/> / <see cref="HandshakeRsp"/> / <see cref="ArteryHeartbeat"/> /
-    /// <see cref="ArteryHeartbeatRsp"/> / <see cref="ArteryQuarantined"/> -- the latter three
-    /// added at task group 6, "Control Stream", task 6.4/6.5, extending the SAME hand-rolled
-    /// serializer found on this branch rather than replacing it with sourcegen; see the task
-    /// report for why sourcegen still cannot be used here).
+    /// Source-generated V2 MessagePack serializer for ALL NINE Artery control/handshake/reliable-
+    /// system-message-delivery messages (<see cref="HandshakeReq"/> / <see cref="HandshakeRsp"/> /
+    /// <see cref="ArteryHeartbeat"/> / <see cref="ArteryHeartbeatRsp"/> / <see cref="ArteryQuarantined"/> /
+    /// <see cref="Ack"/> / <see cref="Nack"/> / <see cref="SystemMessageEnvelope"/> /
+    /// <see cref="ClearSystemMessageDelivery"/>).
     ///
     /// <para>
-    /// Design.md ("Handshake + association/UID (gate G2)") pins handshake message encoding to
-    /// V2 source-generated MessagePack, with an explicit fallback: "a hand-written
-    /// <c>MessagePackSerializer&lt;T&gt;</c> subclass (still V2, still msgpack) with a tracked
-    /// follow-up to move onto the generator." That fallback is what this class is — see the
-    /// task report for why: the <c>Akka.Serialization.V2</c> source generator requires every
-    /// nested field type to carry <c>[AkkaSerializable]</c> (enforced by
-    /// <c>AkkaSerializerGenerator.MissingNestedSerializableDefinition</c>), and
-    /// <see cref="Address"/> is a core <c>Akka.Actor</c> type this change may not annotate.
+    /// This class used to be hand-rolled (see git history) because the <c>Akka.Serialization.V2</c>
+    /// generator could not, at the time, express a deliberately fieldless message or a nested
+    /// <c>[AkkaSerializable]</c> value-type field. Both gaps were fixed by #8331
+    /// (<see cref="AkkaSerializableAttribute.AllowEmpty"/> and the struct-nested-field fix), so this
+    /// class is now the <c>[AkkaSerializer]</c> half of a source-generated partial class -- the
+    /// generator (<c>Akka.Serialization.V2.Generators.AkkaSerializerGenerator</c>, attached as an
+    /// analyzer on <c>Akka.Remote.csproj</c>) emits the other half
+    /// (<c>ArteryControlMessageSerializer.AkkaSerialization.g.cs</c>): the constructor, <c>Identifier</c>,
+    /// <c>Manifest</c>/<c>Serialize</c>/<c>Deserialize</c>/<c>SizeHint</c> dispatch, and one
+    /// Write/Read/SizeOf method per reachable message type (including the nested
+    /// <see cref="UniqueAddress"/> value type).
     /// </para>
     /// <para>
-    /// This class still writes/reads plain MessagePack (map-with-field-ids, forward-compatible
-    /// via unknown-field skipping) and still derives from the V2
-    /// <see cref="Akka.Serialization.V2.MessagePackSerializer{TProtocol}"/> base (itself a
-    /// <see cref="Akka.Serialization.SerializerV2"/>) purely to reuse its buffer-size and
-    /// bytes-written helpers — no source-generated code is involved.
+    /// The manifest constants below are still hand-written (referenced from each message's
+    /// <see cref="AkkaSerializableAttribute.Manifest"/> as compile-time constants, and from
+    /// <c>SystemMessageAckerStageSpec</c>) -- the generator does not emit public manifest constants.
     /// </para>
     /// <para>
-    /// Follow-up (tracked): once <see cref="Address"/> can be expressed as a generator-visible
-    /// nested type (or the generator grows an escape hatch for foreign types), replace this class
-    /// with a generated one and delete it.
+    /// <see cref="Address"/> is a core <c>Akka.Actor</c> type this change may not annotate with
+    /// <c>[AkkaSerializable]</c>; it is instead handled via the built-in <see cref="AddressFormatter"/>
+    /// escape hatch (<see cref="AkkaSerializerFormatterAttribute"/>), which produces the identical
+    /// 4-element-array wire format the old hand-rolled <c>WriteAddress</c>/<c>ReadAddress</c> used.
+    /// </para>
+    /// <para>
+    /// Class name and serializer identifier (23) are unchanged from the hand-rolled version, so the
+    /// existing <c>Remote.conf</c> registration (<c>artery-control</c> alias, <c>serialization-bindings</c>
+    /// on <see cref="IArteryControlMessage"/>, <c>serialization-identifiers</c> entry) requires no edits.
     /// </para>
     /// </summary>
-    internal sealed class ArteryControlMessageSerializer : Akka.Serialization.V2.MessagePackSerializer<IArteryControlMessage>
+    [AkkaSerializer(Name = "artery-control", SerializerId = 23)]
+    [AkkaSerializerFormatter(typeof(Address), typeof(AddressFormatter))]
+    internal sealed partial class ArteryControlMessageSerializer : MessagePackSerializer<IArteryControlMessage>
     {
         /// <summary>
         /// The manifest for <see cref="HandshakeReq"/>.
@@ -95,518 +100,14 @@ namespace Akka.Remote.Artery
         /// </summary>
         public const string ClearSystemMessageDeliveryManifest = "SCL";
 
-        private const int FromFieldId = 1;
-        private const int ToFieldId = 2;
-        private const int QuarantinedUidFieldId = 2;
-
-        // Ack / Nack share an identical wire shape.
-        private const int AckSeqNoFieldId = 1;
-        private const int AckFromFieldId = 2;
-
-        // SystemMessageEnvelope
-        private const int SmeSeqNoFieldId = 1;
-        private const int SmeAckReplyToFieldId = 2;
-        private const int SmeRecipientPathFieldId = 3;
-        private const int SmePayloadFieldId = 4;
-
-        // ClearSystemMessageDelivery
-        private const int ClearIncarnationFieldId = 1;
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="ArteryControlMessageSerializer"/> class.
+        /// Generated by <c>Akka.Serialization.V2.Generators.AkkaSerializerGenerator</c> -- an
+        /// AOT-safe, explicit alternative to reflection-based (HOCON class-name) construction. Not
+        /// used by <c>Remote.conf</c>'s registration (which still resolves this class by name via
+        /// the classic <c>Serializer</c> reflection contract), but available for
+        /// <see cref="Akka.Serialization.V2.SerializerRegistration.CreateSetup(Akka.Serialization.V2.SerializerRegistration[])"/>-based
+        /// composition.
         /// </summary>
-        /// <param name="system">The actor system that owns this serializer.</param>
-        public ArteryControlMessageSerializer(ExtendedActorSystem system) : base(system)
-        {
-        }
-
-        /// <summary>
-        /// See HOCON registration fragment in the task report — this identifier (23) is unused
-        /// in the reserved 0-40 Akka-internal range as of this change (verified against
-        /// <c>Remote.conf</c>, <c>Cluster.conf</c>, <c>persistence.conf</c>, and the contrib
-        /// cluster-tools / distributed-data / streams reference.conf files; 17, which Pekko uses
-        /// for its <c>ArteryMessageSerializer</c>, is already taken in Akka.NET by
-        /// <c>Akka.Remote.Serialization.PrimitiveSerializers</c>).
-        /// </summary>
-        public override int Identifier => 23;
-
-        /// <inheritdoc/>
-        public override string Manifest(object obj) => obj switch
-        {
-            HandshakeReq => HandshakeReqManifest,
-            HandshakeRsp => HandshakeRspManifest,
-            ArteryHeartbeat => HeartbeatManifest,
-            ArteryHeartbeatRsp => HeartbeatRspManifest,
-            ArteryQuarantined => QuarantinedManifest,
-            Ack => AckManifest,
-            Nack => NackManifest,
-            SystemMessageEnvelope => SystemMessageEnvelopeManifest,
-            ClearSystemMessageDelivery => ClearSystemMessageDeliveryManifest,
-            _ => throw new ArgumentException($"Unsupported Artery control message type: {obj.GetType()}", nameof(obj))
-        };
-
-        /// <inheritdoc/>
-        public override int SizeHint(object obj) => obj switch
-        {
-            HandshakeReq req => SizeOfReq(req),
-            HandshakeRsp rsp => SizeOfRsp(rsp),
-            ArteryHeartbeat => SizeOfMapHeader(0),
-            ArteryHeartbeatRsp => SizeOfMapHeader(0),
-            ArteryQuarantined q => SizeOfQuarantined(q),
-            Ack ack => SizeOfAckOrNack(ack.SeqNo, ack.From),
-            Nack nack => SizeOfAckOrNack(nack.SeqNo, nack.From),
-            ClearSystemMessageDelivery clear => SizeOfMapHeader(1) + SizeOfInt32(ClearIncarnationFieldId) + SizeOfInt32(clear.Incarnation),
-            // SystemMessageEnvelope's inner payload size depends on the nested serializer's OWN
-            // SizeHint, which is not necessarily known cheaply (SizeOfEnvelopePayload returns
-            // UnknownSize when it isn't) -- rather than duplicate that fallback logic here, this
-            // type simply defers to UnknownSize; it is not the hot path (control-stream volume only,
-            // and PooledPayloadWriter grows on demand regardless).
-            SystemMessageEnvelope => UnknownSize,
-            _ => UnknownSize
-        };
-
-        /// <inheritdoc/>
-        public override int Serialize(object obj, IBufferWriter<byte> writer)
-        {
-            var counting = new CountingBufferWriter(writer);
-            var messagePackWriter = new MessagePackWriter(counting);
-
-            switch (obj)
-            {
-                case HandshakeReq req:
-                    WriteReq(ref messagePackWriter, req);
-                    break;
-                case HandshakeRsp rsp:
-                    WriteRsp(ref messagePackWriter, rsp);
-                    break;
-                case ArteryHeartbeat:
-                case ArteryHeartbeatRsp:
-                    // No fields -- an empty map is forward-compatible (an unknown-field skip loop
-                    // handles any fields a future version might add).
-                    messagePackWriter.WriteMapHeader(0);
-                    break;
-                case ArteryQuarantined quarantined:
-                    WriteQuarantined(ref messagePackWriter, quarantined);
-                    break;
-                case Ack ack:
-                    WriteAckOrNack(ref messagePackWriter, ack.SeqNo, ack.From);
-                    break;
-                case Nack nack:
-                    WriteAckOrNack(ref messagePackWriter, nack.SeqNo, nack.From);
-                    break;
-                case SystemMessageEnvelope sme:
-                    WriteSystemMessageEnvelope(ref messagePackWriter, sme);
-                    break;
-                case ClearSystemMessageDelivery clear:
-                    messagePackWriter.WriteMapHeader(1);
-                    messagePackWriter.Write(ClearIncarnationFieldId);
-                    messagePackWriter.Write(clear.Incarnation);
-                    break;
-                default:
-                    throw new ArgumentException($"Unsupported Artery control message type: {obj.GetType()}", nameof(obj));
-            }
-
-            messagePackWriter.Flush();
-            return checked((int)counting.BytesWritten);
-        }
-
-        /// <inheritdoc/>
-        public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)
-        {
-            var reader = new MessagePackReader(bytes);
-            return manifest switch
-            {
-                HandshakeReqManifest => ReadReq(ref reader),
-                HandshakeRspManifest => ReadRsp(ref reader),
-                HeartbeatManifest => ReadEmpty<ArteryHeartbeat>(ref reader, new ArteryHeartbeat()),
-                HeartbeatRspManifest => ReadEmpty<ArteryHeartbeatRsp>(ref reader, new ArteryHeartbeatRsp()),
-                QuarantinedManifest => ReadQuarantined(ref reader),
-                AckManifest => ReadAck(ref reader),
-                NackManifest => ReadNack(ref reader),
-                SystemMessageEnvelopeManifest => ReadSystemMessageEnvelope(ref reader),
-                ClearSystemMessageDeliveryManifest => ReadClearSystemMessageDelivery(ref reader),
-                _ => throw new SerializationException($"Unknown Artery control message manifest [{manifest}].")
-            };
-        }
-
-        private static void WriteReq(ref MessagePackWriter writer, HandshakeReq req)
-        {
-            writer.WriteMapHeader(2);
-            writer.Write(FromFieldId);
-            WriteUniqueAddress(ref writer, req.From);
-            writer.Write(ToFieldId);
-            WriteAddress(ref writer, req.To);
-        }
-
-        private static HandshakeReq ReadReq(ref MessagePackReader reader)
-        {
-            var fieldCount = reader.ReadMapHeader();
-            UniqueAddress? from = null;
-            Address? to = null;
-
-            for (var i = 0; i < fieldCount; i++)
-            {
-                var fieldId = reader.ReadInt32();
-                switch (fieldId)
-                {
-                    case FromFieldId:
-                        from = ReadUniqueAddress(ref reader);
-                        break;
-                    case ToFieldId:
-                        to = ReadAddress(ref reader);
-                        break;
-                    default:
-                        reader.Skip();
-                        break;
-                }
-            }
-
-            if (from is null)
-                throw new SerializationException($"Missing required field [From] with index [{FromFieldId}] for [{HandshakeReqManifest}].");
-            if (to is null)
-                throw new SerializationException($"Missing required field [To] with index [{ToFieldId}] for [{HandshakeReqManifest}].");
-
-            return new HandshakeReq(from.Value, to);
-        }
-
-        private static void WriteRsp(ref MessagePackWriter writer, HandshakeRsp rsp)
-        {
-            writer.WriteMapHeader(1);
-            writer.Write(FromFieldId);
-            WriteUniqueAddress(ref writer, rsp.From);
-        }
-
-        private static HandshakeRsp ReadRsp(ref MessagePackReader reader)
-        {
-            var fieldCount = reader.ReadMapHeader();
-            UniqueAddress? from = null;
-
-            for (var i = 0; i < fieldCount; i++)
-            {
-                var fieldId = reader.ReadInt32();
-                switch (fieldId)
-                {
-                    case FromFieldId:
-                        from = ReadUniqueAddress(ref reader);
-                        break;
-                    default:
-                        reader.Skip();
-                        break;
-                }
-            }
-
-            if (from is null)
-                throw new SerializationException($"Missing required field [From] with index [{FromFieldId}] for [{HandshakeRspManifest}].");
-
-            return new HandshakeRsp(from.Value);
-        }
-
-        private static void WriteQuarantined(ref MessagePackWriter writer, ArteryQuarantined quarantined)
-        {
-            writer.WriteMapHeader(2);
-            writer.Write(FromFieldId);
-            WriteUniqueAddress(ref writer, quarantined.From);
-            writer.Write(QuarantinedUidFieldId);
-            writer.Write(quarantined.QuarantinedUid);
-        }
-
-        private static ArteryQuarantined ReadQuarantined(ref MessagePackReader reader)
-        {
-            var fieldCount = reader.ReadMapHeader();
-            UniqueAddress? from = null;
-            long? quarantinedUid = null;
-
-            for (var i = 0; i < fieldCount; i++)
-            {
-                var fieldId = reader.ReadInt32();
-                switch (fieldId)
-                {
-                    case FromFieldId:
-                        from = ReadUniqueAddress(ref reader);
-                        break;
-                    case QuarantinedUidFieldId:
-                        quarantinedUid = reader.ReadInt64();
-                        break;
-                    default:
-                        reader.Skip();
-                        break;
-                }
-            }
-
-            if (from is null)
-                throw new SerializationException($"Missing required field [From] with index [{FromFieldId}] for [{QuarantinedManifest}].");
-            if (quarantinedUid is null)
-                throw new SerializationException($"Missing required field [QuarantinedUid] with index [{QuarantinedUidFieldId}] for [{QuarantinedManifest}].");
-
-            return new ArteryQuarantined(from.Value, quarantinedUid.Value);
-        }
-
-        /// <summary>
-        /// Shared writer for <see cref="Ack"/> and <see cref="Nack"/> -- identical wire shape
-        /// (design.md gate G3).
-        /// </summary>
-        private static void WriteAckOrNack(ref MessagePackWriter writer, long seqNo, UniqueAddress from)
-        {
-            writer.WriteMapHeader(2);
-            writer.Write(AckSeqNoFieldId);
-            writer.Write(seqNo);
-            writer.Write(AckFromFieldId);
-            WriteUniqueAddress(ref writer, from);
-        }
-
-        private static Ack ReadAck(ref MessagePackReader reader)
-        {
-            var (seqNo, from) = ReadAckOrNack(ref reader, AckManifest);
-            return new Ack(seqNo, from);
-        }
-
-        private static Nack ReadNack(ref MessagePackReader reader)
-        {
-            var (seqNo, from) = ReadAckOrNack(ref reader, NackManifest);
-            return new Nack(seqNo, from);
-        }
-
-        private static (long SeqNo, UniqueAddress From) ReadAckOrNack(ref MessagePackReader reader, string manifestForErrors)
-        {
-            var fieldCount = reader.ReadMapHeader();
-            long? seqNo = null;
-            UniqueAddress? from = null;
-
-            for (var i = 0; i < fieldCount; i++)
-            {
-                var fieldId = reader.ReadInt32();
-                switch (fieldId)
-                {
-                    case AckSeqNoFieldId:
-                        seqNo = reader.ReadInt64();
-                        break;
-                    case AckFromFieldId:
-                        from = ReadUniqueAddress(ref reader);
-                        break;
-                    default:
-                        reader.Skip();
-                        break;
-                }
-            }
-
-            if (seqNo is null)
-                throw new SerializationException($"Missing required field [SeqNo] with index [{AckSeqNoFieldId}] for [{manifestForErrors}].");
-            if (from is null)
-                throw new SerializationException($"Missing required field [From] with index [{AckFromFieldId}] for [{manifestForErrors}].");
-
-            return (seqNo.Value, from.Value);
-        }
-
-        private static int SizeOfAckOrNack(long seqNo, UniqueAddress from) =>
-            SizeOfMapHeader(2) +
-            SizeOfInt32(AckSeqNoFieldId) + SizeOfInt64(seqNo) +
-            SizeOfInt32(AckFromFieldId) + SizeOfUniqueAddress(from);
-
-        private void WriteSystemMessageEnvelope(ref MessagePackWriter writer, SystemMessageEnvelope sme)
-        {
-            writer.WriteMapHeader(4);
-            writer.Write(SmeSeqNoFieldId);
-            writer.Write(sme.SeqNo);
-            writer.Write(SmeAckReplyToFieldId);
-            WriteUniqueAddress(ref writer, sme.AckReplyTo);
-            writer.Write(SmeRecipientPathFieldId);
-            writer.Write(sme.RecipientPath);
-            writer.Write(SmePayloadFieldId);
-            // Nest the inner ISystemMessage recursively via the classic Serialization extension
-            // (serializer id + manifest + raw bytes) -- see the type-level "How the inner message
-            // is nested" remarks on SystemMessageEnvelope for why this existing V2 helper (built for
-            // exactly this "nest an arbitrary payload" purpose) is reused rather than hand-rolled.
-            WriteEnvelopePayload(ref writer, sme.Message);
-        }
-
-        private SystemMessageEnvelope ReadSystemMessageEnvelope(ref MessagePackReader reader)
-        {
-            var fieldCount = reader.ReadMapHeader();
-            long? seqNo = null;
-            UniqueAddress? ackReplyTo = null;
-            string? recipientPath = null;
-            Akka.Dispatch.SysMsg.ISystemMessage? message = null;
-
-            for (var i = 0; i < fieldCount; i++)
-            {
-                var fieldId = reader.ReadInt32();
-                switch (fieldId)
-                {
-                    case SmeSeqNoFieldId:
-                        seqNo = reader.ReadInt64();
-                        break;
-                    case SmeAckReplyToFieldId:
-                        ackReplyTo = ReadUniqueAddress(ref reader);
-                        break;
-                    case SmeRecipientPathFieldId:
-                        recipientPath = reader.ReadString();
-                        break;
-                    case SmePayloadFieldId:
-                        message = ReadEnvelopePayload<Akka.Dispatch.SysMsg.ISystemMessage>(ref reader);
-                        break;
-                    default:
-                        reader.Skip();
-                        break;
-                }
-            }
-
-            if (seqNo is null)
-                throw new SerializationException($"Missing required field [SeqNo] with index [{SmeSeqNoFieldId}] for [{SystemMessageEnvelopeManifest}].");
-            if (ackReplyTo is null)
-                throw new SerializationException($"Missing required field [AckReplyTo] with index [{SmeAckReplyToFieldId}] for [{SystemMessageEnvelopeManifest}].");
-            if (recipientPath is null)
-                throw new SerializationException($"Missing required field [RecipientPath] with index [{SmeRecipientPathFieldId}] for [{SystemMessageEnvelopeManifest}].");
-            if (message is null)
-                throw new SerializationException($"Missing required field [Message] with index [{SmePayloadFieldId}] for [{SystemMessageEnvelopeManifest}].");
-
-            return new SystemMessageEnvelope(message, seqNo.Value, ackReplyTo.Value, recipientPath);
-        }
-
-        private static ClearSystemMessageDelivery ReadClearSystemMessageDelivery(ref MessagePackReader reader)
-        {
-            var fieldCount = reader.ReadMapHeader();
-            int? incarnation = null;
-
-            for (var i = 0; i < fieldCount; i++)
-            {
-                var fieldId = reader.ReadInt32();
-                switch (fieldId)
-                {
-                    case ClearIncarnationFieldId:
-                        incarnation = reader.ReadInt32();
-                        break;
-                    default:
-                        reader.Skip();
-                        break;
-                }
-            }
-
-            if (incarnation is null)
-                throw new SerializationException($"Missing required field [Incarnation] with index [{ClearIncarnationFieldId}] for [{ClearSystemMessageDeliveryManifest}].");
-
-            return new ClearSystemMessageDelivery(incarnation.Value);
-        }
-
-        /// <summary>
-        /// Reads (and discards, forward-compatibly) a MessagePack map for a fieldless control
-        /// message (<see cref="ArteryHeartbeat"/> / <see cref="ArteryHeartbeatRsp"/>), returning
-        /// <paramref name="instance"/>. A shared helper since both messages have identical
-        /// (empty) wire shapes.
-        /// </summary>
-        private static TMessage ReadEmpty<TMessage>(ref MessagePackReader reader, TMessage instance)
-            where TMessage : IArteryControlMessage
-        {
-            var fieldCount = reader.ReadMapHeader();
-            for (var i = 0; i < fieldCount; i++)
-            {
-                reader.ReadInt32();
-                reader.Skip();
-            }
-
-            return instance;
-        }
-
-        private static void WriteAddress(ref MessagePackWriter writer, Address address)
-        {
-            writer.WriteArrayHeader(4);
-            writer.Write(address.Protocol);
-            writer.Write(address.System);
-
-            if (address.Host is { } host)
-                writer.Write(host);
-            else
-                writer.WriteNil();
-
-            if (address.Port is { } port)
-                writer.Write(port);
-            else
-                writer.WriteNil();
-        }
-
-        private static Address ReadAddress(ref MessagePackReader reader)
-        {
-            var length = reader.ReadArrayHeader();
-            if (length != 4)
-                throw new SerializationException($"Expected a 4-element address array, got {length}.");
-
-            var protocol = reader.ReadString() ?? throw new SerializationException("Missing address protocol.");
-            var system = reader.ReadString() ?? throw new SerializationException("Missing address system name.");
-            var host = reader.TryReadNil() ? null : reader.ReadString();
-            var port = reader.TryReadNil() ? (int?)null : reader.ReadInt32();
-
-            return new Address(protocol, system, host, port);
-        }
-
-        private static void WriteUniqueAddress(ref MessagePackWriter writer, UniqueAddress uniqueAddress)
-        {
-            writer.WriteArrayHeader(2);
-            WriteAddress(ref writer, uniqueAddress.Address);
-            writer.Write(uniqueAddress.Uid);
-        }
-
-        private static UniqueAddress ReadUniqueAddress(ref MessagePackReader reader)
-        {
-            var length = reader.ReadArrayHeader();
-            if (length != 2)
-                throw new SerializationException($"Expected a 2-element unique-address array, got {length}.");
-
-            var address = ReadAddress(ref reader);
-            var uid = reader.ReadInt64();
-            return new UniqueAddress(address, uid);
-        }
-
-        private static int SizeOfAddress(Address address) =>
-            SizeOfArrayHeader(4) +
-            SizeOfString(address.Protocol) +
-            SizeOfString(address.System) +
-            (address.Host is { } host ? SizeOfString(host) : SizeOfNil()) +
-            (address.Port is { } port ? SizeOfInt32(port) : SizeOfNil());
-
-        private static int SizeOfUniqueAddress(UniqueAddress uniqueAddress) =>
-            SizeOfArrayHeader(2) + SizeOfAddress(uniqueAddress.Address) + SizeOfInt64(uniqueAddress.Uid);
-
-        private static int SizeOfReq(HandshakeReq req) =>
-            SizeOfMapHeader(2) +
-            SizeOfInt32(FromFieldId) + SizeOfUniqueAddress(req.From) +
-            SizeOfInt32(ToFieldId) + SizeOfAddress(req.To);
-
-        private static int SizeOfRsp(HandshakeRsp rsp) =>
-            SizeOfMapHeader(1) +
-            SizeOfInt32(FromFieldId) + SizeOfUniqueAddress(rsp.From);
-
-        private static int SizeOfQuarantined(ArteryQuarantined quarantined) =>
-            SizeOfMapHeader(2) +
-            SizeOfInt32(FromFieldId) + SizeOfUniqueAddress(quarantined.From) +
-            SizeOfInt32(QuarantinedUidFieldId) + SizeOfInt64(quarantined.QuarantinedUid);
-
-        /// <summary>
-        /// Counts bytes advanced through an inner <see cref="IBufferWriter{T}"/> so
-        /// <see cref="Serialize"/> can report the bytes-written contract required by
-        /// <see cref="Akka.Serialization.SerializerV2"/>, mirroring the counting wrapper the V2
-        /// MessagePack source generator emits for the same purpose
-        /// (<c>AkkaGeneratedCountingBufferWriter</c> in
-        /// <c>Akka.Serialization.V2.Generators.AkkaSerializerGenerator</c>).
-        /// </summary>
-        private sealed class CountingBufferWriter : IBufferWriter<byte>
-        {
-            private readonly IBufferWriter<byte> _inner;
-
-            public CountingBufferWriter(IBufferWriter<byte> inner)
-            {
-                _inner = inner;
-            }
-
-            public long BytesWritten { get; private set; }
-
-            public void Advance(int count)
-            {
-                _inner.Advance(count);
-                BytesWritten += count;
-            }
-
-            public Memory<byte> GetMemory(int sizeHint = 0) => _inner.GetMemory(sizeHint);
-
-            public Span<byte> GetSpan(int sizeHint = 0) => _inner.GetSpan(sizeHint);
-        }
+        public static partial SerializerRegistration CreateRegistration();
     }
 }
