@@ -209,6 +209,23 @@ namespace Akka.Remote.Artery
         public bool TryEnqueueControl(IOutboundEnvelope element) => _controlChannel.Writer.TryWrite(element);
 
         /// <summary>
+        /// The number of elements CURRENTLY buffered in the ORDINARY outbound channel, awaiting a
+        /// consumer. Test-observability surface added for design.md task 8.5 ("slow receiver tests
+        /// proving queues do not grow unbounded") -- <c>System.Threading.Channels</c>' bounded
+        /// channel implementation supports O(1) <see cref="ChannelReader{T}.Count"/>, so this is
+        /// cheap enough to sample repeatedly from a test without perturbing the property under
+        /// test. Production code has no need of this (the bounded <see cref="TryEnqueueOutbound"/> /
+        /// dead-letter-on-<see langword="false"/> pattern is capacity-agnostic), so this exists
+        /// purely for tests to assert the bound is never exceeded.
+        /// </summary>
+        public int OutboundQueueCount => _outboundChannel.Reader.Count;
+
+        /// <summary>
+        /// The CONTROL-channel analog of <see cref="OutboundQueueCount"/>. See its remarks.
+        /// </summary>
+        public int ControlQueueCount => _controlChannel.Reader.Count;
+
+        /// <summary>
         /// Ensures this association's ORDINARY outbound stream is materialized exactly once, no
         /// matter how many threads call this concurrently. The callback is supplied by the
         /// transport (<c>ArteryRemoting</c>), which owns the Tcp extension / materializer / settings

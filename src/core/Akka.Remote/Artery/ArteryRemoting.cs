@@ -65,6 +65,18 @@ namespace Akka.Remote.Artery
         private readonly AssociationRegistry _registry = new();
 
         /// <summary>
+        /// Test-observability accessor for <see cref="_registry"/> (design.md task 8.5, "slow
+        /// receiver tests proving queues do not grow unbounded"): lets tests reach a live
+        /// association's <see cref="Association.OutboundQueueCount"/>/<see cref="Association.ControlQueueCount"/>,
+        /// and (via <see cref="AssociationRegistry.CompleteHandshake"/>) fake a completed handshake
+        /// against a peer that will never actually respond, without needing a second real, reachable
+        /// <see cref="ArteryRemoting"/> instance on the wire. Production code never reads this --
+        /// every production access to associations goes through the instance methods above that
+        /// already close over <see cref="_registry"/>.
+        /// </summary>
+        internal AssociationRegistry Registry => _registry;
+
+        /// <summary>
         /// Subscribers notified (task 6.2) for every decoded, non-handshake inbound control
         /// message, across every association's control connection. <see cref="ArteryRemoting"/>
         /// subscribes itself in <see cref="Start"/> to handle <see cref="ArteryHeartbeat"/> /

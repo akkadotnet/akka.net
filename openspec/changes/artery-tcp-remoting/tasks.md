@@ -83,11 +83,11 @@ BenchmarkDotNet harness (naked, baseline-first, `MemoryDiagnoser` on), socket by
 
 ## 8. Bounded Queues And Backpressure
 
-- [ ] 8.1 Add bounded ordinary outbound queue
-- [ ] 8.2 Add bounded control outbound queue
-- [ ] 8.3 Define overflow behavior for user messages
-- [ ] 8.4 Define overflow behavior for control/system messages
-- [ ] 8.5 Add slow receiver tests proving queues do not grow unbounded
+- [x] 8.1 Add bounded ordinary outbound queue (landed with group 6/7: `Association._outboundChannel`, `Channel.CreateBounded`, capacity `Association.DefaultOutboundQueueCapacity` = 3072 — `AssociationRegistry.cs:86,106,144-149`; `TryEnqueueOutbound` — `AssociationRegistry.cs:202`)
+- [x] 8.2 Add bounded control outbound queue (landed with group 6/7: `Association._controlChannel`, capacity `Association.DefaultControlQueueCapacity` = 256 — `AssociationRegistry.cs:96,107,150-155`; `TryEnqueueControl` — `AssociationRegistry.cs:209`)
+- [x] 8.3 Define overflow behavior for user messages (landed with group 6/7: ordinary overflow → dead letters, log-once per association/uid — `ArteryRemoting.EnqueueOutbound`, `ArteryRemoting.cs:443-463`, using `Association.ShouldLogOrdinaryOverflowDrop` — `AssociationRegistry.cs:256-257`)
+- [x] 8.4 Define overflow behavior for control/system messages (landed with group 6/7: control/system overflow → quarantine, re-entrancy-guarded — `ArteryRemoting.HandleControlOverflow`, `ArteryRemoting.cs:537-551`, called from `EnqueueControl`/`EnqueueSystemMessage`, `ArteryRemoting.cs:481-482,514-515`)
+- [x] 8.5 Add slow receiver tests proving queues do not grow unbounded (unit-level bounded-queue proofs added to `AssociationRegistrySpec.cs`; e2e slow/unresponsive-peer proofs added in new `ArteryBackpressureSpec.cs` — both under `src/core/Akka.Remote.Tests/Artery/`)
 
 ## 9. Lifecycle And Compatibility Tests
 
