@@ -62,24 +62,24 @@ BenchmarkDotNet harness (naked, baseline-first, `MemoryDiagnoser` on), socket by
 
 ## 6. Control Stream
 
-- [ ] 6.1 Add outbound control queue
-- [ ] 6.2 Add inbound control stream processing
-- [ ] 6.3 Route handshake messages over control stream
-- [ ] 6.4 Add liveness/heartbeat control messages
-- [ ] 6.5 Add quarantine control message
-- [ ] 6.6 Ensure control stream cannot be starved by ordinary messages
+- [x] 6.1 Add outbound control queue
+- [x] 6.2 Add inbound control stream processing
+- [x] 6.3 Route handshake messages over control stream
+- [x] 6.4 Add liveness/heartbeat control messages
+- [x] 6.5 Add quarantine control message
+- [x] 6.6 Ensure control stream cannot be starved by ordinary messages
 
 ## 7. Reliable System Messages
 
-- [ ] 7.1 Define system-message envelope
-- [ ] 7.2 Add sequence numbers for outbound system messages
-- [ ] 7.3 Add ACK/NACK control messages
-- [ ] 7.4 Add resend timer
-- [ ] 7.5 Add bounded system-message buffer
-- [ ] 7.6 Quarantine on system-message buffer overflow
-- [ ] 7.7 Quarantine or fail association after give-up timeout
-- [ ] 7.8 Add duplicate and out-of-order system-message tests
-- [ ] 7.9 Verify DeathWatch and remote deployment system-message behavior
+- [x] 7.1 Define system-message envelope
+- [x] 7.2 Add sequence numbers for outbound system messages
+- [x] 7.3 Add ACK/NACK control messages
+- [x] 7.4 Add resend timer
+- [x] 7.5 Add bounded system-message buffer
+- [x] 7.6 Quarantine on system-message buffer overflow
+- [x] 7.7 Quarantine or fail association after give-up timeout
+- [x] 7.8 Add duplicate and out-of-order system-message tests
+- [x] 7.9 Verify DeathWatch and remote deployment system-message behavior
 
 ## 8. Bounded Queues And Backpressure
 
