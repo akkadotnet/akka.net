@@ -242,3 +242,7 @@ launchSettings.json
 # Claude worktree management
 .claude-wt/worktrees
 /.playwright-mcp
+design-notes/8295-consistent-hashing-concepts.md
+design-notes/8293-consistenthash-ring-storage.md
+design-notes/8295-consistent-hash-64bit-ring.md
+scripts/setup-dev-env-fedora.sh

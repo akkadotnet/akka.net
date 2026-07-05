@@ -50,14 +50,24 @@ namespace Akka.Tests.Routing
         #region Helpers
 
         /// <summary>
-        /// Reads the private ring dictionary out of a <see cref="ConsistentHash{T}"/> so tests can
-        /// assert on the exact key-&gt;node mapping (there is no public accessor).
+        /// Reads the private ring state out of a <see cref="ConsistentHash{T}"/> so tests can assert
+        /// on the exact key-&gt;node mapping (there is no public accessor). Since #8293 the ring is
+        /// stored as parallel sorted arrays rather than a retained SortedDictionary; rebuild the
+        /// dictionary shape here so the assertions (and the legacy-ring comparison) stay unchanged.
         /// </summary>
         private static SortedDictionary<int, T> Ring<T>(ConsistentHash<T> hash)
         {
-            var field = typeof(ConsistentHash<T>).GetField("_nodes", BindingFlags.NonPublic | BindingFlags.Instance);
-            field.Should().NotBeNull("the ConsistentHash<T>._nodes field is required by these tests");
-            return (SortedDictionary<int, T>)field.GetValue(hash);
+            var keysField = typeof(ConsistentHash<T>).GetField("_nodeHashRing", BindingFlags.NonPublic | BindingFlags.Instance);
+            var valuesField = typeof(ConsistentHash<T>).GetField("_nodeRing", BindingFlags.NonPublic | BindingFlags.Instance);
+            keysField.Should().NotBeNull("the ConsistentHash<T>._nodeHashRing field is required by these tests");
+            valuesField.Should().NotBeNull("the ConsistentHash<T>._nodeRing field is required by these tests");
+
+            var keys = (int[])keysField.GetValue(hash);
+            var values = (T[])valuesField.GetValue(hash);
+            var ring = new SortedDictionary<int, T>();
+            for (var i = 0; i < keys.Length; i++)
+                ring.Add(keys[i], values[i]); // Add, not the indexer: a duplicate ring slot must fail loudly
+            return ring;
         }
 
         /// <summary>

@@ -26,40 +26,32 @@ namespace Akka.Routing
     /// <typeparam name="T">The type of objects to store in the hash.</typeparam>
     public class ConsistentHash<T>
     {
-        private readonly SortedDictionary<int, T> _nodes;
+        // Ring state: parallel arrays sorted by ring slot, materialized once at construction.
+        // The SortedDictionary the ring is built in is deliberately NOT retained: after
+        // construction it was only ever read by IsEmpty and operator + / operator - (both served
+        // by the arrays), while its red-black-tree nodes (~56 bytes per ring point) dominated the
+        // ring's steady-state footprint - ~1.1 MB of dead weight at 20k ring points (#8293).
+        private readonly int[] _nodeHashRing;
+        private readonly T[] _nodeRing;
         private readonly int _virtualNodesFactor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHash{T}"/> class.
         /// </summary>
-        /// <param name="nodes">TBD</param>
-        /// <param name="virtualNodesFactor">TBD</param>
+        /// <param name="nodes">The ring content as a slot-to-node mapping sorted by slot. Used only to
+        /// materialize the internal lookup arrays; the dictionary itself is not retained, so mutating
+        /// it after construction does not affect this instance.</param>
+        /// <param name="virtualNodesFactor">The number of virtual nodes each node is expanded into on the ring.</param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="virtualNodesFactor"/> is less than one.
         /// </exception>
         public ConsistentHash(SortedDictionary<int, T> nodes, int virtualNodesFactor)
         {
-            _nodes = nodes;
-
             if (virtualNodesFactor < 1) throw new ArgumentException("virtualNodesFactor must be >= 1", nameof(virtualNodesFactor));
 
+            _nodeHashRing = nodes.Keys.ToArray();
+            _nodeRing = nodes.Values.ToArray();
             _virtualNodesFactor = virtualNodesFactor;
-        }
-
-        private (int[], T[])? _ring = null;
-        private (int[], T[])? RingTuple
-        {
-            get { return _ring ??= (_nodes.Keys.ToArray(), _nodes.Values.ToArray()); }
-            }
-
-        private int[] NodeHashRing
-        {
-            get { return RingTuple.Value.Item1; }
-        }
-
-        private T[] NodeRing
-        {
-            get { return RingTuple.Value.Item2; }
         }
 
         /// <summary>
@@ -94,7 +86,7 @@ namespace Akka.Routing
             else
             {
                 var j = Math.Abs(i + 1);
-                if (j >= NodeHashRing.Length) return 0; //after last, use first
+                if (j >= _nodeHashRing.Length) return 0; //after last, use first
                 else return j; //next node clockwise
             }
         }
@@ -111,7 +103,7 @@ namespace Akka.Routing
         {
             if (IsEmpty) throw new InvalidOperationException($"Can't get node for [{key}] from an empty node ring");
 
-            return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
+            return _nodeRing[Idx(Array.BinarySearch(_nodeHashRing, ConsistentHash.HashFor(key)))];
         }
 
         /// <summary>
@@ -126,7 +118,7 @@ namespace Akka.Routing
         {
             if (IsEmpty) throw new InvalidOperationException($"Can't get node for [{key}] from an empty node ring");
 
-            return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
+            return _nodeRing[Idx(Array.BinarySearch(_nodeHashRing, ConsistentHash.HashFor(key)))];
         }
 
         /// <summary>
@@ -134,7 +126,7 @@ namespace Akka.Routing
         /// </summary>
         public bool IsEmpty
         {
-            get { return !_nodes.Any(); }
+            get { return _nodeHashRing.Length == 0; }
         }
 
         /// <summary>
@@ -176,10 +168,10 @@ namespace Akka.Routing
             // ToString() (the ring's node identity), so this is byte-identical to
             // ConsistentHash.Create(all nodes): collisions resolve in canonical order, and adding a
             // node already present (by ToString) is a no-op rather than a duplicated vnode set (#8031).
-            // Values repeats each node virtualNodesFactor times; Distinct() (reference equality on the
-            // stored instances) collapses that back to N so Create sorts N nodes, not N*V - Create's
-            // ToString de-dup remains the correctness guarantee.
-            return ConsistentHash.Create(hash._nodes.Values.Distinct().Append(node), hash._virtualNodesFactor);
+            // The ring values array repeats each node virtualNodesFactor times; Distinct() (reference
+            // equality on the stored instances) collapses that back to N so Create sorts N nodes, not
+            // N*V - Create's ToString de-dup remains the correctness guarantee.
+            return ConsistentHash.Create(hash._nodeRing.Distinct().Append(node), hash._virtualNodesFactor);
         }
 
         /// <summary>
@@ -199,10 +191,11 @@ namespace Akka.Routing
             // (the ring's node identity) - rather than T.Equals - avoids dropping a different node
             // that merely compares Equals-equal to the target (#8031).
             var nodeKey = node.ToString();
-            // Distinct() first (reference equality collapses the virtualNodesFactor repeats in Values
-            // to N distinct nodes) so the ToString filter and Create's sort run over N, not N*V.
+            // Distinct() first (reference equality collapses the virtualNodesFactor repeats in the
+            // ring values array to N distinct nodes) so the ToString filter and Create's sort run
+            // over N, not N*V.
             return ConsistentHash.Create(
-                hash._nodes.Values.Distinct().Where(n => !string.Equals(n.ToString(), nodeKey, StringComparison.Ordinal)),
+                hash._nodeRing.Distinct().Where(n => !string.Equals(n.ToString(), nodeKey, StringComparison.Ordinal)),
                 hash._virtualNodesFactor);
         }
 
