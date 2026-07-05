@@ -845,7 +845,23 @@ namespace Akka.IO
             Log.Warning("Received Write command before Register command. It will be buffered until Register will be received (buffered write size is {0} bytes)",
                 write.Bytes);
 
-            _pendingRegistrationWrites.Enqueue(new WriteCommand(write, sender));
+            // INVARIANT: TcpConnection never retains caller-owned memory past the message-handler
+            // turn; pre-registration writes are copied at enqueue (cold path) — see the WriteAck
+            // contract in EnqueueWrite. On the Open-phase path (HandleWrite -> EnqueueWrite), the
+            // caller's ReadOnlySequence<byte> is copied into the transport's pipe synchronously,
+            // in the same turn the Write message is handled, before WriteAck is sent. A
+            // pre-registration write has no such bound: it can sit in _pendingRegistrationWrites
+            // for an arbitrary amount of time (until Register arrives, up to
+            // Settings.RegisterTimeout) before FlushPendingRegistrationWrites ever touches it. If
+            // we queued the caller's sequence as-is, a caller using a pooled/reusable buffer (the
+            // whole point of the ReadOnlySequence<byte> Write surface) could safely reuse or
+            // mutate it well before that flush, silently corrupting the bytes eventually written
+            // to the socket. Copying here — a one-time, cold-path allocation — makes the buffered
+            // write's lifetime fully independent of the caller's buffer.
+            var copiedData = new ReadOnlySequence<byte>(write.Data.ToArray());
+            var bufferedWrite = Write.Create(copiedData, write.Ack);
+
+            _pendingRegistrationWrites.Enqueue(new WriteCommand(bufferedWrite, sender));
             _pendingRegistrationBytes += byteCount;
         }
 
@@ -882,6 +898,16 @@ namespace Akka.IO
             // Write directly to transport — pipe handles buffering and batching.
             // The pipe absorbs writes into its internal buffer (memcpy, not syscall).
             // The write pump flushes the buffer to the socket asynchronously.
+            //
+            // WriteAck contract: WriteAsync (see TcpTransportConnection) synchronously copies
+            // every segment of write.Data into the pipe's internal buffer before returning —
+            // the ValueTask<FlushResult> it hands back only tracks the async flush to the
+            // socket, not the memcpy. So by the time we send WriteAck below, the caller's
+            // memory has already been copied out of and may be safely reused or mutated. This
+            // call happens synchronously within the same actor-message-handler turn that
+            // received the Write, which is the invariant BufferSingleWriteBeforeRegister's
+            // pre-registration copy exists to preserve for writes that can't reach this method
+            // in the same turn.
             _transport!.WriteAsync(write.Data, _cts!.Token);
 
             if (write.WantsAck) sender.Tell(write.Ack);
