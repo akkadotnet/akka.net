@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Channels;
 using Akka.Actor;
+using Akka.Streams;
 
 namespace Akka.Remote.Artery
 {
@@ -137,6 +138,59 @@ namespace Akka.Remote.Artery
         private readonly Channel<IOutboundEnvelope> _controlChannel;
         private readonly MaterializeOnceGate _outboundGate = new();
         private readonly MaterializeOnceGate _controlGate = new();
+
+        /// <summary>
+        /// The <see cref="UniqueKillSwitch"/> of the CURRENT materialization of this association's
+        /// ORDINARY outbound stream (design.md group 9, canonical reconnect fix), or
+        /// <see langword="null"/> if that stream has never been materialized. Published by
+        /// <see cref="SetOutboundKillSwitch"/> on the materializing thread; read + tripped by
+        /// <see cref="TripOutboundKillSwitch"/> from the CONTROL stream's termination continuation
+        /// on a different thread -- <c>volatile</c> for that cross-thread visibility (a reference
+        /// write/read is already atomic).
+        ///
+        /// <para>
+        /// <b>Why the control stream trips it.</b> The ordinary stream has no keep-alive, so it
+        /// detects a dead peer only when an ordinary write happens to fail -- and a single write to
+        /// a just-gracefully-closed socket can succeed locally (the peer's RST lands only
+        /// afterwards), leaving an idle ordinary stream stranded on a dead connection indefinitely.
+        /// The CONTROL stream detects the same peer death RELIABLY -- its periodic heartbeat always
+        /// produces a "second write" that hits the errored socket -- so when control's own
+        /// connection genuinely fails we trip this switch to drive the ordinary stream down too, so
+        /// it reconnects to the live incarnation alongside control instead of lingering. Tripping is
+        /// idempotent (<see cref="UniqueKillSwitch.Shutdown"/>) and null-safe; a stale switch
+        /// (ordinary already torn down / in restart-backoff) is a harmless no-op.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>Edge-triggered, once per death (<see cref="MarkControlHealthy"/>/<see cref="TryConsumeControlHealthy"/>).</b>
+        /// The trip fires only on control's transition from CONNECTED to FAILED -- NOT on every
+        /// control-stream fault. Control reconnect-loops against a still-dead peer (each attempt is a
+        /// fast connection-refused fault), and tripping the ordinary stream on each of those would
+        /// churn it: a trip landing while the ordinary consumer is mid-handshake against the revived
+        /// peer would drop its single held <c>pendingMessage</c> (accepted at-most-once, but
+        /// needless). So the trip is gated on <see cref="TryConsumeControlHealthy"/>: it fires once
+        /// for the initial death (control HAD connected -- warmup, or a prior incarnation), then goes
+        /// quiet until control successfully connects again (<see cref="MarkControlHealthy"/>). After
+        /// that single kick the ordinary stream self-manages its own reconnect loop and, once the
+        /// peer is back, delivers its still-queued messages in order UNINTERRUPTED. Non-lossy for
+        /// pinned invariant 5: anything still in the association-owned channel survives (the channel
+        /// is externally owned and outlives any single materialization).
+        /// </para>
+        /// </summary>
+        private volatile UniqueKillSwitch? _outboundKillSwitch;
+
+        /// <summary>
+        /// Edge-detector state for <see cref="_outboundKillSwitch"/>'s once-per-death tripping. Set
+        /// to 1 by <see cref="MarkControlHealthy"/> when the CONTROL stream's outbound connection is
+        /// successfully ESTABLISHED (its <c>OutgoingConnection</c> materialized task completes -- a
+        /// connection-refused reconnect attempt against a dead peer FAULTS that task instead, so it
+        /// never marks healthy); atomically read-and-cleared to 0 by <see cref="TryConsumeControlHealthy"/>
+        /// on the control stream's fault, which trips the ordinary stream only if control had in fact
+        /// been connected since the last trip. <see cref="Interlocked"/> throughout -- written on the
+        /// connection-established continuation, consumed on the termination continuation, different
+        /// threads.
+        /// </summary>
+        private int _controlHealthy;
 
         /// <summary>
         /// Set (independently per stream) by <see cref="CompleteOutbound"/>/<see cref="CompleteControlOutbound"/>
@@ -290,6 +344,40 @@ namespace Akka.Remote.Artery
         /// Resets the CONTROL outbound stream's materialize-once gate. See <see cref="ResetOutboundGate"/>.
         /// </summary>
         public void ResetControlGate() => _controlGate.Reset();
+
+        /// <summary>
+        /// Publishes the <see cref="UniqueKillSwitch"/> for the ORDINARY outbound stream's current
+        /// materialization so <see cref="TripOutboundKillSwitch"/> can later abort it. Called by the
+        /// transport (<c>ArteryRemoting.MaterializeOutboundStream</c>) each time the ordinary stream
+        /// is (re-)materialized -- see <see cref="_outboundKillSwitch"/>.
+        /// </summary>
+        public void SetOutboundKillSwitch(UniqueKillSwitch killSwitch) => _outboundKillSwitch = killSwitch;
+
+        /// <summary>
+        /// Drives the ORDINARY outbound stream's current materialization down (if any) via its
+        /// <see cref="UniqueKillSwitch"/>, so the standard termination -&gt;
+        /// <c>ArteryRemoting.ScheduleOutboundRestart</c> path reconnects it. Idempotent + null-safe.
+        /// Called from the CONTROL stream's termination continuation when control's connection
+        /// genuinely fails AND had previously connected (<see cref="TryConsumeControlHealthy"/>) --
+        /// see <see cref="_outboundKillSwitch"/> for why control's reliable death detection drives
+        /// the keep-alive-less ordinary stream, and why the trip is edge-triggered.
+        /// </summary>
+        public void TripOutboundKillSwitch() => _outboundKillSwitch?.Shutdown();
+
+        /// <summary>
+        /// Records that the CONTROL stream's outbound connection has been successfully ESTABLISHED,
+        /// arming the once-per-death ordinary-stream trip (see <see cref="_controlHealthy"/>). Called
+        /// from the transport when control's <c>OutgoingConnection</c> materialized task completes.
+        /// </summary>
+        public void MarkControlHealthy() => Interlocked.Exchange(ref _controlHealthy, 1);
+
+        /// <summary>
+        /// Atomically reports whether the CONTROL stream had connected since the last trip, clearing
+        /// the flag so a subsequent reconnect-loop fault (against a still-dead peer, which never
+        /// re-armed via <see cref="MarkControlHealthy"/>) does NOT trip the ordinary stream again.
+        /// See <see cref="_controlHealthy"/> / <see cref="_outboundKillSwitch"/>.
+        /// </summary>
+        public bool TryConsumeControlHealthy() => Interlocked.Exchange(ref _controlHealthy, 0) == 1;
 
         /// <summary>
         /// Whether the ORDINARY outbound stream should be (re-)materialized right now (design.md

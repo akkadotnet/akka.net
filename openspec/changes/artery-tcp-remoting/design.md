@@ -237,7 +237,33 @@ is unsafe across a restart — it must be forced through a fresh `HandshakeReq` 
 same-uid re-handshake is a no-op on `AssociationState` and provides no other observable signal);
 (2) `Akka.IO.TcpConnection` never proactively observed its write pump's completion, so a write-side
 I/O failure on an otherwise-idle one-way connection could go undetected indefinitely — fixed
-generally (not Artery-specific) by mirroring the existing read-pump-monitoring pattern); DeathWatch
+generally (not Artery-specific) by mirroring the existing read-pump-monitoring pattern);
+(3) **the ordinary stream has no keep-alive, so it detects a dead peer only when an ordinary write
+happens to fail — and a single write to a just-gracefully-closed socket can succeed locally (the
+peer's RST lands only afterwards), leaving an idle ordinary stream stranded on a dead connection
+indefinitely** (observed as a slow-CI-only 30s hang in the queued-redelivery spec, deterministic
+on fast boxes only because loopback RST latency there wins the race). Fixed by having the CONTROL
+stream — which detects the same death RELIABLY, since its periodic heartbeat always produces a
+"second write" that hits the errored socket — trip a published per-materialization ordinary
+`UniqueKillSwitch` (`Association._outboundKillSwitch`) when control's own connection genuinely fails,
+driving the ordinary stream down through the standard termination → `ScheduleOutboundRestart` path
+so it reconnects to the live incarnation alongside control instead of lingering. The trip is
+**edge-triggered — once per death, not per control fault**: control captures its `OutgoingConnection`
+materialized task and arms the detector (`MarkControlHealthy`) only when the connection is actually
+ESTABLISHED (a connection-refused reconnect attempt against a still-dead peer faults that task and
+leaves it disarmed), and the fault path fires the trip only via `TryConsumeControlHealthy()`
+(atomic read-and-clear). Without the edge gate, control's ~per-backoff reconnect-loop faults would
+each re-trip the ordinary stream, and a trip landing while the ordinary consumer is mid-handshake
+against the revived peer would drop its single held `pendingMessage` — the accepted best-effort
+window, but needless churn that empirically dropped the first buffered message ~50% of the time
+under a 2-core load. With the edge gate the ordinary stream is kicked exactly once (initial death),
+then self-manages its own reconnect loop and delivers its still-queued messages in order,
+uninterrupted, once the peer returns. Read-side EOF cannot substitute (it fires on every healthy
+one-way connection, so it was deliberately rejected as the teardown trigger); adding an ordinary
+keep-alive was rejected in favour of reusing control's existing reliable detection. Non-lossy for
+the pinned invariant above (a spurious trip during a control-only transient costs only a cheap
+ordinary reconnect; only already-dequeued envelopes are at-most-once-dropped, queued ones survive);
+DeathWatch
 across peer restart (watch → peer dies → Terminated via give-up/quarantine path); clean start/stop
 cycles (9.2); QuarantinedEvent publication (9.4); cluster formation over Artery (9.5 — first full
 integration proof; `akka://` scheme in seed nodes — verified working with the production

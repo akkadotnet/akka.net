@@ -704,12 +704,45 @@ namespace Akka.Remote.Artery
             // completion) or when the WRITE direction genuinely fails/gets cancelled downstream
             // (a real connection failure) -- never merely because the read side (which nothing
             // ever writes to) reached EOF.
-            var (terminationWatch, _) = Source.Single(BuildPreamble(streamId))
-                .Concat(frames)
-                .WatchTermination(Keep.Right)
-                .Via(_tcp!.OutgoingConnection(host, port))
-                .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
-                .Run(_materializer!);
+            var preambleAndFrames = Source.Single(BuildPreamble(streamId)).Concat(frames);
+
+            // The ORDINARY stream is fitted with a KillSwitch that is published to the Association so
+            // the CONTROL stream -- which detects peer death RELIABLY via its periodic heartbeat,
+            // unlike the keep-alive-less ordinary stream -- can drive it down when control's own
+            // connection fails, instead of leaving an idle ordinary stream stranded on a dead socket
+            // (design.md group 9's canonical reconnect fix; see Association._outboundKillSwitch). The
+            // control stream itself needs no such switch -- it IS the reliable detector. Control also
+            // captures its OutgoingConnection materialized task: when that connection is ESTABLISHED
+            // it arms the once-per-death ordinary trip (MarkControlHealthy); a connection-refused
+            // reconnect attempt faults that task instead, so the edge-detector stays disarmed and the
+            // ordinary stream is not churned during a still-dead-peer reconnect loop.
+            Task terminationWatch;
+            if (isControlStream)
+            {
+                Task connectionTask;
+                ((terminationWatch, connectionTask), _) = preambleAndFrames
+                    .WatchTermination(Keep.Right)
+                    .ViaMaterialized(_tcp!.OutgoingConnection(host, port), Keep.Both)
+                    .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
+                    .Run(_materializer!);
+
+                connectionTask.ContinueWith(ct =>
+                {
+                    if (ct.IsCompletedSuccessfully)
+                        association.MarkControlHealthy();
+                }, TaskContinuationOptions.ExecuteSynchronously);
+            }
+            else
+            {
+                UniqueKillSwitch killSwitch;
+                ((killSwitch, terminationWatch), _) = preambleAndFrames
+                    .ViaMaterialized(KillSwitches.Single<ReadOnlySequence<byte>>(), Keep.Right)
+                    .WatchTermination(Keep.Both)
+                    .Via(_tcp!.OutgoingConnection(host, port))
+                    .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
+                    .Run(_materializer!);
+                association.SetOutboundKillSwitch(killSwitch);
+            }
 
             terminationWatch.ContinueWith(t =>
             {
@@ -723,6 +756,18 @@ namespace Akka.Remote.Artery
                     _log.Debug(
                         "Artery {0} outbound connection to [{1}] completed; reconnect will be attempted per " +
                         "outbound-restart-backoff unless shut down or (ordinary only) quarantined.", streamId, remoteAddress);
+
+                // GROUP 9 canonical reconnect fix: when the CONTROL stream's connection genuinely
+                // FAILS after having been ESTABLISHED (t.IsFaulted AND TryConsumeControlHealthy --
+                // edge-triggered, once per death; a graceful shutdown-completion never faults, and a
+                // connection-refused reconnect attempt against a still-dead peer never armed the
+                // detector), drive the ORDINARY stream down ONCE so it reconnects alongside control
+                // rather than lingering on a dead socket after a single ordinary write failed to
+                // surface the death. Firing only on the edge avoids churning a healthy ordinary
+                // consumer mid-handshake against the revived peer. Idempotent + null-safe when the
+                // ordinary stream is not currently materialized. See Association._outboundKillSwitch.
+                if (isControlStream && t.IsFaulted && association.TryConsumeControlHealthy())
+                    association.TripOutboundKillSwitch();
 
                 ScheduleOutboundRestart(remoteAddress, association, streamId);
             }, TaskContinuationOptions.ExecuteSynchronously);
