@@ -188,6 +188,46 @@ Akka.NET's classic UID is a 32-bit `int` (`AddressUidExtension.Uid` → `int`; `
 
 **G2 correctness suite:** happy-path associate (UID both ways; `association(uid)` None→Some); traffic-stall buffering (pre-completion messages delivered in order, zero drops); timeout + retry cadence; incarnation change (new UID resets association, ordering preserved); quarantine (+ new-UID re-associate, stale-UID ignored, pruning); InboundHandshake guards (wrong `to`, unknown origin); **Cluster integration — `SelfUniqueAddress` UID == observed handshake UID (the test that pins the int/long decision)**; config switch + coexistence (mixed-transport fails fast).
 
+## Association outbound-stream lifecycle: reconnect (group 9, DESIGNED 2026-07-05)
+
+G2 shipped with a documented limitation: a failed outbound connection ended the association's
+stream permanently. That violates the verified `SendQueue` lifecycle invariant ("the queue is
+**externally owned and injected** … the queue **survives stream restart** — reconnect re-attaches
+a new consumer to the same queue, so buffered messages persist") and blocks every
+restart-with-new-UID scenario. Group 9 implements it:
+
+- **The channels already survive** (Association-owned; `CompleteOutbound` only fires at transport
+  shutdown). What restarts is the CONSUMER: on outbound-stream termination (connection refused,
+  reset, `HandshakeTimeoutException`, write failure), the association's materialize-once gate for
+  that stream RESETS, and re-materialization is scheduled after `outbound-restart-backoff` (new
+  `advanced` key, default 1s). Applies independently per stream (ordinary, control).
+- **Retry policy — MVP-simple, termination via existing mechanisms:** unlimited restarts with the
+  fixed backoff. There is deliberately NO restart-count give-up: the association's *reliability*
+  give-up already exists where it matters — `give-up-system-message-after` quarantines when
+  unacked system messages age out, and quarantine gates ordinary sends. An unreachable peer with
+  no pending system messages costs one bounded queue + one backoff timer — same cost class as
+  Pekko's idle associations. Buffered ordinary messages persist until delivery or process
+  shutdown (bounded at queue capacity; overflow policy unchanged).
+- **Handshake across restart is free:** the handshake stages are per-materialization; a fresh
+  stream re-injects `HandshakeReq`; the peer's reply is idempotent (`CompleteHandshake` same-uid
+  no-op) or installs a new incarnation (peer restarted with new UID) — exactly the G2 semantics.
+  System-message seqNo state is per-incarnation and lives OUTSIDE the stage materialization
+  (delivery-stage buffer must survive restart or re-send from the buffer on re-materialization —
+  implementation must preserve invariant: no unacked system message is lost by a stream restart).
+- **Quarantined associations still restart their CONTROL stream** (piercing requires a live
+  control channel); ordinary remains gated at `Send()`.
+- **Inbound requires nothing:** new inbound connections are accepted at any time; acker state is
+  per-connection/incarnation by construction.
+- **Config:** `advanced.outbound-restart-backoff = 1s`. Tests use progress/order assertions only.
+
+**Group 9 correctness suite:** kill the peer's listener mid-traffic → restart it (same address,
+NEW uid) → association re-associates, new incarnation installed, old uid stays quarantinable,
+buffered messages from the old incarnation are NOT delivered out of order (document exact
+semantics: pre-restart ordinary messages may be dropped-to-dead-letters or delivered — pick and
+pin); DeathWatch across peer restart (watch → peer dies → Terminated via give-up/quarantine
+path); clean start/stop cycles (9.2); QuarantinedEvent publication (9.4); cluster formation over
+Artery (9.5 — first full integration proof; `akka://` scheme in seed nodes).
+
 ## Reliable system-message delivery (gate G3)
 
 Verified against Pekko `SystemMessageDelivery.scala` + Akka.NET `AckedDelivery.cs` / `Endpoint.cs`.
