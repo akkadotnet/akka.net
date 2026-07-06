@@ -126,6 +126,29 @@ namespace Akka.IO
         }
 
         /// <summary>
+        /// Self-tell: the transport's WRITE pump (<see cref="ITransportConnection.WriteCompleted"/>)
+        /// failed with an I/O error (e.g. a broken pipe/connection reset discovered while flushing
+        /// a previously-buffered write to the socket, well after <see cref="EnqueueWrite"/> already
+        /// returned).
+        ///
+        /// <para>
+        /// <b>Why this exists.</b> Unlike the read side, nothing previously observed
+        /// <see cref="ITransportConnection.WriteCompleted"/> proactively -- a write-pump failure on
+        /// a connection with no FURTHER write attempts (e.g. an otherwise-idle one-way outbound
+        /// connection) would never surface at all: <see cref="EnqueueWrite"/> only discovers a
+        /// stale failure reactively, via a synchronous re-throw from the pipe on the NEXT write
+        /// attempt, which may never come. This mirrors <see cref="ReadPumpFailed"/>'s monitoring
+        /// (see <see cref="StartTransport"/>) so a write-side failure is detected promptly even
+        /// when nothing is actively writing.
+        /// </para>
+        /// </summary>
+        private sealed class WritePumpFailed : INoSerializationVerificationNeeded
+        {
+            public Exception Cause { get; }
+            public WritePumpFailed(Exception cause) { Cause = cause; }
+        }
+
+        /// <summary>
         /// Self-tell: transport shutdown/close operation completed successfully.
         /// </summary>
         private sealed class TransportOperationCompleted : INoSerializationVerificationNeeded
@@ -341,6 +364,7 @@ namespace Akka.IO
             // Monitor the read pump for completion/errors
             var self = Self;
             _ = MonitorReadPumpAsync();
+            _ = MonitorWritePumpAsync();
 
             async Task MonitorReadPumpAsync()
             {
@@ -352,6 +376,23 @@ namespace Akka.IO
                 catch (Exception ex)
                 {
                     self.Tell(new ReadPumpFailed(ex));
+                }
+            }
+
+            // Proactively observe the write pump too (see WritePumpFailed's remarks) -- a
+            // GRACEFUL write-side completion (this system deliberately calling ShutdownAsync/
+            // CloseAsync/DisposeAsync) is already tracked by those callers' own explicit awaits
+            // (e.g. HandleConfirmedClose's ContinueWith), so only a FAULT here is actionable;
+            // a normal (non-faulted) completion is a no-op from this monitor's perspective.
+            async Task MonitorWritePumpAsync()
+            {
+                try
+                {
+                    await transport.WriteCompleted.ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    self.Tell(new WritePumpFailed(ex));
                 }
             }
         }
@@ -431,6 +472,7 @@ namespace Akka.IO
             SuspendResumeHandlers();
             Receive<StreamEof>(_ => HandleStreamEof());
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
+            Receive<WritePumpFailed>(msg => HandleIoError(msg.Cause));
             Receive<HandlerDied>(_ =>
             {
                 Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
@@ -454,6 +496,7 @@ namespace Akka.IO
             });
             SuspendResumeHandlers();
             Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
+            Receive<WritePumpFailed>(msg => HandleIoError(msg.Cause));
             Receive<HandlerDied>(_ =>
             {
                 Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
@@ -529,6 +572,12 @@ namespace Akka.IO
             {
                 if (_traceLogging)
                     Log.Debug("I/O task failed during close: {0}", msg.Cause.Message);
+                DoCloseConnection(closeSender, closeEvent);
+            });
+            Receive<WritePumpFailed>(msg =>
+            {
+                if (_traceLogging)
+                    Log.Debug("Write pump failed during close: {0}", msg.Cause.Message);
                 DoCloseConnection(closeSender, closeEvent);
             });
             SuspendResumeHandlers();
@@ -908,7 +957,31 @@ namespace Akka.IO
             // received the Write, which is the invariant BufferSingleWriteBeforeRegister's
             // pre-registration copy exists to preserve for writes that can't reach this method
             // in the same turn.
-            _transport!.WriteAsync(write.Data, _cts!.Token);
+            //
+            // A SYNCHRONOUS throw here (not merely a faulted, unobserved ValueTask) means the
+            // transport's write pump (TcpTransportConnection.RunWritePumpAsync) has ALREADY hit a
+            // fatal socket error (e.g. a broken pipe/connection reset after the peer vanished)
+            // and completed the pipe's reader WITH that exception -- PipeWriter.Write/FlushAsync
+            // re-throws it synchronously on the very next call. Left uncaught, this exception
+            // used to escape into the actor's normal message-processing turn as an UNHANDLED
+            // exception: the default supervisor strategy would try to Restart this actor, and
+            // PostRestart (above) deliberately forbids that ("Restarting not supported for
+            // connection actors"), turning an ordinary peer-disconnect into a PostRestartException
+            // that escalates to this actor's supervisor instead of a graceful connection close.
+            // Route it through the SAME graceful teardown every other I/O failure on this actor
+            // uses (HandleIoError: notify the handler/commander with ErrorClosed, stop self) --
+            // see design.md group 9's reconnect correctness suite ("kill the peer mid-traffic"),
+            // which is what first exercised this path.
+            try
+            {
+                _transport!.WriteAsync(write.Data, _cts!.Token);
+            }
+            catch (Exception ex)
+            {
+                sender.Tell(write.FailureMessage.WithCause(ex));
+                HandleIoError(ex);
+                return;
+            }
 
             if (write.WantsAck) sender.Tell(write.Ack);
         }

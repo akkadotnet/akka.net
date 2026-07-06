@@ -13,7 +13,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Net;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
@@ -56,6 +55,19 @@ namespace Akka.Remote.Artery
     /// B-&gt;A to carry the reply. Neither system ever writes to a socket it accepted (inbound);
     /// every direction of every stream type gets its own independently-materialized outbound
     /// connection.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Reconnect (design.md group 9, "Association outbound-stream lifecycle: reconnect").</b>
+    /// An outbound stream's TCP connection is no longer a one-shot affair: when either stream
+    /// (ordinary or control) terminates for any reason -- other than this system's own
+    /// <see cref="Shutdown"/> -- <see cref="ScheduleOutboundRestart"/> resets that stream's
+    /// materialize-once gate and schedules re-materialization after <c>outbound-restart-backoff</c>
+    /// (unlimited retries, fixed backoff, no restart-count give-up). The CONTROL stream always
+    /// restarts (it pierces quarantine); the ORDINARY stream does not restart while the
+    /// association's CURRENT peer uid is quarantined (<see cref="Send"/> already gates ordinary
+    /// sends for that uid, so reconnecting would only waste a connection). See
+    /// <see cref="MaterializeOutboundStream"/>'s "Reconnect" remarks for the full mechanism.
     /// </para>
     /// </summary>
     internal sealed class ArteryRemoting : RemoteTransport, IControlMessageSubscriber
@@ -456,7 +468,12 @@ namespace Akka.Remote.Artery
         {
             var association = _registry.AssociationFor(remoteAddress);
             if (!association.IsOutboundMaterialized)
-                association.EnsureOutboundMaterialized(a => MaterializeOutbound(remoteAddress, a));
+                // isRestart is derived from the gate's OWN history (design.md group 9), not a
+                // literal here -- this on-demand path can race ScheduleOutboundRestart's scheduled
+                // callback for who actually wins EnsureOutboundMaterialized after a reset, and
+                // BOTH must agree on whether a fresh handshake is required (see
+                // Association.HasOutboundEverRestarted's remarks).
+                association.EnsureOutboundMaterialized(a => MaterializeOutbound(remoteAddress, a, isRestart: a.HasOutboundEverRestarted));
 
             if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, recipientPath)))
             {
@@ -488,7 +505,7 @@ namespace Akka.Remote.Artery
         {
             var association = _registry.AssociationFor(remoteAddress);
             if (!association.IsControlOutboundMaterialized)
-                association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a));
+                association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a, isRestart: a.HasControlEverRestarted));
 
             if (!association.TryEnqueueControl(new OutboundEnvelope(message, null, recipientPath)))
                 HandleControlOverflow(remoteAddress, association, message);
@@ -521,7 +538,7 @@ namespace Akka.Remote.Artery
 
             var association = _registry.AssociationFor(remoteAddress);
             if (!association.IsControlOutboundMaterialized)
-                association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a));
+                association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a, isRestart: a.HasControlEverRestarted));
 
             if (!association.TryEnqueueControl(new OutboundEnvelope(message, null, null)))
                 HandleControlOverflow(remoteAddress, association, message);
@@ -562,11 +579,11 @@ namespace Akka.Remote.Artery
                 Quarantine(remoteAddress, peer!.Value.Uid);
         }
 
-        private void MaterializeOutbound(Address remoteAddress, Association association) =>
-            MaterializeOutboundStream(remoteAddress, association.OutboundReader, ArteryStreamId.Ordinary);
+        private void MaterializeOutbound(Address remoteAddress, Association association, bool isRestart = false) =>
+            MaterializeOutboundStream(remoteAddress, association, ArteryStreamId.Ordinary, isRestart);
 
-        private void MaterializeControlOutbound(Address remoteAddress, Association association) =>
-            MaterializeOutboundStream(remoteAddress, association.ControlReader, ArteryStreamId.Control);
+        private void MaterializeControlOutbound(Address remoteAddress, Association association, bool isRestart = false) =>
+            MaterializeOutboundStream(remoteAddress, association, ArteryStreamId.Control, isRestart);
 
         /// <summary>
         /// Materializes ONE outbound stream chain -- shared shape for BOTH the ordinary and
@@ -587,15 +604,39 @@ namespace Akka.Remote.Artery
         /// through <see cref="EnqueueControl"/>.
         /// </para>
         /// <para>
-        /// Faithful-but-minimal (carried over from G2): no reconnect/retry -- if the connection
-        /// fails, this association's outbound stream simply ends (a subsequent enqueue call will
-        /// keep buffering into the channel, but nothing will ever drain it again until the
-        /// process is restarted). Reconnect sophistication remains out of scope.
+        /// <b>Reconnect (design.md group 9, "Association outbound-stream lifecycle: reconnect").</b>
+        /// The channel <paramref name="association"/> exposes (<see cref="Association.OutboundReader"/>/
+        /// <see cref="Association.ControlReader"/>) is Association-owned and outlives any single
+        /// materialization -- so when THIS materialization's completion Task settles (for ANY
+        /// reason: connection refused/reset, <see cref="HandshakeTimeoutException"/>, write
+        /// failure, or even a graceful peer-side close), <see cref="ScheduleOutboundRestart"/>
+        /// resets that stream's materialize-once gate and schedules a fresh call back into THIS
+        /// SAME method after <c>outbound-restart-backoff</c> -- <see cref="ChannelSource.FromReader{T}"/>
+        /// re-attaches a NEW consumer to the SAME channel, so any envelope enqueued but not yet
+        /// dequeued by the old (now-dead) consumer is still there waiting (the "queue survives,
+        /// consumer restarts" invariant this design has relied on since G2). Guarded against
+        /// restarting after this system's own transport <see cref="Shutdown"/> and, for the
+        /// ORDINARY stream only, against restarting while the CURRENT peer uid is quarantined --
+        /// see <see cref="Association.ShouldRestartOutbound"/>/<see cref="Association.ShouldRestartControl"/>.
+        /// </para>
+        /// <para>
+        /// <paramref name="isRestart"/> (design.md group 9) is <see langword="true"/> when THIS
+        /// materialization is (or could be) a reconnect -- it forces <see cref="OutboundHandshakeStage"/>
+        /// to always send a fresh <see cref="HandshakeReq"/> rather than trusting stale "already
+        /// associated" state left over from a possibly-since-restarted peer -- see
+        /// <see cref="OutboundHandshakeStage.ForceReqOnStart"/>'s remarks for why this is required
+        /// for correctness (not merely defensive). Every caller derives this from
+        /// <see cref="Association.HasOutboundEverRestarted"/>/<see cref="Association.HasControlEverRestarted"/>
+        /// AT THE MOMENT its <c>EnsureOutboundMaterialized</c>/<c>EnsureControlOutboundMaterialized</c>
+        /// callback actually runs (never a hardcoded literal) -- <see cref="ScheduleOutboundRestart"/>'s
+        /// scheduled callback is not the ONLY caller that can win the race to materialize after a
+        /// reset; an ordinary producer's on-demand enqueue call can too, and both must agree.
         /// </para>
         /// </summary>
-        private void MaterializeOutboundStream(Address remoteAddress, ChannelReader<IOutboundEnvelope> reader, ArteryStreamId streamId)
+        private void MaterializeOutboundStream(Address remoteAddress, Association association, ArteryStreamId streamId, bool isRestart = false)
         {
             var isControlStream = streamId == ArteryStreamId.Control;
+            var reader = isControlStream ? association.ControlReader : association.OutboundReader;
 
             var outboundContext = new AssociationRegistryOutboundContext(
                 _registry,
@@ -608,7 +649,7 @@ namespace Akka.Remote.Artery
 
             var handshakeStage = new OutboundHandshakeStage(
                 outboundContext, _settings.HandshakeRetryInterval, _settings.HandshakeTimeout,
-                _settings.InjectHandshakeInterval, isControlStream: isControlStream);
+                _settings.InjectHandshakeInterval, isControlStream: isControlStream, forceReqOnStart: isRestart);
 
             var host = remoteAddress.Host
                 ?? throw new RemoteTransportException($"Cannot open an Artery {streamId} outbound connection to [{remoteAddress}]: missing host.");
@@ -632,31 +673,110 @@ namespace Akka.Remote.Artery
             // handshake stage -- so a freshly-wrapped SystemMessageEnvelope is gated by handshake
             // completion exactly like every other control-stream element (held behind
             // OutboundHandshakeStage's pendingMessage until the association completes, never
-            // dropped) -- see that stage's own type-level placement remarks.
+            // dropped) -- see that stage's own type-level placement remarks. The Association-owned
+            // SystemMessageDeliveryState (design.md group 9 invariant 3) is passed in so a
+            // restarted materialization attaches to the SAME unacked buffer/seqNo, instead of
+            // starting from empty -- see that state type's remarks.
             var withSystemMessageDelivery = isControlStream
                 ? withHeartbeat.Via(Flow.FromGraph(new SystemMessageDeliveryStage(
-                    outboundContext, _settings.SystemMessageBufferSize, _settings.SystemMessageResendInterval, _settings.GiveUpSystemMessageAfter)))
+                    outboundContext, association.SystemMessageDeliveryState, _settings.SystemMessageBufferSize,
+                    _settings.SystemMessageResendInterval, _settings.GiveUpSystemMessageAfter)))
                 : withHeartbeat;
 
             var frames = withSystemMessageDelivery
                 .Via(Flow.FromGraph(handshakeStage))
                 .Via(Flow.FromGraph(encodeStage));
 
-            var completion = Source.Single(BuildPreamble(streamId))
+            // TERMINATION SIGNAL (design.md group 9 -- empirically corrected from the design's
+            // first-draft "RunWith result / Sink.Ignore task" wording; see the type-level
+            // "Reconnect" remarks and the group 9 report for the full story). Artery's outbound
+            // connections are ONE-WAY BY DESIGN (see the type-level "Connection cardinality"
+            // remarks): the PEER's accepted (inbound) counterpart always writes `Source.Empty`
+            // (see `HandleIncomingConnection`), which completes the INSTANT it materializes. That
+            // makes THIS connection's READ side hit EOF almost immediately after every single
+            // connect -- healthy or not -- so `Sink.Ignore`'s own materialized Task (which only
+            // tracks that READ side) resolves near-instantly on EVERY materialization, including
+            // perfectly healthy ones, which would busy-loop-restart a fine connection forever.
+            // `WatchTermination` placed on the WRITE side (the `frames` source, upstream of
+            // `OutgoingConnection`) instead reports the thing group 9 actually needs: it resolves
+            // ONLY when the association's own channel completes (this system's `Shutdown` calling
+            // `CompleteOutbound`/`CompleteControlOutbound` -- a deliberate, non-restart-worthy
+            // completion) or when the WRITE direction genuinely fails/gets cancelled downstream
+            // (a real connection failure) -- never merely because the read side (which nothing
+            // ever writes to) reached EOF.
+            var (terminationWatch, _) = Source.Single(BuildPreamble(streamId))
                 .Concat(frames)
+                .WatchTermination(Keep.Right)
                 .Via(_tcp!.OutgoingConnection(host, port))
-                .RunWith(Sink.Ignore<ReadOnlySequence<byte>>(), _materializer!);
+                .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
+                .Run(_materializer!);
 
-            completion.ContinueWith(t =>
+            terminationWatch.ContinueWith(t =>
             {
                 if (t.IsFaulted)
                     _log.Warning(
                         t.Exception?.GetBaseException(),
                         "Artery {0} outbound connection to [{1}] failed; this association's {0} outbound stream " +
-                        "has ended (no automatic reconnect).", streamId, remoteAddress);
+                        "has ended -- reconnect will be attempted per outbound-restart-backoff unless shut down " +
+                        "or (ordinary only) quarantined.", streamId, remoteAddress);
                 else
-                    _log.Debug("Artery {0} outbound connection to [{1}] completed.", streamId, remoteAddress);
+                    _log.Debug(
+                        "Artery {0} outbound connection to [{1}] completed; reconnect will be attempted per " +
+                        "outbound-restart-backoff unless shut down or (ordinary only) quarantined.", streamId, remoteAddress);
+
+                ScheduleOutboundRestart(remoteAddress, association, streamId);
             }, TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        /// <summary>
+        /// Design.md group 9, "Association outbound-stream lifecycle: reconnect": called every
+        /// time <paramref name="streamId"/>'s outbound stream for <paramref name="association"/>
+        /// terminates (see <see cref="MaterializeOutboundStream"/>'s completion continuation).
+        /// Resets that stream's materialize-once gate and schedules exactly one re-materialization
+        /// call after <c>outbound-restart-backoff</c>, via <see cref="Actor.IActionScheduler.ScheduleOnce(TimeSpan, Action)"/>
+        /// (the system scheduler -- never a raw <c>Thread</c>/<c>Task.Delay</c> loop). Retries are
+        /// unlimited at this fixed backoff -- there is deliberately no restart-count give-up (see
+        /// design.md's rationale: the association's own reliability give-up, plus quarantine
+        /// gating at <see cref="Send"/>, already provide termination where it matters).
+        ///
+        /// <para>
+        /// Both the pre-schedule AND the post-backoff checks re-consult
+        /// <see cref="Association.ShouldRestartOutbound"/>/<see cref="Association.ShouldRestartControl"/>
+        /// -- this system's own <see cref="Shutdown"/> or (ordinary stream only) a quarantine of the
+        /// current peer uid may happen at any point during the backoff window, and must still take
+        /// effect even though the gate was already reset.
+        /// </para>
+        /// </summary>
+        private void ScheduleOutboundRestart(Address remoteAddress, Association association, ArteryStreamId streamId)
+        {
+            if (streamId == ArteryStreamId.Control)
+            {
+                if (!association.ShouldRestartControl())
+                    return;
+
+                association.ResetControlGate();
+                System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
+                {
+                    if (!association.ShouldRestartControl())
+                        return;
+
+                    association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a, isRestart: a.HasControlEverRestarted));
+                });
+
+                return;
+            }
+
+            if (!association.ShouldRestartOutbound())
+                return;
+
+            association.ResetOutboundGate();
+            System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
+            {
+                if (!association.ShouldRestartOutbound())
+                    return;
+
+                association.EnsureOutboundMaterialized(a => MaterializeOutbound(remoteAddress, a, isRestart: a.HasOutboundEverRestarted));
+            });
         }
 
         private static ReadOnlySequence<byte> BuildPreamble(ArteryStreamId streamId)

@@ -127,6 +127,15 @@ namespace Akka.Remote.Artery
         public TimeSpan GiveUpSystemMessageAfter { get; }
 
         /// <summary>
+        /// How long to wait before re-materializing an association's outbound stream (ordinary
+        /// or control, independently) after it terminates for any reason other than this
+        /// system's own transport <c>Shutdown()</c> -- design.md group 9, "Association
+        /// outbound-stream lifecycle: reconnect". Restarts are unlimited at this fixed backoff;
+        /// there is deliberately no restart-count give-up (see design.md's rationale).
+        /// </summary>
+        public TimeSpan OutboundRestartBackoff { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ArterySettings"/> class from the
         /// <c>akka.remote.artery</c> sub-config.
         /// </summary>
@@ -183,6 +192,8 @@ namespace Akka.Remote.Artery
 
             SystemMessageResendInterval = GetPositiveTimeSpan(arteryConfig, "advanced.system-message-resend-interval", TimeSpan.FromSeconds(1));
             GiveUpSystemMessageAfter = GetPositiveTimeSpan(arteryConfig, "advanced.give-up-system-message-after", TimeSpan.FromHours(6));
+
+            OutboundRestartBackoff = GetPositiveTimeSpan(arteryConfig, "advanced.outbound-restart-backoff", TimeSpan.FromSeconds(1));
         }
 
         private static TimeSpan GetPositiveTimeSpan(Config config, string path, TimeSpan @default)

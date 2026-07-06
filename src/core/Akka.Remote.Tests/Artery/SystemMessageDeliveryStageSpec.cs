@@ -63,6 +63,13 @@ namespace Akka.Remote.Tests.Artery
             public required List<IControlMessageSubscriber> Subscribers { get; init; }
             public required List<(Address Address, long Uid)> QuarantineCalls { get; init; }
 
+            /// <summary>
+            /// The Association-owned unacked-buffer/seqNo/incarnation state this materialization
+            /// attaches to (design.md group 9 invariant 3) -- exposed so a test can simulate a
+            /// stream restart by materializing a SECOND stage against this SAME instance.
+            /// </summary>
+            public required SystemMessageDeliveryState State { get; init; }
+
             /// <summary>Simulates an inbound SysAck/SysNack "arriving from the peer" for every subscriber (mirrors ArteryRemoting.NotifyControlSubscribers).</summary>
             public void DeliverControlMessage(long originUid, object message)
             {
@@ -88,6 +95,7 @@ namespace Akka.Remote.Tests.Artery
             var remoteAddress = NewRemote();
             var subscribers = new List<IControlMessageSubscriber>();
             var quarantineCalls = new List<(Address, long)>();
+            var state = new SystemMessageDeliveryState();
 
             var context = new AssociationRegistryOutboundContext(
                 registry,
@@ -100,6 +108,7 @@ namespace Akka.Remote.Tests.Artery
 
             var stage = new SystemMessageDeliveryStage(
                 context,
+                state,
                 bufferCapacity,
                 resendInterval ?? TimeSpan.FromMilliseconds(200),
                 giveUpAfter ?? TimeSpan.FromSeconds(30));
@@ -116,8 +125,49 @@ namespace Akka.Remote.Tests.Artery
                 Pub = pub,
                 Sub = sub,
                 Subscribers = subscribers,
-                QuarantineCalls = quarantineCalls
+                QuarantineCalls = quarantineCalls,
+                State = state
             };
+        }
+
+        /// <summary>
+        /// Simulates design.md group 9's outbound-stream reconnect: materializes a SECOND,
+        /// independent <see cref="SystemMessageDeliveryStage"/> instance against <paramref name="original"/>'s
+        /// SAME <see cref="Harness.State"/> (and registry/remote address) -- exactly what
+        /// <c>ArteryRemoting.MaterializeOutboundStream</c> does when it re-materializes the control
+        /// stream after a backoff, per <see cref="Association.SystemMessageDeliveryState"/>. The
+        /// caller must first retire the ORIGINAL materialization (complete its upstream and wait
+        /// for its subscriber to unregister) so the two <c>Logic</c> instances never run
+        /// concurrently against the shared state -- mirroring production, where the old stream's
+        /// completion Task always settles before a restart is scheduled.
+        /// </summary>
+        private (TestPublisher.Probe<IOutboundEnvelope> Pub, TestSubscriber.Probe<IOutboundEnvelope> Sub) RestartStage(
+            ActorMaterializer materializer,
+            Harness original,
+            int bufferCapacity = 20_000,
+            TimeSpan? resendInterval = null,
+            TimeSpan? giveUpAfter = null)
+        {
+            var context = new AssociationRegistryOutboundContext(
+                original.Registry,
+                NewLocal(),
+                original.RemoteAddress,
+                sendControl: _ => { },
+                subscribeControl: original.Subscribers.Add,
+                unsubscribeControl: s => original.Subscribers.Remove(s),
+                quarantine: (addr, uid) => original.QuarantineCalls.Add((addr, uid)));
+
+            var stage = new SystemMessageDeliveryStage(
+                context,
+                original.State,
+                bufferCapacity,
+                resendInterval ?? TimeSpan.FromMilliseconds(200),
+                giveUpAfter ?? TimeSpan.FromSeconds(30));
+
+            return this.SourceProbe<IOutboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(stage), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IOutboundEnvelope>(), Keep.Both)
+                .Run(materializer);
         }
 
         [Fact(DisplayName = "happy-path: the first system message is wrapped as SystemMessageEnvelope with seqNo 1 and ackReplyTo the local address")]
@@ -379,6 +429,60 @@ namespace Akka.Remote.Tests.Artery
             }
 
             afterNewIncarnation.SeqNo.Should().Be(1L, "a new incarnation must reset the outbound seqNo back to 1 (design.md invariant 2)");
+        }
+
+        [Fact(DisplayName = "design.md group 9 invariant 3: unacknowledged system messages survive a simulated outbound-stream restart -- the restarted materialization eagerly re-emits them in order, and the seqNo counter continues rather than resetting")]
+        public async Task Should_Survive_Unacked_Buffer_Across_Simulated_Stream_Restart()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var h = BuildHarness(materializer, resendInterval: TimeSpan.FromSeconds(30));
+            var peer = h.CompleteHandshake(remoteUid: 2222L);
+
+            await h.Sub.RequestAsync(2);
+            await h.Pub.SendNextAsync(SystemMessageElement("watch-1"));
+            await h.Pub.SendNextAsync(SystemMessageElement("watch-2"));
+            ((SystemMessageEnvelope)(await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(3))).Message).SeqNo.Should().Be(1L);
+            ((SystemMessageEnvelope)(await h.Sub.ExpectNextAsync(TimeSpan.FromSeconds(3))).Message).SeqNo.Should().Be(2L);
+
+            // Both seq 1 and seq 2 are now sitting UNACKED in the shared buffer. Retire the
+            // original materialization -- mirrors production, where the old outbound TCP
+            // connection's completion Task always settles (here: upstream completes, which drives
+            // PostStop -> UnsubscribeControl) BEFORE a restart is ever scheduled. Poll on the
+            // subscriber list actually shrinking back to empty -- a deterministic progress signal,
+            // not a wall-clock wait -- so the two Logic instances never run concurrently.
+            await h.Pub.SendCompleteAsync();
+            await AwaitConditionAsync(() => Task.FromResult(h.Subscribers.Count == 0), TimeSpan.FromSeconds(3));
+
+            // Simulate the restart: a brand-new SystemMessageDeliveryStage/Logic materialization,
+            // attached to the SAME Harness.State (SystemMessageDeliveryState) the first one used.
+            // Long resend interval (matches BuildHarness's own default) -- this test is not about
+            // resend timing, and a short interval would make the final "nothing left to resend"
+            // assertion race the resend timer instead of proving anything about the Ack itself.
+            var (pub2, sub2) = RestartStage(materializer, h, resendInterval: TimeSpan.FromSeconds(30));
+
+            // The restarted materialization must eagerly re-emit BOTH still-unacked entries, in
+            // their ORIGINAL seq order, without needing a new system message to arrive first (see
+            // SystemMessageDeliveryStage.Logic.PreStart's eager-requeue remarks).
+            await sub2.RequestAsync(2);
+            var first = (SystemMessageEnvelope)(await sub2.ExpectNextAsync(TimeSpan.FromSeconds(3))).Message;
+            var second = (SystemMessageEnvelope)(await sub2.ExpectNextAsync(TimeSpan.FromSeconds(3))).Message;
+            first.SeqNo.Should().Be(1L, "the restart must not lose or reorder the still-unacknowledged seq-1 entry");
+            second.SeqNo.Should().Be(2L, "the restart must not lose or reorder the still-unacknowledged seq-2 entry");
+
+            // A freshly-created system message on the RESTARTED stage continues the SAME seq
+            // sequence (3) -- proving NextSeq survived the restart too, not just the buffer's
+            // contents.
+            await pub2.SendNextAsync(SystemMessageElement("watch-3"));
+            await sub2.RequestAsync(1);
+            var third = (SystemMessageEnvelope)(await sub2.ExpectNextAsync(TimeSpan.FromSeconds(3))).Message;
+            third.SeqNo.Should().Be(3L, "the seqNo counter must also survive the restart, continuing from where the old materialization left off");
+
+            // An Ack delivered to the RESTARTED stage for the pre-restart seq-1/seq-2 entries pops
+            // them from the SAME shared buffer -- proving Ack/Nack processing operates correctly
+            // on state inherited from a prior materialization, not just freshly-created state.
+            h.DeliverControlMessage(peer.Uid, new SysAck(2L, peer));
+            await sub2.RequestAsync(1);
+            await sub2.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(400));
         }
     }
 }

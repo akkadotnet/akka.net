@@ -222,11 +222,26 @@ restart-with-new-UID scenario. Group 9 implements it:
 
 **Group 9 correctness suite:** kill the peer's listener mid-traffic → restart it (same address,
 NEW uid) → association re-associates, new incarnation installed, old uid stays quarantinable,
-buffered messages from the old incarnation are NOT delivered out of order (document exact
-semantics: pre-restart ordinary messages may be dropped-to-dead-letters or delivered — pick and
-pin); DeathWatch across peer restart (watch → peer dies → Terminated via give-up/quarantine
-path); clean start/stop cycles (9.2); QuarantinedEvent publication (9.4); cluster formation over
-Artery (9.5 — first full integration proof; `akka://` scheme in seed nodes).
+buffered messages from the old incarnation are NOT delivered out of order (**PINNED, implemented
+2026-07-06**: an ordinary envelope still sitting in the association-owned outbound channel — i.e.
+not yet dequeued by a consumer — at the moment the old stream dies is neither dropped nor
+reordered: it stays queued and is delivered, in original per-recipient order, to the new
+incarnation once the fresh handshake completes. The ONLY messages that may be lost are ones
+already dequeued from the channel and handed to a materialization that itself fails again before
+completing its OWN handshake — an accepted, pre-existing best-effort characteristic of the
+ordinary stream (it has no ack/resend, unlike the reliable system-message lane), not a new gap
+introduced by reconnect. This required two implementation fixes beyond simple gate-reset-and-retry:
+(1) `OutboundHandshakeStage`'s G2-era "already associated by address ⇒ skip re-handshake" fast path
+is unsafe across a restart — it must be forced through a fresh `HandshakeReq` round trip
+(`ForceReqOnStart`, gated on a monotonic per-association `HandshakeGeneration` counter, since a
+same-uid re-handshake is a no-op on `AssociationState` and provides no other observable signal);
+(2) `Akka.IO.TcpConnection` never proactively observed its write pump's completion, so a write-side
+I/O failure on an otherwise-idle one-way connection could go undetected indefinitely — fixed
+generally (not Artery-specific) by mirroring the existing read-pump-monitoring pattern); DeathWatch
+across peer restart (watch → peer dies → Terminated via give-up/quarantine path); clean start/stop
+cycles (9.2); QuarantinedEvent publication (9.4); cluster formation over Artery (9.5 — first full
+integration proof; `akka://` scheme in seed nodes — verified working with the production
+seed-nodes join path, no changes needed).
 
 ## Reliable system-message delivery (gate G3)
 

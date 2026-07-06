@@ -41,6 +41,17 @@ namespace Akka.Remote.Artery
         AssociationState AssociationState { get; }
 
         /// <summary>
+        /// Monotonically incremented every time this association's handshake is (re-)completed --
+        /// see <see cref="Artery.Association.HandshakeGeneration"/>. Design.md group 9's
+        /// <see cref="OutboundHandshakeStage"/> <c>ForceReqOnStart</c> path uses this (not
+        /// <see cref="AssociationState"/> alone) to detect that a FRESH handshake round-trip
+        /// completed since THIS materialization started, even in the same-uid case where
+        /// <see cref="AssociationState"/> itself is a reference-equal no-op and so provides no
+        /// observable signal on its own.
+        /// </summary>
+        long HandshakeGeneration { get; }
+
+        /// <summary>
         /// Completes the handshake with <paramref name="peer"/> for this outbound association.
         /// Exposed for symmetry/testability with <see cref="IInboundContext"/>; the normal G2
         /// flow completes an association's handshake from the INBOUND side (a
@@ -135,6 +146,9 @@ namespace Akka.Remote.Artery
 
         /// <inheritdoc/>
         public AssociationState AssociationState => _registry.AssociationFor(RemoteAddress).CurrentState;
+
+        /// <inheritdoc/>
+        public long HandshakeGeneration => _registry.AssociationFor(RemoteAddress).HandshakeGeneration;
 
         /// <inheritdoc/>
         public AssociationState CompleteHandshake(UniqueAddress peer) => _registry.CompleteHandshake(RemoteAddress, peer);

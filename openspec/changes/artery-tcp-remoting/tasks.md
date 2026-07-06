@@ -91,11 +91,19 @@ BenchmarkDotNet harness (naked, baseline-first, `MemoryDiagnoser` on), socket by
 
 ## 9. Lifecycle And Compatibility Tests
 
-- [ ] 9.1 Verify classic remoting still works when Artery is disabled
-- [ ] 9.2 Verify Artery remoting starts and stops cleanly
-- [ ] 9.3 Verify remote association restart with new UID resets state
-- [ ] 9.4 Verify quarantine events are published correctly
-- [ ] 9.5 Verify cluster formation with Artery TCP if cluster scope is included in MVP
+- [x] 9.1 Verify classic remoting still works when Artery is disabled (`ArteryConfigSpec.Should_SelectClassicRemoting_When_ArteryNotEnabled` / `Should_UseAkkaTcpScheme_When_ClassicRemotingIsActive`, pre-existing, unaffected by group 9)
+- [x] 9.2 Verify Artery remoting starts and stops cleanly (`ArteryReconnectSpec.Should_CleanStartStop_ThreeSequentialCycles` -- 3 sequential create/terminate cycles on port 0)
+- [x] 9.3 Verify remote association restart with new UID resets state (`ArteryReconnectSpec.Should_Reassociate_After_Peer_Restarts_With_New_Uid`: B restarts on the same port/name with a new uid; A re-associates automatically (group 9 reconnect), new incarnation + uid visible via the registry, post-restart ordinary sends reach the new incarnation, the pre-kill Watch's `Terminated` arrives via RemoteWatcher's failure detector, and a stale-uid `Quarantine` call for the superseded uid is correctly ignored, per `AssociationState.Quarantine`'s pre-existing G2 semantics). Implemented the reconnect mechanism itself (`ArteryRemoting.ScheduleOutboundRestart`, `Association.HasOutboundEverRestarted`/`HasControlEverRestarted`/`ShouldRestartOutbound`/`ShouldRestartControl`, `MaterializeOnceGate.Reset`/`HasEverRestarted`), moved `SystemMessageDeliveryStage`'s unacked buffer/seqNo to an Association-owned `SystemMessageDeliveryState` (invariant 3: survives restart), added `OutboundHandshakeStage.ForceReqOnStart` + `Association.HandshakeGeneration` (a restarted stream must always re-handshake, never trust stale "already associated" state), and fixed a general (non-Artery-specific) `Akka.IO.TcpConnection`/`TcpTransportConnection` bug where a write-pump I/O failure on an otherwise-idle connection was never proactively detected (see `WritePumpFailed`/`MonitorWritePumpAsync`). Also added `SystemMessageDeliveryStageSpec.Should_Survive_Unacked_Buffer_Across_Simulated_Stream_Restart` and `AssociationRestartSpec` (pure unit tests for the restart-decision/gate-reset/shutdown-guard logic).
+- [x] 9.4 Verify quarantine events are published correctly (already covered: `ArteryBackpressureSpec` asserts `QuarantinedEvent` on the quarantining side; `ArteryControlStreamSpec.Should_Notify_Peer_On_Quarantine` asserts `ThisActorSystemQuarantinedEvent` on the quarantined side -- no gaps found, not extended)
+- [x] 9.5 Verify cluster formation with Artery TCP if cluster scope is included in MVP (`Akka.Cluster.Tests.ArteryClusterFormationSpec.Should_Form_Cluster_Over_Artery_Via_Seed_Nodes` -- new spec, lives in `Akka.Cluster.Tests` since `Akka.Remote.Tests` does not reference `Akka.Cluster`; two nodes, `akka://` scheme seed node via the production seed-nodes bootstrap path, both reach `MemberStatus.Up` via `ClusterEvent.MemberUp` subscriptions, clean `CoordinatedShutdown`. No production changes were needed -- the `akka://` scheme and seed-node join path worked correctly against Artery out of the box)
+
+Group 9 also covers design.md's "Association outbound-stream lifecycle: reconnect" section in full:
+outbound-stream restart with unlimited retries at a fixed `advanced.outbound-restart-backoff`
+(default 1s, new `ArterySettings`/`Remote.conf` key), the quarantined-association restart asymmetry
+(control always restarts, ordinary does not while the current uid is quarantined), and the pinned
+pre-restart ordinary-message semantics (buffered-but-undelivered envelopes survive and are
+delivered in order -- see design.md's updated "Group 9 correctness suite" paragraph and
+`ArteryReconnectSpec.Should_Redeliver_Queued_Ordinary_Messages_After_Reconnect`).
 
 ## 10. Deferred Follow-Ups
 

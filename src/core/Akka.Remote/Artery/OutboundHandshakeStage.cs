@@ -98,7 +98,8 @@ namespace Akka.Remote.Artery
             TimeSpan retryInterval,
             TimeSpan handshakeTimeout,
             TimeSpan injectHandshakeInterval,
-            bool isControlStream = true)
+            bool isControlStream = true,
+            bool forceReqOnStart = false)
         {
             if (retryInterval <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(retryInterval), retryInterval, "must be positive.");
@@ -112,6 +113,7 @@ namespace Akka.Remote.Artery
             HandshakeTimeout = handshakeTimeout;
             InjectHandshakeInterval = injectHandshakeInterval;
             IsControlStream = isControlStream;
+            ForceReqOnStart = forceReqOnStart;
             Shape = new FlowShape<IOutboundEnvelope, IOutboundEnvelope>(In, Out);
         }
 
@@ -130,6 +132,33 @@ namespace Akka.Remote.Artery
         /// </summary>
         public bool IsControlStream { get; }
 
+        /// <summary>
+        /// <see langword="true"/> when this materialization is a design.md group 9 RECONNECT
+        /// (a fresh materialization after the previous outbound stream terminated), rather than an
+        /// association's first-ever materialization. Forces <see cref="Logic.PreStart"/> to always
+        /// go through <c>ReqInProgress</c> (send/await a fresh <see cref="HandshakeReq"/>) instead
+        /// of the G2 fast-path shortcut that treats "an association already exists for this
+        /// address" as "handshake already complete".
+        ///
+        /// <para>
+        /// <b>Why the fast path is unsafe across a restart.</b> <see cref="Artery.AssociationState.UniqueRemoteAddress"/>
+        /// matches by ADDRESS, not by CURRENT LIVE CONNECTION — after a peer restarts under a new
+        /// uid, the association's cached state still shows the OLD uid until the fresh handshake
+        /// completes. A reconnected stream that trusted the stale "already associated" state would
+        /// start flowing ordinary traffic (or, on the control stream, wait out a full
+        /// <c>control-heartbeat-interval</c> before ever re-injecting) toward a peer that has never
+        /// actually handshaked THIS uid's connection — the new peer's <see cref="InboundHandshakeStage"/>
+        /// would drop every such envelope as an unknown origin (design.md group 9's reconnect
+        /// correctness suite is what surfaced this). Forcing a fresh Req on every restart is always
+        /// safe regardless of whether the peer's uid actually changed — a same-uid <see cref="HandshakeRsp"/>
+        /// is an idempotent no-op (see <see cref="Artery.AssociationState.CompleteHandshake"/>) — it
+        /// only costs one extra round trip. The G2 fast path is preserved for a stream's FIRST-ever
+        /// materialization (<see langword="false"/>, the default), where "another stream on this
+        /// same association already completed the handshake" is a legitimate, still-current signal.
+        /// </para>
+        /// </summary>
+        public bool ForceReqOnStart { get; }
+
         public Inlet<IOutboundEnvelope> In { get; } = new("OutboundHandshake.in");
         public Outlet<IOutboundEnvelope> Out { get; } = new("OutboundHandshake.out");
 
@@ -144,6 +173,19 @@ namespace Akka.Remote.Artery
             private IOutboundEnvelope? _pendingMessage;
             private DateTime _lastInject = DateTime.MinValue;
 
+            /// <summary>
+            /// Only meaningful when <see cref="OutboundHandshakeStage.ForceReqOnStart"/> -- the
+            /// <see cref="IOutboundContext.HandshakeGeneration"/> value observed at
+            /// <see cref="PreStart"/>, BEFORE this materialization's own fresh
+            /// <see cref="HandshakeReq"/> has had any chance to be answered. Completion is only
+            /// recognized once the CURRENT generation has advanced PAST this baseline -- proving a
+            /// handshake round-trip was processed AFTER this materialization started, not merely
+            /// that "some association already exists for this address" (which could be stale
+            /// leftover state from a peer that has since restarted -- see
+            /// <see cref="OutboundHandshakeStage.ForceReqOnStart"/>'s remarks).
+            /// </summary>
+            private long _handshakeGenerationBaseline;
+
             public Logic(OutboundHandshakeStage stage) : base(stage.Shape)
             {
                 _stage = stage;
@@ -153,7 +195,8 @@ namespace Akka.Remote.Artery
 
             public override void PreStart()
             {
-                if (_stage.Context.AssociationState.UniqueRemoteAddress is { } already &&
+                if (!_stage.ForceReqOnStart &&
+                    _stage.Context.AssociationState.UniqueRemoteAddress is { } already &&
                     Equals(already.Address, _stage.Context.RemoteAddress))
                 {
                     _state = State.Completed;
@@ -161,6 +204,7 @@ namespace Akka.Remote.Artery
                     return;
                 }
 
+                _handshakeGenerationBaseline = _stage.Context.HandshakeGeneration;
                 _state = State.ReqInProgress;
                 ScheduleRepeatedly(RetryTimerKey, _stage.RetryInterval);
                 ScheduleOnce(TimeoutTimerKey, _stage.HandshakeTimeout);
@@ -290,6 +334,18 @@ namespace Akka.Remote.Artery
 
                 if (_stage.Context.AssociationState.UniqueRemoteAddress is not { } remote ||
                     !Equals(remote.Address, _stage.Context.RemoteAddress))
+                    return;
+
+                // A materialization that reached ReqInProgress (either its own first-ever
+                // handshake, or a design.md group 9 restart via ForceReqOnStart) must observe the
+                // HANDSHAKE GENERATION advance PAST this Logic instance's own baseline -- not
+                // merely "AssociationState currently shows some peer for this address" -- proving
+                // a Req/Rsp round-trip was actually processed AFTER this materialization started.
+                // Without this, a restarted stream would trust STALE state left over from a peer
+                // that has since restarted under a new uid and start flowing traffic to it before
+                // it has ever actually handshaked THIS connection (design.md group 9's reconnect
+                // correctness suite is what surfaced this -- see ForceReqOnStart's remarks).
+                if (_stage.Context.HandshakeGeneration <= _handshakeGenerationBaseline)
                     return;
 
                 _state = State.Completed;
