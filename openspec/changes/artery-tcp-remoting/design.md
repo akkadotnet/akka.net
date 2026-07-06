@@ -262,8 +262,21 @@ uninterrupted, once the peer returns. Read-side EOF cannot substitute (it fires 
 one-way connection, so it was deliberately rejected as the teardown trigger); adding an ordinary
 keep-alive was rejected in favour of reusing control's existing reliable detection. Non-lossy for
 the pinned invariant above (a spurious trip during a control-only transient costs only a cheap
-ordinary reconnect; only already-dequeued envelopes are at-most-once-dropped, queued ones survive);
-DeathWatch
+ordinary reconnect; only already-dequeued envelopes are at-most-once-dropped, queued ones survive).
+
+**Test split (channel-buffering unit-tested; end-to-end proves ORDER).** The precise "messages
+still in the channel survive a stream restart" property is asserted deterministically at the unit
+level in `AssociationRestartSpec` (gate/killswitch/channel logic, no real sockets). The end-to-end
+`ArteryReconnectSpec.Should_Redeliver_Queued_Ordinary_Messages_After_Reconnect` proves the
+observable half — after the peer restarts under a new uid, a burst of ordinary messages to the same
+path is delivered to the new incarnation **in original order** (a contiguous in-order suffix; k==0
+== all delivered in the common case). It confirms reconnect by retrying a throwaway probe until one
+round-trips, NOT by observing the exact moment the dead-peer stream tears down: that internal
+transition's observability is subject to OS socket-close timing (a lone write to a
+gracefully-closed socket can succeed locally, so a busy Windows agent may not surface the dead
+connection until after the reconnect to the live one has already happened — which made an earlier
+`!IsOutboundMaterialized` gate wait flaky on Windows while the reconnect itself worked fine, as the
+sibling `Should_Reassociate` spec independently proves on the same platform). DeathWatch
 across peer restart (watch → peer dies → Terminated via give-up/quarantine path); clean start/stop
 cycles (9.2); QuarantinedEvent publication (9.4); cluster formation over Artery (9.5 — first full
 integration proof; `akka://` scheme in seed nodes — verified working with the production
