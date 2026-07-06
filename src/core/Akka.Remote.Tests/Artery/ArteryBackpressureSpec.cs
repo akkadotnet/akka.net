@@ -9,8 +9,6 @@
 
 using System;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -112,26 +110,13 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        /// <summary>
-        /// Reserves, then immediately releases, an ephemeral TCP port on loopback: a deterministic,
-        /// near-instant "guaranteed nobody is listening here" address generator (a closed port on
-        /// loopback refuses new connections effectively immediately -- no wall-clock wait needed to
-        /// observe the failure). Same idiom as <c>BugFix4384Spec.GetFreeTcpPort</c>.
-        /// </summary>
-        private static int GetUnresponsivePort()
-        {
-            var listener = new TcpListener(IPAddress.Loopback, 0);
-            listener.Start();
-            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            listener.Stop();
-            return port;
-        }
-
         [Fact(DisplayName = "Ordinary outbound queue: flooding an association to an unresponsive peer dead-letters the overflow, keeps the queue's occupied size bounded at capacity, and does not wedge sends to a different, healthy association")]
         public async Task Should_DeadLetter_Ordinary_Overflow_Against_Unresponsive_Peer_Without_Wedging_Other_Associations()
         {
             const int capacity = Association.DefaultOutboundQueueCapacity;
-            var deadPort = GetUnresponsivePort();
+            // Port 0 is not an assignable listener port, so it is a permanently-unreachable peer --
+            // deterministic connection failure, no reservation, no reserve-then-release race.
+            const int deadPort = 0;
             var deadAddress = new Address("akka", "dead-sys", "127.0.0.1", deadPort);
 
             var systemA = ActorSystem.Create("ArteryBackpressureOrdinaryA", ArteryConfig());
@@ -200,7 +185,9 @@ namespace Akka.Remote.Tests.Artery
         public async Task Should_Quarantine_Exactly_Once_On_Control_Overflow_Against_Unresponsive_Peer_Without_Wedging_Other_Associations()
         {
             const int controlCapacity = Association.DefaultControlQueueCapacity;
-            var deadPort = GetUnresponsivePort();
+            // Port 0 is not an assignable listener port, so it is a permanently-unreachable peer --
+            // deterministic connection failure, no reservation, no reserve-then-release race.
+            const int deadPort = 0;
             var deadAddress = new Address("akka", "dead-sys", "127.0.0.1", deadPort);
             const long fakePeerUid = 123_456_789L;
 
