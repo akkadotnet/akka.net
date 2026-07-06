@@ -14,6 +14,10 @@
              so this does not introduce a cycle. -->
         <ProjectReference Include="..\Akka.Streams\Akka.Streams.csproj" />
         <ProjectReference Include="..\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
+        <!-- Analyzer-only reference: generates the Artery control-message serializer partial
+             class (Akka.Remote.Artery.ArteryControlMessageSerializer) from [AkkaSerializable] /
+             [AkkaField] annotations. Mirrors Akka.Serialization.V2.Tests' csproj. -->
+        <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="DotNetty.Handlers" Version="0.7.6" />

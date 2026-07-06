@@ -8,7 +8,6 @@
 #nullable enable
 using System;
 using System.Buffers;
-using System.Text;
 using Akka.Actor;
 using MessagePack;
 
@@ -141,101 +140,37 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
             SizeOfInt32(3) + SizeOfBinHeader(payloadSize) + payloadSize);
     }
 
-    protected static int SizeOfNil() => 1;
+    protected static int SizeOfNil() => MessagePackSizes.SizeOfNil();
 
-    protected static int SizeOfBoolean(bool _) => 1;
+    protected static int SizeOfBoolean(bool value) => MessagePackSizes.SizeOfBoolean(value);
 
-    protected static int SizeOfDouble(double _) => 9;
+    protected static int SizeOfDouble(double value) => MessagePackSizes.SizeOfDouble(value);
 
-    protected static int SizeOfInt32(int value) => MessagePackWriter.GetEncodedLength((long)value);
+    protected static int SizeOfInt32(int value) => MessagePackSizes.SizeOfInt32(value);
 
-    protected static int SizeOfInt64(long value) => MessagePackWriter.GetEncodedLength(value);
+    protected static int SizeOfInt64(long value) => MessagePackSizes.SizeOfInt64(value);
 
-    protected static int SizeOfEnum(int value) => SizeOfInt32(value);
+    protected static int SizeOfEnum(int value) => MessagePackSizes.SizeOfEnum(value);
 
-    protected static int SizeOfMapHeader(int count)
-    {
-        if (count <= 15)
-            return 1;
-        if (count <= ushort.MaxValue)
-            return 3;
-        return 5;
-    }
+    protected static int SizeOfMapHeader(int count) => MessagePackSizes.SizeOfMapHeader(count);
 
-    protected static int SizeOfArrayHeader(int count)
-    {
-        if (count <= 15)
-            return 1;
-        if (count <= ushort.MaxValue)
-            return 3;
-        return 5;
-    }
+    protected static int SizeOfArrayHeader(int count) => MessagePackSizes.SizeOfArrayHeader(count);
 
-    protected static int SizeOfString(string? value)
-    {
-        if (value is null)
-            return SizeOfNil();
+    protected static int SizeOfString(string? value) => MessagePackSizes.SizeOfString(value);
 
-        var byteCount = Encoding.UTF8.GetByteCount(value);
-        return checked(SizeOfStringHeader(byteCount) + byteCount);
-    }
+    protected static int SizeOfBytes(byte[]? value) => MessagePackSizes.SizeOfBytes(value);
 
-    protected static int SizeOfBytes(byte[]? value)
-    {
-        if (value is null)
-            return SizeOfNil();
+    protected static int SizeOfGuid(Guid value) => MessagePackSizes.SizeOfGuid(value);
 
-        return checked(SizeOfBinHeader(value.Length) + value.Length);
-    }
+    protected static int SizeOfDateTime(DateTime value) => MessagePackSizes.SizeOfDateTime(value);
 
-    protected static int SizeOfGuid(Guid _) => SizeOfBinHeader(16) + 16;
+    protected static int SizeOfDateTimeOffset(DateTimeOffset value) => MessagePackSizes.SizeOfDateTimeOffset(value);
 
-    protected static int SizeOfDateTime(DateTime value)
-    {
-        return checked(SizeOfArrayHeader(2) + SizeOfInt64(value.Ticks) + SizeOfInt32((int)value.Kind));
-    }
+    protected static int SizeOfDecimal(decimal value) => MessagePackSizes.SizeOfDecimal(value);
 
-    protected static int SizeOfDateTimeOffset(DateTimeOffset value)
-    {
-        return checked(SizeOfArrayHeader(2) + SizeOfInt64(value.Ticks) + SizeOfInt32((int)value.Offset.TotalMinutes));
-    }
+    protected static int SizeOfActorRef(global::Akka.Actor.IActorRef? actorRef) => MessagePackSizes.SizeOfActorRef(actorRef);
 
-    protected static int SizeOfDecimal(decimal value)
-    {
-        Span<int> bits = stackalloc int[4];
-        decimal.GetBits(value, bits);
-        return checked(
-            SizeOfArrayHeader(4) +
-            SizeOfInt32(bits[0]) +
-            SizeOfInt32(bits[1]) +
-            SizeOfInt32(bits[2]) +
-            SizeOfInt32(bits[3]));
-    }
-
-    protected static int SizeOfActorRef(global::Akka.Actor.IActorRef? actorRef)
-    {
-        return SizeOfString(global::Akka.Serialization.Serialization.SerializedActorPath(actorRef));
-    }
-
-    protected static int SizeOfBinHeader(int byteCount)
-    {
-        if (byteCount <= byte.MaxValue)
-            return 2;
-        if (byteCount <= ushort.MaxValue)
-            return 3;
-        return 5;
-    }
-
-    private static int SizeOfStringHeader(int byteCount)
-    {
-        if (byteCount <= 31)
-            return 1;
-        if (byteCount <= byte.MaxValue)
-            return 2;
-        if (byteCount <= ushort.MaxValue)
-            return 3;
-        return 5;
-    }
+    protected static int SizeOfBinHeader(int byteCount) => MessagePackSizes.SizeOfBinHeader(byteCount);
 
     private sealed class AkkaPooledBufferWriter : IBufferWriter<byte>, IDisposable
     {

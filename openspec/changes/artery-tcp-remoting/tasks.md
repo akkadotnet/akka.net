@@ -62,32 +62,32 @@ BenchmarkDotNet harness (naked, baseline-first, `MemoryDiagnoser` on), socket by
 
 ## 6. Control Stream
 
-- [ ] 6.1 Add outbound control queue
-- [ ] 6.2 Add inbound control stream processing
-- [ ] 6.3 Route handshake messages over control stream
-- [ ] 6.4 Add liveness/heartbeat control messages
-- [ ] 6.5 Add quarantine control message
-- [ ] 6.6 Ensure control stream cannot be starved by ordinary messages
+- [x] 6.1 Add outbound control queue
+- [x] 6.2 Add inbound control stream processing
+- [x] 6.3 Route handshake messages over control stream
+- [x] 6.4 Add liveness/heartbeat control messages
+- [x] 6.5 Add quarantine control message
+- [x] 6.6 Ensure control stream cannot be starved by ordinary messages
 
 ## 7. Reliable System Messages
 
-- [ ] 7.1 Define system-message envelope
-- [ ] 7.2 Add sequence numbers for outbound system messages
-- [ ] 7.3 Add ACK/NACK control messages
-- [ ] 7.4 Add resend timer
-- [ ] 7.5 Add bounded system-message buffer
-- [ ] 7.6 Quarantine on system-message buffer overflow
-- [ ] 7.7 Quarantine or fail association after give-up timeout
-- [ ] 7.8 Add duplicate and out-of-order system-message tests
-- [ ] 7.9 Verify DeathWatch and remote deployment system-message behavior
+- [x] 7.1 Define system-message envelope
+- [x] 7.2 Add sequence numbers for outbound system messages
+- [x] 7.3 Add ACK/NACK control messages
+- [x] 7.4 Add resend timer
+- [x] 7.5 Add bounded system-message buffer
+- [x] 7.6 Quarantine on system-message buffer overflow
+- [x] 7.7 Quarantine or fail association after give-up timeout
+- [x] 7.8 Add duplicate and out-of-order system-message tests
+- [x] 7.9 Verify DeathWatch and remote deployment system-message behavior
 
 ## 8. Bounded Queues And Backpressure
 
-- [ ] 8.1 Add bounded ordinary outbound queue
-- [ ] 8.2 Add bounded control outbound queue
-- [ ] 8.3 Define overflow behavior for user messages
-- [ ] 8.4 Define overflow behavior for control/system messages
-- [ ] 8.5 Add slow receiver tests proving queues do not grow unbounded
+- [x] 8.1 Add bounded ordinary outbound queue (landed with group 6/7: `Association._outboundChannel`, `Channel.CreateBounded`, capacity `Association.DefaultOutboundQueueCapacity` = 3072 — `AssociationRegistry.cs:86,106,144-149`; `TryEnqueueOutbound` — `AssociationRegistry.cs:202`)
+- [x] 8.2 Add bounded control outbound queue (landed with group 6/7: `Association._controlChannel`, capacity `Association.DefaultControlQueueCapacity` = 256 — `AssociationRegistry.cs:96,107,150-155`; `TryEnqueueControl` — `AssociationRegistry.cs:209`)
+- [x] 8.3 Define overflow behavior for user messages (landed with group 6/7: ordinary overflow → dead letters, log-once per association/uid — `ArteryRemoting.EnqueueOutbound`, `ArteryRemoting.cs:443-463`, using `Association.ShouldLogOrdinaryOverflowDrop` — `AssociationRegistry.cs:256-257`)
+- [x] 8.4 Define overflow behavior for control/system messages (landed with group 6/7: control/system overflow → quarantine, re-entrancy-guarded — `ArteryRemoting.HandleControlOverflow`, `ArteryRemoting.cs:537-551`, called from `EnqueueControl`/`EnqueueSystemMessage`, `ArteryRemoting.cs:481-482,514-515`)
+- [x] 8.5 Add slow receiver tests proving queues do not grow unbounded (unit-level bounded-queue proofs added to `AssociationRegistrySpec.cs`; e2e slow/unresponsive-peer proofs added in new `ArteryBackpressureSpec.cs` — both under `src/core/Akka.Remote.Tests/Artery/`)
 
 ## 9. Lifecycle And Compatibility Tests
 

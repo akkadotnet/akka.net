@@ -19,11 +19,62 @@ namespace Akka.Remote.Artery
     /// <summary>
     /// INTERNAL API.
     ///
+    /// CAS-gated "materialize exactly once" latch, shared by the ordinary and control outbound
+    /// stream materialization paths on <see cref="Association"/> (design.md task group 6, task
+    /// 6.1: "factor the shared shape into a helper rather than duplicating"). Each
+    /// <see cref="Association"/> owns TWO independent instances of this type -- one per outbound
+    /// stream -- so materializing one never affects the other's gate.
+    /// </summary>
+    internal sealed class MaterializeOnceGate
+    {
+        private int _started;
+
+        /// <summary>
+        /// Whether <see cref="EnsureStarted"/> has already started (or finished) materializing.
+        /// A cheap check callers can use to skip allocating a materialize callback on the
+        /// (post-first-call) steady-state path.
+        /// </summary>
+        public bool IsStarted => Volatile.Read(ref _started) != 0;
+
+        /// <summary>
+        /// Runs <paramref name="materialize"/> exactly once, no matter how many threads call this
+        /// concurrently -- only the FIRST caller's callback executes (CAS-gated on an internal flag).
+        /// </summary>
+        public void EnsureStarted(Action materialize)
+        {
+            if (Interlocked.CompareExchange(ref _started, 1, 0) == 0)
+                materialize();
+        }
+    }
+
+    /// <summary>
+    /// INTERNAL API.
+    ///
     /// Owns the lock-free <see cref="AssociationState"/> snapshot for one remote
-    /// <see cref="Actor.Address"/>, the CAS retry loops that transition it, AND (G2 transport chunk)
-    /// the association's bounded outbound queue + once-only outbound-stream materialization
-    /// lifecycle (design.md Decision 7/9: a bounded <c>Channel</c>, externally owned so it survives
-    /// stream restart -- reconnect re-attaches a new consumer to the SAME channel).
+    /// <see cref="Actor.Address"/>, the CAS retry loops that transition it, AND (G2 transport chunk;
+    /// extended at task group 6, "Control Stream") the association's TWO bounded outbound queues
+    /// -- ordinary and control -- plus their once-only outbound-stream materialization lifecycles
+    /// (design.md Decision 7/9: bounded <c>Channel</c>s, externally owned so they survive stream
+    /// restart -- reconnect re-attaches a new consumer to the SAME channel).
+    ///
+    /// <para>
+    /// <b>Two independent channels, one per stream (task 6.1).</b> The control channel is
+    /// deliberately separate infrastructure from the ordinary channel -- not a priority lane
+    /// carved out of the same queue -- so that the ordinary queue filling up can NEVER block or
+    /// starve control traffic (design.md "Control stream before lanes" / Decision 5, and the
+    /// Invariants section's "quarantine gating at the send-routing layer" / "control stream stays
+    /// alive and drainable while quarantined"). Its capacity is intentionally smaller than the
+    /// ordinary queue's -- control traffic (handshake, heartbeat, quarantine notice, and reliable
+    /// system-message envelopes) is low-volume relative to ordinary user traffic.
+    /// <b>GROUP7 RESOLVED (design.md gate G3):</b> design.md Decision 7's control/system overflow
+    /// -&gt; QUARANTINE policy is implemented in <c>ArteryRemoting.HandleControlOverflow</c> (called
+    /// from both <c>EnqueueControl</c> and <c>EnqueueSystemMessage</c> on a full channel) -- this is
+    /// a SEPARATE, much-smaller-capacity overflow point than <c>SystemMessageDeliveryStage</c>'s own
+    /// internal unacknowledged-buffer overflow (<c>system-message-buffer-size</c>, default 20000):
+    /// the channel here is producer-side backpressure (protects a producing actor thread from a slow
+    /// socket), while the stage's buffer is the RELIABILITY window (how long a sent-but-unacked
+    /// message may wait before giving up) -- both funnel into the same quarantine outcome.
+    /// </para>
     /// </summary>
     internal sealed class Association
     {
@@ -34,15 +85,69 @@ namespace Akka.Remote.Artery
         /// </summary>
         public const int DefaultOutboundQueueCapacity = 3072;
 
-        private volatile AssociationState _state;
-        private readonly Channel<ArteryOutboundElement> _outboundChannel;
-        private int _outboundMaterializeStarted;
+        /// <summary>
+        /// Default capacity for <see cref="ControlReader"/>'s bounded channel. Deliberately smaller
+        /// than <see cref="DefaultOutboundQueueCapacity"/> -- control traffic (handshake, heartbeat,
+        /// quarantine notice, reliable system-message envelopes and their Ack/Nack replies) is
+        /// low-volume relative to ordinary user traffic (design.md task group 6, task 6.1). The full
+        /// asymmetric overflow policy (control overflow -> quarantine, per Decision 7) is implemented
+        /// -- see the type-level "GROUP7 RESOLVED" remarks.
+        /// </summary>
+        public const int DefaultControlQueueCapacity = 256;
 
-        public Association(Address remoteAddress, int outboundQueueCapacity = DefaultOutboundQueueCapacity)
+        private volatile AssociationState _state;
+
+        // Typed as the IOutboundEnvelope INTERFACE (not the concrete OutboundEnvelope record) so
+        // ChannelSource.FromReader(OutboundReader) yields a Source<IOutboundEnvelope, _> that feeds
+        // OutboundHandshakeStage's Inlet<IOutboundEnvelope> directly -- no upcast .Select needed
+        // between the channel and the handshake stage (design.md Decision 9's ChannelSource.FromReader
+        // mandate; see the G3 opening-refactor task report for why the interface, not the concrete
+        // type, is the channel's type parameter).
+        private readonly Channel<IOutboundEnvelope> _outboundChannel;
+        private readonly Channel<IOutboundEnvelope> _controlChannel;
+        private readonly MaterializeOnceGate _outboundGate = new();
+        private readonly MaterializeOnceGate _controlGate = new();
+
+        /// <summary>
+        /// Per-uid "have we already logged a quarantine-drop for this uid" latch (task 6.6:
+        /// "log once per association, not per message"). Keyed by uid (not just a single
+        /// per-association flag) so a NEW incarnation -- a different uid, possibly quarantined
+        /// again in the future -- gets its own fresh unlogged state.
+        /// </summary>
+        private readonly ConcurrentDictionary<long, bool> _quarantineDropLogged = new();
+
+        /// <summary>
+        /// Same latch shape as <see cref="_quarantineDropLogged"/>, applied to the ORDINARY
+        /// outbound queue's overflow-drop warning (a flooded producer can otherwise log once PER
+        /// DROPPED MESSAGE -- thousands of formatted log lines during a burst -- which was itself
+        /// an amplifier of unrelated ThreadPool starvation observed under CI load). Keyed by uid
+        /// for the same reason: a reconnect (new incarnation) gets its own fresh unlogged state,
+        /// rather than a stale latch from a prior incarnation permanently silencing the warning.
+        /// Sends observed before the handshake resolves a peer uid all share the reserved
+        /// <see cref="PreHandshakeOverflowUid"/> bucket.
+        /// </summary>
+        private readonly ConcurrentDictionary<long, bool> _ordinaryOverflowDropLogged = new();
+
+        /// <summary>
+        /// Reserved uid bucket for <see cref="ShouldLogOrdinaryOverflowDrop"/> calls that occur
+        /// before this association's handshake has resolved a real peer uid.
+        /// </summary>
+        private const long PreHandshakeOverflowUid = long.MinValue;
+
+        public Association(
+            Address remoteAddress,
+            int outboundQueueCapacity = DefaultOutboundQueueCapacity,
+            int controlQueueCapacity = DefaultControlQueueCapacity)
         {
             RemoteAddress = remoteAddress;
             _state = AssociationState.Create();
-            _outboundChannel = Channel.CreateBounded<ArteryOutboundElement>(new BoundedChannelOptions(outboundQueueCapacity)
+            _outboundChannel = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(outboundQueueCapacity)
+            {
+                SingleReader = true,
+                SingleWriter = false,
+                FullMode = BoundedChannelFullMode.Wait
+            });
+            _controlChannel = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(controlQueueCapacity)
             {
                 SingleReader = true,
                 SingleWriter = false,
@@ -61,47 +166,112 @@ namespace Akka.Remote.Artery
         public AssociationState CurrentState => _state;
 
         /// <summary>
-        /// The reading side of this association's bounded outbound queue. Consumed by exactly one
-        /// materialized outbound stream (<see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/>),
+        /// The reading side of this association's bounded ORDINARY outbound queue. Consumed by
+        /// exactly one materialized outbound stream (<see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/>),
         /// per <see cref="EnsureOutboundMaterialized"/>.
         /// </summary>
-        public ChannelReader<ArteryOutboundElement> OutboundReader => _outboundChannel.Reader;
+        public ChannelReader<IOutboundEnvelope> OutboundReader => _outboundChannel.Reader;
+
+        /// <summary>
+        /// The reading side of this association's bounded CONTROL outbound queue -- separate
+        /// infrastructure from <see cref="OutboundReader"/> (task 6.1). Consumed by exactly one
+        /// materialized outbound stream, per <see cref="EnsureControlOutboundMaterialized"/>.
+        /// </summary>
+        public ChannelReader<IOutboundEnvelope> ControlReader => _controlChannel.Reader;
 
         /// <summary>
         /// Whether <see cref="EnsureOutboundMaterialized"/> has already started (or finished)
-        /// materializing this association's outbound stream. A cheap check callers can use to skip
-        /// allocating a materialize callback on the (post-first-call) steady-state path.
+        /// materializing this association's ORDINARY outbound stream. A cheap check callers can
+        /// use to skip allocating a materialize callback on the (post-first-call) steady-state path.
         /// </summary>
-        public bool IsOutboundMaterialized => Volatile.Read(ref _outboundMaterializeStarted) != 0;
+        public bool IsOutboundMaterialized => _outboundGate.IsStarted;
 
         /// <summary>
-        /// Attempts to enqueue <paramref name="element"/> for the outbound stream to send.
+        /// Whether <see cref="EnsureControlOutboundMaterialized"/> has already started (or
+        /// finished) materializing this association's CONTROL outbound stream.
+        /// </summary>
+        public bool IsControlOutboundMaterialized => _controlGate.IsStarted;
+
+        /// <summary>
+        /// Attempts to enqueue <paramref name="element"/> for the ORDINARY outbound stream to send.
         /// Non-blocking (<see cref="ChannelWriter{T}.TryWrite"/>) -- NEVER awaits/blocks a producing
         /// actor thread on a slow remote (Decision 7). Returns <see langword="false"/> when the
         /// bounded queue is full; the caller (<c>ArteryRemoting</c>) applies the overflow policy
         /// (ordinary messages -> dead letters).
         /// </summary>
-        public bool TryEnqueueOutbound(ArteryOutboundElement element) => _outboundChannel.Writer.TryWrite(element);
+        public bool TryEnqueueOutbound(IOutboundEnvelope element) => _outboundChannel.Writer.TryWrite(element);
 
         /// <summary>
-        /// Ensures this association's outbound stream is materialized exactly once, no matter how
-        /// many threads call this concurrently -- only the FIRST caller's <paramref name="materialize"/>
-        /// callback executes (CAS-gated on an internal flag). The callback is supplied by the
+        /// Attempts to enqueue <paramref name="element"/> for the CONTROL outbound stream to send.
+        /// Non-blocking, same discipline as <see cref="TryEnqueueOutbound"/>. See the type-level
+        /// remarks on <see cref="DefaultControlQueueCapacity"/> for the GROUP7 overflow-policy note.
+        /// </summary>
+        public bool TryEnqueueControl(IOutboundEnvelope element) => _controlChannel.Writer.TryWrite(element);
+
+        /// <summary>
+        /// The number of elements CURRENTLY buffered in the ORDINARY outbound channel, awaiting a
+        /// consumer. Test-observability surface added for design.md task 8.5 ("slow receiver tests
+        /// proving queues do not grow unbounded") -- <c>System.Threading.Channels</c>' bounded
+        /// channel implementation supports O(1) <see cref="ChannelReader{T}.Count"/>, so this is
+        /// cheap enough to sample repeatedly from a test without perturbing the property under
+        /// test. Production code has no need of this (the bounded <see cref="TryEnqueueOutbound"/> /
+        /// dead-letter-on-<see langword="false"/> pattern is capacity-agnostic), so this exists
+        /// purely for tests to assert the bound is never exceeded.
+        /// </summary>
+        public int OutboundQueueCount => _outboundChannel.Reader.Count;
+
+        /// <summary>
+        /// The CONTROL-channel analog of <see cref="OutboundQueueCount"/>. See its remarks.
+        /// </summary>
+        public int ControlQueueCount => _controlChannel.Reader.Count;
+
+        /// <summary>
+        /// Ensures this association's ORDINARY outbound stream is materialized exactly once, no
+        /// matter how many threads call this concurrently. The callback is supplied by the
         /// transport (<c>ArteryRemoting</c>), which owns the Tcp extension / materializer / settings
         /// this pure state type deliberately does not know about.
         /// </summary>
-        public void EnsureOutboundMaterialized(Action<Association> materialize)
-        {
-            if (Interlocked.CompareExchange(ref _outboundMaterializeStarted, 1, 0) == 0)
-                materialize(this);
-        }
+        public void EnsureOutboundMaterialized(Action<Association> materialize) =>
+            _outboundGate.EnsureStarted(() => materialize(this));
 
         /// <summary>
-        /// Marks the outbound channel complete (no further writes accepted) so its materialized
-        /// <see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/> consumer finishes gracefully.
-        /// Called on transport shutdown.
+        /// Ensures this association's CONTROL outbound stream is materialized exactly once, no
+        /// matter how many threads call this concurrently. See <see cref="EnsureOutboundMaterialized"/>.
+        /// </summary>
+        public void EnsureControlOutboundMaterialized(Action<Association> materialize) =>
+            _controlGate.EnsureStarted(() => materialize(this));
+
+        /// <summary>
+        /// Marks the ORDINARY outbound channel complete (no further writes accepted) so its
+        /// materialized <see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/> consumer
+        /// finishes gracefully. Called on transport shutdown.
         /// </summary>
         public void CompleteOutbound() => _outboundChannel.Writer.TryComplete();
+
+        /// <summary>
+        /// Marks the CONTROL outbound channel complete. See <see cref="CompleteOutbound"/>.
+        /// </summary>
+        public void CompleteControlOutbound() => _controlChannel.Writer.TryComplete();
+
+        /// <summary>
+        /// Records (task 6.6: "log once per association, not per message") that a quarantine-drop
+        /// warning has been logged for <paramref name="uid"/>. Returns <see langword="true"/> the
+        /// FIRST time it is called for a given uid (the caller should log), and
+        /// <see langword="false"/> every subsequent call for that same uid (the caller should stay
+        /// silent).
+        /// </summary>
+        public bool ShouldLogQuarantineDrop(long uid) => _quarantineDropLogged.TryAdd(uid, true);
+
+        /// <summary>
+        /// Records ("log once per association, not per message" -- same discipline as
+        /// <see cref="ShouldLogQuarantineDrop"/>) that an ORDINARY outbound queue overflow-drop
+        /// warning has been logged for <paramref name="uid"/> (or, pre-handshake, the reserved
+        /// <see cref="PreHandshakeOverflowUid"/> bucket). Returns <see langword="true"/> the FIRST
+        /// time it is called for a given uid (the caller should log), and <see langword="false"/>
+        /// every subsequent call for that same uid (the caller should stay silent and just drop).
+        /// </summary>
+        public bool ShouldLogOrdinaryOverflowDrop(long? uid) =>
+            _ordinaryOverflowDropLogged.TryAdd(uid ?? PreHandshakeOverflowUid, true);
 
         /// <summary>
         /// CAS loop applying <see cref="AssociationState.CompleteHandshake"/>. Returns both the

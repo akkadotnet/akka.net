@@ -18,9 +18,10 @@ namespace Akka.Remote.Artery
     ///
     /// Outbound half of the Artery handshake, faithful to
     /// <c>openspec/changes/artery-tcp-remoting/design.md</c>
-    /// ("Handshake + association/UID (gate G2)"). A <c>GraphStage&lt;FlowShape&lt;object, object&gt;&gt;</c>
-    /// — see the element-type note on <see cref="IInboundContext"/> for why <c>object</c> rather
-    /// than a dedicated envelope type.
+    /// ("Handshake + association/UID (gate G2)"). A
+    /// <c>GraphStage&lt;FlowShape&lt;IOutboundEnvelope, IOutboundEnvelope&gt;&gt;</c> -- the injected
+    /// <see cref="HandshakeReq"/> is wrapped in an <see cref="OutboundEnvelope"/> (no sender/recipient
+    /// path, <see cref="IOutboundEnvelope.IsControl"/> true) instead of flowing as a naked object.
     ///
     /// <para><b>States.</b> <c>Start</c> → <c>ReqInProgress</c> → <c>Completed</c>. On
     /// materialization (or the first relevant event) the stage injects a <see cref="HandshakeReq"/>
@@ -61,8 +62,23 @@ namespace Akka.Remote.Artery
     /// time, ~1s has just passed") — the task explicitly sanctions exactly this simplification
     /// ("track last-injection time; if a message flows and it's been &gt; inject-handshake-interval
     /// since the last injection, inject another ahead of it").</para>
+    ///
+    /// <para><b>Control-channel routing (task group 6, "Control Stream", task 6.3).</b> This
+    /// SAME stage class is materialized on EVERY outbound stream (control, ordinary, and later
+    /// large) — "every stream handshakes" — but only ONE of them, the control stream, is the one
+    /// whose <see cref="Out"/> IS the control connection. So <see cref="IsControlStream"/>
+    /// (constructor parameter, default <see langword="true"/> for source compatibility with the
+    /// pre-6.3 shape) toggles how an injected/re-injected <see cref="HandshakeReq"/> is actually
+    /// dispatched: when <see langword="true"/>, unchanged from before — pushed inline onto this
+    /// stage's own <see cref="Out"/> (which flows straight to the control connection). When
+    /// <see langword="false"/> (the ordinary/large stream's instance), the Req is instead handed
+    /// to <see cref="IOutboundContext.SendControl"/> — a side channel that enqueues onto the
+    /// ASSOCIATION's separate control queue/connection — and this stage's own <see cref="Out"/>
+    /// never carries a <see cref="HandshakeReq"/> element at all. Either way, the "hold the
+    /// pending user element until completion" gating behavior is unchanged; only the Req's
+    /// delivery path differs.</para>
     /// </summary>
-    internal sealed class OutboundHandshakeStage : GraphStage<FlowShape<object, object>>
+    internal sealed class OutboundHandshakeStage : GraphStage<FlowShape<IOutboundEnvelope, IOutboundEnvelope>>
     {
         /// <summary>
         /// The lifecycle states this stage's logic moves through.
@@ -81,7 +97,8 @@ namespace Akka.Remote.Artery
             IOutboundContext context,
             TimeSpan retryInterval,
             TimeSpan handshakeTimeout,
-            TimeSpan injectHandshakeInterval)
+            TimeSpan injectHandshakeInterval,
+            bool isControlStream = true)
         {
             if (retryInterval <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(retryInterval), retryInterval, "must be positive.");
@@ -94,7 +111,8 @@ namespace Akka.Remote.Artery
             RetryInterval = retryInterval;
             HandshakeTimeout = handshakeTimeout;
             InjectHandshakeInterval = injectHandshakeInterval;
-            Shape = new FlowShape<object, object>(In, Out);
+            IsControlStream = isControlStream;
+            Shape = new FlowShape<IOutboundEnvelope, IOutboundEnvelope>(In, Out);
         }
 
         public IOutboundContext Context { get; }
@@ -102,10 +120,20 @@ namespace Akka.Remote.Artery
         public TimeSpan HandshakeTimeout { get; }
         public TimeSpan InjectHandshakeInterval { get; }
 
-        public Inlet<object> In { get; } = new("OutboundHandshake.in");
-        public Outlet<object> Out { get; } = new("OutboundHandshake.out");
+        /// <summary>
+        /// <see langword="true"/> when this instance is materialized on the control stream
+        /// itself (the default, preserving the pre-6.3 shape used by every existing test/caller
+        /// that does not pass this parameter): an injected <see cref="HandshakeReq"/> is pushed
+        /// inline onto <see cref="Out"/>. <see langword="false"/> for the ordinary/large stream's
+        /// instance: the Req is routed via <see cref="IOutboundContext.SendControl"/> instead —
+        /// see the type-level "Control-channel routing" remarks.
+        /// </summary>
+        public bool IsControlStream { get; }
 
-        public override FlowShape<object, object> Shape { get; }
+        public Inlet<IOutboundEnvelope> In { get; } = new("OutboundHandshake.in");
+        public Outlet<IOutboundEnvelope> Out { get; } = new("OutboundHandshake.out");
+
+        public override FlowShape<IOutboundEnvelope, IOutboundEnvelope> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
@@ -113,7 +141,7 @@ namespace Akka.Remote.Artery
         {
             private readonly OutboundHandshakeStage _stage;
             private State _state = State.Start;
-            private object? _pendingMessage;
+            private IOutboundEnvelope? _pendingMessage;
             private DateTime _lastInject = DateTime.MinValue;
 
             public Logic(OutboundHandshakeStage stage) : base(stage.Shape)
@@ -183,15 +211,24 @@ namespace Akka.Remote.Artery
 
                 if (ShouldReinjectForLiveness())
                 {
-                    _pendingMessage = elem;
-
-                    if (IsAvailable(_stage.Out))
+                    if (_stage.IsControlStream)
                     {
-                        _lastInject = DateTime.UtcNow;
-                        Push(_stage.Out, BuildReq());
+                        _pendingMessage = elem;
+
+                        if (IsAvailable(_stage.Out))
+                        {
+                            _lastInject = DateTime.UtcNow;
+                            Push(_stage.Out, BuildReqEnvelope());
+                        }
+
+                        return;
                     }
 
-                    return;
+                    // Non-control stream: the Req travels via the control side channel and never
+                    // occupies this stream's Out slot, so the user element can flow through
+                    // immediately below -- no need to hold it.
+                    _lastInject = DateTime.UtcNow;
+                    _stage.Context.SendControl(BuildReqMessage());
                 }
 
                 if (IsAvailable(_stage.Out))
@@ -268,11 +305,23 @@ namespace Akka.Remote.Artery
 
                 var now = DateTime.UtcNow;
                 var due = _lastInject == DateTime.MinValue || now - _lastInject >= _stage.RetryInterval;
-                if (!due || !IsAvailable(_stage.Out))
+                if (!due)
+                    return;
+
+                if (!_stage.IsControlStream)
+                {
+                    // Side channel: never competes for this stream's own Out demand, so no
+                    // IsAvailable(Out) guard is needed here.
+                    _lastInject = now;
+                    _stage.Context.SendControl(BuildReqMessage());
+                    return;
+                }
+
+                if (!IsAvailable(_stage.Out))
                     return;
 
                 _lastInject = now;
-                Push(_stage.Out, BuildReq());
+                Push(_stage.Out, BuildReqEnvelope());
             }
 
             private bool ShouldReinjectForLiveness()
@@ -281,7 +330,9 @@ namespace Akka.Remote.Artery
                 return _lastInject == DateTime.MinValue || now - _lastInject >= _stage.InjectHandshakeInterval;
             }
 
-            private HandshakeReq BuildReq() => new(_stage.Context.LocalAddress, _stage.Context.RemoteAddress);
+            private HandshakeReq BuildReqMessage() => new(_stage.Context.LocalAddress, _stage.Context.RemoteAddress);
+
+            private IOutboundEnvelope BuildReqEnvelope() => new OutboundEnvelope(BuildReqMessage(), null, null);
         }
     }
 }

@@ -23,9 +23,11 @@ namespace Akka.Remote.Artery
     /// parses the 5-byte connection preamble (<see cref="ArteryConnectionHeader"/>) exactly once,
     /// then incrementally frames (<see cref="ArteryFrameParser"/>), decodes
     /// (<see cref="ArteryEnvelopeCodec"/>), and deserializes the payload of every subsequent frame,
-    /// classifying each into either a bare <see cref="IArteryControlMessage"/> (handshake) or an
-    /// <see cref="ArteryInboundEnvelope"/> (ordinary user message) -- see design.md "G2 staging" and
-    /// "Decode order (structural, not an optimization)".
+    /// wrapping each in an <see cref="IInboundEnvelope"/> -- a control envelope
+    /// (<see cref="IInboundEnvelope.IsControl"/> true, <see cref="IInboundEnvelope.RecipientPath"/>
+    /// <see langword="null"/>) for a handshake message, or an ordinary envelope (recipient/sender
+    /// paths resolved) for a user message -- see design.md "G2 staging" and "Decode order
+    /// (structural, not an optimization)".
     ///
     /// <para>
     /// <b>Why one combined stage instead of separate preamble/framing/decode stages.</b> All three
@@ -34,15 +36,18 @@ namespace Akka.Remote.Artery
     /// in a single fused island on the hot path). Splitting them into multiple
     /// <see cref="GraphStage{TShape}"/>s would add nothing but ceremony at G2. Only classification
     /// (control vs. ordinary) happens here; <see cref="InboundHandshakeStage"/> itself is NOT
-    /// reimplemented or forked -- it is composed downstream, unmodified, over this stage's <c>object</c>
-    /// output (see the element-type note on <see cref="IInboundContext"/>).
+    /// reimplemented or forked -- it is composed downstream, unmodified, over this stage's
+    /// <see cref="IInboundEnvelope"/> output.
     /// </para>
     ///
     /// <para>
-    /// <b>Non-Ordinary connection preamble.</b> G2 only implements the ordinary stream; a connection
-    /// whose preamble declares <see cref="ArteryStreamId.Control"/> or <see cref="ArteryStreamId.Large"/>
-    /// is logged and the connection is dropped (stage failure) -- control/large streams land at G3/G7
-    /// per the design's milestone table.
+    /// <b>Accepted connection preambles.</b> As of task group 6 ("Control Stream"), both
+    /// <see cref="ArteryStreamId.Ordinary"/> and <see cref="ArteryStreamId.Control"/> connections
+    /// are accepted -- routing downstream is by the decoded envelope's <see cref="IInboundEnvelope.IsControl"/>
+    /// flag (message type), not by which physical connection carried it (both preambles feed the
+    /// identical inbound shape: framing -&gt; decode -&gt; deserialize -&gt; <see cref="InboundHandshakeStage"/>
+    /// -&gt; dispatch). A connection whose preamble declares <see cref="ArteryStreamId.Large"/> is
+    /// logged and the connection is dropped (stage failure) -- the large stream lands at G7.
     /// </para>
     ///
     /// <para>
@@ -55,22 +60,22 @@ namespace Akka.Remote.Artery
     /// speaking the protocol correctly.
     /// </para>
     /// </summary>
-    internal sealed class ArteryInboundProcessingStage : GraphStage<FlowShape<ReadOnlySequence<byte>, object>>
+    internal sealed class ArteryInboundProcessingStage : GraphStage<FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>>
     {
         public ArteryInboundProcessingStage(int maxFrameLength, Akka.Serialization.Serialization serialization)
         {
             MaxFrameLength = maxFrameLength;
             Serialization = serialization;
-            Shape = new FlowShape<ReadOnlySequence<byte>, object>(In, Out);
+            Shape = new FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>(In, Out);
         }
 
         public int MaxFrameLength { get; }
         public Akka.Serialization.Serialization Serialization { get; }
 
         public Inlet<ReadOnlySequence<byte>> In { get; } = new("ArteryInboundProcessing.in");
-        public Outlet<object> Out { get; } = new("ArteryInboundProcessing.out");
+        public Outlet<IInboundEnvelope> Out { get; } = new("ArteryInboundProcessing.out");
 
-        public override FlowShape<ReadOnlySequence<byte>, object> Shape { get; }
+        public override FlowShape<ReadOnlySequence<byte>, IInboundEnvelope> Shape { get; }
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
@@ -78,7 +83,7 @@ namespace Akka.Remote.Artery
         {
             private readonly ArteryInboundProcessingStage _stage;
             private readonly ArteryFrameParser _frameParser;
-            private readonly Queue<object> _pending = new();
+            private readonly Queue<IInboundEnvelope> _pending = new();
 
             private readonly byte[] _preambleBuffer = new byte[ArteryConnectionHeader.Length];
             private int _preambleFilled;
@@ -162,13 +167,13 @@ namespace Akka.Remote.Artery
 
                 ArteryConnectionHeader.TryParse(new ReadOnlySequence<byte>(_preambleBuffer), out var streamId, out _);
 
-                if (streamId != ArteryStreamId.Ordinary)
+                if (streamId != ArteryStreamId.Ordinary && streamId != ArteryStreamId.Control)
                 {
                     Log.Warning(
                         "Dropping inbound Artery connection: preamble declared stream id [{0}], but only " +
-                        "the Ordinary stream is implemented at G2 (control/large land at G3/G7).", streamId);
+                        "Ordinary and Control are implemented at task group 6 (large lands at G7).", streamId);
                     FailStage(new ArteryFramingException(
-                        $"Unsupported Artery connection stream id [{streamId}] (only Ordinary is accepted at G2)."));
+                        $"Unsupported Artery connection stream id [{streamId}] (only Ordinary/Control are accepted)."));
                     return false;
                 }
 
@@ -195,7 +200,7 @@ namespace Akka.Remote.Artery
             {
                 while (_frameParser.TryReadFrame(out var frameBody))
                 {
-                    object? element;
+                    IInboundEnvelope? element;
                     try
                     {
                         element = DecodeFrame(frameBody);
@@ -211,7 +216,7 @@ namespace Akka.Remote.Artery
                 }
             }
 
-            private object? DecodeFrame(ReadOnlySequence<byte> frameBody)
+            private IInboundEnvelope? DecodeFrame(ReadOnlySequence<byte> frameBody)
             {
                 var decoded = ArteryEnvelopeCodec.Decode(frameBody);
 
@@ -224,7 +229,7 @@ namespace Akka.Remote.Artery
                 var payload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
 
                 if (payload is IArteryControlMessage)
-                    return payload;
+                    return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
 
                 if (!decoded.TryGetRecipientPath(out var recipientPath))
                 {
@@ -242,7 +247,7 @@ namespace Akka.Remote.Artery
                 }
 
                 var senderPath = decoded.TryGetSenderPath(out var s) ? s : null;
-                return new ArteryInboundEnvelope(payload, senderPath, recipientPath);
+                return new InboundEnvelope(payload, senderPath, recipientPath, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
             }
 
             private void DeliverOrPull()

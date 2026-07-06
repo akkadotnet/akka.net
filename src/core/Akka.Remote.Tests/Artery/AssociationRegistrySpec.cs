@@ -107,5 +107,154 @@ namespace Akka.Remote.Tests.Artery
 
             registry.TryGetByUid(peer.Uid).Should().BeSameAs(registry.AssociationFor(AddressA));
         }
+
+        // --- Control channel (task group 6, "Control Stream", task 6.1) ---
+
+        [Fact(DisplayName = "Association should expose a SEPARATE control channel from its ordinary channel, each independently materializable")]
+        public void Association_should_expose_independent_ordinary_and_control_channels()
+        {
+            var registry = new AssociationRegistry();
+            var association = registry.AssociationFor(AddressA);
+
+            association.IsOutboundMaterialized.Should().BeFalse();
+            association.IsControlOutboundMaterialized.Should().BeFalse();
+
+            var ordinaryMaterialized = 0;
+            var controlMaterialized = 0;
+            association.EnsureOutboundMaterialized(_ => ordinaryMaterialized++);
+
+            // Materializing the ORDINARY stream must not also materialize (or affect the
+            // materialize-gate of) the CONTROL stream -- they are independent latches.
+            association.IsOutboundMaterialized.Should().BeTrue();
+            association.IsControlOutboundMaterialized.Should().BeFalse();
+            ordinaryMaterialized.Should().Be(1);
+            controlMaterialized.Should().Be(0);
+
+            association.EnsureControlOutboundMaterialized(_ => controlMaterialized++);
+
+            association.IsControlOutboundMaterialized.Should().BeTrue();
+            controlMaterialized.Should().Be(1);
+
+            // Calling either Ensure* again must not re-invoke its materialize callback (each
+            // gate is CAS-latched exactly-once, independently of the other).
+            association.EnsureOutboundMaterialized(_ => ordinaryMaterialized++);
+            association.EnsureControlOutboundMaterialized(_ => controlMaterialized++);
+            ordinaryMaterialized.Should().Be(1);
+            controlMaterialized.Should().Be(1);
+        }
+
+        [Fact(DisplayName = "A full ORDINARY outbound queue must never block enqueuing to the CONTROL queue (queue-level non-starvation proof, task 6.6)")]
+        public void Full_ordinary_queue_should_not_block_control_enqueue()
+        {
+            // Deliberately tiny capacities so the test can force both queues to their bounds
+            // quickly and deterministically -- see the type-level remarks on Association's
+            // control-channel section for why these are two entirely separate Channel<T>
+            // instances, not a priority split of one queue.
+            var association = new Association(AddressA, outboundQueueCapacity: 4, controlQueueCapacity: 4);
+
+            // Saturate the ordinary queue completely.
+            for (var i = 0; i < 4; i++)
+                association.TryEnqueueOutbound(new OutboundEnvelope($"ordinary-{i}", null, null)).Should().BeTrue();
+
+            association.TryEnqueueOutbound(new OutboundEnvelope("ordinary-overflow", null, null))
+                .Should().BeFalse("the ordinary queue is now full");
+
+            // The control queue must be COMPLETELY unaffected by the ordinary queue's exhaustion
+            // -- this is the structural (not timing-based) half of the non-starvation proof;
+            // ArteryControlStreamSpec's end-to-end heartbeat test is the other half.
+            for (var i = 0; i < 4; i++)
+                association.TryEnqueueControl(new OutboundEnvelope($"control-{i}", null, null)).Should().BeTrue(
+                    "the control queue is entirely separate infrastructure from the (now full) ordinary queue");
+
+            association.TryEnqueueControl(new OutboundEnvelope("control-overflow", null, null))
+                .Should().BeFalse("the control queue has its OWN bound, reached independently of the ordinary queue's state");
+        }
+
+        // --- Bounded queues + backpressure (task group 8, design.md Decision 7 / Invariants) ---
+
+        [Fact(DisplayName = "Ordinary outbound queue accepts up to capacity, rejects the overflow, and resumes accepting once drained (task 8.5: no permanent wedge)")]
+        public void Ordinary_queue_should_accept_to_capacity_reject_overflow_and_resume_after_drain()
+        {
+            const int capacity = 8;
+            var association = new Association(AddressA, outboundQueueCapacity: capacity, controlQueueCapacity: capacity);
+
+            var accepted = 0;
+            for (var i = 0; i < capacity; i++)
+            {
+                if (association.TryEnqueueOutbound(new OutboundEnvelope($"m-{i}", null, null)))
+                    accepted++;
+            }
+
+            accepted.Should().Be(capacity, "every enqueue up to the bound must be accepted");
+            association.OutboundQueueCount.Should().Be(capacity);
+
+            // The bound must keep rejecting -- not just refuse the FIRST overflowing element and
+            // then silently let a later one slip in.
+            association.TryEnqueueOutbound(new OutboundEnvelope("overflow-1", null, null)).Should().BeFalse("the queue is now exactly at capacity");
+            association.TryEnqueueOutbound(new OutboundEnvelope("overflow-2", null, null)).Should().BeFalse("a full queue must keep rejecting every subsequent attempt");
+            association.OutboundQueueCount.Should().Be(capacity, "rejected enqueues must never be counted -- the queue's occupied size cannot exceed its bound");
+
+            // Drain a few elements (simulating the consumer -- the materialized outbound stream --
+            // making progress) and prove the queue resumes accepting: a bounded channel that once
+            // filled must never permanently wedge.
+            const int drained = 3;
+            for (var i = 0; i < drained; i++)
+                association.OutboundReader.TryRead(out _).Should().BeTrue();
+            association.OutboundQueueCount.Should().Be(capacity - drained);
+
+            for (var i = 0; i < drained; i++)
+                association.TryEnqueueOutbound(new OutboundEnvelope($"post-drain-{i}", null, null))
+                    .Should().BeTrue("draining below capacity must immediately unblock further TryEnqueueOutbound calls -- no wedge");
+
+            association.OutboundQueueCount.Should().Be(capacity);
+            association.TryEnqueueOutbound(new OutboundEnvelope("overflow-3", null, null))
+                .Should().BeFalse("back at capacity after re-filling the drained slots");
+        }
+
+        [Fact(DisplayName = "Control outbound queue accepts up to capacity, rejects the overflow, and resumes accepting once drained (same shape as the ordinary queue, task 8.5)")]
+        public void Control_queue_should_accept_to_capacity_reject_overflow_and_resume_after_drain()
+        {
+            const int capacity = 8;
+            var association = new Association(AddressA, outboundQueueCapacity: capacity, controlQueueCapacity: capacity);
+
+            var accepted = 0;
+            for (var i = 0; i < capacity; i++)
+            {
+                if (association.TryEnqueueControl(new OutboundEnvelope($"c-{i}", null, null)))
+                    accepted++;
+            }
+
+            accepted.Should().Be(capacity, "every enqueue up to the bound must be accepted");
+            association.ControlQueueCount.Should().Be(capacity);
+
+            association.TryEnqueueControl(new OutboundEnvelope("overflow-1", null, null)).Should().BeFalse("the control queue is now exactly at capacity");
+            association.TryEnqueueControl(new OutboundEnvelope("overflow-2", null, null)).Should().BeFalse("a full control queue must keep rejecting every subsequent attempt");
+            association.ControlQueueCount.Should().Be(capacity);
+
+            const int drained = 3;
+            for (var i = 0; i < drained; i++)
+                association.ControlReader.TryRead(out _).Should().BeTrue();
+            association.ControlQueueCount.Should().Be(capacity - drained);
+
+            for (var i = 0; i < drained; i++)
+                association.TryEnqueueControl(new OutboundEnvelope($"post-drain-{i}", null, null))
+                    .Should().BeTrue("draining below capacity must immediately unblock further TryEnqueueControl calls -- no wedge");
+
+            association.ControlQueueCount.Should().Be(capacity);
+            association.TryEnqueueControl(new OutboundEnvelope("overflow-3", null, null))
+                .Should().BeFalse("back at capacity after re-filling the drained slots");
+        }
+
+        [Fact(DisplayName = "ShouldLogQuarantineDrop should return true exactly once per uid (task 6.6: log once per association/uid, not per message)")]
+        public void ShouldLogQuarantineDrop_should_latch_once_per_uid()
+        {
+            var association = new Association(AddressA);
+
+            association.ShouldLogQuarantineDrop(1L).Should().BeTrue("the first drop for uid 1 should be logged");
+            association.ShouldLogQuarantineDrop(1L).Should().BeFalse("subsequent drops for the SAME uid must not be logged again");
+            association.ShouldLogQuarantineDrop(1L).Should().BeFalse();
+
+            association.ShouldLogQuarantineDrop(2L).Should().BeTrue("a DIFFERENT uid (e.g. a new incarnation) gets its own fresh unlogged state");
+        }
     }
 }

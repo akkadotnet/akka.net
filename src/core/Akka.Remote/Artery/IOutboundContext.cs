@@ -54,6 +54,26 @@ namespace Akka.Remote.Artery
         /// context is bound to.
         /// </summary>
         void SendControl(object message);
+
+        /// <summary>
+        /// Registers <paramref name="subscriber"/> to receive every decoded inbound control message
+        /// across every association (design.md gate G3) -- the seam <see cref="SystemMessageDeliveryStage"/>
+        /// uses to observe <see cref="Ack"/>/<see cref="Nack"/> replies. Mirrors
+        /// <c>ArteryRemoting.SubscribeControl</c>.
+        /// </summary>
+        void SubscribeControl(IControlMessageSubscriber subscriber);
+
+        /// <summary>
+        /// Reverses <see cref="SubscribeControl"/>.
+        /// </summary>
+        void UnsubscribeControl(IControlMessageSubscriber subscriber);
+
+        /// <summary>
+        /// Quarantines this association's CURRENT remote uid (design.md gate G3's "give-up (overflow
+        /// OR timeout) -> quarantine, never a silent drop" invariant). A no-op if the association has
+        /// no known peer uid yet (still <c>Associating</c> -- nothing to quarantine).
+        /// </summary>
+        void Quarantine();
     }
 
     /// <summary>
@@ -68,17 +88,43 @@ namespace Akka.Remote.Artery
     {
         private readonly AssociationRegistry _registry;
         private readonly Action<object> _sendControl;
+        private readonly Action<IControlMessageSubscriber> _subscribeControl;
+        private readonly Action<IControlMessageSubscriber> _unsubscribeControl;
+        private readonly Action<Address, long> _quarantine;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AssociationRegistryOutboundContext"/> class.
+        /// </summary>
+        /// <param name="registry">The shared association registry.</param>
+        /// <param name="localAddress">This system's own unique address.</param>
+        /// <param name="remoteAddress">The remote address this outbound association targets.</param>
+        /// <param name="sendControl">Sends a message over the control channel to <paramref name="remoteAddress"/>.</param>
+        /// <param name="subscribeControl">
+        /// Registers a global inbound-control-message subscriber (design.md gate G3's
+        /// <see cref="SystemMessageDeliveryStage"/> seam). Defaults to a no-op so pre-G3 callers
+        /// (existing tests) do not need to supply it.
+        /// </param>
+        /// <param name="unsubscribeControl">Reverses <paramref name="subscribeControl"/>. Defaults to a no-op.</param>
+        /// <param name="quarantine">
+        /// Quarantines <paramref name="remoteAddress"/> for a given uid (design.md gate G3's
+        /// give-up-&gt;quarantine invariant). Defaults to a no-op.
+        /// </param>
         public AssociationRegistryOutboundContext(
             AssociationRegistry registry,
             UniqueAddress localAddress,
             Address remoteAddress,
-            Action<object> sendControl)
+            Action<object> sendControl,
+            Action<IControlMessageSubscriber>? subscribeControl = null,
+            Action<IControlMessageSubscriber>? unsubscribeControl = null,
+            Action<Address, long>? quarantine = null)
         {
             _registry = registry;
             LocalAddress = localAddress;
             RemoteAddress = remoteAddress;
             _sendControl = sendControl;
+            _subscribeControl = subscribeControl ?? (static _ => { });
+            _unsubscribeControl = unsubscribeControl ?? (static _ => { });
+            _quarantine = quarantine ?? (static (_, _) => { });
         }
 
         /// <inheritdoc/>
@@ -95,5 +141,18 @@ namespace Akka.Remote.Artery
 
         /// <inheritdoc/>
         public void SendControl(object message) => _sendControl(message);
+
+        /// <inheritdoc/>
+        public void SubscribeControl(IControlMessageSubscriber subscriber) => _subscribeControl(subscriber);
+
+        /// <inheritdoc/>
+        public void UnsubscribeControl(IControlMessageSubscriber subscriber) => _unsubscribeControl(subscriber);
+
+        /// <inheritdoc/>
+        public void Quarantine()
+        {
+            if (AssociationState.UniqueRemoteAddress is { } peer)
+                _quarantine(RemoteAddress, peer.Uid);
+        }
     }
 }
