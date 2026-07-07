@@ -19,6 +19,7 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+using Inet = Akka.IO.Inet;
 
 namespace Akka.Remote.Artery
 {
@@ -139,6 +140,20 @@ namespace Akka.Remote.Artery
         private Func<object, bool>? _dropOutboundControlMessage;
 
         /// <summary>
+        /// Applied to EVERY Artery socket: the accepting <c>Tcp.Bind</c> and both outbound
+        /// <c>Tcp.OutgoingConnection</c> call sites in <see cref="MaterializeOutboundStream"/>.
+        /// Explicitly-pinned large socket buffers prevent the kernel shrinking the receiver's
+        /// window below loopback's MSS under memory pressure, which springs a sender-side
+        /// silly-window-syndrome stall (rwnd_limited forever, observed as an intermittent
+        /// benchmark wedge; see ss evidence: notsent+persist-timer with all app layers idle).
+        /// Pinning &gt;&gt; MSS makes the trap unreachable.
+        /// </summary>
+        private static readonly IImmutableList<Inet.SocketOption> ArterySocketOptions =
+            ImmutableList.Create<Inet.SocketOption>(
+                new Inet.SO.ReceiveBufferSize(1024 * 1024),
+                new Inet.SO.SendBufferSize(1024 * 1024));
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ArteryRemoting"/> class.
         /// </summary>
         /// <param name="system">TBD</param>
@@ -181,7 +196,8 @@ namespace Akka.Remote.Artery
             // under the peer within milliseconds of it being accepted. halfClose: true makes it send
             // `Tcp.ConfirmedClose` (FIN on the write half only) instead, keeping the read side open
             // for as long as the peer keeps sending.
-            var (bindingTask, _) = _tcp.Bind(_settings.CanonicalHostname, _settings.CanonicalPort, halfClose: true)
+            var (bindingTask, _) = _tcp.Bind(_settings.CanonicalHostname, _settings.CanonicalPort,
+                    options: ArterySocketOptions, halfClose: true)
                 .ToMaterialized(Sink.ForEach<Tcp.IncomingConnection>(HandleIncomingConnection), Keep.Both)
                 .Run(_materializer);
 
@@ -230,17 +246,28 @@ namespace Akka.Remote.Artery
                 association.CompleteControlOutbound();
             }
 
-            // Tear every remaining stream down at once via the shared kill switch (every inbound and
-            // outbound graph is woven through it). Deliberately NO _materializer.Shutdown() -- like
-            // Pekko (ArteryTransport.internalShutdown aborts its transportKillSwitch and never shuts
-            // the materializer down), we let the kill switch stop the streams and the ActorSystem
-            // lifecycle reclaim the materializer. Force-shutting the materializer down was what raced
-            // late materializations into IllegalStateException.
+            // Tear every remaining stream down via the shared kill switch first (every inbound and
+            // outbound graph is woven through it) -- the graceful path, mirroring Pekko's
+            // transportKillSwitch abort.
             _killSwitch.Shutdown();
 
+            // ...then REAP the materializer. The kill switch alone is NOT sufficient: a stage parked
+            // on an EXTERNAL signal (e.g. the TCP write stage awaiting a WriteAck from a connection
+            // actor that died with the ack unsent) never processes the kill switch's completion and
+            // sits parked forever -- its ActorGraphInterpreter can then never stop, the /system
+            // guardian can never terminate, and ActorSystem.Terminate() hangs until CoordinatedShutdown's
+            // actor-system-terminate phase times out (observed: 10s per system + zombie systems whose
+            // remote-watchers kept firing into subsequent benchmark rounds, with ~31 leaked interpreter
+            // actors in the heap). Materializer.Shutdown() force-stops those interpreters. This is
+            // SAFE against the late-materialization IllegalStateException race that originally
+            // motivated removing it, because _isShutdown was set FIRST (above) and
+            // MaterializeOutboundStream both guards on _materializer.IsShutdown and catches the
+            // residual race around Run().
             var unbindTask = _binding?.Unbind() ?? Task.CompletedTask;
+            var materializer = _materializer;
             return unbindTask.ContinueWith(_ =>
             {
+                materializer?.Shutdown();
                 _log.Info("Artery TCP remoting shut down");
             }, TaskContinuationOptions.ExecuteSynchronously);
         }
@@ -693,6 +720,14 @@ namespace Akka.Remote.Artery
             var port = remoteAddress.Port
                 ?? throw new RemoteTransportException($"Cannot open an Artery {streamId} outbound connection to [{remoteAddress}]: missing port.");
 
+            // The (string host, int port) OutgoingConnection convenience overload does not accept
+            // socket options, so build the EndPoint ourselves (mirrors Streams.Dsl.Tcp's own
+            // internal CreateEndpoint, which isn't visible from this assembly) to reach the
+            // overload that does -- see ArterySocketOptions.
+            var remoteEndpoint = IPAddress.TryParse(host, out var parsedHost)
+                ? (EndPoint)new IPEndPoint(parsedHost, port)
+                : new DnsEndPoint(host, port);
+
             var encodeStage = new ArteryEncodeStage(System.Serialization, _localUniqueAddress.Uid, _encodeBufferPool);
 
             var source = ChannelSource.FromReader(reader);
@@ -768,7 +803,7 @@ namespace Akka.Remote.Artery
                     Task connectionTask;
                     ((terminationWatch, connectionTask), _) = preambleAndFrames
                         .WatchTermination(Keep.Right)
-                        .ViaMaterialized(_tcp!.OutgoingConnection(host, port), Keep.Both)
+                        .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: ArterySocketOptions), Keep.Both)
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
 
@@ -784,7 +819,7 @@ namespace Akka.Remote.Artery
                     ((killSwitch, terminationWatch), _) = preambleAndFrames
                         .ViaMaterialized(KillSwitches.Single<ReadOnlySequence<byte>>(), Keep.Right)
                         .WatchTermination(Keep.Both)
-                        .Via(_tcp!.OutgoingConnection(host, port))
+                        .Via(_tcp!.OutgoingConnection(remoteEndpoint, options: ArterySocketOptions))
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
                     association.SetOutboundKillSwitch(killSwitch);
