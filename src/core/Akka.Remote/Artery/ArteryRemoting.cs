@@ -103,6 +103,17 @@ namespace Akka.Remote.Artery
         private ActorMaterializer? _materializer;
         private TcpExt? _tcp;
         private Tcp.ServerBinding? _binding;
+
+        // Transport-wide shutdown guard + teardown, mirroring Pekko's ArteryTransport (its
+        // `hasBeenShutdown` AtomicBoolean + the shared "transportKillSwitch"). _isShutdown is set
+        // FIRST in Shutdown() so no NEW outbound stream is materialized once teardown begins (see the
+        // guard at the top of MaterializeOutboundStream). _killSwitch is woven into EVERY inbound and
+        // outbound stream graph, so a single Shutdown() on it tears them all down at once. Like Pekko,
+        // we deliberately do NOT call _materializer.Shutdown() -- the kill switch stops the streams and
+        // the ActorSystem lifecycle reclaims the materializer; force-shutting the materializer down was
+        // exactly what raced a late materialization into an IllegalStateException.
+        private volatile bool _isShutdown;
+        private readonly SharedKillSwitch _killSwitch = KillSwitches.Shared("arteryTransportKillSwitch");
         private UniqueAddress _localUniqueAddress;
         private AssociationRegistryInboundContext? _inboundContext;
 
@@ -205,20 +216,31 @@ namespace Akka.Remote.Artery
         /// <inheritdoc/>
         public override Task Shutdown()
         {
+            // Set the guard FIRST (mirrors Pekko's hasBeenShutdown.compareAndSet at the top of
+            // shutdown()): from here on MaterializeOutboundStream refuses to start new streams, so a
+            // late system message racing termination can no longer trigger a materialization.
+            _isShutdown = true;
             _log.Info("Shutting down Artery TCP remoting on [{0}]", _defaultAddress);
 
+            // Complete the outbound queues so their consumers finish gracefully and no restart is
+            // scheduled (CompleteOutbound also latches the per-association shutdown flags).
             foreach (var association in _registry.AllAssociations)
             {
                 association.CompleteOutbound();
                 association.CompleteControlOutbound();
             }
 
-            var unbindTask = _binding?.Unbind() ?? Task.CompletedTask;
-            var materializer = _materializer;
+            // Tear every remaining stream down at once via the shared kill switch (every inbound and
+            // outbound graph is woven through it). Deliberately NO _materializer.Shutdown() -- like
+            // Pekko (ArteryTransport.internalShutdown aborts its transportKillSwitch and never shuts
+            // the materializer down), we let the kill switch stop the streams and the ActorSystem
+            // lifecycle reclaim the materializer. Force-shutting the materializer down was what raced
+            // late materializations into IllegalStateException.
+            _killSwitch.Shutdown();
 
+            var unbindTask = _binding?.Unbind() ?? Task.CompletedTask;
             return unbindTask.ContinueWith(_ =>
             {
-                materializer?.Shutdown();
                 _log.Info("Artery TCP remoting shut down");
             }, TaskContinuationOptions.ExecuteSynchronously);
         }
@@ -350,6 +372,7 @@ namespace Akka.Remote.Artery
             // element that is not a SystemMessageEnvelope, so composing it unconditionally here
             // (rather than only for control-preamble connections) is correct and simpler.
             var inboundSink = Flow.Create<ReadOnlySequence<byte>>()
+                .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
                 .Via(new ArteryInboundProcessingStage(_settings.MaximumFrameSize, System.Serialization))
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
@@ -635,6 +658,20 @@ namespace Akka.Remote.Artery
         /// </summary>
         private void MaterializeOutboundStream(Address remoteAddress, Association association, ArteryStreamId streamId, bool isRestart = false)
         {
+            // Transport is tearing down: do not materialize a new stream. A late system message (e.g.
+            // RemoteWatcher's final Unwatch during CoordinatedShutdown) can otherwise reach here after
+            // teardown has begun. Mirrors Pekko's `if (transport.isShutdown) throw ShuttingDown` guard
+            // before run() (Association.scala) -- but we RETURN quietly rather than throw, since our
+            // caller (RemoteActorRef.SendSystemMessage) logs a thrown exception as a noisy ERROR. We
+            // ALSO check the materializer itself: unlike Pekko, our ActorMaterializer.Create(System) is
+            // reclaimed by the ActorSystem's OWN teardown (its StreamSupervisor.PostStop flips
+            // IsShutdown) independently of _isShutdown, so it can already be dead here while _isShutdown
+            // is still false. The message stays in the association-owned channel undelivered -- correct,
+            // the transport is going away. The residual race (materializer reclaimed between this check
+            // and Run() below) is caught around Run().
+            if (_isShutdown || _materializer is null || _materializer.IsShutdown)
+                return;
+
             var isControlStream = streamId == ArteryStreamId.Control;
             var reader = isControlStream ? association.ControlReader : association.OutboundReader;
 
@@ -704,7 +741,12 @@ namespace Akka.Remote.Artery
             // completion) or when the WRITE direction genuinely fails/gets cancelled downstream
             // (a real connection failure) -- never merely because the read side (which nothing
             // ever writes to) reached EOF.
-            var preambleAndFrames = Source.Single(BuildPreamble(streamId)).Concat(frames);
+            // Woven through the transport-wide kill switch (same instance as the inbound streams) so
+            // Shutdown() tears every outbound stream down at once -- see _killSwitch. Placed at the
+            // head of the write side so an abort/shutdown propagates down through encode ->
+            // OutgoingConnection and closes the socket.
+            var preambleAndFrames = Source.Single(BuildPreamble(streamId)).Concat(frames)
+                .Via(_killSwitch.Flow<ReadOnlySequence<byte>>());
 
             // The ORDINARY stream is fitted with a KillSwitch that is published to the Association so
             // the CONTROL stream -- which detects peer death RELIABLY via its periodic heartbeat,
@@ -716,32 +758,47 @@ namespace Akka.Remote.Artery
             // it arms the once-per-death ordinary trip (MarkControlHealthy); a connection-refused
             // reconnect attempt faults that task instead, so the edge-detector stays disarmed and the
             // ordinary stream is not churned during a still-dead-peer reconnect loop.
-            Task terminationWatch;
-            if (isControlStream)
+            // null! satisfies definite-assignment: the catch below always returns, so terminationWatch
+            // is only read past this block when the try assigned it.
+            Task terminationWatch = null!;
+            try
             {
-                Task connectionTask;
-                ((terminationWatch, connectionTask), _) = preambleAndFrames
-                    .WatchTermination(Keep.Right)
-                    .ViaMaterialized(_tcp!.OutgoingConnection(host, port), Keep.Both)
-                    .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
-                    .Run(_materializer!);
-
-                connectionTask.ContinueWith(ct =>
+                if (isControlStream)
                 {
-                    if (ct.IsCompletedSuccessfully)
-                        association.MarkControlHealthy();
-                }, TaskContinuationOptions.ExecuteSynchronously);
+                    Task connectionTask;
+                    ((terminationWatch, connectionTask), _) = preambleAndFrames
+                        .WatchTermination(Keep.Right)
+                        .ViaMaterialized(_tcp!.OutgoingConnection(host, port), Keep.Both)
+                        .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
+                        .Run(_materializer!);
+
+                    connectionTask.ContinueWith(ct =>
+                    {
+                        if (ct.IsCompletedSuccessfully)
+                            association.MarkControlHealthy();
+                    }, TaskContinuationOptions.ExecuteSynchronously);
+                }
+                else
+                {
+                    UniqueKillSwitch killSwitch;
+                    ((killSwitch, terminationWatch), _) = preambleAndFrames
+                        .ViaMaterialized(KillSwitches.Single<ReadOnlySequence<byte>>(), Keep.Right)
+                        .WatchTermination(Keep.Both)
+                        .Via(_tcp!.OutgoingConnection(host, port))
+                        .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
+                        .Run(_materializer!);
+                    association.SetOutboundKillSwitch(killSwitch);
+                }
             }
-            else
+            catch (Akka.Pattern.IllegalStateException) when (_isShutdown || _materializer is null || _materializer.IsShutdown)
             {
-                UniqueKillSwitch killSwitch;
-                ((killSwitch, terminationWatch), _) = preambleAndFrames
-                    .ViaMaterialized(KillSwitches.Single<ReadOnlySequence<byte>>(), Keep.Right)
-                    .WatchTermination(Keep.Both)
-                    .Via(_tcp!.OutgoingConnection(host, port))
-                    .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
-                    .Run(_materializer!);
-                association.SetOutboundKillSwitch(killSwitch);
+                // Lost the race with teardown: the ActorSystem reclaimed the materializer (its
+                // StreamSupervisor stopped) between the guard at the top of this method and Run() here,
+                // so Materialize() threw. The transport is going away -- drop quietly. Gated on an
+                // actually-shut-down materializer so a genuine IllegalStateException from a live
+                // materializer still propagates.
+                _log.Debug("Artery {0} outbound stream to [{1}] not materialized: materializer is shutting down.", streamId, remoteAddress);
+                return;
             }
 
             terminationWatch.ContinueWith(t =>

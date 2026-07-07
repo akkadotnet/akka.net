@@ -41,31 +41,37 @@ namespace RemotePingPong
 #endif
         }
 
+        // Selected once at startup via a command-line "artery" flag; controls which remote transport
+        // both ActorSystems bind. Default is the classic DotNetty TCP transport (the historical
+        // baseline); "artery" points the exact same benchmark at Artery.Tcp so the two produce
+        // directly comparable msgs/sec numbers over an otherwise-identical workload.
+        private static bool _useArtery;
+
         public static Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
         {
-            var baseConfig = ConfigurationFactory.ParseString(@"
+            var commonConfig = ConfigurationFactory.ParseString(@"
             akka {
               actor.provider = remote
               loglevel = ERROR
               suppress-json-serializer-warning = on
               log-dead-letters = off
-
-              remote {
-                log-remote-lifecycle-events = off
-
-                dot-netty.tcp {
-                    port = 0
-                    hostname = ""localhost""
-                }
-                
-              }
+              remote.log-remote-lifecycle-events = off
             }");
 
-            var bindingConfig =
-                ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
-                    .WithFallback(ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port = " + port));
+            var transportConfig = _useArtery
+                ? ConfigurationFactory.ParseString($@"
+                akka.remote.artery {{
+                  enabled = on
+                  canonical.hostname = ""{ipOrHostname}""
+                  canonical.port = {port}
+                }}")
+                : ConfigurationFactory.ParseString($@"
+                akka.remote.dot-netty.tcp {{
+                  hostname = ""{ipOrHostname}""
+                  port = {port}
+                }}");
 
-            return bindingConfig.WithFallback(baseConfig);
+            return transportConfig.WithFallback(commonConfig);
         }
 
         private static async Task Main(params string[] args)
@@ -78,9 +84,19 @@ namespace RemotePingPong
             {
                 await Console.Error.WriteLineAsync($"Attempted to elevate process priority, but failed due to {ex.Message} - carrying on at normal process priority.");
             }
-            if (args.Length == 0 || !uint.TryParse(args[0], out var timesToRun))
+            // Args (order-independent): the first numeric arg is timesToRun; the literal "artery"
+            // (case-insensitive) selects the Artery.Tcp transport instead of the DotNetty default.
+            // e.g. `RemotePingPong 3 artery` or `RemotePingPong artery`.
+            _useArtery = args.Any(a => a.Equals("artery", StringComparison.OrdinalIgnoreCase));
+
+            var timesToRun = 1u;
+            foreach (var a in args)
             {
-                timesToRun = 1u;
+                if (uint.TryParse(a, out var parsed))
+                {
+                    timesToRun = parsed;
+                    break;
+                }
             }
 
             await Start(timesToRun);
@@ -97,6 +113,7 @@ namespace RemotePingPong
                 return;
             }
 
+            Console.WriteLine("Transport:                         {0}", _useArtery ? "Artery.Tcp" : "DotNetty");
             Console.WriteLine("OSVersion:                         {0}", Environment.OSVersion);
             Console.WriteLine("ProcessorCount:                    {0}", processorCount);
             Console.WriteLine("ClockSpeed:                        {0} MHZ", CpuSpeed());
