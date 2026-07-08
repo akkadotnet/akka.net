@@ -13,7 +13,6 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -164,24 +163,22 @@ namespace Akka.Tests.IO
         private sealed class BorrowedTestSegment : ReadOnlySequenceSegment<byte>
         {
             public BorrowedTestSegment(ReadOnlyMemory<byte> memory) => Memory = memory;
-        }
 
-        // ReadOnlySequenceSegment<T>.Next and .RunningIndex expose only protected setters, assignable
-        // solely from within the segment's own type hierarchy (OwnedSequenceSegment.Append relies on
-        // exactly that). A borrowed head (BorrowedTestSegment) therefore cannot chain a real
-        // OwnedSequenceSegment tail with a correct RunningIndex through the public API, so this
-        // test-only helper wires the two together via those protected setters and preserves the
-        // ReadOnlySequence invariant (RunningIndex == sum of all preceding segment lengths).
-        private static readonly PropertyInfo NextProperty =
-            typeof(ReadOnlySequenceSegment<byte>).GetProperty(nameof(ReadOnlySequenceSegment<byte>.Next))!;
-
-        private static readonly PropertyInfo RunningIndexProperty =
-            typeof(ReadOnlySequenceSegment<byte>).GetProperty(nameof(ReadOnlySequenceSegment<byte>.RunningIndex))!;
-
-        private static void Chain(ReadOnlySequenceSegment<byte> predecessor, ReadOnlySequenceSegment<byte> successor)
-        {
-            RunningIndexProperty.SetValue(successor, predecessor.RunningIndex + predecessor.Memory.Length);
-            NextProperty.SetValue(predecessor, successor);
+            /// <summary>
+            /// Chains a new borrowed segment after this one, mirroring <c>OwnedSequenceSegment.Append</c>.
+            /// Compiles without reflection because both instances are <see cref="BorrowedTestSegment"/>,
+            /// so the protected <see cref="ReadOnlySequenceSegment{T}.RunningIndex"/>/
+            /// <see cref="ReadOnlySequenceSegment{T}.Next"/> setters are accessible within the same type.
+            /// </summary>
+            public BorrowedTestSegment Append(ReadOnlyMemory<byte> memory)
+            {
+                var next = new BorrowedTestSegment(memory)
+                {
+                    RunningIndex = RunningIndex + Memory.Length
+                };
+                Next = next;
+                return next;
+            }
         }
 
         [Fact]
@@ -282,7 +279,7 @@ namespace Akka.Tests.IO
         }
 
         [Fact]
-        public async Task OwnedWrite_mixed_borrowed_and_owned_chain_disposes_only_the_owned_segment()
+        public async Task BorrowedWrite_all_borrowed_chain_disposes_nothing_and_leaves_bytes_intact()
         {
             using var socketPair = await ConnectedSocketPair.CreateAsync();
             var bindHandler = CreateTestProbe();
@@ -296,38 +293,41 @@ namespace Akka.Tests.IO
             await bindHandler.ExpectMsgAsync<Tcp.Connected>();
             bindHandler.Send(connection, new Tcp.Register(handler.Ref));
 
-            // Segment 1: borrowed -- a plain BorrowedTestSegment that does NOT implement
-            // IOwnedSequenceSegment, and NOT from the poison pool, so any mutation would be
-            // immediately visible as corruption rather than the pool's sentinel pattern.
-            var borrowedPayload = RandomPayload(44, 96);
-            var borrowedArray = (byte[])borrowedPayload.Clone();
-            var borrowedSnapshot = (byte[])borrowedArray.Clone();
+            // A multi-segment chain of BORROWED links only -- none implement IOwnedSequenceSegment,
+            // so the disposal walk must dispose nothing and touch no bytes. This also exercises the
+            // walk over a segment-backed sequence whose links are all non-owned, plus the data.End
+            // bound across a multi-segment chain. Production represents a borrowed preamble exactly
+            // this way (a plain segment that does not opt into IOwnedSequenceSegment) and never mixes
+            // it into an owned frame chain -- the preamble flushes as its own Tcp.Write. None of these
+            // arrays come from the poison pool, so any mutation by the walk would show up immediately
+            // as a changed byte rather than the pool's sentinel pattern.
+            var payload1 = RandomPayload(111, 64);
+            var payload2 = RandomPayload(222, 128);
+            var payload3 = RandomPayload(333, 32);
+            var snapshot1 = (byte[])payload1.Clone();
+            var snapshot2 = (byte[])payload2.Clone();
+            var snapshot3 = (byte[])payload3.Clone();
 
-            // Segment 2: owned, from the poison pool -- a real OwnedSequenceSegment.
-            var ownedPayload = RandomPayload(55, 96);
-            var ownedArray = pool.Rent(ownedPayload.Length);
-            ownedPayload.CopyTo(ownedArray, 0);
-            var owner = new PoisonOwner(pool, ownedArray, ownedPayload.Length);
+            var head = new BorrowedTestSegment(payload1);
+            var mid = head.Append(payload2);
+            var tail = mid.Append(payload3);
+            var data = new System.Buffers.ReadOnlySequence<byte>(head, 0, tail, tail.Memory.Length);
 
-            // One Tcp.Write.Data mixing a borrowed head and an owned tail. The disposal walk must
-            // dispose ONLY the owned tail and leave the borrowed head's bytes completely untouched.
-            var borrowedHead = new BorrowedTestSegment(borrowedArray);
-            var ownedTail = new OwnedSequenceSegment(owner.Memory, owner);
-            Chain(borrowedHead, ownedTail);
-            var data = new System.Buffers.ReadOnlySequence<byte>(borrowedHead, 0, ownedTail, ownedTail.Memory.Length);
+            data.Length.Should().Be(payload1.Length + payload2.Length + payload3.Length);
 
             handler.Send(connection, Tcp.Write.Create(data, new WriteAck(1)));
             (await handler.ExpectMsgAsync<WriteAck>()).Id.Should().Be(1);
 
-            // Only the owned segment gets disposed.
-            owner.DisposeCount.Should().Be(1);
+            // No segment implements IOwnedSequenceSegment, so the walk disposed nothing and scribbled
+            // nothing: every borrowed array is byte-for-byte what it was before the write.
+            payload1.Should().Equal(snapshot1, "a borrowed segment has no owner and must be left completely untouched");
+            payload2.Should().Equal(snapshot2, "a borrowed segment has no owner and must be left completely untouched");
+            payload3.Should().Equal(snapshot3, "a borrowed segment has no owner and must be left completely untouched");
 
-            // The borrowed array was never touched by the disposal walk (no owner attached to it).
-            borrowedArray.Should().Equal(borrowedSnapshot, "a borrowed segment has no owner to dispose and must be left completely untouched");
-
-            var expected = new byte[borrowedPayload.Length + ownedPayload.Length];
-            borrowedPayload.CopyTo(expected, 0);
-            ownedPayload.CopyTo(expected, borrowedPayload.Length);
+            var expected = new byte[payload1.Length + payload2.Length + payload3.Length];
+            payload1.CopyTo(expected, 0);
+            payload2.CopyTo(expected, payload1.Length);
+            payload3.CopyTo(expected, payload1.Length + payload2.Length);
 
             var received = await ReceiveExactAsync(socketPair.Client, expected.Length, TimeSpan.FromSeconds(5));
             received.Should().Equal(expected);
