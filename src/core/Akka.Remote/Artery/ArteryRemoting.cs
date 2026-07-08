@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
+using Akka.Remote.Artery.Compression;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using Inet = Akka.IO.Inet;
@@ -521,10 +522,86 @@ namespace Akka.Remote.Artery
                     // later (group 7+) work; the Rsp's value today is purely observability (tests
                     // subscribe to see liveness/non-starvation -- see ArteryTransportSpec).
                     break;
+
+                case ActorRefCompressionAdvertisement adv when _settings.CompressionEnabled:
+                    HandleCompressionAdvertisement(originUid, adv, isManifest: false);
+                    break;
+
+                case ClassManifestCompressionAdvertisement adv when _settings.CompressionEnabled:
+                    HandleCompressionAdvertisement(originUid, adv, isManifest: true);
+                    break;
+
+                // When compression is disabled the two advertisement cases' `when` guard fails and the
+                // message falls through here, IGNORED -- no table installed, no Ack (design.md hard
+                // invariant: compression off => advertisements ignored, tables stay Empty). The Ack
+                // messages themselves are the RECEIVER side's confirmation trigger (Stage 2b) and are
+                // likewise ignored here for now.
             }
         }
 
-        private void SendControlToAddress(Address to, object message) => EnqueueControl(to, message);
+        /// <summary>
+        /// SENDER side of the compression advertisement protocol (design.md
+        /// "artery-ref-manifest-compression" Decision 5, Stage 2a). A peer (the traffic RECEIVER) has
+        /// advertised a table for THIS system to use when sending TO it: build the outbound
+        /// <see cref="CompressionTable{T}"/> from the ordered list (position = index), install it on
+        /// the association for that peer, and reply with the matching Ack. Only reached when
+        /// compression is enabled (guarded at the call site).
+        /// </summary>
+        private void HandleCompressionAdvertisement(long originUid, ICompressionAdvertisement advertisement, bool isManifest)
+        {
+            // The advertising peer is the ORIGIN of this control message; its association is keyed by
+            // that uid (the same resolution the heartbeat reply uses above). If it is not resolvable
+            // -- e.g. an advertisement racing association teardown -- drop it; a fresh table will be
+            // re-advertised (matches Pekko's "no association yet -> don't advertise/act").
+            if (_registry.TryGetByUid(originUid) is not { } association)
+            {
+                _log.Debug(
+                    "Ignoring compression advertisement from uid [{0}] (version [{1}]): no association resolved for that origin.",
+                    originUid, advertisement.TableVersion);
+                return;
+            }
+
+            // Build THIS system's OUTBOUND table. advertisement.OriginUid is THIS system's uid (the
+            // system that will USE the table for outbound), carried for parity with Pekko; the install
+            // itself keys on the ADVERTISING peer's association (resolved above).
+            var table = CompressionTable<string>.FromAdvertisement(
+                advertisement.OriginUid, advertisement.TableVersion, advertisement.Table);
+
+            if (isManifest)
+                association.SwapOutboundManifestCompressionTable(table);
+            else
+                association.SwapOutboundActorRefCompressionTable(table);
+
+            // Reply Ack: From = THIS system's own unique address (so the peer's confirmation can
+            // stale-guard it, Stage 2b), TableVersion echoed. Sent back over the control stream.
+            object ack = isManifest
+                ? new ClassManifestCompressionAdvertisementAck(_localUniqueAddress, advertisement.TableVersion)
+                : new ActorRefCompressionAdvertisementAck(_localUniqueAddress, advertisement.TableVersion);
+            EnqueueControl(association.RemoteAddress, ack);
+
+            _log.Debug(
+                "Installed OUTBOUND {0} compression table (version [{1}], {2} entries) for [{3}] and acked.",
+                isManifest ? "manifest" : "actor-ref", advertisement.TableVersion, advertisement.Table.Count, association.RemoteAddress);
+        }
+
+        /// <summary>
+        /// Enqueues <paramref name="message"/> onto <paramref name="to"/>'s outbound CONTROL stream.
+        /// INTERNAL -- also exposed to the Artery test suite (e.g. to inject a compression
+        /// advertisement from a peer over the real control stream).
+        /// </summary>
+        internal void SendControlToAddress(Address to, object message) => EnqueueControl(to, message);
+
+        /// <summary>
+        /// INTERNAL test seam: the current OUTBOUND actor-ref compression table this system would use
+        /// when sending to <paramref name="remoteAddress"/> (design.md Decision 2). Lets a test assert
+        /// that a received advertisement was installed, without reaching into the registry directly.
+        /// </summary>
+        internal CompressionTable<string> OutboundActorRefCompressionTableFor(Address remoteAddress) =>
+            _registry.AssociationFor(remoteAddress).OutboundActorRefCompressionTable;
+
+        /// <summary>INTERNAL test seam: manifest counterpart of <see cref="OutboundActorRefCompressionTableFor"/>.</summary>
+        internal CompressionTable<string> OutboundManifestCompressionTableFor(Address remoteAddress) =>
+            _registry.AssociationFor(remoteAddress).OutboundManifestCompressionTable;
 
         private void EnqueueOutbound(Address remoteAddress, object message, string? senderPath, string? recipientPath)
         {
@@ -740,7 +817,15 @@ namespace Akka.Remote.Artery
                 ? (EndPoint)new IPEndPoint(parsedHost, port)
                 : new DnsEndPoint(host, port);
 
-            var encodeStage = new ArteryEncodeStage(System.Serialization, _localUniqueAddress.Uid, _encodeBufferPool);
+            // OUTBOUND compression source (design.md "artery-ref-manifest-compression" Decision 2/4):
+            // ONLY the ORDINARY stream compresses, and only when compression is enabled -- the control
+            // stream (handshake/heartbeat/quarantine/reliable-system-message traffic) is NEVER
+            // compressed (Pekko's useOutboundCompression(!isArteryMessage)). A null source keeps the
+            // frame byte-identical to a no-compression build; a non-null source whose tables are still
+            // Empty (nothing advertised yet) does too. The Association-owned tables survive stream
+            // restarts (same rationale as SystemMessageDeliveryState, threaded in just below).
+            var compressionSource = !isControlStream && _settings.CompressionEnabled ? association : null;
+            var encodeStage = new ArteryEncodeStage(System.Serialization, _localUniqueAddress.Uid, _encodeBufferPool, compressionSource);
 
             var source = ChannelSource.FromReader(reader);
 

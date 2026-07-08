@@ -96,6 +96,26 @@ namespace Akka.Remote.Artery.Compression
             new CompressionTable<T>(0L, 0, new Dictionary<T, int>());
 
         /// <summary>
+        /// Builds the OUTBOUND <c>value -&gt; index</c> table a sender installs when it receives a
+        /// compression advertisement (design.md Decision 5): the advertised values arrive as a single
+        /// ordered list where the list position IS the dense compression index, so entry <c>i</c> maps
+        /// to index <c>i</c>. <paramref name="originUid"/> is the advertisement's origin UID (the
+        /// system that will USE this table for outbound). A duplicate value keeps its LAST position
+        /// (the receiver builds gap-less, duplicate-free tables, so this is only a defensive tie-break).
+        /// </summary>
+        public static CompressionTable<T> FromAdvertisement(long originUid, byte version, IReadOnlyList<T> orderedValues)
+        {
+            if (orderedValues is null)
+                throw new System.ArgumentNullException(nameof(orderedValues));
+
+            var dictionary = new Dictionary<T, int>(orderedValues.Count);
+            for (var i = 0; i < orderedValues.Count; i++)
+                dictionary[orderedValues[i]] = i;
+
+            return new CompressionTable<T>(originUid, version, dictionary);
+        }
+
+        /// <summary>
         /// The next table version after <paramref name="version"/>, ported from Pekko's
         /// <c>incrementTableVersion</c>: valid versions cycle through <c>0..127</c> and wrap
         /// <c>127 -&gt; 0</c>. Advancing the disabled sentinel

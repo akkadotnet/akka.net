@@ -107,7 +107,7 @@ namespace Akka.Remote.Artery
     /// message may wait before giving up) -- both funnel into the same quarantine outcome.
     /// </para>
     /// </summary>
-    internal sealed class Association
+    internal sealed class Association : Compression.IOutboundCompressionTables
     {
         /// <summary>
         /// Default capacity for <see cref="OutboundReader"/>'s bounded channel (Decision 7/9). A
@@ -215,6 +215,21 @@ namespace Akka.Remote.Artery
         private readonly SystemMessageDeliveryState _systemMessageDeliveryState = new();
 
         /// <summary>
+        /// OUTBOUND actor-ref / manifest compression tables for THIS destination (design.md
+        /// "artery-ref-manifest-compression" Decision 2). Association-owned -- like
+        /// <see cref="SystemMessageDeliveryState"/> -- so they survive outbound-stream restarts:
+        /// a fresh <see cref="ArteryEncodeStage"/> materialization reads the SAME installed table
+        /// rather than reverting to <see cref="Compression.CompressionTable{T}.Empty"/>. Each table is
+        /// IMMUTABLE and swapped as a whole reference (<c>Volatile.Write</c>) when an advertisement
+        /// arrives on the control-stream thread; the encode stage reads it (<c>Volatile.Read</c>) once
+        /// per message -- so a lane can never observe a torn <c>(version, dictionary)</c> pair. Default
+        /// <see cref="Compression.CompressionTable{T}.Empty"/> = nothing compressed = LITERAL,
+        /// byte-identical to a no-compression build.
+        /// </summary>
+        private Compression.CompressionTable<string> _outboundActorRefCompressionTable = Compression.CompressionTable<string>.Empty;
+        private Compression.CompressionTable<string> _outboundManifestCompressionTable = Compression.CompressionTable<string>.Empty;
+
+        /// <summary>
         /// Per-uid "have we already logged a quarantine-drop for this uid" latch (task 6.6:
         /// "log once per association, not per message"). Keyed by uid (not just a single
         /// per-association flag) so a NEW incarnation -- a different uid, possibly quarantined
@@ -320,6 +335,31 @@ namespace Akka.Remote.Artery
         /// <see cref="_systemMessageDeliveryState"/>.
         /// </summary>
         public SystemMessageDeliveryState SystemMessageDeliveryState => _systemMessageDeliveryState;
+
+        /// <inheritdoc/>
+        public Compression.CompressionTable<string> OutboundActorRefCompressionTable =>
+            Volatile.Read(ref _outboundActorRefCompressionTable);
+
+        /// <inheritdoc/>
+        public Compression.CompressionTable<string> OutboundManifestCompressionTable =>
+            Volatile.Read(ref _outboundManifestCompressionTable);
+
+        /// <summary>
+        /// Installs a new OUTBOUND actor-ref compression table for this destination (design.md
+        /// Decision 2), swapping the whole immutable reference atomically. Called from the
+        /// control-stream thread when an <see cref="Compression.ActorRefCompressionAdvertisement"/>
+        /// arrives; the encode stage observes the swap on its next per-message
+        /// <see cref="OutboundActorRefCompressionTable"/> read.
+        /// </summary>
+        public void SwapOutboundActorRefCompressionTable(Compression.CompressionTable<string> table) =>
+            Volatile.Write(ref _outboundActorRefCompressionTable, table ?? throw new ArgumentNullException(nameof(table)));
+
+        /// <summary>
+        /// Manifest counterpart of <see cref="SwapOutboundActorRefCompressionTable"/>, installed on a
+        /// <see cref="Compression.ClassManifestCompressionAdvertisement"/>.
+        /// </summary>
+        public void SwapOutboundManifestCompressionTable(Compression.CompressionTable<string> table) =>
+            Volatile.Write(ref _outboundManifestCompressionTable, table ?? throw new ArgumentNullException(nameof(table)));
 
         /// <summary>
         /// Whether this association's ORDINARY outbound stream has been permanently torn down by
