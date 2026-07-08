@@ -85,5 +85,5 @@
 
 **PR2 — consumer adoption (lands with the Artery write-coalescing work; §9.5 and §9.6 are atomic — see design.md):**
 
-- [ ] 9.5 [PR2] `TcpStages.cs` coalescing: chain owner-carrying segments **zero-copy** in the write buffer (`WriteBufferSegment` carries the owner), drop the interim `.ToArray()`; dispose buffered owners on abort / `OnUpstreamFailure` / close-without-flush
-- [ ] 9.6 [PR2] `ArteryEncodeStage`: push an owner-carrying segment; delete the two-generation workaround (`_pendingDispose`/`_pendingDisposeOlder`) and its pull/ack inference; keep only a teardown-only backstop dispose on `OnDownstreamFinish`/`PostStop` (safe via idempotent double-dispose)
+- [x] 9.5 [PR2] `TcpStages.cs` coalescing: chain owner-carrying segments **zero-copy** in the write buffer (`WriteBufferSegment` carries the owner), drop the interim `.ToArray()`; dispose buffered owners on abort / `OnUpstreamFailure` / close-without-flush
+- [x] 9.6 [PR2] `ArteryEncodeStage`: push an owner-carrying segment; delete the two-generation workaround (`_pendingDispose`/`_pendingDisposeOlder`) and its pull/ack inference; keep only a teardown-only backstop dispose on `OnDownstreamFinish`/`PostStop` (safe via idempotent double-dispose)
