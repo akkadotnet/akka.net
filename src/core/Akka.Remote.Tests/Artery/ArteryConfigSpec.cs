@@ -91,6 +91,48 @@ namespace Akka.Remote.Tests.Artery
 
             // Association outbound-stream lifecycle: reconnect (design.md group 9).
             settings.OutboundRestartBackoff.Should().Be(1.Seconds());
+
+            // Actor-ref / manifest compression (design.md "artery-ref-manifest-compression"):
+            // off by default, parsed-now/used-later.
+            settings.CompressionEnabled.Should().BeFalse();
+            settings.CompressionActorRefsMax.Should().Be(256);
+            settings.CompressionManifestsMax.Should().Be(256);
+            settings.CompressionAdvertisementInterval.Should().Be(1.Minutes());
+            settings.CompressionFrequencySketchImplementation.Should().Be("bounded");
+        }
+
+        [Fact(DisplayName = "Should_ParseCompressionMaxOff_As_Zero")]
+        public void Should_ParseCompressionMaxOff_As_Zero()
+        {
+            var arteryConfig = ConfigurationFactory.ParseString(@"
+                    akka.remote.artery.advanced.compression.actor-refs.max = off
+                    akka.remote.artery.advanced.compression.manifests.max = off
+                ")
+                .WithFallback(RemoteConfigFactory.Default())
+                .GetConfig("akka.remote.artery");
+
+            var settings = new ArterySettings(arteryConfig);
+            settings.CompressionActorRefsMax.Should().Be(0);
+            settings.CompressionManifestsMax.Should().Be(0);
+        }
+
+        [Fact(DisplayName = "Should_ParseCompressionEnabled_And_CustomMaxima_When_Overridden")]
+        public void Should_ParseCompressionEnabled_And_CustomMaxima_When_Overridden()
+        {
+            var arteryConfig = ConfigurationFactory.ParseString(@"
+                    akka.remote.artery.advanced.compression.enabled = on
+                    akka.remote.artery.advanced.compression.actor-refs.max = 1024
+                    akka.remote.artery.advanced.compression.manifests.max = 128
+                    akka.remote.artery.advanced.compression.advertisement-interval = 30s
+                ")
+                .WithFallback(RemoteConfigFactory.Default())
+                .GetConfig("akka.remote.artery");
+
+            var settings = new ArterySettings(arteryConfig);
+            settings.CompressionEnabled.Should().BeTrue();
+            settings.CompressionActorRefsMax.Should().Be(1024);
+            settings.CompressionManifestsMax.Should().Be(128);
+            settings.CompressionAdvertisementInterval.Should().Be(30.Seconds());
         }
 
         [Theory(DisplayName = "Should_ThrowConfigurationException_When_ArterySettingIsInvalid")]
@@ -103,6 +145,10 @@ namespace Akka.Remote.Tests.Artery
         [InlineData("akka.remote.artery.advanced.system-message-resend-interval = 0s")]
         [InlineData("akka.remote.artery.advanced.give-up-system-message-after = 0s")]
         [InlineData("akka.remote.artery.advanced.outbound-restart-backoff = 0s")]
+        [InlineData("akka.remote.artery.advanced.compression.actor-refs.max = 70000")] // > 65535 (16-bit tag space)
+        [InlineData("akka.remote.artery.advanced.compression.manifests.max = -1")]
+        [InlineData("akka.remote.artery.advanced.compression.actor-refs.max = not-a-number")]
+        [InlineData("akka.remote.artery.advanced.compression.advertisement-interval = 0s")]
         public void Should_ThrowConfigurationException_When_ArterySettingIsInvalid(string overrideHocon)
         {
             var arteryConfig = ConfigurationFactory.ParseString(overrideHocon)
