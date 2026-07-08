@@ -17,6 +17,7 @@ using Akka.Dispatch;
 using Akka.Remote.Transport.DotNetty;
 using Akka.Event;
 using Akka.Remote.Transport;
+using Akka.Remote.Transport.Pipelines;
 using Akka.Util.Internal;
 
 namespace Akka.Remote
@@ -1073,7 +1074,11 @@ namespace Akka.Remote
                         //Apply AkkaProtocolTransport wrapper to the end of the chain
                         //The chain at this point:
                         // AkkaProtocolTransport <-- Adapter <-- .. <-- Adapter <-- Driver
-                        transports.Add(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(_conf), new AkkaPduProtobuffCodec(Context.System)));
+                        // CopilotNotes: CreateCodec checks whether the pipe transport is enabled
+                        // + configured for MessagePack, and returns the correct codec. Falls back
+                        // to AkkaPduProtobuffCodec for all other transports.
+                        var pduCodec = PipeTransportSettings.CreateCodec(_conf, Context.System);
+                        transports.Add(new AkkaProtocolTransport(wrappedTransport, Context.System, new AkkaProtocolSettings(_conf), pduCodec));
                     }
 
                     // Collect all transports, listen addresses, and listener promises in one Task
@@ -1148,7 +1153,7 @@ namespace Akka.Remote
                     Context.ActorOf(RARP.For(Context.System)
                     .ConfigureDispatcher(
                         ReliableDeliverySupervisor.ReliableDeliverySupervisorProps(handleOption, localAddress,
-                            remoteAddress, refuseUid, transport, endpointSettings, new AkkaPduProtobuffCodec(Context.System),
+                            remoteAddress, refuseUid, transport, endpointSettings, PipeTransportSettings.CreateCodec(_conf, Context.System),
                             _receiveBuffers, endpointSettings.Dispatcher)
                             .WithDeploy(Deploy.Local)),
                         $"reliableEndpointWriter-{AddressUrlEncoder.Encode(remoteAddress)}-{_endpointId.Next()}");
@@ -1159,7 +1164,7 @@ namespace Akka.Remote
                     Context.ActorOf(RARP.For(Context.System)
                     .ConfigureDispatcher(
                         EndpointWriter.EndpointWriterProps(handleOption, localAddress, remoteAddress, refuseUid,
-                            transport, endpointSettings, new AkkaPduProtobuffCodec(Context.System), _receiveBuffers,
+                            transport, endpointSettings, PipeTransportSettings.CreateCodec(_conf, Context.System), _receiveBuffers,
                             reliableDeliverySupervisor: null)
                             .WithDeploy(Deploy.Local)),
                         $"endpointWriter-{AddressUrlEncoder.Encode(remoteAddress)}-{_endpointId.Next()}");

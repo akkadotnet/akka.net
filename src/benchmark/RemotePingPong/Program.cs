@@ -41,31 +41,96 @@ namespace RemotePingPong
 #endif
         }
 
-        public static Config CreateActorSystemConfig(string actorSystemName, string ipOrHostname, int port)
+        /// <summary>
+        /// Selects which Akka.Remote transport driver + PDU codec to use for the benchmark run.
+        /// </summary>
+        internal enum TransportMode
         {
+            /// <summary>Legacy DotNetty TCP transport with protobuf codec (the historical baseline).</summary>
+            DotNetty,
+
+            /// <summary>System.IO.Pipelines TCP transport with protobuf codec (wire-compatible).</summary>
+            PipeProtobuf,
+
+            /// <summary>System.IO.Pipelines TCP transport with MessagePack codec (fastest, cluster-wide opt-in).</summary>
+            PipeMsgPack,
+        }
+
+        /// <summary>
+        /// Parses a transport mode string from the command line.
+        /// Valid values (case-insensitive): "dotnetty", "pipe", "pipe-protobuf", "pipe-msgpack", "messagepack".
+        /// Defaults to <see cref="TransportMode.DotNetty"/> when the string is empty / unrecognised.
+        /// </summary>
+        private static TransportMode ParseTransportMode(string? arg)
+        {
+            return (arg ?? "").ToLowerInvariant() switch
+            {
+                "pipe" or "pipe-protobuf" or "pipelines" => TransportMode.PipeProtobuf,
+                "pipe-msgpack" or "messagepack" or "msgpack" => TransportMode.PipeMsgPack,
+                _ => TransportMode.DotNetty,
+            };
+        }
+
+        private static string TransportLabel(TransportMode mode) => mode switch
+        {
+            TransportMode.PipeProtobuf => "Pipe/TCP + Protobuf",
+            TransportMode.PipeMsgPack  => "Pipe/TCP + MessagePack",
+            _                          => "DotNetty/TCP + Protobuf",
+        };
+
+        public static Config CreateActorSystemConfig(
+            string actorSystemName,
+            string ipOrHostname,
+            int port,
+            TransportMode mode = TransportMode.DotNetty)
+        {
+            // ── Base config shared by all modes ──────────────────────────────
             var baseConfig = ConfigurationFactory.ParseString(@"
             akka {
               actor.provider = remote
               loglevel = ERROR
               suppress-json-serializer-warning = on
               log-dead-letters = off
-
               remote {
                 log-remote-lifecycle-events = off
-
-                dot-netty.tcp {
-                    port = 0
-                    hostname = ""localhost""
-                }
-                
               }
             }");
 
-            var bindingConfig =
-                ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.hostname = """ + ipOrHostname + @"""")
-                    .WithFallback(ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp.port = " + port));
+            // ── Transport-specific overrides ─────────────────────────────────
+            Config transportConfig = mode switch
+            {
+                TransportMode.PipeProtobuf => ConfigurationFactory.ParseString($@"
+                    akka.remote {{
+                        enabled-transports = [""akka.remote.pipe.tcp""]
+                        pipe.tcp {{
+                            hostname = ""{ipOrHostname}""
+                            port     = {port}
+                            envelope = protobuf
+                        }}
+                    }}"),
 
-            return bindingConfig.WithFallback(baseConfig);
+                TransportMode.PipeMsgPack => ConfigurationFactory.ParseString($@"
+                    akka.remote {{
+                        enabled-transports = [""akka.remote.pipe.tcp""]
+                        pipe.tcp {{
+                            hostname = ""{ipOrHostname}""
+                            port     = {port}
+                            envelope = messagepack
+                        }}
+                    }}"),
+
+                // Default: DotNetty
+                _ => ConfigurationFactory.ParseString($@"
+                    akka.remote {{
+                        enabled-transports = [""akka.remote.dot-netty.tcp""]
+                        dot-netty.tcp {{
+                            hostname = ""{ipOrHostname}""
+                            port     = {port}
+                        }}
+                    }}"),
+            };
+
+            return transportConfig.WithFallback(baseConfig);
         }
 
         private static async Task Main(params string[] args)
@@ -76,19 +141,32 @@ namespace RemotePingPong
             }
             catch (Exception ex)
             {
-                await Console.Error.WriteLineAsync($"Attempted to elevate process priority, but failed due to {ex.Message} - carrying on at normal process priority.");
-            }
-            if (args.Length == 0 || !uint.TryParse(args[0], out var timesToRun))
-            {
-                timesToRun = 1u;
+                await Console.Error.WriteLineAsync(
+                    $"Attempted to elevate process priority, but failed due to {ex.Message} - carrying on at normal process priority.");
             }
 
-            await Start(timesToRun);
+            // ── Parse args ────────────────────────────────────────────────────
+            // Usage: RemotePingPong [timesToRun] [transport]
+            // transport: dotnetty | pipe | pipe-msgpack
+            uint timesToRun = 1;
+            var  transportMode = TransportMode.DotNetty;
+
+            if (args.Length >= 1 && !uint.TryParse(args[0], out timesToRun))
+                timesToRun = 1;
+            if (args.Length >= 2)
+                transportMode = ParseTransportMode(args[1]);
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"Transport mode: {TransportLabel(transportMode)}");
+            Console.ResetColor();
+
+            await Start(timesToRun, transportMode);
         }
 
         private static bool _firstRun = true;
 
-        private static void PrintSysInfo(){
+        private static void PrintSysInfo(TransportMode mode)
+        {
             var processorCount = Environment.ProcessorCount;
             if (processorCount == 0)
             {
@@ -97,16 +175,15 @@ namespace RemotePingPong
                 return;
             }
 
+            Console.WriteLine("Transport:                         {0}", TransportLabel(mode));
             Console.WriteLine("OSVersion:                         {0}", Environment.OSVersion);
             Console.WriteLine("ProcessorCount:                    {0}", processorCount);
             Console.WriteLine("ClockSpeed:                        {0} MHZ", CpuSpeed());
             Console.WriteLine("Actor Count:                       {0}", processorCount * 2);
-            Console.WriteLine("Messages sent/received per client: {0}  ({0:0e0})", repeat*2);
+            Console.WriteLine("Messages sent/received per client: {0}  ({0:0e0})", repeat * 2);
             Console.WriteLine("Is Server GC:                      {0}", GCSettings.IsServerGC);
             Console.WriteLine("Thread count:                      {0}", Process.GetCurrentProcess().Threads.Count);
             Console.WriteLine();
-
-            //Print tables
             Console.WriteLine("Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads");
 
             _firstRun = false;
@@ -114,15 +191,15 @@ namespace RemotePingPong
 
         const long repeat = 100000L;
 
-        private static async Task Start(uint timesToRun)
-        {         
+        private static async Task Start(uint timesToRun, TransportMode mode)
+        {
             for (var i = 0; i < timesToRun; i++)
             {
                 var redCount = 0;
                 var bestThroughput = 0L;
                 foreach (var throughput in GetClientSettings())
                 {
-                    var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount);
+                    var result1 = await Benchmark(throughput, repeat, bestThroughput, redCount, mode);
                     bestThroughput = result1.Item2;
                     redCount = result1.Item3;
                 }
@@ -148,12 +225,16 @@ namespace RemotePingPong
             return numberOfClients * numberOfRepeats * 2;
         }
 
-        private static async Task<(bool, long, int)> Benchmark(int numberOfClients, long numberOfRepeats, long bestThroughput, int redCount)
+        private static async Task<(bool, long, int)> Benchmark(
+            int numberOfClients,
+            long numberOfRepeats,
+            long bestThroughput,
+            int redCount,
+            TransportMode mode)
         {
             var totalMessagesReceived = GetTotalMessagesReceived(numberOfClients, numberOfRepeats);
-            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0));
-
-            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0));
+            var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", "127.0.0.1", 0, mode));
+            var system2 = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", "127.0.0.1", 0, mode));
 
             List<Task<long>> tasks = new List<Task<long>>();
             List<IActorRef> receivers = new List<IActorRef>();
@@ -185,13 +266,13 @@ namespace RemotePingPong
             var testReady = (bool)rsp;
             if (!testReady)
             {
-                throw new Exception("Received report that 1 or more remote actor is unable to begin the test. Aborting run.");
+                throw new Exception(
+                    "Received report that 1 or more remote actor is unable to begin the test. Aborting run.");
             }
 
-            // now that the dispatchers in both ActorSystems are started, we want to measure thread count and other system
-            // metrics here - but only the very first benchmark
-            if(_firstRun){
-                PrintSysInfo();
+            if (_firstRun)
+            {
+                PrintSysInfo(mode);
             }
 
             var startThreads = Process.GetCurrentProcess().Threads.Count;
@@ -199,20 +280,21 @@ namespace RemotePingPong
             var sw = Stopwatch.StartNew();
             receivers.ForEach(c =>
             {
-                for (var i = 0; i < 50; i++) // prime the pump so EndpointWriters can take advantage of their batching model
+                for (var i = 0; i < 50; i++) // prime the pump
                     c.Tell("hit");
             });
-            var waiting = Task.WhenAll(tasks);
-            await Task.WhenAll(waiting);
+            await Task.WhenAll(tasks);
             sw.Stop();
-            
+
             var endThreads = Process.GetCurrentProcess().Threads.Count;
 
-            // force clean termination
             await Task.WhenAll(new[] { system1.Terminate(), system2.Terminate() });
 
             var elapsedMilliseconds = sw.ElapsedMilliseconds;
-            long throughput = elapsedMilliseconds == 0 ? -1 : (long)Math.Ceiling((double)totalMessagesReceived / elapsedMilliseconds * 1000);
+            long throughput = elapsedMilliseconds == 0
+                ? -1
+                : (long)Math.Ceiling((double)totalMessagesReceived / elapsedMilliseconds * 1000);
+
             var foregroundColor = Console.ForegroundColor;
             if (throughput >= bestThroughput)
             {
@@ -227,7 +309,15 @@ namespace RemotePingPong
             }
 
             Console.ForegroundColor = foregroundColor;
-            Console.WriteLine("{0,10},{1,8},{2,10},{3,11}, {4,13}, {5,15}", numberOfClients, totalMessagesReceived, throughput, sw.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture), startThreads, endThreads);
+            Console.WriteLine(
+                "{0,10},{1,8},{2,10},{3,11}, {4,13}, {5,15}",
+                numberOfClients,
+                totalMessagesReceived,
+                throughput,
+                sw.Elapsed.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture),
+                startThreads,
+                endThreads);
+
             return (redCount <= 3, bestThroughput, redCount);
         }
 
