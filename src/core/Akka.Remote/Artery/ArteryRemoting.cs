@@ -122,10 +122,12 @@ namespace Akka.Remote.Artery
         /// The <see cref="ArrayPool{T}"/> every materialized outbound stream's
         /// <see cref="ArteryEncodeStage"/> rents its encode buffers from -- sourced from
         /// <see cref="ArteryTransportSetup.EncodeBufferPool"/> (read once in <see cref="Start"/>).
-        /// <see langword="null"/> (production default, and whenever no <see cref="ArteryTransportSetup"/>
-        /// is present at all) means <see cref="ArrayPool{T}.Shared"/> -- see
-        /// <see cref="ArteryEnvelopeCodec.Encode(Akka.Serialization.Serialization,long,string?,string?,object,ArrayPool{byte}?)"/>'s
-        /// own default. Replaces the former mutable static test hook (<c>EncodePoolOverrideForTests</c>)
+        /// When no override is supplied (the production default) this is a transport-scoped
+        /// <see cref="ArrayPool{T}.Create()"/> instance rather than <see cref="ArrayPool{T}.Shared"/>:
+        /// the encode buffer is rented on the materialization thread and returned on the TCP write
+        /// thread, and a dedicated per-transport pool avoids thrashing <see cref="ArrayPool{T}.Shared"/>'s
+        /// per-core buckets with that cross-thread traffic (see <see cref="Start"/> for the full
+        /// rationale). Replaces the former mutable static test hook (<c>EncodePoolOverrideForTests</c>)
         /// -- see <see cref="ArteryTransportSetup"/> for why (per-<see cref="ExtendedActorSystem"/>
         /// configuration, not a process-wide static, so concurrently-running tests never race
         /// each other over it).
@@ -183,7 +185,17 @@ namespace Akka.Remote.Artery
             _materializer = ActorMaterializer.Create(System);
             _tcp = System.TcpStream();
             var arteryTransportSetup = System.Settings.Setup.Get<ArteryTransportSetup>();
-            _encodeBufferPool = arteryTransportSetup.Select(s => s.EncodeBufferPool).GetOrElse(null);
+            // Default the encode pool to a transport-scoped ArrayPool<byte>.Create() instance rather
+            // than ArrayPool<byte>.Shared (which is what a null value resolves to downstream). Shared is
+            // a single process-wide pool; the outbound encode path rents on the stream's materialization
+            // thread and returns on the TCP write thread, so under load the cross-thread rent/return
+            // traffic thrashes Shared's per-core buckets (measured ~10% throughput loss). A dedicated
+            // per-transport pool isolates that traffic. Created ONCE here in Start() (not per outbound
+            // connection -- MaterializeOutboundStream reads this field), so every outbound lane in this
+            // transport shares the one instance. A test-injected ArteryTransportSetup.EncodeBufferPool
+            // (e.g. the poison pool) still overrides this.
+            _encodeBufferPool = arteryTransportSetup.Select(s => s.EncodeBufferPool).GetOrElse(null)
+                                ?? ArrayPool<byte>.Create();
             _dropOutboundControlMessage = arteryTransportSetup.Select(s => s.DropOutboundControlMessage).GetOrElse(null);
 
             // halfClose: true is essential here, not cosmetic. Every accepted (inbound) connection's
