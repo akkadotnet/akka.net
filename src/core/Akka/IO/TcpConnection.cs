@@ -305,6 +305,10 @@ namespace Akka.IO
             while (_pendingRegistrationWrites.Count > 0)
             {
                 var write = _pendingRegistrationWrites.Dequeue();
+                // Disposal path: PostStop/drain. The connection is tearing down and this queued
+                // pre-registration write will never reach the pipe — dispose any owner it carries
+                // before notifying the sender of failure, same as every other rejection path.
+                write.Cmd.Data.DisposeOwnedSegments();
                 write.Sender.Tell(write.Cmd.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
             }
 
@@ -509,6 +513,9 @@ namespace Akka.IO
             // We're shutting down - reject new writes, wait for transport operations
             Receive<Tcp.WriteCommand>(w =>
             {
+                // Disposal path: rejected while closing. The write never reaches the pipe, so
+                // dispose any owner(s) it carries before signaling failure.
+                DisposeOwnedSegments(w);
                 Sender.Tell(w.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
             });
             Receive<Abort>(c => HandleClose(Sender, c.Event));
@@ -816,10 +823,37 @@ namespace Akka.IO
         /*  Write handling                                                   */
         /* ================================================================= */
 
+        /// <summary>
+        /// Disposes every owner-carrying segment reachable from <paramref name="cmd"/>'s data —
+        /// <see cref="Write.Data"/> directly for a single write, or every constituent
+        /// <see cref="Write"/>'s <see cref="Write.Data"/> for a <see cref="CompoundWrite"/>. Used on
+        /// rejection paths where the whole command (which may bundle several writes) is being
+        /// dropped without ever reaching the transport.
+        /// </summary>
+        private static void DisposeOwnedSegments(Tcp.WriteCommand cmd)
+        {
+            switch (cmd)
+            {
+                case Write w:
+                    w.Data.DisposeOwnedSegments();
+                    break;
+                case CompoundWrite compound:
+                    foreach (var part in compound)
+                    {
+                        if (part is Write w2)
+                            w2.Data.DisposeOwnedSegments();
+                    }
+                    break;
+            }
+        }
+
         private void HandleWrite(Tcp.WriteCommand cmd)
         {
             if (_closingGracefully)
             {
+                // Disposal path: rejected because a graceful close is already underway. The write
+                // never reaches the pipe, so dispose any owner(s) it carries before signaling failure.
+                DisposeOwnedSegments(cmd);
                 Sender.Tell(cmd.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
                 return;
             }
@@ -881,12 +915,19 @@ namespace Akka.IO
 
             if (_maxQueuedBytes >= 0 && _pendingRegistrationBytes + byteCount > _maxQueuedBytes)
             {
+                // Disposal path: queue-full rejection (pre-registration). The write never reaches
+                // the pipe, so dispose any owner(s) it carries before signaling failure.
+                write.Data.DisposeOwnedSegments();
                 sender.Tell(write.FailureMessage.WithCause(DroppingWriteBecauseQueueIsFullException));
                 return;
             }
 
             if (byteCount == 0)
             {
+                // Disposal path: empty write, nothing to buffer. In practice an owner-carrying
+                // segment always has non-zero length, but dispose defensively here too so a
+                // degenerate zero-length owned write can never leak.
+                write.Data.DisposeOwnedSegments();
                 if (write.WantsAck) sender.Tell(write.Ack);
                 return;
             }
@@ -906,9 +947,24 @@ namespace Akka.IO
             // whole point of the ReadOnlySequence<byte> Write surface) could safely reuse or
             // mutate it well before that flush, silently corrupting the bytes eventually written
             // to the socket. Copying here — a one-time, cold-path allocation — makes the buffered
-            // write's lifetime fully independent of the caller's buffer.
-            var copiedData = new ReadOnlySequence<byte>(write.Data.ToArray());
-            var bufferedWrite = Write.Create(copiedData, write.Ack);
+            // write's lifetime fully independent of the caller's buffer. This #8323 fallback is
+            // unchanged for BORROWED (owner-less) writes.
+            //
+            // Disposal path: pre-registration deferral. An OWNED write is different: the caller
+            // already transferred ownership under contract ("MUST NOT touch the buffer again once
+            // sent"), so there is no reuse hazard to defend against, and copying here would just be
+            // a redundant allocation. Queue it AS-IS (no copy) — the owner stays alive until
+            // whichever comes first: (a) FlushPendingRegistrationWrites -> EnqueueWrite performs
+            // the real pipe copy and disposes it there (the existing open-path disposal, unchanged
+            // — see EnqueueWrite), or (b) PostStop/drain disposes it if Register never arrives.
+            // NOTE: if a single write mixes borrowed and owned segments, the borrowed portion does
+            // NOT get the #8323 defensive copy while sitting in this queue — accepted trade-off,
+            // see design notes in OwnedSequenceSegment.cs; no caller mixes the two within one
+            // Tcp.Write today (PR2's coalescing concats a one-time preamble as a separate element,
+            // never mixed into the same Write.Data as owned frames).
+            var bufferedWrite = write.Data.HasOwnedSegments()
+                ? write
+                : Write.Create(new ReadOnlySequence<byte>(write.Data.ToArray()), write.Ack);
 
             _pendingRegistrationWrites.Enqueue(new WriteCommand(bufferedWrite, sender));
             _pendingRegistrationBytes += byteCount;
@@ -933,6 +989,9 @@ namespace Akka.IO
             // This check prevents a single oversized write from overwhelming the pipe buffer.
             if (_maxQueuedBytes >= 0 && byteCount > _maxQueuedBytes)
             {
+                // Disposal path: queue-full rejection (open/registered path). The write never
+                // reaches the pipe, so dispose any owner(s) it carries before signaling failure.
+                write.Data.DisposeOwnedSegments();
                 sender.Tell(write.FailureMessage.WithCause(DroppingWriteBecauseQueueIsFullException));
                 return;
             }
@@ -940,6 +999,9 @@ namespace Akka.IO
             // Handle empty writes immediately
             if (byteCount == 0)
             {
+                // Disposal path: empty write, never reaches WriteAsync. Defensive - see the
+                // matching byteCount == 0 branch in BufferSingleWriteBeforeRegister.
+                write.Data.DisposeOwnedSegments();
                 if (write.WantsAck) sender.Tell(write.Ack);
                 return;
             }
@@ -978,10 +1040,26 @@ namespace Akka.IO
             }
             catch (Exception ex)
             {
+                // Disposal path: open/registered path, WriteAsync threw synchronously. Per the
+                // contract documented above, a synchronous throw here means the pipe's writer was
+                // already completed (with an exception) BEFORE this call — i.e. no bytes of this
+                // write reached the pipe. Safe (and required) to dispose the same as the success
+                // path: either a given segment's bytes were copied before the throw (copy done,
+                // safe to free the source) or they never were (never reached the pipe, so nothing
+                // downstream can be reading them).
+                write.Data.DisposeOwnedSegments();
                 sender.Tell(write.FailureMessage.WithCause(ex));
                 HandleIoError(ex);
                 return;
             }
+
+            // Disposal path: open/registered path, happy case. WriteAsync (see
+            // TcpTransportConnection) has synchronously copied every segment of write.Data into
+            // the pipe's internal buffer by the time it returns (see the WriteAck contract comment
+            // above) — this is THE pipe-copy point, so it's safe to dispose any owner(s) write.Data
+            // carries right here, before the ack (order relative to the ack below doesn't matter,
+            // only that it's after the copy).
+            write.Data.DisposeOwnedSegments();
 
             if (write.WantsAck) sender.Tell(write.Ack);
         }
