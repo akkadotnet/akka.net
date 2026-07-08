@@ -40,6 +40,16 @@ namespace Akka.Remote.Artery.Compression
         /// <summary>Returned by <see cref="Compress"/> when the value is not in the table -- caller must emit a LITERAL tag. Mirrors Pekko <c>NotCompressedId = -1</c>.</summary>
         public const int NotCompressedId = -1;
 
+        /// <summary>Lowest valid table version.</summary>
+        public const byte MinVersion = 0;
+
+        /// <summary>
+        /// Highest valid table version. Versions live in <c>0..127</c> (the high bit is never set, so a
+        /// version can never be confused with the <see cref="DecompressionTable{T}.DisabledVersion"/>
+        /// <c>0xFF</c> sentinel) and wrap <c>127 -&gt; 0</c> -- see <see cref="IncrementVersion"/>.
+        /// </summary>
+        public const byte MaxVersion = 127;
+
         private readonly IReadOnlyDictionary<T, int> _dictionary;
 
         public CompressionTable(long originUid, byte version, IReadOnlyDictionary<T, int> dictionary)
@@ -84,6 +94,16 @@ namespace Akka.Remote.Artery.Compression
         /// <summary>An empty version-0 table -- the initial outbound state (nothing compressed, everything LITERAL).</summary>
         public static CompressionTable<T> Empty { get; } =
             new CompressionTable<T>(0L, 0, new Dictionary<T, int>());
+
+        /// <summary>
+        /// The next table version after <paramref name="version"/>, ported from Pekko's
+        /// <c>incrementTableVersion</c>: valid versions cycle through <c>0..127</c> and wrap
+        /// <c>127 -&gt; 0</c>. Advancing the disabled sentinel
+        /// (<see cref="DecompressionTable{T}.DisabledVersion"/>, <c>0xFF</c>) yields the first real
+        /// version, <see cref="MinVersion"/> (<c>0</c>), matching Pekko's <c>-1 -&gt; 0</c>.
+        /// </summary>
+        public static byte IncrementVersion(byte version) =>
+            version >= MaxVersion ? MinVersion : (byte)(version + 1);
 
         public override string ToString() => $"CompressionTable({OriginUid},{Version},count={_dictionary.Count})";
     }

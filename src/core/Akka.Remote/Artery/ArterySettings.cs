@@ -136,6 +136,55 @@ namespace Akka.Remote.Artery
         public TimeSpan OutboundRestartBackoff { get; }
 
         /// <summary>
+        /// The largest compression-table index that fits the envelope's 16-bit COMPRESSED tag, and
+        /// therefore the hard upper bound on <see cref="CompressionActorRefsMax"/> /
+        /// <see cref="CompressionManifestsMax"/> (see design.md "Risks / edge cases -- Index space").
+        /// </summary>
+        public const int MaxCompressionTableSize = (int)ArteryEnvelopeHeader.CompressedIndexMask; // 65535
+
+        /// <summary>
+        /// Whether Artery actor-ref/manifest compression is enabled (design.md
+        /// "artery-ref-manifest-compression"). Off by default; when off, no compression table is ever
+        /// advertised, the encoder emits only LITERAL tags, and the wire is byte-identical to a build
+        /// without compression. This flag gates the whole feature.
+        ///
+        /// <para>
+        /// Parsed now (following the "parse now, use later" precedent of <see cref="InboundLanes"/>);
+        /// the advertisement protocol + live encode/decode wiring land in later stages.
+        /// </para>
+        /// </summary>
+        public bool CompressionEnabled { get; }
+
+        /// <summary>
+        /// Maximum number of actor paths retained in a single advertised actor-ref compression table
+        /// (the receiver's top heavy hitters). Default 256; <c>off</c> (parsed as <c>0</c>) disables
+        /// actor-ref compression. Validated to <c>0..<see cref="MaxCompressionTableSize"/></c> so every
+        /// index fits the 16-bit COMPRESSED tag.
+        /// </summary>
+        public int CompressionActorRefsMax { get; }
+
+        /// <summary>
+        /// Maximum number of class manifests retained in a single advertised manifest compression
+        /// table. Default 256; <c>off</c> (parsed as <c>0</c>) disables manifest compression. Same
+        /// <c>0..<see cref="MaxCompressionTableSize"/></c> validation as <see cref="CompressionActorRefsMax"/>.
+        /// </summary>
+        public int CompressionManifestsMax { get; }
+
+        /// <summary>
+        /// How often a receiver rebuilds and re-advertises its compression tables to each origin.
+        /// Default 1 minute (matches Pekko). Parsed now, used once the advertisement protocol lands.
+        /// </summary>
+        public TimeSpan CompressionAdvertisementInterval { get; }
+
+        /// <summary>
+        /// Selects the frequency-sketch implementation used to detect heavy hitters (design.md
+        /// Decision 6). Only the MVP <c>bounded</c> count-based sketch exists today; Pekko's aging
+        /// <c>fast-frequency-sketch</c> is deferred behind the <c>IFrequencySketch</c> seam. Parsed now,
+        /// used once the inbound-compression state machine lands.
+        /// </summary>
+        public string CompressionFrequencySketchImplementation { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ArterySettings"/> class from the
         /// <c>akka.remote.artery</c> sub-config.
         /// </summary>
@@ -194,6 +243,43 @@ namespace Akka.Remote.Artery
             GiveUpSystemMessageAfter = GetPositiveTimeSpan(arteryConfig, "advanced.give-up-system-message-after", TimeSpan.FromHours(6));
 
             OutboundRestartBackoff = GetPositiveTimeSpan(arteryConfig, "advanced.outbound-restart-backoff", TimeSpan.FromSeconds(1));
+
+            // Actor-ref / manifest compression (design.md "artery-ref-manifest-compression").
+            // "Parse now, use later" -- Enabled gates the whole feature; when off, the maxes/interval
+            // are irrelevant but still validated so a bad value is caught at startup, not first-use.
+            CompressionEnabled = arteryConfig.GetBoolean("advanced.compression.enabled");
+            CompressionActorRefsMax = GetCompressionMax(arteryConfig, "advanced.compression.actor-refs.max", 256);
+            CompressionManifestsMax = GetCompressionMax(arteryConfig, "advanced.compression.manifests.max", 256);
+            CompressionAdvertisementInterval = GetPositiveTimeSpan(arteryConfig, "advanced.compression.advertisement-interval", TimeSpan.FromMinutes(1));
+            CompressionFrequencySketchImplementation = arteryConfig.GetString("advanced.compression.frequency-sketch-implementation", "bounded");
+        }
+
+        /// <summary>
+        /// Parses a compression-table size cap: an <c>off</c>/<c>false</c> value disables that
+        /// category (returned as <c>0</c>); any other value must be a non-negative integer no greater
+        /// than <see cref="MaxCompressionTableSize"/> (so every dense index fits the 16-bit tag).
+        /// </summary>
+        private static int GetCompressionMax(Config config, string path, int @default)
+        {
+            var raw = config.GetString(path, @default.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            int max;
+            if (string.Equals(raw, "off", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(raw, "false", StringComparison.OrdinalIgnoreCase))
+            {
+                max = 0;
+            }
+            else if (!int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out max))
+            {
+                throw new ConfigurationException(
+                    $"akka.remote.artery.{path} must be a non-negative integer or \"off\", but was [{raw}].");
+            }
+
+            if (max < 0 || max > MaxCompressionTableSize)
+                throw new ConfigurationException(
+                    $"akka.remote.artery.{path} must be between 0 and {MaxCompressionTableSize} (the 16-bit compression-tag index space), but was [{max}].");
+
+            return max;
         }
 
         private static TimeSpan GetPositiveTimeSpan(Config config, string path, TimeSpan @default)

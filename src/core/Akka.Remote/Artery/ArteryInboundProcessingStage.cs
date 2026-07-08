@@ -11,6 +11,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using Akka.Event;
+using Akka.Remote.Artery.Compression;
 using Akka.Streams;
 using Akka.Streams.Stage;
 
@@ -62,15 +63,29 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class ArteryInboundProcessingStage : GraphStage<FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>>
     {
-        public ArteryInboundProcessingStage(int maxFrameLength, Akka.Serialization.Serialization serialization)
+        public ArteryInboundProcessingStage(
+            int maxFrameLength,
+            Akka.Serialization.Serialization serialization,
+            IInboundCompressions? compressions = null)
         {
             MaxFrameLength = maxFrameLength;
             Serialization = serialization;
+            // DEFAULT: the disabled path. NoInboundCompressions never resolves a COMPRESSED tag, so an
+            // unwired stage keeps dropping COMPRESSED tags with a warning exactly as before -- the live
+            // per-origin InboundCompressions is threaded in by a later stage, not here.
+            Compressions = compressions ?? NoInboundCompressions.Instance;
             Shape = new FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>(In, Out);
         }
 
         public int MaxFrameLength { get; }
         public Akka.Serialization.Serialization Serialization { get; }
+
+        /// <summary>
+        /// Receiver-side compression coordinator that resolves COMPRESSED sender/recipient/manifest
+        /// tags. Defaults to <see cref="NoInboundCompressions.Instance"/> (the off-by-default path,
+        /// which resolves nothing and so drops every COMPRESSED tag with a warning).
+        /// </summary>
+        public IInboundCompressions Compressions { get; }
 
         public Inlet<ReadOnlySequence<byte>> In { get; } = new("ArteryInboundProcessing.in");
         public Outlet<IInboundEnvelope> Out { get; } = new("ArteryInboundProcessing.out");
@@ -219,23 +234,30 @@ namespace Akka.Remote.Artery
             private IInboundEnvelope? DecodeFrame(ReadOnlySequence<byte> frameBody)
             {
                 var decoded = ArteryEnvelopeCodec.Decode(frameBody);
+                var originUid = decoded.Header.OriginUid;
 
-                if (!decoded.TryGetManifest(out var manifest))
+                if (!TryResolveManifest(decoded, originUid, out var manifest))
                 {
-                    Log.Warning("Dropping inbound Artery frame: COMPRESSED manifest tag (ref/manifest compression is not implemented at G2).");
+                    // MISS on a COMPRESSED manifest (unknown/stale table, or compression disabled):
+                    // drop with a warning, don't fault the stream (design.md Decision 4).
+                    Log.Warning(
+                        "Dropping inbound Artery frame: unresolved COMPRESSED manifest tag from origin [{0}] " +
+                        "(table version [{1}], index [{2}]).",
+                        originUid, decoded.Header.ManifestTableVersion, decoded.ManifestCompressedIndex);
                     return null;
                 }
 
                 var payload = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
 
                 if (payload is IArteryControlMessage)
-                    return new InboundEnvelope(payload, null, null, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
+                    return new InboundEnvelope(payload, null, null, originUid, decoded.Header.SerializerId, manifest);
 
-                if (!decoded.TryGetRecipientPath(out var recipientPath))
+                if (!TryResolveRecipient(decoded, originUid, out var recipientPath))
                 {
                     Log.Warning(
-                        "Dropping inbound ordinary-stream message of type [{0}]: COMPRESSED recipient tag " +
-                        "(ref compression is not implemented at G2).", payload.GetType());
+                        "Dropping inbound ordinary-stream message of type [{0}]: unresolved COMPRESSED recipient tag " +
+                        "from origin [{1}] (table version [{2}], index [{3}]).",
+                        payload.GetType(), originUid, decoded.Header.ActorRefTableVersion, decoded.RecipientCompressedIndex);
                     return null;
                 }
 
@@ -246,8 +268,45 @@ namespace Akka.Remote.Artery
                     return null;
                 }
 
-                var senderPath = decoded.TryGetSenderPath(out var s) ? s : null;
-                return new InboundEnvelope(payload, senderPath, recipientPath, decoded.Header.OriginUid, decoded.Header.SerializerId, manifest);
+                // A COMPRESSED sender that can't be resolved is NOT fatal -- the sender is optional, so
+                // (as before) the message is delivered with a null sender rather than dropped.
+                var senderPath = TryResolveSender(decoded, originUid, out var s) ? s : null;
+                return new InboundEnvelope(payload, senderPath, recipientPath, originUid, decoded.Header.SerializerId, manifest);
+            }
+
+            private bool TryResolveManifest(in ArteryEnvelopeDecoded decoded, long originUid, out string manifest)
+            {
+                if (decoded.ManifestKind == ArteryTagKind.Compressed)
+                    return _stage.Compressions.TryDecompressClassManifest(
+                        originUid, decoded.Header.ManifestTableVersion, decoded.ManifestCompressedIndex, out manifest);
+
+                return decoded.TryGetManifest(out manifest);
+            }
+
+            private bool TryResolveRecipient(in ArteryEnvelopeDecoded decoded, long originUid, out string? recipientPath)
+            {
+                if (decoded.RecipientKind == ArteryTagKind.Compressed)
+                {
+                    var resolved = _stage.Compressions.TryDecompressActorRef(
+                        originUid, decoded.Header.ActorRefTableVersion, decoded.RecipientCompressedIndex, out var path);
+                    recipientPath = resolved ? path : null;
+                    return resolved;
+                }
+
+                return decoded.TryGetRecipientPath(out recipientPath);
+            }
+
+            private bool TryResolveSender(in ArteryEnvelopeDecoded decoded, long originUid, out string? senderPath)
+            {
+                if (decoded.SenderKind == ArteryTagKind.Compressed)
+                {
+                    var resolved = _stage.Compressions.TryDecompressActorRef(
+                        originUid, decoded.Header.ActorRefTableVersion, decoded.SenderCompressedIndex, out var path);
+                    senderPath = resolved ? path : null;
+                    return resolved;
+                }
+
+                return decoded.TryGetSenderPath(out senderPath);
             }
 
             private void DeliverOrPull()

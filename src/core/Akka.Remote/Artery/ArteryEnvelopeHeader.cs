@@ -153,13 +153,13 @@ namespace Akka.Remote.Artery
         /// <summary>The <see cref="Akka.Serialization.Serializer"/> id used to serialize the payload.</summary>
         public int SerializerId { get; }
 
-        /// <summary>The raw, undecoded sender-ref tag. See <see cref="ArteryEnvelopeDecoded.SenderKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetSenderPath"/>.</summary>
+        /// <summary>The raw, undecoded sender-ref tag. See <see cref="ArteryEnvelopeDecoded.SenderKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetSenderPath(out string?)"/>.</summary>
         public uint SenderTag { get; }
 
-        /// <summary>The raw, undecoded recipient-ref tag. See <see cref="ArteryEnvelopeDecoded.RecipientKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetRecipientPath"/>.</summary>
+        /// <summary>The raw, undecoded recipient-ref tag. See <see cref="ArteryEnvelopeDecoded.RecipientKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetRecipientPath(out string?)"/>.</summary>
         public uint RecipientTag { get; }
 
-        /// <summary>The raw, undecoded manifest tag. See <see cref="ArteryEnvelopeDecoded.ManifestKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetManifest"/>.</summary>
+        /// <summary>The raw, undecoded manifest tag. See <see cref="ArteryEnvelopeDecoded.ManifestKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetManifest(out string)"/>.</summary>
         public uint ManifestTag { get; }
 
         /// <summary>
