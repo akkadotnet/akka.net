@@ -9,7 +9,6 @@
 
 using System;
 using System.Buffers;
-using System.Threading;
 
 namespace Akka.IO
 {
@@ -34,9 +33,9 @@ namespace Akka.IO
         bool HasOwner { get; }
 
         /// <summary>
-        /// Disposes the owner carried by this segment, if any. MUST be idempotent: calling this
-        /// more than once (e.g. from two different teardown paths racing to be conservative) is
-        /// harmless and disposes the owner at most once.
+        /// Disposes the owner carried by this segment. Idempotent: calling it more than once on the
+        /// same thread (e.g. a reject path followed by drain) is harmless and disposes the owner at
+        /// most once. Disposal is single-threaded — see <see cref="OwnedSequenceSegment.DisposeOwner"/>.
         /// </summary>
         void DisposeOwner();
     }
@@ -71,11 +70,13 @@ namespace Akka.IO
     /// </para>
     ///
     /// <para>
-    /// <b>Borrowed segments in a mixed chain.</b> A segment constructed with <c>owner: null</c> is a
-    /// legitimate, borrowed (owner-less) link in a chain that also contains owner-carrying segments —
-    /// <see cref="DisposeOwner"/> is then simply a no-op for that link. This lets a single
-    /// <see cref="ReadOnlySequence{T}"/> mix borrowed and owned memory (e.g. a one-time preamble
-    /// prepended to owned frames) without a different segment type.
+    /// <b>Borrowed links in a mixed chain.</b> This type ALWAYS owns — a borrowed (owner-less) link
+    /// in a chain that also contains owned segments (e.g. a one-time preamble prepended to owned
+    /// frames) is a different concept and is NOT an <see cref="OwnedSequenceSegment"/> with a null
+    /// owner. Represent a borrowed link with any plain <see cref="ReadOnlySequenceSegment{T}"/> that
+    /// does not implement <see cref="IOwnedSequenceSegment"/>: the disposal walk tests each link for
+    /// that interface and skips the ones that don't implement it, so borrowed and owned links coexist
+    /// in one <see cref="ReadOnlySequence{T}"/> without this type having to model "maybe owns".
     /// </para>
     /// </summary>
     internal sealed class OwnedSequenceSegment : ReadOnlySequenceSegment<byte>, IOwnedSequenceSegment
@@ -83,21 +84,23 @@ namespace Akka.IO
         private IMemoryOwner<byte>? _owner;
 
         /// <summary>
-        /// Creates a segment over <paramref name="memory"/>, optionally carrying <paramref name="owner"/>.
+        /// Creates a segment exposing <paramref name="memory"/> and owning <paramref name="owner"/>.
         /// </summary>
         /// <param name="memory">
-        /// The memory this segment exposes. When <paramref name="owner"/> is supplied, this MUST be
-        /// (a slice of) <paramref name="owner"/>'s own <see cref="IMemoryOwner{T}.Memory"/> — this
-        /// type does not verify that relationship.
+        /// The memory this segment exposes. MUST be (a slice of) <paramref name="owner"/>'s own
+        /// <see cref="IMemoryOwner{T}.Memory"/> — this type does not verify that relationship.
         /// </param>
         /// <param name="owner">
-        /// The owner of the pooled memory backing this segment, or <see langword="null"/> for a
-        /// borrowed (owner-less) segment whose <see cref="DisposeOwner"/> is a no-op.
+        /// The owner of the pooled memory backing this segment. <b>Required</b>: this type exists to
+        /// carry ownership, so it always owns exactly one <see cref="IMemoryOwner{T}"/> until
+        /// <see cref="DisposeOwner"/> returns it. A borrowed (owner-less) link in a mixed chain is a
+        /// DIFFERENT concept — represent it with a plain <see cref="ReadOnlySequenceSegment{T}"/> that
+        /// does not implement <see cref="IOwnedSequenceSegment"/>, which the disposal walk skips.
         /// </param>
-        public OwnedSequenceSegment(ReadOnlyMemory<byte> memory, IMemoryOwner<byte>? owner = null)
+        public OwnedSequenceSegment(ReadOnlyMemory<byte> memory, IMemoryOwner<byte> owner)
         {
             Memory = memory;
-            _owner = owner;
+            _owner = owner ?? throw new ArgumentNullException(nameof(owner));
         }
 
         /// <summary>
@@ -106,9 +109,9 @@ namespace Akka.IO
         /// <see cref="ReadOnlySequenceSegment{T}.Next"/> correctly.
         /// </summary>
         /// <param name="memory">The memory the appended segment exposes.</param>
-        /// <param name="owner">The owner carried by the appended segment, or <see langword="null"/> for a borrowed link.</param>
+        /// <param name="owner">The owner carried by the appended segment. Required — see the constructor.</param>
         /// <returns>The newly appended segment.</returns>
-        public OwnedSequenceSegment Append(ReadOnlyMemory<byte> memory, IMemoryOwner<byte>? owner = null)
+        public OwnedSequenceSegment Append(ReadOnlyMemory<byte> memory, IMemoryOwner<byte> owner)
         {
             var next = new OwnedSequenceSegment(memory, owner)
             {
@@ -119,18 +122,22 @@ namespace Akka.IO
         }
 
         /// <inheritdoc />
-        public bool HasOwner => Volatile.Read(ref _owner) is not null;
+        public bool HasOwner => _owner is not null;
 
         /// <summary>
-        /// Disposes the owner carried by this segment, if any. Idempotent: the owner reference is
-        /// atomically cleared before disposal, so a second (or racing) call is a harmless no-op —
-        /// this mirrors <c>PooledPayloadWriter.RentedMemoryOwner</c>'s own idempotent
-        /// <see cref="IDisposable.Dispose"/>, so overlapping disposal paths degrade to a harmless
-        /// double-dispose rather than a use-after-return.
+        /// Disposes the owner carried by this segment, returning its pooled buffer. Disposal always
+        /// happens on a single thread: a segment's owner is disposed only by whichever party
+        /// currently holds it — the owning stream stage on the interpreter thread, or
+        /// <c>TcpConnection</c> on its actor thread once the write has been handed off via a mailbox
+        /// <c>Tell</c> (which also publishes the segment's fields to that thread) — never by two at
+        /// once, so no synchronization is needed. Clearing the reference before disposing keeps a
+        /// second call on the same thread (e.g. a reject path followed by drain) a harmless no-op,
+        /// and the owner's own <see cref="IDisposable.Dispose"/> is idempotent besides.
         /// </summary>
         public void DisposeOwner()
         {
-            var owner = Interlocked.Exchange(ref _owner, null);
+            var owner = _owner;
+            _owner = null;
             owner?.Dispose();
         }
 
