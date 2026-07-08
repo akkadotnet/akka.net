@@ -187,10 +187,22 @@ namespace Akka.IO
             if (data.Start.GetObject() is not ReadOnlySequenceSegment<byte> segment)
                 return;
 
+            // Bound the walk to THIS sequence's own end segment: `data` may be a slice of a longer
+            // segment chain, and disposing owners past `data.End` would free pooled memory that
+            // belongs to a DIFFERENT write still referencing the tail (a use-after-return). No
+            // current caller slices an owner-carrying chain this way — Artery's encode stage mints a
+            // single segment, and coalescing spans the whole head->tail chain it drained — but
+            // bounding here keeps the walk correct for any future caller that does. `data.End`'s
+            // segment is disposed inclusively, then the walk stops.
+            var end = data.End.GetObject() as ReadOnlySequenceSegment<byte>;
+
             while (segment is not null)
             {
                 if (segment is IOwnedSequenceSegment owned)
                     owned.DisposeOwner();
+
+                if (ReferenceEquals(segment, end))
+                    break;
 
                 segment = segment.Next!;
             }
