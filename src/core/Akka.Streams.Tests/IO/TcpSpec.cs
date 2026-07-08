@@ -95,6 +95,51 @@ namespace Akka.Streams.Tests.IO
         }
 
         [Fact]
+        public async Task Outgoing_TCP_stream_must_correctly_coalesce_many_rapid_small_writes_into_ordered_output()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var server = await new Server(this).InitializeAsync();
+
+                const int elementCount = 100;
+
+                // Each element carries a unique, multi-byte payload (its own index, big-endian)
+                // so that any reordering, truncation, or byte-level corruption introduced by
+                // write coalescing (buffering multiple elements while a WriteAck round-trip is
+                // outstanding, then flushing them as a single Tcp.Write -- see
+                // TcpConnectionStage.TcpStreamLogic) would be detected.
+                var testInput = Enumerable.Range(0, elementCount)
+                    .Select(i => new ReadOnlySequence<byte>(BitConverter.GetBytes(i).Reverse().ToArray()))
+                    .ToList();
+                var expectedOutput = testInput.Aggregate(ReadOnlySequence<byte>.Empty, Concat);
+                var expectedLength = (int)expectedOutput.Length;
+
+                // Source.From does not throttle -- elements are emitted back-to-back as fast as
+                // downstream demand allows, which is exactly the scenario write coalescing
+                // targets: many small pushes arriving while a single WriteAck round-trip to the
+                // connection actor is still in flight. The finite source completing also
+                // exercises the flush-buffered-writes-before-close path.
+                Source.From(testInput)
+                    .Via(Sys.TcpStream().OutgoingConnection(server.Address))
+                    .To(Sink.Ignore<ReadOnlySequence<byte>>())
+                    .Run(Materializer);
+
+                var serverConnection = await server.WaitAcceptAsync();
+                serverConnection.Read(expectedLength);
+                var received = await serverConnection.WaitReadAsync();
+
+                // Byte-for-byte, in order -- the receiver cannot observe write boundaries, so
+                // correctness here is defined purely by content + order + completion.
+                received.ToArray().Should().Equal(expectedOutput.ToArray());
+
+                serverConnection.ConfirmedClose();
+                await serverConnection.ExpectClosedAsync(Akka.IO.Tcp.ConfirmedClosed.Instance);
+                await serverConnection.ExpectTerminatedAsync();
+                server.Close();
+            }, Materializer);
+        }
+
+        [Fact]
         public async Task Outgoing_TCP_stream_must_be_able_to_read_a_sequence_of_ByteStrings()
         {
             var server = await new Server(this).InitializeAsync();

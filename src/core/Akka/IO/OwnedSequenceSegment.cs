@@ -38,6 +38,17 @@ namespace Akka.IO
         /// most once. Disposal is single-threaded — see <see cref="OwnedSequenceSegment.DisposeOwner"/>.
         /// </summary>
         void DisposeOwner();
+
+        /// <summary>
+        /// Returns the owner carried by this segment and clears the segment's own reference to it,
+        /// so a subsequent <see cref="DisposeOwner"/> call on THIS segment becomes a no-op. Used when
+        /// one owner-carrying segment's memory is re-wrapped into another segment (e.g. write
+        /// coalescing chaining a producer's frame into its own buffer) so that exactly one segment
+        /// ends up responsible for eventually disposing the owner — ownership TRANSFERS to the
+        /// caller, it does not dispose anything itself. Single-threaded, same pattern as
+        /// <see cref="DisposeOwner"/> — see <see cref="OwnedSequenceSegment.DisposeOwner"/>.
+        /// </summary>
+        IMemoryOwner<byte>? DetachOwner();
     }
 
     /// <summary>
@@ -139,6 +150,14 @@ namespace Akka.IO
             var owner = _owner;
             _owner = null;
             owner?.Dispose();
+        }
+
+        /// <inheritdoc />
+        public IMemoryOwner<byte>? DetachOwner()
+        {
+            var owner = _owner;
+            _owner = null;
+            return owner;
         }
 
         /// <summary>
