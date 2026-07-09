@@ -55,11 +55,32 @@ namespace Akka.Remote.Artery
         /// <summary>
         /// Runs <paramref name="materialize"/> exactly once, no matter how many threads call this
         /// concurrently -- only the FIRST caller's callback executes (CAS-gated on an internal flag).
+        ///
+        /// <para>
+        /// <b>A throwing callback resets the gate instead of stranding it.</b> <c>_started</c> is
+        /// CAS-flipped to 1 BEFORE <paramref name="materialize"/> runs, so if the callback throws
+        /// (any exception NOT already caught/swallowed inside it -- e.g. a genuine bug, or a
+        /// transient failure unrelated to the specific shutdown races <c>ArteryRemoting.MaterializeOutboundStream</c>
+        /// already catches and swallows internally), the gate would otherwise stay latched
+        /// "started" forever with no stream ever actually materialized and no restart ever
+        /// scheduled for it. Resetting on throw (then rethrowing, so the caller still observes the
+        /// original failure) lets the NEXT <see cref="EnsureStarted"/> call try again instead.
+        /// </para>
         /// </summary>
         public void EnsureStarted(Action materialize)
         {
-            if (Interlocked.CompareExchange(ref _started, 1, 0) == 0)
+            if (Interlocked.CompareExchange(ref _started, 1, 0) != 0)
+                return;
+
+            try
+            {
                 materialize();
+            }
+            catch
+            {
+                Volatile.Write(ref _started, 0);
+                throw;
+            }
         }
 
         /// <summary>
@@ -117,14 +138,19 @@ namespace Akka.Remote.Artery
         public const int DefaultOutboundQueueCapacity = 3072;
 
         /// <summary>
-        /// Default capacity for <see cref="ControlReader"/>'s bounded channel. Deliberately smaller
-        /// than <see cref="DefaultOutboundQueueCapacity"/> -- control traffic (handshake, heartbeat,
+        /// Default capacity for <see cref="ControlReader"/>'s bounded channel -- matches Pekko's
+        /// <c>outbound-control-queue-size</c> default. Control traffic (handshake, heartbeat,
         /// quarantine notice, reliable system-message envelopes and their Ack/Nack replies) is
-        /// low-volume relative to ordinary user traffic (design.md task group 6, task 6.1). The full
-        /// asymmetric overflow policy (control overflow -> quarantine, per Decision 7) is implemented
-        /// -- see the type-level "GROUP7 RESOLVED" remarks.
+        /// low-volume relative to ordinary user traffic in steady state (design.md task group 6,
+        /// task 6.1), but a mass-termination burst (e.g. a large `Terminate()`/CoordinatedShutdown
+        /// fanning out thousands of `Unwatch` system messages at once) can legitimately need a MUCH
+        /// larger buffer than the old 256 -- that undersized default caused spurious quarantines
+        /// against an otherwise healthy peer under exactly that burst. The full asymmetric overflow
+        /// policy (control overflow -> quarantine, per Decision 7) is implemented -- see the
+        /// type-level "GROUP7 RESOLVED" remarks. Overridable via
+        /// <c>akka.remote.artery.advanced.outbound-control-queue-size</c> (<see cref="ArterySettings.OutboundControlQueueSize"/>).
         /// </summary>
-        public const int DefaultControlQueueCapacity = 256;
+        public const int DefaultControlQueueCapacity = 20_000;
 
         private volatile AssociationState _state;
 
@@ -222,30 +248,14 @@ namespace Akka.Remote.Artery
         /// </summary>
         private readonly ConcurrentDictionary<long, bool> _quarantineDropLogged = new();
 
-        /// <summary>
-        /// Same latch shape as <see cref="_quarantineDropLogged"/>, applied to the ORDINARY
-        /// outbound queue's overflow-drop warning (a flooded producer can otherwise log once PER
-        /// DROPPED MESSAGE -- thousands of formatted log lines during a burst -- which was itself
-        /// an amplifier of unrelated ThreadPool starvation observed under CI load). Keyed by uid
-        /// for the same reason: a reconnect (new incarnation) gets its own fresh unlogged state,
-        /// rather than a stale latch from a prior incarnation permanently silencing the warning.
-        /// Sends observed before the handshake resolves a peer uid all share the reserved
-        /// <see cref="PreHandshakeOverflowUid"/> bucket.
-        /// </summary>
-        private readonly ConcurrentDictionary<long, bool> _ordinaryOverflowDropLogged = new();
-
-        /// <summary>
-        /// Reserved uid bucket for <see cref="ShouldLogOrdinaryOverflowDrop"/> calls that occur
-        /// before this association's handshake has resolved a real peer uid.
-        /// </summary>
-        private const long PreHandshakeOverflowUid = long.MinValue;
-
         public Association(
             Address remoteAddress,
             int outboundQueueCapacity = DefaultOutboundQueueCapacity,
             int controlQueueCapacity = DefaultControlQueueCapacity)
         {
             RemoteAddress = remoteAddress;
+            OutboundQueueCapacity = outboundQueueCapacity;
+            ControlQueueCapacity = controlQueueCapacity;
             _state = AssociationState.Create();
             _outboundChannel = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(outboundQueueCapacity)
             {
@@ -265,6 +275,21 @@ namespace Akka.Remote.Artery
         /// The remote address this association is keyed by.
         /// </summary>
         public Address RemoteAddress { get; }
+
+        /// <summary>
+        /// This association's ORDINARY outbound queue capacity, as constructed (see
+        /// <see cref="DefaultOutboundQueueCapacity"/>). Exposed so callers (<c>ArteryRemoting</c>'s
+        /// overflow log messages) report the ACTUAL configured capacity rather than a hardcoded
+        /// constant -- tests that pass a custom capacity would otherwise see a wrong number in the
+        /// log.
+        /// </summary>
+        public int OutboundQueueCapacity { get; }
+
+        /// <summary>
+        /// This association's CONTROL outbound queue capacity, as constructed. See
+        /// <see cref="OutboundQueueCapacity"/>.
+        /// </summary>
+        public int ControlQueueCapacity { get; }
 
         /// <summary>
         /// The current immutable state snapshot. Safe to read from any thread.
@@ -483,17 +508,6 @@ namespace Akka.Remote.Artery
         public bool ShouldLogQuarantineDrop(long uid) => _quarantineDropLogged.TryAdd(uid, true);
 
         /// <summary>
-        /// Records ("log once per association, not per message" -- same discipline as
-        /// <see cref="ShouldLogQuarantineDrop"/>) that an ORDINARY outbound queue overflow-drop
-        /// warning has been logged for <paramref name="uid"/> (or, pre-handshake, the reserved
-        /// <see cref="PreHandshakeOverflowUid"/> bucket). Returns <see langword="true"/> the FIRST
-        /// time it is called for a given uid (the caller should log), and <see langword="false"/>
-        /// every subsequent call for that same uid (the caller should stay silent and just drop).
-        /// </summary>
-        public bool ShouldLogOrdinaryOverflowDrop(long? uid) =>
-            _ordinaryOverflowDropLogged.TryAdd(uid ?? PreHandshakeOverflowUid, true);
-
-        /// <summary>
         /// Monotonically incremented on EVERY <see cref="CompleteHandshake"/> call, regardless of
         /// whether it actually changed <see cref="AssociationState"/> (a same-uid
         /// <see cref="HandshakeRsp"/> is a documented, reference-equal no-op on
@@ -589,17 +603,25 @@ namespace Akka.Remote.Artery
         private readonly ConcurrentDictionary<Address, Association> _byAddress = new();
         private readonly ConcurrentDictionary<long, Association> _byUid = new();
         private readonly int _outboundQueueCapacity;
+        private readonly int _controlQueueCapacity;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AssociationRegistry"/> class.
         /// </summary>
         /// <param name="outboundQueueCapacity">
-        /// Capacity of every materialized <see cref="Association"/>'s bounded outbound channel
-        /// (see <see cref="Association.DefaultOutboundQueueCapacity"/>).
+        /// Capacity of every materialized <see cref="Association"/>'s bounded ORDINARY outbound
+        /// channel (see <see cref="Association.DefaultOutboundQueueCapacity"/>).
         /// </param>
-        public AssociationRegistry(int outboundQueueCapacity = Association.DefaultOutboundQueueCapacity)
+        /// <param name="controlQueueCapacity">
+        /// Capacity of every materialized <see cref="Association"/>'s bounded CONTROL outbound
+        /// channel (see <see cref="Association.DefaultControlQueueCapacity"/>).
+        /// </param>
+        public AssociationRegistry(
+            int outboundQueueCapacity = Association.DefaultOutboundQueueCapacity,
+            int controlQueueCapacity = Association.DefaultControlQueueCapacity)
         {
             _outboundQueueCapacity = outboundQueueCapacity;
+            _controlQueueCapacity = controlQueueCapacity;
         }
 
         /// <summary>
@@ -608,7 +630,9 @@ namespace Akka.Remote.Artery
         /// if this is the first reference to that address.
         /// </summary>
         public Association AssociationFor(Address remoteAddress) =>
-            _byAddress.GetOrAdd(remoteAddress, (addr, capacity) => new Association(addr, capacity), _outboundQueueCapacity);
+            _byAddress.GetOrAdd(remoteAddress,
+                static (addr, caps) => new Association(addr, caps.Outbound, caps.Control),
+                (Outbound: _outboundQueueCapacity, Control: _controlQueueCapacity));
 
         /// <summary>
         /// Looks up the association currently known to own <paramref name="uid"/>. Returns

@@ -75,7 +75,7 @@ namespace Akka.Remote.Artery
     {
         private readonly ArterySettings _settings;
         private readonly ILoggingAdapter _log;
-        private readonly AssociationRegistry _registry = new();
+        private readonly AssociationRegistry _registry;
 
         /// <summary>
         /// Test-observability accessor for <see cref="_registry"/> (design.md task 8.5, "slow
@@ -178,6 +178,11 @@ namespace Akka.Remote.Artery
             _log = Logging.GetLogger(system, "artery");
             _settings = new ArterySettings(system.Settings.Config.GetConfig("akka.remote.artery"));
             _arterySocketOptions = BuildArterySocketOptions(_settings);
+            // Sized from THIS transport's own settings (fix for the 78x-undersized 256 default that
+            // caused spurious quarantines under a mass-termination Unwatch burst) rather than the
+            // registry's own hardcoded defaults -- see ArterySettings.OutboundMessageQueueSize /
+            // OutboundControlQueueSize.
+            _registry = new AssociationRegistry(_settings.OutboundMessageQueueSize, _settings.OutboundControlQueueSize);
         }
 
         /// <inheritdoc/>
@@ -552,17 +557,17 @@ namespace Akka.Remote.Artery
 
             if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, recipientPath)))
             {
-                // Log-once-per-association (mirrors HandleControlOverflow's sibling
-                // ShouldLogQuarantineDrop latch): a flooded producer can otherwise overflow this
-                // queue thousands of times in a row, and logging (format + write) on EVERY
-                // dropped message was itself an amplifier of unrelated ThreadPool starvation
-                // observed under CI load -- see AssociationRegistry.ShouldLogOrdinaryOverflowDrop.
-                if (association.ShouldLogOrdinaryOverflowDrop(association.CurrentState.UniqueRemoteAddress?.Uid))
-                    _log.Warning(
-                        "Outbound Artery queue to [{0}] is full (capacity {1}); dropping message of type [{2}] to " +
-                        "dead letters. Further drops for this association/uid will not be logged individually.",
-                        remoteAddress, Association.DefaultOutboundQueueCapacity, message.GetType());
-                System.DeadLetters.Tell(message, ActorRefs.NoSender);
+                // Publish DIRECTLY to the event stream -- mirrors Pekko's Association.dropped().
+                // NOT routed through System.DeadLetters.Tell (that would double-wrap: Tell to the
+                // DeadLetters actor itself publishes a DeadLetter/Dropped wrapping whatever it's
+                // handed). The existing DeadLetterListener already provides log-N-then-periodic-
+                // summary behavior for Dropped via the akka.log-dead-letters settings, so no
+                // separate log-once latch is needed here (see DeadLetterSuspensionSpec).
+                System.EventStream.Publish(new Dropped(
+                    message,
+                    $"Outbound Artery queue to [{remoteAddress}] is full (capacity {association.OutboundQueueCapacity})",
+                    ActorRefs.NoSender,
+                    System.DeadLetters));
             }
         }
 
@@ -646,7 +651,7 @@ namespace Akka.Remote.Artery
             _log.Error(
                 "Outbound Artery CONTROL queue to [{0}] is full (capacity {1}); dropping control message of " +
                 "type [{2}] to dead letters{3}.",
-                remoteAddress, Association.DefaultControlQueueCapacity, message.GetType(),
+                remoteAddress, association.ControlQueueCapacity, message.GetType(),
                 shouldQuarantine ? " and quarantining the association" : "");
             System.DeadLetters.Tell(message, ActorRefs.NoSender);
 
@@ -858,6 +863,24 @@ namespace Akka.Remote.Artery
                 // actually-shut-down materializer so a genuine IllegalStateException from a live
                 // materializer still propagates.
                 _log.Debug("Artery {0} outbound stream to [{1}] not materialized: materializer is shutting down.", streamId, remoteAddress);
+                return;
+            }
+            catch (InvalidOperationException)
+            {
+                // A SECOND, DIFFERENT shutdown race (no flag guard here -- deliberately, read on).
+                // ActorMaterializer.Create(system)'s StreamSupervisor is a TOP-LEVEL actor created
+                // via system.ActorOf(...), i.e. it lives under /user -- so it starts terminating
+                // (ActorCell.MakeChild then throws THIS exception, "Cannot create child while
+                // terminating or terminated", for any new graph-interpreter child Run() tries to
+                // create) as soon as /user guardian tears down, which happens WELL BEFORE
+                // ArteryRemoting.Shutdown() runs (that is gated behind /system's RemotingTerminator
+                // phase, later in CoordinatedShutdown). During that window BOTH _isShutdown and
+                // _materializer.IsShutdown are still false -- this exception is therefore itself the
+                // only available authoritative "the actor system is terminating" signal here, unlike
+                // the IllegalStateException case above. Dropping the message/ack this materialization
+                // would have carried is safe: the peer's SystemMessageDeliveryStage resend/give-up
+                // protocol handles a missing ack.
+                _log.Debug("Artery {0} outbound stream to [{1}] not materialized: actor system is terminating.", streamId, remoteAddress);
                 return;
             }
 

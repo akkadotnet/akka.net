@@ -96,6 +96,23 @@ namespace Akka.Remote.Artery
         public TimeSpan ControlHeartbeatInterval { get; }
 
         /// <summary>
+        /// Capacity of every association's bounded ORDINARY outbound queue (see
+        /// <see cref="Akka.Remote.Artery.Association.DefaultOutboundQueueCapacity"/>). Matches
+        /// Pekko's <c>outbound-message-queue-size</c> default; left unchanged from the original
+        /// G2 constant.
+        /// </summary>
+        public int OutboundMessageQueueSize { get; }
+
+        /// <summary>
+        /// Capacity of every association's bounded CONTROL outbound queue (see
+        /// <see cref="Akka.Remote.Artery.Association.DefaultControlQueueCapacity"/>). Matches
+        /// Pekko's <c>outbound-control-queue-size</c> default -- widened from this port's original
+        /// (undersized) 256 constant, which caused spurious quarantines under a mass-termination
+        /// <c>Unwatch</c> burst against an otherwise healthy peer.
+        /// </summary>
+        public int OutboundControlQueueSize { get; }
+
+        /// <summary>
         /// Maximum number of unacknowledged system-message envelopes <see cref="SystemMessageDeliveryStage"/>
         /// buffers for possible resend before giving up (and quarantining the association) --
         /// design.md gate G3, "Reliable system-message delivery". Matches Pekko's default.
@@ -194,6 +211,16 @@ namespace Akka.Remote.Artery
             HandshakeRetryInterval = GetPositiveTimeSpan(arteryConfig, "advanced.handshake-retry-interval", TimeSpan.FromSeconds(1));
             InjectHandshakeInterval = GetPositiveTimeSpan(arteryConfig, "advanced.inject-handshake-interval", TimeSpan.FromSeconds(1));
             ControlHeartbeatInterval = GetPositiveTimeSpan(arteryConfig, "advanced.control-heartbeat-interval", TimeSpan.FromSeconds(5));
+
+            OutboundMessageQueueSize = arteryConfig.GetInt("advanced.outbound-message-queue-size", Association.DefaultOutboundQueueCapacity);
+            if (OutboundMessageQueueSize <= 0)
+                throw new ConfigurationException(
+                    $"akka.remote.artery.advanced.outbound-message-queue-size must be greater than 0, but was [{OutboundMessageQueueSize}].");
+
+            OutboundControlQueueSize = arteryConfig.GetInt("advanced.outbound-control-queue-size", Association.DefaultControlQueueCapacity);
+            if (OutboundControlQueueSize <= 0)
+                throw new ConfigurationException(
+                    $"akka.remote.artery.advanced.outbound-control-queue-size must be greater than 0, but was [{OutboundControlQueueSize}].");
 
             SystemMessageBufferSize = arteryConfig.GetInt("advanced.system-message-buffer-size", 20_000);
             if (SystemMessageBufferSize <= 0)
