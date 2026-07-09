@@ -18,6 +18,12 @@ using Akka.Remote.Artery;
 using Akka.Streams;
 using Akka.Streams.Dsl;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Diagnosers;
+using BenchmarkDotNet.Engines;
+using BenchmarkDotNet.Exporters;
+using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Loggers;
 
 namespace Akka.Benchmarks.Remoting.Artery
 {
@@ -56,15 +62,22 @@ namespace Akka.Benchmarks.Remoting.Artery
     /// <c>ArteryEncodeStage</c> itself) -- kept as permanent infrastructure.
     /// </para>
     /// </summary>
-    [Config(typeof(ArterySubstrateConfig))]
+    [Config(typeof(ArteryEncodeStageConfig))]
     public class ArteryEncodeStageBenchmarks
     {
         private const long OriginUid = 0x0102_0304_0506_0708L;
         private const string SenderPath = "akka://Sys@127.0.0.1:9001/user/sender-actor";
         private const string RecipientPath = "akka://Sys@127.0.0.1:9001/user/recipient-actor";
 
-        /// <summary>Messages pushed through the stage per benchmark invocation (= OperationsPerInvoke).</summary>
-        private const int MessageCount = 5_000;
+        /// <summary>
+        /// Messages pushed through the stage per benchmark invocation (= OperationsPerInvoke).
+        /// Sized so one invocation clears BenchmarkDotNet's 100ms iteration-time floor at the
+        /// ~230-275ns/op this stage actually runs at once JIT/pool/GC are warmed to steady state
+        /// (1_000_000 * ~270ns ~= 270ms) -- see <see cref="ArteryEncodeStageConfig"/> for why
+        /// that floor was being missed before, and why 300_000 (sized off the OLD, warm-up-
+        /// polluted ~800ns/op Monitoring figure) still wasn't enough.
+        /// </summary>
+        private const int MessageCount = 1_000_000;
 
         /// <summary>Payload sizes spanning small (control-message-scale), mid, and multi-KB messages -- matches <see cref="ArteryEnvelopeEncodeBenchmarks"/>.</summary>
         [Params(32, 256, 4096)]
@@ -148,6 +161,71 @@ namespace Akka.Benchmarks.Remoting.Artery
 
             writer.Complete();
             return _allDone;
+        }
+    }
+
+    /// <summary>
+    /// BenchmarkDotNet configuration for <see cref="ArteryEncodeStageBenchmarks"/> specifically
+    /// -- deliberately NOT <c>ArterySubstrateConfig</c> (used by the macro substrate benchmarks
+    /// in <see cref="ArterySubstrateFixture"/>).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Why this benchmark can't share <c>ArterySubstrateConfig</c>.</b> That config pins
+    /// <c>RunStrategy.Monitoring</c> with <c>RunOncePerIteration()</c>: no pilot stage, no
+    /// overhead subtraction, exactly <c>WarmupCount</c> + <c>IterationCount</c> fixed calls.
+    /// It's the right tool for the macro substrate benchmarks, whose single invocation already
+    /// spans hundreds of ms driving ~1M messages. Reusing it here (at the original
+    /// <c>MessageCount = 5_000</c>) produced ~750-900ns/op iterations of only ~3.7-4ms each --
+    /// two orders of magnitude under BenchmarkDotNet's recommended 100ms floor -- which tripped
+    /// a <c>MinIterationTime</c> warning and left the reported ns/op trustworthy only to an
+    /// order of magnitude, exactly the number this investigation needs precision on (deciding
+    /// between a ~550ns/msg and a ~320ns/msg hypothesis).
+    /// </para>
+    /// <para>
+    /// <b>The fix.</b> <see cref="ArteryEncodeStageBenchmarks.MessageCount"/> was raised to
+    /// 1_000_000 so a single invocation clears the 100ms floor with comfortable margin even
+    /// under host load. (An initial pass raised it only to 300_000, sized off the OLD
+    /// Monitoring-strategy figure of ~750-900ns/op -- but that figure turned out to be inflated
+    /// by warm-up costs [JIT tiering / buffer-pool growth] that a 5_000-message, 2-warmup-
+    /// iteration batch never fully paid off; once warmed, this stage actually runs at
+    /// ~230-275ns/op, so 300_000 ops/invocation landed at only 65-87ms -- still short of the
+    /// floor.) That alone doesn't let this config drop down to the fully-automatic
+    /// <c>ThroughputBenchmarkConfig</c> pattern used elsewhere in this project (e.g.
+    /// <c>StreamThroughputBenchmarks</c>): those benchmarks build a brand-new, stateless
+    /// <c>Source.From(...)</c> pipeline on every call, so BenchmarkDotNet's pilot stage is free
+    /// to unroll several calls into one measured iteration. This benchmark instead drains a
+    /// single-use, <c>[IterationSetup]</c>-scoped <see cref="System.Threading.Channels.Channel{T}"/>
+    /// -- real backpressure-producing plumbing, deliberately preserved rather than swapped for a
+    /// synchronous <c>Source.From</c> (that would change WHAT the benchmark measures, not just
+    /// HOW it's measured). A second call against the same channel after
+    /// <c>writer.Complete()</c> would spin forever on <c>TryWrite</c>, so
+    /// <c>InvocationCount</c>/<c>UnrollFactor</c> are explicitly pinned to 1 -- the engine must
+    /// call <see cref="ArteryEncodeStageBenchmarks.EncodeStage_OnPush"/> exactly once per
+    /// iteration, matching the existing <c>[IterationSetup]</c> contract.
+    /// </para>
+    /// <para>
+    /// The net effect: BenchmarkDotNet's ordinary <c>RunStrategy.Throughput</c> engine (normal
+    /// overhead-subtraction and statistics, NOT Monitoring), one real batch-of-1M call per
+    /// iteration, <c>WarmupCount</c>/<c>IterationCount</c> left at the same 2/10 shape as before
+    /// so total run time stays predictable.
+    /// </para>
+    /// </remarks>
+    public class ArteryEncodeStageConfig : ManualConfig
+    {
+        public ArteryEncodeStageConfig()
+        {
+            AddDiagnoser(MemoryDiagnoser.Default);
+            AddExporter(MarkdownExporter.GitHub);
+            AddLogger(ConsoleLogger.Default);
+            AddColumn(new RequestsPerSecondColumn());
+            AddJob(Job.Default
+                .WithGcMode(new GcMode { Server = true, Concurrent = true })
+                .WithStrategy(RunStrategy.Throughput)
+                .WithWarmupCount(2)
+                .WithIterationCount(10)
+                .WithInvocationCount(1)
+                .WithUnrollFactor(1));
         }
     }
 }
