@@ -8,6 +8,7 @@
 #nullable enable
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -91,6 +92,10 @@ namespace Akka.Remote.Tests.Artery
 
             // Association outbound-stream lifecycle: reconnect (design.md group 9).
             settings.OutboundRestartBackoff.Should().Be(1.Seconds());
+
+            // TCP input-pipe pause/resume watermarks (mirrors the 1 MiB socket buffers
+            // ArteryRemoting.BuildArterySocketOptions pins on every connection).
+            settings.TcpPipeBufferSize.Should().Be(1024 * 1024);
         }
 
         [Theory(DisplayName = "Should_ThrowConfigurationException_When_ArterySettingIsInvalid")]
@@ -103,6 +108,7 @@ namespace Akka.Remote.Tests.Artery
         [InlineData("akka.remote.artery.advanced.system-message-resend-interval = 0s")]
         [InlineData("akka.remote.artery.advanced.give-up-system-message-after = 0s")]
         [InlineData("akka.remote.artery.advanced.outbound-restart-backoff = 0s")]
+        [InlineData("akka.remote.artery.advanced.tcp.pipe-buffer-size = 0b")]
         public void Should_ThrowConfigurationException_When_ArterySettingIsInvalid(string overrideHocon)
         {
             var arteryConfig = ConfigurationFactory.ParseString(overrideHocon)
@@ -110,6 +116,35 @@ namespace Akka.Remote.Tests.Artery
                 .GetConfig("akka.remote.artery");
 
             Assert.Throws<ConfigurationException>(() => new ArterySettings(arteryConfig));
+        }
+
+        [Fact(DisplayName = "Should_OverrideTcpPipeBufferSize_When_ConfigProvided")]
+        public void Should_OverrideTcpPipeBufferSize_When_ConfigProvided()
+        {
+            var arteryConfig = ConfigurationFactory.ParseString("akka.remote.artery.advanced.tcp.pipe-buffer-size = 2m")
+                .WithFallback(RemoteConfigFactory.Default())
+                .GetConfig("akka.remote.artery");
+
+            var settings = new ArterySettings(arteryConfig);
+            settings.TcpPipeBufferSize.Should().Be(2 * 1024 * 1024);
+        }
+
+        [Fact(DisplayName = "Should_IncludePipeBufferSizeOption_When_BuildingArterySocketOptions")]
+        public void Should_IncludePipeBufferSizeOption_When_BuildingArterySocketOptions()
+        {
+            var arteryConfig = ConfigurationFactory.ParseString("akka.remote.artery.advanced.tcp.pipe-buffer-size = 2m")
+                .WithFallback(RemoteConfigFactory.Default())
+                .GetConfig("akka.remote.artery");
+            var settings = new ArterySettings(arteryConfig);
+
+            var options = ArteryRemoting.BuildArterySocketOptions(settings);
+
+            var pipeBufferSize = options.OfType<Akka.IO.Inet.SO.PipeBufferSize>().Should().ContainSingle().Subject;
+            pipeBufferSize.Size.Should().Be(2 * 1024 * 1024);
+
+            // The 1 MiB OS socket buffers are unaffected by this change.
+            options.OfType<Akka.IO.Inet.SO.ReceiveBufferSize>().Should().ContainSingle();
+            options.OfType<Akka.IO.Inet.SO.SendBufferSize>().Should().ContainSingle();
         }
 
         [Fact(DisplayName = "Should_SelectArteryRemoting_When_ArteryEnabled_ViaConfig")]

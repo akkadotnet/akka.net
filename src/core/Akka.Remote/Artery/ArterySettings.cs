@@ -136,6 +136,16 @@ namespace Akka.Remote.Artery
         public TimeSpan OutboundRestartBackoff { get; }
 
         /// <summary>
+        /// Resume-writer threshold, in bytes, for the input <see cref="System.IO.Pipelines.Pipe"/>
+        /// of every Artery TCP connection (pause-writer threshold is twice this value) -- see
+        /// <see cref="Akka.IO.Inet.SO.PipeBufferSize"/>. Defaults to 1 MiB, mirroring the 1 MiB OS
+        /// socket buffers Artery already pins (see <c>ArteryRemoting.BuildArterySocketOptions</c>); the
+        /// much smaller Akka.IO-wide default (derived from <c>akka.io.tcp.receive-buffer-size</c>,
+        /// 8 KiB) throttles the read pump well below what Artery's sockets can sustain.
+        /// </summary>
+        public int TcpPipeBufferSize { get; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ArterySettings"/> class from the
         /// <c>akka.remote.artery</c> sub-config.
         /// </summary>
@@ -194,6 +204,12 @@ namespace Akka.Remote.Artery
             GiveUpSystemMessageAfter = GetPositiveTimeSpan(arteryConfig, "advanced.give-up-system-message-after", TimeSpan.FromHours(6));
 
             OutboundRestartBackoff = GetPositiveTimeSpan(arteryConfig, "advanced.outbound-restart-backoff", TimeSpan.FromSeconds(1));
+
+            var tcpPipeBufferSize = arteryConfig.GetByteSize("advanced.tcp.pipe-buffer-size", 1024 * 1024) ?? 1024 * 1024;
+            if (tcpPipeBufferSize <= 0)
+                throw new ConfigurationException(
+                    $"akka.remote.artery.advanced.tcp.pipe-buffer-size must be greater than 0, but was [{tcpPipeBufferSize}].");
+            TcpPipeBufferSize = (int)tcpPipeBufferSize;
         }
 
         private static TimeSpan GetPositiveTimeSpan(Config config, string path, TimeSpan @default)

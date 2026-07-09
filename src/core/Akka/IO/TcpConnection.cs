@@ -408,6 +408,30 @@ namespace Akka.IO
         /// </summary>
         protected abstract ITransportConnection CreateTransport();
 
+        /// <summary>
+        /// Resolves the resume-writer threshold (in bytes) for this connection's input pipe, i.e.
+        /// the <see cref="System.IO.Pipelines.Pipe"/> that buffers bytes read from the socket before
+        /// the actor drains them. The pause-writer threshold applied by callers is twice this value.
+        /// </summary>
+        /// <remarks>
+        /// If <paramref name="options"/> contains an <see cref="Inet.SO.PipeBufferSize"/>, its
+        /// <see cref="Inet.SO.PipeBufferSize.Size"/> wins (the LAST one, if more than one is present --
+        /// mirroring how later options generally override earlier ones for the same knob). Otherwise
+        /// this falls back to <paramref name="settings"/>'s <see cref="TcpSettings.ReceiveBufferSize"/>,
+        /// preserving the pre-existing default for every Akka.IO TCP connection that doesn't opt in.
+        /// </remarks>
+        internal static int ResolvePipeBufferSize(TcpSettings settings, IEnumerable<Inet.SocketOption> options)
+        {
+            var size = settings.ReceiveBufferSize;
+            foreach (var option in options)
+            {
+                if (option is Inet.SO.PipeBufferSize pipeBufferSize)
+                    size = pipeBufferSize.Size;
+            }
+
+            return size;
+        }
+
         /* ================================================================= */
         /*  Close-notification tracking                                      */
         /* ================================================================= */

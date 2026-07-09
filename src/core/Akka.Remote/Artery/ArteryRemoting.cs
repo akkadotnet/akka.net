@@ -149,11 +149,23 @@ namespace Akka.Remote.Artery
         /// silly-window-syndrome stall (rwnd_limited forever, observed as an intermittent
         /// benchmark wedge; see ss evidence: notsent+persist-timer with all app layers idle).
         /// Pinning &gt;&gt; MSS makes the trap unreachable.
+        ///
+        /// <para>
+        /// Also carries an <see cref="Inet.SO.PipeBufferSize"/> (<see cref="ArterySettings.TcpPipeBufferSize"/>,
+        /// 1 MiB by default) so <c>TcpIncomingConnection</c>/<c>TcpOutgoingConnection</c> size their
+        /// input pipe's pause/resume watermarks to match these socket buffers, instead of falling back
+        /// to Akka.IO's much smaller default (derived from <c>akka.io.tcp.receive-buffer-size</c>,
+        /// 8 KiB) -- that default throttles the read pump well below what these pinned sockets can
+        /// sustain under high-in-flight or one-way flood traffic.
+        /// </para>
         /// </summary>
-        private static readonly IImmutableList<Inet.SocketOption> ArterySocketOptions =
+        internal static IImmutableList<Inet.SocketOption> BuildArterySocketOptions(ArterySettings settings) =>
             ImmutableList.Create<Inet.SocketOption>(
                 new Inet.SO.ReceiveBufferSize(1024 * 1024),
-                new Inet.SO.SendBufferSize(1024 * 1024));
+                new Inet.SO.SendBufferSize(1024 * 1024),
+                new Inet.SO.PipeBufferSize(settings.TcpPipeBufferSize));
+
+        private readonly IImmutableList<Inet.SocketOption> _arterySocketOptions;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ArteryRemoting"/> class.
@@ -165,6 +177,7 @@ namespace Akka.Remote.Artery
         {
             _log = Logging.GetLogger(system, "artery");
             _settings = new ArterySettings(system.Settings.Config.GetConfig("akka.remote.artery"));
+            _arterySocketOptions = BuildArterySocketOptions(_settings);
         }
 
         /// <inheritdoc/>
@@ -209,7 +222,7 @@ namespace Akka.Remote.Artery
             // `Tcp.ConfirmedClose` (FIN on the write half only) instead, keeping the read side open
             // for as long as the peer keeps sending.
             var (bindingTask, _) = _tcp.Bind(_settings.CanonicalHostname, _settings.CanonicalPort,
-                    options: ArterySocketOptions, halfClose: true)
+                    options: _arterySocketOptions, halfClose: true)
                 .ToMaterialized(Sink.ForEach<Tcp.IncomingConnection>(HandleIncomingConnection), Keep.Both)
                 .Run(_materializer);
 
@@ -735,7 +748,7 @@ namespace Akka.Remote.Artery
             // The (string host, int port) OutgoingConnection convenience overload does not accept
             // socket options, so build the EndPoint ourselves (mirrors Streams.Dsl.Tcp's own
             // internal CreateEndpoint, which isn't visible from this assembly) to reach the
-            // overload that does -- see ArterySocketOptions.
+            // overload that does -- see BuildArterySocketOptions/_arterySocketOptions.
             var remoteEndpoint = IPAddress.TryParse(host, out var parsedHost)
                 ? (EndPoint)new IPEndPoint(parsedHost, port)
                 : new DnsEndPoint(host, port);
@@ -815,7 +828,7 @@ namespace Akka.Remote.Artery
                     Task connectionTask;
                     ((terminationWatch, connectionTask), _) = preambleAndFrames
                         .WatchTermination(Keep.Right)
-                        .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: ArterySocketOptions), Keep.Both)
+                        .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions), Keep.Both)
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
 
@@ -831,7 +844,7 @@ namespace Akka.Remote.Artery
                     ((killSwitch, terminationWatch), _) = preambleAndFrames
                         .ViaMaterialized(KillSwitches.Single<ReadOnlySequence<byte>>(), Keep.Right)
                         .WatchTermination(Keep.Both)
-                        .Via(_tcp!.OutgoingConnection(remoteEndpoint, options: ArterySocketOptions))
+                        .Via(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions))
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
                     association.SetOutboundKillSwitch(killSwitch);
