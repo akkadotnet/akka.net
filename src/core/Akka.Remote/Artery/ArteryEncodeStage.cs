@@ -10,6 +10,7 @@
 using System;
 using System.Buffers;
 using Akka.IO;
+using Akka.Remote.Artery.Compression;
 using Akka.Streams;
 using Akka.Streams.Stage;
 
@@ -65,17 +66,29 @@ namespace Akka.Remote.Artery
         /// substitute a pool that scribbles over a returned array -- the "poison pool" regression
         /// suite -- turning a lifetime-safety bug into a loud, deterministic assertion failure.
         /// </param>
-        public ArteryEncodeStage(Akka.Serialization.Serialization serialization, long originUid, ArrayPool<byte>? pool = null)
+        /// <param name="compression">
+        /// OUTBOUND compression-table source for this destination (design.md
+        /// "artery-ref-manifest-compression" Decision 2), read once per message via
+        /// <c>Volatile.Read</c>. <see langword="null"/> -- the default, and always the value for the
+        /// CONTROL stream and for any build with compression disabled -- means "no compression": every
+        /// tag is written LITERAL, byte-identical to a no-compression build. When non-null, the stage
+        /// still emits LITERAL for the CONTROL/handshake messages it can identify per element
+        /// (<see cref="IOutboundEnvelope.IsControl"/>), mirroring Pekko's
+        /// <c>useOutboundCompression(!isArteryMessage)</c>.
+        /// </param>
+        public ArteryEncodeStage(Akka.Serialization.Serialization serialization, long originUid, ArrayPool<byte>? pool = null, IOutboundCompressionTables? compression = null)
         {
             Serialization = serialization ?? throw new ArgumentNullException(nameof(serialization));
             OriginUid = originUid;
             Pool = pool;
+            Compression = compression;
             Shape = new FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>(In, Out);
         }
 
         public Akka.Serialization.Serialization Serialization { get; }
         public long OriginUid { get; }
         public ArrayPool<byte>? Pool { get; }
+        public IOutboundCompressionTables? Compression { get; }
 
         public Inlet<IOutboundEnvelope> In { get; } = new("ArteryEncode.in");
         public Outlet<ReadOnlySequence<byte>> Out { get; } = new("ArteryEncode.out");
@@ -99,13 +112,24 @@ namespace Akka.Remote.Artery
             {
                 var elem = Grab(_stage.In);
 
+                // OUTBOUND compression (design.md "artery-ref-manifest-compression" Decision 2 + 4).
+                // Read the destination's current immutable tables once per message (Volatile.Read via
+                // the property). NEVER compress control/handshake traffic (Pekko's
+                // useOutboundCompression(!isArteryMessage)) -- both because the control stream is
+                // materialized with a null source AND, defensively, per element via IsControl. A null
+                // source or an Empty table falls back to LITERAL, byte-identical to no compression.
+                var compression = elem.IsControl ? null : _stage.Compression;
+                var actorRefTable = compression?.OutboundActorRefCompressionTable;
+                var manifestTable = compression?.OutboundManifestCompressionTable;
+
                 // Encode-failure behavior mirrors the pre-refactor EncodeOutboundElement exactly:
                 // no per-message try/catch here -- ArteryEnvelopeCodec.Encode's OWN internal
                 // try/catch already disposes its writer on failure before rethrowing, and an
                 // exception escaping OnPush fails this stage (matching the old .Select(...)
                 // behavior of failing the whole outbound stream on an encode error).
                 var writer = ArteryEnvelopeCodec.Encode(
-                    _stage.Serialization, _stage.OriginUid, elem.SenderPath, elem.RecipientPath, elem.Message, _stage.Pool);
+                    _stage.Serialization, _stage.OriginUid, elem.SenderPath, elem.RecipientPath, elem.Message, _stage.Pool,
+                    actorRefTable, manifestTable);
 
                 // Detach moves ownership of the encoded, pooled buffer to `owner` -- no
                 // WrittenSpan.ToArray() copy, and deliberately NO writer.Dispose() here (Detach

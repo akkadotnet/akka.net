@@ -11,6 +11,7 @@ using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Text;
+using Akka.Remote.Artery.Compression;
 
 namespace Akka.Remote.Artery
 {
@@ -36,7 +37,7 @@ namespace Akka.Remote.Artery
         /// <summary>
         /// Total encoded size for an explicit-parts encode with the given sender/recipient/manifest
         /// strings and payload length. Callers use this to rent a big-enough destination buffer
-        /// before calling <see cref="Encode(Span{byte},long,int,string?,string?,string,ReadOnlySpan{byte})"/>.
+        /// before calling <see cref="Encode(Span{byte},long,int,string?,string?,string,ReadOnlySpan{byte},CompressionTable{string},CompressionTable{string})"/>.
         /// This is an exact size (not merely an upper bound) because, unlike the V2 single-pass
         /// overload, every input here is already a concrete string/length.
         /// </summary>
@@ -59,6 +60,15 @@ namespace Akka.Remote.Artery
         /// overload, which resolves serializer id + manifest from a message object and streams the
         /// payload directly). A null or empty <paramref name="senderPath"/> / <paramref name="recipientPath"/>
         /// encodes as the ABSENT tag; an empty <paramref name="manifest"/> likewise encodes as ABSENT.
+        ///
+        /// <para>
+        /// When an OUTBOUND compression table (<paramref name="actorRefTable"/> for sender/recipient,
+        /// <paramref name="manifestTable"/> for the manifest) contains the value, that tag is written
+        /// COMPRESSED (a 16-bit index) instead of a LITERAL and the header's matching table-version byte
+        /// is stamped; a miss -- or the default <see langword="null"/>/<see cref="CompressionTable{T}.Empty"/>
+        /// table -- falls back to LITERAL. The default therefore keeps the encoded frame BYTE-IDENTICAL
+        /// to a build without compression.
+        /// </para>
         /// </summary>
         /// <returns>The total number of bytes written to <paramref name="destination"/> (frame-length field + envelope).</returns>
         /// <exception cref="ArteryEnvelopeException">A sender/recipient/manifest literal's UTF-8 form exceeds 64KB - 1 bytes.</exception>
@@ -69,18 +79,24 @@ namespace Akka.Remote.Artery
             string? senderPath,
             string? recipientPath,
             string manifest,
-            ReadOnlySpan<byte> payload)
+            ReadOnlySpan<byte> payload,
+            CompressionTable<string>? actorRefTable = null,
+            CompressionTable<string>? manifestTable = null)
         {
             manifest ??= string.Empty;
 
             var envelope = destination.Slice(ArteryEnvelopeHeader.FrameLengthFieldLength);
             var cursor = ArteryEnvelopeHeader.HeaderLength;
 
+            byte actorRefTableVersion = 0;
+            byte manifestTableVersion = 0;
+
             // Literal placement order (not load-bearing for decode -- tags carry absolute offsets --
-            // but fixed by convention): sender, recipient, manifest.
-            var senderTag = WriteLiteral(envelope, ref cursor, senderPath);
-            var recipientTag = WriteLiteral(envelope, ref cursor, recipientPath);
-            var manifestTag = WriteLiteral(envelope, ref cursor, manifest);
+            // but fixed by convention): sender, recipient, manifest. A COMPRESSED tag writes no
+            // literal, so the cursor simply doesn't advance for it.
+            var senderTag = WriteRefTagOrLiteral(envelope, ref cursor, senderPath, actorRefTable, ref actorRefTableVersion);
+            var recipientTag = WriteRefTagOrLiteral(envelope, ref cursor, recipientPath, actorRefTable, ref actorRefTableVersion);
+            var manifestTag = WriteManifestTagOrLiteral(envelope, ref cursor, manifest, manifestTable, ref manifestTableVersion);
 
             var payloadOffset = cursor;
             payload.CopyTo(envelope.Slice(payloadOffset));
@@ -89,7 +105,8 @@ namespace Akka.Remote.Artery
             BinaryPrimitives.WriteUInt32LittleEndian(destination, (uint)frameLength);
             WriteFixedHeader(
                 envelope.Slice(0, ArteryEnvelopeHeader.HeaderLength),
-                serializerId, originUid, senderTag, recipientTag, manifestTag, payloadOffset);
+                serializerId, originUid, senderTag, recipientTag, manifestTag, payloadOffset,
+                actorRefTableVersion, manifestTableVersion);
 
             return ArteryEnvelopeHeader.FrameLengthFieldLength + frameLength;
         }
@@ -156,6 +173,11 @@ namespace Akka.Remote.Artery
         /// <see cref="Akka.Serialization.PooledPayloadWriter.Detach"/> to hand ownership of the encoded
         /// bytes to a transport without an intermediate copy.
         /// </returns>
+        /// <param name="actorRefTable">
+        /// OUTBOUND actor-ref compression table (see the explicit-parts overload). Default
+        /// <see langword="null"/> keeps the frame byte-identical to a build without compression.
+        /// </param>
+        /// <param name="manifestTable">OUTBOUND manifest compression table; the manifest counterpart of <paramref name="actorRefTable"/>.</param>
         /// <exception cref="ArteryEnvelopeException">A sender/recipient/manifest literal's UTF-8 form exceeds 64KB - 1 bytes.</exception>
         public static Akka.Serialization.PooledPayloadWriter Encode(
             Akka.Serialization.Serialization serialization,
@@ -163,7 +185,9 @@ namespace Akka.Remote.Artery
             string? senderPath,
             string? recipientPath,
             object message,
-            ArrayPool<byte>? pool = null)
+            ArrayPool<byte>? pool = null,
+            CompressionTable<string>? actorRefTable = null,
+            CompressionTable<string>? manifestTable = null)
         {
             if (serialization is null)
                 throw new ArgumentNullException(nameof(serialization));
@@ -194,9 +218,12 @@ namespace Akka.Remote.Artery
                     writer.GetSpan(reservedPrefixLength);
                     writer.Advance(reservedPrefixLength);
 
-                    var senderTag = WriteLiteral(writer, senderPath);
-                    var recipientTag = WriteLiteral(writer, recipientPath);
-                    var manifestTag = WriteLiteral(writer, manifest);
+                    byte actorRefTableVersion = 0;
+                    byte manifestTableVersion = 0;
+
+                    var senderTag = WriteRefTagOrLiteral(writer, senderPath, actorRefTable, ref actorRefTableVersion);
+                    var recipientTag = WriteRefTagOrLiteral(writer, recipientPath, actorRefTable, ref actorRefTableVersion);
+                    var manifestTag = WriteManifestTagOrLiteral(writer, manifest, manifestTable, ref manifestTableVersion);
 
                     var payloadOffset = writer.WrittenCount - ArteryEnvelopeHeader.FrameLengthFieldLength;
 
@@ -210,7 +237,8 @@ namespace Akka.Remote.Artery
                         writer.GetPatchSpan(0, ArteryEnvelopeHeader.FrameLengthFieldLength), (uint)frameLength);
                     WriteFixedHeader(
                         writer.GetPatchSpan(ArteryEnvelopeHeader.FrameLengthFieldLength, ArteryEnvelopeHeader.HeaderLength),
-                        serializer.Identifier, originUid, senderTag, recipientTag, manifestTag, payloadOffset);
+                        serializer.Identifier, originUid, senderTag, recipientTag, manifestTag, payloadOffset,
+                        actorRefTableVersion, manifestTableVersion);
 
                     return writer;
                 }
@@ -315,18 +343,77 @@ namespace Akka.Remote.Artery
             uint senderTag,
             uint recipientTag,
             uint manifestTag,
-            long payloadOffset)
+            long payloadOffset,
+            byte actorRefTableVersion,
+            byte manifestTableVersion)
         {
             header[ArteryEnvelopeHeader.VersionOffset] = ArteryEnvelopeHeader.CurrentVersion;
             header[ArteryEnvelopeHeader.FlagsOffset] = 0;
-            header[ArteryEnvelopeHeader.ActorRefTableVersionOffset] = 0;
-            header[ArteryEnvelopeHeader.ManifestTableVersionOffset] = 0;
+            header[ArteryEnvelopeHeader.ActorRefTableVersionOffset] = actorRefTableVersion;
+            header[ArteryEnvelopeHeader.ManifestTableVersionOffset] = manifestTableVersion;
             BinaryPrimitives.WriteInt64LittleEndian(header.Slice(ArteryEnvelopeHeader.OriginUidOffset), originUid);
             BinaryPrimitives.WriteInt32LittleEndian(header.Slice(ArteryEnvelopeHeader.SerializerIdOffset), serializerId);
             BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(ArteryEnvelopeHeader.SenderTagOffset), senderTag);
             BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(ArteryEnvelopeHeader.RecipientTagOffset), recipientTag);
             BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(ArteryEnvelopeHeader.ManifestTagOffset), manifestTag);
             BinaryPrimitives.WriteUInt32LittleEndian(header.Slice(ArteryEnvelopeHeader.PayloadOffsetFieldOffset), checked((uint)payloadOffset));
+        }
+
+        /// <summary>
+        /// ENCODE HOOK (actor-ref). Emits a COMPRESSED tag (and stamps <paramref name="tableVersion"/>)
+        /// when <paramref name="value"/> is in <paramref name="table"/>; otherwise writes a LITERAL and
+        /// leaves <paramref name="tableVersion"/> untouched. A <see langword="null"/>/empty table always
+        /// falls back to LITERAL, so the default keeps the frame byte-identical to a no-compression build.
+        /// </summary>
+        private static uint WriteRefTagOrLiteral(
+            Span<byte> envelope, ref int cursor, string? value, CompressionTable<string>? table, ref byte tableVersion)
+        {
+            if (CompressionTagCodec.TryBuildActorRefTag(table, value, out var tag, out var version))
+            {
+                tableVersion = version;
+                return tag;
+            }
+
+            return WriteLiteral(envelope, ref cursor, value);
+        }
+
+        /// <summary>ENCODE HOOK (manifest). Manifest counterpart of <see cref="WriteRefTagOrLiteral(Span{byte}, ref int, string?, CompressionTable{string}?, ref byte)"/>.</summary>
+        private static uint WriteManifestTagOrLiteral(
+            Span<byte> envelope, ref int cursor, string? value, CompressionTable<string>? table, ref byte tableVersion)
+        {
+            if (CompressionTagCodec.TryBuildManifestTag(table, value, out var tag, out var version))
+            {
+                tableVersion = version;
+                return tag;
+            }
+
+            return WriteLiteral(envelope, ref cursor, value);
+        }
+
+        /// <summary>ENCODE HOOK (actor-ref) for the growable <see cref="Akka.Serialization.PooledPayloadWriter"/> V2 path.</summary>
+        private static uint WriteRefTagOrLiteral(
+            Akka.Serialization.PooledPayloadWriter writer, string? value, CompressionTable<string>? table, ref byte tableVersion)
+        {
+            if (CompressionTagCodec.TryBuildActorRefTag(table, value, out var tag, out var version))
+            {
+                tableVersion = version;
+                return tag;
+            }
+
+            return WriteLiteral(writer, value);
+        }
+
+        /// <summary>ENCODE HOOK (manifest) for the growable <see cref="Akka.Serialization.PooledPayloadWriter"/> V2 path.</summary>
+        private static uint WriteManifestTagOrLiteral(
+            Akka.Serialization.PooledPayloadWriter writer, string? value, CompressionTable<string>? table, ref byte tableVersion)
+        {
+            if (CompressionTagCodec.TryBuildManifestTag(table, value, out var tag, out var version))
+            {
+                tableVersion = version;
+                return tag;
+            }
+
+            return WriteLiteral(writer, value);
         }
 
         /// <summary>Writes a LITERAL tag's length-prefixed UTF-8 bytes into a fixed <see cref="Span{T}"/>, advancing <paramref name="cursor"/>.</summary>
@@ -455,23 +542,40 @@ namespace Akka.Remote.Artery
         public ArteryTagKind ManifestKind => ClassifyTag(Header.ManifestTag);
 
         /// <summary>
-        /// Resolves the sender ref's path. Returns <see langword="true"/> with <paramref name="path"/>
-        /// set to <see langword="null"/> when ABSENT (no sender), or to the decoded literal string
-        /// when LITERAL. Returns <see langword="false"/> when COMPRESSED -- see
-        /// <see cref="SenderCompressedIndex"/>; resolving a compressed index to a ref is future work.
+        /// Resolves the sender ref's path with no compression table. Returns <see langword="true"/>
+        /// with <paramref name="path"/> set to <see langword="null"/> when ABSENT (no sender), or to
+        /// the decoded literal string when LITERAL. Returns <see langword="false"/> when COMPRESSED --
+        /// see <see cref="SenderCompressedIndex"/> and the <see cref="DecompressionTable{T}"/> overload.
         /// </summary>
-        public bool TryGetSenderPath(out string? path) => TryResolveTag(Header.SenderTag, out path);
-
-        /// <summary>Resolves the recipient ref's path. See <see cref="TryGetSenderPath"/> for ABSENT/LITERAL/COMPRESSED semantics.</summary>
-        public bool TryGetRecipientPath(out string? path) => TryResolveTag(Header.RecipientTag, out path);
+        public bool TryGetSenderPath(out string? path) => TryGetSenderPath(null, out path);
 
         /// <summary>
-        /// Resolves the manifest. ABSENT decodes to <see cref="string.Empty"/> (an empty manifest is
-        /// itself a legitimate value, unlike sender/recipient's ABSENT meaning "no ref").
+        /// Resolves the sender ref's path, resolving a COMPRESSED tag against
+        /// <paramref name="actorRefTable"/>. A <see langword="null"/> table (or a COMPRESSED index the
+        /// table cannot resolve -- stale/unknown) returns <see langword="false"/>, which the inbound
+        /// stage treats as "drop and let a fresh table be advertised" rather than faulting the stream.
         /// </summary>
-        public bool TryGetManifest(out string manifest)
+        public bool TryGetSenderPath(DecompressionTable<string>? actorRefTable, out string? path) =>
+            TryResolveTag(Header.SenderTag, actorRefTable, out path);
+
+        /// <summary>Resolves the recipient ref's path with no compression table. See <see cref="TryGetSenderPath(out string?)"/> for ABSENT/LITERAL/COMPRESSED semantics.</summary>
+        public bool TryGetRecipientPath(out string? path) => TryGetRecipientPath(null, out path);
+
+        /// <summary>Resolves the recipient ref's path, resolving a COMPRESSED tag against <paramref name="actorRefTable"/>. See <see cref="TryGetSenderPath(DecompressionTable{string}?, out string?)"/>.</summary>
+        public bool TryGetRecipientPath(DecompressionTable<string>? actorRefTable, out string? path) =>
+            TryResolveTag(Header.RecipientTag, actorRefTable, out path);
+
+        /// <summary>
+        /// Resolves the manifest with no compression table. ABSENT decodes to <see cref="string.Empty"/>
+        /// (an empty manifest is itself a legitimate value, unlike sender/recipient's ABSENT meaning
+        /// "no ref").
+        /// </summary>
+        public bool TryGetManifest(out string manifest) => TryGetManifest(null, out manifest);
+
+        /// <summary>Resolves the manifest, resolving a COMPRESSED tag against <paramref name="manifestTable"/>. See <see cref="TryGetManifest(out string)"/> and <see cref="TryGetSenderPath(DecompressionTable{string}?, out string?)"/>.</summary>
+        public bool TryGetManifest(DecompressionTable<string>? manifestTable, out string manifest)
         {
-            if (TryResolveTag(Header.ManifestTag, out var resolved))
+            if (TryResolveTag(Header.ManifestTag, manifestTable, out var resolved))
             {
                 manifest = resolved ?? string.Empty;
                 return true;
@@ -500,7 +604,7 @@ namespace Akka.Remote.Artery
 
         private static int DecodeCompressedIndex(uint tag) => (int)(tag & ArteryEnvelopeHeader.CompressedIndexMask);
 
-        private bool TryResolveTag(uint tag, out string? value)
+        private bool TryResolveTag(uint tag, DecompressionTable<string>? table, out string? value)
         {
             switch (ClassifyTag(tag))
             {
@@ -508,6 +612,15 @@ namespace Akka.Remote.Artery
                     value = null;
                     return true;
                 case ArteryTagKind.Compressed:
+                    // Resolve the 16-bit index against the provided table. A null table (unwired /
+                    // compression disabled) or an unallocated/stale index is a MISS -> false, which
+                    // the inbound stage turns into drop-with-warning (never a stream fault).
+                    if (CompressionTagCodec.TryResolve(table, DecodeCompressedIndex(tag), out var resolved))
+                    {
+                        value = resolved;
+                        return true;
+                    }
+
                     value = null;
                     return false;
                 default:

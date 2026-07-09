@@ -53,6 +53,18 @@ namespace Akka.Remote.Artery
         public const uint CompressedIndexMask = 0x0000_FFFFu;
 
         /// <summary>
+        /// The fixed non-zero top-byte marker written into a COMPRESSED tag (<c>0x01</c> in the top
+        /// byte). Any non-zero top byte classifies as COMPRESSED (<see cref="CompressedTagMask"/>); the
+        /// encoder writes this specific marker OR'd with the 16-bit index (<see cref="CompressedIndexMask"/>).
+        /// The middle byte (bits 16-23) is reserved and written zero. The table VERSION is carried
+        /// separately, in the fixed header's <see cref="ActorRefTableVersionOffset"/> /
+        /// <see cref="ManifestTableVersionOffset"/> byte -- NOT in the tag. Ref/manifest compression
+        /// (feature/artery-ref-manifest-compression) is the only writer of COMPRESSED tags; until it
+        /// lands, the encoder never emits this marker.
+        /// </summary>
+        public const uint CompressedTagMarker = 0x0100_0000u;
+
+        /// <summary>
         /// Exclusive upper bound for a LITERAL tag's byte offset -- keeps literal offsets clear of
         /// the COMPRESSED discriminator's top byte. Derived constraint from design.md: keep
         /// <c>maximum-frame-size</c> well under 16 MB so this bound can never be reached in practice.
@@ -141,13 +153,13 @@ namespace Akka.Remote.Artery
         /// <summary>The <see cref="Akka.Serialization.Serializer"/> id used to serialize the payload.</summary>
         public int SerializerId { get; }
 
-        /// <summary>The raw, undecoded sender-ref tag. See <see cref="ArteryEnvelopeDecoded.SenderKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetSenderPath"/>.</summary>
+        /// <summary>The raw, undecoded sender-ref tag. See <see cref="ArteryEnvelopeDecoded.SenderKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetSenderPath(out string?)"/>.</summary>
         public uint SenderTag { get; }
 
-        /// <summary>The raw, undecoded recipient-ref tag. See <see cref="ArteryEnvelopeDecoded.RecipientKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetRecipientPath"/>.</summary>
+        /// <summary>The raw, undecoded recipient-ref tag. See <see cref="ArteryEnvelopeDecoded.RecipientKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetRecipientPath(out string?)"/>.</summary>
         public uint RecipientTag { get; }
 
-        /// <summary>The raw, undecoded manifest tag. See <see cref="ArteryEnvelopeDecoded.ManifestKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetManifest"/>.</summary>
+        /// <summary>The raw, undecoded manifest tag. See <see cref="ArteryEnvelopeDecoded.ManifestKind"/> / <see cref="ArteryEnvelopeDecoded.TryGetManifest(out string)"/>.</summary>
         public uint ManifestTag { get; }
 
         /// <summary>
