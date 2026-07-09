@@ -86,6 +86,7 @@ namespace Akka.Remote.Tests.Artery
             akka.remote.artery.enabled = on
             akka.remote.artery.canonical.hostname = "127.0.0.1"
             akka.remote.artery.canonical.port = 0
+            akka.loggers = ["Akka.TestKit.TestEventListener, Akka.TestKit"]
             """);
 
         [Fact(DisplayName = "Shutdown race: materializing a brand-new CONTROL stream while the transport's own StreamSupervisor is terminating must not surface as an ERROR log (the InvalidOperationException is swallowed as an authoritative shutdown signal, per this fix's ArteryRemoting.MaterializeOutboundStream guard)")]

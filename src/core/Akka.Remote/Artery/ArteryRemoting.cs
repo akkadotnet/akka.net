@@ -584,6 +584,24 @@ namespace Akka.Remote.Artery
         private void EnqueueSystemMessage(Address remoteAddress, ISystemMessage message, string recipientPath)
         {
             var association = _registry.AssociationFor(remoteAddress);
+
+            // Early shutdown guard: graceful ActorSystem termination tears down every
+            // association's control channel (ArteryRemoting.Shutdown() -> CompleteControlOutbound)
+            // BEFORE RemoteWatcher finishes draining its own queued Unwatch work, so this method is
+            // routinely called after the channel is already closed. Route straight to dead letters at
+            // DEBUG instead of paying for a (pointless) materialize/enqueue attempt. This check alone
+            // cannot close the race -- the channel can still complete between here and
+            // TryEnqueueControl below -- so HandleControlOverflow applies the SAME check again,
+            // race-free, after a failed enqueue.
+            if (_isShutdown || association.IsControlShutDown)
+            {
+                _log.Debug(
+                    "Outbound control channel to [{0}] already closed during shutdown; dropping {1} to dead letters.",
+                    remoteAddress, message.GetType());
+                System.DeadLetters.Tell(message, ActorRefs.NoSender);
+                return;
+            }
+
             if (!association.IsControlOutboundMaterialized)
                 association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a, isRestart: a.HasControlEverRestarted));
 
@@ -617,6 +635,18 @@ namespace Akka.Remote.Artery
             }
 
             var association = _registry.AssociationFor(remoteAddress);
+
+            // Early shutdown guard -- see EnqueueSystemMessage's matching guard for the full
+            // rationale (same race, same quiet drop-to-dead-letters path).
+            if (_isShutdown || association.IsControlShutDown)
+            {
+                _log.Debug(
+                    "Outbound control channel to [{0}] already closed during shutdown; dropping {1} to dead letters.",
+                    remoteAddress, message.GetType());
+                System.DeadLetters.Tell(message, ActorRefs.NoSender);
+                return;
+            }
+
             if (!association.IsControlOutboundMaterialized)
                 association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a, isRestart: a.HasControlEverRestarted));
 
@@ -642,9 +672,34 @@ namespace Akka.Remote.Artery
         /// time <c>Quarantine</c>'s own follow-up <c>EnqueueControl</c> calls (possibly) overflow in
         /// turn, the CAS state flip has already happened, so the second re-entry's guard is false.
         /// </para>
+        ///
+        /// <para>
+        /// <b>Closed-channel vs. actually-full (mirrors Pekko's <c>Association.sendControl</c>
+        /// <c>isShutdown</c> gating).</b> <see cref="Association.TryEnqueueControl"/>'s underlying
+        /// <see cref="System.Threading.Channels.ChannelWriter{T}.TryWrite"/> returns
+        /// <see langword="false"/> BOTH when the bounded queue is genuinely at capacity AND when the
+        /// writer has already been completed by <see cref="Association.CompleteControlOutbound"/> --
+        /// which graceful <see cref="Shutdown"/> calls for every association BEFORE RemoteWatcher has
+        /// necessarily finished draining its own queued Unwatch work. Checking
+        /// <see cref="Association.IsControlShutDown"/> HERE, after the failed enqueue, is race-free
+        /// (channel completion latches permanently) even though the guards at the top of
+        /// <see cref="EnqueueControl"/>/<see cref="EnqueueSystemMessage"/> cannot close this TOCTOU
+        /// gap by themselves. Treating a closed-channel drop the same as a genuinely full queue would
+        /// otherwise spuriously log at ERROR and quarantine an otherwise perfectly healthy peer on
+        /// every ordinary graceful shutdown.
+        /// </para>
         /// </summary>
         private void HandleControlOverflow(Address remoteAddress, Association association, object message)
         {
+            if (association.IsControlShutDown)
+            {
+                _log.Debug(
+                    "Outbound control channel to [{0}] already closed during shutdown; dropping {1} to dead letters.",
+                    remoteAddress, message.GetType());
+                System.DeadLetters.Tell(message, ActorRefs.NoSender);
+                return;
+            }
+
             var peer = association.CurrentState.UniqueRemoteAddress;
             var shouldQuarantine = peer is { } p && !association.IsQuarantined(p.Uid);
 
