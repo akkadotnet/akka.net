@@ -107,27 +107,35 @@ namespace RemotePingPong
         // sides of the benchmark in separate processes so they can sit on two physical machines and
         // exercise a real network. Both default to false, in which case the benchmark behaves
         // exactly as before - both ActorSystems in this one process over loopback, byte-for-byte
-        // identical config. Split mode is Artery-only (either token implies "artery").
+        // identical config. Split mode supports either transport, selected by the exact same
+        // "artery" token rule as single-process mode (see _useArtery) - neither token forces a
+        // transport on its own.
         private static bool _serverMode;
         private static bool _clientMode;
 
         // "host=" - in server mode, the address this process advertises to clients (required).
-        // NOTE: this port's ArterySettings has no separate bind.hostname, so the Artery listener
-        // binds directly to this address as well (bind == advertise) - use the machine's LAN IP,
+        // NOTE: neither transport's config sets a separate bind hostname here - ArterySettings'
+        // canonical.hostname and DotNetty's public-hostname both fall back to the bind hostname
+        // when left unset (see CreateActorSystemConfig) - so the listener binds directly to this
+        // address as well (bind == advertise) regardless of transport - use the machine's LAN IP,
         // not 0.0.0.0. In client mode, the server's advertised address to benchmark against
         // (required) - it must match the server's host= EXACTLY, since the string is part of the
         // association key both sides agree on.
         private static string? _host;
 
-        // "port=" - in server mode, the port the Artery listener binds/advertises; in client mode,
-        // the server's port. Defaults to DefaultSplitPort on both sides, so omitting it everywhere
-        // Just Works. (The client's OWN system always binds an ephemeral port - see Benchmark().)
+        // "port=" - in server mode, the port the transport's listener binds/advertises; in client
+        // mode, the server's port. Defaults to DefaultSplitPort on both sides, so omitting it
+        // everywhere Just Works. (The client's OWN system always binds an ephemeral port - see
+        // Benchmark().)
         private static int _splitPort = DefaultSplitPort;
 
         // Matches ArterySettings' canonical.port default (which is also Pekko Artery's default).
+        // Used uniformly for split mode regardless of transport - DotNetty's own historical
+        // default is 2552 - so split-mode command lines are identical across transports; only
+        // the "artery" token changes.
         private const int DefaultSplitPort = 25520;
 
-        // "myhost=" (client mode only) - the address the CLIENT's own Artery system advertises.
+        // "myhost=" (client mode only) - the address the CLIENT's own remote system advertises.
         // Server->client replies matter in both modes (echo replies in ping-pong, Ack/Complete
         // credit grants in one-way), so this must be reachable FROM the server - never localhost
         // when the server is a remote machine. Defaults to auto-detecting the local outbound IP
@@ -137,6 +145,16 @@ namespace RemotePingPong
         // True when _myHost came from DetectLocalOutboundIp rather than an explicit "myhost=" -
         // disclosed in the client header so a mis-detected address is easy to spot and override.
         private static bool _myHostAutoDetected;
+
+        // The wire scheme for whichever transport this run selected: "akka" for Artery
+        // (RemoteSettings.AkkaScheme, unwrapped) or "akka.tcp" for classic DotNetty remoting
+        // (RemoteSettings.AkkaScheme + TcpTransport's SchemeIdentifier, joined by
+        // SchemeAugmenter). Split-client mode has to build the server's Address by hand (see
+        // Benchmark()) since there's no local Provider.DefaultAddress to read it from, so this
+        // has to track _useArtery exactly, or RemoteScope deployment can't resolve the
+        // association at all. Single-process mode never needs this - it always reads the scheme
+        // straight off the real Provider.DefaultAddress.
+        private static string SplitServerScheme => _useArtery ? "akka" : "akka.tcp";
 
         /// <summary>
         /// Auto-detects the local IP the OS would use to reach <paramref name="serverHost"/>: the
@@ -165,6 +183,17 @@ namespace RemotePingPong
         /// </summary>
         private static void ResolveQueueSize()
         {
+            if (!_useArtery)
+            {
+                // qsize=/auto-raise tune akka.remote.artery.advanced.outbound-message-queue-size,
+                // which DotNetty's transport never reads - CreateActorSystemConfig() only writes
+                // that HOCON key when _useArtery is true. Leave _effectiveQueueSize/
+                // _queueSizeAutoRaiseReason both null (never even computed) for a DotNetty run, so
+                // there's nothing to auto-raise; an explicit qsize= override is instead surfaced as
+                // a one-line "ignored" notice in the run header - see PrintSysInfo/PrintServerInfo.
+                return;
+            }
+
             if (_qSizeOverride.HasValue)
             {
                 _effectiveQueueSize = _qSizeOverride.Value;
@@ -258,20 +287,27 @@ namespace RemotePingPong
             // it whenever window x clients would exceed 80% of the default capacity - see
             // ResolveQueueSize(). Default-config runs (window x clients well under that threshold)
             // are unaffected either way.
-            // Split two-process mode: "server" makes this process a long-lived Artery host - it
+            // Split two-process mode: "server" makes this process a long-lived host - it
             // binds/advertises host= (required) and port= (default 25520), prints "SERVER READY"
             // once listening, and serves sequential benchmark runs until killed (Ctrl+C/SIGTERM);
             // "client host=<server-ip> [port=N]" points the full existing benchmark protocol
             // (timesToRun reps, echo/oneway, all tokens above) at that remote server instead of an
             // in-process system2. "myhost=" (client only) sets the address this client advertises
             // for server->client replies - defaults to auto-detecting the outbound IP toward the
-            // server. Either token implies artery. The orchestrator is expected to pass MATCHING
-            // window=/clients=/qsize=/oneway tokens to both sides (dumb and explicit - each side
-            // sizes and reports its own config; there is no negotiation protocol). When neither
-            // token is passed, behavior is exactly the single-process benchmark described above.
+            // server. Transport selection follows the exact same "artery" token rule as
+            // single-process mode - present (either side) selects Artery.Tcp, absent selects
+            // classic DotNetty remoting; neither "server" nor "client" forces a transport on its
+            // own. qsize=/auto-raise remain Artery-only concepts either way - under DotNetty
+            // they're ignored (with a header notice) rather than silently doing nothing. The
+            // orchestrator is expected to pass MATCHING window=/clients=/qsize=/oneway/artery
+            // tokens to both sides (dumb and explicit - each side sizes and reports its own
+            // config; there is no negotiation protocol). When neither "server" nor "client" is
+            // passed, behavior is exactly the single-process benchmark described above.
             // e.g. `RemotePingPong 3 artery` or `RemotePingPong artery oneway window=1000 clients=10 iobuf=128k msgs=500000 qsize=10000`
-            // or `RemotePingPong server host=10.0.0.5 oneway window=200 clients=25` (machine A)
-            //  + `RemotePingPong 3 artery client host=10.0.0.5 oneway window=200 clients=25` (machine B).
+            // or `RemotePingPong server host=10.0.0.5 oneway window=200 clients=25` (machine A, DotNetty)
+            //  + `RemotePingPong 3 client host=10.0.0.5 oneway window=200 clients=25` (machine B, DotNetty)
+            // or `RemotePingPong server host=10.0.0.5 artery oneway window=200 clients=25` (machine A, Artery)
+            //  + `RemotePingPong 3 artery client host=10.0.0.5 oneway window=200 clients=25` (machine B, Artery).
             _useArtery = args.Any(a => a.Equals("artery", StringComparison.OrdinalIgnoreCase));
             _onewayMode = args.Any(a => a.Equals("oneway", StringComparison.OrdinalIgnoreCase));
             _serverMode = args.Any(a => a.Equals("server", StringComparison.OrdinalIgnoreCase));
@@ -356,11 +392,10 @@ namespace RemotePingPong
 
             if (_serverMode || _clientMode)
             {
-                // Split mode is Artery-only: the whole point of the mode is exercising the Artery
-                // transport across a real network, and the server addresses itself via Artery's
-                // canonical config - no DotNetty variant is wired up.
-                _useArtery = true;
-
+                // Transport was already selected above from the "artery" token, exactly like
+                // single-process mode - CreateActorSystemConfig() branches on _useArtery either
+                // way, so both server and client bind/advertise correctly for whichever transport
+                // was chosen. No forcing here.
                 if (string.IsNullOrEmpty(_host))
                 {
                     await Console.Error.WriteLineAsync(_serverMode
@@ -434,9 +469,16 @@ namespace RemotePingPong
                     Console.ForegroundColor = prevColor;
                 }
             }
+            else if (_qSizeOverride.HasValue)
+            {
+                // qsize= only means something in Artery mode (outbound-message-queue-size);
+                // called out explicitly rather than silently doing nothing, so a stray qsize= on a
+                // DotNetty run is never mistaken for having taken effect.
+                Console.WriteLine("qsize= ignored (DotNetty)");
+            }
             if (_clientMode)
             {
-                Console.WriteLine("Split mode:                        client -> akka://SystemB@{0}:{1}", _host, _splitPort);
+                Console.WriteLine("Split mode:                        client -> {0}://SystemB@{1}:{2}", SplitServerScheme, _host, _splitPort);
                 Console.WriteLine("Client advertised address:         {0}{1}", _myHost, _myHostAutoDetected ? " (auto-detected)" : " (explicit myhost=)");
                 // Deliberate divergence from single-process mode, disclosed up front: the split
                 // server persists across all timesToRun reps (its JIT/caches stay warm) while this
@@ -477,26 +519,29 @@ namespace RemotePingPong
         }
 
         /// <summary>
-        /// Split-mode server: a deliberately dumb, long-lived Artery host. It creates NO benchmark
-        /// actors of its own - every echo/receiver actor is RemoteScope-deployed onto it by the
-        /// client, via the exact same deployments single-process mode makes against its in-process
-        /// system2 (see Benchmark()). Those land under
-        /// /remote/akka/SystemA@[myhost]:[ephemeral-port]/... paths on this system, and the client
-        /// binds a fresh ephemeral port every rep, so sequential runs can never collide on actor
-        /// names - Akka's remote-deployment daemon already IS a "server-side factory keyed by
-        /// client identity", which is why no run-id negotiation or receptionist protocol is needed
-        /// here. window=/clients=/qsize=/oneway tokens are accepted so the orchestrator can pass
-        /// the SAME values to both sides; functionally only the queue sizing matters on this side
-        /// (it sizes THIS system's outbound queue for the reply traffic - echoes in ping-pong,
-        /// Ack/Complete credit grants in one-way), while oneway/window/clients are disclosed in the
-        /// header so operators can eyeball that both sides were launched consistently. Serves an
-        /// arbitrary number of sequential benchmark runs until killed (Ctrl+C/SIGTERM).
+        /// Split-mode server: a deliberately dumb, long-lived remote host - Artery or DotNetty,
+        /// whichever _useArtery selected (same "artery" token rule as single-process mode; see
+        /// CreateActorSystemConfig()). It creates NO benchmark actors of its own - every
+        /// echo/receiver actor is RemoteScope-deployed onto it by the client, via the exact same
+        /// deployments single-process mode makes against its in-process system2 (see Benchmark()).
+        /// Those land under /remote/[scheme]/SystemA@[myhost]:[ephemeral-port]/... paths on this
+        /// system ([scheme] being SplitServerScheme's "akka" or "akka.tcp"), and the client binds
+        /// a fresh ephemeral port every rep, so sequential runs can never collide on actor names -
+        /// Akka's remote-deployment daemon already IS a "server-side factory keyed by client
+        /// identity", which is why no run-id negotiation or receptionist protocol is needed here.
+        /// window=/clients=/qsize=/oneway tokens are accepted so the orchestrator can pass the
+        /// SAME values to both sides; functionally only the queue sizing matters on this side (it
+        /// sizes THIS system's outbound queue for the reply traffic - echoes in ping-pong,
+        /// Ack/Complete credit grants in one-way, and only in Artery mode - see
+        /// ResolveQueueSize()), while oneway/window/clients are disclosed in the header so
+        /// operators can eyeball that both sides were launched consistently. Serves an arbitrary
+        /// number of sequential benchmark runs until killed (Ctrl+C/SIGTERM).
         /// </summary>
         private static async Task RunServer()
         {
             var system = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", _host!, _splitPort));
             // DefaultAddress reflects the ACTUALLY-bound endpoint (ActorSystem.Create doesn't
-            // return until the Artery listener is up), so printing READY from it is truthful.
+            // return until the transport's listener is up), so printing READY from it is truthful.
             var boundAddress = ((ExtendedActorSystem)system).Provider.DefaultAddress;
 
             // Same drop visibility as Benchmark(), but long-lived: this process has no knowledge of
@@ -541,7 +586,7 @@ namespace RemotePingPong
         /// </summary>
         private static void PrintServerInfo()
         {
-            Console.WriteLine("Transport:                         Artery.Tcp");
+            Console.WriteLine("Transport:                         {0}", _useArtery ? "Artery.Tcp" : "DotNetty");
             Console.WriteLine("Mode:                              {0} (split: server side)", _onewayMode ? "one-way" : "ping-pong");
             Console.WriteLine("OSVersion:                         {0}", Environment.OSVersion);
             Console.WriteLine("ProcessorCount:                    {0}", Environment.ProcessorCount);
@@ -551,14 +596,21 @@ namespace RemotePingPong
             {
                 Console.WriteLine("Pinned client count:               {0}", _pinnedClients.Value);
             }
-            Console.WriteLine("Outbound queue size (artery):      {0}{1}", _effectiveQueueSize ?? DefaultOutboundQueueCapacity,
-                _qSizeOverride.HasValue ? " (explicit qsize=)" : _effectiveQueueSize.HasValue ? " (auto-raised)" : " (default)");
-            if (_queueSizeAutoRaiseReason != null)
+            if (_useArtery)
             {
-                var prevColor = Console.ForegroundColor;
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine(_queueSizeAutoRaiseReason);
-                Console.ForegroundColor = prevColor;
+                Console.WriteLine("Outbound queue size (artery):      {0}{1}", _effectiveQueueSize ?? DefaultOutboundQueueCapacity,
+                    _qSizeOverride.HasValue ? " (explicit qsize=)" : _effectiveQueueSize.HasValue ? " (auto-raised)" : " (default)");
+                if (_queueSizeAutoRaiseReason != null)
+                {
+                    var prevColor = Console.ForegroundColor;
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine(_queueSizeAutoRaiseReason);
+                    Console.ForegroundColor = prevColor;
+                }
+            }
+            else if (_qSizeOverride.HasValue)
+            {
+                Console.WriteLine("qsize= ignored (DotNetty)");
             }
         }
 
@@ -598,7 +650,7 @@ namespace RemotePingPong
             // is a long-lived RunServer() process and system2Address simply points at it: all
             // server-side actors are still created through the exact same RemoteScope deployments
             // below, they just genuinely land on the other machine, under
-            // /remote/akka/SystemA@[myhost]:[ephemeral-port]/... paths that are unique per rep
+            // /remote/[scheme]/SystemA@[myhost]:[ephemeral-port]/... paths that are unique per rep
             // (fresh client port each rep), so sequential runs never collide on the shared server.
             // Deliberate divergence from single-process mode: that server persists across all
             // timesToRun reps (its JIT stays warm) while system1 here is recreated per rep -
@@ -607,7 +659,12 @@ namespace RemotePingPong
             Address system2Address;
             if (_clientMode)
             {
-                system2Address = new Address("akka", "SystemB", _host, _splitPort);
+                // The split server has no local Provider.DefaultAddress to read here (it's a
+                // separate process) - its Address has to be built by hand, and the scheme MUST
+                // match the transport it was actually bound with (see SplitServerScheme) or
+                // RemoteScope deployment below can't resolve the association at all: classic
+                // DotNetty remoting addresses are "akka.tcp://...", Artery's are "akka://...".
+                system2Address = new Address(SplitServerScheme, "SystemB", _host, _splitPort);
             }
             else
             {
