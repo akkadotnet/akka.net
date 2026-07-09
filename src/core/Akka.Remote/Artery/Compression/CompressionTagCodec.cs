@@ -83,17 +83,10 @@ namespace Akka.Remote.Artery.Compression
         /// </summary>
         public static bool TryResolve<T>(DecompressionTable<T>? table, int idx, out T value) where T : class
         {
-            if (table is not null && (uint)idx < (uint)table.Length)
+            if (table is not null && table.TryGet(idx, out var resolved))
             {
-                try
-                {
-                    value = table.Get(idx);
-                    return true;
-                }
-                catch (System.ArgumentOutOfRangeException)
-                {
-                    // unallocated slot -> fall through to the miss path
-                }
+                value = resolved!;
+                return true;
             }
 
             value = null!;

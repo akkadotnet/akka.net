@@ -75,6 +75,21 @@ namespace Akka.Remote.Artery.Compression
             return value;
         }
 
+        /// <summary>
+        /// Resolves <paramref name="idx"/> to its value without throwing. Returns <see langword="false"/>
+        /// (a decode miss) when the index is out of range or the slot is unallocated.
+        /// </summary>
+        public bool TryGet(int idx, out T? value)
+        {
+            if ((uint)idx < (uint)_table.Length)
+            {
+                value = _table[idx];
+                return value is not null;
+            }
+            value = null;
+            return false;
+        }
+
         /// <summary>An empty active table at version 0 -- the initial inbound state before any advertisement.</summary>
         public static DecompressionTable<T> Empty { get; } =
             new DecompressionTable<T>(0L, 0, Array.Empty<T?>());
