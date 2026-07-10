@@ -286,6 +286,7 @@ namespace Akka.Cluster.Tests
                     {
                         Interlocked.Increment(ref soft);
                     }
+                    // slopwatch-ignore: SW003 Hard-deadline cancellation while an iteration is tearing down; the outcome was already recorded before this fires, so there is nothing left to handle.
                     catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
                     {
                         // deadline hit while tearing down — ignore
@@ -444,6 +445,7 @@ namespace Akka.Cluster.Tests
                         cluster.Subscribe(sink, typeof(ClusterEvent.IClusterDomainEvent));
                         cluster.SendCurrentClusterState(sink);
                     }
+                    // slopwatch-ignore: SW003 The cluster may already be terminated by the startup race under test; this retry loop is best-effort probing and the actual outcome is captured via FuzzFailureSink/IsTerminated below.
                     catch
                     {
                         /* system may be shutting down — expected under the race */
@@ -542,6 +544,7 @@ namespace Akka.Cluster.Tests
                 {
                     await Task.WhenAll(burners).WaitAsync(TimeSpan.FromSeconds(5));
                 }
+                // slopwatch-ignore: SW003 Draining the CPU-burner tasks is best-effort cleanup; a burner exception or the 5s WaitAsync timeout must never fail the fuzz iteration itself.
                 catch
                 {
                     /* burners are best-effort */
@@ -553,6 +556,7 @@ namespace Akka.Cluster.Tests
                     {
                         await sys.Terminate().WaitAsync(TimeSpan.FromSeconds(10));
                     }
+                    // slopwatch-ignore: SW003 Teardown is intentionally bounded and best-effort; a system wedged by the deadlock under test is abandoned here and GC'd with the test process rather than failing the spec.
                     catch
                     {
                         /* bounded teardown; a wedged system is GC'd with the test process */
@@ -601,6 +605,7 @@ namespace Akka.Cluster.Tests
             {
                 sink = sys.ActorOf(Props.Create(() => new SinkActor()));
             }
+            // slopwatch-ignore: SW003 The target system may already be terminating from the deadlock under test; failing to create the sink actor here is expected and the hammer loop below falls back to DeadLetters.
             catch
             {
                 // system already terminating
@@ -616,6 +621,7 @@ namespace Akka.Cluster.Tests
                     cluster.Subscribe(target, typeof(ClusterEvent.IClusterDomainEvent));
                     cluster.SendCurrentClusterState(target);
                 }
+                // slopwatch-ignore: SW003 This loop hammers ClusterCore concurrently with the startup race under test, so the target system may be mid-shutdown; failures here are expected and the loop simply retries.
                 catch
                 {
                     // expected while the system is shutting down
