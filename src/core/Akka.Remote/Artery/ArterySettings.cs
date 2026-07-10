@@ -86,9 +86,18 @@ namespace Akka.Remote.Artery
         public int InboundLaneBufferSize { get; }
 
         /// <summary>
-        /// Number of outbound connections (lanes) used to send ordinary-stream messages. Parsed
-        /// and validated now but NOT YET USED -- outbound lane fan-out is separate, still-pending
-        /// work (this port's inbound side is what <see cref="InboundLanes"/> now drives).
+        /// Number of independent, bounded ordinary-outbound channels ("lanes") each association
+        /// fans ordinary-stream sends across, Pekko-faithful (<c>Association.scala</c>'s
+        /// <c>outboundLanes</c>/<c>OrdinaryQueueIndex</c> array): a message's recipient uid is
+        /// hashed onto one lane (<see cref="Akka.Remote.Artery.Association.SelectLane"/>) so the
+        /// SAME recipient always lands on the SAME lane (preserving per-recipient ordering) while
+        /// DIFFERENT recipients spread their traffic across every lane. All lanes still funnel into
+        /// ONE TCP connection per association (an Akka.Streams <c>MergeHub</c> merges the encoded
+        /// lane outputs before the socket) -- lanes parallelize ENCODING/serialization contention
+        /// across CPU cores for associations carrying many actors' worth of ordinary traffic; they
+        /// do not add sockets. Defaults to 1, which collapses to today's single-chain shape exactly
+        /// (no merge machinery is ever materialized at the default). See <see cref="InboundLanes"/>
+        /// for the inbound-side analog.
         /// </summary>
         public int OutboundLanes { get; }
 
@@ -116,10 +125,12 @@ namespace Akka.Remote.Artery
         public TimeSpan ControlHeartbeatInterval { get; }
 
         /// <summary>
-        /// Capacity of every association's bounded ORDINARY outbound queue (see
+        /// Capacity of every association's bounded ORDINARY outbound queue, PER LANE (see
         /// <see cref="Akka.Remote.Artery.Association.DefaultOutboundQueueCapacity"/>). Matches
         /// Pekko's <c>outbound-message-queue-size</c> default; left unchanged from the original
-        /// G2 constant.
+        /// G2 constant. Applies to EACH of <see cref="OutboundLanes"/>' lanes independently when
+        /// that value is greater than 1 -- this setting is not divided across lanes, matching
+        /// Pekko (every lane gets its own full-size queue).
         /// </summary>
         public int OutboundMessageQueueSize { get; }
 

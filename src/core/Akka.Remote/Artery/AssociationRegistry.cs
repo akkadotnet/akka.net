@@ -155,7 +155,7 @@ namespace Akka.Remote.Artery
         /// <summary>
         /// Default capacity for <see cref="LargeReader"/>'s bounded channel (task 10.2, "Large
         /// Message Stream") -- matches Pekko's <c>outbound-large-message-queue-size</c> default.
-        /// This channel is allocated unconditionally, exactly like <see cref="_outboundChannel"/>/
+        /// This channel is allocated unconditionally, exactly like <see cref="_laneChannels"/>/
         /// <see cref="_controlChannel"/> (task group 6, task 6.1's "factor the shared shape"
         /// precedent) -- whether it is EVER materialized/enqueued to is entirely a transport-layer
         /// decision (<c>ArteryRemoting</c> only routes to it, and only ever calls
@@ -175,7 +175,19 @@ namespace Akka.Remote.Artery
         // between the channel and the handshake stage (design.md Decision 9's ChannelSource.FromReader
         // mandate; see the G3 opening-refactor task report for why the interface, not the concrete
         // type, is the channel's type parameter).
-        private readonly Channel<IOutboundEnvelope> _outboundChannel;
+        //
+        // <b>Ordinary lanes (outbound-lanes).</b> What used to be a single `_outboundChannel` field
+        // is now an ARRAY of independently-bounded channels, one per outbound lane -- Pekko-faithful
+        // (Association.scala's `queues` array, `OrdinaryQueueIndex + i`). At the shipping default
+        // `outbound-lanes = 1` this array has exactly one element and every existing accessor below
+        // (<see cref="OutboundReader"/>, the zero-arg <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/>
+        // overload, <see cref="OutboundQueueCount"/>) resolves to lane 0 -- i.e. EXACTLY today's
+        // single channel, just addressed through `_laneChannels[0]` instead of a solo field. This is
+        // what makes lanes=1 gate B (zero behavioral change) hold at the Association level: nothing
+        // observable differs, only the storage shape. <see cref="ArteryRemoting"/> is what decides
+        // WHICH lane a given send's envelope lands in (<see cref="SelectLane"/>, cached per
+        // <see cref="RemoteActorRef"/>) and which lane(s) a materialized stream reads from.
+        private readonly Channel<IOutboundEnvelope>[] _laneChannels;
         private readonly Channel<IOutboundEnvelope> _controlChannel;
 
         /// <summary>
@@ -226,8 +238,23 @@ namespace Akka.Remote.Artery
         /// pinned invariant 5: anything still in the association-owned channel survives (the channel
         /// is externally owned and outlives any single materialization).
         /// </para>
+        ///
+        /// <para>
+        /// <b>Widened to <see cref="IKillSwitch"/> for outbound-lanes.</b> At <c>outbound-lanes = 1</c>
+        /// this is still the per-materialization <see cref="Akka.Streams.UniqueKillSwitch"/> that
+        /// <see cref="KillSwitches.Single{T}"/> always produced (gate B: unchanged). At
+        /// <c>outbound-lanes &gt; 1</c>, <c>ArteryRemoting</c> instead publishes a single
+        /// <see cref="Akka.Streams.SharedKillSwitch"/> woven into EVERY lane chain plus the merge/
+        /// socket tail, so tripping it (from here, or from that assembly's own termination
+        /// continuation) tears the whole N-lanes-&gt;-one-socket unit down together as ONE
+        /// restartable assembly (Pekko's <c>streamKillSwitch</c> semantics,
+        /// <c>Association.scala</c>'s <c>runOutboundOrdinaryMessagesStream</c>). Both switch types
+        /// implement <see cref="IKillSwitch"/>'s <c>Shutdown()</c>/<c>Abort(Exception)</c>, so this
+        /// field's consumers (<see cref="TripOutboundKillSwitch"/>) are unaffected by which kind is
+        /// currently published.
+        /// </para>
         /// </summary>
-        private volatile UniqueKillSwitch? _outboundKillSwitch;
+        private volatile IKillSwitch? _outboundKillSwitch;
 
         /// <summary>
         /// The <see cref="UniqueKillSwitch"/> of the CURRENT materialization of this association's
@@ -291,23 +318,45 @@ namespace Akka.Remote.Artery
         /// </summary>
         private readonly ConcurrentDictionary<long, bool> _quarantineDropLogged = new();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Association"/> class.
+        /// </summary>
+        /// <param name="remoteAddress">The remote address this association is keyed by.</param>
+        /// <param name="outboundQueueCapacity">Capacity of every ordinary-outbound lane channel, PER LANE (see <see cref="DefaultOutboundQueueCapacity"/>).</param>
+        /// <param name="controlQueueCapacity">Capacity of the bounded CONTROL outbound channel (see <see cref="DefaultControlQueueCapacity"/>).</param>
+        /// <param name="largeQueueCapacity">Capacity of the bounded LARGE-MESSAGE outbound channel (see <see cref="DefaultLargeQueueCapacity"/>).</param>
+        /// <param name="outboundLanes">
+        /// Number of independent, bounded ordinary-outbound channels this association owns (see
+        /// <see cref="_laneChannels"/>'s remarks) -- <c>akka.remote.artery.advanced.outbound-lanes</c>
+        /// (<see cref="ArterySettings.OutboundLanes"/>). Defaults to 1 -- today's single-channel
+        /// shape (gate B). Clamped to a minimum of 1 defensively; <see cref="ArterySettings"/>
+        /// already rejects a configured value below 1 at parse time.
+        /// </param>
         public Association(
             Address remoteAddress,
             int outboundQueueCapacity = DefaultOutboundQueueCapacity,
             int controlQueueCapacity = DefaultControlQueueCapacity,
-            int largeQueueCapacity = DefaultLargeQueueCapacity)
+            int largeQueueCapacity = DefaultLargeQueueCapacity,
+            int outboundLanes = 1)
         {
             RemoteAddress = remoteAddress;
             OutboundQueueCapacity = outboundQueueCapacity;
             ControlQueueCapacity = controlQueueCapacity;
             LargeQueueCapacity = largeQueueCapacity;
+            OutboundLanes = Math.Max(1, outboundLanes);
             _state = AssociationState.Create();
-            _outboundChannel = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(outboundQueueCapacity)
+
+            _laneChannels = new Channel<IOutboundEnvelope>[OutboundLanes];
+            for (var i = 0; i < OutboundLanes; i++)
             {
-                SingleReader = true,
-                SingleWriter = false,
-                FullMode = BoundedChannelFullMode.Wait
-            });
+                _laneChannels[i] = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(outboundQueueCapacity)
+                {
+                    SingleReader = true,
+                    SingleWriter = false,
+                    FullMode = BoundedChannelFullMode.Wait
+                });
+            }
+
             _controlChannel = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(controlQueueCapacity)
             {
                 SingleReader = true,
@@ -349,16 +398,37 @@ namespace Akka.Remote.Artery
         public int LargeQueueCapacity { get; }
 
         /// <summary>
+        /// The number of ordinary-outbound lanes this association was constructed with (see
+        /// <see cref="_laneChannels"/>) -- <see cref="ArterySettings.OutboundLanes"/>. Always
+        /// &gt;= 1. <c>ArteryRemoting</c> uses THIS value (not its own settings snapshot) as the
+        /// single source of truth for lane-array bounds, so it can never drift from the actual
+        /// shape of this association's channel array.
+        /// </summary>
+        public int OutboundLanes { get; }
+
+        /// <summary>
         /// The current immutable state snapshot. Safe to read from any thread.
         /// </summary>
         public AssociationState CurrentState => _state;
 
         /// <summary>
-        /// The reading side of this association's bounded ORDINARY outbound queue. Consumed by
-        /// exactly one materialized outbound stream (<see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/>),
-        /// per <see cref="EnsureOutboundMaterialized"/>.
+        /// The reading side of this association's bounded ORDINARY outbound queue -- LANE 0.
+        /// Consumed by exactly one materialized outbound stream
+        /// (<see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/>), per
+        /// <see cref="EnsureOutboundMaterialized"/>. At <c>outbound-lanes = 1</c> (the shipping
+        /// default) this is the association's ONLY ordinary channel -- i.e. today's shape,
+        /// unchanged (gate B). At <c>outbound-lanes &gt; 1</c>, use <see cref="LaneReader"/> to
+        /// reach lanes 1..N-1; this property still resolves to lane 0 either way.
         /// </summary>
-        public ChannelReader<IOutboundEnvelope> OutboundReader => _outboundChannel.Reader;
+        public ChannelReader<IOutboundEnvelope> OutboundReader => _laneChannels[0].Reader;
+
+        /// <summary>
+        /// The reading side of ordinary-outbound LANE <paramref name="lane"/> (0-based,
+        /// &lt; <see cref="OutboundLanes"/>). See <see cref="OutboundReader"/> for lane 0's
+        /// equivalent accessor. Only ever called by <c>ArteryRemoting</c>'s lanes-aware
+        /// materialization path (<c>outbound-lanes &gt; 1</c>).
+        /// </summary>
+        public ChannelReader<IOutboundEnvelope> LaneReader(int lane) => _laneChannels[lane].Reader;
 
         /// <summary>
         /// The reading side of this association's bounded CONTROL outbound queue -- separate
@@ -461,12 +531,13 @@ namespace Akka.Remote.Artery
         public void ResetLargeGate() => _largeGate.Reset();
 
         /// <summary>
-        /// Publishes the <see cref="UniqueKillSwitch"/> for the ORDINARY outbound stream's current
+        /// Publishes the <see cref="IKillSwitch"/> for the ORDINARY outbound stream's current
         /// materialization so <see cref="TripOutboundKillSwitch"/> can later abort it. Called by the
-        /// transport (<c>ArteryRemoting.MaterializeOutboundStream</c>) each time the ordinary stream
-        /// is (re-)materialized -- see <see cref="_outboundKillSwitch"/>.
+        /// transport (<c>ArteryRemoting.MaterializeOutboundStream</c> at <c>outbound-lanes = 1</c>,
+        /// or <c>ArteryRemoting.MaterializeOrdinaryOutboundWithLanes</c> at <c>outbound-lanes &gt; 1</c>)
+        /// each time the ordinary stream is (re-)materialized -- see <see cref="_outboundKillSwitch"/>.
         /// </summary>
-        public void SetOutboundKillSwitch(UniqueKillSwitch killSwitch) => _outboundKillSwitch = killSwitch;
+        public void SetOutboundKillSwitch(IKillSwitch killSwitch) => _outboundKillSwitch = killSwitch;
 
         /// <summary>
         /// Drives the ORDINARY outbound stream's current materialization down (if any) via its
@@ -540,24 +611,60 @@ namespace Akka.Remote.Artery
             !_largeShutDown && !(CurrentState.UniqueRemoteAddress is { } peer && IsQuarantined(peer.Uid));
 
         /// <summary>
-        /// Attempts to enqueue <paramref name="element"/> for the ORDINARY outbound stream to send.
-        /// Non-blocking (<see cref="ChannelWriter{T}.TryWrite"/>) -- NEVER awaits/blocks a producing
-        /// actor thread on a slow remote (Decision 7). Returns <see langword="false"/> when the
-        /// bounded queue is full; the caller (<c>ArteryRemoting</c>) applies the overflow policy
-        /// (ordinary messages -> dead letters).
+        /// Attempts to enqueue <paramref name="element"/> onto ordinary-outbound LANE 0. Non-blocking
+        /// (<see cref="ChannelWriter{T}.TryWrite"/>) -- NEVER awaits/blocks a producing actor thread
+        /// on a slow remote (Decision 7). Returns <see langword="false"/> when the bounded queue is
+        /// full; the caller (<c>ArteryRemoting</c>) applies the overflow policy (ordinary messages ->
+        /// dead letters). Back-compat convenience overload for callers that do not route by lane
+        /// (direct-<see cref="Association"/> unit tests; always correct at <c>outbound-lanes = 1</c>,
+        /// where lane 0 is the association's ONLY ordinary channel). <c>ArteryRemoting</c>'s
+        /// production send path always uses the lane-indexed overload below.
         /// </summary>
-        public bool TryEnqueueOutbound(IOutboundEnvelope element) => _outboundChannel.Writer.TryWrite(element);
+        public bool TryEnqueueOutbound(IOutboundEnvelope element) => TryEnqueueOutbound(element, 0);
+
+        /// <summary>
+        /// Attempts to enqueue <paramref name="element"/> onto ordinary-outbound LANE
+        /// <paramref name="lane"/> (0-based, &lt; <see cref="OutboundLanes"/>) -- the lane-routing
+        /// counterpart <c>ArteryRemoting.EnqueueOutbound</c> uses once it has resolved (and cached,
+        /// per <see cref="SelectLane"/>) which lane a given send belongs on. Same non-blocking/
+        /// overflow discipline as <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/>.
+        /// </summary>
+        public bool TryEnqueueOutbound(IOutboundEnvelope element, int lane) => _laneChannels[lane].Writer.TryWrite(element);
+
+        /// <summary>
+        /// Deterministically selects which ordinary-outbound lane a message to
+        /// <paramref name="recipientUid"/> should ride, Pekko-faithful (<c>Association.selectQueue</c>,
+        /// <c>Association.scala:476-505</c>: <c>OrdinaryQueueIndex + math.abs(r.path.uid % outboundLanes)</c>)
+        /// -- SAME recipient always resolves to the SAME lane (preserves per-recipient ordering),
+        /// distinct recipients spread across every configured lane.
+        ///
+        /// <para>
+        /// <b>Unsigned arithmetic, not <c>Math.Abs</c> (deliberate deviation from Pekko's literal
+        /// formula).</b> Pekko's Scala <c>uid: Int</c> is 32-bit and its formula is
+        /// <c>abs(uid % lanes)</c>; this port's <see cref="Akka.Actor.ActorPath.Uid"/> is a 64-bit
+        /// <see langword="long"/>, and <c>Math.Abs(long.MinValue)</c> throws
+        /// <see cref="OverflowException"/> (the exact edge <c>Math.Abs(int.MinValue)</c> has in the
+        /// 32-bit case) -- an extremely unlikely but real uid value (actor incarnation uids are
+        /// pseudo-random <see langword="long"/>s) would crash every send to that one recipient.
+        /// Reinterpreting the signed uid's bits as <see langword="ulong"/> before the modulo sidesteps
+        /// the overflow entirely (no throw for ANY input) while still deterministically mapping every
+        /// uid into <c>[0, lanes)</c> -- functionally equivalent to "abs mod lanes" for partitioning
+        /// purposes, just crash-proof.
+        /// </para>
+        /// </summary>
+        public static int SelectLane(long recipientUid, int lanes) =>
+            lanes <= 1 ? 0 : (int)(unchecked((ulong)recipientUid) % (ulong)lanes);
 
         /// <summary>
         /// Attempts to enqueue <paramref name="element"/> for the CONTROL outbound stream to send.
-        /// Non-blocking, same discipline as <see cref="TryEnqueueOutbound"/>. See the type-level
+        /// Non-blocking, same discipline as <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/>. See the type-level
         /// remarks on <see cref="DefaultControlQueueCapacity"/> for the GROUP7 overflow-policy note.
         /// </summary>
         public bool TryEnqueueControl(IOutboundEnvelope element) => _controlChannel.Writer.TryWrite(element);
 
         /// <summary>
         /// Attempts to enqueue <paramref name="element"/> for the LARGE-MESSAGE outbound stream to
-        /// send (task 10.2). Non-blocking, same discipline as <see cref="TryEnqueueOutbound"/>.
+        /// send (task 10.2). Non-blocking, same discipline as <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/>.
         /// Overflow is a soft drop (<c>ArteryRemoting</c> publishes <see cref="Akka.Event.Dropped"/>),
         /// never a quarantine -- large-message traffic follows the ORDINARY overflow policy, not
         /// control's.
@@ -565,16 +672,24 @@ namespace Akka.Remote.Artery
         public bool TryEnqueueLarge(IOutboundEnvelope element) => _largeChannel.Writer.TryWrite(element);
 
         /// <summary>
-        /// The number of elements CURRENTLY buffered in the ORDINARY outbound channel, awaiting a
+        /// The number of elements CURRENTLY buffered in ordinary-outbound LANE 0, awaiting a
         /// consumer. Test-observability surface added for design.md task 8.5 ("slow receiver tests
         /// proving queues do not grow unbounded") -- <c>System.Threading.Channels</c>' bounded
         /// channel implementation supports O(1) <see cref="ChannelReader{T}.Count"/>, so this is
         /// cheap enough to sample repeatedly from a test without perturbing the property under
-        /// test. Production code has no need of this (the bounded <see cref="TryEnqueueOutbound"/> /
+        /// test. Production code has no need of this (the bounded <see cref="TryEnqueueOutbound(IOutboundEnvelope)"/> /
         /// dead-letter-on-<see langword="false"/> pattern is capacity-agnostic), so this exists
-        /// purely for tests to assert the bound is never exceeded.
+        /// purely for tests to assert the bound is never exceeded. See <see cref="LaneQueueCount"/>
+        /// for lanes 1..N-1.
         /// </summary>
-        public int OutboundQueueCount => _outboundChannel.Reader.Count;
+        public int OutboundQueueCount => _laneChannels[0].Reader.Count;
+
+        /// <summary>
+        /// The LANE-indexed analog of <see cref="OutboundQueueCount"/>: the number of elements
+        /// CURRENTLY buffered in ordinary-outbound LANE <paramref name="lane"/>. See
+        /// <see cref="OutboundQueueCount"/>'s remarks.
+        /// </summary>
+        public int LaneQueueCount(int lane) => _laneChannels[lane].Reader.Count;
 
         /// <summary>
         /// The CONTROL-channel analog of <see cref="OutboundQueueCount"/>. See its remarks.
@@ -613,15 +728,18 @@ namespace Akka.Remote.Artery
             _largeGate.EnsureStarted(() => materialize(this));
 
         /// <summary>
-        /// Marks the ORDINARY outbound channel complete (no further writes accepted) so its
-        /// materialized <see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/> consumer
-        /// finishes gracefully. Called on transport shutdown -- also latches
+        /// Marks EVERY ordinary-outbound lane channel complete (no further writes accepted) so
+        /// their materialized <see cref="Akka.Streams.Dsl.ChannelSource.FromReader{T}"/> consumers
+        /// all finish gracefully. Called on transport shutdown -- also latches
         /// <see cref="IsOutboundShutDown"/> so design.md group 9's reconnect logic never
-        /// re-materializes this stream again.
+        /// re-materializes this stream again. At <c>outbound-lanes = 1</c> this completes exactly
+        /// the one lane channel that exists (gate B: unchanged).
         /// </summary>
         public void CompleteOutbound()
         {
-            _outboundChannel.Writer.TryComplete();
+            foreach (var laneChannel in _laneChannels)
+                laneChannel.Writer.TryComplete();
+
             _outboundShutDown = true;
         }
 
@@ -752,13 +870,14 @@ namespace Akka.Remote.Artery
         private readonly int _outboundQueueCapacity;
         private readonly int _controlQueueCapacity;
         private readonly int _largeQueueCapacity;
+        private readonly int _outboundLanes;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AssociationRegistry"/> class.
         /// </summary>
         /// <param name="outboundQueueCapacity">
         /// Capacity of every materialized <see cref="Association"/>'s bounded ORDINARY outbound
-        /// channel (see <see cref="Association.DefaultOutboundQueueCapacity"/>).
+        /// channel, PER LANE (see <see cref="Association.DefaultOutboundQueueCapacity"/>).
         /// </param>
         /// <param name="controlQueueCapacity">
         /// Capacity of every materialized <see cref="Association"/>'s bounded CONTROL outbound
@@ -768,14 +887,21 @@ namespace Akka.Remote.Artery
         /// Capacity of every materialized <see cref="Association"/>'s bounded LARGE-MESSAGE
         /// outbound channel (task 10.2; see <see cref="Association.DefaultLargeQueueCapacity"/>).
         /// </param>
+        /// <param name="outboundLanes">
+        /// Number of ordinary-outbound lanes every materialized <see cref="Association"/> owns --
+        /// <see cref="ArterySettings.OutboundLanes"/>. Defaults to 1 (today's single-channel shape,
+        /// gate B).
+        /// </param>
         public AssociationRegistry(
             int outboundQueueCapacity = Association.DefaultOutboundQueueCapacity,
             int controlQueueCapacity = Association.DefaultControlQueueCapacity,
-            int largeQueueCapacity = Association.DefaultLargeQueueCapacity)
+            int largeQueueCapacity = Association.DefaultLargeQueueCapacity,
+            int outboundLanes = 1)
         {
             _outboundQueueCapacity = outboundQueueCapacity;
             _controlQueueCapacity = controlQueueCapacity;
             _largeQueueCapacity = largeQueueCapacity;
+            _outboundLanes = outboundLanes;
         }
 
         /// <summary>
@@ -785,8 +911,8 @@ namespace Akka.Remote.Artery
         /// </summary>
         public Association AssociationFor(Address remoteAddress) =>
             _byAddress.GetOrAdd(remoteAddress,
-                static (addr, caps) => new Association(addr, caps.Outbound, caps.Control, caps.Large),
-                (Outbound: _outboundQueueCapacity, Control: _controlQueueCapacity, Large: _largeQueueCapacity));
+                static (addr, caps) => new Association(addr, caps.Outbound, caps.Control, caps.Large, caps.Lanes),
+                (Outbound: _outboundQueueCapacity, Control: _controlQueueCapacity, Large: _largeQueueCapacity, Lanes: _outboundLanes));
 
         /// <summary>
         /// Looks up the association currently known to own <paramref name="uid"/>. Returns
