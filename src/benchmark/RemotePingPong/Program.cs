@@ -488,6 +488,12 @@ namespace RemotePingPong
                               "awaiting a reply/ack).",
                 DefaultValueFactory = _ => 50
             };
+            windowOption.Validators.Add(result =>
+            {
+                var value = result.GetValueOrDefault<int>();
+                if (value <= 0)
+                    result.AddError($"--window must be greater than zero (got {value}).");
+            });
 
             var clientsOption = new Option<int?>("--clients")
             {
