@@ -11,7 +11,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
-using System.Threading;
 using Akka.Actor;
 using Akka.Annotations;
 using Akka.Cluster.Serialization.Proto.Msg;
@@ -56,22 +55,21 @@ namespace Akka.Cluster.Serialization
         internal const string GossipEnvelopeManifest = "Akka.Cluster.GossipEnvelope, Akka.Cluster";
         internal const string ClusterRouterPoolManifest = "Akka.Cluster.Routing.ClusterRouterPool, Akka.Cluster";
 
-        // NOTE: this can't be resolved eagerly in the constructor - serializers are constructed during
-        // ActorSystem initialization, before the Cluster extension is registered, so `Cluster.Get(system)`
-        // would fail if called too early. The laziness is load-bearing; System.Lazy<bool> with
-        // LazyThreadSafetyMode.PublicationOnly publishes a single instance to all readers while still
-        // tolerating concurrent first access (this getter is hit on every Heartbeat/HeartbeatRsp
-        // ToBinary/Manifest call). PublicationOnly is used instead of FastLazy<T> deliberately: `Cluster.Get`
-        // can throw (e.g. ConfigurationException when the actor provider isn't cluster-aware), and
-        // PublicationOnly retries the factory on the next access rather than caching the exception forever,
-        // which is what FastLazy<T> would do - a single early throw would otherwise poison heartbeat
-        // serialization for the lifetime of the process.
-        private readonly Lazy<bool> _useLegacyHeartbeatMessage;
-        private bool UseLegacyHeartbeatMessage => _useLegacyHeartbeatMessage.Value;
+        private Option<bool> _useLegacyHeartbeatMessageDontUseDirectly = Option<bool>.None;
+        private bool UseLegacyHeartbeatMessage
+        {
+            get
+            {
+                if(_useLegacyHeartbeatMessageDontUseDirectly.IsEmpty)
+                    _useLegacyHeartbeatMessageDontUseDirectly = Cluster.Get(system).Settings.UseLegacyHeartbeatMessage;
+                return _useLegacyHeartbeatMessageDontUseDirectly.Value;
+            }
+        }
 
         public ClusterMessageSerializer(ExtendedActorSystem system) : base(system)
         {
-            _useLegacyHeartbeatMessage = new Lazy<bool>(() => Cluster.Get(system).Settings.UseLegacyHeartbeatMessage, LazyThreadSafetyMode.PublicationOnly);
+
+           
         }
 
         public override byte[] ToBinary(object obj)

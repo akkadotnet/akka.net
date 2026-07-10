@@ -11,7 +11,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using Akka.Actor;
 using Akka.DistributedData.Serialization.Proto.Msg;
 using Akka.Serialization;
@@ -22,7 +21,7 @@ using UniqueAddress = Akka.Cluster.UniqueAddress;
 
 namespace Akka.DistributedData.Serialization
 {
-
+    
     /// <summary>
     /// INTERNAL API.
     ///
@@ -33,34 +32,54 @@ namespace Akka.DistributedData.Serialization
         public SerializationSupport(ExtendedActorSystem system)
         {
             System = system;
-            _ser = new Lazy<Akka.Serialization.Serialization>(() => new Akka.Serialization.Serialization(System), LazyThreadSafetyMode.PublicationOnly);
-            _protocol = new Lazy<string>(() => System.Provider.DefaultAddress.Protocol, LazyThreadSafetyMode.PublicationOnly);
-            _transportInfo = new Lazy<Information>(() => new Information(System.Provider.DefaultAddress, System), LazyThreadSafetyMode.PublicationOnly);
         }
 
         private const int BufferSize = 1024 * 4;
 
         public ExtendedActorSystem System { get; }
 
-        // NOTE: these are lazily-constructed exactly once (thread-safe) rather than eagerly in the
-        // constructor, because SerializationSupport instances are themselves created during
-        // ActorSystem/serializer initialization - constructing a full Serialization instance (or
-        // touching System.Provider.DefaultAddress) at that point is not safe. System.Lazy<T> with
-        // LazyThreadSafetyMode.PublicationOnly guarantees only one constructed value is ever published to
-        // all readers even under concurrent first access, same as plain check-then-write `volatile` fields
-        // would not. PublicationOnly (rather than FastLazy<T>) is deliberate: if the factory throws, the
-        // next access simply retries it instead of caching and rethrowing the same exception forever.
-        private readonly Lazy<Akka.Serialization.Serialization> _ser;
+        private volatile Akka.Serialization.Serialization _ser;
 
-        public Akka.Serialization.Serialization Serialization => _ser.Value;
+        public Akka.Serialization.Serialization Serialization
+        {
+            get
+            {
+                if (_ser == null)
+                {
+                    _ser = new Akka.Serialization.Serialization(System);
+                }
 
-        private readonly Lazy<string> _protocol;
+                return _ser;
+            }
+        }
 
-        public string AddressProtocol => _protocol.Value;
+        private volatile string _protocol;
 
-        private readonly Lazy<Information> _transportInfo;
+        public string AddressProtocol
+        {
+            get
+            {
+                if (_protocol == null)
+                    _protocol = System.Provider.DefaultAddress.Protocol;
+                return _protocol;
+            }
+        }
 
-        public Information TransportInfo => _transportInfo.Value;
+        private volatile Information _transportInfo;
+
+        public Information TransportInfo
+        {
+            get
+            {
+                if (_transportInfo == null)
+                {
+                    var address = System.Provider.DefaultAddress;
+                    _transportInfo = new Information(address, System);
+                }
+
+                return _transportInfo;
+            }
+        }
 
         public static byte[] Compress(IMessage msg)
         {
