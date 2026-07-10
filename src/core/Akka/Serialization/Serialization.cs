@@ -136,6 +136,18 @@ namespace Akka.Serialization
         /// <summary>
         /// Needs to be INTERNAL so it can be accessed from tests. Should never be set directly.
         /// </summary>
+        /// <remarks>
+        /// LOAD-BEARING INVARIANT: this is <c>[ThreadStatic]</c>, so it is only visible on the OS
+        /// thread that set it. Every serialize/deserialize call must run start-to-finish on a single
+        /// OS thread, with the <see cref="WithTransport{T}(ExtendedActorSystem,System.Func{T})"/>
+        /// set/restore bracketing the call directly - there must be no <c>await</c> or
+        /// <c>Task.Run</c> (or any other thread hand-off) between the point where this is set and the
+        /// point where a serializer reads it (e.g. via <see cref="SerializedActorPath"/>). If work is
+        /// scheduled onto a different thread in between, that thread will see a stale or empty value
+        /// and actor references will serialize with the wrong (or no) transport address. See
+        /// <c>Akka.Serialization.V2.ActorPathFormatter</c> for how this same invariant is documented
+        /// and upheld for the Artery/MessagePack serialization path.
+        /// </remarks>
         [ThreadStatic]
         internal static Information CurrentTransportInformation;
 
@@ -174,8 +186,11 @@ namespace Akka.Serialization
         private readonly SerializerV2 _nullSerializer;
 
         private readonly ConcurrentDictionary<Type, SerializerV2> _serializerMap = new();
-        private readonly Dictionary<int, SerializerV2> _serializersById = new();
-        private readonly Dictionary<string, SerializerV2> _serializersByName = new();
+        // NOTE: these are read on every Deserialize/GetSerializerById hot-path call, but writable at
+        // any time via the public AddSerializer(string, ...) API - plain Dictionary is not thread-safe
+        // for concurrent reads racing a concurrent write, so both need to be ConcurrentDictionary.
+        private readonly ConcurrentDictionary<int, SerializerV2> _serializersById = new();
+        private readonly ConcurrentDictionary<string, SerializerV2> _serializersByName = new();
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
         private readonly MinimalLogger _initializationLogger;

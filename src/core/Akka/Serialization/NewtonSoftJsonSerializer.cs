@@ -343,9 +343,17 @@ namespace Akka.Serialization
                 {
                     return RestoreJToken(j);
                 }
-                
+
                 //The JObject is not of our concern, let Json.NET deserialize it.
-                return j.ToObject(type, parent._serializer);
+                // IMPORTANT: this must NOT use the shared `parent._serializer` instance. Newtonsoft's
+                // JsonSerializer lazily caches a mutable, unsynchronized DefaultReferenceResolver the
+                // first time GetReferenceResolver() is invoked (e.g. via PreserveReferencesHandling),
+                // and Akka's default settings enable PreserveObjectReferences. Sharing one JsonSerializer
+                // across concurrent FromBinary calls (as happens with parallel deserialization lanes)
+                // means concurrent calls share one mutable $id/$ref table and corrupt each other's object
+                // graphs. Create a fresh, cheap JsonSerializer per call instead - this mirrors what
+                // toBinary_PooledBuilder already does on the serialize side.
+                return j.ToObject(type, JsonSerializer.CreateDefault(parent.Settings));
             }
 
             //The deserialized object is a surrogate, unwrap it
