@@ -152,6 +152,21 @@ namespace Akka.Remote.Artery
         /// </summary>
         public const int DefaultControlQueueCapacity = 20_000;
 
+        /// <summary>
+        /// Default capacity for <see cref="LargeReader"/>'s bounded channel (task 10.2, "Large
+        /// Message Stream") -- matches Pekko's <c>outbound-large-message-queue-size</c> default.
+        /// This channel is allocated unconditionally, exactly like <see cref="_outboundChannel"/>/
+        /// <see cref="_controlChannel"/> (task group 6, task 6.1's "factor the shared shape"
+        /// precedent) -- whether it is EVER materialized/enqueued to is entirely a transport-layer
+        /// decision (<c>ArteryRemoting</c> only routes to it, and only ever calls
+        /// <see cref="EnsureLargeOutboundMaterialized"/>, when <see cref="ArterySettings.LargeMessageChannelEnabled"/>
+        /// is <see langword="true"/>) -- see design.md task 10.2's gate L remarks for why an
+        /// always-allocated-but-never-used bounded channel is behavior-identical to today when the
+        /// feature is off. Overridable via
+        /// <c>akka.remote.artery.advanced.outbound-large-message-queue-size</c> (<see cref="ArterySettings.OutboundLargeMessageQueueSize"/>).
+        /// </summary>
+        public const int DefaultLargeQueueCapacity = 256;
+
         private volatile AssociationState _state;
 
         // Typed as the IOutboundEnvelope INTERFACE (not the concrete OutboundEnvelope record) so
@@ -162,8 +177,17 @@ namespace Akka.Remote.Artery
         // type, is the channel's type parameter).
         private readonly Channel<IOutboundEnvelope> _outboundChannel;
         private readonly Channel<IOutboundEnvelope> _controlChannel;
+
+        /// <summary>
+        /// Bounded channel for the LARGE-MESSAGE outbound stream (task 10.2). Allocated
+        /// unconditionally -- see <see cref="DefaultLargeQueueCapacity"/>'s remarks for why an
+        /// always-allocated-but-unused channel is harmless when the feature is disabled.
+        /// </summary>
+        private readonly Channel<IOutboundEnvelope> _largeChannel;
+
         private readonly MaterializeOnceGate _outboundGate = new();
         private readonly MaterializeOnceGate _controlGate = new();
+        private readonly MaterializeOnceGate _largeGate = new();
 
         /// <summary>
         /// The <see cref="UniqueKillSwitch"/> of the CURRENT materialization of this association's
@@ -206,6 +230,19 @@ namespace Akka.Remote.Artery
         private volatile UniqueKillSwitch? _outboundKillSwitch;
 
         /// <summary>
+        /// The <see cref="UniqueKillSwitch"/> of the CURRENT materialization of this association's
+        /// LARGE-MESSAGE outbound stream (task 10.2), or <see langword="null"/> if that stream has
+        /// never been materialized. Tripped alongside <see cref="_outboundKillSwitch"/> by
+        /// <see cref="TripLargeOutboundKillSwitch"/> for the exact same reason
+        /// <see cref="_outboundKillSwitch"/> is tripped from the CONTROL stream's termination
+        /// continuation -- the large stream has no heartbeat of its own either, so it can only
+        /// detect a dead peer when an outbound write happens to fail. Null-safe/idempotent to
+        /// trip even when the large stream was never materialized (feature disabled, or not yet
+        /// used for this association).
+        /// </summary>
+        private volatile UniqueKillSwitch? _largeOutboundKillSwitch;
+
+        /// <summary>
         /// Edge-detector state for <see cref="_outboundKillSwitch"/>'s once-per-death tripping. Set
         /// to 1 by <see cref="MarkControlHealthy"/> when the CONTROL stream's outbound connection is
         /// successfully ESTABLISHED (its <c>OutgoingConnection</c> materialized task completes -- a
@@ -230,6 +267,12 @@ namespace Akka.Remote.Artery
         private volatile bool _controlShutDown;
 
         /// <summary>
+        /// Set by <see cref="CompleteLargeOutbound"/> -- the LARGE-MESSAGE analog of
+        /// <see cref="_outboundShutDown"/>/<see cref="_controlShutDown"/>. See <see cref="IsOutboundShutDown"/>.
+        /// </summary>
+        private volatile bool _largeShutDown;
+
+        /// <summary>
         /// Association-owned state for the OUTBOUND half of reliable system-message delivery
         /// (design.md gate G3's <see cref="SystemMessageDeliveryStage"/>, extended by design.md
         /// group 9's reconnect invariant 3: "no unacked system message may be lost across a
@@ -251,11 +294,13 @@ namespace Akka.Remote.Artery
         public Association(
             Address remoteAddress,
             int outboundQueueCapacity = DefaultOutboundQueueCapacity,
-            int controlQueueCapacity = DefaultControlQueueCapacity)
+            int controlQueueCapacity = DefaultControlQueueCapacity,
+            int largeQueueCapacity = DefaultLargeQueueCapacity)
         {
             RemoteAddress = remoteAddress;
             OutboundQueueCapacity = outboundQueueCapacity;
             ControlQueueCapacity = controlQueueCapacity;
+            LargeQueueCapacity = largeQueueCapacity;
             _state = AssociationState.Create();
             _outboundChannel = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(outboundQueueCapacity)
             {
@@ -264,6 +309,12 @@ namespace Akka.Remote.Artery
                 FullMode = BoundedChannelFullMode.Wait
             });
             _controlChannel = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(controlQueueCapacity)
+            {
+                SingleReader = true,
+                SingleWriter = false,
+                FullMode = BoundedChannelFullMode.Wait
+            });
+            _largeChannel = Channel.CreateBounded<IOutboundEnvelope>(new BoundedChannelOptions(largeQueueCapacity)
             {
                 SingleReader = true,
                 SingleWriter = false,
@@ -292,6 +343,12 @@ namespace Akka.Remote.Artery
         public int ControlQueueCapacity { get; }
 
         /// <summary>
+        /// This association's LARGE-MESSAGE outbound queue capacity, as constructed (task 10.2).
+        /// See <see cref="OutboundQueueCapacity"/>.
+        /// </summary>
+        public int LargeQueueCapacity { get; }
+
+        /// <summary>
         /// The current immutable state snapshot. Safe to read from any thread.
         /// </summary>
         public AssociationState CurrentState => _state;
@@ -311,6 +368,15 @@ namespace Akka.Remote.Artery
         public ChannelReader<IOutboundEnvelope> ControlReader => _controlChannel.Reader;
 
         /// <summary>
+        /// The reading side of this association's bounded LARGE-MESSAGE outbound queue (task
+        /// 10.2) -- separate infrastructure from <see cref="OutboundReader"/>/<see cref="ControlReader"/>.
+        /// Consumed by exactly one materialized outbound stream, per <see cref="EnsureLargeOutboundMaterialized"/>
+        /// -- only ever materialized by <c>ArteryRemoting</c> when <see cref="ArterySettings.LargeMessageChannelEnabled"/>
+        /// is <see langword="true"/>.
+        /// </summary>
+        public ChannelReader<IOutboundEnvelope> LargeReader => _largeChannel.Reader;
+
+        /// <summary>
         /// Whether <see cref="EnsureOutboundMaterialized"/> has already started (or finished)
         /// materializing this association's ORDINARY outbound stream. A cheap check callers can
         /// use to skip allocating a materialize callback on the (post-first-call) steady-state path.
@@ -322,6 +388,12 @@ namespace Akka.Remote.Artery
         /// finished) materializing this association's CONTROL outbound stream.
         /// </summary>
         public bool IsControlOutboundMaterialized => _controlGate.IsStarted;
+
+        /// <summary>
+        /// Whether <see cref="EnsureLargeOutboundMaterialized"/> has already started (or
+        /// finished) materializing this association's LARGE-MESSAGE outbound stream (task 10.2).
+        /// </summary>
+        public bool IsLargeOutboundMaterialized => _largeGate.IsStarted;
 
         /// <summary>
         /// Whether the ORDINARY outbound stream has EVER restarted (design.md group 9) -- see
@@ -338,6 +410,12 @@ namespace Akka.Remote.Artery
         /// Whether the CONTROL outbound stream has EVER restarted. See <see cref="HasOutboundEverRestarted"/>.
         /// </summary>
         public bool HasControlEverRestarted => _controlGate.HasEverRestarted;
+
+        /// <summary>
+        /// Whether the LARGE-MESSAGE outbound stream has EVER restarted (task 10.2). See
+        /// <see cref="HasOutboundEverRestarted"/>.
+        /// </summary>
+        public bool HasLargeEverRestarted => _largeGate.HasEverRestarted;
 
         /// <summary>
         /// Association-owned state backing <see cref="SystemMessageDeliveryStage"/>'s outbound
@@ -360,6 +438,12 @@ namespace Akka.Remote.Artery
         public bool IsControlShutDown => _controlShutDown;
 
         /// <summary>
+        /// Whether this association's LARGE-MESSAGE outbound stream has been permanently torn
+        /// down by <see cref="CompleteLargeOutbound"/> (task 10.2). See <see cref="IsOutboundShutDown"/>.
+        /// </summary>
+        public bool IsLargeShutDown => _largeShutDown;
+
+        /// <summary>
         /// Resets the ORDINARY outbound stream's materialize-once gate (design.md group 9) so the
         /// next <see cref="EnsureOutboundMaterialized"/> call re-materializes it.
         /// </summary>
@@ -369,6 +453,12 @@ namespace Akka.Remote.Artery
         /// Resets the CONTROL outbound stream's materialize-once gate. See <see cref="ResetOutboundGate"/>.
         /// </summary>
         public void ResetControlGate() => _controlGate.Reset();
+
+        /// <summary>
+        /// Resets the LARGE-MESSAGE outbound stream's materialize-once gate (task 10.2). See
+        /// <see cref="ResetOutboundGate"/>.
+        /// </summary>
+        public void ResetLargeGate() => _largeGate.Reset();
 
         /// <summary>
         /// Publishes the <see cref="UniqueKillSwitch"/> for the ORDINARY outbound stream's current
@@ -388,6 +478,19 @@ namespace Akka.Remote.Artery
         /// the keep-alive-less ordinary stream, and why the trip is edge-triggered.
         /// </summary>
         public void TripOutboundKillSwitch() => _outboundKillSwitch?.Shutdown();
+
+        /// <summary>
+        /// Publishes the <see cref="UniqueKillSwitch"/> for the LARGE-MESSAGE outbound stream's
+        /// current materialization (task 10.2). See <see cref="SetOutboundKillSwitch"/>.
+        /// </summary>
+        public void SetLargeOutboundKillSwitch(UniqueKillSwitch killSwitch) => _largeOutboundKillSwitch = killSwitch;
+
+        /// <summary>
+        /// Drives the LARGE-MESSAGE outbound stream's current materialization down (if any), for
+        /// the exact same reason and from the exact same call site as <see cref="TripOutboundKillSwitch"/>
+        /// (task 10.2) -- see <see cref="_largeOutboundKillSwitch"/>.
+        /// </summary>
+        public void TripLargeOutboundKillSwitch() => _largeOutboundKillSwitch?.Shutdown();
 
         /// <summary>
         /// Records that the CONTROL stream's outbound connection has been successfully ESTABLISHED,
@@ -428,6 +531,15 @@ namespace Akka.Remote.Artery
         public bool ShouldRestartControl() => !_controlShutDown;
 
         /// <summary>
+        /// Whether the LARGE-MESSAGE outbound stream should be (re-)materialized right now (task
+        /// 10.2). Same rule as <see cref="ShouldRestartOutbound"/> -- large-message traffic is
+        /// ordinary USER data (just isolated onto its own stream), so it is gated by quarantine
+        /// exactly the same way.
+        /// </summary>
+        public bool ShouldRestartLargeOutbound() =>
+            !_largeShutDown && !(CurrentState.UniqueRemoteAddress is { } peer && IsQuarantined(peer.Uid));
+
+        /// <summary>
         /// Attempts to enqueue <paramref name="element"/> for the ORDINARY outbound stream to send.
         /// Non-blocking (<see cref="ChannelWriter{T}.TryWrite"/>) -- NEVER awaits/blocks a producing
         /// actor thread on a slow remote (Decision 7). Returns <see langword="false"/> when the
@@ -442,6 +554,15 @@ namespace Akka.Remote.Artery
         /// remarks on <see cref="DefaultControlQueueCapacity"/> for the GROUP7 overflow-policy note.
         /// </summary>
         public bool TryEnqueueControl(IOutboundEnvelope element) => _controlChannel.Writer.TryWrite(element);
+
+        /// <summary>
+        /// Attempts to enqueue <paramref name="element"/> for the LARGE-MESSAGE outbound stream to
+        /// send (task 10.2). Non-blocking, same discipline as <see cref="TryEnqueueOutbound"/>.
+        /// Overflow is a soft drop (<c>ArteryRemoting</c> publishes <see cref="Akka.Event.Dropped"/>),
+        /// never a quarantine -- large-message traffic follows the ORDINARY overflow policy, not
+        /// control's.
+        /// </summary>
+        public bool TryEnqueueLarge(IOutboundEnvelope element) => _largeChannel.Writer.TryWrite(element);
 
         /// <summary>
         /// The number of elements CURRENTLY buffered in the ORDINARY outbound channel, awaiting a
@@ -461,6 +582,12 @@ namespace Akka.Remote.Artery
         public int ControlQueueCount => _controlChannel.Reader.Count;
 
         /// <summary>
+        /// The LARGE-MESSAGE-channel analog of <see cref="OutboundQueueCount"/> (task 10.2). See
+        /// its remarks.
+        /// </summary>
+        public int LargeQueueCount => _largeChannel.Reader.Count;
+
+        /// <summary>
         /// Ensures this association's ORDINARY outbound stream is materialized exactly once, no
         /// matter how many threads call this concurrently. The callback is supplied by the
         /// transport (<c>ArteryRemoting</c>), which owns the Tcp extension / materializer / settings
@@ -475,6 +602,15 @@ namespace Akka.Remote.Artery
         /// </summary>
         public void EnsureControlOutboundMaterialized(Action<Association> materialize) =>
             _controlGate.EnsureStarted(() => materialize(this));
+
+        /// <summary>
+        /// Ensures this association's LARGE-MESSAGE outbound stream is materialized exactly once
+        /// (task 10.2), no matter how many threads call this concurrently. See
+        /// <see cref="EnsureOutboundMaterialized"/>. Only ever called by <c>ArteryRemoting</c>
+        /// when <see cref="ArterySettings.LargeMessageChannelEnabled"/> is <see langword="true"/>.
+        /// </summary>
+        public void EnsureLargeOutboundMaterialized(Action<Association> materialize) =>
+            _largeGate.EnsureStarted(() => materialize(this));
 
         /// <summary>
         /// Marks the ORDINARY outbound channel complete (no further writes accepted) so its
@@ -496,6 +632,17 @@ namespace Akka.Remote.Artery
         {
             _controlChannel.Writer.TryComplete();
             _controlShutDown = true;
+        }
+
+        /// <summary>
+        /// Marks the LARGE-MESSAGE outbound channel complete (task 10.2). See
+        /// <see cref="CompleteOutbound"/>. Safe to call unconditionally, whether or not the large
+        /// stream was ever materialized for this association.
+        /// </summary>
+        public void CompleteLargeOutbound()
+        {
+            _largeChannel.Writer.TryComplete();
+            _largeShutDown = true;
         }
 
         /// <summary>
@@ -604,6 +751,7 @@ namespace Akka.Remote.Artery
         private readonly ConcurrentDictionary<long, Association> _byUid = new();
         private readonly int _outboundQueueCapacity;
         private readonly int _controlQueueCapacity;
+        private readonly int _largeQueueCapacity;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AssociationRegistry"/> class.
@@ -616,12 +764,18 @@ namespace Akka.Remote.Artery
         /// Capacity of every materialized <see cref="Association"/>'s bounded CONTROL outbound
         /// channel (see <see cref="Association.DefaultControlQueueCapacity"/>).
         /// </param>
+        /// <param name="largeQueueCapacity">
+        /// Capacity of every materialized <see cref="Association"/>'s bounded LARGE-MESSAGE
+        /// outbound channel (task 10.2; see <see cref="Association.DefaultLargeQueueCapacity"/>).
+        /// </param>
         public AssociationRegistry(
             int outboundQueueCapacity = Association.DefaultOutboundQueueCapacity,
-            int controlQueueCapacity = Association.DefaultControlQueueCapacity)
+            int controlQueueCapacity = Association.DefaultControlQueueCapacity,
+            int largeQueueCapacity = Association.DefaultLargeQueueCapacity)
         {
             _outboundQueueCapacity = outboundQueueCapacity;
             _controlQueueCapacity = controlQueueCapacity;
+            _largeQueueCapacity = largeQueueCapacity;
         }
 
         /// <summary>
@@ -631,8 +785,8 @@ namespace Akka.Remote.Artery
         /// </summary>
         public Association AssociationFor(Address remoteAddress) =>
             _byAddress.GetOrAdd(remoteAddress,
-                static (addr, caps) => new Association(addr, caps.Outbound, caps.Control),
-                (Outbound: _outboundQueueCapacity, Control: _controlQueueCapacity));
+                static (addr, caps) => new Association(addr, caps.Outbound, caps.Control, caps.Large),
+                (Outbound: _outboundQueueCapacity, Control: _controlQueueCapacity, Large: _largeQueueCapacity));
 
         /// <summary>
         /// Looks up the association currently known to own <paramref name="uid"/>. Returns

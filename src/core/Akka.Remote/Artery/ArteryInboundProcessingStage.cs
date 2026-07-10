@@ -41,13 +41,16 @@ namespace Akka.Remote.Artery
     /// </para>
     ///
     /// <para>
-    /// <b>Accepted connection preambles.</b> As of task group 6 ("Control Stream"), both
-    /// <see cref="ArteryStreamId.Ordinary"/> and <see cref="ArteryStreamId.Control"/> connections
-    /// are accepted -- routing downstream is by the decoded envelope's <see cref="IInboundEnvelope.IsControl"/>
-    /// flag (message type), not by which physical connection carried it (both preambles feed the
-    /// identical inbound shape: framing -&gt; decode -&gt; deserialize -&gt; <see cref="InboundHandshakeStage"/>
-    /// -&gt; dispatch). A connection whose preamble declares <see cref="ArteryStreamId.Large"/> is
-    /// logged and the connection is dropped (stage failure) -- the large stream lands at G7.
+    /// <b>Accepted connection preambles.</b> All three stream ids --
+    /// <see cref="ArteryStreamId.Ordinary"/>, <see cref="ArteryStreamId.Control"/>, and (task
+    /// 10.2) <see cref="ArteryStreamId.Large"/> -- are accepted; routing downstream is by the
+    /// decoded envelope's <see cref="IInboundEnvelope.IsControl"/> flag (message type), not by
+    /// which physical connection carried it (every preamble feeds the identical inbound shape:
+    /// framing -&gt; decode -&gt; deserialize -&gt; <see cref="InboundHandshakeStage"/> -&gt;
+    /// dispatch). The one thing that DOES vary by preamble is the frame-size limit the parser
+    /// enforces: a <see cref="ArteryStreamId.Large"/> connection uses <see cref="MaxLargeFrameLength"/>
+    /// instead of <see cref="MaxFrameLength"/> -- see <see cref="Logic.TryConsumePreamble"/>, which
+    /// defers constructing the frame parser until the preamble reveals which one applies.
     /// </para>
     ///
     /// <para>
@@ -62,14 +65,29 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class ArteryInboundProcessingStage : GraphStage<FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>>
     {
-        public ArteryInboundProcessingStage(int maxFrameLength, Akka.Serialization.Serialization serialization)
+        /// <param name="maxFrameLength">
+        /// Frame-size limit for connections whose preamble declares <see cref="ArteryStreamId.Ordinary"/>
+        /// or <see cref="ArteryStreamId.Control"/> (they share one limit, matching Pekko's
+        /// <c>maximum-frame-size</c>).
+        /// </param>
+        /// <param name="maxLargeFrameLength">
+        /// Frame-size limit for a connection whose preamble declares <see cref="ArteryStreamId.Large"/>
+        /// (task 10.2) -- matches Pekko's <c>maximum-large-frame-size</c>.
+        /// </param>
+        /// <param name="serialization">The receiving actor system's <see cref="Akka.Serialization.Serialization"/> extension.</param>
+        public ArteryInboundProcessingStage(int maxFrameLength, int maxLargeFrameLength, Akka.Serialization.Serialization serialization)
         {
             MaxFrameLength = maxFrameLength;
+            MaxLargeFrameLength = maxLargeFrameLength;
             Serialization = serialization;
             Shape = new FlowShape<ReadOnlySequence<byte>, IInboundEnvelope>(In, Out);
         }
 
         public int MaxFrameLength { get; }
+
+        /// <summary>Frame-size limit applied ONLY to a connection whose preamble declares <see cref="ArteryStreamId.Large"/> (task 10.2).</summary>
+        public int MaxLargeFrameLength { get; }
+
         public Akka.Serialization.Serialization Serialization { get; }
 
         public Inlet<ReadOnlySequence<byte>> In { get; } = new("ArteryInboundProcessing.in");
@@ -82,17 +100,26 @@ namespace Akka.Remote.Artery
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
         {
             private readonly ArteryInboundProcessingStage _stage;
-            private readonly ArteryFrameParser _frameParser;
             private readonly Queue<IInboundEnvelope> _pending = new();
 
             private readonly byte[] _preambleBuffer = new byte[ArteryConnectionHeader.Length];
             private int _preambleFilled;
             private bool _preambleParsed;
 
+            /// <summary>
+            /// Deliberately NOT constructed until <see cref="TryConsumePreamble"/> has parsed the
+            /// preamble (task 10.2): which of <see cref="ArteryInboundProcessingStage.MaxFrameLength"/>/
+            /// <see cref="ArteryInboundProcessingStage.MaxLargeFrameLength"/> applies is only known
+            /// once the connection's declared stream id is known. Always non-null by the time
+            /// <see cref="AppendToParser"/>/<see cref="DrainReadyFrames"/> run -- <see cref="OnPush"/>
+            /// always calls <see cref="TryConsumePreamble"/> first (and returns early if it hasn't
+            /// finished) before either method is ever reached.
+            /// </summary>
+            private ArteryFrameParser? _frameParser;
+
             public Logic(ArteryInboundProcessingStage stage) : base(stage.Shape)
             {
                 _stage = stage;
-                _frameParser = new ArteryFrameParser(stage.MaxFrameLength);
                 SetHandler(stage.In, this);
                 SetHandler(stage.Out, this);
             }
@@ -167,15 +194,22 @@ namespace Akka.Remote.Artery
 
                 ArteryConnectionHeader.TryParse(new ReadOnlySequence<byte>(_preambleBuffer), out var streamId, out _);
 
-                if (streamId != ArteryStreamId.Ordinary && streamId != ArteryStreamId.Control)
+                if (streamId != ArteryStreamId.Ordinary && streamId != ArteryStreamId.Control && streamId != ArteryStreamId.Large)
                 {
-                    Log.Warning(
-                        "Dropping inbound Artery connection: preamble declared stream id [{0}], but only " +
-                        "Ordinary and Control are implemented at task group 6 (large lands at G7).", streamId);
-                    FailStage(new ArteryFramingException(
-                        $"Unsupported Artery connection stream id [{streamId}] (only Ordinary/Control are accepted)."));
+                    // Defensive only -- ArteryConnectionHeader.TryParse already throws
+                    // ArteryFramingException for any byte value outside {1, 2, 3}, so every
+                    // ArteryStreamId value it CAN return is accepted above. Kept as a backstop in
+                    // case a future stream id is added to the enum without updating this stage.
+                    Log.Warning("Dropping inbound Artery connection: preamble declared unsupported stream id [{0}].", streamId);
+                    FailStage(new ArteryFramingException($"Unsupported Artery connection stream id [{streamId}]."));
                     return false;
                 }
+
+                // The frame-size limit depends on which stream this connection carries (task
+                // 10.2) -- construct the parser only now that the preamble has revealed it.
+                _frameParser = streamId == ArteryStreamId.Large
+                    ? new ArteryFrameParser(_stage.MaxLargeFrameLength)
+                    : new ArteryFrameParser(_stage.MaxFrameLength);
 
                 _preambleParsed = true;
                 return true;
@@ -186,19 +220,24 @@ namespace Akka.Remote.Artery
                 if (data.IsEmpty)
                     return;
 
+                // Non-null by construction here -- see _frameParser's remarks: OnPush always
+                // resolves the preamble (and thus constructs the parser) before ever reaching this
+                // call.
+                var frameParser = _frameParser!;
+
                 if (data.IsSingleSegment)
                 {
-                    _frameParser.Append(data.First);
+                    frameParser.Append(data.First);
                     return;
                 }
 
                 foreach (var segment in data)
-                    _frameParser.Append(segment);
+                    frameParser.Append(segment);
             }
 
             private void DrainReadyFrames()
             {
-                while (_frameParser.TryReadFrame(out var frameBody))
+                while (_frameParser!.TryReadFrame(out var frameBody))
                 {
                     IInboundEnvelope? element;
                     try

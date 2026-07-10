@@ -135,6 +135,22 @@ namespace Akka.Remote.Artery
         private ArrayPool<byte>? _encodeBufferPool;
 
         /// <summary>
+        /// The DEDICATED <see cref="ArrayPool{T}"/> the LARGE-MESSAGE outbound stream's
+        /// <see cref="ArteryEncodeStage"/> rents its encode buffers from (task 10.2) -- kept
+        /// SEPARATE from <see cref="_encodeBufferPool"/> rather than shared, since large-message
+        /// buffers are (by construction) much bigger than ordinary/control ones and would
+        /// otherwise pollute <see cref="_encodeBufferPool"/>'s bucket sizing. Sized directly from
+        /// <see cref="ArterySettings.MaximumLargeFrameSize"/>/<see cref="ArterySettings.LargeBufferPoolSize"/>
+        /// via <see cref="ArrayPool{T}.Create(int, int)"/> -- mapping Pekko's <c>EnvelopeBufferPool</c>
+        /// (maximumFrameSize, bufferPoolSize) sizing onto this port's ArrayPool idiom (maxArrayLength,
+        /// maxArraysPerBucket). Created unconditionally in <see cref="Start"/> (harmless bucket
+        /// bookkeeping if the large stream is never used) -- see
+        /// <see cref="Association.DefaultLargeQueueCapacity"/>'s remarks for the same
+        /// "always allocate, only conditionally used" pattern.
+        /// </summary>
+        private ArrayPool<byte>? _largeEncodeBufferPool;
+
+        /// <summary>
         /// Fault-injection test hook (design.md gate G3) -- see <see cref="ArteryTransportSetup.DropOutboundControlMessage"/>.
         /// Read once from <see cref="ArteryTransportSetup"/> in <see cref="Start"/>; <see langword="null"/>
         /// (production default) disables it entirely.
@@ -181,8 +197,9 @@ namespace Akka.Remote.Artery
             // Sized from THIS transport's own settings (fix for the 78x-undersized 256 default that
             // caused spurious quarantines under a mass-termination Unwatch burst) rather than the
             // registry's own hardcoded defaults -- see ArterySettings.OutboundMessageQueueSize /
-            // OutboundControlQueueSize.
-            _registry = new AssociationRegistry(_settings.OutboundMessageQueueSize, _settings.OutboundControlQueueSize);
+            // OutboundControlQueueSize / OutboundLargeMessageQueueSize (task 10.2).
+            _registry = new AssociationRegistry(
+                _settings.OutboundMessageQueueSize, _settings.OutboundControlQueueSize, _settings.OutboundLargeMessageQueueSize);
         }
 
         /// <inheritdoc/>
@@ -215,6 +232,13 @@ namespace Akka.Remote.Artery
             _encodeBufferPool = arteryTransportSetup.Select(s => s.EncodeBufferPool).GetOrElse(null)
                                 ?? ArrayPool<byte>.Create();
             _dropOutboundControlMessage = arteryTransportSetup.Select(s => s.DropOutboundControlMessage).GetOrElse(null);
+
+            // Large-message stream (task 10.2): a dedicated pool, sized from the large-specific
+            // settings -- see _largeEncodeBufferPool's remarks for why this is kept separate from
+            // _encodeBufferPool. Created unconditionally, regardless of whether
+            // ArterySettings.LargeMessageChannelEnabled is true -- harmless when unused (mirrors
+            // Association's always-allocated-but-possibly-unused large channel).
+            _largeEncodeBufferPool = ArrayPool<byte>.Create(_settings.MaximumLargeFrameSize, _settings.LargeBufferPoolSize);
 
             // halfClose: true is essential here, not cosmetic. Every accepted (inbound) connection's
             // WRITE side is `Source.Empty` (Artery uses separate per-direction connections -- see the
@@ -274,6 +298,7 @@ namespace Akka.Remote.Artery
             {
                 association.CompleteOutbound();
                 association.CompleteControlOutbound();
+                association.CompleteLargeOutbound();
             }
 
             // Tear every remaining stream down via the shared kill switch first (every inbound and
@@ -354,7 +379,7 @@ namespace Akka.Remote.Artery
 
             var senderPath = sender.IsNobody() ? null : sender.Path.ToSerializationFormatWithAddress(DefaultAddress);
 
-            EnqueueOutbound(remoteAddress, message, senderPath, recipientPath);
+            EnqueueOutbound(remoteAddress, message, senderPath, recipientPath, recipient);
         }
 
         /// <inheritdoc/>
@@ -420,9 +445,12 @@ namespace Akka.Remote.Artery
         {
             _log.Debug("Accepted inbound Artery TCP connection from [{0}]", connection.RemoteAddress);
 
-            // Both Ordinary and Control connections feed this SAME inbound shape (task 6.2) --
-            // ArteryInboundProcessingStage accepts either preamble; routing downstream is purely
-            // by the decoded envelope's IsControl flag, not by which connection carried it.
+            // Ordinary, Control, AND (task 10.2) Large connections all feed this SAME inbound
+            // shape -- ArteryInboundProcessingStage accepts any of the three preambles; routing
+            // downstream is purely by the decoded envelope's IsControl flag, not by which
+            // connection carried it. The stage itself picks the frame-size limit (ordinary/control
+            // share MaximumFrameSize; large uses MaximumLargeFrameSize) once it has read enough of
+            // the preamble to know which stream this particular connection is.
             // SystemMessageAckerStage (design.md gate G3) sits right after InboundHandshakeStage,
             // mirroring the reference "InboundHandshake -> InboundQuarantineCheck ->
             // [control only: SystemMessageAcker]" pipeline -- it is a no-op pass-through for every
@@ -430,7 +458,7 @@ namespace Akka.Remote.Artery
             // (rather than only for control-preamble connections) is correct and simpler.
             var inboundSink = Flow.Create<ReadOnlySequence<byte>>()
                 .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
-                .Via(new ArteryInboundProcessingStage(_settings.MaximumFrameSize, System.Serialization))
+                .Via(new ArteryInboundProcessingStage(_settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization))
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
                 .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));
@@ -544,9 +572,42 @@ namespace Akka.Remote.Artery
 
         private void SendControlToAddress(Address to, object message) => EnqueueControl(to, message);
 
-        private void EnqueueOutbound(Address remoteAddress, object message, string? senderPath, string? recipientPath)
+        private void EnqueueOutbound(Address remoteAddress, object message, string? senderPath, string? recipientPath, RemoteActorRef recipient)
         {
             var association = _registry.AssociationFor(remoteAddress);
+
+            // Large-message stream routing (task 10.2), Pekko-faithful precedence: control > large
+            // > ordinary. Control is already excluded by construction -- every system/control
+            // message is diverted to EnqueueSystemMessage/EnqueueControl BEFORE this method is ever
+            // called (see Send()), so it can never reach here regardless of whether its path
+            // happens to match a large-message-destinations pattern. ActorSelectionMessage is
+            // explicitly excluded too, matching Pekko's documented large-message-destinations
+            // semantics ("Messages sent to ActorSelections will not be passed through the large
+            // message stream") -- and in this port `recipient` for a selection send is the
+            // selection's ANCHOR, not the final target, so it would essentially never match a
+            // destination pattern anyway; the explicit check just makes the invariant exact rather
+            // than incidental.
+            if (_settings.LargeMessageChannelEnabled &&
+                message is not ActorSelectionMessage &&
+                _settings.LargeMessageDestinations.Find(recipient.Path.Elements) is not null)
+            {
+                if (!association.IsLargeOutboundMaterialized)
+                    association.EnsureLargeOutboundMaterialized(a => MaterializeLargeOutbound(remoteAddress, a, isRestart: a.HasLargeEverRestarted));
+
+                if (!association.TryEnqueueLarge(new OutboundEnvelope(message, senderPath, recipientPath)))
+                {
+                    // Same direct-to-event-stream Dropped semantics as the ordinary queue's PR
+                    // #8346 fix (see below) -- soft drop, never a quarantine.
+                    System.EventStream.Publish(new Dropped(
+                        message,
+                        $"Outbound Artery large-message queue to [{remoteAddress}] is full (capacity {association.LargeQueueCapacity})",
+                        ActorRefs.NoSender,
+                        System.DeadLetters));
+                }
+
+                return;
+            }
+
             if (!association.IsOutboundMaterialized)
                 // isRestart is derived from the gate's OWN history (design.md group 9), not a
                 // literal here -- this on-demand path can race ScheduleOutboundRestart's scheduled
@@ -720,6 +781,9 @@ namespace Akka.Remote.Artery
         private void MaterializeControlOutbound(Address remoteAddress, Association association, bool isRestart = false) =>
             MaterializeOutboundStream(remoteAddress, association, ArteryStreamId.Control, isRestart);
 
+        private void MaterializeLargeOutbound(Address remoteAddress, Association association, bool isRestart = false) =>
+            MaterializeOutboundStream(remoteAddress, association, ArteryStreamId.Large, isRestart);
+
         /// <summary>
         /// Materializes ONE outbound stream chain -- shared shape for BOTH the ordinary and
         /// control streams (design.md task group 6, task 6.1: "factor the shared shape into a
@@ -785,7 +849,13 @@ namespace Akka.Remote.Artery
                 return;
 
             var isControlStream = streamId == ArteryStreamId.Control;
-            var reader = isControlStream ? association.ControlReader : association.OutboundReader;
+            var isLargeStream = streamId == ArteryStreamId.Large;
+            var reader = streamId switch
+            {
+                ArteryStreamId.Control => association.ControlReader,
+                ArteryStreamId.Large => association.LargeReader,
+                _ => association.OutboundReader
+            };
 
             var outboundContext = new AssociationRegistryOutboundContext(
                 _registry,
@@ -813,7 +883,10 @@ namespace Akka.Remote.Artery
                 ? (EndPoint)new IPEndPoint(parsedHost, port)
                 : new DnsEndPoint(host, port);
 
-            var encodeStage = new ArteryEncodeStage(System.Serialization, _localUniqueAddress.Uid, _encodeBufferPool);
+            // Large-message stream (task 10.2) rents from its OWN dedicated, large-sized pool --
+            // see _largeEncodeBufferPool's remarks.
+            var encodeStage = new ArteryEncodeStage(
+                System.Serialization, _localUniqueAddress.Uid, isLargeStream ? _largeEncodeBufferPool : _encodeBufferPool);
 
             var source = ChannelSource.FromReader(reader);
 
@@ -900,6 +973,10 @@ namespace Akka.Remote.Artery
                 }
                 else
                 {
+                    // Ordinary AND large-message (task 10.2) streams share this branch -- neither
+                    // has its own heartbeat, so both rely on the CONTROL stream's death detection
+                    // to trip their kill switch (see the ordinary-vs-large kill switch dispatch
+                    // just below, and the termination continuation's trip-both call).
                     UniqueKillSwitch killSwitch;
                     ((killSwitch, terminationWatch), _) = preambleAndFrames
                         .ViaMaterialized(KillSwitches.Single<ReadOnlySequence<byte>>(), Keep.Right)
@@ -907,7 +984,11 @@ namespace Akka.Remote.Artery
                         .Via(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions))
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
-                    association.SetOutboundKillSwitch(killSwitch);
+
+                    if (isLargeStream)
+                        association.SetLargeOutboundKillSwitch(killSwitch);
+                    else
+                        association.SetOutboundKillSwitch(killSwitch);
                 }
             }
             catch (Akka.Pattern.IllegalStateException) when (_isShutdown || _materializer is null || _materializer.IsShutdown)
@@ -956,13 +1037,17 @@ namespace Akka.Remote.Artery
                 // FAILS after having been ESTABLISHED (t.IsFaulted AND TryConsumeControlHealthy --
                 // edge-triggered, once per death; a graceful shutdown-completion never faults, and a
                 // connection-refused reconnect attempt against a still-dead peer never armed the
-                // detector), drive the ORDINARY stream down ONCE so it reconnects alongside control
-                // rather than lingering on a dead socket after a single ordinary write failed to
-                // surface the death. Firing only on the edge avoids churning a healthy ordinary
-                // consumer mid-handshake against the revived peer. Idempotent + null-safe when the
-                // ordinary stream is not currently materialized. See Association._outboundKillSwitch.
+                // detector), drive the ORDINARY stream (and, task 10.2, the LARGE-MESSAGE stream --
+                // it has no heartbeat of its own either) down ONCE so they reconnect alongside
+                // control rather than lingering on a dead socket after a single write failed to
+                // surface the death. Firing only on the edge avoids churning a healthy consumer
+                // mid-handshake against the revived peer. Idempotent + null-safe when a stream is
+                // not currently materialized. See Association._outboundKillSwitch/_largeOutboundKillSwitch.
                 if (isControlStream && t.IsFaulted && association.TryConsumeControlHealthy())
+                {
                     association.TripOutboundKillSwitch();
+                    association.TripLargeOutboundKillSwitch();
+                }
 
                 ScheduleOutboundRestart(remoteAddress, association, streamId);
             }, TaskContinuationOptions.ExecuteSynchronously);
@@ -1001,6 +1086,23 @@ namespace Akka.Remote.Artery
                         return;
 
                     association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a, isRestart: a.HasControlEverRestarted));
+                });
+
+                return;
+            }
+
+            if (streamId == ArteryStreamId.Large)
+            {
+                if (!association.ShouldRestartLargeOutbound())
+                    return;
+
+                association.ResetLargeGate();
+                System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
+                {
+                    if (!association.ShouldRestartLargeOutbound())
+                        return;
+
+                    association.EnsureLargeOutboundMaterialized(a => MaterializeLargeOutbound(remoteAddress, a, isRestart: a.HasLargeEverRestarted));
                 });
 
                 return;

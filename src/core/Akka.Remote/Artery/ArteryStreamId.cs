@@ -36,6 +36,16 @@ namespace Akka.Remote.Artery
         /// Messages destined for <c>large-message-destinations</c>, isolated onto their own
         /// stream to avoid head-of-line blocking. This is isolation, not chunking — Artery
         /// TCP does not fragment oversized payloads.
+        ///
+        /// <para>
+        /// <b>No ordering guarantee vs. ordinary traffic (Pekko-documented).</b> A large-stream
+        /// message and an ordinary-stream message sent to the SAME recipient ride two entirely
+        /// independent connections/queues -- there is no relative ordering guarantee between
+        /// them, unlike same-stream traffic (which IS strictly ordered per sender/recipient).
+        /// Only materialized (own outbound queue + connection) when
+        /// <c>large-message-destinations</c> is configured; see
+        /// <see cref="ArterySettings.LargeMessageChannelEnabled"/>.
+        /// </para>
         /// </summary>
         Large = 3
     }
