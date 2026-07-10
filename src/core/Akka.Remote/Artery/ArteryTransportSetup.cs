@@ -67,10 +67,17 @@ namespace Akka.Remote.Artery
         /// it. <see langword="null"/> (the default, and the only production value) disables this
         /// entirely -- every control message is enqueued normally.
         /// </param>
-        public ArteryTransportSetup(ArrayPool<byte>? encodeBufferPool = null, Func<object, bool>? dropOutboundControlMessage = null)
+        /// <param name="onInboundLanesInitialized">
+        /// Test-observability hook -- see <see cref="OnInboundLanesInitialized"/>.
+        /// </param>
+        public ArteryTransportSetup(
+            ArrayPool<byte>? encodeBufferPool = null,
+            Func<object, bool>? dropOutboundControlMessage = null,
+            Action<int>? onInboundLanesInitialized = null)
         {
             EncodeBufferPool = encodeBufferPool;
             DropOutboundControlMessage = dropOutboundControlMessage;
+            OnInboundLanesInitialized = onInboundLanesInitialized;
         }
 
         /// <summary>
@@ -86,5 +93,18 @@ namespace Akka.Remote.Artery
         /// <see langword="null"/> (the default) disables this -- see the constructor parameter docs.
         /// </summary>
         public Func<object, bool>? DropOutboundControlMessage { get; }
+
+        /// <summary>
+        /// Test-observability hook (inbound lanes): invoked once, with the actual configured lane
+        /// count, every time an accepted Ordinary-stream connection's
+        /// <see cref="ArteryInboundProcessingStage"/> actually materializes its per-lane
+        /// <see cref="System.Threading.Channels.Channel{T}"/>s + consumer loops (i.e. lets a test
+        /// observe "lanes &gt; 1 really did create N lanes" without reaching into the stage's own
+        /// private <see cref="Akka.Streams.Stage.GraphStageLogic"/> instance, which is otherwise
+        /// unreachable from outside the materialized stream). <see langword="null"/> (the default,
+        /// and the only production value) disables this entirely -- it is never invoked at the
+        /// <c>InboundLanes</c>=1 default in any case, since lane machinery is never materialized then.
+        /// </summary>
+        public Action<int>? OnInboundLanesInitialized { get; }
     }
 }

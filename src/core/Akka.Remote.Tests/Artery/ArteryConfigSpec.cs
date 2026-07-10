@@ -77,7 +77,11 @@ namespace Akka.Remote.Tests.Artery
             settings.CanonicalHostname.Should().Be("localhost");
             settings.CanonicalPort.Should().Be(25520);
             settings.MaximumFrameSize.Should().Be(256 * 1024);
-            settings.InboundLanes.Should().Be(4);
+
+            // Ships at 1 (single-lane, fused pipeline -- byte-identical to pre-lanes processing)
+            // until the scaling gates pass -- see ArterySettings.InboundLanes's remarks.
+            settings.InboundLanes.Should().Be(1);
+            settings.InboundLaneBufferSize.Should().Be(4096);
             settings.OutboundLanes.Should().Be(1);
             settings.HandshakeTimeout.Should().Be(20.Seconds());
             settings.HandshakeRetryInterval.Should().Be(1.Seconds());
@@ -108,6 +112,7 @@ namespace Akka.Remote.Tests.Artery
         [InlineData("akka.remote.artery.advanced.maximum-frame-size = 0b")]
         [InlineData("akka.remote.artery.advanced.maximum-frame-size = 20000000b")] // > 0x00FFFFFF (16 MiB - 1)
         [InlineData("akka.remote.artery.advanced.inbound-lanes = 0")]
+        [InlineData("akka.remote.artery.advanced.inbound-lane-buffer-size = 0")]
         [InlineData("akka.remote.artery.advanced.outbound-lanes = 0")]
         [InlineData("akka.remote.artery.transport = aeron")]
         [InlineData("akka.remote.artery.advanced.system-message-buffer-size = 0")]

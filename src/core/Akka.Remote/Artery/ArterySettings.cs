@@ -62,15 +62,33 @@ namespace Akka.Remote.Artery
         public int MaximumFrameSize { get; }
 
         /// <summary>
-        /// Number of inbound lanes ordinary-stream messages are fanned out across for parallel
-        /// deserialization/dispatch. Parsed and validated now but NOT used until the lanes work
-        /// lands at gate G5 -- see design.md's milestone table.
+        /// Number of inbound lanes ordinary-stream messages are fanned out across, WITHIN one
+        /// accepted connection, for parallel payload deserialization + actor-ref resolution +
+        /// Tell -- see <see cref="Artery.ArteryInboundProcessingStage"/>'s remarks for the full
+        /// mechanism (bounded per-lane <see cref="System.Threading.Channels.Channel{T}"/>s +
+        /// dedicated consumer loops) and the lane-key derivation (recipient path hash; special
+        /// cased for <see cref="Actor.ActorSelectionMessage"/>, whose <c>RecipientPath</c> is
+        /// always the SAME remote root-guardian anchor). Ships at 1 (see
+        /// <see cref="InboundLaneBufferSize"/> for the per-lane queue capacity used when this is
+        /// &gt; 1) -- AT 1, the lane machinery is not materialized at all; the inbound pipeline is
+        /// byte-identical to the pre-lanes single-threaded-per-connection processing.
         /// </summary>
         public int InboundLanes { get; }
 
         /// <summary>
+        /// Capacity of the bounded <see cref="System.Threading.Channels.Channel{T}"/> feeding each
+        /// inbound lane's consumer loop, when <see cref="InboundLanes"/> &gt; 1 -- see that
+        /// property's remarks. A full lane channel backpressures the connection (never drops,
+        /// never grows unbounded): the accepting <see cref="Artery.ArteryInboundProcessingStage"/>
+        /// parks the connection's read side via <see cref="System.Threading.Channels.ChannelWriter{T}.WaitToWriteAsync"/>
+        /// until room frees up. Irrelevant (never read) when <see cref="InboundLanes"/> is 1.
+        /// </summary>
+        public int InboundLaneBufferSize { get; }
+
+        /// <summary>
         /// Number of outbound connections (lanes) used to send ordinary-stream messages. Parsed
-        /// and validated now but NOT used until gate G5; see <see cref="InboundLanes"/>.
+        /// and validated now but NOT YET USED -- outbound lane fan-out is separate, still-pending
+        /// work (this port's inbound side is what <see cref="InboundLanes"/> now drives).
         /// </summary>
         public int OutboundLanes { get; }
 
@@ -267,10 +285,15 @@ namespace Akka.Remote.Artery
                     $"offsets stay within their 24-bit tag space, but was [{maximumFrameSize}].");
             MaximumFrameSize = (int)maximumFrameSize;
 
-            InboundLanes = arteryConfig.GetInt("advanced.inbound-lanes", 4);
+            InboundLanes = arteryConfig.GetInt("advanced.inbound-lanes", 1);
             if (InboundLanes < 1)
                 throw new ConfigurationException(
                     $"akka.remote.artery.advanced.inbound-lanes must be >= 1, but was [{InboundLanes}].");
+
+            InboundLaneBufferSize = arteryConfig.GetInt("advanced.inbound-lane-buffer-size", 4096);
+            if (InboundLaneBufferSize <= 0)
+                throw new ConfigurationException(
+                    $"akka.remote.artery.advanced.inbound-lane-buffer-size must be greater than 0, but was [{InboundLaneBufferSize}].");
 
             OutboundLanes = arteryConfig.GetInt("advanced.outbound-lanes", 1);
             if (OutboundLanes < 1)

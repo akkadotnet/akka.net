@@ -158,6 +158,13 @@ namespace Akka.Remote.Artery
         private Func<object, bool>? _dropOutboundControlMessage;
 
         /// <summary>
+        /// Test-observability hook (inbound lanes) -- see <see cref="ArteryTransportSetup.OnInboundLanesInitialized"/>.
+        /// Read once from <see cref="ArteryTransportSetup"/> in <see cref="Start"/>; <see langword="null"/>
+        /// (production default) disables it entirely.
+        /// </summary>
+        private Action<int>? _onInboundLanesInitialized;
+
+        /// <summary>
         /// Applied to EVERY Artery socket: the accepting <c>Tcp.Bind</c> and both outbound
         /// <c>Tcp.OutgoingConnection</c> call sites in <see cref="MaterializeOutboundStream"/>.
         /// Explicitly-pinned large socket buffers prevent the kernel shrinking the receiver's
@@ -232,6 +239,7 @@ namespace Akka.Remote.Artery
             _encodeBufferPool = arteryTransportSetup.Select(s => s.EncodeBufferPool).GetOrElse(null)
                                 ?? ArrayPool<byte>.Create();
             _dropOutboundControlMessage = arteryTransportSetup.Select(s => s.DropOutboundControlMessage).GetOrElse(null);
+            _onInboundLanesInitialized = arteryTransportSetup.Select(s => s.OnInboundLanesInitialized).GetOrElse(null);
 
             // Large-message stream (task 10.2): a dedicated pool, sized from the large-specific
             // settings -- see _largeEncodeBufferPool's remarks for why this is kept separate from
@@ -456,9 +464,29 @@ namespace Akka.Remote.Artery
             // [control only: SystemMessageAcker]" pipeline -- it is a no-op pass-through for every
             // element that is not a SystemMessageEnvelope, so composing it unconditionally here
             // (rather than only for control-preamble connections) is correct and simpler.
+            //
+            // GATE A / conditional topology (inbound lanes): at the InboundLanes=1 default, this
+            // constructs the stage EXACTLY as before -- the 3-arg overload, no lane machinery ever
+            // materialized. Only when InboundLanes > 1 does construction take the lanes-aware
+            // overload, handing it the shared IInboundContext (reused for its own IsKnownOrigin
+            // gate on an Ordinary connection's lane path -- see that stage's remarks) and
+            // DispatchOrdinaryMessage (the SAME resolve-and-Tell logic DispatchInbound's ordinary
+            // branch uses, invoked directly by each lane's consumer loop instead of via this
+            // Sink.ForEach). InboundHandshakeStage/SystemMessageAckerStage/DispatchInbound below are
+            // NEVER modified for lanes -- a lane-enabled Ordinary connection's own ordinary traffic
+            // never reaches them at all (dispatched directly from the lane), while any (should
+            // never happen) control-classified frame on that same connection, and everything on
+            // every Control/Large connection, still flows through them completely unchanged.
+            var processingStage = _settings.InboundLanes > 1
+                ? new ArteryInboundProcessingStage(
+                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization,
+                    _settings.InboundLanes, _settings.InboundLaneBufferSize, _inboundContext!, DispatchOrdinaryMessage,
+                    _onInboundLanesInitialized)
+                : new ArteryInboundProcessingStage(_settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization);
+
             var inboundSink = Flow.Create<ReadOnlySequence<byte>>()
                 .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
-                .Via(new ArteryInboundProcessingStage(_settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization))
+                .Via(processingStage)
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
                 .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));
@@ -487,8 +515,6 @@ namespace Akka.Remote.Artery
                 return;
             }
 
-            var recipient = Provider.ResolveActorRefWithLocalAddress(env.RecipientPath, DefaultAddress);
-
             if (env.Message is ISystemMessage systemMessage)
             {
                 // Reliable system-message delivery (design.md gate G3): SystemMessageAckerStage has
@@ -496,18 +522,51 @@ namespace Akka.Remote.Artery
                 // classic's DefaultMessageDispatcher system-message path, NOT Tell. System messages
                 // never carry a sender in practice (RemoteActorRef.SendSystemMessage always sends
                 // with sender: null) -- see SystemMessageEnvelope's type-level remarks.
+                var recipient = Provider.ResolveActorRefWithLocalAddress(env.RecipientPath, DefaultAddress);
                 recipient.SendSystemMessage(systemMessage);
                 return;
             }
 
-            var sender = env.SenderPath is { } senderPath
-                ? Provider.ResolveActorRefWithLocalAddress(senderPath, DefaultAddress)
+            DispatchOrdinaryMessage(env.Message, env.SenderPath, env.RecipientPath);
+        }
+
+        /// <summary>
+        /// The ordinary-message half of <see cref="DispatchInbound"/> (resolve recipient, resolve
+        /// sender or fall back to dead letters, <c>Tell</c>) -- factored out so it can ALSO be
+        /// invoked directly by an inbound lane's consumer loop (<see cref="ArteryInboundProcessingStage"/>,
+        /// when <see cref="ArterySettings.InboundLanes"/> &gt; 1) once it has deserialized the
+        /// payload, bypassing this <see cref="Sink"/> entirely for that traffic. Identical logic,
+        /// identical semantics, regardless of which caller invokes it -- lanes change WHERE this
+        /// runs (a dedicated lane thread vs. this connection's own stage thread), never WHAT it does.
+        /// </summary>
+        private void DispatchOrdinaryMessage(object message, string? senderPath, string recipientPath)
+        {
+            var recipient = Provider.ResolveActorRefWithLocalAddress(recipientPath, DefaultAddress);
+
+            // Defensive-only safety branch mirroring DispatchInbound's ISystemMessage handling
+            // above -- in practice UNREACHABLE for either of this method's callers: DispatchInbound
+            // itself already special-cases ISystemMessage before ever reaching here (the lanes=1
+            // path), and lane-routed traffic is Ordinary-stream-only by construction (every system
+            // message rides the CONTROL stream, wrapped in a SystemMessageEnvelope, via
+            // EnqueueSystemMessage -- never the ordinary queue lanes fan out from; see
+            // ArteryInboundProcessingStage's "Why control/large connections and lanes=1 never touch
+            // this machinery" remarks). Kept anyway so this method's dispatch semantics stay EXACTLY
+            // identical to DispatchInbound's regardless of which caller -- the lanes=1 Sink.ForEach
+            // above, or an inbound lane's consumer loop -- ends up invoking it.
+            if (message is ISystemMessage systemMessage)
+            {
+                recipient.SendSystemMessage(systemMessage);
+                return;
+            }
+
+            var sender = senderPath is { } sp
+                ? Provider.ResolveActorRefWithLocalAddress(sp, DefaultAddress)
                 : (IActorRef)System.DeadLetters;
 
             // Mirrors classic's DefaultMessageDispatcher semantics without depending on classic types:
             // an unresolvable recipient resolves to an EmptyLocalActorRef, whose Tell publishes a
             // DeadLetter automatically.
-            recipient.Tell(env.Message, sender);
+            recipient.Tell(message, sender);
         }
 
         /// <summary>
