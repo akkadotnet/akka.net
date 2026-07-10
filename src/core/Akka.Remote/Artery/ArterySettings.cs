@@ -317,6 +317,10 @@ namespace Akka.Remote.Artery
                     "akka.remote.artery.advanced.maximum-large-frame-size must be greater than 0 and no greater than " +
                     $"{ArteryFrameParser.MaxAllowedFrameLength} (0x00FFFFFF) so that Artery envelope literal " +
                     $"offsets stay within their 24-bit tag space, but was [{maximumLargeFrameSize}].");
+            if (maximumLargeFrameSize < MaximumFrameSize)
+                throw new ConfigurationException(
+                    "akka.remote.artery.advanced.maximum-large-frame-size must be greater than or equal to " +
+                    $"akka.remote.artery.advanced.maximum-frame-size [{MaximumFrameSize}], but was [{maximumLargeFrameSize}].");
             MaximumLargeFrameSize = (int)maximumLargeFrameSize;
 
             LargeBufferPoolSize = arteryConfig.GetInt("advanced.large-buffer-pool-size", 32);

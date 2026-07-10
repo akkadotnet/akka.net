@@ -154,6 +154,19 @@ namespace Akka.Remote.Tests.Artery
             Assert.Throws<ConfigurationException>(() => new ArterySettings(arteryConfig));
         }
 
+        [Fact(DisplayName = "Should_ThrowConfigurationException_When_MaximumLargeFrameSizeIsSmallerThanMaximumFrameSize")]
+        public void Should_ThrowConfigurationException_When_MaximumLargeFrameSizeIsSmallerThanMaximumFrameSize()
+        {
+            var arteryConfig = ConfigurationFactory.ParseString("""
+                    akka.remote.artery.advanced.maximum-frame-size = 512k
+                    akka.remote.artery.advanced.maximum-large-frame-size = 256k
+                    """)
+                .WithFallback(RemoteConfigFactory.Default())
+                .GetConfig("akka.remote.artery");
+
+            Assert.Throws<ConfigurationException>(() => new ArterySettings(arteryConfig));
+        }
+
         // ----------------------------------------------------------------------------------
         // L.4 (destination matching) -- exact path, single "*" wildcard, trailing "**" wildcard,
         // non-match. Pure function tests against the parsed WildcardIndex -- no ActorSystem/
