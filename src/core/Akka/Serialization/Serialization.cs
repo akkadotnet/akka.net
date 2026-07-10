@@ -186,11 +186,11 @@ namespace Akka.Serialization
         private readonly SerializerV2 _nullSerializer;
 
         private readonly ConcurrentDictionary<Type, SerializerV2> _serializerMap = new();
-        // NOTE: these are read on every Deserialize/GetSerializerById hot-path call, but writable at
-        // any time via the public AddSerializer(string, ...) API - plain Dictionary is not thread-safe
-        // for concurrent reads racing a concurrent write, so both need to be ConcurrentDictionary.
-        private readonly ConcurrentDictionary<int, SerializerV2> _serializersById = new();
-        private readonly ConcurrentDictionary<string, SerializerV2> _serializersByName = new();
+        // NOTE: populated ONLY during construction (every AddSerializer call site is in the ctor);
+        // read-only thereafter, so plain Dictionary is safe for the concurrent reads on the
+        // Deserialize/GetSerializerById hot path. Registration after startup is not supported.
+        private readonly Dictionary<int, SerializerV2> _serializersById = new();
+        private readonly Dictionary<string, SerializerV2> _serializersByName = new();
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
         private readonly MinimalLogger _initializationLogger;
@@ -436,6 +436,12 @@ namespace Akka.Serialization
         /// <summary>
         /// Adds the serializer to the internal state of the serialization subsystem
         /// </summary>
+        /// <remarks>
+        /// Must only be called during <see cref="ActorSystem"/> initialization (all framework call
+        /// sites are in this class's constructor). The serializer registries are read without
+        /// synchronization on the deserialization hot path and are treated as immutable once the
+        /// system has started — registering a serializer after startup is not supported.
+        /// </remarks>
         /// <param name="name">Configuration name of the serializer</param>
         /// <param name="serializer">Serializer instance</param>
         public void AddSerializer(string name, SerializerV2 serializer)
