@@ -142,9 +142,8 @@ namespace Akka.Cluster.Sharding.Tests.Internal
             ExpectTerminated(rememberEntityStarter);
         }
 
-        // TODO: check the timing code to make sure that this actually works, it was flaky/racy even when run locally.
-        [LocalFact(SkipLocal = "Racy unit test, suspected bad code underneath")]
-        public void RememberEntitiesStarter_must_try_start_all_entities_in_a_throttled_way_with_entity_recovery_strategy_constant()
+        [LocalFact(SkipLocal = "Asserts real-time throttle windows (2s batches, 600ms ExpectNoMsg); too jittery for CI")]
+        public async Task RememberEntitiesStarter_must_try_start_all_entities_in_a_throttled_way_with_entity_recovery_strategy_constant()
         {
             var regionProbe = CreateTestProbe();
             var shardProbe = CreateTestProbe();
@@ -159,7 +158,10 @@ namespace Akka.Cluster.Sharding.Tests.Internal
                         frequency = 2 s
                         number-of-entities = 2
                     }
-                    retry-interval = 1s
+                    # drives the no-ack retry timer: must exceed the ~4s recovery window, otherwise
+                    # at t=2s it ticks together with the batch timer and resends the just-dispatched,
+                    # not-yet-acked batch, tripping the ExpectNoMsg windows below
+                    retry-interval = 30s
                     ")
                     .WithFallback(Sys.Settings.Config.GetConfig("akka.cluster.sharding")), Sys.Settings.Config.GetConfig("akka.cluster.singleton"));
 
@@ -167,31 +169,31 @@ namespace Akka.Cluster.Sharding.Tests.Internal
                     RememberEntityStarter
                       .Props(regionProbe.Ref, shardProbe.Ref, shardId, ImmutableHashSet.Create("1", "2", "3", "4", "5"), customSettings));
 
-            void RecieveStartAndAck()
+            async Task ReceiveStartAndAckAsync()
             {
-                var start = regionProbe.ExpectMsg<ShardRegion.StartEntity>();
+                var start = await regionProbe.ExpectMsgAsync<ShardRegion.StartEntity>();
                 regionProbe.LastSender.Tell(new ShardRegion.StartEntityAck(start.EntityId, shardId));
             }
 
             Watch(rememberEntityStarter);
             // first batch should be immediate
-            RecieveStartAndAck();
-            RecieveStartAndAck();
+            await ReceiveStartAndAckAsync();
+            await ReceiveStartAndAckAsync();
             // second batch holding off (with some room for unstable test env)
-            regionProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(600));
+            await regionProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(600));
 
             // second batch should be immediate
-            RecieveStartAndAck();
-            RecieveStartAndAck();
+            await ReceiveStartAndAckAsync();
+            await ReceiveStartAndAckAsync();
             // third batch holding off
-            regionProbe.ExpectNoMsg(TimeSpan.FromMilliseconds(600));
+            await regionProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(600));
 
-            RecieveStartAndAck();
+            await ReceiveStartAndAckAsync();
 
             // the starter should then stop itself, not sending anything more to the shard or region
-            ExpectTerminated(rememberEntityStarter);
-            shardProbe.ExpectNoMsg();
-            regionProbe.ExpectNoMsg();
+            await ExpectTerminatedAsync(rememberEntityStarter);
+            await shardProbe.ExpectNoMsgAsync();
+            await regionProbe.ExpectNoMsgAsync();
         }
     }
 }
