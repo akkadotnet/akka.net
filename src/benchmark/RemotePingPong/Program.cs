@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.CommandLine;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -18,6 +19,7 @@ using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
+using Akka.Serialization;
 using Akka.Util.Internal;
 
 namespace RemotePingPong
@@ -44,15 +46,15 @@ namespace RemotePingPong
 #endif
         }
 
-        // Selected once at startup via a command-line "artery" flag; controls which remote transport
+        // Selected once at startup via the "--artery" option; controls which remote transport
         // both ActorSystems bind. Default is the classic DotNetty TCP transport (the historical
-        // baseline); "artery" points the exact same benchmark at Artery.Tcp so the two produce
+        // baseline); "--artery" points the exact same benchmark at Artery.Tcp so the two produce
         // directly comparable msgs/sec numbers over an otherwise-identical workload.
         private static bool _useArtery;
 
-        // Selected once at startup via a command-line "oneway" flag. Default mode is ping-pong
+        // Selected once at startup via the "--oneway" option. Default mode is ping-pong
         // (client sends, destination echoes every message back - see EchoActor/BenchmarkActor).
-        // "oneway" switches to a Pekko-MaxThroughput-style one-directional firehose: the sender
+        // "--oneway" switches to a Pekko-MaxThroughput-style one-directional firehose: the sender
         // fires a credit-based stream of messages at the receiver with no reply loop, so the
         // benchmark measures pure one-way transport throughput. See OneWaySenderActor /
         // OneWayReceiverActor.
@@ -60,70 +62,102 @@ namespace RemotePingPong
 
         // Number of messages used to "prime the pump" for each client before awaiting completion -
         // i.e. the in-flight window size. Defaults to 50 (the historical hard-coded value) but can
-        // be overridden via the "window=N" command-line token.
+        // be overridden via the "--window N" option.
         private static int _windowSize = 50;
 
-        // When set (via the "clients=N" command-line token), pins the benchmark to a single client
+        // When set (via the "--clients N" option), pins the benchmark to a single client
         // count instead of sweeping the full GetClientSettings() series.
         private static int? _pinnedClients;
 
-        // When set (via the "iobuf=SIZE" command-line token), overrides Akka.IO's
+        // When set (via the "--iobuf SIZE" option), overrides Akka.IO's
         // akka.io.tcp.receive-buffer-size / send-buffer-size (default 8k) for both ActorSystems.
         // The raw string is passed through verbatim as a HOCON size value (e.g. "128k", "1m").
         private static string? _ioBufSize;
 
-        // When set (via the "msgs=N" command-line token), overrides the per-client message count
+        // When set (via the "--msgs N" option), overrides the per-client message count
         // (default: the "repeat" constant, 100000L). One-way mode's default run length is often
         // sub-second, which isn't long enough to observe steady-state throughput - this lets callers
         // push the run into multi-second territory without touching the constant.
         private static long? _msgsOverride;
+
+        // Selected once at startup via the "--payload" option: "toy" (default) is today's historical
+        // payload - the actors exchange a bare "hit" string, serialized by the default NewtonsoftJson
+        // fallback, byte-for-byte unchanged. "real" swaps in RealPayload.RealPayloadFactory's
+        // canonical message (several primitives, a nested type, a collection), serialized by whichever
+        // arm "--serializer" selects - see ResolvePayloadInstance()/RealPayloadSerializationConfig().
+        private static string _payloadMode = "toy";
+
+        // Selected once at startup via the "--serializer" option: "v2" (Akka.Serialization.V2
+        // source-generated MessagePack) or "protobuf" (hand-written Google.Protobuf, string manifest).
+        // Only meaningful when _payloadMode is "real" - see BuildRootCommand()'s cross-option
+        // validators, which require --serializer whenever --payload real is given and reject it
+        // otherwise.
+        private static string? _serializerArm;
+
+        // The actual object every "hit"/priming Tell sends, resolved once per process by
+        // ResolvePayloadInstance() from _payloadMode/_serializerArm. Defaults to the literal "hit"
+        // string so a --payload-less invocation is byte-for-byte identical to pre-real-payload
+        // behavior.
+        private static object _payloadInstance = "hit";
+
+        // Guards EnsureRealPayloadWiring() so the startup serializer-resolution/round-trip proof
+        // (and the one-time bytes-on-wire report folded into PrintSysInfo/PrintServerInfo) runs
+        // exactly once per process, regardless of how many client-count/times-to-run reps follow.
+        private static bool _realPayloadWiringVerified;
+
+        // Set by EnsureRealPayloadWiring() the one time it runs in a --payload real invocation: the
+        // exact serialized byte length of RealPayloadFactory's canonical message under the selected
+        // arm. Reported in PrintSysInfo/PrintServerInfo - see the S.4 bytes-on-wire requirement.
+        private static int _realPayloadWireBytes;
 
         // Default akka.remote.artery.advanced.outbound-message-queue-size (see Remote.conf /
         // AssociationRegistry.DefaultOutboundQueueCapacity) - the per-association capacity every
         // benchmark client's outbound traffic funnels through when running in Artery mode.
         private const int DefaultOutboundQueueCapacity = 3072;
 
-        // When set (via the "qsize=N" command-line token), overrides
+        // When set (via the "--qsize N" option), overrides
         // akka.remote.artery.advanced.outbound-message-queue-size (default 3072, see
         // DefaultOutboundQueueCapacity) for both ActorSystems. Only meaningful in Artery mode.
         // Plain integer - the underlying HOCON key is read with GetInt, not GetByteSize, so
-        // (unlike iobuf=) there's no k/m size-suffix parsing to mirror here.
+        // (unlike --iobuf) there's no k/m size-suffix parsing to mirror here.
         private static int? _qSizeOverride;
 
-        // Resolved once (in Main(), from _qSizeOverride/_windowSize/_pinnedClients) before the run
-        // starts and applied uniformly to every ActorSystem created for the whole invocation - see
-        // ResolveQueueSize(). Null means "leave akka.remote.artery.advanced.outbound-message-queue-
-        // size at its HOCON default": no new HOCON key is set at all, so default-config runs (e.g.
-        // window=50 x clients=25) are byte-for-byte identical to pre-qsize behavior and stay
-        // historically comparable.
+        // Resolved once (in RunLoopbackAsync/RunServerModeAsync/RunClientModeAsync, from
+        // _qSizeOverride/_windowSize/_pinnedClients) before the run starts and applied uniformly
+        // to every ActorSystem created for the whole invocation - see ResolveQueueSize(). Null
+        // means "leave akka.remote.artery.advanced.outbound-message-queue-size at its HOCON
+        // default": no new HOCON key is set at all, so default-config runs (e.g. --window 50
+        // --clients 25) are byte-for-byte identical to pre-qsize behavior and stay historically
+        // comparable.
         private static int? _effectiveQueueSize;
 
         // Set alongside _effectiveQueueSize when the harness auto-raised the queue (as opposed to
-        // the caller passing an explicit qsize=); printed verbatim in the run header so an
+        // the caller passing an explicit --qsize); printed verbatim in the run header so an
         // auto-raised run is never mistaken for a default-config one.
         private static string? _queueSizeAutoRaiseReason;
 
-        // Split two-process mode (via the "server" / "client" command-line tokens): runs the two
+        // Split two-process mode (via the "server" / "client" subcommands): runs the two
         // sides of the benchmark in separate processes so they can sit on two physical machines and
-        // exercise a real network. Both default to false, in which case the benchmark behaves
-        // exactly as before - both ActorSystems in this one process over loopback, byte-for-byte
-        // identical config. Split mode supports either transport, selected by the exact same
-        // "artery" token rule as single-process mode (see _useArtery) - neither token forces a
-        // transport on its own.
-        private static bool _serverMode;
+        // exercise a real network. When neither is used ("run", the default), the benchmark
+        // behaves exactly as before - both ActorSystems in this one process over loopback,
+        // byte-for-byte identical config. Split mode supports either transport, selected by the
+        // exact same "--artery" option as single-process mode (see _useArtery) - neither
+        // subcommand forces a transport on its own. (Dispatch between run/server/client is now
+        // handled directly by which subcommand's action runs - see BuildRootCommand() - so unlike
+        // the old positional parser there is no standalone "_serverMode" flag to check.)
         private static bool _clientMode;
 
-        // "host=" - in server mode, the address this process advertises to clients (required).
+        // "--host" - in server mode, the address this process advertises to clients (required).
         // NOTE: neither transport's config sets a separate bind hostname here - ArterySettings'
         // canonical.hostname and DotNetty's public-hostname both fall back to the bind hostname
         // when left unset (see CreateActorSystemConfig) - so the listener binds directly to this
         // address as well (bind == advertise) regardless of transport - use the machine's LAN IP,
         // not 0.0.0.0. In client mode, the server's advertised address to benchmark against
-        // (required) - it must match the server's host= EXACTLY, since the string is part of the
+        // (required) - it must match the server's --host EXACTLY, since the string is part of the
         // association key both sides agree on.
         private static string? _host;
 
-        // "port=" - in server mode, the port the transport's listener binds/advertises; in client
+        // "--port" - in server mode, the port the transport's listener binds/advertises; in client
         // mode, the server's port. Defaults to DefaultSplitPort on both sides, so omitting it
         // everywhere Just Works. (The client's OWN system always binds an ephemeral port - see
         // Benchmark().)
@@ -132,17 +166,17 @@ namespace RemotePingPong
         // Matches ArterySettings' canonical.port default (which is also Pekko Artery's default).
         // Used uniformly for split mode regardless of transport - DotNetty's own historical
         // default is 2552 - so split-mode command lines are identical across transports; only
-        // the "artery" token changes.
+        // the "--artery" option changes.
         private const int DefaultSplitPort = 25520;
 
-        // "myhost=" (client mode only) - the address the CLIENT's own remote system advertises.
+        // "--myhost" (client mode only) - the address the CLIENT's own remote system advertises.
         // Server->client replies matter in both modes (echo replies in ping-pong, Ack/Complete
         // credit grants in one-way), so this must be reachable FROM the server - never localhost
         // when the server is a remote machine. Defaults to auto-detecting the local outbound IP
         // toward the server via the connected-UDP-socket trick (see DetectLocalOutboundIp).
         private static string? _myHost;
 
-        // True when _myHost came from DetectLocalOutboundIp rather than an explicit "myhost=" -
+        // True when _myHost came from DetectLocalOutboundIp rather than an explicit "--myhost" -
         // disclosed in the client header so a mis-detected address is easy to spot and override.
         private static bool _myHostAutoDetected;
 
@@ -174,8 +208,8 @@ namespace RemotePingPong
 
         /// <summary>
         /// Resolves the effective akka.remote.artery.advanced.outbound-message-queue-size for this
-        /// entire invocation. An explicit "qsize=" always wins. Otherwise, if windowSize times the
-        /// largest client count this run will exercise (the pinned "clients=" value, or the max of
+        /// entire invocation. An explicit "--qsize" always wins. Otherwise, if windowSize times the
+        /// largest client count this run will exercise (the pinned "--clients" value, or the max of
         /// GetClientSettings() when sweeping) would exceed 80% of the default 3072 capacity, the
         /// queue is auto-raised to 2x that product - covers both the one-way credit-window case and
         /// ping-pong's echo traffic, which both funnel through the same per-association outbound
@@ -185,11 +219,11 @@ namespace RemotePingPong
         {
             if (!_useArtery)
             {
-                // qsize=/auto-raise tune akka.remote.artery.advanced.outbound-message-queue-size,
+                // --qsize/auto-raise tune akka.remote.artery.advanced.outbound-message-queue-size,
                 // which DotNetty's transport never reads - CreateActorSystemConfig() only writes
                 // that HOCON key when _useArtery is true. Leave _effectiveQueueSize/
                 // _queueSizeAutoRaiseReason both null (never even computed) for a DotNetty run, so
-                // there's nothing to auto-raise; an explicit qsize= override is instead surfaced as
+                // there's nothing to auto-raise; an explicit --qsize override is instead surfaced as
                 // a one-line "ignored" notice in the run header - see PrintSysInfo/PrintServerInfo.
                 return;
             }
@@ -260,10 +294,147 @@ namespace RemotePingPong
                 config = queueSizeConfig.WithFallback(config);
             }
 
+            // Only set when "--payload real" was given - a --payload-less (or "--payload toy")
+            // invocation never touches akka.actor.serializers/serialization-bindings, so the toy
+            // default's config (and therefore its NewtonsoftJson-fallback wire behavior) stays
+            // byte-for-byte identical to pre-real-payload behavior.
+            var realPayloadConfig = RealPayloadSerializationConfig();
+            if (realPayloadConfig != null)
+                config = realPayloadConfig.WithFallback(config);
+
             return config;
         }
 
-        private static async Task Main(params string[] args)
+        /// <summary>
+        /// Builds the akka.actor.serializers/serialization-bindings HOCON for whichever real-payload
+        /// arm "--serializer" selected, or null when "--payload" is "toy" (the default). Applied to
+        /// EVERY ActorSystem this invocation creates - both loopback systems in "run" mode, and each
+        /// side of split "server"/"client" mode - since CreateActorSystemConfig() is the single choke
+        /// point all three subcommands funnel through. Split mode still relies on the operator passing
+        /// the SAME "--payload"/"--serializer" flags to both the "server" and "client" processes (the
+        /// same convention "--artery"/"--oneway"/"--qsize" already use) - there is no over-the-wire
+        /// negotiation of serializer bindings.
+        /// </summary>
+        private static Config? RealPayloadSerializationConfig()
+        {
+            if (_payloadMode != "real")
+                return null;
+
+            return _serializerArm switch
+            {
+                "v2" => ConfigurationFactory.ParseString(@"
+                akka.actor {
+                  serializers {
+                    real-benchmark-v2 = ""RemotePingPong.RealPayload.V2.RealBenchmarkSerializer, RemotePingPong""
+                  }
+                  serialization-bindings {
+                    ""RemotePingPong.RealPayload.V2.RealBenchmarkMessage, RemotePingPong"" = real-benchmark-v2
+                  }
+                }"),
+                "protobuf" => ConfigurationFactory.ParseString(@"
+                akka.actor {
+                  serializers {
+                    real-benchmark-protobuf = ""RemotePingPong.RealPayload.Protobuf.RealBenchmarkProtobufSerializer, RemotePingPong""
+                  }
+                  serialization-bindings {
+                    ""RemotePingPong.RealPayload.Protobuf.RealBenchmarkMessage, RemotePingPong"" = real-benchmark-protobuf
+                  }
+                }"),
+                _ => throw new InvalidOperationException(
+                    "\"--payload real\" requires --serializer to have been resolved (v2|protobuf) before " +
+                    "an ActorSystem config can be built - this should have been rejected by the CLI's " +
+                    "cross-option validators before reaching here.")
+            };
+        }
+
+        /// <summary>
+        /// Resolves the object every "hit"/priming Tell actually sends for this invocation, from
+        /// _payloadMode/_serializerArm. "toy" (default) returns the literal "hit" string - identical to
+        /// pre-real-payload behavior. "real" builds RealPayloadFactory's ONE canonical message and
+        /// converts it to whichever arm's wire type "--serializer" selected, so both arms carry
+        /// identical logical content (see RealPayloadFactory's remarks).
+        /// </summary>
+        private static object ResolvePayloadInstance()
+        {
+            if (_payloadMode != "real")
+                return "hit";
+
+            var canonical = RealPayload.RealPayloadFactory.CreateCanonical();
+            return _serializerArm switch
+            {
+                "v2" => canonical,
+                "protobuf" => RealPayload.RealPayloadFactory.ToProtobuf(canonical),
+                _ => throw new InvalidOperationException(
+                    "\"--payload real\" requires --serializer to have been resolved (v2|protobuf) before " +
+                    "the payload instance can be built - this should have been rejected by the CLI's " +
+                    "cross-option validators before reaching here.")
+            };
+        }
+
+        /// <summary>
+        /// Proof of correct wiring for a "--payload real" run (see the harness's S.3/4 requirements):
+        /// resolves the serializer Akka actually picked for the canonical payload via
+        /// <see cref="Akka.Serialization.Serialization.FindSerializerFor"/>, logs its id/type (so a
+        /// silent NewtonsoftJson fallback - e.g. from a serialization-bindings typo - is impossible to
+        /// miss), then round-trips the canonical message through it and FAILS FAST (throws) if the
+        /// resolved serializer isn't the expected arm's type, or if the round-tripped value isn't
+        /// logically equal to the original. Runs exactly once per process (guarded by
+        /// _realPayloadWiringVerified), on whichever ActorSystem calls it first - loopback/split-client
+        /// mode call this from Benchmark() right after creating system1; split-server mode calls it
+        /// from RunServer() right after creating its system. No-op when _payloadMode is "toy".
+        /// </summary>
+        private static void EnsureRealPayloadWiring(ActorSystem system)
+        {
+            if (_payloadMode != "real" || _realPayloadWiringVerified)
+                return;
+
+            _realPayloadWiringVerified = true;
+
+            var extendedSystem = (ExtendedActorSystem)system;
+            var canonical = _payloadInstance;
+
+            var expectedType = _serializerArm switch
+            {
+                "v2" => typeof(RealPayload.V2.RealBenchmarkSerializer),
+                "protobuf" => typeof(RealPayload.Protobuf.RealBenchmarkProtobufSerializer),
+                _ => throw new InvalidOperationException($"Unknown --serializer value [{_serializerArm}].")
+            };
+
+            var serializer = extendedSystem.Serialization.FindSerializerFor(canonical);
+
+            Console.WriteLine();
+            Console.WriteLine("Real-payload serializer wiring (system \"{0}\"):", system.Name);
+            Console.WriteLine("  --serializer arm:                  {0}", _serializerArm);
+            Console.WriteLine("  Resolved serializer:               {0} (Id={1})", serializer.GetType().FullName, serializer.Identifier);
+
+            if (serializer.GetType() != expectedType)
+            {
+                throw new InvalidOperationException(
+                    $"Real-payload wiring check FAILED: expected serializer [{expectedType.FullName}] for " +
+                    $"--serializer {_serializerArm}, but Serialization.FindSerializerFor resolved " +
+                    $"[{serializer.GetType().FullName}] instead (Id={serializer.Identifier}). This usually means " +
+                    "the serialization-bindings HOCON entry for the message type is missing or mistyped, and " +
+                    "Akka silently fell back to a different serializer (e.g. NewtonsoftJson).");
+            }
+
+            var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, canonical);
+            var bytes = serializer.ToBinary(canonical);
+            var roundTripped = extendedSystem.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
+
+            if (!canonical.Equals(roundTripped))
+            {
+                throw new InvalidOperationException(
+                    $"Real-payload wiring check FAILED: round-tripping the canonical message through " +
+                    $"[{serializer.GetType().FullName}] (serialize -> deserialize) did not preserve logical " +
+                    "equality. Original and deserialized values differ.");
+            }
+
+            _realPayloadWireBytes = bytes.Length;
+            Console.WriteLine("  Round-trip check:                  PASSED ({0} bytes)", bytes.Length);
+            Console.WriteLine();
+        }
+
+        private static async Task<int> Main(string[] args)
         {
             try
             {
@@ -273,153 +444,332 @@ namespace RemotePingPong
             {
                 await Console.Error.WriteLineAsync($"Attempted to elevate process priority, but failed due to {ex.Message} - carrying on at normal process priority.");
             }
-            // Args (order-independent): the first numeric arg is timesToRun; the literal "artery"
-            // (case-insensitive) selects the Artery.Tcp transport instead of the DotNetty default.
-            // "oneway" (case-insensitive) switches from ping-pong to the one-directional firehose
-            // mode (see OneWaySenderActor/OneWayReceiverActor). "window=N" overrides the in-flight
-            // priming window (default 50); "clients=N" pins the benchmark to a single client count
-            // instead of sweeping GetClientSettings(). "iobuf=SIZE" overrides
-            // akka.io.tcp.receive-buffer-size / send-buffer-size (e.g. "128k", "1m") for both
-            // ActorSystems - default behavior (8k) is unchanged when omitted. "msgs=N" overrides the
-            // per-client message count (default 100000) - default behavior is unchanged when omitted.
-            // "qsize=N" overrides akka.remote.artery.advanced.outbound-message-queue-size (default
-            // 3072, Artery mode only) for both ActorSystems; when omitted, the harness auto-raises
-            // it whenever window x clients would exceed 80% of the default capacity - see
-            // ResolveQueueSize(). Default-config runs (window x clients well under that threshold)
-            // are unaffected either way.
-            // Split two-process mode: "server" makes this process a long-lived host - it
-            // binds/advertises host= (required) and port= (default 25520), prints "SERVER READY"
-            // once listening, and serves sequential benchmark runs until killed (Ctrl+C/SIGTERM);
-            // "client host=<server-ip> [port=N]" points the full existing benchmark protocol
-            // (timesToRun reps, echo/oneway, all tokens above) at that remote server instead of an
-            // in-process system2. "myhost=" (client only) sets the address this client advertises
-            // for server->client replies - defaults to auto-detecting the outbound IP toward the
-            // server. Transport selection follows the exact same "artery" token rule as
-            // single-process mode - present (either side) selects Artery.Tcp, absent selects
-            // classic DotNetty remoting; neither "server" nor "client" forces a transport on its
-            // own. qsize=/auto-raise remain Artery-only concepts either way - under DotNetty
-            // they're ignored (with a header notice) rather than silently doing nothing. The
-            // orchestrator is expected to pass MATCHING window=/clients=/qsize=/oneway/artery
-            // tokens to both sides (dumb and explicit - each side sizes and reports its own
-            // config; there is no negotiation protocol). When neither "server" nor "client" is
-            // passed, behavior is exactly the single-process benchmark described above.
-            // e.g. `RemotePingPong 3 artery` or `RemotePingPong artery oneway window=1000 clients=10 iobuf=128k msgs=500000 qsize=10000`
-            // or `RemotePingPong server host=10.0.0.5 oneway window=200 clients=25` (machine A, DotNetty)
-            //  + `RemotePingPong 3 client host=10.0.0.5 oneway window=200 clients=25` (machine B, DotNetty)
-            // or `RemotePingPong server host=10.0.0.5 artery oneway window=200 clients=25` (machine A, Artery)
-            //  + `RemotePingPong 3 artery client host=10.0.0.5 oneway window=200 clients=25` (machine B, Artery).
-            _useArtery = args.Any(a => a.Equals("artery", StringComparison.OrdinalIgnoreCase));
-            _onewayMode = args.Any(a => a.Equals("oneway", StringComparison.OrdinalIgnoreCase));
-            _serverMode = args.Any(a => a.Equals("server", StringComparison.OrdinalIgnoreCase));
-            _clientMode = args.Any(a => a.Equals("client", StringComparison.OrdinalIgnoreCase));
 
-            var timesToRun = 1u;
-            var timesToRunSet = false;
-            foreach (var a in args)
+            var rootCommand = BuildRootCommand();
+            var parseResult = rootCommand.Parse(args);
+            return await parseResult.InvokeAsync();
+        }
+
+        /// <summary>
+        /// Builds the harness's command-line interface (System.CommandLine). Three subcommands:
+        /// "run" (the default single-process loopback benchmark - both ActorSystems in this
+        /// process over loopback), "server" and "client" (the split two-node mode - see the field
+        /// docs on _clientMode/_host/_splitPort/_myHost above). Every knob that used to
+        /// be a bare "token" or "key=value" pair in the old positional parser is now a named,
+        /// self-documenting `--option` with its own description and default, shared across
+        /// whichever subcommands actually read it (the same Option&lt;T&gt; instance can be added to
+        /// multiple Command objects - System.CommandLine tracks parsed values per invocation, not
+        /// per Option instance). Invoking the harness with NO subcommand (bare `RemotePingPong`)
+        /// preserves the historical default behavior exactly: it runs the same single-process
+        /// loopback ping-pong sweep "run" performs with every option left at its default.
+        /// e.g. `RemotePingPong run --artery --oneway --window 1000 --clients 10 --iobuf 128k --msgs 500000 --qsize 10000`
+        /// or `RemotePingPong server --host 10.0.0.5 --oneway --window 200 --clients 25` (machine A, DotNetty)
+        ///  + `RemotePingPong client --times 3 --host 10.0.0.5 --oneway --window 200 --clients 25` (machine B, DotNetty)
+        /// or `RemotePingPong server --artery --host 10.0.0.5 --oneway --window 200 --clients 25` (machine A, Artery)
+        ///  + `RemotePingPong client --artery --times 3 --host 10.0.0.5 --oneway --window 200 --clients 25` (machine B, Artery).
+        /// </summary>
+        private static RootCommand BuildRootCommand()
+        {
+            var arteryOption = new Option<bool>("--artery")
             {
-                if (!timesToRunSet && uint.TryParse(a, out var parsed))
-                {
-                    timesToRun = parsed;
-                    timesToRunSet = true;
-                    continue;
-                }
+                Description = "Use the Artery.Tcp transport instead of the classic DotNetty TCP transport (the default)."
+            };
 
-                if (a.StartsWith("window=", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (int.TryParse(a.Substring("window=".Length), out var window))
-                        _windowSize = window;
-                    continue;
-                }
+            var onewayOption = new Option<bool>("--oneway")
+            {
+                Description = "Switch from ping-pong mode to one-directional firehose mode: the sender fires a " +
+                              "credit-based stream of messages at the receiver with no reply loop, measuring pure " +
+                              "one-way transport throughput (see OneWaySenderActor/OneWayReceiverActor)."
+            };
 
-                if (a.StartsWith("clients=", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (int.TryParse(a.Substring("clients=".Length), out var clients))
-                        _pinnedClients = clients;
-                    continue;
-                }
+            var windowOption = new Option<int>("--window")
+            {
+                Description = "In-flight priming window size per client (i.e. how many messages are sent before " +
+                              "awaiting a reply/ack).",
+                DefaultValueFactory = _ => 50
+            };
 
-                if (a.StartsWith("iobuf=", StringComparison.OrdinalIgnoreCase))
-                {
-                    var iobuf = a.Substring("iobuf=".Length);
-                    if (!string.IsNullOrWhiteSpace(iobuf))
-                        _ioBufSize = iobuf;
-                    continue;
-                }
+            var clientsOption = new Option<int?>("--clients")
+            {
+                Description = "Pin the benchmark to a single client count instead of sweeping the full series " +
+                              "(1, 5, 10, 15, 20, 25, 30)."
+            };
 
-                if (a.StartsWith("msgs=", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (long.TryParse(a.Substring("msgs=".Length), out var msgs))
-                        _msgsOverride = msgs;
-                    continue;
-                }
+            var iobufOption = new Option<string?>("--iobuf")
+            {
+                Description = "Override akka.io.tcp.receive-buffer-size / send-buffer-size for both ActorSystems " +
+                              "(HOCON size value, e.g. \"128k\", \"1m\"). Default (8k) is unchanged when omitted."
+            };
 
-                if (a.StartsWith("qsize=", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (int.TryParse(a.Substring("qsize=".Length), out var qsize))
-                        _qSizeOverride = qsize;
-                    continue;
-                }
+            var msgsOption = new Option<long?>("--msgs")
+            {
+                Description = "Override the per-client message count (default 100000). Useful for one-way mode, " +
+                              "whose default run length is often sub-second."
+            };
 
-                if (a.StartsWith("host=", StringComparison.OrdinalIgnoreCase))
-                {
-                    var host = a.Substring("host=".Length);
-                    if (!string.IsNullOrWhiteSpace(host))
-                        _host = host;
-                    continue;
-                }
+            var qsizeOption = new Option<int?>("--qsize")
+            {
+                Description = "Override akka.remote.artery.advanced.outbound-message-queue-size (default " +
+                              $"{DefaultOutboundQueueCapacity}, Artery mode only). When omitted, the harness " +
+                              "auto-raises it whenever window x clients would exceed 80% of the default capacity."
+            };
 
-                if (a.StartsWith("port=", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (int.TryParse(a.Substring("port=".Length), out var port))
-                        _splitPort = port;
-                    continue;
-                }
+            var timesOption = new Option<uint>("--times")
+            {
+                Description = "Number of times to repeat the full benchmark sweep/run.",
+                DefaultValueFactory = _ => 1u
+            };
 
-                if (a.StartsWith("myhost=", StringComparison.OrdinalIgnoreCase))
+            var payloadOption = new Option<string>("--payload")
+            {
+                Description = "Message payload to exchange: \"toy\" (default) is today's historical payload - a " +
+                              "bare \"hit\" string, serialized by the default NewtonsoftJson fallback, byte-for-byte " +
+                              "unchanged. \"real\" sends a realistic message (int/long/double/bool primitives, a " +
+                              "string, a nested complex type, and a collection) built from one canonical source and " +
+                              "serialized by the arm --serializer selects; requires --serializer.",
+                DefaultValueFactory = _ => "toy"
+            };
+            payloadOption.Validators.Add(result =>
+            {
+                var value = result.GetValueOrDefault<string>();
+                if (value != "toy" && value != "real")
+                    result.AddError($"--payload must be \"toy\" or \"real\" (got \"{value}\").");
+            });
+
+            var serializerOption = new Option<string?>("--serializer")
+            {
+                Description = "Real-payload serializer arm: \"v2\" (Akka.Serialization.V2 source-generated " +
+                              "MessagePack) or \"protobuf\" (hand-written Google.Protobuf, string manifest). " +
+                              "Required when --payload real is given; rejected otherwise (--payload toy has no " +
+                              "custom serializer to select)."
+            };
+            serializerOption.Validators.Add(result =>
+            {
+                var value = result.GetValueOrDefault<string?>();
+                if (value is not null && value != "v2" && value != "protobuf")
+                    result.AddError($"--serializer must be \"v2\" or \"protobuf\" (got \"{value}\").");
+            });
+
+            void AddPayloadSerializerValidation(Command command)
+            {
+                command.Validators.Add(result =>
                 {
-                    var myhost = a.Substring("myhost=".Length);
-                    if (!string.IsNullOrWhiteSpace(myhost))
-                        _myHost = myhost;
-                    continue;
-                }
+                    var payload = result.GetValue(payloadOption);
+                    var serializer = result.GetValue(serializerOption);
+                    if (payload == "real" && serializer is null)
+                        result.AddError("--serializer <v2|protobuf> is required when --payload real is specified.");
+                    else if (payload != "real" && serializer is not null)
+                        result.AddError("--serializer is only meaningful with --payload real (omit --serializer, " +
+                                         "or add --payload real).");
+                });
             }
 
-            if (_serverMode && _clientMode)
+            var runCommand = new Command("run",
+                "Run the default in-process loopback benchmark: both ActorSystems live in this process, " +
+                "communicating over loopback. This is what runs when no subcommand is given.");
+            runCommand.Options.Add(arteryOption);
+            runCommand.Options.Add(onewayOption);
+            runCommand.Options.Add(windowOption);
+            runCommand.Options.Add(clientsOption);
+            runCommand.Options.Add(iobufOption);
+            runCommand.Options.Add(msgsOption);
+            runCommand.Options.Add(qsizeOption);
+            runCommand.Options.Add(timesOption);
+            runCommand.Options.Add(payloadOption);
+            runCommand.Options.Add(serializerOption);
+            AddPayloadSerializerValidation(runCommand);
+            runCommand.SetAction(parseResult => RunLoopbackAsync(
+                parseResult.GetValue(arteryOption),
+                parseResult.GetValue(onewayOption),
+                parseResult.GetValue(windowOption),
+                parseResult.GetValue(clientsOption),
+                parseResult.GetValue(iobufOption),
+                parseResult.GetValue(msgsOption),
+                parseResult.GetValue(qsizeOption),
+                parseResult.GetValue(timesOption),
+                parseResult.GetValue(payloadOption)!,
+                parseResult.GetValue(serializerOption)));
+
+            var serverHostOption = new Option<string>("--host")
             {
-                await Console.Error.WriteLineAsync("Cannot pass both 'server' and 'client' - pick one side per process.");
-                Environment.Exit(1);
+                Description = "Address this process advertises/binds to remote clients (use this machine's LAN " +
+                              "IP, not 0.0.0.0).",
+                Required = true
+            };
+
+            var serverPortOption = new Option<int>("--port")
+            {
+                Description = "Port this server's transport listener binds/advertises.",
+                DefaultValueFactory = _ => DefaultSplitPort
+            };
+
+            var serverCommand = new Command("server",
+                "Run the long-lived split-mode server side: a dumb remote host with no benchmark actors of its " +
+                "own - every echo/receiver actor is RemoteScope-deployed onto it by a 'client' process. Serves " +
+                "sequential benchmark runs until killed (Ctrl+C/SIGTERM).");
+            serverCommand.Options.Add(arteryOption);
+            serverCommand.Options.Add(onewayOption);
+            serverCommand.Options.Add(windowOption);
+            serverCommand.Options.Add(clientsOption);
+            serverCommand.Options.Add(iobufOption);
+            serverCommand.Options.Add(qsizeOption);
+            serverCommand.Options.Add(serverHostOption);
+            serverCommand.Options.Add(serverPortOption);
+            serverCommand.Options.Add(payloadOption);
+            serverCommand.Options.Add(serializerOption);
+            AddPayloadSerializerValidation(serverCommand);
+            serverCommand.SetAction(parseResult => RunServerModeAsync(
+                parseResult.GetValue(arteryOption),
+                parseResult.GetValue(onewayOption),
+                parseResult.GetValue(windowOption),
+                parseResult.GetValue(clientsOption),
+                parseResult.GetValue(iobufOption),
+                parseResult.GetValue(qsizeOption),
+                parseResult.GetValue(serverHostOption),
+                parseResult.GetValue(serverPortOption),
+                parseResult.GetValue(payloadOption)!,
+                parseResult.GetValue(serializerOption)));
+
+            var clientHostOption = new Option<string>("--host")
+            {
+                Description = "The split-mode server's advertised address to benchmark against (must match the " +
+                              "server's --host exactly).",
+                Required = true
+            };
+
+            var clientPortOption = new Option<int>("--port")
+            {
+                Description = "The split-mode server's port.",
+                DefaultValueFactory = _ => DefaultSplitPort
+            };
+
+            var myHostOption = new Option<string?>("--myhost")
+            {
+                Description = "Address this client's own remote system advertises for server -> client replies " +
+                              "(echoes in ping-pong, Ack/Complete credit grants in one-way). Must be reachable " +
+                              "from the server - never localhost when the server is a remote machine. Defaults " +
+                              "to auto-detecting the local outbound IP toward the server."
+            };
+
+            var clientCommand = new Command("client",
+                "Run the split-mode client side: points the full benchmark protocol at a remote 'server' " +
+                "process instead of an in-process second ActorSystem.");
+            clientCommand.Options.Add(arteryOption);
+            clientCommand.Options.Add(onewayOption);
+            clientCommand.Options.Add(windowOption);
+            clientCommand.Options.Add(clientsOption);
+            clientCommand.Options.Add(iobufOption);
+            clientCommand.Options.Add(msgsOption);
+            clientCommand.Options.Add(qsizeOption);
+            clientCommand.Options.Add(timesOption);
+            clientCommand.Options.Add(clientHostOption);
+            clientCommand.Options.Add(clientPortOption);
+            clientCommand.Options.Add(myHostOption);
+            clientCommand.Options.Add(payloadOption);
+            clientCommand.Options.Add(serializerOption);
+            AddPayloadSerializerValidation(clientCommand);
+            clientCommand.SetAction(parseResult => RunClientModeAsync(
+                parseResult.GetValue(arteryOption),
+                parseResult.GetValue(onewayOption),
+                parseResult.GetValue(windowOption),
+                parseResult.GetValue(clientsOption),
+                parseResult.GetValue(iobufOption),
+                parseResult.GetValue(msgsOption),
+                parseResult.GetValue(qsizeOption),
+                parseResult.GetValue(timesOption),
+                parseResult.GetValue(clientHostOption),
+                parseResult.GetValue(clientPortOption),
+                parseResult.GetValue(myHostOption),
+                parseResult.GetValue(payloadOption)!,
+                parseResult.GetValue(serializerOption)));
+
+            var rootCommand = new RootCommand(
+                "RemotePingPong - Akka.Remote cross-platform performance benchmark harness. With no subcommand, " +
+                "behaves exactly like 'run' with every option at its default (single-process loopback ping-pong " +
+                "sweep).");
+            rootCommand.Subcommands.Add(runCommand);
+            rootCommand.Subcommands.Add(serverCommand);
+            rootCommand.Subcommands.Add(clientCommand);
+            // Bare invocation (no subcommand) preserves the historical default behavior byte-for-byte: the
+            // same single-process loopback benchmark "run" performs with every option left at its default.
+            rootCommand.SetAction(_ => RunLoopbackAsync(
+                artery: false, oneway: false, window: 50, clients: null, iobuf: null, msgs: null, qsize: null,
+                times: 1u, payload: "toy", serializer: null));
+
+            return rootCommand;
+        }
+
+        private static async Task<int> RunLoopbackAsync(bool artery, bool oneway, int window, int? clients,
+            string? iobuf, long? msgs, int? qsize, uint times, string payload, string? serializer)
+        {
+            _useArtery = artery;
+            _onewayMode = oneway;
+            _windowSize = window;
+            _pinnedClients = clients;
+            _ioBufSize = iobuf;
+            _msgsOverride = msgs;
+            _qSizeOverride = qsize;
+            _payloadMode = payload;
+            _serializerArm = serializer;
+            _payloadInstance = ResolvePayloadInstance();
+
+            ResolveQueueSize();
+            await Start(times);
+            return 0;
+        }
+
+        private static async Task<int> RunServerModeAsync(bool artery, bool oneway, int window, int? clients,
+            string? iobuf, int? qsize, string host, int port, string payload, string? serializer)
+        {
+            _useArtery = artery;
+            _onewayMode = oneway;
+            _windowSize = window;
+            _pinnedClients = clients;
+            _ioBufSize = iobuf;
+            _qSizeOverride = qsize;
+            _host = host;
+            _splitPort = port;
+            _payloadMode = payload;
+            _serializerArm = serializer;
+            _payloadInstance = ResolvePayloadInstance();
+
+            ResolveQueueSize();
+            await RunServer();
+            return 0;
+        }
+
+        private static async Task<int> RunClientModeAsync(bool artery, bool oneway, int window, int? clients,
+            string? iobuf, long? msgs, int? qsize, uint times, string host, int port, string? myHost,
+            string payload, string? serializer)
+        {
+            _useArtery = artery;
+            _onewayMode = oneway;
+            _windowSize = window;
+            _pinnedClients = clients;
+            _ioBufSize = iobuf;
+            _msgsOverride = msgs;
+            _qSizeOverride = qsize;
+            _clientMode = true;
+            _host = host;
+            _splitPort = port;
+            _payloadMode = payload;
+            _serializerArm = serializer;
+            _payloadInstance = ResolvePayloadInstance();
+
+            if (!string.IsNullOrWhiteSpace(myHost))
+            {
+                _myHost = myHost;
+                _myHostAutoDetected = false;
             }
-
-            if (_serverMode || _clientMode)
+            else
             {
-                // Transport was already selected above from the "artery" token, exactly like
-                // single-process mode - CreateActorSystemConfig() branches on _useArtery either
-                // way, so both server and client bind/advertise correctly for whichever transport
-                // was chosen. No forcing here.
-                if (string.IsNullOrEmpty(_host))
-                {
-                    await Console.Error.WriteLineAsync(_serverMode
-                        ? "'server' mode requires host=<address to advertise/bind> (use this machine's LAN IP)."
-                        : "'client' mode requires host=<server address> (must match the server's host= exactly).");
-                    Environment.Exit(1);
-                }
-
-                if (_clientMode && string.IsNullOrEmpty(_myHost))
-                {
-                    _myHost = DetectLocalOutboundIp(_host!, _splitPort);
-                    _myHostAutoDetected = true;
-                }
+                _myHost = DetectLocalOutboundIp(host, port);
+                _myHostAutoDetected = true;
             }
 
             ResolveQueueSize();
-
-            if (_serverMode)
-            {
-                await RunServer();
-                return;
-            }
-
-            await Start(timesToRun);
+            await Start(times);
+            return 0;
         }
 
         private static bool _firstRun = true;
@@ -456,11 +806,11 @@ namespace RemotePingPong
             }
             if (_useArtery)
             {
-                // Always print the effective value - default (untouched), explicit qsize=
+                // Always print the effective value - default (untouched), explicit --qsize
                 // override, or auto-raised - so a run's queue capacity is never ambiguous from
                 // the header alone.
                 Console.WriteLine("Outbound queue size (artery):      {0}{1}", _effectiveQueueSize ?? DefaultOutboundQueueCapacity,
-                    _qSizeOverride.HasValue ? " (explicit qsize=)" : _effectiveQueueSize.HasValue ? " (auto-raised)" : " (default)");
+                    _qSizeOverride.HasValue ? " (explicit --qsize)" : _effectiveQueueSize.HasValue ? " (auto-raised)" : " (default)");
                 if (_queueSizeAutoRaiseReason != null)
                 {
                     var prevColor = Console.ForegroundColor;
@@ -471,20 +821,24 @@ namespace RemotePingPong
             }
             else if (_qSizeOverride.HasValue)
             {
-                // qsize= only means something in Artery mode (outbound-message-queue-size);
-                // called out explicitly rather than silently doing nothing, so a stray qsize= on a
+                // --qsize only means something in Artery mode (outbound-message-queue-size);
+                // called out explicitly rather than silently doing nothing, so a stray --qsize on a
                 // DotNetty run is never mistaken for having taken effect.
-                Console.WriteLine("qsize= ignored (DotNetty)");
+                Console.WriteLine("--qsize ignored (DotNetty)");
             }
             if (_clientMode)
             {
                 Console.WriteLine("Split mode:                        client -> {0}://SystemB@{1}:{2}", SplitServerScheme, _host, _splitPort);
-                Console.WriteLine("Client advertised address:         {0}{1}", _myHost, _myHostAutoDetected ? " (auto-detected)" : " (explicit myhost=)");
+                Console.WriteLine("Client advertised address:         {0}{1}", _myHost, _myHostAutoDetected ? " (auto-detected)" : " (explicit --myhost)");
                 // Deliberate divergence from single-process mode, disclosed up front: the split
                 // server persists across all timesToRun reps (its JIT/caches stay warm) while this
                 // client recreates its system per rep - single-process mode restarts BOTH systems
                 // every rep, so split-mode rep-1 "cold" numbers warm up faster than historical ones.
                 Console.WriteLine("NOTE: server system persists across reps (server-side JIT stays warm); client recreates its system per rep.");
+            }
+            if (_payloadMode == "real")
+            {
+                PrintRealPayloadInfo();
             }
             Console.WriteLine();
 
@@ -492,6 +846,38 @@ namespace RemotePingPong
             Console.WriteLine("Num clients, Total [msg], Msgs/sec, Total [ms], Start Threads, End Threads");
 
             _firstRun = false;
+        }
+
+        /// <summary>
+        /// S.4 bytes-on-wire reporting for "--payload real" runs: the exact serialized payload size
+        /// (measured once by EnsureRealPayloadWiring's round-trip check, before any actor is created)
+        /// alongside the msgs/sec table, since msgs/sec alone conflates CPU cost with frame size and
+        /// the two arms produce very different frame sizes. Only ever called when _payloadMode is
+        /// "real" (see the two call sites in PrintSysInfo/PrintServerInfo), so a "toy" run's output is
+        /// completely unaffected - not even an extra blank line.
+        /// </summary>
+        /// <remarks>
+        /// This reports the exact serialized MESSAGE payload only (what the chosen serializer's
+        /// ToBinary/Serialize actually produced) - not the full on-wire frame. Estimating the full
+        /// Artery/DotNetty frame (length-prefix, RemoteEnvelope protobuf wrapper or Artery's compact
+        /// binary header, actor path strings, etc.) was investigated but isn't cheaply reachable from
+        /// this benchmark project: those types (e.g. Akka.Remote.Serialization.Proto.Msg.RemoteEnvelope,
+        /// Akka.Remote.Artery's HeaderBuilder/EnvelopeBufferPool) are internal to Akka.Remote (see
+        /// Akka.Remote.csproj's `Protobuf Access="internal"` items) and there is no supported public API
+        /// to size them without constructing a live association. Rather than fabricate an unverified
+        /// frame-size estimate, this reports only the number this benchmark can prove exactly, and
+        /// documents the gap: DotNetty classic remoting adds a 4-byte length-prefix
+        /// (Akka.IO's LengthFieldPrepender) plus a RemoteEnvelope protobuf wrapper (recipient/sender
+        /// actor path strings + serializer id + manifest) on top of the figure below; Artery adds its
+        /// own compact binary header (association uid, serializer id, manifest/path compression table
+        /// refs, flags) instead.
+        /// </remarks>
+        private static void PrintRealPayloadInfo()
+        {
+            Console.WriteLine("Payload:                           real (--serializer {0})", _serializerArm);
+            Console.WriteLine("Serialized payload size:           {0} bytes (canonical message, {1} readings) " +
+                               "[message bytes only - see PrintRealPayloadInfo's remarks for wire-frame overhead]",
+                _realPayloadWireBytes, RealPayload.RealPayloadFactory.ReadingCount);
         }
 
         const long repeat = 100000L;
@@ -520,7 +906,7 @@ namespace RemotePingPong
 
         /// <summary>
         /// Split-mode server: a deliberately dumb, long-lived remote host - Artery or DotNetty,
-        /// whichever _useArtery selected (same "artery" token rule as single-process mode; see
+        /// whichever _useArtery selected (same "--artery" option rule as single-process mode; see
         /// CreateActorSystemConfig()). It creates NO benchmark actors of its own - every
         /// echo/receiver actor is RemoteScope-deployed onto it by the client, via the exact same
         /// deployments single-process mode makes against its in-process system2 (see Benchmark()).
@@ -529,7 +915,7 @@ namespace RemotePingPong
         /// a fresh ephemeral port every rep, so sequential runs can never collide on actor names -
         /// Akka's remote-deployment daemon already IS a "server-side factory keyed by client
         /// identity", which is why no run-id negotiation or receptionist protocol is needed here.
-        /// window=/clients=/qsize=/oneway tokens are accepted so the orchestrator can pass the
+        /// --window/--clients/--qsize/--oneway are accepted so the orchestrator can pass the
         /// SAME values to both sides; functionally only the queue sizing matters on this side (it
         /// sizes THIS system's outbound queue for the reply traffic - echoes in ping-pong,
         /// Ack/Complete credit grants in one-way, and only in Artery mode - see
@@ -540,6 +926,7 @@ namespace RemotePingPong
         private static async Task RunServer()
         {
             var system = ActorSystem.Create("SystemB", CreateActorSystemConfig("SystemB", _host!, _splitPort));
+            EnsureRealPayloadWiring(system);
             // DefaultAddress reflects the ACTUALLY-bound endpoint (ActorSystem.Create doesn't
             // return until the transport's listener is up), so printing READY from it is truthful.
             var boundAddress = ((ExtendedActorSystem)system).Provider.DefaultAddress;
@@ -578,11 +965,11 @@ namespace RemotePingPong
         }
 
         /// <summary>
-        /// Server-mode analogue of <see cref="PrintSysInfo"/>: discloses the tokens this side was
+        /// Server-mode analogue of <see cref="PrintSysInfo"/>: discloses the options this side was
         /// launched with, most importantly the effective outbound queue size. The values only match
-        /// the client's if the orchestrator passed the same window=/clients=/qsize= tokens to both
-        /// sides - keeping that the operator's job (dumb and explicit) is deliberate; there is no
-        /// negotiation protocol to go wrong.
+        /// the client's if the orchestrator passed the same --window/--clients/--qsize values to
+        /// both sides - keeping that the operator's job (dumb and explicit) is deliberate; there is
+        /// no negotiation protocol to go wrong.
         /// </summary>
         private static void PrintServerInfo()
         {
@@ -599,7 +986,7 @@ namespace RemotePingPong
             if (_useArtery)
             {
                 Console.WriteLine("Outbound queue size (artery):      {0}{1}", _effectiveQueueSize ?? DefaultOutboundQueueCapacity,
-                    _qSizeOverride.HasValue ? " (explicit qsize=)" : _effectiveQueueSize.HasValue ? " (auto-raised)" : " (default)");
+                    _qSizeOverride.HasValue ? " (explicit --qsize)" : _effectiveQueueSize.HasValue ? " (auto-raised)" : " (default)");
                 if (_queueSizeAutoRaiseReason != null)
                 {
                     var prevColor = Console.ForegroundColor;
@@ -610,7 +997,11 @@ namespace RemotePingPong
             }
             else if (_qSizeOverride.HasValue)
             {
-                Console.WriteLine("qsize= ignored (DotNetty)");
+                Console.WriteLine("--qsize ignored (DotNetty)");
+            }
+            if (_payloadMode == "real")
+            {
+                PrintRealPayloadInfo();
             }
         }
 
@@ -644,6 +1035,7 @@ namespace RemotePingPong
             // port per rep, which split mode additionally relies on for server-side actor-path
             // uniqueness (see the system2 comment below).
             var system1 = ActorSystem.Create("SystemA", CreateActorSystemConfig("SystemA", _clientMode ? _myHost! : "127.0.0.1", 0));
+            EnsureRealPayloadWiring(system1);
 
             // system2 - the serving side (echo actors in ping-pong, receivers in one-way) - only
             // exists in this process in single-process mode. In split-client mode the serving side
@@ -710,7 +1102,7 @@ namespace RemotePingPong
                 // the whole benchmark. Callers no longer need to manually keep that product under
                 // ~2500-3000: ResolveQueueSize() auto-raises outbound-message-queue-size to 2x the
                 // product whenever it would exceed 80% of the default capacity (or callers can pin
-                // an explicit value via "qsize=") - see the field doc on _effectiveQueueSize. Drops
+                // an explicit value via "--qsize") - see the field doc on _effectiveQueueSize. Drops
                 // (if the queue is ever undersized regardless) are surfaced via the dropWatcher
                 // subscription above rather than silently deadlocking the credit gate.
                 var ackEvery = Math.Max(1, windowSize / 2);
@@ -735,7 +1127,7 @@ namespace RemotePingPong
                             "receiver" + i);
                     var sender =
                         system1.ActorOf(
-                            Props.Create(() => new OneWaySenderActor(numberOfRepeats, windowSize, ackEvery, receiver, ts)),
+                            Props.Create(() => new OneWaySenderActor(numberOfRepeats, windowSize, ackEvery, receiver, ts, _payloadInstance)),
                             "sender" + i);
 
                     primeTargets.Add(sender);
@@ -795,7 +1187,7 @@ namespace RemotePingPong
                 primeTargets.ForEach(c =>
                 {
                     for (var i = 0; i < windowSize; i++) // prime the pump so EndpointWriters can take advantage of their batching model
-                        c.Tell("hit");
+                        c.Tell(_payloadInstance);
                 });
             }
             var waiting = Task.WhenAll(tasks);
@@ -997,7 +1389,7 @@ namespace RemotePingPong
         /// One-way firehose sender (lives on system1, paired 1:1 with a <see cref="OneWayReceiverActor"/>
         /// on system2). Implements credit-based flow control: unbounded fire-and-forget sending would
         /// overflow Artery's bounded outbound queue (default capacity 3072/association, auto-raised
-        /// by ResolveQueueSize() - or overridden via "qsize=" - when window x clients would otherwise
+        /// by ResolveQueueSize() - or overridden via "--qsize" - when window x clients would otherwise
         /// exceed it) and silently stall, so this actor never has more than `windowSize` messages in
         /// flight per pair. It sends its whole window up-front as credit, then tops back up by
         /// `ackEvery` messages every time the receiver grants an <see cref="Ack"/>, until it has sent
@@ -1016,15 +1408,22 @@ namespace RemotePingPong
             private readonly int _ackEvery;
             private readonly IActorRef _receiver;
             private readonly TaskCompletionSource<long> _completion;
+            // The payload every message actually carries - "hit" (default/toy) or the resolved
+            // real-payload instance (see Program._payloadInstance/ResolvePayloadInstance()). Unlike
+            // ping-pong mode (where one priming send is enough - the same object bounces between
+            // BenchmarkActor/EchoActor for the rest of the repeats), one-way mode has no reply loop:
+            // every individual message sent here must carry the payload itself.
+            private readonly object _payload;
             private long _sent;
 
-            public OneWaySenderActor(long maxMessages, int windowSize, int ackEvery, IActorRef receiver, TaskCompletionSource<long> completion)
+            public OneWaySenderActor(long maxMessages, int windowSize, int ackEvery, IActorRef receiver, TaskCompletionSource<long> completion, object payload)
             {
                 _maxMessages = maxMessages;
                 _windowSize = windowSize;
                 _ackEvery = ackEvery;
                 _receiver = receiver;
                 _completion = completion;
+                _payload = payload;
             }
 
             protected override void OnReceive(object message)
@@ -1047,7 +1446,7 @@ namespace RemotePingPong
             {
                 for (var i = 0; i < count && _sent < _maxMessages; i++)
                 {
-                    _receiver.Tell("hit");
+                    _receiver.Tell(_payload);
                     _sent++;
                 }
             }

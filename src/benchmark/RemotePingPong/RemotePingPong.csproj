@@ -15,6 +15,33 @@
 
 <ItemGroup>
   <ProjectReference Include="..\..\core\Akka.Remote\Akka.Remote.csproj" />
+  <ProjectReference Include="..\..\core\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
+  <!-- Analyzer-only reference: generates the real-payload V2 arm's serializer partial class
+       (RemotePingPong.RealPayload.V2.RealBenchmarkSerializer) from [AkkaSerializable]/[AkkaField]
+       annotations. Mirrors Akka.Remote.csproj's reference to the same generator for
+       ArteryControlMessageSerializer. -->
+  <ProjectReference Include="..\..\core\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
 </ItemGroup>
-  
+
+<ItemGroup>
+  <!-- CLI parsing (subcommands: run/server/client) - benchmark-only dependency, MIT licensed. -->
+  <PackageReference Include="System.CommandLine" Version="2.0.9" />
+  <!-- Real-payload V2 arm: MessagePack formatter/attribute types used directly by
+       RealPayload/V2/RealBenchmarkMessages.cs (ReadingBatchFormatter). Also flows transitively via
+       Akka.Serialization.V2.csproj, but this project uses MessagePack types directly, so it takes an
+       explicit reference too. -->
+  <PackageReference Include="MessagePack" Version="$(MessagePackVersion)" />
+  <!-- Real-payload Protobuf arm: same protoc-based codegen approach Akka.Remote uses for its own
+       checked-in .proto files (src/protobuf/*.proto) - see RealPayload/Protobuf/RealBenchmarkMessage.proto. -->
+  <PackageReference Include="Google.Protobuf" Version="$(ProtobufVersion)" />
+  <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+    <PrivateAssets>all</PrivateAssets>
+    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+  </PackageReference>
+</ItemGroup>
+
+<ItemGroup>
+  <Protobuf Access="internal" Include="RealPayload\Protobuf\RealBenchmarkMessage.proto" />
+</ItemGroup>
+
 </Project>
