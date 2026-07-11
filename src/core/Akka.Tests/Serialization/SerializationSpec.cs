@@ -977,4 +977,55 @@ namespace Akka.Tests.Serialization
 
         private sealed class SomeRandomType { }
     }
+
+    /// <summary>
+    /// Regression coverage for #8354, the mirror image of #6502/#6503: instead of a member
+    /// statically typed as <c>object</c>, the member here is statically typed as a concrete
+    /// <see cref="ISurrogated"/> type (<see cref="Address"/>). When the JSON for that member
+    /// carries no `$type` metadata (`encode-type-names = false`, or an external producer),
+    /// <see cref="NewtonSoftJsonSerializer.SurrogateConverter"/> used to hand the resulting
+    /// <see cref="JObject"/> straight back to itself for the same type, recursing forever and
+    /// crashing the process with a native, uncatchable <see cref="StackOverflowException"/>.
+    /// </summary>
+    public class SurrogatedMemberWithoutTypeNamesSpec : AkkaSpec
+    {
+        private static readonly Config Conf = ConfigurationFactory.ParseString(@"
+            akka.actor {
+                serialization-settings.json {
+                    encode-type-names = false
+                }
+            }
+        ");
+
+        public SurrogatedMemberWithoutTypeNamesSpec() : base(Conf)
+        {
+        }
+
+        [Fact(DisplayName = "Should deserialize a member statically typed as a concrete ISurrogated type when the JSON carries no $type metadata (#8354)")]
+        public void Should_deserialize_ISurrogated_typed_member_without_type_metadata()
+        {
+            var serializer = Sys.Serialization.FindSerializerForType(typeof(object))
+                .Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
+
+            var message = new MessageWithAddress
+            {
+                TargetAddress = new Address("akka.tcp", "sys", "localhost", 8081)
+            };
+
+            var serialized = serializer.ToBinary(message);
+
+            // Used to trigger unbounded recursion between SurrogateConverter and
+            // TranslateSurrogate, crashing the process with a native, uncatchable
+            // StackOverflowException before the #8354 fix.
+            var deserialized = serializer.FromBinary<MessageWithAddress>(serialized);
+
+            deserialized.Should().NotBeNull();
+            deserialized.TargetAddress.Should().Be(message.TargetAddress);
+        }
+
+        public sealed class MessageWithAddress
+        {
+            public Address TargetAddress { get; set; }
+        }
+    }
 }
