@@ -733,6 +733,279 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Count(d => d.Id == "AKKASG013").Should().Be(1);
     }
 
+    [Fact(DisplayName = "Generator should not report AKKASG003 and should compile cleanly for natively-supported collection shapes")]
+    public void Generator_should_not_report_AKKASG003_for_supported_collection_shapes()
+    {
+        const string source = """
+            #nullable enable
+            using System.Collections.Generic;
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 121001)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable]
+            public sealed record Reading([property: AkkaField(1)] string SensorId, [property: AkkaField(2)] double Value);
+
+            [AkkaSerializable(Manifest = "collections-v1")]
+            public sealed record Collections(
+                [property: AkkaField(1)] int[] Ints,
+                [property: AkkaField(2)] List<string> Names,
+                [property: AkkaField(3)] IReadOnlyList<Reading> Readings,
+                [property: AkkaField(4)] Dictionary<int, string> Map,
+                [property: AkkaField(5)] List<List<int>> Matrix,
+                [property: AkkaField(6)] Dictionary<string, List<Reading>> Grouped,
+                [property: AkkaField(7)] List<int>? MaybeInts,
+                [property: AkkaField(8)] List<int?> OptionalInts) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // The old ReadingBatch workaround existed because List<Reading> and friends hit AKKASG003; they
+        // are now natively supported, so AKKASG003 must not fire and the generated collection code must
+        // compile inside the in-memory compilation.
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG003");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG003 for a List of a nested [AkkaSerializable] type")]
+    public void Generator_should_not_report_AKKASG003_for_list_of_serializable_type()
+    {
+        const string source = """
+            #nullable enable
+            using System.Collections.Generic;
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 121002)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable]
+            public sealed record Reading([property: AkkaField(1)] string SensorId, [property: AkkaField(2)] double Value);
+
+            [AkkaSerializable(Manifest = "batch-v1")]
+            public sealed record Batch([property: AkkaField(1)] List<Reading> Readings) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG003");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should still report AKKASG003 for a genuinely unsupported exotic collection type")]
+    public void Generator_should_report_AKKASG003_for_unsupported_exotic_type()
+    {
+        const string source = """
+            #nullable enable
+            using System.Collections.Generic;
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 121003)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            // HashSet<T> is deliberately outside the supported set (T[], List<T>, IReadOnlyList<T>,
+            // Dictionary<TKey,TValue>) -- the scope boundary must still fail with AKKASG003.
+            [AkkaSerializable(Manifest = "exotic-v1")]
+            public sealed record Exotic([property: AkkaField(1)] HashSet<int> Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG003" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG003 for a collection whose element type is unsupported")]
+    public void Generator_should_report_AKKASG003_for_collection_of_unsupported_element()
+    {
+        const string source = """
+            #nullable enable
+            using System.Collections.Generic;
+            using System.Text;
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 121004)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "bad-element-v1")]
+            public sealed record BadElement([property: AkkaField(1)] List<StringBuilder> Values) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // A collection whose element is unsupported collapses to unsupported so AKKASG003 fires with the
+        // full field type -- it must not silently emit ill-typed code or an incorrect encoding.
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG003" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG014 for a long-backed enum scalar field")]
+    public void Generator_should_report_AKKASG014_for_long_backed_enum_scalar_field()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            public enum LongStatus : long
+            {
+                A = 0,
+                Big = long.MaxValue
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 121005)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "long-enum-v1")]
+            public sealed record LongEnumMessage([property: AkkaField(1)] LongStatus Status) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // Enums encode as int32; a long-backed enum value outside int32 range would silently truncate,
+        // so it must be rejected at compile time -- naming both the enum and its backing type.
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG014" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("LongStatus", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("long", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG014 for a uint-backed enum inside a List<>")]
+    public void Generator_should_report_AKKASG014_for_uint_backed_enum_inside_list()
+    {
+        const string source = """
+            #nullable enable
+            using System.Collections.Generic;
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            public enum UIntStatus : uint
+            {
+                A = 0,
+                Big = uint.MaxValue
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 121006)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "uint-enum-list-v1")]
+            public sealed record UIntEnumListMessage([property: AkkaField(1)] List<UIntStatus> Statuses) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // The unsupported enum backing must propagate OUT of the collection so AKKASG014 fires naming
+        // the enum -- not collapse to the generic AKKASG003.
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG014" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("UIntStatus", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("uint", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG014 for int32-representable enum backings")]
+    public void Generator_should_not_report_AKKASG014_for_int32_representable_enum_backings()
+    {
+        const string source = """
+            #nullable enable
+            using System.Collections.Generic;
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            public enum IntStatus
+            {
+                A = 0,
+                B = 1
+            }
+
+            public enum ShortStatus : short
+            {
+                A = 0,
+                B = 1
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 121007)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "ok-enum-v1")]
+            public sealed record OkEnumMessage(
+                [property: AkkaField(1)] IntStatus IntStatus,
+                [property: AkkaField(2)] ShortStatus ShortStatus,
+                [property: AkkaField(3)] List<ShortStatus> ShortStatuses) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG014");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);

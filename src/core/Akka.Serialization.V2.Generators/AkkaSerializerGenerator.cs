@@ -131,6 +131,15 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor UnsupportedEnumUnderlyingType = new(
+        "AKKASG014",
+        "Enum underlying type is not supported",
+        "Property '{0}' on type '{1}' uses enum type '{2}' whose underlying type '{3}' is not fully int32-representable; " +
+        "generated serializers encode enums as int32, so use an enum backed by sbyte, byte, short, ushort, or int",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var serializers = context.SyntaxProvider
@@ -483,14 +492,33 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 continue;
 
             messages.Add(message);
-            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Object))
+            var referencedObjectTypes = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var field in message.Fields)
+                CollectObjectTypeNames(field.Mapping, referencedObjectTypes);
+
+            foreach (var typeName in referencedObjectTypes)
             {
-                if (allMessagesByType.TryGetValue(field.Mapping.TypeFullName, out var nestedMessage))
+                if (allMessagesByType.TryGetValue(typeName, out var nestedMessage))
                     pending.Enqueue(nestedMessage);
             }
         }
 
         return messages.ToImmutable();
+    }
+
+    /// <summary>
+    /// Collects every <see cref="FieldKind.Object"/> type name reachable through a mapping, descending
+    /// into collection element/key/value mappings so that a nested <c>[AkkaSerializable]</c> type used
+    /// only inside a collection (for example the element of a <c>List&lt;Reading&gt;</c>) is still
+    /// reached and gets its Write/Read/SizeOf methods generated.
+    /// </summary>
+    private static void CollectObjectTypeNames(TypeMapping mapping, HashSet<string> into)
+    {
+        if (mapping.Kind == FieldKind.Object)
+            into.Add(mapping.TypeFullName);
+
+        foreach (var argument in mapping.TypeArguments)
+            CollectObjectTypeNames(argument, into);
     }
 
     private static bool ValidateMessages(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages)
@@ -535,6 +563,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.MissingSerializableDefinition))
             {
                 context.ReportDiagnostic(Diagnostic.Create(MissingNestedSerializableDefinition, Location.None, field.Name, message.FullyQualifiedName, field.TypeFullName));
+                isValid = false;
+            }
+
+            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.UnsupportedEnumUnderlyingType))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(UnsupportedEnumUnderlyingType, Location.None, field.Name, message.FullyQualifiedName, field.Mapping.TypeFullName, field.Mapping.EnumUnderlyingTypeName));
                 isValid = false;
             }
         }
@@ -752,19 +786,28 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine("        checked");
         sb.AppendLine("        {");
         sb.Append("            var size = SizeOfMapHeader(").Append(message.Fields.Length).AppendLine(");");
+        var alloc = new NameAlloc();
         foreach (var field in message.Fields)
-            GenerateSizeField(sb, field);
+            GenerateSizeField(sb, field, alloc);
         sb.AppendLine("            return size;");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine();
     }
 
-    private static void GenerateSizeField(StringBuilder sb, FieldInfo field)
+    private static void GenerateSizeField(StringBuilder sb, FieldInfo field, NameAlloc alloc)
     {
         var value = "message." + field.Name;
         var localName = ToCamelCase(field.Name) + "Size";
         sb.Append("            size += SizeOfInt32(").Append(field.Index).AppendLine(");");
+        if (IsCollectionKind(field.Mapping.Kind))
+        {
+            var fieldSize = alloc.Next("size");
+            EmitSizeCollectionBody(sb, field.Mapping, value, fieldSize, "            ", alloc);
+            sb.Append("            size += ").Append(fieldSize).AppendLine(";");
+            return;
+        }
+
         if (TryGetInlineSizeExpression(field, value, out var expression))
         {
             sb.Append("            size += ").Append(expression).AppendLine(";");
@@ -859,8 +902,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             .Append("(ref global::MessagePack.MessagePackWriter writer, ").Append(message.FullyQualifiedName).AppendLine(" message)");
         sb.AppendLine("    {");
         sb.Append("        writer.WriteMapHeader(").Append(message.Fields.Length).AppendLine(");");
+        var alloc = new NameAlloc();
         foreach (var field in message.Fields)
-            GenerateWriteField(sb, field);
+            GenerateWriteField(sb, field, alloc);
         sb.AppendLine("    }");
         sb.AppendLine();
     }
@@ -871,6 +915,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             .AppendLine("(ref global::MessagePack.MessagePackReader reader)");
         sb.AppendLine("    {");
         sb.AppendLine("        var fieldCount = reader.ReadMapHeader();");
+        var alloc = new NameAlloc();
         foreach (var field in message.Fields)
         {
             sb.Append("        ").Append(GetLocalType(field)).Append(' ').Append(ToCamelCase(field.Name)).Append(" = ")
@@ -887,7 +932,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         foreach (var field in message.Fields)
         {
             sb.Append("                case ").Append(field.Index).AppendLine(":");
-            GenerateReadField(sb, field);
+            GenerateReadField(sb, field, alloc);
             if (IsRequired(field))
                 sb.Append("                    ").Append(GetHasLocalName(field)).AppendLine(" = true;");
             sb.AppendLine("                    break;");
@@ -918,7 +963,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
-    private static void GenerateWriteField(StringBuilder sb, FieldInfo field)
+    private static void GenerateWriteField(StringBuilder sb, FieldInfo field, NameAlloc alloc)
     {
         var value = "message." + field.Name;
         sb.Append("        writer.Write(").Append(field.Index).AppendLine(");");
@@ -927,15 +972,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.Append("        if (").Append(value).AppendLine(" is null)");
             sb.AppendLine("            writer.WriteNil();");
             sb.AppendLine("        else");
-            GenerateWriteFieldValue(sb, field, value + ".Value", "            ");
+            GenerateWriteFieldValue(sb, field, value + ".Value", "            ", alloc);
             return;
         }
 
-        GenerateWriteFieldValue(sb, field, value, "        ");
+        GenerateWriteFieldValue(sb, field, value, "        ", alloc);
     }
 
-    private static void GenerateWriteFieldValue(StringBuilder sb, FieldInfo field, string value, string indent)
+    private static void GenerateWriteFieldValue(StringBuilder sb, FieldInfo field, string value, string indent, NameAlloc alloc)
     {
+        if (IsCollectionKind(field.Mapping.Kind))
+        {
+            EmitWriteCollectionBody(sb, field.Mapping, value, indent, alloc);
+            return;
+        }
+
         switch (field.Mapping.Kind)
         {
             case FieldKind.String:
@@ -1011,15 +1062,26 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         }
     }
 
-    private static void GenerateReadField(StringBuilder sb, FieldInfo field)
+    private static void GenerateReadField(StringBuilder sb, FieldInfo field, NameAlloc alloc)
     {
         var target = ToCamelCase(field.Name);
+
+        // Collection fields own their MessagePack nil handling end-to-end (EmitReadCollectionBody
+        // does its own TryReadNil), so they are read directly regardless of the field's nullability:
+        // a nil-on-the-wire assigns null, and the post-loop required-field guard rejects a null in a
+        // non-nullable collection slot exactly as it does for any other non-nullable reference field.
+        if (IsCollectionKind(field.Mapping.Kind))
+        {
+            GenerateReadFieldValue(sb, field, target, "                    ", alloc);
+            return;
+        }
+
         if (IsNullableValueField(field))
         {
             sb.AppendLine("                    if (reader.TryReadNil())");
             sb.Append("                        ").Append(target).AppendLine(" = null;");
             sb.AppendLine("                    else");
-            GenerateReadFieldValue(sb, field, target, "                        ");
+            GenerateReadFieldValue(sb, field, target, "                        ", alloc);
             return;
         }
 
@@ -1032,15 +1094,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.AppendLine("                    if (reader.TryReadNil())");
             sb.Append("                        ").Append(target).AppendLine(" = null;");
             sb.AppendLine("                    else");
-            GenerateReadFieldValue(sb, field, target, "                        ");
+            GenerateReadFieldValue(sb, field, target, "                        ", alloc);
             return;
         }
 
-        GenerateReadFieldValue(sb, field, target, "                    ");
+        GenerateReadFieldValue(sb, field, target, "                    ", alloc);
     }
 
-    private static void GenerateReadFieldValue(StringBuilder sb, FieldInfo field, string target, string indent)
+    private static void GenerateReadFieldValue(StringBuilder sb, FieldInfo field, string target, string indent, NameAlloc alloc)
     {
+        if (IsCollectionKind(field.Mapping.Kind))
+        {
+            EmitReadCollectionBody(sb, field.Mapping, target, indent, alloc);
+            return;
+        }
+
         switch (field.Mapping.Kind)
         {
             case FieldKind.String:
@@ -1092,6 +1160,374 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         }
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // Native collection emission (T[], List<T>, IReadOnlyList<T>, Dictionary<TKey, TValue>).
+    //
+    // Collections encode as MessagePack array/map framing wrapped around per-element encodings that
+    // reuse the same scalar/object primitives as ordinary fields, and compose recursively so nested
+    // collections (List<List<int>>, Dictionary<string, List<Reading>>) work with no special cases.
+    // null encodes as MessagePack nil; empty encodes as a zero-length array/map header. The two are
+    // distinct on the wire and round-trip as distinct values. This framing is permanent wire format --
+    // see the encoding matrix in the PR body for the full table.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>Allocates collision-free local names within a single generated method body.</summary>
+    private sealed class NameAlloc
+    {
+        private int _counter;
+
+        public string Next(string hint) => "__" + hint + _counter++;
+    }
+
+    private static string CollectionCountMember(FieldKind kind) => kind == FieldKind.Array ? "Length" : "Count";
+
+    /// <summary>
+    /// Whether a value of this element mapping is stored as a reference in its strongly-typed collection
+    /// slot. Reference elements are declared as nullable read temporaries and stored with the
+    /// null-forgiving operator (a runtime no-op) so the generated code stays warning-clean under
+    /// <c>#nullable enable</c> while still round-tripping a genuine null element.
+    /// </summary>
+    private static bool ElementIsReference(TypeMapping mapping)
+    {
+        if (IsCollectionKind(mapping.Kind))
+            return true;
+
+        return mapping.Kind switch
+        {
+            FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef => true,
+            FieldKind.Object => !mapping.IsValueType,
+            _ => false
+        };
+    }
+
+    private static string ElementStore(TypeMapping mapping, string valueExpr)
+        => ElementIsReference(mapping) ? valueExpr + "!" : valueExpr;
+
+    private static string ElementTempType(TypeMapping mapping)
+        => ElementIsReference(mapping) ? mapping.DeclaredTypeName + "?" : mapping.DeclaredTypeName;
+
+    private static bool IsScalarValueKind(FieldKind kind)
+        => kind is FieldKind.Int32 or FieldKind.Int64 or FieldKind.Boolean or FieldKind.Double
+            or FieldKind.Decimal or FieldKind.Guid or FieldKind.DateTime or FieldKind.DateTimeOffset or FieldKind.Enum;
+
+    // ----- WRITE -----
+
+    private static void EmitWriteCollectionBody(StringBuilder sb, TypeMapping mapping, string value, string indent, NameAlloc alloc)
+    {
+        sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
+        sb.Append(indent).AppendLine("{");
+        sb.Append(indent).AppendLine("    writer.WriteNil();");
+        sb.Append(indent).AppendLine("}");
+        sb.Append(indent).AppendLine("else");
+        sb.Append(indent).AppendLine("{");
+
+        var bodyIndent = indent + "    ";
+        var loopIndent = bodyIndent + "    ";
+        if (mapping.Kind == FieldKind.Dictionary)
+        {
+            var kvp = alloc.Next("kvp");
+            sb.Append(bodyIndent).Append("writer.WriteMapHeader(").Append(value).AppendLine(".Count);");
+            sb.Append(bodyIndent).Append("foreach (var ").Append(kvp).Append(" in ").Append(value).AppendLine(")");
+            sb.Append(bodyIndent).AppendLine("{");
+            EmitWriteElement(sb, mapping.TypeArguments[0], kvp + ".Key", loopIndent, alloc);
+            EmitWriteElement(sb, mapping.TypeArguments[1], kvp + ".Value", loopIndent, alloc);
+            sb.Append(bodyIndent).AppendLine("}");
+        }
+        else
+        {
+            var item = alloc.Next("item");
+            sb.Append(bodyIndent).Append("writer.WriteArrayHeader(").Append(value).Append('.').Append(CollectionCountMember(mapping.Kind)).AppendLine(");");
+            sb.Append(bodyIndent).Append("foreach (var ").Append(item).Append(" in ").Append(value).AppendLine(")");
+            sb.Append(bodyIndent).AppendLine("{");
+            EmitWriteElement(sb, mapping.TypeArguments[0], item, loopIndent, alloc);
+            sb.Append(bodyIndent).AppendLine("}");
+        }
+
+        sb.Append(indent).AppendLine("}");
+    }
+
+    private static void EmitWriteElement(StringBuilder sb, TypeMapping mapping, string value, string indent, NameAlloc alloc)
+    {
+        if (IsCollectionKind(mapping.Kind))
+        {
+            EmitWriteCollectionBody(sb, mapping, value, indent, alloc);
+            return;
+        }
+
+        if (mapping.Kind == FieldKind.Object)
+        {
+            if (mapping.IsValueType && !mapping.IsNullable)
+            {
+                sb.Append(indent).Append("Write").Append(GetObjectMethodName(mapping)).Append("(ref writer, ").Append(value).AppendLine(");");
+                return;
+            }
+
+            var writeValue = mapping.IsValueType ? value + ".Value" : value;
+            sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
+            sb.Append(indent).AppendLine("    writer.WriteNil();");
+            sb.Append(indent).AppendLine("else");
+            sb.Append(indent).Append("    Write").Append(GetObjectMethodName(mapping)).Append("(ref writer, ").Append(writeValue).AppendLine(");");
+            return;
+        }
+
+        if (mapping.IsNullable && IsScalarValueKind(mapping.Kind))
+        {
+            sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
+            sb.Append(indent).AppendLine("    writer.WriteNil();");
+            sb.Append(indent).AppendLine("else");
+            EmitScalarWrite(sb, mapping, value + ".Value", indent + "    ");
+            return;
+        }
+
+        EmitScalarWrite(sb, mapping, value, indent);
+    }
+
+    private static void EmitScalarWrite(StringBuilder sb, TypeMapping mapping, string value, string indent)
+    {
+        switch (mapping.Kind)
+        {
+            case FieldKind.String:
+            case FieldKind.ByteArray:
+            case FieldKind.Int32:
+            case FieldKind.Int64:
+            case FieldKind.Boolean:
+            case FieldKind.Double:
+                sb.Append(indent).Append("writer.Write(").Append(value).AppendLine(");");
+                break;
+            case FieldKind.Decimal:
+                sb.Append(indent).Append("WriteDecimal(ref writer, ").Append(value).AppendLine(");");
+                break;
+            case FieldKind.Guid:
+                sb.Append(indent).Append("WriteGuid(ref writer, ").Append(value).AppendLine(");");
+                break;
+            case FieldKind.DateTime:
+                sb.Append(indent).Append("WriteDateTime(ref writer, ").Append(value).AppendLine(");");
+                break;
+            case FieldKind.DateTimeOffset:
+                sb.Append(indent).Append("WriteDateTimeOffset(ref writer, ").Append(value).AppendLine(");");
+                break;
+            case FieldKind.ActorRef:
+                sb.Append(indent).Append("WriteActorRef(ref writer, ").Append(value).AppendLine(");");
+                break;
+            case FieldKind.Enum:
+                sb.Append(indent).Append("writer.Write((int)").Append(value).AppendLine(");");
+                break;
+        }
+    }
+
+    // ----- READ -----
+
+    private static void EmitReadCollectionBody(StringBuilder sb, TypeMapping mapping, string target, string indent, NameAlloc alloc)
+    {
+        sb.Append(indent).AppendLine("if (reader.TryReadNil())");
+        sb.Append(indent).AppendLine("{");
+        sb.Append(indent).Append("    ").Append(target).AppendLine(" = null;");
+        sb.Append(indent).AppendLine("}");
+        sb.Append(indent).AppendLine("else");
+        sb.Append(indent).AppendLine("{");
+
+        var bodyIndent = indent + "    ";
+        var loopIndent = bodyIndent + "    ";
+        var length = alloc.Next("len");
+        var collection = alloc.Next("col");
+        var index = alloc.Next("i");
+
+        if (mapping.Kind == FieldKind.Dictionary)
+        {
+            var key = mapping.TypeArguments[0];
+            var val = mapping.TypeArguments[1];
+            var keyVar = alloc.Next("key");
+            var valVar = alloc.Next("val");
+            sb.Append(bodyIndent).Append("var ").Append(length).AppendLine(" = reader.ReadMapHeader();");
+            sb.Append(bodyIndent).Append("var ").Append(collection).Append(" = new global::System.Collections.Generic.Dictionary<")
+                .Append(key.DeclaredTypeName).Append(", ").Append(val.DeclaredTypeName).Append(">(").Append(length).AppendLine(");");
+            sb.Append(bodyIndent).Append("for (var ").Append(index).Append(" = 0; ").Append(index).Append(" < ").Append(length).Append("; ").Append(index).AppendLine("++)");
+            sb.Append(bodyIndent).AppendLine("{");
+            EmitReadElement(sb, key, keyVar, loopIndent, alloc);
+            EmitReadElement(sb, val, valVar, loopIndent, alloc);
+            sb.Append(loopIndent).Append(collection).Append('[').Append(ElementStore(key, keyVar)).Append("] = ").Append(ElementStore(val, valVar)).AppendLine(";");
+            sb.Append(bodyIndent).AppendLine("}");
+        }
+        else
+        {
+            var element = mapping.TypeArguments[0];
+            var itemVar = alloc.Next("item");
+            sb.Append(bodyIndent).Append("var ").Append(length).AppendLine(" = reader.ReadArrayHeader();");
+            if (mapping.Kind == FieldKind.Array)
+                sb.Append(bodyIndent).Append("var ").Append(collection).Append(" = ").Append(GetArrayAllocationExpression(element.DeclaredTypeName, length)).AppendLine(";");
+            else
+                sb.Append(bodyIndent).Append("var ").Append(collection).Append(" = new global::System.Collections.Generic.List<").Append(element.DeclaredTypeName).Append(">(").Append(length).AppendLine(");");
+            sb.Append(bodyIndent).Append("for (var ").Append(index).Append(" = 0; ").Append(index).Append(" < ").Append(length).Append("; ").Append(index).AppendLine("++)");
+            sb.Append(bodyIndent).AppendLine("{");
+            EmitReadElement(sb, element, itemVar, loopIndent, alloc);
+            if (mapping.Kind == FieldKind.Array)
+                sb.Append(loopIndent).Append(collection).Append('[').Append(index).Append("] = ").Append(ElementStore(element, itemVar)).AppendLine(";");
+            else
+                sb.Append(loopIndent).Append(collection).Append(".Add(").Append(ElementStore(element, itemVar)).AppendLine(");");
+            sb.Append(bodyIndent).AppendLine("}");
+        }
+
+        sb.Append(bodyIndent).Append(target).Append(" = ").Append(collection).AppendLine(";");
+        sb.Append(indent).AppendLine("}");
+    }
+
+    /// <summary>
+    /// Builds the C# allocation expression for a single-dimension array of
+    /// <paramref name="elementTypeName"/>. For a jagged array the length belongs in the FIRST bracket
+    /// pair with the element's own bracket pairs appended after it: element <c>int[]</c> allocates as
+    /// <c>new int[len][]</c> (not the invalid <c>new int[][len]</c>), element <c>int[][]</c> as
+    /// <c>new int[len][][]</c>. Bracket pairs only ever appear as an array suffix in the
+    /// fully-qualified display name (generics use angle brackets), so peeling trailing <c>[]</c> pairs
+    /// off the element type name recovers the correct structure.
+    /// </summary>
+    private static string GetArrayAllocationExpression(string elementTypeName, string lengthVar)
+    {
+        var core = elementTypeName;
+        var suffix = string.Empty;
+        while (core.EndsWith("[]", StringComparison.Ordinal))
+        {
+            core = core.Substring(0, core.Length - 2);
+            suffix += "[]";
+        }
+
+        return "new " + core + "[" + lengthVar + "]" + suffix;
+    }
+
+    private static void EmitReadElement(StringBuilder sb, TypeMapping mapping, string resultVar, string indent, NameAlloc alloc)
+    {
+        sb.Append(indent).Append(ElementTempType(mapping)).Append(' ').Append(resultVar).AppendLine(";");
+
+        if (IsCollectionKind(mapping.Kind))
+        {
+            EmitReadCollectionBody(sb, mapping, resultVar, indent, alloc);
+            return;
+        }
+
+        if (mapping.Kind == FieldKind.Object)
+        {
+            if (mapping.IsValueType && !mapping.IsNullable)
+            {
+                sb.Append(indent).Append(resultVar).Append(" = Read").Append(GetObjectMethodName(mapping)).AppendLine("(ref reader);");
+                return;
+            }
+
+            sb.Append(indent).AppendLine("if (reader.TryReadNil())");
+            sb.Append(indent).Append("    ").Append(resultVar).AppendLine(" = null;");
+            sb.Append(indent).AppendLine("else");
+            sb.Append(indent).Append("    ").Append(resultVar).Append(" = Read").Append(GetObjectMethodName(mapping)).AppendLine("(ref reader);");
+            return;
+        }
+
+        if (mapping.IsNullable && IsScalarValueKind(mapping.Kind))
+        {
+            sb.Append(indent).AppendLine("if (reader.TryReadNil())");
+            sb.Append(indent).Append("    ").Append(resultVar).AppendLine(" = null;");
+            sb.Append(indent).AppendLine("else");
+            sb.Append(indent).Append("    ").Append(resultVar).Append(" = ").Append(GetScalarReadExpression(mapping)).AppendLine(";");
+            return;
+        }
+
+        sb.Append(indent).Append(resultVar).Append(" = ").Append(GetScalarReadExpression(mapping)).AppendLine(";");
+    }
+
+    private static string GetScalarReadExpression(TypeMapping mapping)
+    {
+        return mapping.Kind switch
+        {
+            FieldKind.String => "reader.ReadString()",
+            FieldKind.ByteArray => "reader.ReadBytes()?.ToArray()",
+            FieldKind.Int32 => "reader.ReadInt32()",
+            FieldKind.Int64 => "reader.ReadInt64()",
+            FieldKind.Boolean => "reader.ReadBoolean()",
+            FieldKind.Double => "reader.ReadDouble()",
+            FieldKind.Decimal => "ReadDecimal(ref reader)",
+            FieldKind.Guid => "ReadGuid(ref reader)",
+            FieldKind.DateTime => "ReadDateTime(ref reader)",
+            FieldKind.DateTimeOffset => "ReadDateTimeOffset(ref reader)",
+            FieldKind.ActorRef => "ReadActorRef(ref reader)",
+            FieldKind.Enum => "(" + mapping.TypeFullName + ")reader.ReadInt32()",
+            _ => "default"
+        };
+    }
+
+    // ----- SIZE -----
+
+    private static void EmitSizeCollectionBody(StringBuilder sb, TypeMapping mapping, string value, string sizeVar, string indent, NameAlloc alloc)
+    {
+        sb.Append(indent).Append("int ").Append(sizeVar).AppendLine(";");
+        sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
+        sb.Append(indent).AppendLine("{");
+        sb.Append(indent).Append("    ").Append(sizeVar).AppendLine(" = SizeOfNil();");
+        sb.Append(indent).AppendLine("}");
+        sb.Append(indent).AppendLine("else");
+        sb.Append(indent).AppendLine("{");
+
+        var bodyIndent = indent + "    ";
+        var loopIndent = bodyIndent + "    ";
+        if (mapping.Kind == FieldKind.Dictionary)
+        {
+            var kvp = alloc.Next("kvp");
+            sb.Append(bodyIndent).Append(sizeVar).Append(" = SizeOfMapHeader(").Append(value).AppendLine(".Count);");
+            sb.Append(bodyIndent).Append("foreach (var ").Append(kvp).Append(" in ").Append(value).AppendLine(")");
+            sb.Append(bodyIndent).AppendLine("{");
+            EmitSizeElement(sb, mapping.TypeArguments[0], kvp + ".Key", sizeVar, loopIndent, alloc);
+            EmitSizeElement(sb, mapping.TypeArguments[1], kvp + ".Value", sizeVar, loopIndent, alloc);
+            sb.Append(bodyIndent).AppendLine("}");
+        }
+        else
+        {
+            var item = alloc.Next("item");
+            sb.Append(bodyIndent).Append(sizeVar).Append(" = SizeOfArrayHeader(").Append(value).Append('.').Append(CollectionCountMember(mapping.Kind)).AppendLine(");");
+            sb.Append(bodyIndent).Append("foreach (var ").Append(item).Append(" in ").Append(value).AppendLine(")");
+            sb.Append(bodyIndent).AppendLine("{");
+            EmitSizeElement(sb, mapping.TypeArguments[0], item, sizeVar, loopIndent, alloc);
+            sb.Append(bodyIndent).AppendLine("}");
+        }
+
+        sb.Append(indent).AppendLine("}");
+    }
+
+    private static void EmitSizeElement(StringBuilder sb, TypeMapping mapping, string value, string sizeVar, string indent, NameAlloc alloc)
+    {
+        if (IsCollectionKind(mapping.Kind))
+        {
+            var innerSize = alloc.Next("size");
+            EmitSizeCollectionBody(sb, mapping, value, innerSize, indent, alloc);
+            sb.Append(indent).Append(sizeVar).Append(" += ").Append(innerSize).AppendLine(";");
+            return;
+        }
+
+        if (mapping.Kind == FieldKind.Object)
+        {
+            var elementSize = alloc.Next("size");
+            string sizeExpr;
+            if (mapping.IsValueType && !mapping.IsNullable)
+            {
+                sizeExpr = "SizeOf" + GetObjectMethodName(mapping) + "(" + value + ")";
+            }
+            else
+            {
+                var sizedValue = mapping.IsValueType ? value + ".Value" : value;
+                sizeExpr = value + " is null ? SizeOfNil() : SizeOf" + GetObjectMethodName(mapping) + "(" + sizedValue + ")";
+            }
+
+            sb.Append(indent).Append("var ").Append(elementSize).Append(" = ").Append(sizeExpr).AppendLine(";");
+            sb.Append(indent).Append("if (").Append(elementSize).AppendLine(" < 0)");
+            sb.Append(indent).AppendLine("    return global::Akka.Serialization.SerializerV2.UnknownSize;");
+            sb.Append(indent).Append(sizeVar).Append(" += ").Append(elementSize).AppendLine(";");
+            return;
+        }
+
+        if (mapping.IsNullable && IsScalarValueKind(mapping.Kind))
+        {
+            sb.Append(indent).Append(sizeVar).Append(" += ").Append(value).Append(" is null ? SizeOfNil() : ")
+                .Append(GetScalarSizeExpression(mapping, value + ".Value")).AppendLine(";");
+            return;
+        }
+
+        sb.Append(indent).Append(sizeVar).Append(" += ").Append(GetScalarSizeExpression(mapping, value)).AppendLine(";");
+    }
+
     private static TypeMapping MapType(ITypeSymbol type, KnownTypes knownTypes)
     {
         if (TryGetNullableValueType(type, out var underlyingType))
@@ -1104,7 +1540,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         // mapping name, can never match a formatter, and still fail with AKKASG003.
         var mapping = MapTypeCore(type, knownTypes);
         if (mapping.TypeFullName.Length == 0 && type is INamedTypeSymbol { IsGenericType: false } namedType)
-            return new TypeMapping(mapping.Kind, GetFullyQualifiedTypeName(namedType));
+            return mapping.WithTypeFullName(GetFullyQualifiedTypeName(namedType));
 
         return mapping;
     }
@@ -1112,7 +1548,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static TypeMapping MapTypeCore(ITypeSymbol type, KnownTypes knownTypes)
     {
         if (type is INamedTypeSymbol enumType && type.TypeKind == TypeKind.Enum)
+        {
+            // Enums encode as int32 on the wire ("writer.Write((int)value)" / "(E)reader.ReadInt32()"),
+            // so an underlying type whose values are not all int32-representable (uint, long, ulong)
+            // would silently truncate. Reject at compile time (AKKASG014) instead.
+            var underlyingType = enumType.EnumUnderlyingType;
+            if (underlyingType != null && !IsEnumUnderlyingTypeSupported(underlyingType.SpecialType))
+            {
+                return new TypeMapping(
+                    FieldKind.UnsupportedEnumUnderlyingType,
+                    GetFullyQualifiedTypeName(enumType),
+                    enumUnderlyingTypeName: underlyingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            }
+
             return new TypeMapping(FieldKind.Enum, GetFullyQualifiedTypeName(enumType));
+        }
 
         if (type is IArrayTypeSymbol { ElementType.SpecialType: SpecialType.System_Byte })
             return new TypeMapping(FieldKind.ByteArray);
@@ -1138,11 +1588,127 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         if (mapping.Kind != FieldKind.Unsupported)
             return mapping;
 
+        if (TryMapCollection(type, knownTypes, out var collectionMapping))
+            return collectionMapping;
+
         if (type is INamedTypeSymbol { IsGenericType: false, TypeKind: TypeKind.Class or TypeKind.Struct } missingNestedType)
             return new TypeMapping(FieldKind.MissingSerializableDefinition, GetFullyQualifiedTypeName(missingNestedType));
 
         return mapping;
     }
+
+    /// <summary>
+    /// Maps the four natively-supported collection shapes -- <c>T[]</c>, <c>List&lt;T&gt;</c>,
+    /// <c>IReadOnlyList&lt;T&gt;</c>, and <c>Dictionary&lt;TKey,TValue&gt;</c> -- to their collection
+    /// <see cref="FieldKind"/>, recursively mapping element/key/value types so collections compose.
+    /// A collection whose element/key/value is itself unsupported collapses to
+    /// <see cref="FieldKind.Unsupported"/> so AKKASG003 fires with the full field type -- except an
+    /// enum element with an unsupported underlying type, which propagates as
+    /// <see cref="FieldKind.UnsupportedEnumUnderlyingType"/> so AKKASG014 fires naming the enum.
+    /// <c>byte[]</c> is never seen here (it is intercepted earlier as <see cref="FieldKind.ByteArray"/>).
+    /// </summary>
+    private static bool TryMapCollection(ITypeSymbol type, KnownTypes knownTypes, out TypeMapping mapping)
+    {
+        mapping = default;
+
+        if (type is IArrayTypeSymbol { Rank: 1 } arrayType && arrayType.ElementType.SpecialType != SpecialType.System_Byte)
+        {
+            var element = MapCollectionElement(arrayType.ElementType, knownTypes);
+            mapping = TryCollapseBadElement(element, out var collapsed)
+                ? collapsed
+                : new TypeMapping(FieldKind.Array, typeArguments: ImmutableArray.Create(element));
+            return true;
+        }
+
+        if (type is not INamedTypeSymbol { IsGenericType: true } namedType)
+            return false;
+
+        var definition = namedType.OriginalDefinition;
+        if (knownTypes.ListOfT != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.ListOfT))
+        {
+            var element = MapCollectionElement(namedType.TypeArguments[0], knownTypes);
+            mapping = TryCollapseBadElement(element, out var collapsed)
+                ? collapsed
+                : new TypeMapping(FieldKind.List, typeArguments: ImmutableArray.Create(element));
+            return true;
+        }
+
+        if (knownTypes.ReadOnlyListOfT != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.ReadOnlyListOfT))
+        {
+            var element = MapCollectionElement(namedType.TypeArguments[0], knownTypes);
+            mapping = TryCollapseBadElement(element, out var collapsed)
+                ? collapsed
+                : new TypeMapping(FieldKind.ReadOnlyList, typeArguments: ImmutableArray.Create(element));
+            return true;
+        }
+
+        if (knownTypes.DictionaryOfKeyValue != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.DictionaryOfKeyValue))
+        {
+            var key = MapCollectionElement(namedType.TypeArguments[0], knownTypes);
+            var value = MapCollectionElement(namedType.TypeArguments[1], knownTypes);
+            mapping = TryCollapseBadElement(key, out var collapsedKey) ? collapsedKey
+                : TryCollapseBadElement(value, out var collapsedValue) ? collapsedValue
+                : new TypeMapping(FieldKind.Dictionary, typeArguments: ImmutableArray.Create(key, value));
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Collapses a bad collection element/key/value mapping into the mapping the containing field
+    /// should carry. An enum with an unsupported underlying type keeps its identity (enum name plus
+    /// backing type) so AKKASG014 can name it even through arbitrarily deep nesting; every other bad
+    /// element collapses to plain <see cref="FieldKind.Unsupported"/> for AKKASG003.
+    /// </summary>
+    private static bool TryCollapseBadElement(TypeMapping element, out TypeMapping collapsed)
+    {
+        if (element.Kind == FieldKind.UnsupportedEnumUnderlyingType)
+        {
+            collapsed = new TypeMapping(
+                FieldKind.UnsupportedEnumUnderlyingType,
+                element.TypeFullName,
+                enumUnderlyingTypeName: element.EnumUnderlyingTypeName);
+            return true;
+        }
+
+        if (element.Kind is FieldKind.Unsupported or FieldKind.MissingSerializableDefinition)
+        {
+            collapsed = new TypeMapping(FieldKind.Unsupported);
+            return true;
+        }
+
+        collapsed = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Whether every value of an enum with this underlying type is exactly representable as an int32
+    /// (the wire encoding for <see cref="FieldKind.Enum"/>). uint, long, and ulong are rejected: their
+    /// out-of-int32-range values would silently truncate through the <c>(int)</c> cast.
+    /// </summary>
+    private static bool IsEnumUnderlyingTypeSupported(SpecialType underlyingType)
+    {
+        return underlyingType is SpecialType.System_SByte
+            or SpecialType.System_Byte
+            or SpecialType.System_Int16
+            or SpecialType.System_UInt16
+            or SpecialType.System_Int32;
+    }
+
+    private static TypeMapping MapCollectionElement(ITypeSymbol type, KnownTypes knownTypes)
+    {
+        var declaredTypeName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+        if (TryGetNullableValueType(type, out var underlyingType))
+            return MapTypeCore(underlyingType, knownTypes).AsCollectionElement(declaredTypeName, isNullable: true);
+
+        var isNullable = type.IsReferenceType && type.NullableAnnotation == NullableAnnotation.Annotated;
+        return MapTypeCore(type, knownTypes).AsCollectionElement(declaredTypeName, isNullable);
+    }
+
+    private static bool IsCollectionKind(FieldKind kind)
+        => kind is FieldKind.Array or FieldKind.List or FieldKind.ReadOnlyList or FieldKind.Dictionary;
 
     private static string DefaultValue(FieldInfo field)
     {
@@ -1180,6 +1746,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static bool IsReferenceLike(FieldInfo field)
     {
+        if (IsCollectionKind(field.Mapping.Kind))
+            return true;
+
         if (field.Mapping.Kind == FieldKind.Formatted)
             return field.Formatter is { IsTargetValueType: false };
 
@@ -1339,6 +1908,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             Guid = compilation.GetTypeByMetadataName("System.Guid");
             DateTimeOffset = compilation.GetTypeByMetadataName("System.DateTimeOffset");
             ActorRef = compilation.GetTypeByMetadataName("Akka.Actor.IActorRef");
+            ListOfT = compilation.GetTypeByMetadataName("System.Collections.Generic.List`1");
+            ReadOnlyListOfT = compilation.GetTypeByMetadataName("System.Collections.Generic.IReadOnlyList`1");
+            DictionaryOfKeyValue = compilation.GetTypeByMetadataName("System.Collections.Generic.Dictionary`2");
         }
 
         public INamedTypeSymbol? FieldAttribute { get; }
@@ -1347,6 +1919,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public INamedTypeSymbol? Guid { get; }
         public INamedTypeSymbol? DateTimeOffset { get; }
         public INamedTypeSymbol? ActorRef { get; }
+        public INamedTypeSymbol? ListOfT { get; }
+        public INamedTypeSymbol? ReadOnlyListOfT { get; }
+        public INamedTypeSymbol? DictionaryOfKeyValue { get; }
 
         public static KnownTypes From(Compilation compilation)
         {
@@ -1406,11 +1981,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private readonly struct TypeMapping
     {
-        public TypeMapping(FieldKind kind, string typeFullName = "", bool isValueType = false)
+        public TypeMapping(
+            FieldKind kind,
+            string typeFullName = "",
+            bool isValueType = false,
+            string declaredTypeName = "",
+            bool isNullable = false,
+            ImmutableArray<TypeMapping> typeArguments = default,
+            string enumUnderlyingTypeName = "")
         {
             Kind = kind;
             TypeFullName = typeFullName;
             IsValueType = isValueType;
+            DeclaredTypeName = declaredTypeName;
+            IsNullable = isNullable;
+            TypeArguments = typeArguments.IsDefault ? ImmutableArray<TypeMapping>.Empty : typeArguments;
+            EnumUnderlyingTypeName = enumUnderlyingTypeName;
         }
 
         public FieldKind Kind { get; }
@@ -1423,6 +2009,43 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         /// <see cref="FieldKind.Formatted"/> foreign-type formatter targets. Unused for every other kind.
         /// </summary>
         public bool IsValueType { get; }
+
+        /// <summary>
+        /// The exact fully-qualified C# type name (from <see cref="SymbolDisplayFormat.FullyQualifiedFormat"/>)
+        /// used to declare read temporaries and construct collection instances when this mapping is a
+        /// collection element/key/value. Populated only for mappings produced by <c>MapCollectionElement</c>.
+        /// For a <c>Nullable&lt;T&gt;</c> value element it includes the trailing <c>?</c> (for example
+        /// <c>int?</c>); for a reference element it is the non-nullable form.
+        /// </summary>
+        public string DeclaredTypeName { get; }
+
+        /// <summary>
+        /// For a collection element/key/value mapping: whether the element may be MessagePack <c>nil</c>.
+        /// True for a <c>Nullable&lt;T&gt;</c> value element or a nullable-annotated reference element.
+        /// Reference objects and nested collections are always nil-guarded regardless of this flag; it is
+        /// only load-bearing for distinguishing <c>T?</c> from <c>T</c> among value-type elements.
+        /// </summary>
+        public bool IsNullable { get; }
+
+        /// <summary>
+        /// Child mappings for a collection kind: a single element mapping for
+        /// <see cref="FieldKind.Array"/>/<see cref="FieldKind.List"/>/<see cref="FieldKind.ReadOnlyList"/>,
+        /// and [key, value] for <see cref="FieldKind.Dictionary"/>. Empty for every non-collection kind.
+        /// </summary>
+        public ImmutableArray<TypeMapping> TypeArguments { get; }
+
+        /// <summary>
+        /// For <see cref="FieldKind.UnsupportedEnumUnderlyingType"/>: the display name of the enum's
+        /// underlying type (for example <c>long</c>), carried alongside <see cref="TypeFullName"/> (the
+        /// enum itself) so AKKASG014 can name both. Empty for every other kind.
+        /// </summary>
+        public string EnumUnderlyingTypeName { get; }
+
+        public TypeMapping WithTypeFullName(string typeFullName)
+            => new(Kind, typeFullName, IsValueType, DeclaredTypeName, IsNullable, TypeArguments, EnumUnderlyingTypeName);
+
+        public TypeMapping AsCollectionElement(string declaredTypeName, bool isNullable)
+            => new(Kind, TypeFullName, IsValueType, declaredTypeName, isNullable, TypeArguments, EnumUnderlyingTypeName);
     }
 
     /// <summary>
@@ -1476,6 +2099,11 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         Enum,
         Object,
         MissingSerializableDefinition,
-        Formatted
+        Formatted,
+        Array,
+        List,
+        ReadOnlyList,
+        Dictionary,
+        UnsupportedEnumUnderlyingType
     }
 }
