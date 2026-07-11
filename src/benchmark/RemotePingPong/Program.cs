@@ -136,6 +136,18 @@ namespace RemotePingPong
         // auto-raised run is never mistaken for a default-config one.
         private static string? _queueSizeAutoRaiseReason;
 
+        // When set (via the "--inbound-lanes N" option), overrides
+        // akka.remote.artery.advanced.inbound-lanes (see Remote.conf for the default) for every
+        // ActorSystem this invocation creates - both loopback systems in "run" mode, this node's
+        // system in split "server"/"client" mode. Only meaningful in Artery mode. Null means the
+        // HOCON key is never touched, so default-config runs stay byte-for-byte identical to
+        // pre-lanes behavior - same convention as _qSizeOverride.
+        private static int? _inboundLanesOverride;
+
+        // Same as _inboundLanesOverride, but for akka.remote.artery.advanced.outbound-lanes
+        // (default 1, see Remote.conf).
+        private static int? _outboundLanesOverride;
+
         // Split two-process mode (via the "server" / "client" subcommands): runs the two
         // sides of the benchmark in separate processes so they can sit on two physical machines and
         // exercise a real network. When neither is used ("run", the default), the benchmark
@@ -292,6 +304,28 @@ namespace RemotePingPong
                   outbound-message-queue-size = {_effectiveQueueSize.Value}
                 }}");
                 config = queueSizeConfig.WithFallback(config);
+            }
+
+            // Same convention as the queue-size override above: only write the lanes keys when
+            // they're actually going to be read (Artery mode) AND the caller passed an explicit
+            // --inbound-lanes/--outbound-lanes. Left unset, no HOCON key is added at all and
+            // Remote.conf's defaults apply untouched.
+            if (_useArtery && _inboundLanesOverride.HasValue)
+            {
+                var inboundLanesConfig = ConfigurationFactory.ParseString($@"
+                akka.remote.artery.advanced {{
+                  inbound-lanes = {_inboundLanesOverride.Value}
+                }}");
+                config = inboundLanesConfig.WithFallback(config);
+            }
+
+            if (_useArtery && _outboundLanesOverride.HasValue)
+            {
+                var outboundLanesConfig = ConfigurationFactory.ParseString($@"
+                akka.remote.artery.advanced {{
+                  outbound-lanes = {_outboundLanesOverride.Value}
+                }}");
+                config = outboundLanesConfig.WithFallback(config);
             }
 
             // Only set when "--payload real" was given - a --payload-less (or "--payload toy")
@@ -520,6 +554,34 @@ namespace RemotePingPong
                               "auto-raises it whenever window x clients would exceed 80% of the default capacity."
             };
 
+            var inboundLanesOption = new Option<int?>("--inbound-lanes")
+            {
+                Description = "Override akka.remote.artery.advanced.inbound-lanes - how many lanes " +
+                              "inbound ordinary-stream messages are fanned out across for parallel " +
+                              "deserialization/dispatch. Artery mode only; ignored without --artery. When " +
+                              "omitted, the Remote.conf default applies untouched."
+            };
+            inboundLanesOption.Validators.Add(result =>
+            {
+                var value = result.GetValueOrDefault<int?>();
+                if (value is <= 0)
+                    result.AddError($"--inbound-lanes must be greater than zero (got {value}).");
+            });
+
+            var outboundLanesOption = new Option<int?>("--outbound-lanes")
+            {
+                Description = "Override akka.remote.artery.advanced.outbound-lanes (default 1) - how many " +
+                              "outbound lanes ordinary-stream messages are fanned out across. Artery " +
+                              "mode only; ignored without --artery. When omitted, the Remote.conf default " +
+                              "applies untouched."
+            };
+            outboundLanesOption.Validators.Add(result =>
+            {
+                var value = result.GetValueOrDefault<int?>();
+                if (value is <= 0)
+                    result.AddError($"--outbound-lanes must be greater than zero (got {value}).");
+            });
+
             var timesOption = new Option<uint>("--times")
             {
                 Description = "Number of times to repeat the full benchmark sweep/run.",
@@ -580,6 +642,8 @@ namespace RemotePingPong
             runCommand.Options.Add(iobufOption);
             runCommand.Options.Add(msgsOption);
             runCommand.Options.Add(qsizeOption);
+            runCommand.Options.Add(inboundLanesOption);
+            runCommand.Options.Add(outboundLanesOption);
             runCommand.Options.Add(timesOption);
             runCommand.Options.Add(payloadOption);
             runCommand.Options.Add(serializerOption);
@@ -592,6 +656,8 @@ namespace RemotePingPong
                 parseResult.GetValue(iobufOption),
                 parseResult.GetValue(msgsOption),
                 parseResult.GetValue(qsizeOption),
+                parseResult.GetValue(inboundLanesOption),
+                parseResult.GetValue(outboundLanesOption),
                 parseResult.GetValue(timesOption),
                 parseResult.GetValue(payloadOption)!,
                 parseResult.GetValue(serializerOption)));
@@ -619,6 +685,8 @@ namespace RemotePingPong
             serverCommand.Options.Add(clientsOption);
             serverCommand.Options.Add(iobufOption);
             serverCommand.Options.Add(qsizeOption);
+            serverCommand.Options.Add(inboundLanesOption);
+            serverCommand.Options.Add(outboundLanesOption);
             serverCommand.Options.Add(serverHostOption);
             serverCommand.Options.Add(serverPortOption);
             serverCommand.Options.Add(payloadOption);
@@ -631,6 +699,8 @@ namespace RemotePingPong
                 parseResult.GetValue(clientsOption),
                 parseResult.GetValue(iobufOption),
                 parseResult.GetValue(qsizeOption),
+                parseResult.GetValue(inboundLanesOption),
+                parseResult.GetValue(outboundLanesOption),
                 parseResult.GetValue(serverHostOption),
                 parseResult.GetValue(serverPortOption),
                 parseResult.GetValue(payloadOption)!,
@@ -667,6 +737,8 @@ namespace RemotePingPong
             clientCommand.Options.Add(iobufOption);
             clientCommand.Options.Add(msgsOption);
             clientCommand.Options.Add(qsizeOption);
+            clientCommand.Options.Add(inboundLanesOption);
+            clientCommand.Options.Add(outboundLanesOption);
             clientCommand.Options.Add(timesOption);
             clientCommand.Options.Add(clientHostOption);
             clientCommand.Options.Add(clientPortOption);
@@ -682,6 +754,8 @@ namespace RemotePingPong
                 parseResult.GetValue(iobufOption),
                 parseResult.GetValue(msgsOption),
                 parseResult.GetValue(qsizeOption),
+                parseResult.GetValue(inboundLanesOption),
+                parseResult.GetValue(outboundLanesOption),
                 parseResult.GetValue(timesOption),
                 parseResult.GetValue(clientHostOption),
                 parseResult.GetValue(clientPortOption),
@@ -700,13 +774,14 @@ namespace RemotePingPong
             // same single-process loopback benchmark "run" performs with every option left at its default.
             rootCommand.SetAction(_ => RunLoopbackAsync(
                 artery: false, oneway: false, window: 50, clients: null, iobuf: null, msgs: null, qsize: null,
-                times: 1u, payload: "toy", serializer: null));
+                inboundLanes: null, outboundLanes: null, times: 1u, payload: "toy", serializer: null));
 
             return rootCommand;
         }
 
         private static async Task<int> RunLoopbackAsync(bool artery, bool oneway, int window, int? clients,
-            string? iobuf, long? msgs, int? qsize, uint times, string payload, string? serializer)
+            string? iobuf, long? msgs, int? qsize, int? inboundLanes, int? outboundLanes, uint times,
+            string payload, string? serializer)
         {
             _useArtery = artery;
             _onewayMode = oneway;
@@ -715,6 +790,8 @@ namespace RemotePingPong
             _ioBufSize = iobuf;
             _msgsOverride = msgs;
             _qSizeOverride = qsize;
+            _inboundLanesOverride = inboundLanes;
+            _outboundLanesOverride = outboundLanes;
             _payloadMode = payload;
             _serializerArm = serializer;
             _payloadInstance = ResolvePayloadInstance();
@@ -725,7 +802,8 @@ namespace RemotePingPong
         }
 
         private static async Task<int> RunServerModeAsync(bool artery, bool oneway, int window, int? clients,
-            string? iobuf, int? qsize, string host, int port, string payload, string? serializer)
+            string? iobuf, int? qsize, int? inboundLanes, int? outboundLanes, string host, int port,
+            string payload, string? serializer)
         {
             _useArtery = artery;
             _onewayMode = oneway;
@@ -733,6 +811,8 @@ namespace RemotePingPong
             _pinnedClients = clients;
             _ioBufSize = iobuf;
             _qSizeOverride = qsize;
+            _inboundLanesOverride = inboundLanes;
+            _outboundLanesOverride = outboundLanes;
             _host = host;
             _splitPort = port;
             _payloadMode = payload;
@@ -745,8 +825,8 @@ namespace RemotePingPong
         }
 
         private static async Task<int> RunClientModeAsync(bool artery, bool oneway, int window, int? clients,
-            string? iobuf, long? msgs, int? qsize, uint times, string host, int port, string? myHost,
-            string payload, string? serializer)
+            string? iobuf, long? msgs, int? qsize, int? inboundLanes, int? outboundLanes, uint times,
+            string host, int port, string? myHost, string payload, string? serializer)
         {
             _useArtery = artery;
             _onewayMode = oneway;
@@ -755,6 +835,8 @@ namespace RemotePingPong
             _ioBufSize = iobuf;
             _msgsOverride = msgs;
             _qSizeOverride = qsize;
+            _inboundLanesOverride = inboundLanes;
+            _outboundLanesOverride = outboundLanes;
             _clientMode = true;
             _host = host;
             _splitPort = port;
@@ -824,13 +906,30 @@ namespace RemotePingPong
                     Console.WriteLine(_queueSizeAutoRaiseReason);
                     Console.ForegroundColor = prevColor;
                 }
+                // Only printed when explicitly overridden - a lanes-less run keeps the exact
+                // header it had before these options existed.
+                if (_inboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("Inbound lanes (artery):            {0} (explicit --inbound-lanes)", _inboundLanesOverride.Value);
+                }
+                if (_outboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("Outbound lanes (artery):           {0} (explicit --outbound-lanes)", _outboundLanesOverride.Value);
+                }
             }
-            else if (_qSizeOverride.HasValue)
+            else
             {
-                // --qsize only means something in Artery mode (outbound-message-queue-size);
-                // called out explicitly rather than silently doing nothing, so a stray --qsize on a
-                // DotNetty run is never mistaken for having taken effect.
-                Console.WriteLine("--qsize ignored (DotNetty)");
+                // --qsize/--inbound-lanes/--outbound-lanes only mean something in Artery mode;
+                // called out explicitly rather than silently doing nothing, so a stray override on
+                // a DotNetty run is never mistaken for having taken effect.
+                if (_qSizeOverride.HasValue)
+                {
+                    Console.WriteLine("--qsize ignored (DotNetty)");
+                }
+                if (_inboundLanesOverride.HasValue || _outboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("--inbound-lanes/--outbound-lanes ignored (DotNetty)");
+                }
             }
             if (_clientMode)
             {
@@ -921,10 +1020,11 @@ namespace RemotePingPong
         /// a fresh ephemeral port every rep, so sequential runs can never collide on actor names -
         /// Akka's remote-deployment daemon already IS a "server-side factory keyed by client
         /// identity", which is why no run-id negotiation or receptionist protocol is needed here.
-        /// --window/--clients/--qsize/--oneway are accepted so the orchestrator can pass the
-        /// SAME values to both sides; functionally only the queue sizing matters on this side (it
-        /// sizes THIS system's outbound queue for the reply traffic - echoes in ping-pong,
-        /// Ack/Complete credit grants in one-way, and only in Artery mode - see
+        /// --window/--clients/--qsize/--inbound-lanes/--outbound-lanes/--oneway are accepted so
+        /// the orchestrator can pass the SAME values to both sides; functionally only the queue
+        /// and lane sizing matter on this side (they size THIS system's outbound queue for the
+        /// reply traffic - echoes in ping-pong, Ack/Complete credit grants in one-way - and its
+        /// Artery inbound/outbound lane counts, and only in Artery mode - see
         /// ResolveQueueSize()), while oneway/window/clients are disclosed in the header so
         /// operators can eyeball that both sides were launched consistently. Serves an arbitrary
         /// number of sequential benchmark runs until killed (Ctrl+C/SIGTERM).
@@ -1000,10 +1100,25 @@ namespace RemotePingPong
                     Console.WriteLine(_queueSizeAutoRaiseReason);
                     Console.ForegroundColor = prevColor;
                 }
+                if (_inboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("Inbound lanes (artery):            {0} (explicit --inbound-lanes)", _inboundLanesOverride.Value);
+                }
+                if (_outboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("Outbound lanes (artery):           {0} (explicit --outbound-lanes)", _outboundLanesOverride.Value);
+                }
             }
-            else if (_qSizeOverride.HasValue)
+            else
             {
-                Console.WriteLine("--qsize ignored (DotNetty)");
+                if (_qSizeOverride.HasValue)
+                {
+                    Console.WriteLine("--qsize ignored (DotNetty)");
+                }
+                if (_inboundLanesOverride.HasValue || _outboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("--inbound-lanes/--outbound-lanes ignored (DotNetty)");
+                }
             }
             if (_payloadMode == "real")
             {
