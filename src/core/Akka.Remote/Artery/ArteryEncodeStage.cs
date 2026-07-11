@@ -39,16 +39,19 @@ namespace Akka.Remote.Artery
     /// </para>
     ///
     /// <para>
-    /// <b>Why this stage itself needs no backstop.</b> The outbound stream from this stage's
-    /// <c>Out</c> down to <c>OutgoingConnection</c>/coalescing is one fused island (encode -&gt;
-    /// preamble-concat -&gt; killswitch -&gt; coalescing, no <c>.Async()</c> boundary in between), so
-    /// <c>OnPush</c> hands the owner into coalescing's write buffer synchronously, on the same
-    /// call -- this stage never holds an owner across handler calls, so there is nothing left for a
-    /// teardown path to dispose. A backstop here would in fact be actively wrong: disposal is
-    /// single-threaded by design (no <see cref="System.Threading.Interlocked"/>/<c>Volatile</c>
-    /// anywhere in this transfer chain), and adding one would risk a second, concurrent dispose
-    /// racing whichever downstream party (coalescing's <c>PostStop</c> or <c>TcpConnection</c>) is
-    /// disposing the SAME owner on its own thread.
+    /// <b>Why this stage itself needs no backstop.</b> At <c>outbound-lanes = 1</c>, the outbound
+    /// stream from this stage's <c>Out</c> down to <c>OutgoingConnection</c>/coalescing is one fused
+    /// island (encode -&gt; preamble-concat -&gt; killswitch -&gt; coalescing, no <c>.Async()</c> boundary
+    /// in between), so <c>OnPush</c> hands the owner into coalescing's write buffer synchronously, on the
+    /// same call -- this stage never holds an owner across handler calls, so there is nothing left for
+    /// a teardown path to dispose. At <c>outbound-lanes &gt; 1</c>, this stage's encode output crosses an
+    /// asynchronous boundary: the <c>MergeHub</c>'s internal queue sits between each lane's encode and
+    /// the shared coalescing sink. Ownership still transfers to exactly one downstream consumer on the
+    /// happy path (no double-dispose), but on an abrupt assembly teardown, any elements stranded inside
+    /// the hub's queue are NOT returned to their buffer pools and are simply reclaimed by the GC. This
+    /// is an accepted, safe trade-off: the bounded memory cost is the hub's per-producer buffer capacity
+    /// times the lane count, and no use-after-free is possible since the stranded elements never escape
+    /// the queue nor are they read after disposal.
     /// </para>
     /// </summary>
     internal sealed class ArteryEncodeStage : GraphStage<FlowShape<IOutboundEnvelope, ReadOnlySequence<byte>>>

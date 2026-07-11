@@ -46,6 +46,30 @@ namespace Akka.Remote
         private readonly Props _props;
 
         /// <summary>
+        /// INTERNAL API.
+        ///
+        /// Cached outbound send-routing decision for Akka.Remote.Artery TCP remoting (Pekko's
+        /// <c>cachedSendQueueIndex</c>, <c>RemoteActorRef.scala</c>): computed once per ref, on its
+        /// first ordinary send, by <c>Akka.Remote.Artery.ArteryRemoting.EnqueueOutbound</c> and
+        /// reused for every subsequent send to this same ref -- avoiding repeating the
+        /// large-message-destination pattern match / lane hash on every single message. Encodes
+        /// either "route to the large-message stream" or an ordinary-outbound lane index; see
+        /// <c>ArteryRemoting</c>'s private <c>UnresolvedSendRoute</c>/<c>LargeMessageRoute</c>
+        /// constants for the exact encoding.
+        ///
+        /// <para>
+        /// Sentinel <c>-1</c> means "not yet resolved". Meaningless -- and never read -- for
+        /// classic DotNetty remoting, which has no lanes/large-message-stream concept. Deliberately
+        /// a plain (non-volatile) field, matching Pekko's own <c>cachedSendQueueIndex</c>: the
+        /// computed value is a pure, idempotent function of this ref's (immutable) path and the
+        /// transport's (fixed for the process's lifetime) settings, so a benign race where two
+        /// threads compute and write the same value concurrently is harmless -- no synchronization
+        /// needed.
+        /// </para>
+        /// </summary>
+        internal int CachedSendQueueIndex = -1;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="RemoteActorRef"/> class.
         /// </summary>
         /// <param name="remote">The remote.</param>

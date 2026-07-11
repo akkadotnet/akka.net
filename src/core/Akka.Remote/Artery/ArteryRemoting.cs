@@ -151,6 +151,30 @@ namespace Akka.Remote.Artery
         private ArrayPool<byte>? _largeEncodeBufferPool;
 
         /// <summary>
+        /// Per-LANE dedicated <see cref="ArrayPool{T}"/> instances (outbound-lanes) -- one
+        /// independent <see cref="ArrayPool{T}.Create()"/> per lane, NOT shared with each other,
+        /// with <see cref="_encodeBufferPool"/> (which continues to serve the control stream, and
+        /// the ordinary stream at the <c>outbound-lanes = 1</c> default), or with
+        /// <see cref="_largeEncodeBufferPool"/>. Each lane's <see cref="ArteryEncodeStage"/> rents
+        /// on its own lane's materialization thread and returns on the ONE shared TCP write
+        /// thread -- giving every lane its own pool avoids the SAME cross-thread
+        /// rent-here-return-there bucket-thrashing pattern <see cref="_encodeBufferPool"/>'s own
+        /// remarks describe for <see cref="ArrayPool{T}.Shared"/> (measured ~10% throughput loss
+        /// there), just one level down (lane vs. transport-wide). This is the CONSERVATIVE choice
+        /// (favor isolation over pool-instance count); whether per-lane pools actually beat one
+        /// pool shared across all lanes (fewer pool instances, at the cost of reintroducing
+        /// cross-lane rent/return traffic) is an open question a micro-benchmark should answer
+        /// before this gate signs off -- see the outbound-lanes report.
+        ///
+        /// <para>
+        /// Empty (never indexed) at <c>outbound-lanes = 1</c> -- the ordinary stream at the default
+        /// lane count never reads this array; it uses <see cref="_encodeBufferPool"/> via the
+        /// UNCHANGED <see cref="MaterializeOutboundStream"/> path (gate B).
+        /// </para>
+        /// </summary>
+        private ArrayPool<byte>[]? _laneEncodeBufferPools;
+
+        /// <summary>
         /// Fault-injection test hook (design.md gate G3) -- see <see cref="ArteryTransportSetup.DropOutboundControlMessage"/>.
         /// Read once from <see cref="ArteryTransportSetup"/> in <see cref="Start"/>; <see langword="null"/>
         /// (production default) disables it entirely.
@@ -206,7 +230,8 @@ namespace Akka.Remote.Artery
             // registry's own hardcoded defaults -- see ArterySettings.OutboundMessageQueueSize /
             // OutboundControlQueueSize / OutboundLargeMessageQueueSize (task 10.2).
             _registry = new AssociationRegistry(
-                _settings.OutboundMessageQueueSize, _settings.OutboundControlQueueSize, _settings.OutboundLargeMessageQueueSize);
+                _settings.OutboundMessageQueueSize, _settings.OutboundControlQueueSize, _settings.OutboundLargeMessageQueueSize,
+                _settings.OutboundLanes);
         }
 
         /// <inheritdoc/>
@@ -220,8 +245,9 @@ namespace Akka.Remote.Artery
         {
             _log.Info("Starting Artery TCP remoting on [{0}:{1}]", _settings.CanonicalHostname, _settings.CanonicalPort);
             _log.Warning(
-                "Artery TCP remoting is EXPERIMENTAL and under active development -- task group 7 (reliable " +
-                "system-message delivery: seq/Ack/Nack/resend over the control stream; no lanes/compression yet). " +
+                "Artery TCP remoting is EXPERIMENTAL and under active development -- reliable system-message " +
+                "delivery (seq/Ack/Nack/resend over the control stream) and outbound lanes " +
+                "(akka.remote.artery.advanced.outbound-lanes) have landed; no inbound lanes/compression yet. " +
                 "Do not use in production.");
 
             _materializer = ActorMaterializer.Create(System);
@@ -236,10 +262,19 @@ namespace Akka.Remote.Artery
             // connection -- MaterializeOutboundStream reads this field), so every outbound lane in this
             // transport shares the one instance. A test-injected ArteryTransportSetup.EncodeBufferPool
             // (e.g. the poison pool) still overrides this.
-            _encodeBufferPool = arteryTransportSetup.Select(s => s.EncodeBufferPool).GetOrElse(null)
-                                ?? ArrayPool<byte>.Create();
+            var encodePoolOverride = arteryTransportSetup.Select(s => s.EncodeBufferPool).GetOrElse(null);
+            _encodeBufferPool = encodePoolOverride ?? ArrayPool<byte>.Create();
             _dropOutboundControlMessage = arteryTransportSetup.Select(s => s.DropOutboundControlMessage).GetOrElse(null);
             _onInboundLanesInitialized = arteryTransportSetup.Select(s => s.OnInboundLanesInitialized).GetOrElse(null);
+
+            // Outbound lanes: one DEDICATED ArrayPool<byte>.Create() per lane (never Shared, never
+            // reused across lanes) -- see _laneEncodeBufferPools' remarks. A test-injected
+            // EncodeBufferPool override (the poison-pool regression hook) is honored uniformly
+            // across every lane too, same as it is for _encodeBufferPool above. Left empty
+            // (harmless -- never indexed) at the outbound-lanes = 1 default; see MaterializeOutbound.
+            _laneEncodeBufferPools = _settings.OutboundLanes > 1
+                ? BuildLaneEncodeBufferPools(_settings.OutboundLanes, encodePoolOverride)
+                : Array.Empty<ArrayPool<byte>>();
 
             // Large-message stream (task 10.2): a dedicated pool, sized from the large-specific
             // settings -- see _largeEncodeBufferPool's remarks for why this is kept separate from
@@ -631,9 +666,47 @@ namespace Akka.Remote.Artery
 
         private void SendControlToAddress(Address to, object message) => EnqueueControl(to, message);
 
+        /// <summary>
+        /// <see cref="RemoteActorRef.CachedSendQueueIndex"/>'s sentinel: this ref's send route has
+        /// not been resolved yet (see <see cref="ResolveSendRoute"/>).
+        /// </summary>
+        private const int UnresolvedSendRoute = -1;
+
+        /// <summary>
+        /// <see cref="RemoteActorRef.CachedSendQueueIndex"/> encoding for "route to the
+        /// LARGE-MESSAGE stream" -- distinguished from every ordinary-lane index (always &gt;= 0)
+        /// by being negative but distinct from <see cref="UnresolvedSendRoute"/>.
+        /// </summary>
+        private const int LargeMessageRoute = -2;
+
+        /// <summary>
+        /// Resolves (and caches, per <see cref="RemoteActorRef.CachedSendQueueIndex"/>) which
+        /// outbound queue <paramref name="recipient"/>'s ordinary sends belong on -- Pekko's
+        /// <c>Association.selectQueue</c>, computed ONCE per ref rather than on every single send
+        /// (closing the review follow-up from the large-message-stream PR: this also eliminates
+        /// that per-send <see cref="Akka.Util.WildcardIndex{T}.Find"/> call on the steady-state path
+        /// once the ref's route is cached). Returns either <see cref="LargeMessageRoute"/> or an ordinary
+        /// lane index in <c>[0, association.OutboundLanes)</c> (<see cref="Association.SelectLane"/>).
+        /// </summary>
+        private int ResolveSendRoute(RemoteActorRef recipient, Association association)
+        {
+            var cached = recipient.CachedSendQueueIndex;
+            if (cached != UnresolvedSendRoute)
+                return cached;
+
+            var computed = _settings.LargeMessageChannelEnabled &&
+                            _settings.LargeMessageDestinations.Find(recipient.Path.Elements) is not null
+                ? LargeMessageRoute
+                : Association.SelectLane(recipient.Path.Uid, association.OutboundLanes);
+
+            recipient.CachedSendQueueIndex = computed;
+            return computed;
+        }
+
         private void EnqueueOutbound(Address remoteAddress, object message, string? senderPath, string? recipientPath, RemoteActorRef recipient)
         {
             var association = _registry.AssociationFor(remoteAddress);
+            var route = ResolveSendRoute(recipient, association);
 
             // Large-message stream routing (task 10.2), Pekko-faithful precedence: control > large
             // > ordinary. Control is already excluded by construction -- every system/control
@@ -644,11 +717,10 @@ namespace Akka.Remote.Artery
             // semantics ("Messages sent to ActorSelections will not be passed through the large
             // message stream") -- and in this port `recipient` for a selection send is the
             // selection's ANCHOR, not the final target, so it would essentially never match a
-            // destination pattern anyway; the explicit check just makes the invariant exact rather
-            // than incidental.
-            if (_settings.LargeMessageChannelEnabled &&
-                message is not ActorSelectionMessage &&
-                _settings.LargeMessageDestinations.Find(recipient.Path.Elements) is not null)
+            // destination pattern anyway. This exclusion is applied PER-MESSAGE (never cached) so a
+            // shared anchor ref's cached "large" route -- from some OTHER, non-selection send to
+            // the same anchor -- never leaks into a selection send's routing.
+            if (route == LargeMessageRoute && message is not ActorSelectionMessage)
             {
                 if (!association.IsLargeOutboundMaterialized)
                     association.EnsureLargeOutboundMaterialized(a => MaterializeLargeOutbound(remoteAddress, a, isRestart: a.HasLargeEverRestarted));
@@ -667,6 +739,11 @@ namespace Akka.Remote.Artery
                 return;
             }
 
+            // Either an ordinary lane index already, or an ActorSelectionMessage whose recipient's
+            // cached route says "large" -- forced onto lane 0 for THIS send only (see the remarks
+            // above; the ref's cache is left untouched for its own future non-selection sends).
+            var laneIndex = route == LargeMessageRoute ? 0 : route;
+
             if (!association.IsOutboundMaterialized)
                 // isRestart is derived from the gate's OWN history (design.md group 9), not a
                 // literal here -- this on-demand path can race ScheduleOutboundRestart's scheduled
@@ -675,17 +752,19 @@ namespace Akka.Remote.Artery
                 // Association.HasOutboundEverRestarted's remarks).
                 association.EnsureOutboundMaterialized(a => MaterializeOutbound(remoteAddress, a, isRestart: a.HasOutboundEverRestarted));
 
-            if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, recipientPath)))
+            if (!association.TryEnqueueOutbound(new OutboundEnvelope(message, senderPath, recipientPath), laneIndex))
             {
                 // Publish DIRECTLY to the event stream -- mirrors Pekko's Association.dropped().
                 // NOT routed through System.DeadLetters.Tell (that would double-wrap: Tell to the
                 // DeadLetters actor itself publishes a DeadLetter/Dropped wrapping whatever it's
                 // handed). The existing DeadLetterListener already provides log-N-then-periodic-
                 // summary behavior for Dropped via the akka.log-dead-letters settings, so no
-                // separate log-once latch is needed here (see DeadLetterSuspensionSpec).
+                // separate log-once latch is needed here (see DeadLetterSuspensionSpec). The lane
+                // index is named explicitly so an operator can tell WHICH lane backed up --
+                // outbound-lanes drop-observability requirement.
                 System.EventStream.Publish(new Dropped(
                     message,
-                    $"Outbound Artery queue to [{remoteAddress}] is full (capacity {association.OutboundQueueCapacity})",
+                    $"Outbound Artery queue to [{remoteAddress}] lane [{laneIndex}] is full (capacity {association.OutboundQueueCapacity})",
                     ActorRefs.NoSender,
                     System.DeadLetters));
             }
@@ -834,14 +913,198 @@ namespace Akka.Remote.Artery
                 Quarantine(remoteAddress, peer!.Value.Uid);
         }
 
-        private void MaterializeOutbound(Address remoteAddress, Association association, bool isRestart = false) =>
-            MaterializeOutboundStream(remoteAddress, association, ArteryStreamId.Ordinary, isRestart);
+        /// <summary>
+        /// Materializes this association's ORDINARY outbound stream. GATE B: at
+        /// <c>association.OutboundLanes &lt;= 1</c> (the shipping default) this is EXACTLY today's
+        /// call -- <see cref="MaterializeOutboundStream"/>, unchanged, no merge/fan-in machinery
+        /// ever materialized. Only at <c>OutboundLanes &gt; 1</c> does this branch into the
+        /// N-lanes-&gt;-one-socket assembly (<see cref="MaterializeOrdinaryOutboundWithLanes"/>).
+        /// Branches on <c>association.OutboundLanes</c> (the actual channel array's own lane
+        /// count), not a separately-read settings snapshot, so this can never drift from the shape
+        /// <see cref="Association"/> was actually constructed with.
+        /// </summary>
+        private void MaterializeOutbound(Address remoteAddress, Association association, bool isRestart = false)
+        {
+            if (association.OutboundLanes <= 1)
+            {
+                MaterializeOutboundStream(remoteAddress, association, ArteryStreamId.Ordinary, isRestart);
+                return;
+            }
+
+            MaterializeOrdinaryOutboundWithLanes(remoteAddress, association, isRestart);
+        }
 
         private void MaterializeControlOutbound(Address remoteAddress, Association association, bool isRestart = false) =>
             MaterializeOutboundStream(remoteAddress, association, ArteryStreamId.Control, isRestart);
 
         private void MaterializeLargeOutbound(Address remoteAddress, Association association, bool isRestart = false) =>
             MaterializeOutboundStream(remoteAddress, association, ArteryStreamId.Large, isRestart);
+
+        /// <summary>
+        /// Materializes this association's ORDINARY outbound stream when <c>outbound-lanes &gt; 1</c>:
+        /// N independent lane chains --
+        /// <c>ChannelSource.FromReader(laneReader) -&gt; OutboundHandshakeStage -&gt; ArteryEncodeStage</c>,
+        /// each with its OWN <see cref="OutboundHandshakeStage"/> instance (Pekko does this too --
+        /// <c>ArteryTransport.scala:791-812</c>) and its OWN dedicated encode buffer pool
+        /// (<see cref="_laneEncodeBufferPools"/>) -- merged via <see cref="MergeHub"/> into the
+        /// SAME preamble/kill-switch/<c>Tcp.OutgoingConnection</c> tail
+        /// <see cref="MaterializeOutboundStream"/> uses for the single-lane case: ONE socket per
+        /// association, regardless of lane count. Frame atomicity is inherent -- <see cref="MergeHub"/>
+        /// merges whole elements, and each <see cref="ArteryEncodeStage"/> element is one complete
+        /// framed message, so interleaving happens only at frame boundaries.
+        ///
+        /// <para>
+        /// <b>One restartable unit (Pekko's <c>streamKillSwitch</c> semantics,
+        /// <c>Association.scala</c>'s <c>runOutboundOrdinaryMessagesStream</c>).</b> A single
+        /// <see cref="SharedKillSwitch"/> (<paramref name="association"/>'s published
+        /// <see cref="Association.SetOutboundKillSwitch"/> value for this materialization) is woven
+        /// into EVERY lane chain AND the merge/socket tail. Whichever piece settles FIRST -- a lane
+        /// chain failing, the merge/socket tail failing, or either completing gracefully -- trips
+        /// this switch, which tears every OTHER piece down too; only once every piece's own
+        /// termination task has then settled does the single overall termination watch fire
+        /// <see cref="ScheduleOutboundRestart"/> for <see cref="ArteryStreamId.Ordinary"/> -- i.e.
+        /// the whole N-lanes-plus-socket assembly restarts together, as Pekko does, never a lone
+        /// lane silently going quiet while its siblings and the socket linger.
+        /// </para>
+        ///
+        /// <para>
+        /// Lane channels themselves survive this restart exactly the way the single ordinary
+        /// channel does today -- they are <paramref name="association"/>-owned and outlive any one
+        /// materialization (design.md group 9); only the stream graphs reading from them are torn
+        /// down and rebuilt.
+        /// </para>
+        /// </summary>
+        private void MaterializeOrdinaryOutboundWithLanes(Address remoteAddress, Association association, bool isRestart)
+        {
+            // Same shutdown/materializer-liveness guard as MaterializeOutboundStream -- see its
+            // remarks for the full rationale (late system message racing teardown; materializer
+            // reclaimed independently of _isShutdown).
+            if (_isShutdown || _materializer is null || _materializer.IsShutdown)
+                return;
+
+            var lanes = association.OutboundLanes;
+
+            var outboundContext = new AssociationRegistryOutboundContext(
+                _registry,
+                _localUniqueAddress,
+                remoteAddress,
+                sendControl: message => EnqueueControl(remoteAddress, message),
+                subscribeControl: SubscribeControl,
+                unsubscribeControl: UnsubscribeControl,
+                quarantine: (address, uid) => Quarantine(address, uid));
+
+            var host = remoteAddress.Host
+                ?? throw new RemoteTransportException($"Cannot open an Artery {ArteryStreamId.Ordinary} outbound connection to [{remoteAddress}]: missing host.");
+            var port = remoteAddress.Port
+                ?? throw new RemoteTransportException($"Cannot open an Artery {ArteryStreamId.Ordinary} outbound connection to [{remoteAddress}]: missing port.");
+            var remoteEndpoint = IPAddress.TryParse(host, out var parsedHost)
+                ? (EndPoint)new IPEndPoint(parsedHost, port)
+                : new DnsEndPoint(host, port);
+
+            // ONE switch, shared across every lane chain AND the merge/socket tail below -- see
+            // this method's "one restartable unit" remarks. Named per-association for diagnosability.
+            var laneKillSwitch = KillSwitches.Shared($"arteryOutboundLanesKillSwitch-{remoteAddress}");
+
+            // null! satisfies definite-assignment (same pattern/rationale as MaterializeOutboundStream's
+            // own terminationWatch): the catch clauses below always return, so these are only read
+            // past the try block when it assigned them.
+            Sink<ReadOnlySequence<byte>, NotUsed> mergeSink = null!;
+            Task mergeTailTermination = null!;
+            var laneTerminations = new Task[lanes];
+
+            try
+            {
+                var mergeHubSource = MergeHub.Source<ReadOnlySequence<byte>>();
+
+                // Preamble (written ONCE, not per lane -- there is only ONE socket) -> transport-wide
+                // kill switch (Shutdown() tears every association's streams down) -> this assembly's
+                // OWN shared kill switch -> watch termination (write-side completion signal, exactly
+                // like MaterializeOutboundStream's "TERMINATION SIGNAL" remarks) -> OutgoingConnection.
+                ((mergeSink, mergeTailTermination), _) = Source.Single(BuildPreamble(ArteryStreamId.Ordinary))
+                    .ConcatMaterialized(mergeHubSource, Keep.Right)
+                    .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
+                    .Via(laneKillSwitch.Flow<ReadOnlySequence<byte>>())
+                    .WatchTermination(Keep.Both)
+                    .Via(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions))
+                    .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
+                    .Run(_materializer!);
+
+                association.SetOutboundKillSwitch(laneKillSwitch);
+
+                for (var i = 0; i < lanes; i++)
+                {
+                    var handshakeStage = new OutboundHandshakeStage(
+                        outboundContext, _settings.HandshakeRetryInterval, _settings.HandshakeTimeout,
+                        _settings.InjectHandshakeInterval, isControlStream: false, forceReqOnStart: isRestart);
+
+                    var encodeStage = new ArteryEncodeStage(
+                        System.Serialization, _localUniqueAddress.Uid, _laneEncodeBufferPools![i]);
+
+                    var (laneTermination, _) = ChannelSource.FromReader(association.LaneReader(i))
+                        .Via(laneKillSwitch.Flow<IOutboundEnvelope>())
+                        .Via(Flow.FromGraph(handshakeStage))
+                        .Via(Flow.FromGraph(encodeStage))
+                        .WatchTermination(Keep.Right)
+                        .ToMaterialized(mergeSink, Keep.Both)
+                        .Run(_materializer!);
+
+                    laneTerminations[i] = laneTermination;
+                }
+            }
+            catch (Akka.Pattern.IllegalStateException) when (_isShutdown || _materializer is null || _materializer.IsShutdown)
+            {
+                // Same shutdown race MaterializeOutboundStream's matching catch documents -- lost
+                // the race with teardown (materializer reclaimed between the guard above and Run()).
+                _log.Debug("Artery {0} outbound lanes stream to [{1}] not materialized: materializer is shutting down.", ArteryStreamId.Ordinary, remoteAddress);
+                return;
+            }
+            catch (InvalidOperationException)
+            {
+                // Same second shutdown race MaterializeOutboundStream's matching catch documents --
+                // /user guardian tearing down ahead of ArteryRemoting.Shutdown() itself.
+                _log.Debug("Artery {0} outbound lanes stream to [{1}] not materialized: actor system is terminating.", ArteryStreamId.Ordinary, remoteAddress);
+                return;
+            }
+
+            // Whichever piece (any lane, or the merge/socket tail) settles FIRST trips the shared
+            // switch, tearing every OTHER piece down too -- see this method's "one restartable unit"
+            // remarks. Idempotent (SharedKillSwitch.Shutdown()/Abort() are both first-caller-wins).
+            var allPieces = new Task[lanes + 1];
+            Array.Copy(laneTerminations, allPieces, lanes);
+            allPieces[lanes] = mergeTailTermination;
+
+            foreach (var piece in allPieces)
+            {
+                piece.ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        laneKillSwitch.Abort(t.Exception!.GetBaseException());
+                    else
+                        laneKillSwitch.Shutdown();
+                }, TaskContinuationOptions.ExecuteSynchronously);
+            }
+
+            // The SINGLE overall termination signal for this assembly: fires ScheduleOutboundRestart
+            // exactly once, only after EVERY lane and the merge/socket tail have all themselves
+            // settled (a direct consequence of the trip-on-first-settle wiring above cascading the
+            // shutdown/abort through every OTHER piece's kill-switch-woven flow).
+            Task.WhenAll(allPieces).ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    _log.Warning(
+                        t.Exception?.GetBaseException(),
+                        "Artery {0} outbound lanes stream to [{1}] failed; this association's ordinary outbound " +
+                        "assembly ({2} lanes) has ended -- reconnect will be attempted per outbound-restart-backoff " +
+                        "unless shut down or quarantined.", ArteryStreamId.Ordinary, remoteAddress, lanes);
+                else
+                    _log.Debug(
+                        "Artery {0} outbound lanes stream to [{1}] completed ({2} lanes); reconnect will be " +
+                        "attempted per outbound-restart-backoff unless shut down or quarantined.",
+                        ArteryStreamId.Ordinary, remoteAddress, lanes);
+
+                ScheduleOutboundRestart(remoteAddress, association, ArteryStreamId.Ordinary);
+            }, TaskContinuationOptions.ExecuteSynchronously);
+        }
 
         /// <summary>
         /// Materializes ONE outbound stream chain -- shared shape for BOTH the ordinary and
@@ -1185,6 +1448,23 @@ namespace Akka.Remote.Artery
             var buffer = new byte[ArteryConnectionHeader.Length];
             ArteryConnectionHeader.WriteTo(buffer, streamId);
             return new ReadOnlySequence<byte>(buffer);
+        }
+
+        /// <summary>
+        /// Builds <paramref name="lanes"/> independent <see cref="ArrayPool{T}"/> instances for
+        /// <see cref="_laneEncodeBufferPools"/> -- see that field's remarks for why each lane gets
+        /// its own <see cref="ArrayPool{T}.Create()"/> rather than sharing one. When
+        /// <paramref name="testOverride"/> is supplied (the poison-pool regression hook), every
+        /// lane uses that SAME override instance instead, mirroring how <see cref="_encodeBufferPool"/>
+        /// honors the override.
+        /// </summary>
+        private static ArrayPool<byte>[] BuildLaneEncodeBufferPools(int lanes, ArrayPool<byte>? testOverride)
+        {
+            var pools = new ArrayPool<byte>[lanes];
+            for (var i = 0; i < lanes; i++)
+                pools[i] = testOverride ?? ArrayPool<byte>.Create();
+
+            return pools;
         }
     }
 }
