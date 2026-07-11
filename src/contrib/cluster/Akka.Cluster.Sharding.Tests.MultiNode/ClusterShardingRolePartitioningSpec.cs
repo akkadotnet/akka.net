@@ -207,18 +207,27 @@ namespace Akka.Cluster.Sharding.Tests
                 // migrating between R1 nodes, so region (re-)registration routinely takes longer
                 // than the default 5s AwaitAssert budget on a busy CI agent. See MNTR flakiness
                 // where this asserted 2 regions instead of 3 before convergence completed.
+                //
+                // Fresh probe per attempt + bounded inner expect + explicit 1s interval (the
+                // ClusterShardingQueriesSpec pattern): each timed-out attempt previously burned
+                // the full 5s single-expect default on the shared TestActor mailbox -- only ~6
+                // attempts fit in the window, and a late CurrentRegions reply from a timed-out
+                // attempt could pollute the next read. This shape yields ~30 clean, independent
+                // samples inside the same 30s budget.
                 await AwaitAssertAsync(async () =>
                 {
+                    var probe = CreateTestProbe();
                     var region = ClusterSharding.Get(Sys).ShardRegion(E1.TypeKey);
-                    region.Tell(GetCurrentRegions.Instance);
-                    (await ExpectMsgAsync<CurrentRegions>()).Regions.Count.Should().Be(3);
-                }, TimeSpan.FromSeconds(30));
+                    region.Tell(GetCurrentRegions.Instance, probe.Ref);
+                    (await probe.ExpectMsgAsync<CurrentRegions>(TimeSpan.FromSeconds(3))).Regions.Count.Should().Be(3);
+                }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
                 await AwaitAssertAsync(async () =>
                 {
+                    var probe = CreateTestProbe();
                     var region = ClusterSharding.Get(Sys).ShardRegion(E2.TypeKey);
-                    region.Tell(GetCurrentRegions.Instance);
-                    (await ExpectMsgAsync<CurrentRegions>()).Regions.Count.Should().Be(2);
-                }, TimeSpan.FromSeconds(30));
+                    region.Tell(GetCurrentRegions.Instance, probe.Ref);
+                    (await probe.ExpectMsgAsync<CurrentRegions>(TimeSpan.FromSeconds(3))).Regions.Count.Should().Be(2);
+                }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
             }, Config.Fourth);
 
             await EnterBarrierAsync($"{Roles.Count}-up");
