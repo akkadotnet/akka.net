@@ -44,6 +44,22 @@ public abstract class MultiNodeConfig
     private bool _testTransport = false;
 
     /// <summary>
+    /// Opt-in switch (not a public API) that lets the whole multi-node test run be
+    /// re-pointed at the Artery TCP remoting transport instead of classic DotNetty, without
+    /// touching individual specs. Set the <c>AKKA_MNTR_TRANSPORT</c> environment variable to
+    /// <c>artery</c> (case-insensitive) before invoking `dotnet test` on a `*.Tests.MultiNode`
+    /// project. Unset (the default) is byte-for-byte identical to today's DotNetty-only
+    /// behavior. This is deliberately internal-only plumbing -- it layers in as the lowest
+    /// non-default config tier, so any spec (or its <see cref="CommonConfig"/>/per-role
+    /// <see cref="NodeConfig(IEnumerable{RoleName}, IEnumerable{Config})"/>) that explicitly
+    /// sets `akka.remote.artery.*` keys of its own still wins.
+    /// </summary>
+    private static readonly bool UseArteryTransport = string.Equals(
+        Environment.GetEnvironmentVariable("AKKA_MNTR_TRANSPORT"),
+        "artery",
+        StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Register a common base config for all test participants, if so desired.
     /// </summary>
     public Config CommonConfig
@@ -148,12 +164,28 @@ public abstract class MultiNodeConfig
                 ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.applied-adapters = [trttl, gremlin]")
                 : ConfigurationFactory.Empty;
 
+            // AKKA_MNTR_TRANSPORT=artery: layer in Artery's canonical host/port (mirroring
+            // MultiNodeSpec.NodeConfig's classic dot-netty.tcp block below) as a fallback tier
+            // below CommonConfig/per-role NodeConfig but above BaseConfig, so specs are never
+            // silently overridden. See `UseArteryTransport` above for the full rationale; note
+            // this does NOT provide any equivalent to `_testTransport`'s throttle/blackhole
+            // adapters -- Artery has no failure-injection/test-mode equivalent today.
+            var arteryConfig = UseArteryTransport
+                ? ConfigurationFactory.ParseString(string.Format(
+                    @"akka.remote.artery {{
+                        enabled = on
+                        canonical.hostname = ""{0}""
+                        canonical.port = {1}
+                    }}", MultiNodeSpec.SelfName, MultiNodeSpec.SelfPort))
+                : ConfigurationFactory.Empty;
+
             var builder = ImmutableList.CreateBuilder<Config>();
             if (_nodeConf.TryGetValue(Myself, out var nodeConfig))
                 builder.Add(nodeConfig);
             builder.Add(_commonConf);
             builder.Add(transportConfig);
             builder.Add(MultiNodeSpec.NodeConfig);
+            builder.Add(arteryConfig);
             builder.Add(MultiNodeSpec.BaseConfig);
 
             return builder.ToImmutable().Aggregate((a, b) => a.WithFallback(b));

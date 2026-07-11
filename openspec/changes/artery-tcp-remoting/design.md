@@ -188,6 +188,100 @@ Akka.NET's classic UID is a 32-bit `int` (`AddressUidExtension.Uid` → `int`; `
 
 **G2 correctness suite:** happy-path associate (UID both ways; `association(uid)` None→Some); traffic-stall buffering (pre-completion messages delivered in order, zero drops); timeout + retry cadence; incarnation change (new UID resets association, ordering preserved); quarantine (+ new-UID re-associate, stale-UID ignored, pruning); InboundHandshake guards (wrong `to`, unknown origin); **Cluster integration — `SelfUniqueAddress` UID == observed handshake UID (the test that pins the int/long decision)**; config switch + coexistence (mixed-transport fails fast).
 
+## Association outbound-stream lifecycle: reconnect (group 9, DESIGNED 2026-07-05)
+
+G2 shipped with a documented limitation: a failed outbound connection ended the association's
+stream permanently. That violates the verified `SendQueue` lifecycle invariant ("the queue is
+**externally owned and injected** … the queue **survives stream restart** — reconnect re-attaches
+a new consumer to the same queue, so buffered messages persist") and blocks every
+restart-with-new-UID scenario. Group 9 implements it:
+
+- **The channels already survive** (Association-owned; `CompleteOutbound` only fires at transport
+  shutdown). What restarts is the CONSUMER: on outbound-stream termination (connection refused,
+  reset, `HandshakeTimeoutException`, write failure), the association's materialize-once gate for
+  that stream RESETS, and re-materialization is scheduled after `outbound-restart-backoff` (new
+  `advanced` key, default 1s). Applies independently per stream (ordinary, control).
+- **Retry policy — MVP-simple, termination via existing mechanisms:** unlimited restarts with the
+  fixed backoff. There is deliberately NO restart-count give-up: the association's *reliability*
+  give-up already exists where it matters — `give-up-system-message-after` quarantines when
+  unacked system messages age out, and quarantine gates ordinary sends. An unreachable peer with
+  no pending system messages costs one bounded queue + one backoff timer — same cost class as
+  Pekko's idle associations. Buffered ordinary messages persist until delivery or process
+  shutdown (bounded at queue capacity; overflow policy unchanged).
+- **Handshake across restart is free:** the handshake stages are per-materialization; a fresh
+  stream re-injects `HandshakeReq`; the peer's reply is idempotent (`CompleteHandshake` same-uid
+  no-op) or installs a new incarnation (peer restarted with new UID) — exactly the G2 semantics.
+  System-message seqNo state is per-incarnation and lives OUTSIDE the stage materialization
+  (delivery-stage buffer must survive restart or re-send from the buffer on re-materialization —
+  implementation must preserve invariant: no unacked system message is lost by a stream restart).
+- **Quarantined associations still restart their CONTROL stream** (piercing requires a live
+  control channel); ordinary remains gated at `Send()`.
+- **Inbound requires nothing:** new inbound connections are accepted at any time; acker state is
+  per-connection/incarnation by construction.
+- **Config:** `advanced.outbound-restart-backoff = 1s`. Tests use progress/order assertions only.
+
+**Group 9 correctness suite:** kill the peer's listener mid-traffic → restart it (same address,
+NEW uid) → association re-associates, new incarnation installed, old uid stays quarantinable,
+buffered messages from the old incarnation are NOT delivered out of order (**PINNED, implemented
+2026-07-06**: an ordinary envelope still sitting in the association-owned outbound channel — i.e.
+not yet dequeued by a consumer — at the moment the old stream dies is neither dropped nor
+reordered: it stays queued and is delivered, in original per-recipient order, to the new
+incarnation once the fresh handshake completes. The ONLY messages that may be lost are ones
+already dequeued from the channel and handed to a materialization that itself fails again before
+completing its OWN handshake — an accepted, pre-existing best-effort characteristic of the
+ordinary stream (it has no ack/resend, unlike the reliable system-message lane), not a new gap
+introduced by reconnect. This required two implementation fixes beyond simple gate-reset-and-retry:
+(1) `OutboundHandshakeStage`'s G2-era "already associated by address ⇒ skip re-handshake" fast path
+is unsafe across a restart — it must be forced through a fresh `HandshakeReq` round trip
+(`ForceReqOnStart`, gated on a monotonic per-association `HandshakeGeneration` counter, since a
+same-uid re-handshake is a no-op on `AssociationState` and provides no other observable signal);
+(2) `Akka.IO.TcpConnection` never proactively observed its write pump's completion, so a write-side
+I/O failure on an otherwise-idle one-way connection could go undetected indefinitely — fixed
+generally (not Artery-specific) by mirroring the existing read-pump-monitoring pattern);
+(3) **the ordinary stream has no keep-alive, so it detects a dead peer only when an ordinary write
+happens to fail — and a single write to a just-gracefully-closed socket can succeed locally (the
+peer's RST lands only afterwards), leaving an idle ordinary stream stranded on a dead connection
+indefinitely** (observed as a slow-CI-only 30s hang in the queued-redelivery spec, deterministic
+on fast boxes only because loopback RST latency there wins the race). Fixed by having the CONTROL
+stream — which detects the same death RELIABLY, since its periodic heartbeat always produces a
+"second write" that hits the errored socket — trip a published per-materialization ordinary
+`UniqueKillSwitch` (`Association._outboundKillSwitch`) when control's own connection genuinely fails,
+driving the ordinary stream down through the standard termination → `ScheduleOutboundRestart` path
+so it reconnects to the live incarnation alongside control instead of lingering. The trip is
+**edge-triggered — once per death, not per control fault**: control captures its `OutgoingConnection`
+materialized task and arms the detector (`MarkControlHealthy`) only when the connection is actually
+ESTABLISHED (a connection-refused reconnect attempt against a still-dead peer faults that task and
+leaves it disarmed), and the fault path fires the trip only via `TryConsumeControlHealthy()`
+(atomic read-and-clear). Without the edge gate, control's ~per-backoff reconnect-loop faults would
+each re-trip the ordinary stream, and a trip landing while the ordinary consumer is mid-handshake
+against the revived peer would drop its single held `pendingMessage` — the accepted best-effort
+window, but needless churn that empirically dropped the first buffered message ~50% of the time
+under a 2-core load. With the edge gate the ordinary stream is kicked exactly once (initial death),
+then self-manages its own reconnect loop and delivers its still-queued messages in order,
+uninterrupted, once the peer returns. Read-side EOF cannot substitute (it fires on every healthy
+one-way connection, so it was deliberately rejected as the teardown trigger); adding an ordinary
+keep-alive was rejected in favour of reusing control's existing reliable detection. Non-lossy for
+the pinned invariant above (a spurious trip during a control-only transient costs only a cheap
+ordinary reconnect; only already-dequeued envelopes are at-most-once-dropped, queued ones survive).
+
+**Test split (channel-buffering unit-tested; end-to-end proves ORDER).** The precise "messages
+still in the channel survive a stream restart" property is asserted deterministically at the unit
+level in `AssociationRestartSpec` (gate/killswitch/channel logic, no real sockets). The end-to-end
+`ArteryReconnectSpec.Should_Redeliver_Queued_Ordinary_Messages_After_Reconnect` proves the
+observable half — after the peer restarts under a new uid, a burst of ordinary messages to the same
+path is delivered to the new incarnation **in original order** (a contiguous in-order suffix; k==0
+== all delivered in the common case). It confirms reconnect by retrying a throwaway probe until one
+round-trips, NOT by observing the exact moment the dead-peer stream tears down: that internal
+transition's observability is subject to OS socket-close timing (a lone write to a
+gracefully-closed socket can succeed locally, so a busy Windows agent may not surface the dead
+connection until after the reconnect to the live one has already happened — which made an earlier
+`!IsOutboundMaterialized` gate wait flaky on Windows while the reconnect itself worked fine, as the
+sibling `Should_Reassociate` spec independently proves on the same platform). DeathWatch
+across peer restart (watch → peer dies → Terminated via give-up/quarantine path); clean start/stop
+cycles (9.2); QuarantinedEvent publication (9.4); cluster formation over Artery (9.5 — first full
+integration proof; `akka://` scheme in seed nodes — verified working with the production
+seed-nodes join path, no changes needed).
+
 ## Reliable system-message delivery (gate G3)
 
 Verified against Pekko `SystemMessageDelivery.scala` + Akka.NET `AckedDelivery.cs` / `Endpoint.cs`.
@@ -249,7 +343,16 @@ Phased, **correctness-before-throughput**. Each gate is a HARD stop — do not s
 - **G2 — Basic ordinary messaging.** Two ActorSystems exchange ordinary user messages over Artery TCP (single stream, single lane, no compression); handshake + UID established. Gate: message sent → received → dispatched to the correct actor, with classic remoting unaffected.
 - **G3 — Control stream + reliable system messages (CORRECTNESS GATE — before any perf work).** Control stream cannot be starved; system-message ACK/NACK/resend correct under duplicate, gap, and out-of-order; DeathWatch + remote-deploy behave; quarantine is UID-scoped and control-pierce works. Gate: the system-message correctness suite is green. **Do NOT tune throughput before this passes.**
 - **G4 — Bounded queues + backpressure.** Bounded per-lane + control queues; overflow policy (ordinary → drop to dead-letters, control → quarantine); slow-receiver tests prove memory cannot grow unbounded.
-- **G5 — Lanes + ordering.** Enable N ordinary lanes. **Entry:** the hub-vs-bounded-actor-Tell re-baseline on the Artery frame corpus + real decode island (rule 3; 9900X, N≥3, naked) decides the lane mechanism — stock `PartitionHub`, a ported Artery-internal fixed-size hub, or bounded actor lanes. Gate: per-recipient ordering tests green across lanes before N>1 is allowed on by default.
+- **First END-TO-END baseline (MEASURED 2026-07-07, RemotePingPong over Artery.Tcp, 9900X idle box; harness = the new `artery` flag on RemotePingPong, branch `feature/artery-perf`).** ~625K msgs/s peak and **FLAT** — ~615K at 1 client, still ~600–625K at 30 clients — vs DotNetty ~1.51M (which SCALES with clients via EndpointWriter write-batching). This empirically confirms Decision 2's serial-island theory: adding parallel clients does nothing, so the cap is the per-connection SERIAL path (outbound encode + the one-frame-per-`Tcp.Write` syscall), not a shortage of cores. **Implication + RESEQUENCE:** for small messages the lever is **graph-rule 5 (coalesce `Tcp.Write`s) — demand-driven "flush batching"** — NOT G5 lanes (lanes parallelize inbound *deserialize*, which is near-free for tiny messages, so they cannot move this number). So: profile the serial encode/write island and implement rule-5 write-coalescing **BEFORE** G5 lanes. This does NOT contradict Decision 5 ("NOT batching"): one message still = one envelope = one frame (no message aggregation, no wire change); coalescing only packs multiple *already-framed* messages into one socket write *while the socket is backpressured* — latency-free when uncontended, throughput win only when the write side can't keep up. (The `Flow.batch`/`OnNextBatch` #8326 pattern, applied to the write path.)
+- **Write-coalescing IMPLEMENTED (2026-07-07) — the rule-5 lever, ported from Pekko's streams TCP stage.** Root cause of the flat 625K, confirmed by CPU profile (no thread saturated; ~2.5 threadpool work-items/msg; the deficit is per-message SCHEDULING, not compute — every Artery/Streams/IO frame is <=0.01% self-time): Akka.NET's `TcpConnectionStage` write side was LOCK-STEP — one `Tcp.Write` per element, no next `Pull` until that write's `WriteAck` round-trip returned (~1.6us/msg ceiling, dead flat 1->30 clients). Pekko's stage keeps pulling WHILE a write is in flight, accumulating into a `writeBuffer`, and flushes the whole accumulation as ONE write on the ack — demand-driven "flush batching", latency-free when uncontended, coalescing only when the write side is backpressured. Ported into `Akka.Streams/Implementation/IO/TcpStages.cs` (a GENERAL Akka.Streams win — every streams-TCP user benefits; byte-capped at 16 KiB like Pekko's `write-buffer-size` default; copies each element into the buffer rather than zero-copy-chaining, because pull-ahead outruns `ArteryEncodeStage`'s pooled-buffer recycling — the poison-pool tests proved it). RESULT: RemotePingPong over Artery.Tcp **~625K -> ~1.8M msgs/s** (2.9x), past DotNetty (~1.51M) and the G6 target (1.39M) — single connection, single lane, no lanes/compression. Does NOT contradict Decision 5 (one message still = one envelope = one frame; wire-transparent). Two supporting fixes the win forced out (both `ArteryRemoting`): (a) the coalesced high-throughput bursts sprang a kernel **silly-window-syndrome** stall (receiver window shrinks below loopback MSS under memory pressure -> sender refuses to send sub-MSS forever; `ss`: rwnd_limited 99.9%, notsent+persist-timer, every app layer idle) — fixed by pinning 1 MiB `SO_RCVBUF`/`SO_SNDBUF` on Artery sockets so the window stays >> MSS; (b) the kill-switch-only shutdown (adopted earlier this branch) leaked stages parked on a never-arriving `WriteAck` (memory dump: ~31 orphaned interpreter actors, zombie ActorSystems) — fixed by REAPING the materializer (`_materializer.Shutdown()`) AFTER the kill switch, safe now that `_isShutdown` + `_materializer.IsShutdown` guard the late-materialization race the reaper-removal originally worried about. KNOWN FOLLOW-UPS (teardown-only, NOT correctness — all rows complete, Artery suite 169/169): a residual ~10s CoordinatedShutdown `actor-system-terminate` timeout per system (may be pre-existing — only surfaced at WARNING level); and a stage-level guard so a coalescing `TcpStreamLogic` fails on its connection's `Terminated` mid-run rather than relying on the shutdown reaper.
+- **Zero-copy outbound write path — ATTEMPTED, MEASURED ~10% SLOWER than the copy, being redesigned (2026-07-08).** Followed the coalescing copy (above) with a genuinely zero-copy path: the encoded pooled buffer's ownership rides in an owner-carrying `ReadOnlySequenceSegment<byte>` (`OwnedSequenceSegment`) through `Tcp.Write.Data`, disposed at the pipe-copy point in `TcpConnection` (modernize-akka-io-tcp Decision 8 / ownership-carrying `Tcp.Write`, shipped in #8341; `ArteryEncodeStage` owner-passthrough + `TcpStages` coalescing zero-copy-chaining on `feature/artery-perf`, **NOT pushed**). Correct (Artery poison-pool 169/169). **But a clean 3-way quiet-box macro (RemotePingPong Artery, stock 1→30 sweep, N=3, load ~2.3, reproduced across 2 runs within 1–2%) shows it is a REGRESSION, not a win:** pre-PR1 copy `ef854f4ea` peaks **1.83M**, post-PR1 copy `293c5835d` **1.79M** (PR1 itself ~innocent, −1.9%), zero-copy `b297bc572` **1.61M** — **−10% vs the copy, fully attributable** (B and C differ ONLY by this change). An earlier busy-box A/B that read "flat" was contamination; the lesson is re-run perf on a quiet box (the micro-benchmark-as-you-go discipline).
+  - **Alloc is a TRADE, not a pure win** (`[MemoryDiagnoser]` micro-decomposition, load-independent): encode **+56 B/msg** (the `OwnedSequenceSegment` node — a heap object where the old code used a `ReadOnlySequence` struct) vs coalescing **−(payload-scaled)** (removed `ToArray`; treatment flat ~200 B/op regardless of payload, the copy scales 248→472→4312 B at 32/256/4096). Net ≈ **−196 B/msg** at RemotePingPong's ~256 B frame — real but small, frame-size-dependent, and it INVERTS below ~56 B frames.
+  - **Root-cause hypothesis (pool-swap experiment running to confirm): cross-thread `ArrayPool<byte>.Shared` churn.** Zero-copy RENTS the buffer on the stream interpreter thread (encode) but RETURNS it on `TcpConnection`'s actor thread (the pipe-copy disposal); `ArrayPool.Shared`'s per-core/thread-local buckets thrash under rent-here/return-there, costing more than the memcpy the change removed. The copy version returned buffers same-thread (the encode 2-gen lag's `OnPull`, on the interpreter) and let the `byte[]` copies GC — cheaper. PR1's `DisposeOwnedSegments` walk is exonerated (micro: ~0.5 ns/segment, ~1 ns/msg amortized, 0 alloc).
+  - **The reframe: Decision 8 fixed the disposal SIGNAL but moved the SITE.** The original 2-gen lag returned in the stream, same-thread (right SITE), on a fragile generation count (wrong SIGNAL). Decision 8 fixed the signal (dispose exactly at the pipe copy) but moved the site to the actor thread — introducing the cross-thread cost. The `WriteAck` is ALREADY the exact "bytes in the pipe, safe to reuse" signal AND it lands back on the stream's interpreter thread — so the fix is **keep the site in the stream, drive it off the `WriteAck` signal**.
+  - **Proposed fix — `WriteAck`-driven same-thread return (Idea 1):** the coalescing stage collects owners (`DetachOwner`) during append, moves the flushed batch to an `_inFlight` list on flush, and RETURNS them to the pool in its `WriteAck` handler (interpreter thread = rent thread). `TcpConnection` reverts to treating the write's memory as BORROWED (no disposal). Abort/`PostStop` dispose the buffer's + `_inFlight`'s owners. Keeps zero-copy + no memcpy + same-thread return + the exact WriteAck lifetime — the 2-gen lag done right (right site, right signal). Makes Decision-8 connection-side disposal unnecessary FOR THE ARTERY PATH (Decision 8 stays a valid general Akka.IO mechanism for callers wanting connection-side disposal). Alternatives if insufficient: a dedicated cross-thread-friendly Artery buffer pool (MPSC free-list, Pekko `EnvelopeBufferPool`-style, topology-independent); pooling the segment nodes too (toward true zero per-message alloc); or fresh-alloc/no-pool (gives up zero-alloc, keeps no-memcpy — the throughput floor).
+  - **RESOLVED (2026-07-08): the fix is a one-line pool swap, `ArrayPool<byte>.Create()`, and Idea 1 is NOT needed.** Confirmed cross-thread `ArrayPool.Shared` as the cause via a pool-swap sweep on the zero-copy build (quiet box): `.Shared` 1.64M vs no-op-fresh-alloc 1.81M vs concurrent-free-list 1.82M — any non-thread-local pool recovers. `ArrayPool<byte>.Create()` (the built-in `ConfigurableArrayPool` — no thread-local layer, per-bucket locked stacks, already bounded + size-classed) macro-sanity peaks **1.82M**, matching the copy (1.79M) and pre-PR1 (1.83M). So the plan: swap `_encodeBufferPool` from `.Shared` to `.Create()` (transport-scoped, Pekko `EnvelopeBufferPool`-shaped) — NO custom pool, NO Idea 1 disposal rework. Zero-copy + `Create()` then beats the copy on BOTH throughput (1.82M ≥ 1.79M) and allocation (−196 B/msg).
+  - **The pool was only a ~10% effect; the real single-lane ceiling (~1.8M) is cross-thread COORDINATION, not the pool.** Isolated cross-thread micro (custom two-thread rent/return harness): a single producer→consumer handoff caps ~4M/s on the 9900X **regardless of pool** (same-thread runs 20–100M; cross-thread all cluster 3.5–5M — the handoff, not the pool, is the wall), and `Create()` ranks with the lock-free pools while allocating less. `4M ÷ ~2.5 work-items/msg ≈ 1.8M` — corroborating that the ceiling is per-message coordination (handoffs/doorbells), so **do NOT hand-roll a lock-free pool** (no headroom at this bottleneck). Next frontier past 1.8M: coordination amortization (inbound doorbell/dispatch batching — the #8314 `OnNextBatch` pattern mirrored on the receive path), NOT the pool and NOT lanes. `feature/artery-perf` zero-copy is NOT pushed pending the `Create()` swap + re-validation.
+- **G5 — Lanes + ordering.** Enable N ordinary lanes. **Entry:** the hub-vs-bounded-actor-Tell re-baseline on the Artery frame corpus + real decode island (rule 3; 9900X, N≥3, naked) decides the lane mechanism — stock `PartitionHub`, a ported Artery-internal fixed-size hub, or bounded actor lanes. Gate: per-recipient ordering tests green across lanes before N>1 is allowed on by default. **NOTE (2026-07-07): resequenced behind write-coalescing above — the flat 625K baseline shows lanes are the wrong first lever for small-message throughput.**
 - **G6 — Performance milestone (headline gate).** RemotePingPong on Artery TCP **> 680K msgs/sec** (naked, N≥3); the Artery envelope codec beats the classic protobuf PDU path on allocation + throughput microbenchmarks; generated MessagePack beats V1-adapter fallback. FAIL → profile the serial islands (Decision 2) before shipping.
 - **G7 — Soak + hardening.** Long-running soak (connection churn, restart-with-new-UID, quarantine cycles) with no leaks/hangs; bug-fix pass; API-approval + `dotnet build -warnaserror` clean.
 

@@ -50,9 +50,10 @@ namespace Akka.IO
 
         protected override ITransportConnection CreateTransport()
         {
+            var pipeBufferSize = ResolvePipeBufferSize(Settings, _options);
             var inputPipeOptions = new PipeOptions(
-                pauseWriterThreshold: Settings.ReceiveBufferSize * 2,
-                resumeWriterThreshold: Settings.ReceiveBufferSize,
+                pauseWriterThreshold: pipeBufferSize * 2,
+                resumeWriterThreshold: pipeBufferSize,
                 useSynchronizationContext: false);
 
             if (_stream != null)

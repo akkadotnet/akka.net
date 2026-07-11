@@ -3785,6 +3785,11 @@ namespace Akka.IO
         }
         public static class SO
         {
+            public class PipeBufferSize : Akka.IO.Inet.SocketOption
+            {
+                public PipeBufferSize(int size) { }
+                public int Size { get; }
+            }
             public class ReceiveBufferSize : Akka.IO.Inet.SocketOption
             {
                 public ReceiveBufferSize(int size) { }

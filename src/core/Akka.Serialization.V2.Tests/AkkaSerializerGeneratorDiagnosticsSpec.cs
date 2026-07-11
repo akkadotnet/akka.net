@@ -599,6 +599,140 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
+    [Fact(DisplayName = "Generator should report AKKASG012 when top-level messages duplicate manifest")]
+    public void Generator_should_report_AKKASG012_when_top_level_messages_duplicate_manifest()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120901)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "shared-v1")]
+            public sealed record MessageA([property: AkkaField(1)] string Value) : IProtocol;
+
+            [AkkaSerializable(Manifest = "shared-v1")]
+            public sealed record MessageB([property: AkkaField(1)] string Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG012" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("shared-v1", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("MessageA", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("MessageB", StringComparison.Ordinal));
+
+        // Guards against a control-flow regression: if AKKASG012 stopped suppressing emission, the
+        // generated deserializer would switch on the same manifest string constant twice, which the
+        // C# compiler flags as an unreachable pattern (CS8510).
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "CS8510");
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG012 when the same manifest is reused across different serializers")]
+    public void Generator_should_not_report_AKKASG012_when_manifest_reused_across_serializers()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocolA
+            {
+            }
+
+            public interface IProtocolB
+            {
+            }
+
+            [AkkaSerializer(Name = "sample-a", SerializerId = 120902)]
+            public sealed partial class SampleSerializerA : MessagePackSerializer<IProtocolA>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializer(Name = "sample-b", SerializerId = 120903)]
+            public sealed partial class SampleSerializerB : MessagePackSerializer<IProtocolB>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "shared-v1")]
+            public sealed record MessageA([property: AkkaField(1)] string Value) : IProtocolA;
+
+            [AkkaSerializable(Manifest = "shared-v1")]
+            public sealed record MessageB([property: AkkaField(1)] string Value) : IProtocolB;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG012");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG013 when two serializers duplicate the same serializer id")]
+    public void Generator_should_report_AKKASG013_when_serializers_duplicate_serializer_id()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocolA
+            {
+            }
+
+            public interface IProtocolB
+            {
+            }
+
+            [AkkaSerializer(Name = "sample-a", SerializerId = 120904)]
+            public sealed partial class SampleSerializerA : MessagePackSerializer<IProtocolA>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializer(Name = "sample-b", SerializerId = 120904)]
+            public sealed partial class SampleSerializerB : MessagePackSerializer<IProtocolB>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "message-a-v1")]
+            public sealed record MessageA([property: AkkaField(1)] string Value) : IProtocolA;
+
+            [AkkaSerializable(Manifest = "message-b-v1")]
+            public sealed record MessageB([property: AkkaField(1)] string Value) : IProtocolB;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG013" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("120904", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("SampleSerializerA", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("SampleSerializerB", StringComparison.Ordinal));
+
+        diagnostics.Count(d => d.Id == "AKKASG013").Should().Be(1);
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);

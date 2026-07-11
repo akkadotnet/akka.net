@@ -136,6 +136,18 @@ namespace Akka.Serialization
         /// <summary>
         /// Needs to be INTERNAL so it can be accessed from tests. Should never be set directly.
         /// </summary>
+        /// <remarks>
+        /// LOAD-BEARING INVARIANT: this is <c>[ThreadStatic]</c>, so it is only visible on the OS
+        /// thread that set it. Every serialize/deserialize call must run start-to-finish on a single
+        /// OS thread, with the <see cref="WithTransport{T}(ExtendedActorSystem,System.Func{T})"/>
+        /// set/restore bracketing the call directly - there must be no <c>await</c> or
+        /// <c>Task.Run</c> (or any other thread hand-off) between the point where this is set and the
+        /// point where a serializer reads it (e.g. via <see cref="SerializedActorPath"/>). If work is
+        /// scheduled onto a different thread in between, that thread will see a stale or empty value
+        /// and actor references will serialize with the wrong (or no) transport address. See
+        /// <c>Akka.Serialization.V2.ActorPathFormatter</c> for how this same invariant is documented
+        /// and upheld for the Artery/MessagePack serialization path.
+        /// </remarks>
         [ThreadStatic]
         internal static Information CurrentTransportInformation;
 
@@ -174,6 +186,9 @@ namespace Akka.Serialization
         private readonly SerializerV2 _nullSerializer;
 
         private readonly ConcurrentDictionary<Type, SerializerV2> _serializerMap = new();
+        // NOTE: populated ONLY during construction (every AddSerializer call site is in the ctor);
+        // read-only thereafter, so plain Dictionary is safe for the concurrent reads on the
+        // Deserialize/GetSerializerById hot path. Registration after startup is not supported.
         private readonly Dictionary<int, SerializerV2> _serializersById = new();
         private readonly Dictionary<string, SerializerV2> _serializersByName = new();
 
@@ -421,6 +436,12 @@ namespace Akka.Serialization
         /// <summary>
         /// Adds the serializer to the internal state of the serialization subsystem
         /// </summary>
+        /// <remarks>
+        /// Must only be called during <see cref="ActorSystem"/> initialization (all framework call
+        /// sites are in this class's constructor). The serializer registries are read without
+        /// synchronization on the deserialization hot path and are treated as immutable once the
+        /// system has started — registering a serializer after startup is not supported.
+        /// </remarks>
         /// <param name="name">Configuration name of the serializer</param>
         /// <param name="serializer">Serializer instance</param>
         public void AddSerializer(string name, SerializerV2 serializer)

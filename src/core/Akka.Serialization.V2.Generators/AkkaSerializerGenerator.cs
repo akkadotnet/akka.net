@@ -115,6 +115,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor DuplicateManifest = new(
+        "AKKASG012",
+        "Duplicate top-level message manifest",
+        "Serializer '{0}' has multiple top-level [AkkaSerializable] messages with manifest '{1}': {2}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateSerializerId = new(
+        "AKKASG013",
+        "Duplicate serializer id",
+        "SerializerId {0} is used by multiple [AkkaSerializer] classes: {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var serializers = context.SyntaxProvider
@@ -135,6 +151,19 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         context.RegisterSourceOutput(serializers.Combine(messages), static (ctx, pair) =>
         {
+            var duplicateSerializerIds = pair.Left
+                .Where(s => s != null)
+                .Cast<SerializerInfo>()
+                .Where(s => s.SerializerId != 0)
+                .GroupBy(s => s.SerializerId)
+                .Where(group => group.Count() > 1)
+                .ToImmutableDictionary(group => group.Key, group => string.Join(", ", group.Select(s => s.ClassName)));
+
+            foreach (var duplicate in duplicateSerializerIds)
+            {
+                ctx.ReportDiagnostic(Diagnostic.Create(DuplicateSerializerId, Location.None, duplicate.Key, duplicate.Value));
+            }
+
             foreach (var serializer in pair.Left)
             {
                 if (serializer == null)
@@ -152,6 +181,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     continue;
                 }
 
+                if (duplicateSerializerIds.ContainsKey(serializer.SerializerId))
+                    continue;
+
                 if (!ValidateFormatters(ctx, serializer))
                     continue;
 
@@ -167,7 +199,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     .ToImmutableArray();
                 var reachableMessages = CollectReachableMessages(topLevelMessages, resolvedMessagesByType);
 
-                if (!ValidateMessages(ctx, topLevelMessages, reachableMessages))
+                if (!ValidateMessages(ctx, serializer, topLevelMessages, reachableMessages))
                     continue;
 
                 ctx.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, topLevelMessages, reachableMessages));
@@ -461,12 +493,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         return messages.ToImmutable();
     }
 
-    private static bool ValidateMessages(SourceProductionContext context, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages)
+    private static bool ValidateMessages(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages)
     {
         var isValid = true;
         foreach (var message in topLevelMessages.Where(message => string.IsNullOrWhiteSpace(message.Manifest)))
         {
             context.ReportDiagnostic(Diagnostic.Create(MissingManifest, Location.None, message.FullyQualifiedName));
+            isValid = false;
+        }
+
+        foreach (var duplicate in topLevelMessages
+                     .Where(m => !string.IsNullOrWhiteSpace(m.Manifest))
+                     .GroupBy(m => m.Manifest, StringComparer.Ordinal)
+                     .Where(group => group.Count() > 1))
+        {
+            var typeNames = string.Join(", ", duplicate.Select(m => m.FullyQualifiedName));
+            context.ReportDiagnostic(Diagnostic.Create(DuplicateManifest, Location.None, serializer.ClassName, duplicate.Key, typeNames));
             isValid = false;
         }
 

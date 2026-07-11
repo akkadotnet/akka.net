@@ -280,6 +280,17 @@ namespace Akka.IO
             {
                 await reader.CompleteAsync(error).ConfigureAwait(false);
             }
+
+            // If there was an error, throw it so WriteCompleted.IsFaulted is true -- mirrors
+            // RunReadPumpAsync's own rethrow above. Without this, a write-side I/O failure (e.g. a
+            // broken pipe discovered while flushing to a peer that vanished) would complete this
+            // pump's OWN Task successfully, so nothing proactively observing WriteCompleted (see
+            // TcpConnection.StartTransport's MonitorWritePumpAsync) would ever learn the write side
+            // had failed -- the failure would only ever surface reactively, on whatever NEXT write
+            // attempt happens to re-throw it synchronously from the now-faulted pipe (which, for an
+            // otherwise-idle one-way connection, may never come).
+            if (error != null)
+                throw error;
         }
     }
 }

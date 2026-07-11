@@ -8,6 +8,7 @@
 #nullable enable
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -76,29 +77,51 @@ namespace Akka.Remote.Tests.Artery
             settings.CanonicalHostname.Should().Be("localhost");
             settings.CanonicalPort.Should().Be(25520);
             settings.MaximumFrameSize.Should().Be(256 * 1024);
-            settings.InboundLanes.Should().Be(4);
+
+            // Ships at 1 (single-lane, fused pipeline -- byte-identical to pre-lanes processing)
+            // until the scaling gates pass -- see ArterySettings.InboundLanes's remarks.
+            settings.InboundLanes.Should().Be(1);
+            settings.InboundLaneBufferSize.Should().Be(4096);
             settings.OutboundLanes.Should().Be(1);
             settings.HandshakeTimeout.Should().Be(20.Seconds());
             settings.HandshakeRetryInterval.Should().Be(1.Seconds());
             settings.InjectHandshakeInterval.Should().Be(1.Seconds());
             settings.ControlHeartbeatInterval.Should().Be(5.Seconds());
 
+            // Bounded queues (task group 8) -- outbound-message-queue-size is the ordinary
+            // default, unchanged; outbound-control-queue-size matches Pekko's default and this
+            // fix's widened Association.DefaultControlQueueCapacity (was 256).
+            settings.OutboundMessageQueueSize.Should().Be(3072);
+            settings.OutboundControlQueueSize.Should().Be(20_000);
+
             // Reliable system-message delivery (design.md gate G3).
             settings.SystemMessageBufferSize.Should().Be(20_000);
             settings.SystemMessageResendInterval.Should().Be(1.Seconds());
             settings.GiveUpSystemMessageAfter.Should().Be(6.Hours(),
                 "Pekko's Artery default (NOT classic Akka.NET's much shorter ~3-minute analogue) -- see ArterySettings.GiveUpSystemMessageAfter's remarks");
+
+            // Association outbound-stream lifecycle: reconnect (design.md group 9).
+            settings.OutboundRestartBackoff.Should().Be(1.Seconds());
+
+            // TCP input-pipe pause/resume watermarks (mirrors the 1 MiB socket buffers
+            // ArteryRemoting.BuildArterySocketOptions pins on every connection).
+            settings.TcpPipeBufferSize.Should().Be(1024 * 1024);
         }
 
         [Theory(DisplayName = "Should_ThrowConfigurationException_When_ArterySettingIsInvalid")]
         [InlineData("akka.remote.artery.advanced.maximum-frame-size = 0b")]
         [InlineData("akka.remote.artery.advanced.maximum-frame-size = 20000000b")] // > 0x00FFFFFF (16 MiB - 1)
         [InlineData("akka.remote.artery.advanced.inbound-lanes = 0")]
+        [InlineData("akka.remote.artery.advanced.inbound-lane-buffer-size = 0")]
         [InlineData("akka.remote.artery.advanced.outbound-lanes = 0")]
         [InlineData("akka.remote.artery.transport = aeron")]
         [InlineData("akka.remote.artery.advanced.system-message-buffer-size = 0")]
         [InlineData("akka.remote.artery.advanced.system-message-resend-interval = 0s")]
         [InlineData("akka.remote.artery.advanced.give-up-system-message-after = 0s")]
+        [InlineData("akka.remote.artery.advanced.outbound-restart-backoff = 0s")]
+        [InlineData("akka.remote.artery.advanced.tcp.pipe-buffer-size = 0b")]
+        [InlineData("akka.remote.artery.advanced.outbound-message-queue-size = 0")]
+        [InlineData("akka.remote.artery.advanced.outbound-control-queue-size = 0")]
         public void Should_ThrowConfigurationException_When_ArterySettingIsInvalid(string overrideHocon)
         {
             var arteryConfig = ConfigurationFactory.ParseString(overrideHocon)
@@ -106,6 +129,49 @@ namespace Akka.Remote.Tests.Artery
                 .GetConfig("akka.remote.artery");
 
             Assert.Throws<ConfigurationException>(() => new ArterySettings(arteryConfig));
+        }
+
+        [Fact(DisplayName = "Should_OverrideTcpPipeBufferSize_When_ConfigProvided")]
+        public void Should_OverrideTcpPipeBufferSize_When_ConfigProvided()
+        {
+            var arteryConfig = ConfigurationFactory.ParseString("akka.remote.artery.advanced.tcp.pipe-buffer-size = 2m")
+                .WithFallback(RemoteConfigFactory.Default())
+                .GetConfig("akka.remote.artery");
+
+            var settings = new ArterySettings(arteryConfig);
+            settings.TcpPipeBufferSize.Should().Be(2 * 1024 * 1024);
+        }
+
+        [Fact(DisplayName = "Should_IncludePipeBufferSizeOption_When_BuildingArterySocketOptions")]
+        public void Should_IncludePipeBufferSizeOption_When_BuildingArterySocketOptions()
+        {
+            var arteryConfig = ConfigurationFactory.ParseString("akka.remote.artery.advanced.tcp.pipe-buffer-size = 2m")
+                .WithFallback(RemoteConfigFactory.Default())
+                .GetConfig("akka.remote.artery");
+            var settings = new ArterySettings(arteryConfig);
+
+            var options = ArteryRemoting.BuildArterySocketOptions(settings);
+
+            var pipeBufferSize = options.OfType<Akka.IO.Inet.SO.PipeBufferSize>().Should().ContainSingle().Subject;
+            pipeBufferSize.Size.Should().Be(2 * 1024 * 1024);
+
+            // The 1 MiB OS socket buffers are unaffected by this change.
+            options.OfType<Akka.IO.Inet.SO.ReceiveBufferSize>().Should().ContainSingle();
+            options.OfType<Akka.IO.Inet.SO.SendBufferSize>().Should().ContainSingle();
+        }
+
+        [Fact(DisplayName = "Should_ParseOutboundQueueSizeOverrides_When_ConfigOverridden")]
+        public void Should_ParseOutboundQueueSizeOverrides_When_ConfigOverridden()
+        {
+            var arteryConfig = ConfigurationFactory.ParseString(@"
+                akka.remote.artery.advanced.outbound-message-queue-size = 512
+                akka.remote.artery.advanced.outbound-control-queue-size = 64
+            ").WithFallback(RemoteConfigFactory.Default()).GetConfig("akka.remote.artery");
+
+            var settings = new ArterySettings(arteryConfig);
+
+            settings.OutboundMessageQueueSize.Should().Be(512);
+            settings.OutboundControlQueueSize.Should().Be(64);
         }
 
         [Fact(DisplayName = "Should_SelectArteryRemoting_When_ArteryEnabled_ViaConfig")]

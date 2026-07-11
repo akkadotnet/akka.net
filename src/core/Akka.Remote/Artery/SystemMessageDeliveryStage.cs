@@ -19,6 +19,61 @@ namespace Akka.Remote.Artery
     /// <summary>
     /// INTERNAL API.
     ///
+    /// Association-owned, stream-restart-surviving state for the OUTBOUND half of reliable
+    /// system-message delivery (design.md gate G3's <see cref="SystemMessageDeliveryStage"/>,
+    /// extended by design.md group 9, "Association outbound-stream lifecycle: reconnect",
+    /// invariant 3: "no unacked system message may be lost across a restart").
+    ///
+    /// <para>
+    /// <b>Why this exists (the bug it fixes).</b> Before group 9, <c>SystemMessageDeliveryStage.Logic</c>
+    /// held its unacknowledged buffer, seqNo counter, and observed incarnation as PER-MATERIALIZATION
+    /// instance fields. Group 9 makes the control stream's outbound connection restart after a
+    /// failure -- but a stream restart tears down the old <c>GraphStageLogic</c> and creates a
+    /// brand-new one, which would have started from an EMPTY buffer/seqNo 1, silently losing every
+    /// unacknowledged <see cref="SystemMessageEnvelope"/> in flight (Watch/Unwatch/DeathWatchNotification/
+    /// Terminate) -- exactly the invariant group 9 requires never happen. Moving this state onto the
+    /// <see cref="Artery.Association"/> (looked up via the SAME <see cref="AssociationRegistry"/> every
+    /// materialization's <see cref="IOutboundContext"/> already closes over) means a fresh
+    /// materialization ATTACHES to the same buffer instead of starting a new one -- see
+    /// <see cref="Artery.Association.SystemMessageDeliveryState"/> and
+    /// <c>ArteryRemoting.MaterializeOutboundStream</c> (which passes it into this stage's constructor).
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Concurrency.</b> No locking: the materialize-once gate (<see cref="MaterializeOnceGate"/>)
+    /// guarantees at most one live <c>SystemMessageDeliveryStage.Logic</c> instance is ever running
+    /// for a given association's control stream at a time, and a restart only schedules the NEXT
+    /// materialization once the previous one's completion has already been observed -- so this state
+    /// is handed off sequentially between single-threaded owners, never touched concurrently.
+    /// </para>
+    /// </summary>
+    internal sealed class SystemMessageDeliveryState
+    {
+        /// <summary>
+        /// Unacknowledged envelopes, in ascending seq order (FIFO -- Ack/Nack pop a PREFIX).
+        /// Survives stream restart -- see the type-level remarks.
+        /// </summary>
+        public Queue<(long Seq, IOutboundEnvelope Envelope, DateTime SentAt)> Buffer { get; } = new();
+
+        /// <summary>
+        /// The next per-incarnation monotonic sequence number to assign. Starts at 1 (the default
+        /// <see langword="long"/> value 0 is never a valid assigned seqNo).
+        /// </summary>
+        public long NextSeq { get; set; } = 1;
+
+        /// <summary>
+        /// The <see cref="Artery.AssociationState.Incarnation"/> this state was last observed/reset
+        /// against. 0 (the default) is a deliberate "never initialized" sentinel -- real incarnations
+        /// start at 1 (<see cref="Artery.AssociationState.Create"/>) -- so the FIRST-ever materialization
+        /// can distinguish "brand new association, nothing to refresh" from "a restart that needs to
+        /// check whether a new incarnation completed while this stream was down".
+        /// </summary>
+        public int CurrentIncarnation { get; set; }
+    }
+
+    /// <summary>
+    /// INTERNAL API.
+    ///
     /// Outbound half of reliable system-message delivery (design.md gate G3, "Reliable
     /// system-message delivery"). A <c>GraphStage&lt;FlowShape&lt;IOutboundEnvelope, IOutboundEnvelope&gt;&gt;</c>
     /// materialized ONLY on the CONTROL stream (see <c>ArteryRemoting.MaterializeOutboundStream</c>),
@@ -98,10 +153,14 @@ namespace Akka.Remote.Artery
         /// Initializes a new instance of the <see cref="SystemMessageDeliveryStage"/> class.
         /// </summary>
         /// <param name="context">The outbound association seam (local/remote address, association state, control send/subscribe, quarantine).</param>
+        /// <param name="state">
+        /// The Association-owned, stream-restart-surviving unacked-buffer/seqNo/incarnation state
+        /// (design.md group 9 invariant 3) -- see <see cref="SystemMessageDeliveryState"/>.
+        /// </param>
         /// <param name="bufferCapacity">Maximum unacknowledged <see cref="SystemMessageEnvelope"/>s buffered for resend (<c>system-message-buffer-size</c>).</param>
         /// <param name="resendInterval">How often the whole unacknowledged window is resent (<c>system-message-resend-interval</c>).</param>
         /// <param name="giveUpAfter">How long the OLDEST unacknowledged entry may wait before giving up (<c>give-up-system-message-after</c>).</param>
-        public SystemMessageDeliveryStage(IOutboundContext context, int bufferCapacity, TimeSpan resendInterval, TimeSpan giveUpAfter)
+        public SystemMessageDeliveryStage(IOutboundContext context, SystemMessageDeliveryState state, int bufferCapacity, TimeSpan resendInterval, TimeSpan giveUpAfter)
         {
             if (bufferCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(bufferCapacity), bufferCapacity, "must be positive.");
@@ -111,6 +170,7 @@ namespace Akka.Remote.Artery
                 throw new ArgumentOutOfRangeException(nameof(giveUpAfter), giveUpAfter, "must be positive.");
 
             Context = context;
+            State = state ?? throw new ArgumentNullException(nameof(state));
             BufferCapacity = bufferCapacity;
             ResendInterval = resendInterval;
             GiveUpAfter = giveUpAfter;
@@ -118,6 +178,10 @@ namespace Akka.Remote.Artery
         }
 
         public IOutboundContext Context { get; }
+
+        /// <summary>The restart-surviving unacked-buffer/seqNo/incarnation state this materialization attaches to -- see <see cref="SystemMessageDeliveryState"/>.</summary>
+        public SystemMessageDeliveryState State { get; }
+
         public int BufferCapacity { get; }
         public TimeSpan ResendInterval { get; }
         public TimeSpan GiveUpAfter { get; }
@@ -135,14 +199,16 @@ namespace Akka.Remote.Artery
 
             private readonly SystemMessageDeliveryStage _stage;
 
-            /// <summary>Unacknowledged envelopes, in ascending seq order (FIFO -- Ack/Nack pop a PREFIX).</summary>
-            private readonly Queue<(long Seq, IOutboundEnvelope Envelope, DateTime SentAt)> _buffer = new();
+            /// <summary>
+            /// The unacknowledged buffer/seqNo/incarnation state this materialization attaches to --
+            /// Association-owned, NOT per-materialization (design.md group 9 invariant 3). See
+            /// <see cref="SystemMessageDeliveryState"/>'s type-level remarks for why.
+            /// </summary>
+            private SystemMessageDeliveryState State => _stage.State;
 
-            /// <summary>Elements queued for emission downstream (pass-through + freshly-wrapped + resend batches).</summary>
+            /// <summary>Elements queued for emission downstream (pass-through + freshly-wrapped + resend batches). Per-materialization -- does not need to survive a restart, see PreStart's eager-requeue remarks.</summary>
             private readonly Queue<IOutboundEnvelope> _outQueue = new();
 
-            private long _nextSeq = 1;
-            private int _currentIncarnation;
             private Action<(long OriginUid, object Message)>? _controlCallback;
 
             public Logic(SystemMessageDeliveryStage stage) : base(stage.Shape)
@@ -154,10 +220,30 @@ namespace Akka.Remote.Artery
 
             public override void PreStart()
             {
-                _currentIncarnation = _stage.Context.AssociationState.Incarnation;
+                if (State.CurrentIncarnation == 0)
+                    // Brand-new state (never initialized) -- the FIRST-ever materialization for this
+                    // association's control stream. Not a restart, so there is nothing to "refresh":
+                    // adopt the currently-observed incarnation directly.
+                    State.CurrentIncarnation = _stage.Context.AssociationState.Incarnation;
+                else
+                    // A restart (this state has been observed before) -- a NEW incarnation may have
+                    // completed its handshake while this stream was down; reset if so (same check
+                    // RefreshIncarnation performs on every subsequent event).
+                    RefreshIncarnation();
+
                 _controlCallback = GetAsyncCallback<(long OriginUid, object Message)>(HandleControlMessage);
                 _stage.Context.SubscribeControl(this);
                 ScheduleRepeatedly(ResendTimerKey, _stage.ResendInterval);
+
+                // Eagerly requeue any already-buffered unacked entries (design.md group 9 invariant 3:
+                // "no unacked system message may be lost across a restart") -- rather than waiting up
+                // to one full resend-interval for the timer to notice, get them flowing again
+                // immediately. They are still held behind OutboundHandshakeStage until the FRESH
+                // handshake completes, exactly like any other control-stream element -- so this is
+                // safe even before the peer is reachable again.
+                if (State.Buffer.Count > 0)
+                    foreach (var entry in State.Buffer)
+                        _outQueue.Enqueue(entry.Envelope);
             }
 
             public override void PostStop() => _stage.Context.UnsubscribeControl(this);
@@ -194,19 +280,19 @@ namespace Akka.Remote.Artery
 
             private void ProcessAck(long seqNo)
             {
-                while (_buffer.Count > 0 && _buffer.Peek().Seq <= seqNo)
-                    _buffer.Dequeue();
+                while (State.Buffer.Count > 0 && State.Buffer.Peek().Seq <= seqNo)
+                    State.Buffer.Dequeue();
             }
 
             private void ProcessNack(long seqNo)
             {
-                while (_buffer.Count > 0 && _buffer.Peek().Seq <= seqNo)
-                    _buffer.Dequeue();
+                while (State.Buffer.Count > 0 && State.Buffer.Peek().Seq <= seqNo)
+                    State.Buffer.Dequeue();
 
                 // Immediate tail resend -- do not wait for the next resend-timer tick. Skipped if a
                 // batch is already queued (bounds memory; see the type-level backpressure remarks).
-                if (_buffer.Count > 0 && _outQueue.Count == 0)
-                    foreach (var entry in _buffer)
+                if (State.Buffer.Count > 0 && _outQueue.Count == 0)
+                    foreach (var entry in State.Buffer)
                         _outQueue.Enqueue(entry.Envelope);
             }
 
@@ -218,7 +304,7 @@ namespace Akka.Remote.Artery
                 switch (elem.Message)
                 {
                     case ClearSystemMessageDelivery clear:
-                        if (clear.Incarnation >= _currentIncarnation)
+                        if (clear.Incarnation >= State.CurrentIncarnation)
                             ResetDeliveryState(clear.Incarnation);
                         // Local-only instruction -- never forwarded to Out/the encoder; see
                         // ClearSystemMessageDelivery's type-level remarks.
@@ -238,7 +324,7 @@ namespace Akka.Remote.Artery
 
             private void EnqueueSystemMessage(ISystemMessage systemMessage, IOutboundEnvelope elem)
             {
-                if (_buffer.Count >= _stage.BufferCapacity)
+                if (State.Buffer.Count >= _stage.BufferCapacity)
                 {
                     GiveUp($"unacknowledged system-message buffer overflow (system-message-buffer-size = {_stage.BufferCapacity})");
                     Log.Warning(
@@ -247,10 +333,10 @@ namespace Akka.Remote.Artery
                     return;
                 }
 
-                var seq = _nextSeq++;
+                var seq = State.NextSeq++;
                 var envelope = new SystemMessageEnvelope(systemMessage, seq, _stage.Context.LocalAddress, elem.RecipientPath ?? string.Empty);
                 var wrapped = new OutboundEnvelope(envelope, null, null);
-                _buffer.Enqueue((seq, wrapped, DateTime.UtcNow));
+                State.Buffer.Enqueue((seq, wrapped, DateTime.UtcNow));
                 _outQueue.Enqueue(wrapped);
             }
 
@@ -279,10 +365,10 @@ namespace Akka.Remote.Artery
 
                 RefreshIncarnation();
 
-                if (_buffer.Count == 0)
+                if (State.Buffer.Count == 0)
                     return;
 
-                var oldest = _buffer.Peek();
+                var oldest = State.Buffer.Peek();
                 if (DateTime.UtcNow - oldest.SentAt > _stage.GiveUpAfter)
                 {
                     GiveUp($"give-up-system-message-after ({_stage.GiveUpAfter}) exceeded waiting for ack of seq [{oldest.Seq}]");
@@ -295,7 +381,7 @@ namespace Akka.Remote.Artery
                 // sense growing _outQueue for it).
                 if (_outQueue.Count == 0 && _stage.Context.AssociationState.UniqueRemoteAddress is not null)
                 {
-                    foreach (var entry in _buffer)
+                    foreach (var entry in State.Buffer)
                         _outQueue.Enqueue(entry.Envelope);
 
                     DeliverOrPull();
@@ -307,7 +393,7 @@ namespace Akka.Remote.Artery
                 Log.Warning(
                     "System-message delivery to [{0}] giving up: {1}. Quarantining the association.",
                     _stage.Context.RemoteAddress, reason);
-                ResetDeliveryState(_currentIncarnation);
+                ResetDeliveryState(State.CurrentIncarnation);
                 _stage.Context.Quarantine();
             }
 
@@ -318,12 +404,16 @@ namespace Akka.Remote.Artery
             /// / give-up). Deliberately does NOT clear <see cref="_outQueue"/> -- any already-queued
             /// pass-through/resend elements are harmless to let drain (the control stream keeps
             /// flowing even once quarantined; see design.md's control-pierces-quarantine semantics).
+            /// Mutates the SHARED <see cref="State"/> (design.md group 9 invariant 3) -- this is why
+            /// buffer/seqNo resets survive (or rather, correctly do NOT survive across an actual
+            /// incarnation change) a stream restart the exact same way they did before that state
+            /// moved off this per-materialization <c>Logic</c>.
             /// </summary>
             private void ResetDeliveryState(int incarnation)
             {
-                _buffer.Clear();
-                _nextSeq = 1;
-                _currentIncarnation = incarnation;
+                State.Buffer.Clear();
+                State.NextSeq = 1;
+                State.CurrentIncarnation = incarnation;
             }
 
             /// <summary>
@@ -337,7 +427,7 @@ namespace Akka.Remote.Artery
             private void RefreshIncarnation()
             {
                 var observed = _stage.Context.AssociationState.Incarnation;
-                if (observed != _currentIncarnation)
+                if (observed != State.CurrentIncarnation)
                     ResetDeliveryState(observed);
             }
 

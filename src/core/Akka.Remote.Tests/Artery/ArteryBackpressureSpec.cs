@@ -110,7 +110,7 @@ namespace Akka.Remote.Tests.Artery
             }
         }
 
-        [Fact(DisplayName = "Ordinary outbound queue: flooding an association to an unresponsive peer dead-letters the overflow, keeps the queue's occupied size bounded at capacity, and does not wedge sends to a different, healthy association")]
+        [Fact(DisplayName = "Ordinary outbound queue: flooding an association to an unresponsive peer publishes Dropped for the overflow (direct EventStream publish, mirroring Pekko's Association.dropped()), keeps the queue's occupied size bounded at capacity, and does not wedge sends to a different, healthy association")]
         public async Task Should_DeadLetter_Ordinary_Overflow_Against_Unresponsive_Peer_Without_Wedging_Other_Associations()
         {
             const int capacity = Association.DefaultOutboundQueueCapacity;
@@ -131,8 +131,10 @@ namespace Akka.Remote.Tests.Artery
                 var deadTarget = RARP.For(systemA).Provider.ResolveActorRef(
                     $"akka://dead-sys@127.0.0.1:{deadPort}/user/target");
 
-                var deadLetterProbe = CreateTestProbe(systemA);
-                systemA.EventStream.Subscribe(deadLetterProbe.Ref, typeof(DeadLetter));
+                // The overflow is published DIRECTLY to the event stream as Dropped (this fix) --
+                // NOT routed through System.DeadLetters.Tell, so it never shows up as a DeadLetter.
+                var droppedProbe = CreateTestProbe(systemA);
+                systemA.EventStream.Subscribe(droppedProbe.Ref, typeof(Dropped));
 
                 // Deliberately well past capacity: unambiguous overflow even accounting for the
                 // handful of elements that may be pulled out of the channel toward the (doomed)
@@ -153,18 +155,20 @@ namespace Akka.Remote.Tests.Artery
                 }
 
                 // PROGRESS/COMPLETION (liveness collection, not a timing measurement): the overflow
-                // must show up as dead letters. Collected via the idle-timeout completion signal
+                // must show up as Dropped events. Collected via the idle-timeout completion signal
                 // rather than an exact count -- precisely how many of the flood got pulled toward
                 // the doomed connection attempt before it failed is not deterministic, only that
                 // AT LEAST the queue-bound-respecting majority of the flood does.
-                var deadLetters = await deadLetterProbe
-                    .ReceiveWhileAsync<DeadLetter>(_ => true, max: TimeSpan.FromSeconds(20), idle: TimeSpan.FromSeconds(3), msgs: floodCount)
+                var dropped = await droppedProbe
+                    .ReceiveWhileAsync<Dropped>(_ => true, max: TimeSpan.FromSeconds(20), idle: TimeSpan.FromSeconds(3), msgs: floodCount)
                     .ToListAsync();
 
-                deadLetters.Count.Should().BeGreaterOrEqualTo(floodCount - capacity - 10,
-                    "essentially the whole overflow past capacity must land in dead letters, allowing a small " +
+                dropped.Count.Should().BeGreaterOrEqualTo(floodCount - capacity - 10,
+                    "essentially the whole overflow past capacity must be published as Dropped, allowing a small " +
                     "slack for the few elements that may have been mid-flight toward the doomed connection " +
                     "attempt when it failed");
+                dropped.Should().OnlyContain(d => d.Reason.Contains("full"),
+                    "every Dropped published for a queue overflow must explain WHY in its Reason");
 
                 // NO WEDGE: a completely saturated/dead association must not affect A's ability to
                 // talk to a DIFFERENT, healthy association.
@@ -184,15 +188,24 @@ namespace Akka.Remote.Tests.Artery
         [Fact(DisplayName = "Control channel: flooding system messages against an association whose handshake is complete but whose peer is unresponsive quarantines EXACTLY ONCE (re-entrancy guard holds even though the quarantine notices themselves also overflow the same full channel), dead-letters the overflow, and does not wedge sends to a different, healthy association")]
         public async Task Should_Quarantine_Exactly_Once_On_Control_Overflow_Against_Unresponsive_Peer_Without_Wedging_Other_Associations()
         {
-            const int controlCapacity = Association.DefaultControlQueueCapacity;
+            // Pinned small (via this test's own config override) rather than relying on the
+            // production DefaultControlQueueCapacity (20000, since this fix): flooding 20,400 real
+            // actors just to overflow the production-sized queue would make this test needlessly
+            // slow/heavy. akka.remote.artery.advanced.outbound-control-queue-size lets the test
+            // exercise the SAME overflow -> quarantine policy at a much smaller, fast-to-flood
+            // capacity.
+            const int controlCapacity = 64;
             // Port 0 is not an assignable listener port, so it is a permanently-unreachable peer --
             // deterministic connection failure, no reservation, no reserve-then-release race.
             const int deadPort = 0;
             var deadAddress = new Address("akka", "dead-sys", "127.0.0.1", deadPort);
             const long fakePeerUid = 123_456_789L;
 
-            var systemA = ActorSystem.Create("ArteryBackpressureControlA", ArteryConfig());
-            var systemHealthy = ActorSystem.Create("ArteryBackpressureControlHealthy", ArteryConfig());
+            var smallControlQueueConfig = ConfigurationFactory.ParseString(
+                $"akka.remote.artery.advanced.outbound-control-queue-size = {controlCapacity}").WithFallback(ArteryConfig());
+
+            var systemA = ActorSystem.Create("ArteryBackpressureControlA", smallControlQueueConfig);
+            var systemHealthy = ActorSystem.Create("ArteryBackpressureControlHealthy", smallControlQueueConfig);
             try
             {
                 systemHealthy.ActorOf(Props.Create(() => new Echo()), "echo");
@@ -269,6 +282,61 @@ namespace Akka.Remote.Tests.Artery
             {
                 await systemA.Terminate().AwaitWithTimeout(10.Seconds());
                 await systemHealthy.Terminate().AwaitWithTimeout(10.Seconds());
+            }
+        }
+
+        [Fact(DisplayName = "Control channel: a mass-Unwatch termination burst (~2000 distinct remote watchers torn down at once) against a HEALTHY, responsive peer does not overflow the control queue or quarantine the association -- regression test for the previously 78x-undersized (256) DefaultControlQueueCapacity")]
+        public async Task Should_Not_Quarantine_On_Mass_Unwatch_Termination_Burst_Against_Healthy_Peer()
+        {
+            const int watcherCount = 2000;
+
+            var systemA = ActorSystem.Create("ArteryBackpressureMassUnwatchA", ArteryConfig());
+            var systemB = ActorSystem.Create("ArteryBackpressureMassUnwatchB", ArteryConfig());
+            try
+            {
+                systemB.ActorOf(Props.Create(() => new Echo()), "echo");
+                var healthyPort = BoundPort(systemB);
+
+                // ~2000 REAL, distinct target actors on B, each watched by its OWN PlainWatcher on
+                // A -- distinct watchees (not the SAME target N times) are required to defeat
+                // RemoteWatcher's local dedup (see PlainWatcher's remarks), producing ~2000 real
+                // wire-level Watch system messages now, then (below, at Terminate) ~2000 real
+                // wire-level Unwatch system messages, all funneled onto the SAME association's
+                // CONTROL channel (design.md invariant 5).
+                for (var i = 0; i < watcherCount; i++)
+                {
+                    systemB.ActorOf(Props.Create(() => new Echo()), $"watch-target-{i}");
+                    var targetFromA = RARP.For(systemA).Provider.ResolveActorRef(
+                        $"akka://{systemB.Name}@127.0.0.1:{healthyPort}/user/watch-target-{i}");
+                    systemA.ActorOf(Props.Create(() => new PlainWatcher(targetFromA)));
+                }
+
+                // POSITIVE PROOF the ~2000 Watches above actually got through and the association
+                // is still healthy -- not wedged/quarantined by the WATCH burst itself -- before
+                // moving on to the actual regression scenario below: an ordinary echo round trip.
+                var echoRef = await systemA.ActorSelection(
+                    $"akka://{systemB.Name}@127.0.0.1:{healthyPort}/user/echo").ResolveOne(TimeSpan.FromSeconds(10));
+                var probe = CreateTestProbe(systemA);
+                echoRef.Tell("ping", probe.Ref);
+                await probe.ExpectMsgAsync("ping", TimeSpan.FromSeconds(10));
+
+                // THE REGRESSION SCENARIO: terminating systemA tears down all ~2000 PlainWatchers
+                // at once, firing a burst of ~2000 Unwatch system messages onto the SAME control
+                // channel in a very short window -- the previous, 78x-undersized 256 default
+                // overflowed here and spuriously quarantined this otherwise perfectly healthy
+                // association. HandleControlOverflow's "is full (capacity ...)" ERROR log is the
+                // direct symptom of that overflow, so its absence is direct proof the burst did
+                // NOT overflow the control queue. Scoped to systemA specifically (not the enclosing
+                // AkkaSpec's own Sys, which never sees systemA's log events).
+                await CreateEventFilter(systemA).Error(contains: "is full (capacity").ExpectAsync(0, async () =>
+                {
+                    await systemA.Terminate().AwaitWithTimeout(30.Seconds());
+                });
+            }
+            finally
+            {
+                await systemA.Terminate().AwaitWithTimeout(10.Seconds());
+                await systemB.Terminate().AwaitWithTimeout(10.Seconds());
             }
         }
     }

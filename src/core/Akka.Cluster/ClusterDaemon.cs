@@ -457,7 +457,7 @@ namespace Akka.Cluster
         internal class ReapUnreachableTick : ITick
         {
             private ReapUnreachableTick() { }
-            public static ReapUnreachableTick Instance { get; }  = new();
+            public static ReapUnreachableTick Instance { get; } = new();
         }
 
         /// <summary>
@@ -519,11 +519,20 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Gets a reference to the cluster core daemon.
+        /// INTERNAL API.
+        ///
+        /// Fire-and-forget message sent by the <see cref="Cluster"/> extension constructor to the
+        /// <see cref="ClusterDaemon"/> to kick off non-blocking initialization of the cluster daemon
+        /// tree. Carries the (still-constructing) <see cref="Cluster"/> instance so the daemons can
+        /// create their children and hand the resolved core-daemon ref back to the extension via
+        /// <see cref="Cluster.SetClusterCoreRef"/>.
+        ///
+        /// Local-only (<see cref="INoSerializationVerificationNeeded"/>), like the
+        /// <c>GetClusterCoreRef</c> ask message it replaces.
         /// </summary>
-        internal class GetClusterCoreRef: INoSerializationVerificationNeeded
+        internal sealed class Init : INoSerializationVerificationNeeded
         {
-            public GetClusterCoreRef(Cluster cluster) 
+            public Init(Cluster cluster)
             {
                 Cluster = cluster;
             }
@@ -752,7 +761,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Supervisor managing the different Cluster daemons.
     /// </summary>
-    internal sealed class ClusterDaemon : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    internal sealed class ClusterDaemon : ReceiveActor, IWithUnboundedStash
     {
         private Cluster _cluster;
 
@@ -763,28 +772,47 @@ namespace Akka.Cluster
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private readonly TaskCompletionSource<Done> _clusterPromise = new();
 
+        public IStash Stash { get; set; }
+
         /// <summary>
         /// Creates a new instance of the ClusterDaemon
         /// </summary>
         /// <param name="settings">The settings that will be used for the <see cref="Cluster"/>.</param>
         public ClusterDaemon(ClusterSettings settings)
         {
-            // Important - don't use Cluster(context.system) in constructor because that would
-            // cause deadlock. The Cluster extension is currently being created and is waiting
-            // for response from GetClusterCoreRef in its constructor.
-            // Child actors are therefore created when GetClusterCoreRef is received
+            // Important - don't use Cluster(context.system) in constructor because the Cluster
+            // extension is still being constructed when this actor is created. Construction is now
+            // non-blocking: the extension sends a fire-and-forget InternalClusterAction.Init as its
+            // first message, and the child actors are created only when that Init is received. Any
+            // cluster traffic that arrives before Init (Subscribe, JoinTo, listener registrations,
+            // ...) is stashed by the Uninitialized behavior and replayed once initialized.
             _coreSupervisor = null;
             _settings = settings;
 
             AddCoordinatedLeave();
 
-            Receive<InternalClusterAction.GetClusterCoreRef>(msg =>
+            Uninitialized();
+        }
+
+        private void Uninitialized()
+        {
+            Receive<InternalClusterAction.Init>(msg =>
             {
-                if (_coreSupervisor == null)
-                    CreateChildren(msg.Cluster);
+                // assign _cluster FIRST so PreRestart can re-init after a failed initialization
+                _cluster = msg.Cluster;
+                CreateChildren(msg.Cluster);
                 _coreSupervisor.Forward(msg);
+                Become(Initialized);
+                Stash.UnstashAll();
             });
 
+            // Buffer everything else (Subscribe / JoinTo / listener registrations, ...) until Init
+            // has been processed and the child tree exists.
+            ReceiveAny(_ => Stash.Stash());
+        }
+
+        private void Initialized()
+        {
             Receive<InternalClusterAction.AddOnMemberUpListener>(msg =>
             {
                 Context.ActorOf(
@@ -806,6 +834,22 @@ namespace Akka.Cluster
                 // forward the Ask request so the shutdown task gets completed
                 actor.Forward(leave);
             });
+
+            // Everything else (Subscribe, JoinTo, cluster state queries, ...) is forwarded to the
+            // core supervisor, which forwards it on to the core daemon. Registration order matters
+            // in a ReceiveActor: this catch-all MUST be registered last.
+            ReceiveAny(msg => _coreSupervisor.Forward(msg));
+        }
+
+        protected override void PreRestart(Exception reason, object message)
+        {
+            // Default restart semantics stop the children, so the fresh instance lands back in the
+            // Uninitialized behavior. The Init message that drove initialization has already been
+            // consumed and will not be re-delivered, so re-send it to Self to re-create the child
+            // tree; the Uninitialized stash catches any traffic that arrives in the meantime.
+            base.PreRestart(reason, message);
+            if (_cluster != null)
+                Self.Tell(new InternalClusterAction.Init(_cluster));
         }
 
         private void AddCoordinatedLeave()
@@ -851,7 +895,7 @@ namespace Akka.Cluster
     /// ClusterCoreDaemon and ClusterDomainEventPublisher can't be restarted because the state
     /// would be obsolete. Shutdown the member if any those actors crashed.
     /// </summary>
-    internal class ClusterCoreSupervisor : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    internal class ClusterCoreSupervisor : ReceiveActor, IWithUnboundedStash
     {
         private Cluster _cluster;
 
@@ -860,22 +904,43 @@ namespace Akka.Cluster
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        public IStash Stash { get; set; }
+
         /// <summary>
         /// Creates a new instance of the ClusterCoreSupervisor
         /// </summary>
         public ClusterCoreSupervisor()
         {
-            // Important - don't use Cluster(Context.System) in constructor because that would
-            // cause deadlock. The Cluster extension is currently being created and is waiting
-            // for response from GetClusterCoreRef in its constructor.
-            // Child actors are therefore created when GetClusterCoreRef is received
+            // Important - don't use Cluster(Context.System) in constructor because the Cluster
+            // extension is still being constructed when this actor is created. Construction is now
+            // non-blocking: the child actors are created when InternalClusterAction.Init is received
+            // (forwarded from the ClusterDaemon), at which point the resolved core-daemon ref is
+            // handed back to the extension via Cluster.SetClusterCoreRef (replacing the old
+            // Sender.Tell reply to the constructor's ask). Any traffic that arrives before Init is
+            // stashed by the Uninitialized behavior and replayed once initialized.
 
-            Receive<InternalClusterAction.GetClusterCoreRef>(cr =>
+            Uninitialized();
+        }
+
+        private void Uninitialized()
+        {
+            Receive<InternalClusterAction.Init>(msg =>
             {
-                if (_coreDaemon == null)
-                    CreateChildren(cr.Cluster);
-                Sender.Tell(_coreDaemon);
+                _cluster = msg.Cluster;
+                CreateChildren(msg.Cluster);
+                msg.Cluster.SetClusterCoreRef(_coreDaemon);
+                Become(Initialized);
+                Stash.UnstashAll();
             });
+
+            // Defensive: the ClusterDaemon forwards Init before unstashing, so Init is normally the
+            // first message here, but buffer anything that races ahead of it just in case.
+            ReceiveAny(_ => Stash.Stash());
+        }
+
+        private void Initialized()
+        {
+            ReceiveAny(msg => _coreDaemon.Forward(msg));
         }
 
         /// <summary>
@@ -1628,7 +1693,7 @@ namespace Akka.Cluster
         public void Leaving(Address address)
         {
             // only try to update if the node is available (in the member ring)
-            foreach(var mem in LatestGossip.Members.Where(m => m.Address.Equals(address)))
+            foreach (var mem in LatestGossip.Members.Where(m => m.Address.Equals(address)))
             {
                 if (mem.Status is MemberStatus.Joining or MemberStatus.WeaklyUp or MemberStatus.Up)
                 {
@@ -1636,7 +1701,7 @@ namespace Akka.Cluster
                     var newMembers = LatestGossip.Members
                         .Remove(mem).Add(mem.Copy(status: MemberStatus.Leaving));
                     var newGossip = LatestGossip.Copy(members: newMembers);
-                    
+
                     UpdateLatestGossip(newGossip);
 
                     _cluster.LogInfo("Marked address [{0}] as [{1}]", address, MemberStatus.Leaving);
@@ -1698,11 +1763,11 @@ namespace Akka.Cluster
                         GossipTo(member.UniqueAddress);
                     }
                 }
-               
+
                 // if the previous statement did not evaluate to true, then this node is already being downed
-                
+
             }
-            
+
             if (!found)
             {
                 _cluster.LogInfo("Ignoring down of unknown node [{0}]", address);
@@ -1735,7 +1800,7 @@ namespace Akka.Cluster
         public void ReceiveGossipStatus(GossipStatus status)
         {
             var from = status.From;
-            if(!LatestGossip.HasMember(from))
+            if (!LatestGossip.HasMember(from))
                 _cluster.LogInfo("Ignoring received gossip status from unknown [{0}]", from);
             else if (!LatestGossip.IsReachable(_selfUniqueAddress, from))
                 _cluster.LogInfo("Ignoring received gossip status from unreachable [{0}]", from);
@@ -1805,9 +1870,9 @@ namespace Akka.Cluster
             {
                 _cluster.LogInfo("Ignoring received gossip intended for someone else, from [{0}] to [{1}]. Our full address is [{2}]",
                     from.Address, envelope.To, _selfUniqueAddress);
-                
+
                 // TODO: if the gossip is received for a version of ourselves with a different UID, do we issue a Down command?
-                
+
                 return ReceiveGossipType.Ignored;
             }
             if (!localGossip.HasMember(from))
@@ -1984,12 +2049,12 @@ namespace Akka.Cluster
 #pragma warning restore AK1004
             }
         }
-        
+
         public void GossipSpeedupTick()
         {
             if (IsGossipSpeedupNeeded()) SendGossip();
         }
-        
+
         public bool IsGossipSpeedupNeeded()
         {
             return LatestGossip.Members.Any(m => m.Status == MemberStatus.Down) ||
@@ -2674,16 +2739,16 @@ namespace Akka.Cluster
             switch (message)
             {
                 case InternalClusterAction.JoinSeenNode _:
-                {
-                    //send InitJoin to all seed nodes (except myself)
-                    foreach (var path in _otherSeeds
-                        .Select(y => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(y))))
                     {
-                        path.Tell(new InternalClusterAction.InitJoin());
+                        //send InitJoin to all seed nodes (except myself)
+                        foreach (var path in _otherSeeds
+                            .Select(y => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(y))))
+                        {
+                            path.Tell(new InternalClusterAction.InitJoin());
+                        }
+                        _attempts++;
+                        break;
                     }
-                    _attempts++;
-                    break;
-                }
                 case InternalClusterAction.InitJoinAck initJoinAck:
                     //first InitJoinAck reply
                     Context.Parent.Tell(new ClusterUserAction.JoinTo(initJoinAck.Address));
@@ -2692,15 +2757,15 @@ namespace Akka.Cluster
                 case InternalClusterAction.InitJoinNack _:
                     break; //that seed was uninitialized
                 case ReceiveTimeout _:
-                {
-                    if (_attempts >= 2)
-                        _log.Warning(
-                            "Couldn't join seed nodes after [{0}] attempts, will try again. seed-nodes=[{1}]",
-                            _attempts, string.Join(",", _seeds.Where(x => !x.Equals(_selfAddress))));
-                    //no InitJoinAck received - try again
-                    Self.Tell(new InternalClusterAction.JoinSeenNode());
-                    break;
-                }
+                    {
+                        if (_attempts >= 2)
+                            _log.Warning(
+                                "Couldn't join seed nodes after [{0}] attempts, will try again. seed-nodes=[{1}]",
+                                _attempts, string.Join(",", _seeds.Where(x => !x.Equals(_selfAddress))));
+                        //no InitJoinAck received - try again
+                        Self.Tell(new InternalClusterAction.JoinSeenNode());
+                        break;
+                    }
                 default:
                     Unhandled(message);
                     break;
@@ -2778,24 +2843,24 @@ namespace Akka.Cluster
             switch (message)
             {
                 case InternalClusterAction.JoinSeenNode _ when _timeout.HasTimeLeft:
-                {
-                    // send InitJoin to remaining seed nodes (except myself)
-                    foreach (var seed in _remainingSeeds.Select(
-                        x => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(x))))
-                        seed.Tell(new InternalClusterAction.InitJoin());
-                    break;
-                }
-                case InternalClusterAction.JoinSeenNode _:
-                {
-                    if (_log.IsDebugEnabled)
                     {
-                        _log.Debug("Couldn't join other seed nodes, will join myself. seed-nodes=[{0}]", string.Join(",", _seeds));
+                        // send InitJoin to remaining seed nodes (except myself)
+                        foreach (var seed in _remainingSeeds.Select(
+                            x => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(x))))
+                            seed.Tell(new InternalClusterAction.InitJoin());
+                        break;
                     }
-                    // no InitJoinAck received, initialize new cluster by joining myself
-                    Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
-                    Context.Stop(Self);
-                    break;
-                }
+                case InternalClusterAction.JoinSeenNode _:
+                    {
+                        if (_log.IsDebugEnabled)
+                        {
+                            _log.Debug("Couldn't join other seed nodes, will join myself. seed-nodes=[{0}]", string.Join(",", _seeds));
+                        }
+                        // no InitJoinAck received, initialize new cluster by joining myself
+                        Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
+                        Context.Stop(Self);
+                        break;
+                    }
                 case InternalClusterAction.InitJoinAck initJoinAck:
                     _log.Info("Received InitJoinAck message from [{0}] to [{1}]", initJoinAck.Address, _selfAddress);
                     // first InitJoinAck reply, join existing cluster
@@ -2803,18 +2868,18 @@ namespace Akka.Cluster
                     Context.Stop(Self);
                     break;
                 case InternalClusterAction.InitJoinNack initJoinNack:
-                {
-                    _log.Info("Received InitJoinNack message from [{0}] to [{1}]", initJoinNack.Address, _selfAddress);
-                    _remainingSeeds = _remainingSeeds.Remove(initJoinNack.Address);
-                    if (_remainingSeeds.IsEmpty)
                     {
-                        // initialize new cluster by joining myself when nacks from all other seed nodes
-                        Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
-                        Context.Stop(Self);
-                    }
+                        _log.Info("Received InitJoinNack message from [{0}] to [{1}]", initJoinNack.Address, _selfAddress);
+                        _remainingSeeds = _remainingSeeds.Remove(initJoinNack.Address);
+                        if (_remainingSeeds.IsEmpty)
+                        {
+                            // initialize new cluster by joining myself when nacks from all other seed nodes
+                            Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
+                            Context.Stop(Self);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
                 default:
                     Unhandled(message);
                     break;
