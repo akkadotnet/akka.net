@@ -1201,6 +1201,12 @@ namespace RemotePingPong
             system1.EventStream.Subscribe(dropWatcher, typeof(Dropped));
             system2?.EventStream.Subscribe(dropWatcher, typeof(Dropped));
 
+            // Resend visibility (one-way mode only): tallies every sender-side ack-timeout resend
+            // across all client pairs in this rep. Same lifetime/rationale as dropCounter above - see
+            // OneWaySenderActor.HandleAckTimeout for what increments it and the "*** WARNING" print
+            // near the end of this method for what reads it.
+            var resendCounter = new ResendCounter();
+
             List<Task<long>> tasks = new List<Task<long>>();
             // Holds the system1-side actor that needs the initial "go" nudge for each pair: the
             // BenchmarkActor client in ping-pong mode, or the OneWaySenderActor in one-way mode.
@@ -1248,7 +1254,7 @@ namespace RemotePingPong
                             "receiver" + i);
                     var sender =
                         system1.ActorOf(
-                            Props.Create(() => new OneWaySenderActor(numberOfRepeats, windowSize, ackEvery, receiver, ts, _payloadInstance)),
+                            Props.Create(() => new OneWaySenderActor(numberOfRepeats, windowSize, ackEvery, receiver, ts, _payloadInstance, resendCounter)),
                             "sender" + i);
 
                     primeTargets.Add(sender);
@@ -1329,6 +1335,7 @@ namespace RemotePingPong
             system1.EventStream.Unsubscribe(dropWatcher);
             system2?.EventStream.Unsubscribe(dropWatcher);
             var dropped = dropCounter.Count;
+            var resent = resendCounter.Count;
 
             // force clean termination (split-client mode: only the local system - the server
             // process owns system2's lifecycle and keeps serving subsequent reps/runs)
@@ -1363,6 +1370,21 @@ namespace RemotePingPong
                 var prevColor = Console.ForegroundColor;
                 Console.ForegroundColor = ConsoleColor.Magenta;
                 Console.WriteLine("  *** SUSPECT: dropped {0} (outbound queue overflow) ***", dropped);
+                Console.ForegroundColor = prevColor;
+            }
+
+            if (resent > 0)
+            {
+                // Same "own line, own color" treatment as the drop warning above, and for the same
+                // reason: a nonzero resend count means OneWaySenderActor's ack timeout fired at least
+                // once (see HandleAckTimeout) - the transport actually lost a credit window and the
+                // sender had to blind-retransmit it, so totalMessagesReceived/throughput for this rep
+                // may include retransmitted duplicates the receiver counted as new. Treat this rep's
+                // numbers as SUSPECT. On a healthy transport this block never prints - zero resends
+                // across many runs is the pass signal for the underlying transport fix.
+                var prevColor = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine("  *** WARNING: {0} oneway resend(s) fired - messages were lost by the transport; this rep's numbers are SUSPECT ***", resent);
                 Console.ForegroundColor = prevColor;
             }
 
@@ -1507,6 +1529,23 @@ namespace RemotePingPong
         }
 
         /// <summary>
+        /// Thread-safe resend tally shared between every <see cref="OneWaySenderActor"/> in a single
+        /// Benchmark() rep and the harness loop that reads it once the rep completes. Mirrors
+        /// <see cref="DropCounter"/>'s shape and lifetime (fresh instance per rep, plain object rather
+        /// than actor state so the total can be read synchronously right after the rep finishes) -
+        /// see OneWaySenderActor.HandleAckTimeout for what increments it and the "*** WARNING" print
+        /// in Benchmark() for what reads it.
+        /// </summary>
+        private sealed class ResendCounter
+        {
+            private long _resends;
+
+            public void Increment() => Interlocked.Increment(ref _resends);
+
+            public long Count => Interlocked.Read(ref _resends);
+        }
+
+        /// <summary>
         /// One-way firehose sender (lives on system1, paired 1:1 with a <see cref="OneWayReceiverActor"/>
         /// on system2). Implements credit-based flow control: unbounded fire-and-forget sending would
         /// overflow Artery's bounded outbound queue (default capacity 3072/association, auto-raised
@@ -1521,14 +1560,44 @@ namespace RemotePingPong
         /// the receiver's count is authoritative for "done", but the latch itself has to live here
         /// because it's on system1, never RemoteScope-deployed (see the comment on OneWayReceiverActor
         /// construction in Benchmark() for why a TaskCompletionSource can't live on the receiver).
+        ///
+        /// Ack-timeout resend: Artery's ordinary stream is at-most-once - a lost credit window (a
+        /// known transport robustness gap at outbound-lanes greater than 1, being fixed separately)
+        /// means the receiver's count never reaches the next `ackEvery` multiple, so it never sends
+        /// the Ack this actor is waiting on, and without a fallback this actor - and the whole
+        /// benchmark rep, since Benchmark() awaits every sender's TaskCompletionSource - would hang
+        /// forever. To survive that: an Ack/Complete-driven receive timeout (armed on Run, disarmed
+        /// on Complete, see <see cref="AckTimeout"/>) fires whenever nothing has arrived from the
+        /// receiver in that window, and this actor blind-resends the exact batch it last put on the
+        /// wire (tracked in <c>_lastBatchSize</c>) without touching <c>_sent</c> - the resend must
+        /// not count against the `maxMessages` budget, or the receiver would never see enough
+        /// distinct messages to reach `maxExpectedMessages` and this deadlock-avoidance would itself
+        /// become a permanent throughput shortfall. Every resend increments the shared
+        /// <see cref="ResendCounter"/> so Benchmark() can print a loud, impossible-to-miss warning at
+        /// the end of the rep - the healthy/no-loss path (the only path exercised once the underlying
+        /// transport bug is fixed) prints nothing extra, so "zero resends across many runs" is a
+        /// clean pass/fail signal for that fix. Resends are capped at
+        /// <see cref="MaxResendAttempts"/> - a running total for this actor's whole rep, not reset on
+        /// a successful Ack - so a genuinely dead transport still fails the rep with a clear
+        /// <see cref="TimeoutException"/> instead of retrying forever.
         /// </summary>
         private class OneWaySenderActor : UntypedActor
         {
+            // How long this actor waits for an Ack/Complete before assuming the last window it sent
+            // was lost and blind-resending it. 5s is generous relative to a healthy round-trip (which
+            // is sub-millisecond in-process, low-single-digit ms over a real link) but short enough
+            // that a real loss doesn't stall the rep for long.
+            private static readonly TimeSpan AckTimeout = TimeSpan.FromSeconds(5);
+            // Total resend attempts this actor will make over the life of the rep before giving up
+            // and failing the completion latch - see HandleAckTimeout.
+            private const int MaxResendAttempts = 60;
+
             private readonly long _maxMessages;
             private readonly int _windowSize;
             private readonly int _ackEvery;
             private readonly IActorRef _receiver;
             private readonly TaskCompletionSource<long> _completion;
+            private readonly ResendCounter _resendCounter;
             // The payload every message actually carries - "hit" (default/toy) or the resolved
             // real-payload instance (see Program._payloadInstance/ResolvePayloadInstance()). Unlike
             // ping-pong mode (where one priming send is enough - the same object bounces between
@@ -1536,8 +1605,19 @@ namespace RemotePingPong
             // every individual message sent here must carry the payload itself.
             private readonly object _payload;
             private long _sent;
+            // Size of the most recent batch actually put on the wire (the initial window or an
+            // ackEvery top-up, whichever ran last) - this is what gets blind-resent on an ack
+            // timeout. Deliberately not the same thing as "unacked count": this protocol only acks in
+            // ackEvery-sized chunks, so the sender has no finer-grained notion of exactly how many
+            // in-flight messages were lost. Resending the whole last batch is the simplest
+            // correct-enough response to the known whole-window-loss failure mode this exists to
+            // survive.
+            private int _lastBatchSize;
+            // Total ack-timeout resends fired by this actor across the whole rep (not reset on a
+            // successful Ack) - see MaxResendAttempts.
+            private int _resendAttempts;
 
-            public OneWaySenderActor(long maxMessages, int windowSize, int ackEvery, IActorRef receiver, TaskCompletionSource<long> completion, object payload)
+            public OneWaySenderActor(long maxMessages, int windowSize, int ackEvery, IActorRef receiver, TaskCompletionSource<long> completion, object payload, ResendCounter resendCounter)
             {
                 _maxMessages = maxMessages;
                 _windowSize = windowSize;
@@ -1545,6 +1625,7 @@ namespace RemotePingPong
                 _receiver = receiver;
                 _completion = completion;
                 _payload = payload;
+                _resendCounter = resendCounter;
             }
 
             protected override void OnReceive(object message)
@@ -1552,24 +1633,68 @@ namespace RemotePingPong
                 switch (message)
                 {
                     case Messages.Run:
+                        Context.SetReceiveTimeout(AckTimeout);
                         SendBatch(_windowSize);
                         break;
                     case Ack:
                         SendBatch(_ackEvery);
                         break;
                     case Complete c:
+                        Context.SetReceiveTimeout(null);
                         _completion.TrySetResult(c.TotalReceived);
+                        break;
+                    case ReceiveTimeout:
+                        HandleAckTimeout();
                         break;
                 }
             }
 
             private void SendBatch(int count)
             {
+                var actuallySent = 0;
                 for (var i = 0; i < count && _sent < _maxMessages; i++)
                 {
                     _receiver.Tell(_payload);
                     _sent++;
+                    actuallySent++;
                 }
+
+                if (actuallySent > 0)
+                    _lastBatchSize = actuallySent;
+            }
+
+            /// <summary>
+            /// Fires when Context's receive timeout (armed on Run, see <see cref="AckTimeout"/>)
+            /// elapses with no Ack/Complete received - i.e. the last window this actor sent appears
+            /// to have been lost by the transport. Blind-resends that window (see
+            /// <c>_lastBatchSize</c>) so a lost window can't deadlock the rep; see the class doc for
+            /// why this never touches <c>_sent</c>, and why resends are counted both locally (against
+            /// <see cref="MaxResendAttempts"/>) and in the shared <see cref="ResendCounter"/> (for the
+            /// end-of-rep warning in Benchmark()).
+            /// </summary>
+            private void HandleAckTimeout()
+            {
+                // Degenerate case only: the very first SendBatch(_windowSize) sent nothing (e.g.
+                // maxMessages/windowSize of 0). Nothing was ever put on the wire, so there's nothing
+                // to resend.
+                if (_lastBatchSize == 0)
+                    return;
+
+                _resendAttempts++;
+                if (_resendAttempts > MaxResendAttempts)
+                {
+                    Context.SetReceiveTimeout(null);
+                    _completion.TrySetException(new TimeoutException(
+                        $"OneWaySenderActor gave up after {MaxResendAttempts} resend attempts " +
+                        $"({MaxResendAttempts * (int)AckTimeout.TotalSeconds}s total) with no ack/complete " +
+                        "from the receiver - the transport appears to have stopped delivering messages " +
+                        $"entirely. sent={_sent}/{_maxMessages}, last window size={_lastBatchSize}."));
+                    return;
+                }
+
+                _resendCounter.Increment();
+                for (var i = 0; i < _lastBatchSize; i++)
+                    _receiver.Tell(_payload);
             }
         }
 
