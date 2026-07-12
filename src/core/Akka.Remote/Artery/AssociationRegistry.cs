@@ -764,6 +764,48 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
+        /// Drains every element still buffered in the ordinary-outbound lane channels, handing each
+        /// to <paramref name="onDrained"/> (the transport publishes a <see cref="Akka.Event.Dropped"/>
+        /// per element). Called on transport shutdown, AFTER <see cref="CompleteOutbound"/> has
+        /// closed the writers (so no new element can race in behind the drain) but BEFORE the
+        /// transport trips its shared kill switch -- the consuming stream may therefore still be
+        /// LIVE during the drain, deliberately: an element the consumer wins is an element that
+        /// still has a chance of actually being delivered (delivery beats a Dropped). The exact
+        /// accounting is: every element still channel-resident at drain time gets a Dropped;
+        /// elements the live consumer has already pulled into the stream stages and that die at the
+        /// subsequent kill-switch shutdown are NOT accounted (bounded in-flight, at-most-once by
+        /// contract). Without the drain, a completed channel strands its remaining elements forever,
+        /// SILENTLY -- nothing will ever read them once the consumer is gone (observed live: 34 dead
+        /// channels holding 456 undrained items). Drained elements are NEVER re-fed into any
+        /// stream. Racing the live consumer is benign: <c>TryRead</c> hands each element to exactly
+        /// one reader.
+        /// </summary>
+        public void DrainOutboundToDropped(Action<IOutboundEnvelope> onDrained)
+        {
+            foreach (var laneChannel in _laneChannels)
+                while (laneChannel.Reader.TryRead(out var envelope))
+                    onDrained(envelope);
+        }
+
+        /// <summary>
+        /// The CONTROL-channel analog of <see cref="DrainOutboundToDropped"/>. See its remarks.
+        /// </summary>
+        public void DrainControlToDropped(Action<IOutboundEnvelope> onDrained)
+        {
+            while (_controlChannel.Reader.TryRead(out var envelope))
+                onDrained(envelope);
+        }
+
+        /// <summary>
+        /// The LARGE-MESSAGE-channel analog of <see cref="DrainOutboundToDropped"/>. See its remarks.
+        /// </summary>
+        public void DrainLargeToDropped(Action<IOutboundEnvelope> onDrained)
+        {
+            while (_largeChannel.Reader.TryRead(out var envelope))
+                onDrained(envelope);
+        }
+
+        /// <summary>
         /// Records (task 6.6: "log once per association, not per message") that a quarantine-drop
         /// warning has been logged for <paramref name="uid"/>. Returns <see langword="true"/> the
         /// FIRST time it is called for a given uid (the caller should log), and
