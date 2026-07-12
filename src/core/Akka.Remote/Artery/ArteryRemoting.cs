@@ -15,6 +15,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Streams;
@@ -1134,11 +1135,11 @@ namespace Akka.Remote.Artery
                 _log.Debug("Artery {0} outbound lanes stream to [{1}] not materialized: materializer is shutting down.", ArteryStreamId.Ordinary, remoteAddress);
                 return;
             }
-            catch (InvalidOperationException e) when (IsActorSystemTerminating(e))
+            catch (InvalidOperationException) when (IsActorSystemTerminating())
             {
                 // Same second shutdown race MaterializeOutboundStream's matching catch documents --
-                // /user guardian tearing down ahead of ArteryRemoting.Shutdown() itself. Narrowed to
-                // the specific terminating-child condition (see IsActorSystemTerminating): a spurious
+                // /user guardian tearing down ahead of ArteryRemoting.Shutdown() itself. Narrowed by
+                // actual termination state (see IsActorSystemTerminating): a spurious
                 // InvalidOperationException from a LIVE system propagates instead -- up through
                 // MaterializeOnceGate.EnsureStarted, which resets the gate and rethrows, so the
                 // failure is observable AND the next send can retry. Kill switch tripped before the
@@ -1411,19 +1412,19 @@ namespace Akka.Remote.Artery
                 _log.Debug("Artery {0} outbound stream to [{1}] not materialized: materializer is shutting down.", streamId, remoteAddress);
                 return;
             }
-            catch (InvalidOperationException e) when (IsActorSystemTerminating(e))
+            catch (InvalidOperationException) when (IsActorSystemTerminating())
             {
-                // A SECOND, DIFFERENT shutdown race (no flag guard available -- read on).
-                // ActorMaterializer.Create(system)'s StreamSupervisor is a TOP-LEVEL actor created
-                // via system.ActorOf(...), i.e. it lives under /user -- so it starts terminating
-                // (ActorCell.MakeChild then throws THIS exception, "Cannot create child while
-                // terminating or terminated", for any new graph-interpreter child Run() tries to
-                // create) as soon as /user guardian tears down, which happens WELL BEFORE
-                // ArteryRemoting.Shutdown() runs (that is gated behind /system's RemotingTerminator
-                // phase, later in CoordinatedShutdown). During that window BOTH _isShutdown and
-                // _materializer.IsShutdown are still false -- so the filter matches the SPECIFIC
-                // terminating-child condition instead of swallowing the whole exception TYPE (see
-                // IsActorSystemTerminating): a spurious InvalidOperationException from a LIVE system
+                // A SECOND, DIFFERENT shutdown race (this transport's own flags don't cover it --
+                // read on). ActorMaterializer.Create(system)'s StreamSupervisor is a TOP-LEVEL
+                // actor created via system.ActorOf(...), i.e. it lives under /user -- so it starts
+                // terminating (ActorCell then throws InvalidOperationException for any new
+                // graph-interpreter child Run() tries to create) as soon as /user guardian tears
+                // down, which happens WELL BEFORE ArteryRemoting.Shutdown() runs (that is gated
+                // behind /system's RemotingTerminator phase, later in CoordinatedShutdown). During
+                // that window BOTH _isShutdown and _materializer.IsShutdown are still false -- so
+                // the filter consults actual termination state (the supervisor's own cell,
+                // CoordinatedShutdown, WhenTerminated) instead of swallowing the whole exception
+                // TYPE (see IsActorSystemTerminating): a spurious InvalidOperationException from a LIVE system
                 // propagates up through MaterializeOnceGate.EnsureStarted (which resets the gate and
                 // rethrows) instead of being silently eaten with the gate latched. Dropping the
                 // message/ack this materialization would have carried is safe: the peer's
@@ -1546,20 +1547,74 @@ namespace Akka.Remote.Artery
         private const int OrdinaryConnectionMaxInnerRestarts = 3;
 
         /// <summary>
-        /// Whether <paramref name="e"/> is <c>ActorCell.MakeChild</c>'s "Cannot create child while
-        /// terminating or terminated" -- thrown by <c>Run()</c> when the materializer's
-        /// StreamSupervisor (a /user top-level actor) is being torn down by ActorSystem
-        /// termination, WELL BEFORE <see cref="Shutdown"/>'s own flags are set. Message-matched
-        /// against our own exception source (<c>ActorCell.Children.cs</c>) because no liveness flag
-        /// is reliable inside that window (<c>WhenTerminated</c> has not completed yet while the
-        /// guardian is merely terminating); <c>WhenTerminated.IsCompleted</c> is OR'd in as the
-        /// belt-and-suspenders late signal. Used to NARROW the materialization catch below so a
-        /// spurious <see cref="InvalidOperationException"/> from a live system propagates instead
-        /// of being silently swallowed.
+        /// State-based filter for the two <see cref="InvalidOperationException"/> materialization
+        /// catches: is this system (or this transport's slice of it) shutting down, so the
+        /// exception can be attributed to the shutdown race rather than a genuine fault on a live
+        /// system?
+        ///
+        /// <para>
+        /// Why <c>Run()</c> throws <see cref="InvalidOperationException"/> at all: it creates the
+        /// graph-interpreter actor as a CHILD of the materializer's StreamSupervisor
+        /// (<c>ExtendedActorMaterializer.ActorOf</c> -&gt; <c>ActorCell.AttachChild</c>). The
+        /// StreamSupervisor is a /user top-level actor, so it starts terminating as soon as the
+        /// /user guardian tears down -- WELL BEFORE <see cref="Shutdown"/> flips
+        /// <c>_isShutdown</c> (gated behind /system's RemotingTerminator phase, later in
+        /// <see cref="CoordinatedShutdown"/>). A child-creation attempt in that window throws
+        /// from one of three sites, depending on where the attaching thread lands relative to
+        /// the supervisor's own termination: <c>ActorCell.Children.cs:462</c> (MakeChild's
+        /// up-front terminating check), <c>TerminatingChildrenContainer.cs:68</c> or
+        /// <c>TerminatedChildrenContainer.cs:50</c> (the non-atomic ReserveChild step losing the
+        /// same race a moment later).
+        /// </para>
+        ///
+        /// <para>
+        /// The signals checked, cheapest first -- their union covers the whole window from
+        /// "termination begun" to "termination complete":
+        /// <list type="bullet">
+        /// <item><description><c>_isShutdown</c> / <c>_materializer.IsShutdown</c>: this
+        /// transport's own teardown (the late end of the window; the same flags the sibling
+        /// <c>IllegalStateException</c> catches consult).</description></item>
+        /// <item><description><see cref="IsStreamSupervisorTerminating"/>: the DIRECT cause --
+        /// the cell <c>Run()</c> attaches children to is terminating/terminated. All three throw
+        /// sites above fire precisely when that cell's <c>ChildrenContainer</c> has entered a
+        /// terminating state, and that state never reverts (a Termination reason is terminal),
+        /// so this check -- evaluated at throw time, since <c>when</c> filters run before
+        /// unwinding -- is equivalent to the union of the three throw conditions.</description></item>
+        /// <item><description><see cref="CoordinatedShutdown.ShutdownReason"/> non-null:
+        /// "termination started" -- set atomically the instant a CoordinatedShutdown run begins
+        /// (<see cref="ActorSystem.Terminate"/> routes through it by default).
+        /// <c>TryGetExtension</c> avoids instantiating the extension from inside an exception
+        /// filter (a throwing filter silently evaluates to false).</description></item>
+        /// <item><description><c>ActorSystemImpl.Aborting</c>: <c>ActorSystem.Abort()</c>
+        /// skips CoordinatedShutdown entirely; this is its flag.</description></item>
+        /// <item><description><c>WhenTerminated.IsCompleted</c>: the belt-and-suspenders late
+        /// signal (termination already finished).</description></item>
+        /// </list>
+        /// There is no <c>ActorSystem.WhenTerminating</c> in Akka.NET --
+        /// <c>ShutdownReason</c>/<c>Aborting</c> are the earliest "termination has begun" state
+        /// available. Used to NARROW the materialization catches so a spurious
+        /// <see cref="InvalidOperationException"/> from a live system propagates instead of being
+        /// silently swallowed.
+        /// </para>
         /// </summary>
-        private bool IsActorSystemTerminating(InvalidOperationException e) =>
-            e.Message.Contains("Cannot create child while terminating") ||
-            System.WhenTerminated.IsCompleted;
+        private bool IsActorSystemTerminating() =>
+            _isShutdown
+            || _materializer is null || _materializer.IsShutdown
+            || IsStreamSupervisorTerminating()
+            || (System.TryGetExtension<CoordinatedShutdown>(out var coordinatedShutdown) && coordinatedShutdown.ShutdownReason != null)
+            || (System is ActorSystemImpl systemImpl && systemImpl.Aborting)
+            || System.WhenTerminated.IsCompleted;
+
+        /// <summary>
+        /// Whether the materializer's StreamSupervisor -- the cell every <c>Run()</c> in this
+        /// class attaches its graph-interpreter children to -- is terminating or terminated.
+        /// <c>ActorRefWithCell.Underlying</c> unifies the <c>LocalActorRef</c>/<c>RepointableActorRef</c>
+        /// cases; an <c>UnstartedCell</c> (supervisor still spinning up) reports an empty,
+        /// non-terminating container, so this can never false-positive during startup.
+        /// </summary>
+        private bool IsStreamSupervisorTerminating() =>
+            _materializer?.Supervisor is ActorRefWithCell { Underlying: { } supervisorCell }
+            && (supervisorCell.IsTerminated || supervisorCell.ChildrenContainer.IsTerminating);
 
         /// <summary>
         /// Releases <paramref name="streamId"/>'s materialize-once gate on
