@@ -158,6 +158,12 @@ namespace Akka.Remote.Artery
         /// nothing. Never invoked when <paramref name="inboundLanes"/> is 1 (lanes are never
         /// materialized then) or for a Control/Large-stream connection (lanes are Ordinary-only).
         /// </param>
+        /// <param name="testState">
+        /// Failure-injection blackhole state for the lanes&gt;1 lane path
+        /// (<c>akka.remote.artery.advanced.test-mode</c>) -- see <see cref="TestState"/>.
+        /// <see langword="null"/> (the default, and the only value when test-mode is off) disables
+        /// the lane-path blackhole check entirely.
+        /// </param>
         public ArteryInboundProcessingStage(
             int maxFrameLength,
             int maxLargeFrameLength,
@@ -166,7 +172,8 @@ namespace Akka.Remote.Artery
             int inboundLaneBufferSize = 0,
             IInboundContext? inboundContext = null,
             Action<object, string?, string>? dispatchOrdinary = null,
-            Action<int>? onLanesInitialized = null)
+            Action<int>? onLanesInitialized = null,
+            SharedTestState? testState = null)
         {
             if (inboundLanes < 1)
                 throw new ArgumentOutOfRangeException(nameof(inboundLanes), inboundLanes, "Must be >= 1.");
@@ -182,6 +189,7 @@ namespace Akka.Remote.Artery
             InboundContext = inboundContext;
             DispatchOrdinary = dispatchOrdinary;
             OnLanesInitialized = onLanesInitialized;
+            TestState = testState;
 
             // Resolved ONCE per accepted connection (this stage is materialized per-connection),
             // never on the per-frame hot path -- and only when lanes are actually enabled, since
@@ -237,6 +245,21 @@ namespace Akka.Remote.Artery
 
         /// <summary>See the constructor parameter of the same name.</summary>
         public Action<int>? OnLanesInitialized { get; }
+
+        /// <summary>
+        /// Failure-injection blackhole state (<c>akka.remote.artery.advanced.test-mode</c>) for
+        /// the lanes&gt;1 lane path -- lane-routed ordinary traffic bypasses the connection sink's
+        /// <see cref="InboundTestStage"/>, so the SAME blackhole check runs inside
+        /// <c>ProcessFrameLaneMode</c> instead (right after its existing
+        /// <see cref="IInboundContext.IsKnownOrigin"/> gate; unknown-origin lane traffic is
+        /// already dropped by that gate regardless of test-mode). <see langword="null"/> (the
+        /// default, and the only value at test-mode off OR at the <see cref="InboundLanes"/>=1
+        /// default, where the lane path never runs at all) disables the check -- the single
+        /// nullable-field test it leaves on the lanes&gt;1 frame path is the unavoidable minimum,
+        /// since a stage-internal consumer loop has no stream seam to conditionally insert a
+        /// stage into.
+        /// </summary>
+        public SharedTestState? TestState { get; }
 
         /// <summary>
         /// The shared <see cref="ArteryControlMessageSerializer"/>'s SerializerId (probed via any
@@ -733,6 +756,26 @@ namespace Akka.Remote.Artery
                         "Dropping inbound lane-routed Artery message from unknown origin uid [{0}] (no completed handshake for this uid yet).",
                         decoded.Header.OriginUid);
                     return true;
+                }
+
+                // advanced.test-mode failure injection for the lane path (lane-routed traffic
+                // bypasses the connection sink's InboundTestStage) -- the same known-origin
+                // blackhole check that stage performs, keyed identically as
+                // (localAddress, originAddress). Unknown origins never reach here (dropped by the
+                // IsKnownOrigin gate above, test-mode or not), so the InboundTestStage's
+                // pre-handshake HandshakeReq special case has no lane-path analog. See
+                // TestState's property remarks for the off-mode cost rationale.
+                if (_stage.TestState is { } testState)
+                {
+                    var origin = _stage.InboundContext!.TryResolveOriginAddress(decoded.Header.OriginUid);
+                    if (origin is not null &&
+                        testState.IsBlackhole(_stage.InboundContext!.LocalAddress.Address, origin))
+                    {
+                        Log.Debug(
+                            "dropping inbound lane-routed message from [{0}] with UID [{1}] because of blackhole",
+                            origin, decoded.Header.OriginUid);
+                        return true;
+                    }
                 }
 
                 if (!decoded.TryGetRecipientPath(out var recipientPath))
