@@ -1714,16 +1714,9 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
-        /// Whether <paramref name="e"/> is <c>ActorCell.MakeChild</c>'s "Cannot create child while
-        /// terminating or terminated" -- thrown by <c>Run()</c> when the materializer's
-        /// StreamSupervisor (a /user top-level actor) is being torn down by ActorSystem
-        /// termination, WELL BEFORE <see cref="Shutdown"/>'s own flags are set. Message-matched
-        /// against our own exception source (<c>ActorCell.Children.cs</c>) because no liveness flag
-        /// is reliable inside that window (<c>WhenTerminated</c> has not completed yet while the
-        /// guardian is merely terminating); <c>WhenTerminated.IsCompleted</c> is OR'd in as the
-        /// belt-and-suspenders late signal. Used to NARROW the materialization catch below so a
-        /// spurious <see cref="InvalidOperationException"/> from a live system propagates instead
-        /// of being silently swallowed.
+        /// Returns whether the actor system, materializer, or transport has entered termination.
+        /// This state-based filter narrows the materialization catches so an unrelated
+        /// <see cref="InvalidOperationException"/> from a live system still propagates.
         /// </summary>
         private bool IsActorSystemTerminating() =>
             _isShutdown
