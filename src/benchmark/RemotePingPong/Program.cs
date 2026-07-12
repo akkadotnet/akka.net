@@ -88,10 +88,12 @@ namespace RemotePingPong
         private static string _payloadMode = "toy";
 
         // Selected once at startup via the "--serializer" option: "v2" (Akka.Serialization.V2
-        // source-generated MessagePack) or "protobuf" (hand-written Google.Protobuf, string manifest).
-        // Only meaningful when _payloadMode is "real" - see BuildRootCommand()'s cross-option
-        // validators, which require --serializer whenever --payload real is given and reject it
-        // otherwise.
+        // source-generated MessagePack), "protobuf" (hand-written Google.Protobuf, string manifest),
+        // or "msgpack" (hand-written SerializerWithStringManifest over an attribute-based
+        // [MessagePackObject]/[Key(n)] POCO, using MessagePack directly rather than through the V2
+        // generator). Only meaningful when _payloadMode is "real" - see BuildRootCommand()'s
+        // cross-option validators, which require --serializer whenever --payload real is given and
+        // reject it otherwise.
         private static string? _serializerArm;
 
         // The actual object every "hit"/priming Tell sends, resolved once per process by
@@ -374,8 +376,17 @@ namespace RemotePingPong
                     ""RemotePingPong.RealPayload.Protobuf.RealBenchmarkMessage, RemotePingPong"" = real-benchmark-protobuf
                   }
                 }"),
+                "msgpack" => ConfigurationFactory.ParseString(@"
+                akka.actor {
+                  serializers {
+                    real-benchmark-msgpack = ""RemotePingPong.RealPayload.MsgPack.RealBenchmarkMsgPackSerializer, RemotePingPong""
+                  }
+                  serialization-bindings {
+                    ""RemotePingPong.RealPayload.MsgPack.RealBenchmarkMessage, RemotePingPong"" = real-benchmark-msgpack
+                  }
+                }"),
                 _ => throw new InvalidOperationException(
-                    "\"--payload real\" requires --serializer to have been resolved (v2|protobuf) before " +
+                    "\"--payload real\" requires --serializer to have been resolved (v2|protobuf|msgpack) before " +
                     "an ActorSystem config can be built - this should have been rejected by the CLI's " +
                     "cross-option validators before reaching here.")
             };
@@ -398,8 +409,9 @@ namespace RemotePingPong
             {
                 "v2" => canonical,
                 "protobuf" => RealPayload.RealPayloadFactory.ToProtobuf(canonical),
+                "msgpack" => RealPayload.RealPayloadFactory.ToMsgPack(canonical),
                 _ => throw new InvalidOperationException(
-                    "\"--payload real\" requires --serializer to have been resolved (v2|protobuf) before " +
+                    "\"--payload real\" requires --serializer to have been resolved (v2|protobuf|msgpack) before " +
                     "the payload instance can be built - this should have been rejected by the CLI's " +
                     "cross-option validators before reaching here.")
             };
@@ -431,6 +443,7 @@ namespace RemotePingPong
             {
                 "v2" => typeof(RealPayload.V2.RealBenchmarkSerializer),
                 "protobuf" => typeof(RealPayload.Protobuf.RealBenchmarkProtobufSerializer),
+                "msgpack" => typeof(RealPayload.MsgPack.RealBenchmarkMsgPackSerializer),
                 _ => throw new InvalidOperationException($"Unknown --serializer value [{_serializerArm}].")
             };
 
@@ -607,15 +620,17 @@ namespace RemotePingPong
             var serializerOption = new Option<string?>("--serializer")
             {
                 Description = "Real-payload serializer arm: \"v2\" (Akka.Serialization.V2 source-generated " +
-                              "MessagePack) or \"protobuf\" (hand-written Google.Protobuf, string manifest). " +
+                              "MessagePack), \"protobuf\" (hand-written Google.Protobuf, string manifest), or " +
+                              "\"msgpack\" (hand-written SerializerWithStringManifest over an attribute-based " +
+                              "[MessagePackObject]/[Key(n)] POCO, MessagePack's Standard resolver, no compression). " +
                               "Required when --payload real is given; rejected otherwise (--payload toy has no " +
                               "custom serializer to select)."
             };
             serializerOption.Validators.Add(result =>
             {
                 var value = result.GetValueOrDefault<string?>();
-                if (value is not null && value != "v2" && value != "protobuf")
-                    result.AddError($"--serializer must be \"v2\" or \"protobuf\" (got \"{value}\").");
+                if (value is not null && value != "v2" && value != "protobuf" && value != "msgpack")
+                    result.AddError($"--serializer must be \"v2\", \"protobuf\", or \"msgpack\" (got \"{value}\").");
             });
 
             void AddPayloadSerializerValidation(Command command)
@@ -625,7 +640,7 @@ namespace RemotePingPong
                     var payload = result.GetValue(payloadOption);
                     var serializer = result.GetValue(serializerOption);
                     if (payload == "real" && serializer is null)
-                        result.AddError("--serializer <v2|protobuf> is required when --payload real is specified.");
+                        result.AddError("--serializer <v2|protobuf|msgpack> is required when --payload real is specified.");
                     else if (payload != "real" && serializer is not null)
                         result.AddError("--serializer is only meaningful with --payload real (omit --serializer, " +
                                          "or add --payload real).");
