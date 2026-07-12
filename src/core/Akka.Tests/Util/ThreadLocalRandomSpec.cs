@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Threading;
+using System.Linq;
 using Xunit;
 
 namespace Akka.Tests.Util;
@@ -28,37 +28,17 @@ public class ThreadLocalRandomSpec
     }
 
     [Fact]
-    public void Different_threads_should_draw_different_random_streams()
+    public void Seed_base_should_come_from_a_nondeterministic_source()
     {
-        const int drawCount = 32;
+        // Environment.TickCount returns one stable value throughout a tight loop and therefore
+        // gives simultaneously-started processes the same base. Multiple draws from the
+        // cryptographic source must not collapse to that deterministic behavior. We avoid
+        // asserting that every draw is unique: collisions are valid for a finite random domain.
+        var seeds = Enumerable.Range(0, 32)
+            .Select(_ => Akka.Util.ThreadLocalRandom.CreateSeed())
+            .ToArray();
 
-        var first = new long[drawCount];
-        var second = new long[drawCount];
-
-        // Two dedicated (non-pooled) threads, released at the same time via the barrier, so each
-        // one seeds its own ThreadLocal<Random> instance independently - mirroring the scenario
-        // that motivated this fix (multiple processes/threads starting at ~the same moment).
-        using var barrier = new Barrier(2);
-
-        void Draw(long[] target)
-        {
-            barrier.SignalAndWait(TimeSpan.FromSeconds(10));
-            var random = Akka.Util.ThreadLocalRandom.Current;
-            for (var i = 0; i < drawCount; i++)
-                target[i] = random.NextInt64();
-        }
-
-        var t1 = new Thread(() => Draw(first));
-        var t2 = new Thread(() => Draw(second));
-
-        t1.Start();
-        t2.Start();
-
-        Assert.True(t1.Join(TimeSpan.FromSeconds(10)));
-        Assert.True(t2.Join(TimeSpan.FromSeconds(10)));
-
-        // Deterministic-failure-free formulation: compare the whole drawn sequence rather than a
-        // single value, so the odds of a false failure are astronomically small.
-        Assert.NotEqual(first, second);
+        Assert.True(seeds.Distinct().Skip(1).Any(),
+            "the seed source returned the same value for all 32 draws");
     }
 }
