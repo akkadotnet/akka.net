@@ -29,8 +29,8 @@
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.35.0</ProtobufVersion>
-    <GrpcToolsVersion>2.81.0</GrpcToolsVersion>
+    <ProtobufVersion>3.35.1</ProtobufVersion>
+    <GrpcToolsVersion>2.82.0</GrpcToolsVersion>
     <BenchmarkDotNetVersion>0.15.8</BenchmarkDotNetVersion>
     <MessagePackVersion>3.1.7</MessagePackVersion>
     <MicrosoftCodeAnalysisCSharpVersion>4.13.0</MicrosoftCodeAnalysisCSharpVersion>
