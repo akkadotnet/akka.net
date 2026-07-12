@@ -12,14 +12,16 @@ using System.Linq;
 namespace RemotePingPong.RealPayload
 {
     /// <summary>
-    /// Builds the ONE canonical "real payload" message content shared by both serializer arms
-    /// (`--payload real --serializer v2|protobuf`). <see cref="CreateCanonical"/> is the single
+    /// Builds the ONE canonical "real payload" message content shared by all three serializer arms
+    /// (`--payload real --serializer v2|protobuf|msgpack`). <see cref="CreateCanonical"/> is the single
     /// source of truth: it returns a <see cref="V2.RealBenchmarkMessage"/> record (the V2 arm's own
     /// wire type - no separate DTO needed since it is a plain, attribute-only POCO), and
-    /// <see cref="ToProtobuf"/> derives the Protobuf arm's message from THAT instance field-for-field.
-    /// This guarantees the two arms always carry identical logical content: same primitives, same
-    /// string, same nested <see cref="V2.DeviceInfo"/>/<see cref="Protobuf.DeviceInfo"/> values, and
-    /// the same list of <see cref="V2.Reading"/>/<see cref="Protobuf.Reading"/> entries.
+    /// <see cref="ToProtobuf"/>/<see cref="ToMsgPack"/> derive the Protobuf/MessagePack arms' messages
+    /// from THAT instance field-for-field. This guarantees all three arms always carry identical
+    /// logical content: same primitives, same string, same nested
+    /// <see cref="V2.DeviceInfo"/>/<see cref="Protobuf.DeviceInfo"/>/<see cref="MsgPack.DeviceInfo"/>
+    /// values, and the same list of
+    /// <see cref="V2.Reading"/>/<see cref="Protobuf.Reading"/>/<see cref="MsgPack.Reading"/> entries.
     /// </summary>
     /// <remarks>
     /// Values are fixed literals (no randomness, no wall-clock reads) so every run - and every arm -
@@ -87,6 +89,25 @@ namespace RemotePingPong.RealPayload
             }));
 
             return proto;
+        }
+
+        public static MsgPack.RealBenchmarkMessage ToMsgPack(V2.RealBenchmarkMessage message)
+        {
+            var readings = message.Readings.Items
+                .Select(reading => new MsgPack.Reading(reading.SensorId, reading.Value, reading.TimestampTicks))
+                .ToList();
+
+            return new MsgPack.RealBenchmarkMessage(
+                SequenceNumber: message.SequenceNumber,
+                TimestampTicks: message.TimestampTicks,
+                Value: message.Value,
+                Flag: message.Flag,
+                CorrelationId: message.CorrelationId,
+                Device: new MsgPack.DeviceInfo(
+                    DeviceId: message.Device.DeviceId,
+                    FirmwareVersion: message.Device.FirmwareVersion,
+                    Region: message.Device.Region),
+                Readings: new MsgPack.ReadingBatch(readings));
         }
     }
 }
