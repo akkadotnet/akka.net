@@ -6,8 +6,8 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Security.Cryptography;
 using Akka.Actor;
-using Akka.Util;
 
 namespace Akka.Remote
 {
@@ -68,7 +68,7 @@ namespace Akka.Remote
         /// </param>
         internal AddressUid(bool use64BitUid)
         {
-            Uid = use64BitUid ? Generate64BitUid() : ThreadLocalRandom.Current.Next();
+            Uid = GenerateUid(use64BitUid);
         }
 
         /// <summary>
@@ -77,18 +77,34 @@ namespace Akka.Remote
         public readonly long Uid;
 
         /// <summary>
-        /// Generates a uniformly random nonzero <see cref="long"/> across the full 64-bit range.
-        /// Zero is reserved as a sentinel value and is never returned. netstandard2.0-safe
-        /// (does not rely on <c>Random.NextInt64()</c>, which is only available on net6.0+).
+        /// Generates a uniformly random nonzero UID -- full 64-bit range when
+        /// <paramref name="use64Bit"/> is <c>true</c>, else <c>[1, int.MaxValue]</c> (the legacy
+        /// rolling-upgrade-safe int range). Zero is reserved as a sentinel value and is never
+        /// returned.
+        ///
+        /// <para>
+        /// Deliberately uses a cryptographic <see cref="RandomNumberGenerator"/> rather than
+        /// <c>Akka.Util.ThreadLocalRandom</c>: the latter is seeded from
+        /// <see cref="Environment.TickCount"/>, so MULTIPLE PROCESSES started within the same
+        /// millisecond tick (e.g. the multi-node test runner spawning every node of a spec at
+        /// once) draw identical seeds and produce IDENTICAL system UIDs. The system UID is this
+        /// incarnation's remoting identity -- Artery keys handshakes, quarantines, and its
+        /// association registry's reverse index by it -- so cross-process collisions silently
+        /// corrupt uid-keyed behavior (e.g. traffic from one peer attributed to another).
+        /// Cost is irrelevant here: one draw per ActorSystem. netstandard2.0-safe.
+        /// </para>
         /// </summary>
-        private static long Generate64BitUid()
+        private static long GenerateUid(bool use64Bit)
         {
+            using var rng = RandomNumberGenerator.Create();
             var buf = new byte[8];
             long candidate;
             do
             {
-                ThreadLocalRandom.Current.NextBytes(buf);
-                candidate = BitConverter.ToInt64(buf, 0);
+                rng.GetBytes(buf);
+                candidate = use64Bit
+                    ? BitConverter.ToInt64(buf, 0)
+                    : BitConverter.ToInt32(buf, 0) & int.MaxValue;
             } while (candidate == 0);
 
             return candidate;
