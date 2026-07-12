@@ -20,7 +20,11 @@ using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+// Akka.IO types aliased individually rather than imported wholesale: `using Akka.IO;` would make
+// Tcp/TcpExt ambiguous with the Akka.Streams.Dsl Tcp/TcpExt this file uses for the transport.
 using Inet = Akka.IO.Inet;
+using IOwnedSequenceSegment = Akka.IO.IOwnedSequenceSegment;
+using OwnedSequenceSegment = Akka.IO.OwnedSequenceSegment;
 
 namespace Akka.Remote.Artery
 {
@@ -1077,11 +1081,31 @@ namespace Akka.Remote.Artery
                 // MergeHub -> transport-wide kill switch (Shutdown() tears every association's
                 // streams down) -> this assembly's OWN shared kill switch -> watch termination
                 // (write-side completion signal, exactly like MaterializeOutboundStream's
-                // "TERMINATION SIGNAL" remarks) -> restart-wrapped OutgoingConnection (above).
+                // "TERMINATION SIGNAL" remarks) -> frame batching (below) -> restart-wrapped
+                // OutgoingConnection (above).
+                //
+                // FRAME BATCHING: crossing into the restart-wrapped connection flow costs
+                // per-ELEMENT, so under load the merge tail collapses whatever already-encoded
+                // frames are immediately available into ONE multi-segment sequence of up to
+                // LaneWriteBatchMaxBytes before crossing (AppendFrameToBatch chains the segments
+                // zero-copy; see its remarks for the ownership-transfer invariant). Wire bytes are
+                // IDENTICAL either way -- the inbound side parses frames off the byte stream and
+                // never sees element boundaries. When the connection keeps up, BatchWeighted is a
+                // 1:1 pass-through (it only rolls up while downstream is busy); when it doesn't,
+                // frames coalesce. Placed AFTER WatchTermination so the termination-signal wiring
+                // is unchanged. Teardown: a batch stranded here by an abrupt abort is reclaimed by
+                // the GC rather than returned to its buffer pools -- the same accepted trade as
+                // elements stranded in the MergeHub's own queue (see ArteryEncodeStage's "why this
+                // stage itself needs no backstop" remarks).
                 ((mergeSink, mergeTailTermination), _) = mergeHubSource
                     .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
                     .Via(laneKillSwitch.Flow<ReadOnlySequence<byte>>())
                     .WatchTermination(Keep.Both)
+                    .BatchWeighted(
+                        max: LaneWriteBatchMaxBytes,
+                        costFunction: static frame => frame.Length,
+                        seed: static frame => frame,
+                        aggregate: AppendFrameToBatch)
                     .Via(connectionWithRestart)
                     .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer!);
@@ -1596,6 +1620,110 @@ namespace Akka.Remote.Artery
         /// <see cref="InvalidOperationException"/> from a live system propagates instead of being
         /// silently swallowed.
         /// </para>
+        /// Weight cap for the <c>BatchWeighted</c> stage on the ordinary-lanes merge tail: the most
+        /// bytes of already-encoded frames one batched element may carry. Mirrors the TCP
+        /// write-coalescing cap it feeds into
+        /// (<c>Akka.Streams.Implementation.IO.TcpStages.TcpStreamLogic.WriteBufferCap</c>, 16 KiB):
+        /// that is the largest accumulation the connection stage itself builds before it stops
+        /// pulling, so batching further upstream past it buys nothing.
+        /// </summary>
+        private const long LaneWriteBatchMaxBytes = 16 * 1024;
+
+        /// <summary>
+        /// <c>BatchWeighted</c> aggregate for the ordinary-lanes merge tail (see
+        /// <see cref="MaterializeOrdinaryOutboundWithLanes"/>): chains every segment of
+        /// <paramref name="frame"/> onto the tail of <paramref name="batch"/>'s segment chain --
+        /// zero-copy, no memcpy anywhere -- and returns a single <see cref="ReadOnlySequence{T}"/>
+        /// spanning both. The ownership transfer follows
+        /// <c>Akka.Streams.Implementation.IO.TcpStages.TcpStreamLogic.AppendToWriteBuffer</c>
+        /// exactly: each source segment's owner is detached exactly once
+        /// (<see cref="IOwnedSequenceSegment.DetachOwner"/>) and re-carried by the new link appended
+        /// to the batch, so every pooled buffer always has exactly one segment responsible for
+        /// eventually disposing it. Mutating the batch's tail here is safe: the Batch stage's logic
+        /// is single-threaded, and a pushed batch is never aggregated onto again (the next
+        /// accumulation starts from a fresh seed).
+        ///
+        /// <para>
+        /// <b>Invariant (throws if violated).</b> Both inputs are always
+        /// <see cref="OwnedSequenceSegment"/>-backed. Every element on this path is pushed by
+        /// <see cref="ArteryEncodeStage"/> as <c>OwnedSequenceSegment.Create(owner)</c> -- a
+        /// single-segment, owner-carrying, segment-backed sequence -- and reaches the batch stage
+        /// unchanged: the kill-switch flows, <c>WatchTermination</c>, <c>RecoverWithRetries</c> and
+        /// the <c>MergeHub</c> are all pass-through, and the connection preamble is prepended
+        /// INSIDE the downstream restart factory, so it never passes through this stage. The batch
+        /// side holds by induction: <c>BatchWeighted</c>'s seed is the identity, so an accumulator
+        /// is either a raw encode-stage frame or a previous return value of this method. A
+        /// violation means a foreign producer got wired into the merge tail -- failing the stage
+        /// loudly (settling the assembly, whose restart tier takes over) beats silently copying, or
+        /// worse dropping, bytes of unknown provenance.
+        /// </para>
+        /// </summary>
+        /// <param name="batch">The accumulated batch. Its backing chain is extended in place.</param>
+        /// <param name="frame">The incoming encoded frame whose segments (and their owners) move onto the batch.</param>
+        /// <returns>One sequence over the batch's head through the newly appended tail.</returns>
+        internal static ReadOnlySequence<byte> AppendFrameToBatch(ReadOnlySequence<byte> batch, ReadOnlySequence<byte> frame)
+        {
+            if (batch.Start.GetObject() is not OwnedSequenceSegment head ||
+                batch.End.GetObject() is not OwnedSequenceSegment tail)
+                throw new InvalidOperationException(
+                    "Artery lane frame batching requires OwnedSequenceSegment-backed batches, got " +
+                    $"[{batch.Start.GetObject()?.GetType().ToString() ?? "null"}]: every ordinary-lanes " +
+                    "element must originate from ArteryEncodeStage.");
+
+            if (frame.Start.GetObject() is not ReadOnlySequenceSegment<byte> startObject)
+                throw new InvalidOperationException(
+                    "Artery lane frame batching requires segment-backed frames, got a memory-backed " +
+                    $"sequence of [{frame.Length}] bytes: every ordinary-lanes element must originate " +
+                    "from ArteryEncodeStage.");
+
+            // Same bounded, slice-aware walk as AppendToWriteBuffer: never run past the tail this
+            // sequence actually references, and honor the frame's own start/end offsets on the
+            // first/last links.
+            var endSegment = frame.End.GetObject() as ReadOnlySequenceSegment<byte>;
+            var startIndex = frame.Start.GetInteger();
+            var endIndex = frame.End.GetInteger();
+
+            var segment = startObject;
+            while (segment is not null)
+            {
+                var memory = segment.Memory;
+                var isFirst = ReferenceEquals(segment, startObject);
+                var isLast = ReferenceEquals(segment, endSegment);
+
+                if (isFirst)
+                    memory = memory.Slice(startIndex);
+                if (isLast)
+                    memory = memory.Slice(0, isFirst ? endIndex - startIndex : endIndex);
+
+                var owner = (segment as IOwnedSequenceSegment)?.DetachOwner();
+                if (owner is null)
+                    throw new InvalidOperationException(
+                        $"Artery lane frame batching found a frame segment ([{segment.GetType()}]) " +
+                        "carrying no live pooled-buffer owner: every ordinary-lanes frame segment " +
+                        "must carry the ownership ArteryEncodeStage minted for it.");
+
+                tail = tail.Append(memory, owner);
+
+                if (isLast)
+                    break;
+
+                segment = segment.Next;
+            }
+
+            return new ReadOnlySequence<byte>(head, batch.Start.GetInteger(), tail, tail.Memory.Length);
+        }
+
+        /// <summary>
+        /// Whether <paramref name="e"/> is <c>ActorCell.MakeChild</c>'s "Cannot create child while
+        /// terminating or terminated" -- thrown by <c>Run()</c> when the materializer's
+        /// StreamSupervisor (a /user top-level actor) is being torn down by ActorSystem
+        /// termination, WELL BEFORE <see cref="Shutdown"/>'s own flags are set. Message-matched
+        /// against our own exception source (<c>ActorCell.Children.cs</c>) because no liveness flag
+        /// is reliable inside that window (<c>WhenTerminated</c> has not completed yet while the
+        /// guardian is merely terminating); <c>WhenTerminated.IsCompleted</c> is OR'd in as the
+        /// belt-and-suspenders late signal. Used to NARROW the materialization catch below so a
+        /// spurious <see cref="InvalidOperationException"/> from a live system propagates instead
+        /// of being silently swallowed.
         /// </summary>
         private bool IsActorSystemTerminating() =>
             _isShutdown
