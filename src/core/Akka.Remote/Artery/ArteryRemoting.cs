@@ -1202,7 +1202,7 @@ namespace Akka.Remote.Artery
                             "unless shut down or quarantined. Further attempts are logged at DEBUG, with a WARNING " +
                             "every {3} attempts while the outage persists.",
                             ArteryStreamId.Ordinary, remoteAddress, lanes, ReconnectWarningAttemptInterval);
-                    else if (attempt % ReconnectWarningAttemptInterval == 0)
+                    else if (ShouldWarnReconnectAttempt(attempt))
                         _log.Warning(
                             t.Exception?.GetBaseException(),
                             "Still unable to reconnect Artery {0} outbound lanes stream to [{1}] ({2} lanes): attempt " +
@@ -1506,7 +1506,7 @@ namespace Akka.Remote.Artery
                             "or (ordinary only) quarantined. Further attempts are logged at DEBUG, with a WARNING " +
                             "every {2} attempts while the outage persists.",
                             streamId, remoteAddress, ReconnectWarningAttemptInterval);
-                    else if (attempt % ReconnectWarningAttemptInterval == 0)
+                    else if (ShouldWarnReconnectAttempt(attempt))
                         _log.Warning(
                             t.Exception?.GetBaseException(),
                             "Still unable to reconnect Artery {0} outbound connection to [{1}]: attempt {2} over {3}; " +
@@ -1621,6 +1621,14 @@ namespace Akka.Remote.Artery
         /// as <see cref="OrdinaryConnectionMaxInnerRestarts"/>.
         /// </summary>
         private const int ReconnectWarningAttemptInterval = 10;
+
+        /// <summary>
+        /// Returns whether a failed reconnect attempt should remain operator-visible at WARNING.
+        /// Attempt one announces the outage; every tenth attempt reports that it is still active.
+        /// Kept pure so the cadence is covered without timing a live reconnect loop.
+        /// </summary>
+        internal static bool ShouldWarnReconnectAttempt(int attempt) =>
+            attempt == 1 || attempt > 0 && attempt % ReconnectWarningAttemptInterval == 0;
 
         /// <summary>
         /// RECOVERY signal for the per-outage reconnect-log cadence: called when an outbound
