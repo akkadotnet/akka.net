@@ -313,7 +313,7 @@ namespace Akka.Remote.Tests.Artery
 
                 // Handshake completion, proven the same way every other Artery spec proves it: an
                 // ordinary round trip actually arrives.
-                var echoRef = await systemA.ActorSelection(RemotePath(systemB, "echo")).ResolveOne(TimeSpan.FromSeconds(10));
+                var echoRef = await systemA.ActorSelection(RemotePath(systemB, "echo")).ResolveOne(Dilated(TimeSpan.FromSeconds(10)));
                 var echoProbe = CreateTestProbe(systemA);
                 echoRef.Tell("ping", echoProbe.Ref);
                 await echoProbe.ExpectMsgAsync("ping", TimeSpan.FromSeconds(10));
@@ -323,7 +323,11 @@ namespace Akka.Remote.Tests.Artery
                 // Ordinary connection's lane machinery (see ArteryInboundProcessingStage's "Why
                 // control/large connections and lanes=1 never touch this machinery" remarks: the
                 // CONTROL connection is never lane-routed regardless of inbound-lanes).
-                var watchTargetRemote = RARP.For(systemA).Provider.ResolveActorRef(RemotePath(systemB, "watch-target"));
+                //
+                // The watchee must be resolved uid-fully (ActorSelection.ResolveOne): Provider.ResolveActorRef
+                // on a bare path yields Path.Uid == 0, and a uid-0 watch can never match the real-uid
+                // DeathWatchNotification (ActorRef.Equals is uid-sensitive; Pekko behaves identically).
+                var watchTargetRemote = await systemA.ActorSelection(RemotePath(systemB, "watch-target")).ResolveOne(Dilated(TimeSpan.FromSeconds(10)));
                 var terminatedProbe = CreateTestProbe(systemA);
                 systemA.ActorOf(Props.Create(() => new PlainWatcher(watchTargetRemote, terminatedProbe.Ref)));
 
