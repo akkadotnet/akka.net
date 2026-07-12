@@ -113,6 +113,62 @@ jobs:
       mntrFailuresDir: 'TestResults\\multinode'
       mntrFailuresArtifactName: "net_7_mntr_FAILED_windows-$(Build.BuildId)"
 
+  # Independent, parallel, NON-BLOCKING Artery MNTR stage. Runs the exact same
+  # incrementally-scoped multi-node suite as "net_mntr_windows" above, but
+  # re-points the transport at Artery via AKKA_MNTR_TRANSPORT=artery, which
+  # MultiNodeConfig.Config layers in as a low-priority fallback config tier
+  # (see src/core/Akka.Remote.TestKit/MultiNodeSpec.cs). Purpose: track
+  # Artery's own MNTR green-rate as a ship-confidence metric, independent of
+  # classic DotNetty, without gating PR validation on it.
+  #
+  # Non-blocking: continueOnError: true is set at the job level (in
+  # azure-pipeline.mntr-template.yaml), not just on the test step. The job
+  # still runs and reports its own pass/fail per PR (visible in the Checks
+  # list), but it can never fail PR validation as a whole.
+  #
+  # Known/accepted noise: Artery has no failure-injection test-mode yet
+  # (no equivalent to classic DotNetty's trttl/gremlin transport adapters),
+  # so any spec that calls TestConductor Throttle/Blackhole/PassThrough will
+  # fail fast on the RequireTestConductorTransport() check in
+  # src/core/Akka.Remote.TestKit/Conductor.cs instead of exercising real
+  # behavior. There is no clean way to exclude just these specs today:
+  # incrementalist filters by project, not by test class, and the
+  # MultiNodeFact Skip/SkipWhen mechanism would require touching every one
+  # of the spec files below. Until an Artery test-mode transport lands, treat
+  # failures from this stage as expected noise on top of the specs listed
+  # here (~29-30 known offenders, grouped by project):
+  #   Akka.Cluster.Sharding.Tests.MultiNode: ClusterShardCoordinatorDowning2Spec,
+  #     ClusterShardCoordinatorDowningSpec, ClusterShardingFailureSpec,
+  #     ClusterShardingSingleShardPerEntitySpec
+  #   Akka.Cluster.Tools.Tests.MultiNode: ClusterClientSpec,
+  #     ClusterSingletonManagerDownedSpec
+  #   Akka.DistributedData.Tests.MultiNode: JepsenInspiredInsertSpec,
+  #     ReplicatorChaosSpec, ReplicatorSpec
+  #   Akka.Cluster.Tests.MultiNode: AttemptSysMsgRedeliverySpec,
+  #     ClusterAccrualFailureDetectorSpec, InitialHeartbeatSpec,
+  #     MemberWeaklyUpSpec, RestartNode3Spec, ClusterRoundRobinSpec,
+  #     DownAllIndirectlyConnected5NodeSpec, DownAllUnstable5NodeSpec,
+  #     IndirectlyConnected3NodeSpec, IndirectlyConnected5NodeSpec,
+  #     LeaseMajority5NodeSpec, SplitBrainResolverDowningSpec, SplitBrainSpec,
+  #     StressSpec, SurviveNetworkInstabilitySpec, UnreachableNodeJoinsAgainSpec
+  #   Akka.Remote.Tests.MultiNode: AttemptSysMsgRedeliverySpec,
+  #     RemoteNodeRestartDeathWatchSpec, RemoteNodeShutdownAndComesBackSpec,
+  #     RemoteReDeploymentSpec (+ its Fast/Medium/Slow MultiNet variants),
+  #     TestConductorSpec
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: "net_mntr_windows_artery"
+      displayName: ".NET Multi-Node Tests (Windows, Artery)"
+      vmImage: "windows-latest"
+      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults/multinode"
+      outputDirectory: "TestResults"
+      artifactName: "net_mntr_windows_artery-$(Build.BuildId)"
+      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresArtifactName: "net_mntr_artery_FAILED_windows-$(Build.BuildId)"
+      continueOnError: true
+      env:
+        AKKA_MNTR_TRANSPORT: artery
+
   - template: azure-pipeline.template.yaml
     parameters:
       name: "nuget_pack"
