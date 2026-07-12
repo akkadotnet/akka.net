@@ -10,8 +10,13 @@
 using System;
 using System.Buffers;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.IO;
 using Akka.Remote.Artery;
+using Akka.Streams;
+using Akka.Streams.Dsl;
+using Akka.Streams.TestKit;
+using Akka.TestKit;
 using FluentAssertions;
 using Xunit;
 
@@ -30,8 +35,12 @@ namespace Akka.Remote.Tests.Artery
     /// aggregate single-segment frames (ArteryEncodeStage output), so the walk over a chained
     /// frame is unexercised at runtime -- this spec is what keeps that path correct.
     /// </summary>
-    public class ArteryLaneWriteBatchingSpec
+    public class ArteryLaneWriteBatchingSpec : AkkaSpec
     {
+        public ArteryLaneWriteBatchingSpec(ITestOutputHelper output) : base(output)
+        {
+        }
+
         /// <summary>
         /// An <see cref="IMemoryOwner{T}"/> that counts <see cref="IDisposable.Dispose"/> calls
         /// instead of returning anything to a pool, so a test can assert exactly-once disposal.
@@ -151,6 +160,31 @@ namespace Akka.Remote.Tests.Artery
             multiSegmentFrame.DisposeOwnedSegments();
             ownerA.DisposeCount.Should().Be(1);
             ownerB.DisposeCount.Should().Be(1);
+        }
+
+        [Fact(DisplayName = "Should_DisposeRetainedBatch_When_DownstreamCancels")]
+        public async Task Should_DisposeRetainedBatch_When_DownstreamCancels()
+        {
+            var materializer = ActorMaterializer.Create(Sys);
+            var publisher = this.CreatePublisherProbe<ReadOnlySequence<byte>>();
+            var subscriber = this.CreateSubscriberProbe<ReadOnlySequence<byte>>();
+            var (frame, owner) = EncodeStageStyleFrame(Pattern(128, seed: 3));
+
+            Source.FromPublisher(publisher)
+                .Via(Flow.FromGraph(new LaneWriteBatchStage(16 * 1024)))
+                .To(Sink.FromSubscriber(subscriber))
+                .Run(materializer);
+
+            var subscription = subscriber.EnsureSubscription();
+            publisher.SendNext(frame);
+            owner.DisposeCount.Should().Be(0);
+
+            subscription.Cancel();
+
+            await AwaitAssertAsync(
+                () => owner.DisposeCount.Should().Be(1),
+                TimeSpan.FromSeconds(3),
+                TimeSpan.FromMilliseconds(20));
         }
     }
 }

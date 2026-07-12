@@ -1090,22 +1090,16 @@ namespace Akka.Remote.Artery
                 // LaneWriteBatchMaxBytes before crossing (AppendFrameToBatch chains the segments
                 // zero-copy; see its remarks for the ownership-transfer invariant). Wire bytes are
                 // IDENTICAL either way -- the inbound side parses frames off the byte stream and
-                // never sees element boundaries. When the connection keeps up, BatchWeighted is a
-                // 1:1 pass-through (it only rolls up while downstream is busy); when it doesn't,
-                // frames coalesce. Placed AFTER WatchTermination so the termination-signal wiring
-                // is unchanged. Teardown: a batch stranded here by an abrupt abort is reclaimed by
-                // the GC rather than returned to its buffer pools -- the same accepted trade as
-                // elements stranded in the MergeHub's own queue (see ArteryEncodeStage's "why this
-                // stage itself needs no backstop" remarks).
+                // never sees element boundaries. When the connection keeps up,
+                // LaneWriteBatchStage is a 1:1 pass-through; under downstream backpressure, frames
+                // coalesce. Placed AFTER WatchTermination so the termination-signal wiring is
+                // unchanged. Unlike generic BatchWeighted, its PostStop returns owners retained in
+                // an aggregate or pending frame when cancellation interrupts the stage.
                 ((mergeSink, mergeTailTermination), _) = mergeHubSource
                     .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
                     .Via(laneKillSwitch.Flow<ReadOnlySequence<byte>>())
                     .WatchTermination(Keep.Both)
-                    .BatchWeighted(
-                        max: LaneWriteBatchMaxBytes,
-                        costFunction: static frame => frame.Length,
-                        seed: static frame => frame,
-                        aggregate: AppendFrameToBatch)
+                    .Via(Flow.FromGraph(new LaneWriteBatchStage(LaneWriteBatchMaxBytes)))
                     .Via(connectionWithRestart)
                     .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer!);
@@ -1620,7 +1614,7 @@ namespace Akka.Remote.Artery
         /// <see cref="InvalidOperationException"/> from a live system propagates instead of being
         /// silently swallowed.
         /// </para>
-        /// Weight cap for the <c>BatchWeighted</c> stage on the ordinary-lanes merge tail: the most
+        /// Weight cap for <see cref="LaneWriteBatchStage"/> on the ordinary-lanes merge tail: the most
         /// bytes of already-encoded frames one batched element may carry. Mirrors the TCP
         /// write-coalescing cap it feeds into
         /// (<c>Akka.Streams.Implementation.IO.TcpStages.TcpStreamLogic.WriteBufferCap</c>, 16 KiB):
@@ -1630,7 +1624,7 @@ namespace Akka.Remote.Artery
         private const long LaneWriteBatchMaxBytes = 16 * 1024;
 
         /// <summary>
-        /// <c>BatchWeighted</c> aggregate for the ordinary-lanes merge tail (see
+        /// Aggregate operation used by <see cref="LaneWriteBatchStage"/> on the ordinary-lanes merge tail (see
         /// <see cref="MaterializeOrdinaryOutboundWithLanes"/>): chains every segment of
         /// <paramref name="frame"/> onto the tail of <paramref name="batch"/>'s segment chain --
         /// zero-copy, no memcpy anywhere -- and returns a single <see cref="ReadOnlySequence{T}"/>
@@ -1651,7 +1645,7 @@ namespace Akka.Remote.Artery
         /// unchanged: the kill-switch flows, <c>WatchTermination</c>, <c>RecoverWithRetries</c> and
         /// the <c>MergeHub</c> are all pass-through, and the connection preamble is prepended
         /// INSIDE the downstream restart factory, so it never passes through this stage. The batch
-        /// side holds by induction: <c>BatchWeighted</c>'s seed is the identity, so an accumulator
+        /// side holds by induction: <see cref="LaneWriteBatchStage"/> seeds from the first frame, so an accumulator
         /// is either a raw encode-stage frame or a previous return value of this method. A
         /// violation means a foreign producer got wired into the merge tail -- failing the stage
         /// loudly (settling the assembly, whose restart tier takes over) beats silently copying, or
