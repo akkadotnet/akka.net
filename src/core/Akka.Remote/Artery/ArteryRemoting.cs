@@ -1565,55 +1565,6 @@ namespace Akka.Remote.Artery
         private const int OrdinaryConnectionMaxInnerRestarts = 3;
 
         /// <summary>
-        /// State-based filter for the two <see cref="InvalidOperationException"/> materialization
-        /// catches: is this system (or this transport's slice of it) shutting down, so the
-        /// exception can be attributed to the shutdown race rather than a genuine fault on a live
-        /// system?
-        ///
-        /// <para>
-        /// Why <c>Run()</c> throws <see cref="InvalidOperationException"/> at all: it creates the
-        /// graph-interpreter actor as a CHILD of the materializer's StreamSupervisor
-        /// (<c>ExtendedActorMaterializer.ActorOf</c> -&gt; <c>ActorCell.AttachChild</c>). The
-        /// StreamSupervisor is a /user top-level actor, so it starts terminating as soon as the
-        /// /user guardian tears down -- WELL BEFORE <see cref="Shutdown"/> flips
-        /// <c>_isShutdown</c> (gated behind /system's RemotingTerminator phase, later in
-        /// <see cref="CoordinatedShutdown"/>). A child-creation attempt in that window throws
-        /// from one of three sites, depending on where the attaching thread lands relative to
-        /// the supervisor's own termination: <c>ActorCell.Children.cs:462</c> (MakeChild's
-        /// up-front terminating check), <c>TerminatingChildrenContainer.cs:68</c> or
-        /// <c>TerminatedChildrenContainer.cs:50</c> (the non-atomic ReserveChild step losing the
-        /// same race a moment later).
-        /// </para>
-        ///
-        /// <para>
-        /// The signals checked, cheapest first -- their union covers the whole window from
-        /// "termination begun" to "termination complete":
-        /// <list type="bullet">
-        /// <item><description><c>_isShutdown</c> / <c>_materializer.IsShutdown</c>: this
-        /// transport's own teardown (the late end of the window; the same flags the sibling
-        /// <c>IllegalStateException</c> catches consult).</description></item>
-        /// <item><description><see cref="IsStreamSupervisorTerminating"/>: the DIRECT cause --
-        /// the cell <c>Run()</c> attaches children to is terminating/terminated. All three throw
-        /// sites above fire precisely when that cell's <c>ChildrenContainer</c> has entered a
-        /// terminating state, and that state never reverts (a Termination reason is terminal),
-        /// so this check -- evaluated at throw time, since <c>when</c> filters run before
-        /// unwinding -- is equivalent to the union of the three throw conditions.</description></item>
-        /// <item><description><see cref="CoordinatedShutdown.ShutdownReason"/> non-null:
-        /// "termination started" -- set atomically the instant a CoordinatedShutdown run begins
-        /// (<see cref="ActorSystem.Terminate"/> routes through it by default).
-        /// <c>TryGetExtension</c> avoids instantiating the extension from inside an exception
-        /// filter (a throwing filter silently evaluates to false).</description></item>
-        /// <item><description><c>ActorSystemImpl.Aborting</c>: <c>ActorSystem.Abort()</c>
-        /// skips CoordinatedShutdown entirely; this is its flag.</description></item>
-        /// <item><description><c>WhenTerminated.IsCompleted</c>: the belt-and-suspenders late
-        /// signal (termination already finished).</description></item>
-        /// </list>
-        /// There is no <c>ActorSystem.WhenTerminating</c> in Akka.NET --
-        /// <c>ShutdownReason</c>/<c>Aborting</c> are the earliest "termination has begun" state
-        /// available. Used to NARROW the materialization catches so a spurious
-        /// <see cref="InvalidOperationException"/> from a live system propagates instead of being
-        /// silently swallowed.
-        /// </para>
         /// Weight cap for <see cref="LaneWriteBatchStage"/> on the ordinary-lanes merge tail: the most
         /// bytes of already-encoded frames one batched element may carry. Mirrors the TCP
         /// write-coalescing cap it feeds into
