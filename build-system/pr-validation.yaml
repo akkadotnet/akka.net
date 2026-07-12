@@ -190,6 +190,23 @@ jobs:
       env:
         AKKA_MNTR_TRANSPORT: artery
 
+  # Fourth lane, completing the classic/Artery x Windows/Linux MNTR matrix
+  # (only classic Windows is blocking). Same rationale and known/accepted
+  # noise as the Windows Artery lane above.
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: "net_mntr_linux_artery"
+      displayName: ".NET Multi-Node Tests (Linux, Artery)"
+      vmImage: "ubuntu-latest"
+      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults/multinode"
+      outputDirectory: "TestResults"
+      artifactName: "net_mntr_linux_artery-$(Build.BuildId)"
+      mntrFailuresDir: 'TestResults/multinode'
+      mntrFailuresArtifactName: "net_mntr_artery_FAILED_linux-$(Build.BuildId)"
+      continueOnError: true
+      env:
+        AKKA_MNTR_TRANSPORT: artery
+
   - template: azure-pipeline.template.yaml
     parameters:
       name: "nuget_pack"
