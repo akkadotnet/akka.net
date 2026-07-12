@@ -9,8 +9,8 @@ parameters:
   timeoutInMinutes: 120
   # Job-level continueOnError: when true, a failure in this job is reported (the job
   # itself still shows red/green) but does NOT fail the overall stage/pipeline result.
-  # Used to run a parallel, non-blocking MNTR variant (e.g. Artery) alongside the
-  # classic gating MNTR job without risking PR validation.
+  # Used to run a parallel, non-blocking MNTR variant (e.g. Artery, Linux)
+  # alongside the classic gating MNTR job without risking PR validation.
   continueOnError: false
   # Extra environment variables injected into the test-execution step, e.g.
   # AKKA_MNTR_TRANSPORT: artery to re-point the suite at the Artery transport
@@ -71,7 +71,10 @@ jobs:
         displayName: 'Copy Build Output'
         inputs:
           sourceFolder: ${{ parameters.outputDirectory }}
-          contents: '**\*'
+          # '**' (not the Windows-style '**\*') so this template also works on
+          # Linux agents; matches azure-pipeline.template.yaml, which already
+          # runs on both platforms.
+          contents: '**'
           targetFolder: $(Build.ArtifactStagingDirectory)
           continueOnError: boolean  # 'true' if future steps should run even if this step fails; defaults to 'false'
       - task: PublishBuildArtifacts@1
