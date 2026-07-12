@@ -61,7 +61,7 @@ namespace RemotePingPong.RealPayload
                     DeviceId: "device-042",
                     FirmwareVersion: "1.4.2-rc1",
                     Region: 7),
-                Readings: new V2.ReadingBatch(readings));
+                Readings: readings);
         }
 
         public static Protobuf.RealBenchmarkMessage ToProtobuf(V2.RealBenchmarkMessage message)
@@ -81,7 +81,7 @@ namespace RemotePingPong.RealPayload
                 }
             };
 
-            proto.Readings.AddRange(message.Readings.Items.Select(reading => new Protobuf.Reading
+            proto.Readings.AddRange(message.Readings.Select(reading => new Protobuf.Reading
             {
                 SensorId = reading.SensorId,
                 Value = reading.Value,
@@ -93,7 +93,7 @@ namespace RemotePingPong.RealPayload
 
         public static MsgPack.RealBenchmarkMessage ToMsgPack(V2.RealBenchmarkMessage message)
         {
-            var readings = message.Readings.Items
+            var readings = message.Readings
                 .Select(reading => new MsgPack.Reading(reading.SensorId, reading.Value, reading.TimestampTicks))
                 .ToList();
 
