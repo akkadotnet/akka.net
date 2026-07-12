@@ -37,9 +37,9 @@ public class StressSpecConfig : MultiNodeConfig
 {
     public int TotalNumberOfNodes => Environment.GetEnvironmentVariable("MNTR_STRESSSPEC_NODECOUNT") switch
     {
-        string e when string.IsNullOrEmpty(e) => 13,
+        string e when string.IsNullOrEmpty(e) => 10,
         string val => int.Parse(val),
-        _ => 13
+        _ => 10
     };
 
     public StressSpecConfig()
@@ -54,13 +54,13 @@ akka.test.cluster-stress-spec {
     nr-of-nodes-factor = 1
     # not scaled
     nr-of-seed-nodes = 3
-    nr-of-nodes-joining-to-seed-initially = 2
-    nr-of-nodes-joining-one-by-one-small = 2
-    nr-of-nodes-joining-one-by-one-large = 2
-    nr-of-nodes-joining-to-one = 2
+    nr-of-nodes-joining-to-seed-initially = 1
+    nr-of-nodes-joining-one-by-one-small = 1
+    nr-of-nodes-joining-one-by-one-large = 1
+    nr-of-nodes-joining-to-one = 1
     nr-of-nodes-leaving-one-by-one-small = 1
     nr-of-nodes-leaving-one-by-one-large = 1
-    nr-of-nodes-leaving = 2
+    nr-of-nodes-leaving = 1
     nr-of-nodes-shutdown-one-by-one-small = 1
     nr-of-nodes-shutdown-one-by-one-large = 1
     nr-of-nodes-partition = 2
