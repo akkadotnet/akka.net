@@ -14,9 +14,9 @@ Akka.Net comes with a dedicated module `Akka.TestKit` for supporting tests at di
 
 Install the adapter for your test framework and derive your test class from its `TestKit`:
 
-- `Akka.TestKit.TUnit` for [TUnit](https://tunit.dev/)
-- `Akka.TestKit.Xunit` for xUnit v3
-- `Akka.TestKit.Xunit2` for xUnit v2
+* `Akka.TestKit.TUnit` for [TUnit](https://tunit.dev/)
+* `Akka.TestKit.Xunit` for xUnit v3
+* `Akka.TestKit.Xunit2` for xUnit v2
 
 The TUnit adapter captures the current test output, preserves the implicit actor sender across asynchronous continuations, and shuts down its actor system when TUnit disposes the test instance.
 
