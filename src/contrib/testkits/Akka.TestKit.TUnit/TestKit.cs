@@ -184,7 +184,7 @@ public class TestKit : TestKitBase, IDisposable
             isSystemService: true,
             isAsync: false,
             name: "log-test");
-        logger.Tell(new InitializeLogger(system.EventStream), ActorRefs.NoSender);
+        system.EventStream.Subscribe(logger, typeof(LogEvent));
     }
 
     /// <summary>

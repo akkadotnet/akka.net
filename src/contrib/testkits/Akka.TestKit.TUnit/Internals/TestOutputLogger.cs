@@ -27,11 +27,6 @@ internal sealed class TestOutputLogger : ReceiveActor
         Receive<Info>(HandleLogEvent);
         Receive<Warning>(HandleLogEvent);
         Receive<Error>(HandleLogEvent);
-        Receive<InitializeLogger>(message =>
-        {
-            message.LoggingBus.Subscribe(Self, typeof(LogEvent));
-            Sender.Tell(new LoggerInitialized());
-        });
     }
 
     private void HandleLogEvent(LogEvent logEvent)
