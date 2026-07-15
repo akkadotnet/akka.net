@@ -75,6 +75,40 @@ public sealed class AkkaEnvelopePayloadAttribute : Attribute
 }
 
 /// <summary>
+/// Marks an <see cref="AkkaFieldAttribute"/> property whose static type is an interface or abstract
+/// base as a closed, explicitly-enumerated union of concrete <see cref="AkkaSerializableAttribute"/>
+/// member types.
+/// </summary>
+/// <remarks>
+/// Unlike <see cref="AkkaEnvelopePayloadAttribute"/> (a runtime serializer boundary for payloads
+/// whose concrete type may live in an assembly unknown at compile time), a union field is encoded
+/// structurally inline: the generator emits compile-time dispatch over the declared member set,
+/// discriminated by each member's <see cref="AkkaSerializableAttribute.Manifest"/>. Every member
+/// must be <c>[AkkaSerializable]</c>, declare a manifest unique within this union, and be assignable
+/// to the field's static type. A runtime value whose exact type is not a declared member fails
+/// serialization. When both this attribute and <see cref="AkkaEnvelopePayloadAttribute"/> are
+/// present, the envelope payload marker wins (consistent with its precedence over formatter
+/// registrations).
+/// </remarks>
+[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+public sealed class AkkaUnionAttribute : Attribute
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AkkaUnionAttribute"/> class.
+    /// </summary>
+    /// <param name="memberTypes">The closed set of concrete member types this field may hold.</param>
+    public AkkaUnionAttribute(params Type[] memberTypes)
+    {
+        MemberTypes = memberTypes;
+    }
+
+    /// <summary>
+    /// The closed set of concrete member types this field may hold.
+    /// </summary>
+    public Type[] MemberTypes { get; }
+}
+
+/// <summary>
 /// Registers a hand-written <see cref="IAkkaMessagePackFormatter{T}"/> for a foreign type that
 /// cannot be annotated with <see cref="AkkaSerializableAttribute"/> (for example, a core Akka type
 /// that cannot reference <c>Akka.Serialization.V2</c>).

@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Akka.Serialization.V2.Generators;
@@ -23,6 +24,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private const string SerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializableAttribute";
     private const string FieldAttributeFullName = "Akka.Serialization.V2.AkkaFieldAttribute";
     private const string EnvelopePayloadAttributeFullName = "Akka.Serialization.V2.AkkaEnvelopePayloadAttribute";
+    private const string UnionAttributeFullName = "Akka.Serialization.V2.AkkaUnionAttribute";
     private const string FormatterAttributeFullName = "Akka.Serialization.V2.AkkaSerializerFormatterAttribute";
     private const string FormatterInterfaceFullName = "Akka.Serialization.V2.IAkkaMessagePackFormatter`1";
     private const string ExtendedActorSystemFullName = "Akka.Actor.ExtendedActorSystem";
@@ -140,6 +142,46 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor UnionMemberNotSerializable = new(
+        "AKKASG015",
+        "Union member type is not serializable",
+        "Union member '{0}' on property '{1}' of type '{2}' must be an [AkkaSerializable] class or struct handled by this serializer",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberMissingManifest = new(
+        "AKKASG016",
+        "Union member manifest is required",
+        "Union member '{0}' on property '{1}' of type '{2}' must specify Manifest in its [AkkaSerializable] attribute: the manifest is the union discriminator",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberManifestCollision = new(
+        "AKKASG017",
+        "Union member manifests must be unique",
+        "Union on property '{0}' of type '{1}' has multiple members with manifest '{2}': {3}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberNotAssignable = new(
+        "AKKASG018",
+        "Union member is not assignable to the field type",
+        "Union member '{0}' on property '{1}' of type '{2}' is not implicitly convertible to the field type '{3}'",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidUnionMemberSet = new(
+        "AKKASG019",
+        "Union member set is invalid",
+        "Union on property '{0}' of type '{1}' has an invalid member set: {2}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var serializers = context.SyntaxProvider
@@ -208,10 +250,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     .ToImmutableArray();
                 var reachableMessages = CollectReachableMessages(topLevelMessages, resolvedMessagesByType);
 
-                if (!ValidateMessages(ctx, serializer, topLevelMessages, reachableMessages))
+                if (!ValidateMessages(ctx, serializer, topLevelMessages, reachableMessages, resolvedMessagesByType))
                     continue;
 
-                ctx.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, topLevelMessages, reachableMessages));
+                ctx.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, topLevelMessages, reachableMessages, resolvedMessagesByType));
             }
         });
     }
@@ -402,7 +444,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
         var attribute = context.Attributes[0];
-        var knownTypes = KnownTypes.From(context.SemanticModel.Compilation);
+        var compilation = context.SemanticModel.Compilation;
+        var knownTypes = KnownTypes.From(compilation);
         var manifest = string.Empty;
         var allowEmpty = false;
         foreach (var argument in attribute.NamedArguments)
@@ -425,8 +468,20 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             var isNullable = member.NullableAnnotation == NullableAnnotation.Annotated || IsNullableValueType(member.Type);
             var isEnvelopePayload = member.GetAttributes()
                 .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.EnvelopePayloadAttribute));
-            var mapping = isEnvelopePayload ? new TypeMapping(FieldKind.EnvelopePayload) : MapType(member.Type, knownTypes);
-            fields.Add(new FieldInfo(index, member.Name, member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), mapping, isNullable));
+            var unionMembers = ExtractUnionMembers(member, knownTypes, compilation, out var hasUnionAttribute);
+
+            // Precedence: [AkkaEnvelopePayload] always wins (matching its documented precedence over
+            // formatter registrations), then [AkkaUnion], then ordinary inference.
+            var mapping = isEnvelopePayload ? new TypeMapping(FieldKind.EnvelopePayload)
+                : hasUnionAttribute ? new TypeMapping(FieldKind.Union)
+                : MapType(member.Type, knownTypes);
+            fields.Add(new FieldInfo(
+                index,
+                member.Name,
+                member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                mapping,
+                isNullable,
+                unionMembers: isEnvelopePayload ? default : unionMembers));
         }
 
         return new MessageInfo(
@@ -436,6 +491,66 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             fields.OrderBy(f => f.Index).ToImmutableArray(),
             symbol.AllInterfaces.ToImmutableArray(),
             allowEmpty);
+    }
+
+    /// <summary>
+    /// Extracts the declared member set of an <c>[AkkaUnion]</c> property. Symbol-dependent facts
+    /// (assignability to the field's static type, unbound-generic detection) are captured here;
+    /// facts that need the whole message set (serializability, manifests) are validated later in
+    /// <see cref="ValidateMessages"/> against the serializer's message dictionary. Malformed
+    /// arguments (null, not a type, unbound generic) are recorded as unsupported entries so a
+    /// diagnostic fires instead of the member silently vanishing.
+    /// </summary>
+    private static ImmutableArray<UnionMemberInfo> ExtractUnionMembers(
+        IPropertySymbol member,
+        KnownTypes knownTypes,
+        Compilation compilation,
+        out bool hasUnionAttribute)
+    {
+        hasUnionAttribute = false;
+        if (knownTypes.UnionAttribute == null)
+            return ImmutableArray<UnionMemberInfo>.Empty;
+
+        var unionAttribute = member.GetAttributes()
+            .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
+        if (unionAttribute == null || unionAttribute.ConstructorArguments.Length != 1)
+            return ImmutableArray<UnionMemberInfo>.Empty;
+
+        hasUnionAttribute = true;
+        var arguments = unionAttribute.ConstructorArguments[0].Values;
+        var builder = ImmutableArray.CreateBuilder<UnionMemberInfo>(arguments.Length);
+        foreach (var argument in arguments)
+        {
+            if (argument.Value is not INamedTypeSymbol memberType || memberType.IsUnboundGenericType)
+            {
+                var displayName = argument.Value is ITypeSymbol typeSymbol
+                    ? typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                    : "<null>";
+                builder.Add(new UnionMemberInfo(displayName, isValueType: false, isAssignable: false, isSupported: false));
+                continue;
+            }
+
+            builder.Add(new UnionMemberInfo(
+                GetMessageDictionaryKey(memberType),
+                memberType.IsValueType,
+                compilation.HasImplicitConversion(memberType, member.Type),
+                isSupported: true));
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// The key a type is looked up under in the serializer's message dictionary. Non-generic types
+    /// use the arity-less <see cref="GetFullyQualifiedTypeName"/> (the existing key for every
+    /// <c>[AkkaSerializable]</c> message); closed generic constructions use the full display string
+    /// (e.g. <c>global::Ns.Wrapper&lt;global::Ns.Foo&gt;</c>) so distinct constructions stay distinct.
+    /// </summary>
+    private static string GetMessageDictionaryKey(INamedTypeSymbol type)
+    {
+        return type.IsGenericType
+            ? type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+            : GetFullyQualifiedTypeName(type);
     }
 
     private static ImmutableDictionary<string, MessageInfo> ResolveMessages(
@@ -494,7 +609,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             messages.Add(message);
             var referencedObjectTypes = new HashSet<string>(StringComparer.Ordinal);
             foreach (var field in message.Fields)
+            {
                 CollectObjectTypeNames(field.Mapping, referencedObjectTypes);
+
+                // Union members are reachable exactly like nested Object fields: each member needs
+                // its Write/Read/SizeOf methods generated for the union dispatch to call into.
+                foreach (var unionMember in field.UnionMembers)
+                {
+                    if (unionMember.IsSupported)
+                        referencedObjectTypes.Add(unionMember.TypeFullName);
+                }
+            }
 
             foreach (var typeName in referencedObjectTypes)
             {
@@ -521,7 +646,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             CollectObjectTypeNames(argument, into);
     }
 
-    private static bool ValidateMessages(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages)
+    private static bool ValidateMessages(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages, ImmutableDictionary<string, MessageInfo> messagesByType)
     {
         var isValid = true;
         foreach (var message in topLevelMessages.Where(message => string.IsNullOrWhiteSpace(message.Manifest)))
@@ -571,12 +696,81 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 context.ReportDiagnostic(Diagnostic.Create(UnsupportedEnumUnderlyingType, Location.None, field.Name, message.FullyQualifiedName, field.Mapping.TypeFullName, field.Mapping.EnumUnderlyingTypeName));
                 isValid = false;
             }
+
+            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Union))
+            {
+                if (!ValidateUnionField(context, message, field, messagesByType))
+                    isValid = false;
+            }
         }
 
         return isValid;
     }
 
-    private static string Generate(SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages)
+    private static bool ValidateUnionField(
+        SourceProductionContext context,
+        MessageInfo message,
+        FieldInfo field,
+        ImmutableDictionary<string, MessageInfo> messagesByType)
+    {
+        var isValid = true;
+
+        if (field.UnionMembers.Length == 0)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidUnionMemberSet, Location.None, field.Name, message.FullyQualifiedName, "at least one member type is required"));
+            return false;
+        }
+
+        foreach (var duplicate in field.UnionMembers
+                     .GroupBy(member => member.TypeFullName, StringComparer.Ordinal)
+                     .Where(group => group.Count() > 1))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidUnionMemberSet, Location.None, field.Name, message.FullyQualifiedName, $"member type '{duplicate.Key}' is declared more than once"));
+            isValid = false;
+        }
+
+        var manifests = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var member in field.UnionMembers)
+        {
+            if (!member.IsSupported || !messagesByType.TryGetValue(member.TypeFullName, out var memberMessage))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotSerializable, Location.None, member.TypeFullName, field.Name, message.FullyQualifiedName));
+                isValid = false;
+                continue;
+            }
+
+            if (!member.IsAssignable)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotAssignable, Location.None, member.TypeFullName, field.Name, message.FullyQualifiedName, field.TypeFullName));
+                isValid = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(memberMessage.Manifest))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberMissingManifest, Location.None, member.TypeFullName, field.Name, message.FullyQualifiedName));
+                isValid = false;
+                continue;
+            }
+
+            if (!manifests.TryGetValue(memberMessage.Manifest, out var typesWithManifest))
+            {
+                typesWithManifest = new List<string>();
+                manifests[memberMessage.Manifest] = typesWithManifest;
+            }
+
+            typesWithManifest.Add(member.TypeFullName);
+        }
+
+        foreach (var collision in manifests.Where(pair => pair.Value.Distinct(StringComparer.Ordinal).Count() > 1))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(UnionMemberManifestCollision, Location.None, field.Name, message.FullyQualifiedName, collision.Key, string.Join(", ", collision.Value)));
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    private static string Generate(SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages, ImmutableDictionary<string, MessageInfo> messagesByType)
     {
         var usedFormatters = CollectUsedFormatters(reachableMessages);
 
@@ -622,6 +816,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             GenerateSizeMessage(sb, message);
             GenerateWriteMessage(sb, message);
             GenerateReadMessage(sb, message);
+            GenerateUnionHelpers(sb, message, messagesByType);
         }
 
         sb.AppendLine("}");
@@ -788,14 +983,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.Append("            var size = SizeOfMapHeader(").Append(message.Fields.Length).AppendLine(");");
         var alloc = new NameAlloc();
         foreach (var field in message.Fields)
-            GenerateSizeField(sb, field, alloc);
+            GenerateSizeField(sb, message, field, alloc);
         sb.AppendLine("            return size;");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine();
     }
 
-    private static void GenerateSizeField(StringBuilder sb, FieldInfo field, NameAlloc alloc)
+    private static void GenerateSizeField(StringBuilder sb, MessageInfo message, FieldInfo field, NameAlloc alloc)
     {
         var value = "message." + field.Name;
         var localName = ToCamelCase(field.Name) + "Size";
@@ -815,7 +1010,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         }
 
         sb.Append("            var ").Append(localName).Append(" = ");
-        GenerateSizeExpression(sb, field, value);
+        GenerateSizeExpression(sb, message, field, value);
         sb.AppendLine(";");
         sb.Append("            if (").Append(localName).AppendLine(" < 0)");
         sb.AppendLine("                return global::Akka.Serialization.SerializerV2.UnknownSize;");
@@ -824,12 +1019,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static bool TryGetInlineSizeExpression(FieldInfo field, string value, out string expression)
     {
-        // Object and EnvelopePayload always route through the general GenerateSizeExpression path
-        // below (they call a generated SizeOfXxx/SizeOfEnvelopePayload method, not a scalar
-        // MessagePackSizes helper) -- including when the field is a nullable [AkkaSerializable]
-        // struct, which would otherwise match IsNullableValueField below and get an inline scalar
-        // expression that GetScalarSizeExpression cannot produce for FieldKind.Object.
-        if (field.Mapping.Kind is FieldKind.Formatted or FieldKind.Object or FieldKind.EnvelopePayload)
+        // Object, EnvelopePayload, and Union always route through the general
+        // GenerateSizeExpression path below (they call a generated SizeOfXxx/SizeOfEnvelopePayload/
+        // SizeOfUnion method, not a scalar MessagePackSizes helper) -- including when the field is a
+        // nullable [AkkaSerializable] struct, which would otherwise match IsNullableValueField below
+        // and get an inline scalar expression that GetScalarSizeExpression cannot produce for
+        // FieldKind.Object. Union sizes can also be UnknownSize and need the < 0 guard.
+        if (field.Mapping.Kind is FieldKind.Formatted or FieldKind.Object or FieldKind.EnvelopePayload or FieldKind.Union)
         {
             expression = string.Empty;
             return false;
@@ -845,12 +1041,18 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         return true;
     }
 
-    private static void GenerateSizeExpression(StringBuilder sb, FieldInfo field, string value)
+    private static void GenerateSizeExpression(StringBuilder sb, MessageInfo message, FieldInfo field, string value)
     {
         switch (field.Mapping.Kind)
         {
             case FieldKind.EnvelopePayload:
                 sb.Append("SizeOfEnvelopePayload(").Append(value).Append(')');
+                break;
+            case FieldKind.Union when field.IsNullable:
+                sb.Append(value).Append(" is null ? SizeOfNil() : SizeOfUnion_").Append(GetMessageMethodName(message)).Append('_').Append(field.Name).Append('(').Append(value).Append(')');
+                break;
+            case FieldKind.Union:
+                sb.Append("SizeOfUnion_").Append(GetMessageMethodName(message)).Append('_').Append(field.Name).Append('(').Append(value).Append(')');
                 break;
             case FieldKind.Object when IsNullableValueField(field):
                 sb.Append(value).Append(" is null ? SizeOfNil() : SizeOf").Append(GetObjectMethodName(field.Mapping)).Append('(').Append(value).Append(".Value)");
@@ -904,7 +1106,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.Append("        writer.WriteMapHeader(").Append(message.Fields.Length).AppendLine(");");
         var alloc = new NameAlloc();
         foreach (var field in message.Fields)
-            GenerateWriteField(sb, field, alloc);
+            GenerateWriteField(sb, message, field, alloc);
         sb.AppendLine("    }");
         sb.AppendLine();
     }
@@ -932,7 +1134,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         foreach (var field in message.Fields)
         {
             sb.Append("                case ").Append(field.Index).AppendLine(":");
-            GenerateReadField(sb, field, alloc);
+            GenerateReadField(sb, message, field, alloc);
             if (IsRequired(field))
                 sb.Append("                    ").Append(GetHasLocalName(field)).AppendLine(" = true;");
             sb.AppendLine("                    break;");
@@ -963,7 +1165,147 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
-    private static void GenerateWriteField(StringBuilder sb, FieldInfo field, NameAlloc alloc)
+    // ---------------------------------------------------------------------------------------------
+    // Union emission ([AkkaUnion] fields).
+    //
+    // A union value encodes as a 2-entry int-keyed map: { 1: <member manifest string>, 2: <the
+    // member's ordinary inline field map> }. The manifest is the discriminator -- the same
+    // serializer-owned manifest the member would carry as a top-level message -- so a value reads
+    // identically whether it arrived through union dispatch or ordinary manifest dispatch. Contrast
+    // with [AkkaEnvelopePayload]'s { 1: serializerId, 2: manifest, 3: opaque bytes }: the union
+    // omits the serializer id (every member is owned by this serializer) and inlines the member's
+    // fields directly instead of double-buffering them into a length-prefixed blob.
+    //
+    // Write dispatch matches the runtime type EXACTLY (value.GetType() == typeof(Member)) rather
+    // than pattern matching, so an undeclared subtype of a declared member fails serialization
+    // instead of silently truncating to its base -- the same default System.Text.Json applies to
+    // [JsonDerivedType] sets (UnknownDerivedTypeHandling.FailSerialization). The size path returns
+    // UnknownSize for an undeclared type instead of throwing; the write path throws.
+    // ---------------------------------------------------------------------------------------------
+
+    private static string GetUnionHelperName(MessageInfo message, FieldInfo field)
+    {
+        return "Union_" + GetMessageMethodName(message) + "_" + field.Name;
+    }
+
+    private static void GenerateUnionHelpers(StringBuilder sb, MessageInfo message, ImmutableDictionary<string, MessageInfo> messagesByType)
+    {
+        foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Union))
+        {
+            var helperName = GetUnionHelperName(message, field);
+            var members = field.UnionMembers
+                .Where(member => member.IsSupported && messagesByType.ContainsKey(member.TypeFullName))
+                .Select(member => (Member: member, Message: messagesByType[member.TypeFullName]))
+                .ToImmutableArray();
+
+            GenerateUnionWrite(sb, field, helperName, members);
+            GenerateUnionRead(sb, field, helperName, members);
+            GenerateUnionSize(sb, field, helperName, members);
+        }
+    }
+
+    private static void GenerateUnionWrite(StringBuilder sb, FieldInfo field, string helperName, ImmutableArray<(UnionMemberInfo Member, MessageInfo Message)> members)
+    {
+        sb.Append("    private void Write").Append(helperName)
+            .Append("(ref global::MessagePack.MessagePackWriter writer, ").Append(field.TypeFullName).AppendLine(" value)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var runtimeType = value.GetType();");
+        foreach (var (member, memberMessage) in members)
+        {
+            sb.Append("        if (runtimeType == typeof(").Append(member.TypeFullName).AppendLine("))");
+            sb.AppendLine("        {");
+            sb.AppendLine("            writer.WriteMapHeader(2);");
+            sb.AppendLine("            writer.Write(1);");
+            sb.Append("            writer.Write(\"").Append(Escape(memberMessage.Manifest)).AppendLine("\");");
+            sb.AppendLine("            writer.Write(2);");
+            sb.Append("            Write").Append(GetMessageMethodName(memberMessage)).Append("(ref writer, (").Append(member.TypeFullName).AppendLine(")value);");
+            sb.AppendLine("            return;");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+        }
+
+        sb.Append("        throw new global::System.Runtime.Serialization.SerializationException($\"Type [{runtimeType}] is not a declared union member for field [")
+            .Append(Escape(field.Name)).AppendLine("].\");");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateUnionRead(StringBuilder sb, FieldInfo field, string helperName, ImmutableArray<(UnionMemberInfo Member, MessageInfo Message)> members)
+    {
+        sb.Append("    private ").Append(field.TypeFullName).Append(" Read").Append(helperName)
+            .AppendLine("(ref global::MessagePack.MessagePackReader reader)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var fieldCount = reader.ReadMapHeader();");
+        sb.AppendLine("        string? manifest = null;");
+        sb.Append("        ").Append(field.TypeFullName).AppendLine("? result = default;");
+        sb.AppendLine("        var hasPayload = false;");
+        sb.AppendLine("        for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            var fieldId = reader.ReadInt32();");
+        sb.AppendLine("            switch (fieldId)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                case 1:");
+        sb.AppendLine("                    manifest = reader.ReadString();");
+        sb.AppendLine("                    break;");
+        sb.AppendLine("                case 2:");
+        sb.AppendLine("                    switch (manifest)");
+        sb.AppendLine("                    {");
+        foreach (var (_, memberMessage) in members)
+        {
+            sb.Append("                        case \"").Append(Escape(memberMessage.Manifest)).AppendLine("\":");
+            sb.Append("                            result = Read").Append(GetMessageMethodName(memberMessage)).AppendLine("(ref reader);");
+            sb.AppendLine("                            break;");
+        }
+
+        sb.AppendLine("                        case null:");
+        sb.Append("                            throw new global::System.Runtime.Serialization.SerializationException(\"Union manifest must precede the payload for field [")
+            .Append(Escape(field.Name)).AppendLine("].\");");
+        sb.AppendLine("                        default:");
+        sb.Append("                            throw new global::System.Runtime.Serialization.SerializationException($\"Unknown union manifest [{manifest}] for field [")
+            .Append(Escape(field.Name)).AppendLine("].\");");
+        sb.AppendLine("                    }");
+        sb.AppendLine();
+        sb.AppendLine("                    hasPayload = true;");
+        sb.AppendLine("                    break;");
+        sb.AppendLine("                default:");
+        sb.AppendLine("                    reader.Skip();");
+        sb.AppendLine("                    break;");
+        sb.AppendLine("            }");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        if (!hasPayload || result is null)");
+        sb.Append("            throw new global::System.Runtime.Serialization.SerializationException(\"Missing union payload for field [")
+            .Append(Escape(field.Name)).AppendLine("].\");");
+        sb.AppendLine("        return result;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateUnionSize(StringBuilder sb, FieldInfo field, string helperName, ImmutableArray<(UnionMemberInfo Member, MessageInfo Message)> members)
+    {
+        sb.Append("    private int SizeOf").Append(helperName)
+            .Append('(').Append(field.TypeFullName).AppendLine(" value)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var runtimeType = value.GetType();");
+        foreach (var (member, memberMessage) in members)
+        {
+            sb.Append("        if (runtimeType == typeof(").Append(member.TypeFullName).AppendLine("))");
+            sb.AppendLine("        {");
+            sb.Append("            var payloadSize = SizeOf").Append(GetMessageMethodName(memberMessage)).Append("((").Append(member.TypeFullName).AppendLine(")value);");
+            sb.AppendLine("            if (payloadSize < 0)");
+            sb.AppendLine("                return global::Akka.Serialization.SerializerV2.UnknownSize;");
+            sb.Append("            return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString(\"").Append(Escape(memberMessage.Manifest))
+                .AppendLine("\") + SizeOfInt32(2) + payloadSize);");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("        return global::Akka.Serialization.SerializerV2.UnknownSize;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateWriteField(StringBuilder sb, MessageInfo message, FieldInfo field, NameAlloc alloc)
     {
         var value = "message." + field.Name;
         sb.Append("        writer.Write(").Append(field.Index).AppendLine(");");
@@ -972,14 +1314,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.Append("        if (").Append(value).AppendLine(" is null)");
             sb.AppendLine("            writer.WriteNil();");
             sb.AppendLine("        else");
-            GenerateWriteFieldValue(sb, field, value + ".Value", "            ", alloc);
+            GenerateWriteFieldValue(sb, message, field, value + ".Value", "            ", alloc);
             return;
         }
 
-        GenerateWriteFieldValue(sb, field, value, "        ", alloc);
+        GenerateWriteFieldValue(sb, message, field, value, "        ", alloc);
     }
 
-    private static void GenerateWriteFieldValue(StringBuilder sb, FieldInfo field, string value, string indent, NameAlloc alloc)
+    private static void GenerateWriteFieldValue(StringBuilder sb, MessageInfo message, FieldInfo field, string value, string indent, NameAlloc alloc)
     {
         if (IsCollectionKind(field.Mapping.Kind))
         {
@@ -1059,10 +1401,25 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     sb.Append(indent).Append(GetFormatterFieldName(field.Formatter!)).Append(".Write(ref writer, ").Append(value).AppendLine(");");
                 }
                 break;
+            case FieldKind.Union:
+                // Union fields are always reference-like (the static type is an interface or
+                // abstract base), so only the nullable-reference guard is needed here.
+                if (field.IsNullable)
+                {
+                    sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
+                    sb.Append(indent).AppendLine("    writer.WriteNil();");
+                    sb.Append(indent).AppendLine("else");
+                    sb.Append(indent).Append("    Write").Append(GetUnionHelperName(message, field)).Append("(ref writer, ").Append(value).AppendLine(");");
+                }
+                else
+                {
+                    sb.Append(indent).Append("Write").Append(GetUnionHelperName(message, field)).Append("(ref writer, ").Append(value).AppendLine(");");
+                }
+                break;
         }
     }
 
-    private static void GenerateReadField(StringBuilder sb, FieldInfo field, NameAlloc alloc)
+    private static void GenerateReadField(StringBuilder sb, MessageInfo message, FieldInfo field, NameAlloc alloc)
     {
         var target = ToCamelCase(field.Name);
 
@@ -1072,7 +1429,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         // non-nullable collection slot exactly as it does for any other non-nullable reference field.
         if (IsCollectionKind(field.Mapping.Kind))
         {
-            GenerateReadFieldValue(sb, field, target, "                    ", alloc);
+            GenerateReadFieldValue(sb, message, field, target, "                    ", alloc);
             return;
         }
 
@@ -1081,11 +1438,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.AppendLine("                    if (reader.TryReadNil())");
             sb.Append("                        ").Append(target).AppendLine(" = null;");
             sb.AppendLine("                    else");
-            GenerateReadFieldValue(sb, field, target, "                        ", alloc);
+            GenerateReadFieldValue(sb, message, field, target, "                        ", alloc);
             return;
         }
 
         var isNullableReferenceLikeSlot = field.Mapping.Kind == FieldKind.EnvelopePayload
+            || field.Mapping.Kind == FieldKind.Union
             || (field.Mapping.Kind == FieldKind.Object && IsReferenceLike(field))
             || (field.Mapping.Kind == FieldKind.Formatted && IsReferenceLike(field));
 
@@ -1094,14 +1452,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.AppendLine("                    if (reader.TryReadNil())");
             sb.Append("                        ").Append(target).AppendLine(" = null;");
             sb.AppendLine("                    else");
-            GenerateReadFieldValue(sb, field, target, "                        ", alloc);
+            GenerateReadFieldValue(sb, message, field, target, "                        ", alloc);
             return;
         }
 
-        GenerateReadFieldValue(sb, field, target, "                    ", alloc);
+        GenerateReadFieldValue(sb, message, field, target, "                    ", alloc);
     }
 
-    private static void GenerateReadFieldValue(StringBuilder sb, FieldInfo field, string target, string indent, NameAlloc alloc)
+    private static void GenerateReadFieldValue(StringBuilder sb, MessageInfo message, FieldInfo field, string target, string indent, NameAlloc alloc)
     {
         if (IsCollectionKind(field.Mapping.Kind))
         {
@@ -1156,6 +1514,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 break;
             case FieldKind.Formatted:
                 sb.Append(indent).Append(target).Append(" = ").Append(GetFormatterFieldName(field.Formatter!)).AppendLine(".Read(ref reader);");
+                break;
+            case FieldKind.Union:
+                sb.Append(indent).Append(target).Append(" = Read").Append(GetUnionHelperName(message, field)).AppendLine("(ref reader);");
                 break;
         }
     }
@@ -1726,6 +2087,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             FieldKind.Decimal => "0m",
             FieldKind.ActorRef => "global::Akka.Actor.ActorRefs.NoSender",
             FieldKind.EnvelopePayload => "null",
+            FieldKind.Union => "null",
             // A required (non-nullable) [AkkaSerializable] struct nested field gets a non-nullable
             // local (see GetLocalType/IsReferenceLike): "null" would not compile for it, so fall
             // back to "default" the same way every other non-reference-like kind does below.
@@ -1758,7 +2120,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         if (field.Mapping.Kind == FieldKind.Object)
             return !field.Mapping.IsValueType;
 
-        return field.Mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload;
+        // Union fields are always reference-like: the static type is an interface or abstract base
+        // (a struct cannot be the static type of a multi-member union).
+        return field.Mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload or FieldKind.Union;
     }
 
     private static bool IsNullableValueField(FieldInfo field)
@@ -1855,7 +2219,16 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static string ToCamelCase(string value)
     {
-        return string.IsNullOrEmpty(value) ? value : char.ToLowerInvariant(value[0]) + value.Substring(1);
+        if (string.IsNullOrEmpty(value))
+            return value;
+
+        var name = char.ToLowerInvariant(value[0]) + value.Substring(1);
+
+        // A property named 'Event', 'Lock', 'Object', etc. camel-cases to a reserved C# keyword,
+        // which cannot be used as a local identifier. Escape with '@' (a runtime no-op). The escaped
+        // form composes safely with the suffixes appended elsewhere ('@eventSize', '@eventBytes'):
+        // '@' is legal on any identifier, keyword or not.
+        return SyntaxFacts.GetKeywordKind(name) == SyntaxKind.None ? name : "@" + name;
     }
 
     private static string Escape(string value)
@@ -1904,6 +2277,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             FieldAttribute = compilation.GetTypeByMetadataName(FieldAttributeFullName);
             EnvelopePayloadAttribute = compilation.GetTypeByMetadataName(EnvelopePayloadAttributeFullName);
+            UnionAttribute = compilation.GetTypeByMetadataName(UnionAttributeFullName);
             SerializableAttribute = compilation.GetTypeByMetadataName(SerializableAttributeFullName);
             Guid = compilation.GetTypeByMetadataName("System.Guid");
             DateTimeOffset = compilation.GetTypeByMetadataName("System.DateTimeOffset");
@@ -1915,6 +2289,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         public INamedTypeSymbol? FieldAttribute { get; }
         public INamedTypeSymbol? EnvelopePayloadAttribute { get; }
+        public INamedTypeSymbol? UnionAttribute { get; }
         public INamedTypeSymbol? SerializableAttribute { get; }
         public INamedTypeSymbol? Guid { get; }
         public INamedTypeSymbol? DateTimeOffset { get; }
@@ -1956,7 +2331,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private sealed class FieldInfo
     {
-        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null)
+        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default)
         {
             Index = index;
             Name = name;
@@ -1964,6 +2339,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             Mapping = mapping;
             IsNullable = isNullable;
             Formatter = formatter;
+            UnionMembers = unionMembers.IsDefault ? ImmutableArray<UnionMemberInfo>.Empty : unionMembers;
         }
 
         public int Index { get; }
@@ -1973,9 +2349,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public bool IsNullable { get; }
         public FormatterInfo? Formatter { get; }
 
+        /// <summary>Declared members for a <see cref="FieldKind.Union"/> field; empty otherwise.</summary>
+        public ImmutableArray<UnionMemberInfo> UnionMembers { get; }
+
         public FieldInfo WithFormatter(TypeMapping mapping, FormatterInfo formatter)
         {
-            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter);
+            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers);
         }
     }
 
@@ -2104,6 +2483,36 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         List,
         ReadOnlyList,
         Dictionary,
-        UnsupportedEnumUnderlyingType
+        UnsupportedEnumUnderlyingType,
+        Union
+    }
+
+    /// <summary>
+    /// A single declared member of an <c>[AkkaUnion]</c> field. Carries only strings/bools (no
+    /// <see cref="ISymbol"/> references) so it stays cheap across incremental generator passes.
+    /// Facts requiring symbol access (assignability, unbound-generic detection) are captured at
+    /// extraction time; facts requiring the whole-compilation message set (serializability,
+    /// manifests) are resolved later against the serializer's message dictionary.
+    /// </summary>
+    private sealed class UnionMemberInfo
+    {
+        public UnionMemberInfo(string typeFullName, bool isValueType, bool isAssignable, bool isSupported)
+        {
+            TypeFullName = typeFullName;
+            IsValueType = isValueType;
+            IsAssignable = isAssignable;
+            IsSupported = isSupported;
+        }
+
+        /// <summary>Message-dictionary key for the member type (arity-aware for generics).</summary>
+        public string TypeFullName { get; }
+
+        public bool IsValueType { get; }
+
+        /// <summary>Whether the member type is implicitly convertible to the field's static type.</summary>
+        public bool IsAssignable { get; }
+
+        /// <summary>False when the attribute argument was null, not a type, or an unbound generic.</summary>
+        public bool IsSupported { get; }
     }
 }
