@@ -95,7 +95,7 @@ namespace Akka.Remote.Artery
     ///
     /// <para>
     /// <b>How the inner message is nested (documented per the task).</b> <see cref="Message"/> is
-    /// encoded via <see cref="Akka.Serialization.V2.MessagePackSerializer.WriteEnvelopePayload"/>
+    /// encoded via <see cref="Akka.Serialization.V2.AkkaSerializer.WriteEnvelopePayload"/>
     /// / decoded via <c>ReadEnvelopePayload</c> -- an EXISTING helper on the V2 MessagePack serializer
     /// base class that already implements exactly "nest a serializer id + manifest + raw bytes,
     /// recursively through <c>Serialization.FindSerializerFor</c>/<c>Deserialize</c>" for wrapping an
@@ -120,7 +120,7 @@ namespace Akka.Remote.Artery
     /// <b>Sourcegen swap field-id note.</b> <see cref="Message"/> is marked
     /// <see cref="AkkaEnvelopePayloadAttribute"/>, routing it through the generated serializer's
     /// <c>WriteEnvelopePayload</c>/<c>ReadEnvelopePayload</c> calls -- the SAME
-    /// <see cref="Akka.Serialization.V2.MessagePackSerializer"/> base-class helpers the
+    /// <see cref="Akka.Serialization.V2.AkkaSerializer"/> base-class helpers the
     /// prior hand-rolled <see cref="ArteryControlMessageSerializer"/> used, confirming the generator
     /// has no gap here. The generator emits the record's constructor call positionally by ASCENDING
     /// <see cref="AkkaFieldAttribute"/> index (not by declared parameter order), so field indices

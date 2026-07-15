@@ -140,7 +140,7 @@ public interface IClosedGenericTestProtocol
 [AkkaSerializable<Wrapper<OrderRequest>>(Manifest = "wrap-request-v1")]
 [AkkaSerializable<Wrapper<OrderReceipt>>(Manifest = "wrap-receipt-v1")]
 [AkkaSerializable<EventWrapper<IOrderEvent>>(Manifest = "event-wrap-v1")]
-public sealed partial class ClosedGenericTestSerializer : MessagePackSerializer
+public sealed partial class ClosedGenericTestSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }

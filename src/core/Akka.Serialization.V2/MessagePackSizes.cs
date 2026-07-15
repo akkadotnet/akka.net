@@ -14,7 +14,7 @@ using MessagePack;
 namespace Akka.Serialization.V2;
 
 /// <summary>
-/// Exact-size MessagePack encoding math shared by <see cref="MessagePackSerializer"/>,
+/// Exact-size MessagePack encoding math shared by <see cref="AkkaSerializer"/>,
 /// the built-in foreign-type formatters (<see cref="AddressFormatter"/>, <see cref="ActorPathFormatter"/>),
 /// and external hand-written <see cref="IAkkaMessagePackFormatter{T}"/> implementations.
 /// </summary>

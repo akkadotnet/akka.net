@@ -372,7 +372,7 @@ public sealed record MirrorActorPathMessage(
 [AkkaSerializerFormatter(typeof(Address), typeof(AddressFormatter))]
 [AkkaSerializerFormatter(typeof(TestUniqueAddress), typeof(TestUniqueAddressFormatter))]
 [AkkaSerializerFormatter(typeof(ActorPath), typeof(ActorPathFormatter))]
-public sealed partial class ControlMirrorSerializer : MessagePackSerializer
+public sealed partial class ControlMirrorSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }
@@ -429,7 +429,7 @@ public sealed record SystemTaggedMessage(
 
 [AkkaSerializer<ISystemFormatterProtocol>(Name = "system-formatter", SerializerId = 120103)]
 [AkkaSerializerFormatter(typeof(SystemTaggedValue), typeof(SystemTaggedValueFormatter))]
-public sealed partial class SystemFormatterSerializer : MessagePackSerializer
+public sealed partial class SystemFormatterSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }
@@ -446,7 +446,7 @@ internal sealed record InternalMirrorMessage(
 }
 
 [AkkaSerializer<IInternalMirrorProtocol>(Name = "internal-mirror", SerializerId = 120104)]
-internal sealed partial class InternalMirrorSerializer : MessagePackSerializer
+internal sealed partial class InternalMirrorSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="MessagePackSerializer.cs" company="Akka.NET Project">
+// <copyright file="AkkaSerializer.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2026 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -16,9 +16,9 @@ namespace Akka.Serialization.V2;
 /// <summary>
 /// Base class for source-generated MessagePack serializers scoped to a protocol marker type.
 /// </summary>
-public abstract class MessagePackSerializer : global::Akka.Serialization.SerializerV2
+public abstract class AkkaSerializer : global::Akka.Serialization.SerializerV2
 {
-    protected MessagePackSerializer(ExtendedActorSystem system) : base(system)
+    protected AkkaSerializer(ExtendedActorSystem system) : base(system)
     {
     }
 

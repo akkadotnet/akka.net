@@ -646,7 +646,7 @@ public interface IGeneratedTestProtocol
 }
 
 [AkkaSerializer<IGeneratedTestProtocol>(Name = "generated-test", SerializerId = 120101)]
-public sealed partial class GeneratedTestSerializer : MessagePackSerializer
+public sealed partial class GeneratedTestSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }

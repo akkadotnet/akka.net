@@ -252,7 +252,7 @@ public sealed record GapOptionalHandshakeMessage(
 
 [AkkaSerializer<IGapFixProtocol>(Name = "gap-fix", SerializerId = 120801)]
 [AkkaSerializerFormatter(typeof(Address), typeof(AddressFormatter))]
-public sealed partial class GapFixSerializer : MessagePackSerializer
+public sealed partial class GapFixSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }

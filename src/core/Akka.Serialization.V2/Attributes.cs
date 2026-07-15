@@ -18,7 +18,7 @@ namespace Akka.Serialization.V2;
 /// <typeparamref name="TProtocol"/> selects which <see cref="AkkaSerializableAttribute"/> messages
 /// this serializer dispatches at the top level (those implementing the marker) and becomes the
 /// type this serializer is bound to in Akka's <c>serialization-bindings</c> via the generated
-/// registration. It is purely generator input: the <see cref="MessagePackSerializer"/> base class
+/// registration. It is purely generator input: the <see cref="AkkaSerializer"/> base class
 /// is non-generic and carries no protocol knowledge of its own.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]

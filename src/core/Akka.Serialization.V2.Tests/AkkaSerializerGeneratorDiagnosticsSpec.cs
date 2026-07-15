@@ -38,7 +38,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120501)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -74,7 +74,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120502)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -120,7 +120,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120601)]
             [AkkaSerializerFormatter(typeof(Foreign), typeof(NotAFormatter))]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -160,7 +160,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120602)]
             [AkkaSerializerFormatter(typeof(Foreign), typeof(AbstractFormatter))]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -208,7 +208,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120603)]
             [AkkaSerializerFormatter(typeof(Foreign), typeof(FirstFormatter))]
             [AkkaSerializerFormatter(typeof(Foreign), typeof(SecondFormatter))]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -252,7 +252,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120604)]
             [AkkaSerializerFormatter(typeof(Foreign), typeof(NoUsableCtorFormatter))]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -292,7 +292,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120605)]
             [AkkaSerializerFormatter(typeof(Foreign), typeof(ForeignFormatter))]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -331,7 +331,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120606)]
             [AkkaSerializerFormatter(typeof(int[]), typeof(IntArrayFormatter))]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -370,7 +370,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120607)]
             [AkkaSerializerFormatter(typeof(List<int>), typeof(IntListFormatter))]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -416,7 +416,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120608)]
             [AkkaSerializerFormatter(typeof(Result), typeof(ResultFormatter))]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -450,7 +450,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120609)]
             [AkkaSerializerFormatter(null!, typeof(AddressFormatter))]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -479,7 +479,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120701)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -514,7 +514,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120703)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -544,7 +544,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120702)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -581,7 +581,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120704)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -614,7 +614,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120901)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -660,13 +660,13 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocolA>(Name = "sample-a", SerializerId = 120902)]
-            public sealed partial class SampleSerializerA : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializerA : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
 
             [AkkaSerializer<IProtocolB>(Name = "sample-b", SerializerId = 120903)]
-            public sealed partial class SampleSerializerB : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializerB : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -703,13 +703,13 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocolA>(Name = "sample-a", SerializerId = 120904)]
-            public sealed partial class SampleSerializerA : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializerA : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
 
             [AkkaSerializer<IProtocolB>(Name = "sample-b", SerializerId = 120904)]
-            public sealed partial class SampleSerializerB : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializerB : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -749,7 +749,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121001)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -794,7 +794,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121002)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -828,7 +828,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121003)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -861,7 +861,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121004)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -898,7 +898,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121005)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -940,7 +940,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121006)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -988,7 +988,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             }
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121007)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -1027,7 +1027,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             public sealed record NotSerializable(string Value) : IEvent;
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120701)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -1064,7 +1064,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             public sealed record ManifestlessMember([property: AkkaField(1)] string Value) : IEvent;
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120702)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -1101,7 +1101,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             public sealed record Unrelated([property: AkkaField(1)] string Value);
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120703)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -1135,7 +1135,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120705)]
             [AkkaSerializable<Plain>(Manifest = "plain-again-v1")]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -1166,7 +1166,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 [property: AkkaField(2)] T Payload) : IProtocol;
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120706)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -1200,7 +1200,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             public sealed record Payload([property: AkkaField(1)] string Value);
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120707)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
@@ -1241,7 +1241,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             public sealed record SealedMember([property: AkkaField(1)] string Value) : IEvent;
 
             [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120708)]
-            public sealed partial class SampleSerializer : global::Akka.Serialization.V2.MessagePackSerializer
+            public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
