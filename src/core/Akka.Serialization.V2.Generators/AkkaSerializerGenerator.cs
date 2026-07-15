@@ -741,12 +741,18 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Extracts the declared member set of an <c>[AkkaUnion]</c> property. Symbol-dependent facts
-    /// (assignability to the field's static type, unbound-generic detection) are captured here;
-    /// facts that need the whole message set (serializability, manifests) are validated later in
-    /// <see cref="ValidateMessages"/> against the serializer's message dictionary. Malformed
-    /// arguments (null, not a type, unbound generic) are recorded as unsupported entries so a
-    /// diagnostic fires instead of the member silently vanishing.
+    /// Extracts the declared member set of a union field. The member set comes from the field's
+    /// own <c>[AkkaUnion]</c> when present (a per-field override), otherwise from an
+    /// <c>[AkkaUnion]</c> on the field's STATIC TYPE -- the natural declaration site, where the
+    /// union is stated once for every field of that interface/abstract base. For a field declared
+    /// as a type parameter inside a registered closed construction, the type-level lookup runs
+    /// against the SUBSTITUTED type argument, so <c>T Body</c> with <c>T := IOrderEvent</c> picks
+    /// up the union declared on <c>IOrderEvent</c>.
+    /// Symbol-dependent facts (assignability to the field's static type, unbound-generic detection)
+    /// are captured here; facts that need the whole message set (serializability, manifests) are
+    /// validated later in <see cref="ValidateMessages"/> against the serializer's message
+    /// dictionary. Malformed arguments (null, not a type, unbound generic) are recorded as
+    /// unsupported entries so a diagnostic fires instead of the member silently vanishing.
     /// </summary>
     private static ImmutableArray<UnionMemberInfo> ExtractUnionMembers(
         IPropertySymbol member,
@@ -758,8 +764,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         if (knownTypes.UnionAttribute == null)
             return ImmutableArray<UnionMemberInfo>.Empty;
 
+        // Field-level override wins; otherwise inherit the type-level declaration from the field's
+        // static type. OriginalDefinition covers a generic union base, where the attribute lives on
+        // the definition.
         var unionAttribute = member.GetAttributes()
             .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
+        if (unionAttribute == null && member.Type is INamedTypeSymbol fieldType)
+        {
+            unionAttribute = fieldType.OriginalDefinition.GetAttributes()
+                .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
+        }
+
         if (unionAttribute == null || unionAttribute.ConstructorArguments.Length != 1)
             return ImmutableArray<UnionMemberInfo>.Empty;
 

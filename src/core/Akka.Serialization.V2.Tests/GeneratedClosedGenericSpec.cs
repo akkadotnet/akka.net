@@ -156,14 +156,15 @@ public sealed record Wrapper<T>(
     [property: AkkaField(3)] int? Priority) : IClosedGenericTestProtocol;
 
 /// <summary>
-/// The combined scenario: a generic wrapper whose payload property is a closed union. At
-/// instantiation time (T := IOrderEvent) the union members are validated against the substituted
-/// static type.
+/// The combined scenario: a generic wrapper whose payload property is a closed union. The
+/// definition declares NO union of its own -- at instantiation time (T := IOrderEvent) the
+/// substituted static type's TYPE-LEVEL [AkkaUnion] declaration on IOrderEvent is picked up, and
+/// its members are validated against the substituted type.
 /// </summary>
 [AkkaSerializable]
 public sealed record EventWrapper<T>(
     [property: AkkaField(1)] string Id,
-    [property: AkkaField(2), AkkaUnion(typeof(OrderPlaced), typeof(OrderCancelled))] T Body)
+    [property: AkkaField(2)] T Body)
     : IClosedGenericTestProtocol;
 
 [AkkaSerializable(Manifest = "carrier-v1")]

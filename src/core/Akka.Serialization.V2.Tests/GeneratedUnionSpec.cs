@@ -120,6 +120,19 @@ public sealed class GeneratedUnionSpec : IAsyncLifetime
         RoundTrip(withNull).Should().Be(withNull);
     }
 
+    [Fact(DisplayName = "Field-level union override should narrow the type-level member set")]
+    public void Field_level_union_override_should_narrow_type_level_set()
+    {
+        // OrderNote is a member of the TYPE-LEVEL union on IOrderEvent, but OptionalUnionMessage
+        // overrides the field with a narrower set that excludes it: the override must win.
+        var message = new OptionalUnionMessage("id-3", new OrderNote("order-12", "excluded"));
+
+        var write = () => _serializer.ToBinary(message);
+
+        write.Should().Throw<SerializationException>()
+            .WithMessage("*not a declared union member*");
+    }
+
     [Fact(DisplayName = "Union write should fail serialization for an undeclared runtime type")]
     public void Union_write_should_fail_for_undeclared_runtime_type()
     {
@@ -272,7 +285,12 @@ public interface IUnionTestProtocol
 {
 }
 
-/// <summary>The union's static field type: an ordinary interface, not a protocol marker.</summary>
+/// <summary>
+/// The union's static field type, carrying the TYPE-LEVEL member declaration: stated once here,
+/// inherited by every field of this type (mirroring [JsonDerivedType] and the case list of the
+/// proposed C# language unions). Individual fields may override with their own [AkkaUnion].
+/// </summary>
+[AkkaUnion(typeof(OrderPlaced), typeof(OrderCancelled), typeof(OrderNote))]
 public interface IOrderEvent
 {
 }
@@ -283,12 +301,16 @@ public sealed partial class UnionTestSerializer : MessagePackSerializer<IUnionTe
     public static partial SerializerRegistration CreateRegistration();
 }
 
+/// <summary>Inherits the full member set from the type-level union on <see cref="IOrderEvent"/>.</summary>
 [AkkaSerializable(Manifest = "union-envelope-v1")]
 public sealed record UnionEnvelope(
     [property: AkkaField(1)] string EnvelopeId,
-    [property: AkkaField(2), AkkaUnion(typeof(OrderPlaced), typeof(OrderCancelled), typeof(OrderNote))]
-    IOrderEvent Event) : IUnionTestProtocol;
+    [property: AkkaField(2)] IOrderEvent Event) : IUnionTestProtocol;
 
+/// <summary>
+/// Field-level OVERRIDE: narrows the type-level member set to exclude <see cref="OrderNote"/> for
+/// this one field only.
+/// </summary>
 [AkkaSerializable(Manifest = "optional-union-v1")]
 public sealed record OptionalUnionMessage(
     [property: AkkaField(1)] string Id,

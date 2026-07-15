@@ -75,22 +75,32 @@ public sealed class AkkaEnvelopePayloadAttribute : Attribute
 }
 
 /// <summary>
-/// Marks an <see cref="AkkaFieldAttribute"/> property whose static type is an interface or abstract
-/// base as a closed, explicitly-enumerated union of concrete <see cref="AkkaSerializableAttribute"/>
-/// member types.
+/// Declares a closed, explicitly-enumerated union of concrete
+/// <see cref="AkkaSerializableAttribute"/> member types for an interface or abstract base -- or,
+/// applied to an <see cref="AkkaFieldAttribute"/> property, overrides the member set for that one
+/// field.
 /// </summary>
 /// <remarks>
+/// <para>
+/// The natural declaration site is the union's base TYPE (the interface or abstract class), where
+/// the member set is stated once -- mirroring <c>System.Text.Json</c>'s <c>[JsonDerivedType]</c>
+/// and the case list of the proposed C# language unions. Every field whose static type carries a
+/// type-level union inherits its member set. A field-level application overrides the type-level
+/// set for that field only (for example, to narrow the members a particular schema accepts).
+/// </para>
+/// <para>
 /// Unlike <see cref="AkkaEnvelopePayloadAttribute"/> (a runtime serializer boundary for payloads
 /// whose concrete type may live in an assembly unknown at compile time), a union field is encoded
 /// structurally inline: the generator emits compile-time dispatch over the declared member set,
 /// discriminated by each member's <see cref="AkkaSerializableAttribute.Manifest"/>. Every member
-/// must be <c>[AkkaSerializable]</c>, declare a manifest unique within this union, and be assignable
+/// must be <c>[AkkaSerializable]</c>, declare a manifest unique within the union, and be assignable
 /// to the field's static type. A runtime value whose exact type is not a declared member fails
 /// serialization. When both this attribute and <see cref="AkkaEnvelopePayloadAttribute"/> are
-/// present, the envelope payload marker wins (consistent with its precedence over formatter
-/// registrations).
+/// present on a field, the envelope payload marker wins (consistent with its precedence over
+/// formatter registrations).
+/// </para>
 /// </remarks>
-[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Interface | AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 public sealed class AkkaUnionAttribute : Attribute
 {
     /// <summary>
