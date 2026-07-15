@@ -21,6 +21,11 @@
     <ItemGroup>
         <PackageReference Include="FSharp.Quotations.Evaluator" Version="2.1.0"/>
         <PackageReference Include="FsPickler" Version="5.3.2"/>
+        <!-- Pin the SDK-implicit FSharp.Core so restore doesn't depend on which SDK the
+             build agent has installed (implicit-version drift causes NU1605 downgrade errors
+             against projects that pin $(FsharpVersion)). Use Update (not Include) so we don't
+             duplicate the implicit reference (NU1504). -->
+        <PackageReference Update="FSharp.Core" Version="$(FsharpVersion)"/>
     </ItemGroup>
 
 </Project>
