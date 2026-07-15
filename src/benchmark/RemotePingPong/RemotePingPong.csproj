@@ -26,10 +26,14 @@
 <ItemGroup>
   <!-- CLI parsing (subcommands: run/server/client) - benchmark-only dependency, MIT licensed. -->
   <PackageReference Include="System.CommandLine" Version="2.0.9" />
-  <!-- Real-payload V2 arm: MessagePack formatter/attribute types used directly by
-       RealPayload/V2/RealBenchmarkMessages.cs (ReadingBatchFormatter). Also flows transitively via
-       Akka.Serialization.V2.csproj, but this project uses MessagePack types directly, so it takes an
-       explicit reference too. -->
+  <!-- Real-payload V2 and msgpack arms: MessagePack formatter/attribute types used directly by
+       RealPayload/V2/RealBenchmarkMessages.cs (ReadingBatchFormatter) and
+       RealPayload/MsgPack/RealBenchmarkMessages.cs ([MessagePackObject]/[Key(n)] POCOs,
+       MessagePackSerializer). Also flows transitively via Akka.Serialization.V2.csproj, but this
+       project uses MessagePack types directly, so it takes an explicit reference too. MIT licensed. -->
+  <!-- Real-payload V2 arm: MessagePack flows transitively via Akka.Serialization.V2.csproj (whose
+       generated serializer and base class use MessagePackWriter/Reader), but this project keeps an
+       explicit reference in case benchmark code needs MessagePack types directly. -->
   <PackageReference Include="MessagePack" Version="$(MessagePackVersion)" />
   <!-- Real-payload Protobuf arm: same protoc-based codegen approach Akka.Remote uses for its own
        checked-in .proto files (src/protobuf/*.proto) - see RealPayload/Protobuf/RealBenchmarkMessage.proto. -->

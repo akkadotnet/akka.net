@@ -88,10 +88,12 @@ namespace RemotePingPong
         private static string _payloadMode = "toy";
 
         // Selected once at startup via the "--serializer" option: "v2" (Akka.Serialization.V2
-        // source-generated MessagePack) or "protobuf" (hand-written Google.Protobuf, string manifest).
-        // Only meaningful when _payloadMode is "real" - see BuildRootCommand()'s cross-option
-        // validators, which require --serializer whenever --payload real is given and reject it
-        // otherwise.
+        // source-generated MessagePack), "protobuf" (hand-written Google.Protobuf, string manifest),
+        // or "msgpack" (hand-written SerializerWithStringManifest over an attribute-based
+        // [MessagePackObject]/[Key(n)] POCO, using MessagePack directly rather than through the V2
+        // generator). Only meaningful when _payloadMode is "real" - see BuildRootCommand()'s
+        // cross-option validators, which require --serializer whenever --payload real is given and
+        // reject it otherwise.
         private static string? _serializerArm;
 
         // The actual object every "hit"/priming Tell sends, resolved once per process by
@@ -135,6 +137,18 @@ namespace RemotePingPong
         // the caller passing an explicit --qsize); printed verbatim in the run header so an
         // auto-raised run is never mistaken for a default-config one.
         private static string? _queueSizeAutoRaiseReason;
+
+        // When set (via the "--inbound-lanes N" option), overrides
+        // akka.remote.artery.advanced.inbound-lanes (see Remote.conf for the default) for every
+        // ActorSystem this invocation creates - both loopback systems in "run" mode, this node's
+        // system in split "server"/"client" mode. Only meaningful in Artery mode. Null means the
+        // HOCON key is never touched, so default-config runs stay byte-for-byte identical to
+        // pre-lanes behavior - same convention as _qSizeOverride.
+        private static int? _inboundLanesOverride;
+
+        // Same as _inboundLanesOverride, but for akka.remote.artery.advanced.outbound-lanes
+        // (default 1, see Remote.conf).
+        private static int? _outboundLanesOverride;
 
         // Split two-process mode (via the "server" / "client" subcommands): runs the two
         // sides of the benchmark in separate processes so they can sit on two physical machines and
@@ -294,6 +308,28 @@ namespace RemotePingPong
                 config = queueSizeConfig.WithFallback(config);
             }
 
+            // Same convention as the queue-size override above: only write the lanes keys when
+            // they're actually going to be read (Artery mode) AND the caller passed an explicit
+            // --inbound-lanes/--outbound-lanes. Left unset, no HOCON key is added at all and
+            // Remote.conf's defaults apply untouched.
+            if (_useArtery && _inboundLanesOverride.HasValue)
+            {
+                var inboundLanesConfig = ConfigurationFactory.ParseString($@"
+                akka.remote.artery.advanced {{
+                  inbound-lanes = {_inboundLanesOverride.Value}
+                }}");
+                config = inboundLanesConfig.WithFallback(config);
+            }
+
+            if (_useArtery && _outboundLanesOverride.HasValue)
+            {
+                var outboundLanesConfig = ConfigurationFactory.ParseString($@"
+                akka.remote.artery.advanced {{
+                  outbound-lanes = {_outboundLanesOverride.Value}
+                }}");
+                config = outboundLanesConfig.WithFallback(config);
+            }
+
             // Only set when "--payload real" was given - a --payload-less (or "--payload toy")
             // invocation never touches akka.actor.serializers/serialization-bindings, so the toy
             // default's config (and therefore its NewtonsoftJson-fallback wire behavior) stays
@@ -340,8 +376,17 @@ namespace RemotePingPong
                     ""RemotePingPong.RealPayload.Protobuf.RealBenchmarkMessage, RemotePingPong"" = real-benchmark-protobuf
                   }
                 }"),
+                "msgpack" => ConfigurationFactory.ParseString(@"
+                akka.actor {
+                  serializers {
+                    real-benchmark-msgpack = ""RemotePingPong.RealPayload.MsgPack.RealBenchmarkMsgPackSerializer, RemotePingPong""
+                  }
+                  serialization-bindings {
+                    ""RemotePingPong.RealPayload.MsgPack.RealBenchmarkMessage, RemotePingPong"" = real-benchmark-msgpack
+                  }
+                }"),
                 _ => throw new InvalidOperationException(
-                    "\"--payload real\" requires --serializer to have been resolved (v2|protobuf) before " +
+                    "\"--payload real\" requires --serializer to have been resolved (v2|protobuf|msgpack) before " +
                     "an ActorSystem config can be built - this should have been rejected by the CLI's " +
                     "cross-option validators before reaching here.")
             };
@@ -364,8 +409,9 @@ namespace RemotePingPong
             {
                 "v2" => canonical,
                 "protobuf" => RealPayload.RealPayloadFactory.ToProtobuf(canonical),
+                "msgpack" => RealPayload.RealPayloadFactory.ToMsgPack(canonical),
                 _ => throw new InvalidOperationException(
-                    "\"--payload real\" requires --serializer to have been resolved (v2|protobuf) before " +
+                    "\"--payload real\" requires --serializer to have been resolved (v2|protobuf|msgpack) before " +
                     "the payload instance can be built - this should have been rejected by the CLI's " +
                     "cross-option validators before reaching here.")
             };
@@ -397,6 +443,7 @@ namespace RemotePingPong
             {
                 "v2" => typeof(RealPayload.V2.RealBenchmarkSerializer),
                 "protobuf" => typeof(RealPayload.Protobuf.RealBenchmarkProtobufSerializer),
+                "msgpack" => typeof(RealPayload.MsgPack.RealBenchmarkMsgPackSerializer),
                 _ => throw new InvalidOperationException($"Unknown --serializer value [{_serializerArm}].")
             };
 
@@ -520,6 +567,34 @@ namespace RemotePingPong
                               "auto-raises it whenever window x clients would exceed 80% of the default capacity."
             };
 
+            var inboundLanesOption = new Option<int?>("--inbound-lanes")
+            {
+                Description = "Override akka.remote.artery.advanced.inbound-lanes - how many lanes " +
+                              "inbound ordinary-stream messages are fanned out across for parallel " +
+                              "deserialization/dispatch. Artery mode only; ignored without --artery. When " +
+                              "omitted, the Remote.conf default applies untouched."
+            };
+            inboundLanesOption.Validators.Add(result =>
+            {
+                var value = result.GetValueOrDefault<int?>();
+                if (value is <= 0)
+                    result.AddError($"--inbound-lanes must be greater than zero (got {value}).");
+            });
+
+            var outboundLanesOption = new Option<int?>("--outbound-lanes")
+            {
+                Description = "Override akka.remote.artery.advanced.outbound-lanes (default 1) - how many " +
+                              "outbound lanes ordinary-stream messages are fanned out across. Artery " +
+                              "mode only; ignored without --artery. When omitted, the Remote.conf default " +
+                              "applies untouched."
+            };
+            outboundLanesOption.Validators.Add(result =>
+            {
+                var value = result.GetValueOrDefault<int?>();
+                if (value is <= 0)
+                    result.AddError($"--outbound-lanes must be greater than zero (got {value}).");
+            });
+
             var timesOption = new Option<uint>("--times")
             {
                 Description = "Number of times to repeat the full benchmark sweep/run.",
@@ -545,15 +620,17 @@ namespace RemotePingPong
             var serializerOption = new Option<string?>("--serializer")
             {
                 Description = "Real-payload serializer arm: \"v2\" (Akka.Serialization.V2 source-generated " +
-                              "MessagePack) or \"protobuf\" (hand-written Google.Protobuf, string manifest). " +
+                              "MessagePack), \"protobuf\" (hand-written Google.Protobuf, string manifest), or " +
+                              "\"msgpack\" (hand-written SerializerWithStringManifest over an attribute-based " +
+                              "[MessagePackObject]/[Key(n)] POCO, MessagePack's Standard resolver, no compression). " +
                               "Required when --payload real is given; rejected otherwise (--payload toy has no " +
                               "custom serializer to select)."
             };
             serializerOption.Validators.Add(result =>
             {
                 var value = result.GetValueOrDefault<string?>();
-                if (value is not null && value != "v2" && value != "protobuf")
-                    result.AddError($"--serializer must be \"v2\" or \"protobuf\" (got \"{value}\").");
+                if (value is not null && value != "v2" && value != "protobuf" && value != "msgpack")
+                    result.AddError($"--serializer must be \"v2\", \"protobuf\", or \"msgpack\" (got \"{value}\").");
             });
 
             void AddPayloadSerializerValidation(Command command)
@@ -563,7 +640,7 @@ namespace RemotePingPong
                     var payload = result.GetValue(payloadOption);
                     var serializer = result.GetValue(serializerOption);
                     if (payload == "real" && serializer is null)
-                        result.AddError("--serializer <v2|protobuf> is required when --payload real is specified.");
+                        result.AddError("--serializer <v2|protobuf|msgpack> is required when --payload real is specified.");
                     else if (payload != "real" && serializer is not null)
                         result.AddError("--serializer is only meaningful with --payload real (omit --serializer, " +
                                          "or add --payload real).");
@@ -580,6 +657,8 @@ namespace RemotePingPong
             runCommand.Options.Add(iobufOption);
             runCommand.Options.Add(msgsOption);
             runCommand.Options.Add(qsizeOption);
+            runCommand.Options.Add(inboundLanesOption);
+            runCommand.Options.Add(outboundLanesOption);
             runCommand.Options.Add(timesOption);
             runCommand.Options.Add(payloadOption);
             runCommand.Options.Add(serializerOption);
@@ -592,6 +671,8 @@ namespace RemotePingPong
                 parseResult.GetValue(iobufOption),
                 parseResult.GetValue(msgsOption),
                 parseResult.GetValue(qsizeOption),
+                parseResult.GetValue(inboundLanesOption),
+                parseResult.GetValue(outboundLanesOption),
                 parseResult.GetValue(timesOption),
                 parseResult.GetValue(payloadOption)!,
                 parseResult.GetValue(serializerOption)));
@@ -619,6 +700,8 @@ namespace RemotePingPong
             serverCommand.Options.Add(clientsOption);
             serverCommand.Options.Add(iobufOption);
             serverCommand.Options.Add(qsizeOption);
+            serverCommand.Options.Add(inboundLanesOption);
+            serverCommand.Options.Add(outboundLanesOption);
             serverCommand.Options.Add(serverHostOption);
             serverCommand.Options.Add(serverPortOption);
             serverCommand.Options.Add(payloadOption);
@@ -631,6 +714,8 @@ namespace RemotePingPong
                 parseResult.GetValue(clientsOption),
                 parseResult.GetValue(iobufOption),
                 parseResult.GetValue(qsizeOption),
+                parseResult.GetValue(inboundLanesOption),
+                parseResult.GetValue(outboundLanesOption),
                 parseResult.GetValue(serverHostOption),
                 parseResult.GetValue(serverPortOption),
                 parseResult.GetValue(payloadOption)!,
@@ -667,6 +752,8 @@ namespace RemotePingPong
             clientCommand.Options.Add(iobufOption);
             clientCommand.Options.Add(msgsOption);
             clientCommand.Options.Add(qsizeOption);
+            clientCommand.Options.Add(inboundLanesOption);
+            clientCommand.Options.Add(outboundLanesOption);
             clientCommand.Options.Add(timesOption);
             clientCommand.Options.Add(clientHostOption);
             clientCommand.Options.Add(clientPortOption);
@@ -682,6 +769,8 @@ namespace RemotePingPong
                 parseResult.GetValue(iobufOption),
                 parseResult.GetValue(msgsOption),
                 parseResult.GetValue(qsizeOption),
+                parseResult.GetValue(inboundLanesOption),
+                parseResult.GetValue(outboundLanesOption),
                 parseResult.GetValue(timesOption),
                 parseResult.GetValue(clientHostOption),
                 parseResult.GetValue(clientPortOption),
@@ -700,13 +789,14 @@ namespace RemotePingPong
             // same single-process loopback benchmark "run" performs with every option left at its default.
             rootCommand.SetAction(_ => RunLoopbackAsync(
                 artery: false, oneway: false, window: 50, clients: null, iobuf: null, msgs: null, qsize: null,
-                times: 1u, payload: "toy", serializer: null));
+                inboundLanes: null, outboundLanes: null, times: 1u, payload: "toy", serializer: null));
 
             return rootCommand;
         }
 
         private static async Task<int> RunLoopbackAsync(bool artery, bool oneway, int window, int? clients,
-            string? iobuf, long? msgs, int? qsize, uint times, string payload, string? serializer)
+            string? iobuf, long? msgs, int? qsize, int? inboundLanes, int? outboundLanes, uint times,
+            string payload, string? serializer)
         {
             _useArtery = artery;
             _onewayMode = oneway;
@@ -715,6 +805,8 @@ namespace RemotePingPong
             _ioBufSize = iobuf;
             _msgsOverride = msgs;
             _qSizeOverride = qsize;
+            _inboundLanesOverride = inboundLanes;
+            _outboundLanesOverride = outboundLanes;
             _payloadMode = payload;
             _serializerArm = serializer;
             _payloadInstance = ResolvePayloadInstance();
@@ -725,7 +817,8 @@ namespace RemotePingPong
         }
 
         private static async Task<int> RunServerModeAsync(bool artery, bool oneway, int window, int? clients,
-            string? iobuf, int? qsize, string host, int port, string payload, string? serializer)
+            string? iobuf, int? qsize, int? inboundLanes, int? outboundLanes, string host, int port,
+            string payload, string? serializer)
         {
             _useArtery = artery;
             _onewayMode = oneway;
@@ -733,6 +826,8 @@ namespace RemotePingPong
             _pinnedClients = clients;
             _ioBufSize = iobuf;
             _qSizeOverride = qsize;
+            _inboundLanesOverride = inboundLanes;
+            _outboundLanesOverride = outboundLanes;
             _host = host;
             _splitPort = port;
             _payloadMode = payload;
@@ -745,8 +840,8 @@ namespace RemotePingPong
         }
 
         private static async Task<int> RunClientModeAsync(bool artery, bool oneway, int window, int? clients,
-            string? iobuf, long? msgs, int? qsize, uint times, string host, int port, string? myHost,
-            string payload, string? serializer)
+            string? iobuf, long? msgs, int? qsize, int? inboundLanes, int? outboundLanes, uint times,
+            string host, int port, string? myHost, string payload, string? serializer)
         {
             _useArtery = artery;
             _onewayMode = oneway;
@@ -755,6 +850,8 @@ namespace RemotePingPong
             _ioBufSize = iobuf;
             _msgsOverride = msgs;
             _qSizeOverride = qsize;
+            _inboundLanesOverride = inboundLanes;
+            _outboundLanesOverride = outboundLanes;
             _clientMode = true;
             _host = host;
             _splitPort = port;
@@ -824,13 +921,30 @@ namespace RemotePingPong
                     Console.WriteLine(_queueSizeAutoRaiseReason);
                     Console.ForegroundColor = prevColor;
                 }
+                // Only printed when explicitly overridden - a lanes-less run keeps the exact
+                // header it had before these options existed.
+                if (_inboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("Inbound lanes (artery):            {0} (explicit --inbound-lanes)", _inboundLanesOverride.Value);
+                }
+                if (_outboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("Outbound lanes (artery):           {0} (explicit --outbound-lanes)", _outboundLanesOverride.Value);
+                }
             }
-            else if (_qSizeOverride.HasValue)
+            else
             {
-                // --qsize only means something in Artery mode (outbound-message-queue-size);
-                // called out explicitly rather than silently doing nothing, so a stray --qsize on a
-                // DotNetty run is never mistaken for having taken effect.
-                Console.WriteLine("--qsize ignored (DotNetty)");
+                // --qsize/--inbound-lanes/--outbound-lanes only mean something in Artery mode;
+                // called out explicitly rather than silently doing nothing, so a stray override on
+                // a DotNetty run is never mistaken for having taken effect.
+                if (_qSizeOverride.HasValue)
+                {
+                    Console.WriteLine("--qsize ignored (DotNetty)");
+                }
+                if (_inboundLanesOverride.HasValue || _outboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("--inbound-lanes/--outbound-lanes ignored (DotNetty)");
+                }
             }
             if (_clientMode)
             {
@@ -921,10 +1035,11 @@ namespace RemotePingPong
         /// a fresh ephemeral port every rep, so sequential runs can never collide on actor names -
         /// Akka's remote-deployment daemon already IS a "server-side factory keyed by client
         /// identity", which is why no run-id negotiation or receptionist protocol is needed here.
-        /// --window/--clients/--qsize/--oneway are accepted so the orchestrator can pass the
-        /// SAME values to both sides; functionally only the queue sizing matters on this side (it
-        /// sizes THIS system's outbound queue for the reply traffic - echoes in ping-pong,
-        /// Ack/Complete credit grants in one-way, and only in Artery mode - see
+        /// --window/--clients/--qsize/--inbound-lanes/--outbound-lanes/--oneway are accepted so
+        /// the orchestrator can pass the SAME values to both sides; functionally only the queue
+        /// and lane sizing matter on this side (they size THIS system's outbound queue for the
+        /// reply traffic - echoes in ping-pong, Ack/Complete credit grants in one-way - and its
+        /// Artery inbound/outbound lane counts, and only in Artery mode - see
         /// ResolveQueueSize()), while oneway/window/clients are disclosed in the header so
         /// operators can eyeball that both sides were launched consistently. Serves an arbitrary
         /// number of sequential benchmark runs until killed (Ctrl+C/SIGTERM).
@@ -1000,10 +1115,25 @@ namespace RemotePingPong
                     Console.WriteLine(_queueSizeAutoRaiseReason);
                     Console.ForegroundColor = prevColor;
                 }
+                if (_inboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("Inbound lanes (artery):            {0} (explicit --inbound-lanes)", _inboundLanesOverride.Value);
+                }
+                if (_outboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("Outbound lanes (artery):           {0} (explicit --outbound-lanes)", _outboundLanesOverride.Value);
+                }
             }
-            else if (_qSizeOverride.HasValue)
+            else
             {
-                Console.WriteLine("--qsize ignored (DotNetty)");
+                if (_qSizeOverride.HasValue)
+                {
+                    Console.WriteLine("--qsize ignored (DotNetty)");
+                }
+                if (_inboundLanesOverride.HasValue || _outboundLanesOverride.HasValue)
+                {
+                    Console.WriteLine("--inbound-lanes/--outbound-lanes ignored (DotNetty)");
+                }
             }
             if (_payloadMode == "real")
             {
@@ -1086,6 +1216,12 @@ namespace RemotePingPong
             system1.EventStream.Subscribe(dropWatcher, typeof(Dropped));
             system2?.EventStream.Subscribe(dropWatcher, typeof(Dropped));
 
+            // Resend visibility (one-way mode only): tallies every sender-side ack-timeout resend
+            // across all client pairs in this rep. Same lifetime/rationale as dropCounter above - see
+            // OneWaySenderActor.HandleAckTimeout for what increments it and the "*** WARNING" print
+            // near the end of this method for what reads it.
+            var resendCounter = new ResendCounter();
+
             List<Task<long>> tasks = new List<Task<long>>();
             // Holds the system1-side actor that needs the initial "go" nudge for each pair: the
             // BenchmarkActor client in ping-pong mode, or the OneWaySenderActor in one-way mode.
@@ -1133,7 +1269,7 @@ namespace RemotePingPong
                             "receiver" + i);
                     var sender =
                         system1.ActorOf(
-                            Props.Create(() => new OneWaySenderActor(numberOfRepeats, windowSize, ackEvery, receiver, ts, _payloadInstance)),
+                            Props.Create(() => new OneWaySenderActor(numberOfRepeats, windowSize, ackEvery, receiver, ts, _payloadInstance, resendCounter)),
                             "sender" + i);
 
                     primeTargets.Add(sender);
@@ -1214,6 +1350,7 @@ namespace RemotePingPong
             system1.EventStream.Unsubscribe(dropWatcher);
             system2?.EventStream.Unsubscribe(dropWatcher);
             var dropped = dropCounter.Count;
+            var resent = resendCounter.Count;
 
             // force clean termination (split-client mode: only the local system - the server
             // process owns system2's lifecycle and keeps serving subsequent reps/runs)
@@ -1248,6 +1385,21 @@ namespace RemotePingPong
                 var prevColor = Console.ForegroundColor;
                 Console.ForegroundColor = ConsoleColor.Magenta;
                 Console.WriteLine("  *** SUSPECT: dropped {0} (outbound queue overflow) ***", dropped);
+                Console.ForegroundColor = prevColor;
+            }
+
+            if (resent > 0)
+            {
+                // Same "own line, own color" treatment as the drop warning above, and for the same
+                // reason: a nonzero resend count means OneWaySenderActor's ack timeout fired at least
+                // once (see HandleAckTimeout) - the transport actually lost a credit window and the
+                // sender had to blind-retransmit it, so totalMessagesReceived/throughput for this rep
+                // may include retransmitted duplicates the receiver counted as new. Treat this rep's
+                // numbers as SUSPECT. On a healthy transport this block never prints - zero resends
+                // across many runs is the pass signal for the underlying transport fix.
+                var prevColor = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine("  *** WARNING: {0} oneway resend(s) fired - messages were lost by the transport; this rep's numbers are SUSPECT ***", resent);
                 Console.ForegroundColor = prevColor;
             }
 
@@ -1392,6 +1544,23 @@ namespace RemotePingPong
         }
 
         /// <summary>
+        /// Thread-safe resend tally shared between every <see cref="OneWaySenderActor"/> in a single
+        /// Benchmark() rep and the harness loop that reads it once the rep completes. Mirrors
+        /// <see cref="DropCounter"/>'s shape and lifetime (fresh instance per rep, plain object rather
+        /// than actor state so the total can be read synchronously right after the rep finishes) -
+        /// see OneWaySenderActor.HandleAckTimeout for what increments it and the "*** WARNING" print
+        /// in Benchmark() for what reads it.
+        /// </summary>
+        private sealed class ResendCounter
+        {
+            private long _resends;
+
+            public void Increment() => Interlocked.Increment(ref _resends);
+
+            public long Count => Interlocked.Read(ref _resends);
+        }
+
+        /// <summary>
         /// One-way firehose sender (lives on system1, paired 1:1 with a <see cref="OneWayReceiverActor"/>
         /// on system2). Implements credit-based flow control: unbounded fire-and-forget sending would
         /// overflow Artery's bounded outbound queue (default capacity 3072/association, auto-raised
@@ -1406,14 +1575,44 @@ namespace RemotePingPong
         /// the receiver's count is authoritative for "done", but the latch itself has to live here
         /// because it's on system1, never RemoteScope-deployed (see the comment on OneWayReceiverActor
         /// construction in Benchmark() for why a TaskCompletionSource can't live on the receiver).
+        ///
+        /// Ack-timeout resend: Artery's ordinary stream is at-most-once - a lost credit window (a
+        /// known transport robustness gap at outbound-lanes greater than 1, being fixed separately)
+        /// means the receiver's count never reaches the next `ackEvery` multiple, so it never sends
+        /// the Ack this actor is waiting on, and without a fallback this actor - and the whole
+        /// benchmark rep, since Benchmark() awaits every sender's TaskCompletionSource - would hang
+        /// forever. To survive that: an Ack/Complete-driven receive timeout (armed on Run, disarmed
+        /// on Complete, see <see cref="AckTimeout"/>) fires whenever nothing has arrived from the
+        /// receiver in that window, and this actor blind-resends the exact batch it last put on the
+        /// wire (tracked in <c>_lastBatchSize</c>) without touching <c>_sent</c> - the resend must
+        /// not count against the `maxMessages` budget, or the receiver would never see enough
+        /// distinct messages to reach `maxExpectedMessages` and this deadlock-avoidance would itself
+        /// become a permanent throughput shortfall. Every resend increments the shared
+        /// <see cref="ResendCounter"/> so Benchmark() can print a loud, impossible-to-miss warning at
+        /// the end of the rep - the healthy/no-loss path (the only path exercised once the underlying
+        /// transport bug is fixed) prints nothing extra, so "zero resends across many runs" is a
+        /// clean pass/fail signal for that fix. Resends are capped at
+        /// <see cref="MaxResendAttempts"/> - a running total for this actor's whole rep, not reset on
+        /// a successful Ack - so a genuinely dead transport still fails the rep with a clear
+        /// <see cref="TimeoutException"/> instead of retrying forever.
         /// </summary>
         private class OneWaySenderActor : UntypedActor
         {
+            // How long this actor waits for an Ack/Complete before assuming the last window it sent
+            // was lost and blind-resending it. 5s is generous relative to a healthy round-trip (which
+            // is sub-millisecond in-process, low-single-digit ms over a real link) but short enough
+            // that a real loss doesn't stall the rep for long.
+            private static readonly TimeSpan AckTimeout = TimeSpan.FromSeconds(5);
+            // Total resend attempts this actor will make over the life of the rep before giving up
+            // and failing the completion latch - see HandleAckTimeout.
+            private const int MaxResendAttempts = 60;
+
             private readonly long _maxMessages;
             private readonly int _windowSize;
             private readonly int _ackEvery;
             private readonly IActorRef _receiver;
             private readonly TaskCompletionSource<long> _completion;
+            private readonly ResendCounter _resendCounter;
             // The payload every message actually carries - "hit" (default/toy) or the resolved
             // real-payload instance (see Program._payloadInstance/ResolvePayloadInstance()). Unlike
             // ping-pong mode (where one priming send is enough - the same object bounces between
@@ -1421,8 +1620,19 @@ namespace RemotePingPong
             // every individual message sent here must carry the payload itself.
             private readonly object _payload;
             private long _sent;
+            // Size of the most recent batch actually put on the wire (the initial window or an
+            // ackEvery top-up, whichever ran last) - this is what gets blind-resent on an ack
+            // timeout. Deliberately not the same thing as "unacked count": this protocol only acks in
+            // ackEvery-sized chunks, so the sender has no finer-grained notion of exactly how many
+            // in-flight messages were lost. Resending the whole last batch is the simplest
+            // correct-enough response to the known whole-window-loss failure mode this exists to
+            // survive.
+            private int _lastBatchSize;
+            // Total ack-timeout resends fired by this actor across the whole rep (not reset on a
+            // successful Ack) - see MaxResendAttempts.
+            private int _resendAttempts;
 
-            public OneWaySenderActor(long maxMessages, int windowSize, int ackEvery, IActorRef receiver, TaskCompletionSource<long> completion, object payload)
+            public OneWaySenderActor(long maxMessages, int windowSize, int ackEvery, IActorRef receiver, TaskCompletionSource<long> completion, object payload, ResendCounter resendCounter)
             {
                 _maxMessages = maxMessages;
                 _windowSize = windowSize;
@@ -1430,6 +1640,7 @@ namespace RemotePingPong
                 _receiver = receiver;
                 _completion = completion;
                 _payload = payload;
+                _resendCounter = resendCounter;
             }
 
             protected override void OnReceive(object message)
@@ -1437,24 +1648,68 @@ namespace RemotePingPong
                 switch (message)
                 {
                     case Messages.Run:
+                        Context.SetReceiveTimeout(AckTimeout);
                         SendBatch(_windowSize);
                         break;
                     case Ack:
                         SendBatch(_ackEvery);
                         break;
                     case Complete c:
+                        Context.SetReceiveTimeout(null);
                         _completion.TrySetResult(c.TotalReceived);
+                        break;
+                    case ReceiveTimeout:
+                        HandleAckTimeout();
                         break;
                 }
             }
 
             private void SendBatch(int count)
             {
+                var actuallySent = 0;
                 for (var i = 0; i < count && _sent < _maxMessages; i++)
                 {
                     _receiver.Tell(_payload);
                     _sent++;
+                    actuallySent++;
                 }
+
+                if (actuallySent > 0)
+                    _lastBatchSize = actuallySent;
+            }
+
+            /// <summary>
+            /// Fires when Context's receive timeout (armed on Run, see <see cref="AckTimeout"/>)
+            /// elapses with no Ack/Complete received - i.e. the last window this actor sent appears
+            /// to have been lost by the transport. Blind-resends that window (see
+            /// <c>_lastBatchSize</c>) so a lost window can't deadlock the rep; see the class doc for
+            /// why this never touches <c>_sent</c>, and why resends are counted both locally (against
+            /// <see cref="MaxResendAttempts"/>) and in the shared <see cref="ResendCounter"/> (for the
+            /// end-of-rep warning in Benchmark()).
+            /// </summary>
+            private void HandleAckTimeout()
+            {
+                // Degenerate case only: the very first SendBatch(_windowSize) sent nothing (e.g.
+                // maxMessages/windowSize of 0). Nothing was ever put on the wire, so there's nothing
+                // to resend.
+                if (_lastBatchSize == 0)
+                    return;
+
+                _resendAttempts++;
+                if (_resendAttempts > MaxResendAttempts)
+                {
+                    Context.SetReceiveTimeout(null);
+                    _completion.TrySetException(new TimeoutException(
+                        $"OneWaySenderActor gave up after {MaxResendAttempts} resend attempts " +
+                        $"({MaxResendAttempts * (int)AckTimeout.TotalSeconds}s total) with no ack/complete " +
+                        "from the receiver - the transport appears to have stopped delivering messages " +
+                        $"entirely. sent={_sent}/{_maxMessages}, last window size={_lastBatchSize}."));
+                    return;
+                }
+
+                _resendCounter.Increment();
+                for (var i = 0; i < _lastBatchSize; i++)
+                    _receiver.Tell(_payload);
             }
         }
 

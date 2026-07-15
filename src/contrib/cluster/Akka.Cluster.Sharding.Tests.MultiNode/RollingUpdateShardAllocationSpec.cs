@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Event;
@@ -143,51 +144,61 @@ namespace Akka.Cluster.Sharding.Tests
 
 
         [MultiNodeFact]
-        public void ClusterSharding_with_rolling_update_specs()
+        public async Task ClusterSharding_with_rolling_update_specs()
         {
-            ClusterSharding_must_form_cluster();
-            ClusterSharding_must_start_cluster_sharding_on_first();
-            ClusterSharding_must_start_a_rolling_upgrade();
-            ClusterSharding_must_complete_a_rolling_upgrade();
+            await ClusterSharding_must_form_cluster();
+            await ClusterSharding_must_start_cluster_sharding_on_first();
+            await ClusterSharding_must_start_a_rolling_upgrade();
+            await ClusterSharding_must_complete_a_rolling_upgrade();
         }
 
-        private void ClusterSharding_must_form_cluster()
+        private async Task ClusterSharding_must_form_cluster()
         {
-            AwaitClusterUp(Config.First, Config.Second);
-            EnterBarrier("cluster-started");
+            await AwaitClusterUpAsync(Config.First, Config.Second);
+            await EnterBarrierAsync("cluster-started");
         }
 
-        private void ClusterSharding_must_start_cluster_sharding_on_first()
+        private async Task ClusterSharding_must_start_cluster_sharding_on_first()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // make sure both regions have completed registration before triggering entity allocation
                 // so the folloing allocations end up as one on each node
-                AwaitAssert(() =>
+                //
+                // Fresh probe per attempt + bounded inner expect + explicit 1s interval (the
+                // #8363 / ClusterShardingQueriesSpec pattern): a no-duration AwaitAssert defaults
+                // its outer window to akka.test.single-expect-default (5s), which is also the
+                // inner ExpectMsg's default timeout -- so the outer "retry loop" only ever gets
+                // one attempt on the shared TestActor mailbox, and a late reply arriving after
+                // that attempt times out can pollute the next read. Bounding the inner expect well
+                // under the outer window, and routing replies to a fresh probe each attempt,
+                // restores genuine retries.
+                await AwaitAssertAsync(async () =>
                 {
-                    shardRegion.Value.Tell(GetCurrentRegions.Instance);
-                    ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(2);
-                });
+                    var probe = CreateTestProbe();
+                    shardRegion.Value.Tell(GetCurrentRegions.Instance, probe.Ref);
+                    (await probe.ExpectMsgAsync<CurrentRegions>(TimeSpan.FromSeconds(3))).Regions.Should().HaveCount(2);
+                }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
 
                 shardRegion.Value.Tell(new GiveMeYourHome.Get("id1"));
                 // started on either of the nodes
-                var address1 = ExpectMsg<GiveMeYourHome.Home>().Address;
+                var address1 = (await ExpectMsgAsync<GiveMeYourHome.Home>()).Address;
 
                 shardRegion.Value.Tell(new GiveMeYourHome.Get("id2"));
                 // started on the other of the nodes (because least
-                var address2 = ExpectMsg<GiveMeYourHome.Home>().Address;
+                var address2 = (await ExpectMsgAsync<GiveMeYourHome.Home>()).Address;
 
                 // one on each node
                 ImmutableHashSet.Create(address1, address2).Should().HaveCount(2);
             }, Config.First, Config.Second);
-            EnterBarrier("first-version-started");
+            await EnterBarrierAsync("first-version-started");
         }
 
-        private void ClusterSharding_must_start_a_rolling_upgrade()
+        private async Task ClusterSharding_must_start_a_rolling_upgrade()
         {
             Join(Config.Third, Config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 _ = shardRegion.Value;
 
@@ -196,20 +207,21 @@ namespace Akka.Cluster.Sharding.Tests
                 // with the coordinator and shards will be allocated on the old nodes, so we need
                 // to make sure the third region has completed registration before trying
                 // if we didn't the strategy will default it back to the old nodes
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
-                    shardRegion.Value.Tell(GetCurrentRegions.Instance);
-                    ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(3);
-                });
+                    var probe = CreateTestProbe();
+                    shardRegion.Value.Tell(GetCurrentRegions.Instance, probe.Ref);
+                    (await probe.ExpectMsgAsync<CurrentRegions>(TimeSpan.FromSeconds(3))).Regions.Should().HaveCount(3);
+                }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
             }, Config.First, Config.Second, Config.Third);
 
-            EnterBarrier("third-region-registered");
-            RunOn(() =>
+            await EnterBarrierAsync("third-region-registered");
+            await RunOnAsync(async () =>
             {
                 shardRegion.Value.Tell(new GiveMeYourHome.Get("id3"));
-                ExpectMsg<GiveMeYourHome.Home>();
+                await ExpectMsgAsync<GiveMeYourHome.Home>();
             }, Config.First, Config.Second);
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // now third region should be only option as the other two are old versions
                 // but first new allocated shard would anyway go there because of balance, so we
@@ -218,13 +230,13 @@ namespace Akka.Cluster.Sharding.Tests
                 for (int n = 3; n <= 5; n++)
                 {
                     shardRegion.Value.Tell(new GiveMeYourHome.Get($"id{n}"));
-                    ExpectMsg<GiveMeYourHome.Home>().Address.Should().Be(Cluster.Get(Sys).SelfAddress);
+                    (await ExpectMsgAsync<GiveMeYourHome.Home>()).Address.Should().Be(Cluster.Get(Sys).SelfAddress);
                 }
             }, Config.Third);
-            EnterBarrier("rolling-upgrade-in-progress");
+            await EnterBarrierAsync("rolling-upgrade-in-progress");
         }
 
-        private void ClusterSharding_must_complete_a_rolling_upgrade()
+        private async Task ClusterSharding_must_complete_a_rolling_upgrade()
         {
             Join(Config.Fourth, Config.First);
 
@@ -233,71 +245,74 @@ namespace Akka.Cluster.Sharding.Tests
                 var cluster = Cluster.Get(Sys);
                 cluster.Leave(cluster.SelfAddress);
             }, Config.First);
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     UpMembers.Count().Should().Be(3);
-                });
-            }, Config.Second, Config.Third, Config.Fourth);
-            EnterBarrier("first-left");
-
-            RunOn(() =>
-            {
-                AwaitAssert(() =>
-                {
-                    shardRegion.Value.Tell(GetCurrentRegions.Instance);
-                    ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(3);
-
                 }, TimeSpan.FromSeconds(30));
             }, Config.Second, Config.Third, Config.Fourth);
-            EnterBarrier("sharding-handed-off");
+            await EnterBarrierAsync("first-left");
+
+            await RunOnAsync(async () =>
+            {
+                await AwaitAssertAsync(async () =>
+                {
+                    var probe = CreateTestProbe();
+                    shardRegion.Value.Tell(GetCurrentRegions.Instance, probe.Ref);
+                    (await probe.ExpectMsgAsync<CurrentRegions>(TimeSpan.FromSeconds(3))).Regions.Should().HaveCount(3);
+                }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
+            }, Config.Second, Config.Third, Config.Fourth);
+            await EnterBarrierAsync("sharding-handed-off");
 
             // trigger allocation (no verification because we don't know which id was on node 1)
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id1"));
-                    ExpectMsg<GiveMeYourHome.Home>();
+                    var probe = CreateTestProbe();
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id1"), probe.Ref);
+                    await probe.ExpectMsgAsync<GiveMeYourHome.Home>(TimeSpan.FromSeconds(3));
 
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id2"));
-                    ExpectMsg<GiveMeYourHome.Home>();
-                });
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id2"), probe.Ref);
+                    await probe.ExpectMsgAsync<GiveMeYourHome.Home>(TimeSpan.FromSeconds(3));
+                }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
             }, Config.Second, Config.Third, Config.Fourth);
-            EnterBarrier("first-allocated");
+            await EnterBarrierAsync("first-allocated");
 
             RunOn(() =>
             {
                 var cluster = Cluster.Get(Sys);
                 cluster.Leave(cluster.SelfAddress);
             }, Config.Second);
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 // make sure coordinator has noticed there are only two regions
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
-                    shardRegion.Value.Tell(GetCurrentRegions.Instance);
-                    ExpectMsg<CurrentRegions>().Regions.Should().HaveCount(2);
-                }, TimeSpan.FromSeconds(30));
+                    var probe = CreateTestProbe();
+                    shardRegion.Value.Tell(GetCurrentRegions.Instance, probe.Ref);
+                    (await probe.ExpectMsgAsync<CurrentRegions>(TimeSpan.FromSeconds(3))).Regions.Should().HaveCount(2);
+                }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
             }, Config.Third, Config.Fourth);
-            EnterBarrier("second-left");
+            await EnterBarrierAsync("second-left");
 
             // trigger allocation and verify where each was started
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(async () =>
                 {
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id1"));
-                    var address1 = ExpectMsg<GiveMeYourHome.Home>().Address;
+                    var probe = CreateTestProbe();
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id1"), probe.Ref);
+                    var address1 = (await probe.ExpectMsgAsync<GiveMeYourHome.Home>(TimeSpan.FromSeconds(3))).Address;
                     UpMembers.Select(i => i.Address).Should().Contain(address1);
 
-                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id2"));
-                    var address2 = ExpectMsg<GiveMeYourHome.Home>().Address;
+                    shardRegion.Value.Tell(new GiveMeYourHome.Get("id2"), probe.Ref);
+                    var address2 = (await probe.ExpectMsgAsync<GiveMeYourHome.Home>(TimeSpan.FromSeconds(3))).Address;
                     UpMembers.Select(i => i.Address).Should().Contain(address2);
-                });
+                }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
             }, Config.Third, Config.Fourth);
-            EnterBarrier("completo");
+            await EnterBarrierAsync("completo");
         }
     }
 }
