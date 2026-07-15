@@ -51,9 +51,9 @@ namespace Akka.Remote.Artery
     /// on <see cref="IArteryControlMessage"/>, <c>serialization-identifiers</c> entry) requires no edits.
     /// </para>
     /// </summary>
-    [AkkaSerializer(Name = "artery-control", SerializerId = 23)]
+    [AkkaSerializer<IArteryControlMessage>(Name = "artery-control", SerializerId = 23)]
     [AkkaSerializerFormatter(typeof(Address), typeof(AddressFormatter))]
-    internal sealed partial class ArteryControlMessageSerializer : MessagePackSerializer<IArteryControlMessage>
+    internal sealed partial class ArteryControlMessageSerializer : MessagePackSerializer
     {
         /// <summary>
         /// The manifest for <see cref="HandshakeReq"/>.

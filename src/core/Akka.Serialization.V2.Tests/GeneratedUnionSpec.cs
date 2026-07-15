@@ -295,8 +295,8 @@ public interface IOrderEvent
 {
 }
 
-[AkkaSerializer(Name = "union-test", SerializerId = 120303)]
-public sealed partial class UnionTestSerializer : MessagePackSerializer<IUnionTestProtocol>
+[AkkaSerializer<IUnionTestProtocol>(Name = "union-test", SerializerId = 120303)]
+public sealed partial class UnionTestSerializer : MessagePackSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }

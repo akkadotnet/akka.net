@@ -307,8 +307,8 @@ public interface IOrderBenchmarkProtocol
 {
 }
 
-[AkkaSerializer(Name = "order-benchmark", SerializerId = 120001)]
-public sealed partial class OrderBenchmarkSerializer : MessagePackSerializer<IOrderBenchmarkProtocol>
+[AkkaSerializer<IOrderBenchmarkProtocol>(Name = "order-benchmark", SerializerId = 120001)]
+public sealed partial class OrderBenchmarkSerializer : global::Akka.Serialization.V2.MessagePackSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }
@@ -317,8 +317,8 @@ public interface IEnvelopeBenchmarkProtocol
 {
 }
 
-[AkkaSerializer(Name = "envelope-benchmark", SerializerId = 120002)]
-public sealed partial class EnvelopeBenchmarkSerializer : MessagePackSerializer<IEnvelopeBenchmarkProtocol>
+[AkkaSerializer<IEnvelopeBenchmarkProtocol>(Name = "envelope-benchmark", SerializerId = 120002)]
+public sealed partial class EnvelopeBenchmarkSerializer : global::Akka.Serialization.V2.MessagePackSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }

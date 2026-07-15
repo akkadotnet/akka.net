@@ -16,7 +16,7 @@ namespace Akka.Serialization.V2;
 /// <summary>
 /// Base class for source-generated MessagePack serializers scoped to a protocol marker type.
 /// </summary>
-public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serialization.SerializerV2
+public abstract class MessagePackSerializer : global::Akka.Serialization.SerializerV2
 {
     protected MessagePackSerializer(ExtendedActorSystem system) : base(system)
     {

@@ -11,10 +11,18 @@ using System;
 namespace Akka.Serialization.V2;
 
 /// <summary>
-/// Marks a partial serializer module that the source generator should implement.
+/// Marks a partial serializer module that the source generator should implement, bound to the
+/// protocol marker interface <typeparamref name="TProtocol"/>.
 /// </summary>
+/// <remarks>
+/// <typeparamref name="TProtocol"/> selects which <see cref="AkkaSerializableAttribute"/> messages
+/// this serializer dispatches at the top level (those implementing the marker) and becomes the
+/// type this serializer is bound to in Akka's <c>serialization-bindings</c> via the generated
+/// registration. It is purely generator input: the <see cref="MessagePackSerializer"/> base class
+/// is non-generic and carries no protocol knowledge of its own.
+/// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-public sealed class AkkaSerializerAttribute : Attribute
+public sealed class AkkaSerializerAttribute<TProtocol> : Attribute
 {
     /// <summary>
     /// Logical serializer alias used for Akka serializer registration.
@@ -120,41 +128,24 @@ public sealed class AkkaUnionAttribute : Attribute
 
 /// <summary>
 /// Registers a CLOSED generic construction of a generic <see cref="AkkaSerializableAttribute"/>
-/// type (for example <c>typeof(Wrapper&lt;OrderPlaced&gt;)</c>) with a generated serializer.
+/// type (for example <c>[AkkaSerializable&lt;Wrapper&lt;OrderPlaced&gt;&gt;]</c>) with a generated
+/// serializer. Everything on the wire is marked <c>[AkkaSerializable]</c>: ordinary types carry
+/// the non-generic form on their own declaration; a closed generic construction has no
+/// declaration site of its own, so its marking lives here, on the <c>[AkkaSerializer]</c> class.
 /// </summary>
 /// <remarks>
 /// A Roslyn source generator cannot reify open generics: it can only emit concrete serialization
 /// code for closed constructions it can see at compile time (the same rule System.Text.Json's
-/// source generator enforces by rejecting unbound generics in <c>[JsonSerializable]</c>). C# does
-/// not allow attributes on a closed construction directly, so registration lives here, on the
-/// <c>[AkkaSerializer]</c> partial class — analogous to <see cref="AkkaSerializerFormatterAttribute"/>.
-/// Each registered construction behaves exactly like its own top-level <c>[AkkaSerializable]</c>
-/// message: it needs a distinct <see cref="Manifest"/>, participates in ordinary manifest dispatch,
-/// and its generic fields are resolved against the concrete type arguments. The generic type
-/// definition itself must still be annotated <c>[AkkaSerializable]</c> (that is where the
-/// <c>[AkkaField]</c> indices live), but the open definition is never serialized — only its
-/// registered closed constructions are.
+/// source generator enforces by rejecting unbound generics in <c>[JsonSerializable]</c>). Each
+/// registered construction behaves exactly like its own top-level message: it needs a distinct
+/// <see cref="Manifest"/>, participates in ordinary manifest dispatch, and its generic fields are
+/// resolved against the concrete type arguments. The generic type definition itself must still be
+/// annotated <c>[AkkaSerializable]</c> (that is where the <c>[AkkaField]</c> indices live), but
+/// the open definition is never serialized — only its registered closed constructions are.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
-public sealed class AkkaSerializableInstantiationAttribute : Attribute
+public sealed class AkkaSerializableAttribute<TMessage> : Attribute
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AkkaSerializableInstantiationAttribute"/> class.
-    /// </summary>
-    /// <param name="closedType">
-    /// A closed generic construction of a generic type annotated with
-    /// <see cref="AkkaSerializableAttribute"/>.
-    /// </param>
-    public AkkaSerializableInstantiationAttribute(Type closedType)
-    {
-        ClosedType = closedType;
-    }
-
-    /// <summary>
-    /// The closed generic construction being registered.
-    /// </summary>
-    public Type ClosedType { get; }
-
     /// <summary>
     /// Stable serializer-owned manifest for this closed construction. Required when the
     /// construction implements the serializer's protocol interface (top-level dispatch); also the

@@ -20,12 +20,12 @@ namespace Akka.Serialization.V2.Generators;
 [Generator]
 public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 {
-    private const string SerializerAttributeFullName = "Akka.Serialization.V2.AkkaSerializerAttribute";
+    private const string SerializerAttributeFullName = "Akka.Serialization.V2.AkkaSerializerAttribute`1";
     private const string SerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializableAttribute";
     private const string FieldAttributeFullName = "Akka.Serialization.V2.AkkaFieldAttribute";
     private const string EnvelopePayloadAttributeFullName = "Akka.Serialization.V2.AkkaEnvelopePayloadAttribute";
     private const string UnionAttributeFullName = "Akka.Serialization.V2.AkkaUnionAttribute";
-    private const string InstantiationAttributeFullName = "Akka.Serialization.V2.AkkaSerializableInstantiationAttribute";
+    private const string GenericSerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializableAttribute`1";
     private const string FormatterAttributeFullName = "Akka.Serialization.V2.AkkaSerializerFormatterAttribute";
     private const string FormatterInterfaceFullName = "Akka.Serialization.V2.IAkkaMessagePackFormatter`1";
     private const string ExtendedActorSystemFullName = "Akka.Actor.ExtendedActorSystem";
@@ -186,7 +186,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor InvalidInstantiationTarget = new(
         "AKKASG020",
         "Instantiation target is not a closed generic serializable construction",
-        "[AkkaSerializableInstantiation] target '{0}' on serializer '{1}' must be a closed generic construction of a generic type annotated with [AkkaSerializable]",
+        "[AkkaSerializable<T>] registration '{0}' on serializer '{1}' must be a closed generic construction of a generic type annotated with [AkkaSerializable]",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -202,7 +202,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor GenericSerializableRequiresInstantiation = new(
         "AKKASG022",
         "Generic serializable type requires closed instantiations",
-        "Generic [AkkaSerializable] type '{0}' implements protocol '{1}' of serializer '{2}' but has no [AkkaSerializableInstantiation] registrations; a source generator cannot serialize an open generic, so register each closed construction with [AkkaSerializableInstantiation(typeof(...), Manifest = ...)]",
+        "Generic [AkkaSerializable] type '{0}' implements protocol '{1}' of serializer '{2}' but has no [AkkaSerializable<T>] registrations; a source generator cannot serialize an open generic, so register each closed construction with [AkkaSerializable<T>(Manifest = ...)] on the serializer class",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -210,7 +210,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static readonly DiagnosticDescriptor UnregisteredClosedGenericField = new(
         "AKKASG023",
         "Closed generic field type is not registered",
-        "Property '{0}' on type '{1}' uses closed generic [AkkaSerializable] type '{2}', which must be registered on serializer '{3}' with [AkkaSerializableInstantiation]",
+        "Property '{0}' on type '{1}' uses closed generic [AkkaSerializable] type '{2}', which must be registered on serializer '{3}' with [AkkaSerializable<T>]",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -332,7 +332,6 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
         var attribute = context.Attributes[0];
         var compilation = context.SemanticModel.Compilation;
-        var messagePackSerializer = compilation.GetTypeByMetadataName("Akka.Serialization.V2.MessagePackSerializer`1");
         string? name = null;
         var serializerId = 0;
 
@@ -344,20 +343,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 serializerId = id;
         }
 
-        var baseType = symbol.BaseType;
-        string protocolTypeFullName = string.Empty;
-        INamedTypeSymbol? protocolType = null;
-        while (baseType != null)
-        {
-            if (messagePackSerializer != null && SymbolEqualityComparer.Default.Equals(baseType.OriginalDefinition, messagePackSerializer))
-            {
-                protocolType = baseType.TypeArguments[0] as INamedTypeSymbol;
-                protocolTypeFullName = baseType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                break;
-            }
-
-            baseType = baseType.BaseType;
-        }
+        var protocolType = attribute.AttributeClass?.TypeArguments.FirstOrDefault() as INamedTypeSymbol;
+        var protocolTypeFullName = protocolType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? string.Empty;
 
         var formatterAttributeType = compilation.GetTypeByMetadataName(FormatterAttributeFullName);
         var formatterInterfaceType = compilation.GetTypeByMetadataName(FormatterInterfaceFullName);
@@ -379,7 +366,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Extracts <c>[AkkaSerializableInstantiation]</c> registrations from the serializer class. A
+    /// Extracts <c>[AkkaSerializable&lt;T&gt;]</c> registrations from the serializer class. A
     /// valid target is a CLOSED generic construction (no unbound generics, no type parameters
     /// anywhere in its arguments) whose definition is annotated <c>[AkkaSerializable]</c>; its
     /// <see cref="MessageInfo"/> is built from the constructed symbol, so all field types arrive
@@ -387,12 +374,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// </summary>
     private static ImmutableArray<InstantiationInfo> ExtractInstantiations(INamedTypeSymbol symbol, Compilation compilation)
     {
-        var attributeType = compilation.GetTypeByMetadataName(InstantiationAttributeFullName);
-        if (attributeType == null)
+        var genericSerializableAttribute = compilation.GetTypeByMetadataName(GenericSerializableAttributeFullName);
+        if (genericSerializableAttribute == null)
             return ImmutableArray<InstantiationInfo>.Empty;
 
         var attributes = symbol.GetAttributes()
-            .Where(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, attributeType))
+            .Where(attr => attr.AttributeClass is { IsGenericType: true } ac && SymbolEqualityComparer.Default.Equals(ac.OriginalDefinition, genericSerializableAttribute))
             .ToImmutableArray();
         if (attributes.IsEmpty)
             return ImmutableArray<InstantiationInfo>.Empty;
@@ -401,9 +388,6 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var builder = ImmutableArray.CreateBuilder<InstantiationInfo>(attributes.Length);
         foreach (var attribute in attributes)
         {
-            if (attribute.ConstructorArguments.Length != 1)
-                continue;
-
             var manifest = string.Empty;
             foreach (var argument in attribute.NamedArguments)
             {
@@ -411,7 +395,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     manifest = value;
             }
 
-            var target = attribute.ConstructorArguments[0].Value as INamedTypeSymbol;
+            var target = attribute.AttributeClass!.TypeArguments[0] as INamedTypeSymbol;
             var serializableAttribute = target?.OriginalDefinition.GetAttributes()
                 .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
             var isValidTarget = target is { IsGenericType: true, IsUnboundGenericType: false }
@@ -420,9 +404,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
             if (!isValidTarget)
             {
-                var displayName = attribute.ConstructorArguments[0].Value is ITypeSymbol typeSymbol
-                    ? typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-                    : "<null>";
+                var displayName = attribute.AttributeClass!.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                 builder.Add(new InstantiationInfo(displayName, message: null));
                 continue;
             }
@@ -673,7 +655,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         // A generic [AkkaSerializable] DEFINITION is never a message itself -- a source generator
         // cannot reify an open generic. Only its registered closed constructions serialize
-        // ([AkkaSerializableInstantiation], AKKASG020/022). Extract it as a flagged placeholder
+        // ([AkkaSerializable<T>], AKKASG020/022). Extract it as a flagged placeholder
         // carrying its protocols (for the AKKASG022 check) but no fields: a T-typed field would map
         // as Unsupported and produce a misleading AKKASG003 against the definition.
         if (symbol.IsGenericType)
@@ -977,7 +959,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             // An Object mapping that resolves to no known message would generate a call to a
             // nonexistent Write/Read/SizeOf method. The only way to hit this from within one
             // compilation is a closed generic [AkkaSerializable] field type whose construction was
-            // never registered with [AkkaSerializableInstantiation] (non-generic [AkkaSerializable]
+            // never registered with [AkkaSerializable<T>] (non-generic [AkkaSerializable]
             // types are always extracted). AKKASG023 names the fix.
             foreach (var field in message.Fields)
             {
@@ -2279,7 +2261,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         // OriginalDefinition covers both shapes: for a non-generic type it is the type itself; for a
         // closed generic construction (Wrapper<Foo>) the [AkkaSerializable] attribute lives on the
         // definition. The mapping name is arity-aware (GetMessageDictionaryKey) so a closed
-        // construction resolves to its registered [AkkaSerializableInstantiation] message -- or, if
+        // construction resolves to its registered [AkkaSerializable<T>] message -- or, if
         // unregistered, fails AKKASG023 instead of silently dropping its type arguments.
         if (type is INamedTypeSymbol namedType && namedType.OriginalDefinition.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
             return new TypeMapping(FieldKind.Object, GetMessageDictionaryKey(namedType), namedType.IsValueType);
@@ -2769,7 +2751,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// A single <c>[AkkaSerializableInstantiation]</c> registration. <see cref="Message"/> is null
+    /// A single <c>[AkkaSerializable&lt;T&gt;]</c> registration. <see cref="Message"/> is null
     /// when the target was invalid (not a type, non-generic, unbound, or its definition lacks
     /// <c>[AkkaSerializable]</c>) so AKKASG020 fires instead of the registration silently vanishing.
     /// </summary>

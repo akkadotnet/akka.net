@@ -250,9 +250,9 @@ public sealed record GapOptionalHandshakeMessage(
     public const string ManifestName = "gap-optional-handshake-v1";
 }
 
-[AkkaSerializer(Name = "gap-fix", SerializerId = 120801)]
+[AkkaSerializer<IGapFixProtocol>(Name = "gap-fix", SerializerId = 120801)]
 [AkkaSerializerFormatter(typeof(Address), typeof(AddressFormatter))]
-public sealed partial class GapFixSerializer : MessagePackSerializer<IGapFixProtocol>
+public sealed partial class GapFixSerializer : MessagePackSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }
