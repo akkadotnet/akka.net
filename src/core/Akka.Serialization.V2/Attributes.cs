@@ -109,6 +109,51 @@ public sealed class AkkaUnionAttribute : Attribute
 }
 
 /// <summary>
+/// Registers a CLOSED generic construction of a generic <see cref="AkkaSerializableAttribute"/>
+/// type (for example <c>typeof(Wrapper&lt;OrderPlaced&gt;)</c>) with a generated serializer.
+/// </summary>
+/// <remarks>
+/// A Roslyn source generator cannot reify open generics: it can only emit concrete serialization
+/// code for closed constructions it can see at compile time (the same rule System.Text.Json's
+/// source generator enforces by rejecting unbound generics in <c>[JsonSerializable]</c>). C# does
+/// not allow attributes on a closed construction directly, so registration lives here, on the
+/// <c>[AkkaSerializer]</c> partial class — analogous to <see cref="AkkaSerializerFormatterAttribute"/>.
+/// Each registered construction behaves exactly like its own top-level <c>[AkkaSerializable]</c>
+/// message: it needs a distinct <see cref="Manifest"/>, participates in ordinary manifest dispatch,
+/// and its generic fields are resolved against the concrete type arguments. The generic type
+/// definition itself must still be annotated <c>[AkkaSerializable]</c> (that is where the
+/// <c>[AkkaField]</c> indices live), but the open definition is never serialized — only its
+/// registered closed constructions are.
+/// </remarks>
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
+public sealed class AkkaSerializableInstantiationAttribute : Attribute
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AkkaSerializableInstantiationAttribute"/> class.
+    /// </summary>
+    /// <param name="closedType">
+    /// A closed generic construction of a generic type annotated with
+    /// <see cref="AkkaSerializableAttribute"/>.
+    /// </param>
+    public AkkaSerializableInstantiationAttribute(Type closedType)
+    {
+        ClosedType = closedType;
+    }
+
+    /// <summary>
+    /// The closed generic construction being registered.
+    /// </summary>
+    public Type ClosedType { get; }
+
+    /// <summary>
+    /// Stable serializer-owned manifest for this closed construction. Required when the
+    /// construction implements the serializer's protocol interface (top-level dispatch); also the
+    /// union discriminator when the construction is an <see cref="AkkaUnionAttribute"/> member.
+    /// </summary>
+    public string? Manifest { get; init; }
+}
+
+/// <summary>
 /// Registers a hand-written <see cref="IAkkaMessagePackFormatter{T}"/> for a foreign type that
 /// cannot be annotated with <see cref="AkkaSerializableAttribute"/> (for example, a core Akka type
 /// that cannot reference <c>Akka.Serialization.V2</c>).

@@ -1006,6 +1006,247 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
+    [Fact(DisplayName = "Generator should report AKKASG015 when a union member is not serializable")]
+    public void Generator_should_report_AKKASG015_when_union_member_not_serializable()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            public interface IEvent
+            {
+            }
+
+            public sealed record NotSerializable(string Value) : IEvent;
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120701)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1), AkkaUnion(typeof(NotSerializable))] IEvent Event) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG015" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG016 when a union member has no manifest")]
+    public void Generator_should_report_AKKASG016_when_union_member_has_no_manifest()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            public interface IEvent
+            {
+            }
+
+            [AkkaSerializable]
+            public sealed record ManifestlessMember([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120702)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1), AkkaUnion(typeof(ManifestlessMember))] IEvent Event) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG016" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG018 when a union member is not assignable to the field type")]
+    public void Generator_should_report_AKKASG018_when_union_member_not_assignable()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            public interface IEvent
+            {
+            }
+
+            [AkkaSerializable(Manifest = "unrelated-v1")]
+            public sealed record Unrelated([property: AkkaField(1)] string Value);
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120703)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1), AkkaUnion(typeof(Unrelated))] IEvent Event) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG018" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG020 when an instantiation target is an unbound generic")]
+    public void Generator_should_report_AKKASG020_when_instantiation_target_is_unbound()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializable]
+            public sealed record Wrapper<T>(
+                [property: AkkaField(1)] string Id,
+                [property: AkkaField(2)] T Payload) : IProtocol;
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120704)]
+            [AkkaSerializableInstantiation(typeof(Wrapper<>), Manifest = "wrap-v1")]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG020" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG020 when an instantiation target is not generic")]
+    public void Generator_should_report_AKKASG020_when_instantiation_target_is_not_generic()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializable(Manifest = "plain-v1")]
+            public sealed record Plain([property: AkkaField(1)] string Value) : IProtocol;
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120705)]
+            [AkkaSerializableInstantiation(typeof(Plain), Manifest = "plain-again-v1")]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG020" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG022 when a generic protocol message has no instantiations")]
+    public void Generator_should_report_AKKASG022_when_generic_message_has_no_instantiations()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializable]
+            public sealed record Wrapper<T>(
+                [property: AkkaField(1)] string Id,
+                [property: AkkaField(2)] T Payload) : IProtocol;
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120706)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG022" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG023 when a closed generic field type is not registered")]
+    public void Generator_should_report_AKKASG023_when_closed_generic_field_not_registered()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializable]
+            public sealed record Wrapper<T>(
+                [property: AkkaField(1)] string Id,
+                [property: AkkaField(2)] T Payload);
+
+            [AkkaSerializable]
+            public sealed record Payload([property: AkkaField(1)] string Value);
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120707)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1)] Wrapper<Payload> Inner) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG023" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
