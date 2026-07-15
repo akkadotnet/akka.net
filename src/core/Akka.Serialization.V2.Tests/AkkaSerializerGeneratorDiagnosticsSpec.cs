@@ -1247,6 +1247,56 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG023" && diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
+    [Fact(DisplayName = "Generator should report advisory AKKASG025 when a union member is not sealed")]
+    public void Generator_should_report_AKKASG025_when_union_member_not_sealed()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaUnion(typeof(OpenMember), typeof(SealedMember))]
+            public interface IEvent
+            {
+            }
+
+            [AkkaSerializable(Manifest = "open-v1")]
+            public record OpenMember([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializable(Manifest = "sealed-v1")]
+            public sealed record SealedMember([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializer(Name = "sample", SerializerId = 120708)]
+            public sealed partial class SampleSerializer : MessagePackSerializer<IProtocol>
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1)] IEvent Event) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // Advisory only: fires for the unsealed member, stays Info severity, and does NOT fail the
+        // build -- the union still generates and no errors are produced.
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG025" &&
+            diagnostic.Severity == DiagnosticSeverity.Info &&
+            diagnostic.GetMessage(null).Contains("OpenMember", StringComparison.Ordinal));
+        diagnostics.Should().NotContain(diagnostic =>
+            diagnostic.Id == "AKKASG025" &&
+            diagnostic.GetMessage(null).Contains("SealedMember", StringComparison.Ordinal));
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);

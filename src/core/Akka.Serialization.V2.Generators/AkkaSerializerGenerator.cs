@@ -215,6 +215,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor UnionMemberNotSealed = new(
+        "AKKASG025",
+        "Union member type is not sealed",
+        "Union member '{0}' on property '{1}' of type '{2}' is not sealed; union write dispatch matches the exact runtime type, so an undeclared subtype of '{0}' fails serialization -- consider sealing it",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
     private static readonly DiagnosticDescriptor DuplicateGeneratedName = new(
         "AKKASG024",
         "Generated member name collision",
@@ -788,7 +796,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 var displayName = argument.Value is ITypeSymbol typeSymbol
                     ? typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
                     : "<null>";
-                builder.Add(new UnionMemberInfo(displayName, isValueType: false, isAssignable: false, isSupported: false));
+                builder.Add(new UnionMemberInfo(displayName, isValueType: false, isAssignable: false, isSupported: false, isSealed: false));
                 continue;
             }
 
@@ -796,7 +804,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 GetMessageDictionaryKey(memberType),
                 memberType.IsValueType,
                 compilation.HasImplicitConversion(memberType, member.Type),
-                isSupported: true));
+                isSupported: true,
+                isSealed: memberType.IsSealed || memberType.IsValueType));
         }
 
         return builder.ToImmutable();
@@ -1035,6 +1044,11 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 isValid = false;
             }
 
+            // Advisory only (Info): an unsealed member works, but an undeclared subtype of it fails
+            // at write time under exact-runtime-type dispatch -- worth surfacing, not worth failing.
+            if (!member.IsSealed)
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotSealed, Location.None, member.TypeFullName, field.Name, message.FullyQualifiedName));
+
             if (string.IsNullOrWhiteSpace(memberMessage.Manifest))
             {
                 context.ReportDiagnostic(Diagnostic.Create(UnionMemberMissingManifest, Location.None, member.TypeFullName, field.Name, message.FullyQualifiedName));
@@ -1101,13 +1115,15 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         GenerateSizeHint(sb, topLevelMessages);
         GenerateCountingBufferWriter(sb);
 
+        var unionHelpers = PlanUnionHelpers(reachableMessages);
         foreach (var message in reachableMessages)
         {
-            GenerateSizeMessage(sb, message);
-            GenerateWriteMessage(sb, message);
-            GenerateReadMessage(sb, message);
-            GenerateUnionHelpers(sb, message, messagesByType);
+            GenerateSizeMessage(sb, message, unionHelpers);
+            GenerateWriteMessage(sb, message, unionHelpers);
+            GenerateReadMessage(sb, message, unionHelpers);
         }
+
+        GenerateUnionHelpers(sb, unionHelpers, messagesByType);
 
         sb.AppendLine("}");
         return sb.ToString();
@@ -1263,7 +1279,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
-    private static void GenerateSizeMessage(StringBuilder sb, MessageInfo message)
+    private static void GenerateSizeMessage(StringBuilder sb, MessageInfo message, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers)
     {
         sb.Append("    private int SizeOf").Append(GetMessageMethodName(message))
             .Append('(').Append(message.FullyQualifiedName).AppendLine(" message)");
@@ -1273,14 +1289,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.Append("            var size = SizeOfMapHeader(").Append(message.Fields.Length).AppendLine(");");
         var alloc = new NameAlloc();
         foreach (var field in message.Fields)
-            GenerateSizeField(sb, message, field, alloc);
+            GenerateSizeField(sb, unionHelpers, field, alloc);
         sb.AppendLine("            return size;");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine();
     }
 
-    private static void GenerateSizeField(StringBuilder sb, MessageInfo message, FieldInfo field, NameAlloc alloc)
+    private static void GenerateSizeField(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, NameAlloc alloc)
     {
         var value = "message." + field.Name;
         var localName = ToCamelCase(field.Name) + "Size";
@@ -1300,7 +1316,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         }
 
         sb.Append("            var ").Append(localName).Append(" = ");
-        GenerateSizeExpression(sb, message, field, value);
+        GenerateSizeExpression(sb, unionHelpers, field, value);
         sb.AppendLine(";");
         sb.Append("            if (").Append(localName).AppendLine(" < 0)");
         sb.AppendLine("                return global::Akka.Serialization.SerializerV2.UnknownSize;");
@@ -1331,7 +1347,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         return true;
     }
 
-    private static void GenerateSizeExpression(StringBuilder sb, MessageInfo message, FieldInfo field, string value)
+    private static void GenerateSizeExpression(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, string value)
     {
         switch (field.Mapping.Kind)
         {
@@ -1339,10 +1355,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 sb.Append("SizeOfEnvelopePayload(").Append(value).Append(')');
                 break;
             case FieldKind.Union when field.IsNullable:
-                sb.Append(value).Append(" is null ? SizeOfNil() : SizeOfUnion_").Append(GetMessageMethodName(message)).Append('_').Append(field.Name).Append('(').Append(value).Append(')');
+                sb.Append(value).Append(" is null ? SizeOfNil() : SizeOf").Append(unionHelpers[BuildUnionSignature(field)].HelperName).Append('(').Append(value).Append(')');
                 break;
             case FieldKind.Union:
-                sb.Append("SizeOfUnion_").Append(GetMessageMethodName(message)).Append('_').Append(field.Name).Append('(').Append(value).Append(')');
+                sb.Append("SizeOf").Append(unionHelpers[BuildUnionSignature(field)].HelperName).Append('(').Append(value).Append(')');
                 break;
             case FieldKind.Object when IsNullableValueField(field):
                 sb.Append(value).Append(" is null ? SizeOfNil() : SizeOf").Append(GetObjectMethodName(field.Mapping)).Append('(').Append(value).Append(".Value)");
@@ -1388,7 +1404,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         };
     }
 
-    private static void GenerateWriteMessage(StringBuilder sb, MessageInfo message)
+    private static void GenerateWriteMessage(StringBuilder sb, MessageInfo message, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers)
     {
         sb.Append("    private void Write").Append(GetMessageMethodName(message))
             .Append("(ref global::MessagePack.MessagePackWriter writer, ").Append(message.FullyQualifiedName).AppendLine(" message)");
@@ -1396,12 +1412,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.Append("        writer.WriteMapHeader(").Append(message.Fields.Length).AppendLine(");");
         var alloc = new NameAlloc();
         foreach (var field in message.Fields)
-            GenerateWriteField(sb, message, field, alloc);
+            GenerateWriteField(sb, unionHelpers, field, alloc);
         sb.AppendLine("    }");
         sb.AppendLine();
     }
 
-    private static void GenerateReadMessage(StringBuilder sb, MessageInfo message)
+    private static void GenerateReadMessage(StringBuilder sb, MessageInfo message, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers)
     {
         sb.Append("    private ").Append(message.FullyQualifiedName).Append(" Read").Append(GetMessageMethodName(message))
             .AppendLine("(ref global::MessagePack.MessagePackReader reader)");
@@ -1424,7 +1440,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         foreach (var field in message.Fields)
         {
             sb.Append("                case ").Append(field.Index).AppendLine(":");
-            GenerateReadField(sb, message, field, alloc);
+            GenerateReadField(sb, unionHelpers, field, alloc);
             if (IsRequired(field))
                 sb.Append("                    ").Append(GetHasLocalName(field)).AppendLine(" = true;");
             sb.AppendLine("                    break;");
@@ -1473,24 +1489,66 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     // UnknownSize for an undeclared type instead of throwing; the write path throws.
     // ---------------------------------------------------------------------------------------------
 
-    private static string GetUnionHelperName(MessageInfo message, FieldInfo field)
+    /// <summary>
+    /// The dedup identity of a union dispatch helper: the field's static type plus the ordered
+    /// member set. Two fields (in the same or different messages) with the same static type and
+    /// member set -- the common case under type-level [AkkaUnion] declarations -- share one
+    /// generated Write/Read/SizeOf helper trio instead of emitting duplicates per field.
+    /// </summary>
+    private static string BuildUnionSignature(FieldInfo field)
     {
-        return "Union_" + GetMessageMethodName(message) + "_" + field.Name;
+        return field.TypeFullName + "|" + string.Join("|", field.UnionMembers.Select(member => member.TypeFullName));
     }
 
-    private static void GenerateUnionHelpers(StringBuilder sb, MessageInfo message, ImmutableDictionary<string, MessageInfo> messagesByType)
+    /// <summary>
+    /// Plans one helper per distinct union signature across all reachable messages. Helpers are
+    /// named after the union's folded static type ("Union_IOrderEvent"); when several distinct
+    /// member sets share a static type (field-level overrides), later ones -- ordered by signature
+    /// for determinism -- get a numeric suffix.
+    /// </summary>
+    private static ImmutableDictionary<string, (string HelperName, FieldInfo Field)> PlanUnionHelpers(ImmutableArray<MessageInfo> reachableMessages)
     {
-        foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Union))
+        var representatives = new Dictionary<string, FieldInfo>(StringComparer.Ordinal);
+        foreach (var message in reachableMessages)
         {
-            var helperName = GetUnionHelperName(message, field);
+            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Union))
+            {
+                var signature = BuildUnionSignature(field);
+                if (!representatives.ContainsKey(signature))
+                    representatives[signature] = field;
+            }
+        }
+
+        var builder = ImmutableDictionary.CreateBuilder<string, (string, FieldInfo)>(StringComparer.Ordinal);
+        foreach (var group in representatives.GroupBy(pair => FoldTypeName(pair.Value.TypeFullName), StringComparer.Ordinal))
+        {
+            var ordered = group.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToList();
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                var helperName = i == 0 ? "Union_" + group.Key : "Union_" + group.Key + "_" + (i + 1);
+                builder[ordered[i].Key] = (helperName, ordered[i].Value);
+            }
+        }
+
+        return builder.ToImmutable();
+    }
+
+    private static void GenerateUnionHelpers(
+        StringBuilder sb,
+        ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers,
+        ImmutableDictionary<string, MessageInfo> messagesByType)
+    {
+        foreach (var plan in unionHelpers.Values.OrderBy(plan => plan.HelperName, StringComparer.Ordinal))
+        {
+            var field = plan.Field;
             var members = field.UnionMembers
                 .Where(member => member.IsSupported && messagesByType.ContainsKey(member.TypeFullName))
                 .Select(member => (Member: member, Message: messagesByType[member.TypeFullName]))
                 .ToImmutableArray();
 
-            GenerateUnionWrite(sb, field, helperName, members);
-            GenerateUnionRead(sb, field, helperName, members);
-            GenerateUnionSize(sb, field, helperName, members);
+            GenerateUnionWrite(sb, field, plan.HelperName, members);
+            GenerateUnionRead(sb, field, plan.HelperName, members);
+            GenerateUnionSize(sb, field, plan.HelperName, members);
         }
     }
 
@@ -1514,8 +1572,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.AppendLine();
         }
 
-        sb.Append("        throw new global::System.Runtime.Serialization.SerializationException($\"Type [{runtimeType}] is not a declared union member for field [")
-            .Append(Escape(field.Name)).AppendLine("].\");");
+        sb.Append("        throw new global::System.Runtime.Serialization.SerializationException($\"Type [{runtimeType}] is not a declared union member for union [")
+            .Append(Escape(field.TypeFullName)).AppendLine("].\");");
         sb.AppendLine("    }");
         sb.AppendLine();
     }
@@ -1548,11 +1606,11 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         }
 
         sb.AppendLine("                        case null:");
-        sb.Append("                            throw new global::System.Runtime.Serialization.SerializationException(\"Union manifest must precede the payload for field [")
-            .Append(Escape(field.Name)).AppendLine("].\");");
+        sb.Append("                            throw new global::System.Runtime.Serialization.SerializationException(\"Union manifest must precede the payload for union [")
+            .Append(Escape(field.TypeFullName)).AppendLine("].\");");
         sb.AppendLine("                        default:");
-        sb.Append("                            throw new global::System.Runtime.Serialization.SerializationException($\"Unknown union manifest [{manifest}] for field [")
-            .Append(Escape(field.Name)).AppendLine("].\");");
+        sb.Append("                            throw new global::System.Runtime.Serialization.SerializationException($\"Unknown union manifest [{manifest}] for union [")
+            .Append(Escape(field.TypeFullName)).AppendLine("].\");");
         sb.AppendLine("                    }");
         sb.AppendLine();
         sb.AppendLine("                    hasPayload = true;");
@@ -1564,8 +1622,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine("        }");
         sb.AppendLine();
         sb.AppendLine("        if (!hasPayload || result is null)");
-        sb.Append("            throw new global::System.Runtime.Serialization.SerializationException(\"Missing union payload for field [")
-            .Append(Escape(field.Name)).AppendLine("].\");");
+        sb.Append("            throw new global::System.Runtime.Serialization.SerializationException(\"Missing union payload for union [")
+            .Append(Escape(field.TypeFullName)).AppendLine("].\");");
         sb.AppendLine("        return result;");
         sb.AppendLine("    }");
         sb.AppendLine();
@@ -1595,7 +1653,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
-    private static void GenerateWriteField(StringBuilder sb, MessageInfo message, FieldInfo field, NameAlloc alloc)
+    private static void GenerateWriteField(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, NameAlloc alloc)
     {
         var value = "message." + field.Name;
         sb.Append("        writer.Write(").Append(field.Index).AppendLine(");");
@@ -1604,14 +1662,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.Append("        if (").Append(value).AppendLine(" is null)");
             sb.AppendLine("            writer.WriteNil();");
             sb.AppendLine("        else");
-            GenerateWriteFieldValue(sb, message, field, value + ".Value", "            ", alloc);
+            GenerateWriteFieldValue(sb, unionHelpers, field, value + ".Value", "            ", alloc);
             return;
         }
 
-        GenerateWriteFieldValue(sb, message, field, value, "        ", alloc);
+        GenerateWriteFieldValue(sb, unionHelpers, field, value, "        ", alloc);
     }
 
-    private static void GenerateWriteFieldValue(StringBuilder sb, MessageInfo message, FieldInfo field, string value, string indent, NameAlloc alloc)
+    private static void GenerateWriteFieldValue(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, string value, string indent, NameAlloc alloc)
     {
         if (IsCollectionKind(field.Mapping.Kind))
         {
@@ -1699,17 +1757,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
                     sb.Append(indent).AppendLine("    writer.WriteNil();");
                     sb.Append(indent).AppendLine("else");
-                    sb.Append(indent).Append("    Write").Append(GetUnionHelperName(message, field)).Append("(ref writer, ").Append(value).AppendLine(");");
+                    sb.Append(indent).Append("    Write").Append(unionHelpers[BuildUnionSignature(field)].HelperName).Append("(ref writer, ").Append(value).AppendLine(");");
                 }
                 else
                 {
-                    sb.Append(indent).Append("Write").Append(GetUnionHelperName(message, field)).Append("(ref writer, ").Append(value).AppendLine(");");
+                    sb.Append(indent).Append("Write").Append(unionHelpers[BuildUnionSignature(field)].HelperName).Append("(ref writer, ").Append(value).AppendLine(");");
                 }
                 break;
         }
     }
 
-    private static void GenerateReadField(StringBuilder sb, MessageInfo message, FieldInfo field, NameAlloc alloc)
+    private static void GenerateReadField(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, NameAlloc alloc)
     {
         var target = ToCamelCase(field.Name);
 
@@ -1719,7 +1777,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         // non-nullable collection slot exactly as it does for any other non-nullable reference field.
         if (IsCollectionKind(field.Mapping.Kind))
         {
-            GenerateReadFieldValue(sb, message, field, target, "                    ", alloc);
+            GenerateReadFieldValue(sb, unionHelpers, field, target, "                    ", alloc);
             return;
         }
 
@@ -1728,7 +1786,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.AppendLine("                    if (reader.TryReadNil())");
             sb.Append("                        ").Append(target).AppendLine(" = null;");
             sb.AppendLine("                    else");
-            GenerateReadFieldValue(sb, message, field, target, "                        ", alloc);
+            GenerateReadFieldValue(sb, unionHelpers, field, target, "                        ", alloc);
             return;
         }
 
@@ -1742,14 +1800,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.AppendLine("                    if (reader.TryReadNil())");
             sb.Append("                        ").Append(target).AppendLine(" = null;");
             sb.AppendLine("                    else");
-            GenerateReadFieldValue(sb, message, field, target, "                        ", alloc);
+            GenerateReadFieldValue(sb, unionHelpers, field, target, "                        ", alloc);
             return;
         }
 
-        GenerateReadFieldValue(sb, message, field, target, "                    ", alloc);
+        GenerateReadFieldValue(sb, unionHelpers, field, target, "                    ", alloc);
     }
 
-    private static void GenerateReadFieldValue(StringBuilder sb, MessageInfo message, FieldInfo field, string target, string indent, NameAlloc alloc)
+    private static void GenerateReadFieldValue(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, string target, string indent, NameAlloc alloc)
     {
         if (IsCollectionKind(field.Mapping.Kind))
         {
@@ -1806,7 +1864,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 sb.Append(indent).Append(target).Append(" = ").Append(GetFormatterFieldName(field.Formatter!)).AppendLine(".Read(ref reader);");
                 break;
             case FieldKind.Union:
-                sb.Append(indent).Append(target).Append(" = Read").Append(GetUnionHelperName(message, field)).AppendLine("(ref reader);");
+                sb.Append(indent).Append(target).Append(" = Read").Append(unionHelpers[BuildUnionSignature(field)].HelperName).AppendLine("(ref reader);");
                 break;
         }
     }
@@ -2455,7 +2513,71 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static string GetObjectMethodName(TypeMapping mapping)
     {
-        return SanitizeTypeName(mapping.TypeFullName);
+        return FoldTypeName(mapping.TypeFullName);
+    }
+
+    /// <summary>
+    /// Folds a fully-qualified type name into a compact generated-member identifier the way
+    /// System.Text.Json's <c>GetTypeInfoPropertyName</c> does: namespaces are dropped, each type
+    /// identifier keeps only its simple name, and generic type arguments are concatenated --
+    /// <c>global::Ns.Wrapper&lt;global::Ns.OrderRequest&gt;</c> becomes <c>WrapperOrderRequest</c>.
+    /// These names appear in stack traces (WriteWrapperOrderRequest), so compactness matters.
+    /// Flattening is collision-prone by construction (same simple name in two namespaces, marker
+    /// ambiguity); AKKASG024 detects collisions among generated members and fails compilation
+    /// instead of silently emitting duplicates -- the same trade System.Text.Json makes with its
+    /// DuplicateTypeName diagnostic.
+    /// </summary>
+    private static string FoldTypeName(string typeFullName)
+    {
+        var sb = new StringBuilder(typeFullName.Length);
+        var segment = new StringBuilder();
+
+        void FlushSegment()
+        {
+            if (segment.Length == 0)
+                return;
+
+            sb.Append(char.ToUpperInvariant(segment[0]));
+            if (segment.Length > 1)
+                sb.Append(segment.ToString(1, segment.Length - 1));
+            segment.Clear();
+        }
+
+        var source = typeFullName.Replace("global::", string.Empty);
+        foreach (var ch in source)
+        {
+            switch (ch)
+            {
+                case '.':
+                case '+':
+                    // Keep only the last identifier of a dotted/nested chain: the segment
+                    // accumulated so far was a namespace or containing type.
+                    segment.Clear();
+                    break;
+                case '<':
+                case '>':
+                case ',':
+                case ' ':
+                    FlushSegment();
+                    break;
+                case '[':
+                    FlushSegment();
+                    break;
+                case ']':
+                    sb.Append("Array");
+                    break;
+                case '?':
+                    FlushSegment();
+                    sb.Append("Nullable");
+                    break;
+                default:
+                    segment.Append(ch);
+                    break;
+            }
+        }
+
+        FlushSegment();
+        return sb.ToString();
     }
 
     private static string GetFormatterFieldName(FormatterInfo formatter)
@@ -2465,32 +2587,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static string SanitizeTypeName(string typeFullName)
     {
-        // Escape literal underscores FIRST so sanitization is collision-free:
-        // 'My.Ns.Foo_Bar' -> 'My_Ns_Foo__Bar' and 'My.Ns.Foo.Bar' -> 'My_Ns_Foo_Bar' stay
-        // distinct instead of both collapsing to 'My_Ns_Foo_Bar' (duplicate generated members).
-        //
-        // Closed generic constructions fold their type arguments into the member name (mirroring
-        // System.Text.Json's GetTypeInfoPropertyName recursion): 'Wrapper<Foo>' -> 'Wrapper_Of_Foo_End_'.
-        // The markers contain single underscores, which cannot collide with escaped literal
-        // underscores (always doubled). Residual ambiguity across marker sequences is caught by the
-        // AKKASG024 generated-name collision check rather than made impossible here.
+        // Used only for formatter field names, whose target types are validated non-generic
+        // (AKKASG011) -- generated METHOD names go through FoldTypeName instead. Escape literal
+        // underscores FIRST so sanitization is collision-free: 'My.Ns.Foo_Bar' -> 'My_Ns_Foo__Bar'
+        // and 'My.Ns.Foo.Bar' -> 'My_Ns_Foo_Bar' stay distinct instead of both collapsing to
+        // 'My_Ns_Foo_Bar' (duplicate generated members).
         return typeFullName
             .Replace("global::", string.Empty)
-            .Replace(" ", string.Empty)
             .Replace("_", "__")
             .Replace(".", "_")
-            .Replace("+", "_")
-            .Replace("<", "_Of_")
-            .Replace(">", "_End_")
-            .Replace(",", "_And_")
-            .Replace("[", "_Arr_")
-            .Replace("]", "_RArr_")
-            .Replace("?", "_Opt_");
+            .Replace("+", "_");
     }
 
     private static string GetMessageMethodName(MessageInfo message)
     {
-        return SanitizeTypeName(message.FullyQualifiedName);
+        return FoldTypeName(message.FullyQualifiedName);
     }
 
     private static string GetFullyQualifiedTypeName(INamedTypeSymbol symbol)
@@ -2841,12 +2952,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// </summary>
     private sealed class UnionMemberInfo
     {
-        public UnionMemberInfo(string typeFullName, bool isValueType, bool isAssignable, bool isSupported)
+        public UnionMemberInfo(string typeFullName, bool isValueType, bool isAssignable, bool isSupported, bool isSealed)
         {
             TypeFullName = typeFullName;
             IsValueType = isValueType;
             IsAssignable = isAssignable;
             IsSupported = isSupported;
+            IsSealed = isSealed;
         }
 
         /// <summary>Message-dictionary key for the member type (arity-aware for generics).</summary>
@@ -2859,5 +2971,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         /// <summary>False when the attribute argument was null, not a type, or an unbound generic.</summary>
         public bool IsSupported { get; }
+
+        /// <summary>Whether undeclared subtypes are impossible (sealed class, struct). Advisory AKKASG025 fires otherwise.</summary>
+        public bool IsSealed { get; }
     }
 }
