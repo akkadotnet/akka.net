@@ -183,25 +183,25 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor InvalidInstantiationTarget = new(
+    private static readonly DiagnosticDescriptor InvalidClosedGenericRegistration = new(
         "AKKASG020",
-        "Instantiation target is not a closed generic serializable construction",
+        "Closed generic registration is invalid",
         "[AkkaSerializable<T>] registration '{0}' on serializer '{1}' must be a closed generic construction of a generic type annotated with [AkkaSerializable]",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor DuplicateInstantiation = new(
+    private static readonly DiagnosticDescriptor DuplicateClosedGenericRegistration = new(
         "AKKASG021",
-        "Duplicate instantiation registration",
+        "Duplicate closed generic registration",
         "Serializer '{0}' registers the closed construction '{1}' more than once",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor GenericSerializableRequiresInstantiation = new(
+    private static readonly DiagnosticDescriptor GenericSerializableRequiresRegistration = new(
         "AKKASG022",
-        "Generic serializable type requires closed instantiations",
+        "Generic serializable type requires closed generic registrations",
         "Generic [AkkaSerializable] type '{0}' implements protocol '{1}' of serializer '{2}' but has no [AkkaSerializable<T>] registrations; a source generator cannot serialize an open generic, so register each closed construction with [AkkaSerializable<T>(Manifest = ...)] on the serializer class",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
@@ -287,7 +287,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 if (!ValidateFormatters(ctx, serializer))
                     continue;
 
-                if (!ValidateInstantiations(ctx, serializer))
+                if (!ValidateClosedGenericRegistrations(ctx, serializer))
                     continue;
 
                 var declaredMessages = pair.Right
@@ -307,9 +307,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
                 var allMessages = declaredMessages
                     .Where(message => !message.IsGenericDefinition)
-                    .Concat(serializer.Instantiations
-                        .Where(instantiation => instantiation.Message != null)
-                        .Select(instantiation => instantiation.Message!))
+                    .Concat(serializer.ClosedGenericRegistrations
+                        .Where(registration => registration.Message != null)
+                        .Select(registration => registration.Message!))
                     .ToImmutableArray();
                 var allMessagesByType = allMessages.ToImmutableDictionary(message => message.FullyQualifiedName);
                 var resolvedMessagesByType = ResolveMessages(allMessagesByType, serializer.Formatters);
@@ -350,7 +350,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var formatterInterfaceType = compilation.GetTypeByMetadataName(FormatterInterfaceFullName);
         var extendedActorSystemType = compilation.GetTypeByMetadataName(ExtendedActorSystemFullName);
         var formatters = ExtractFormatters(symbol, formatterAttributeType, formatterInterfaceType, extendedActorSystemType);
-        var instantiations = ExtractInstantiations(symbol, compilation);
+        var closedGenericRegistrations = ExtractClosedGenericRegistrations(symbol, compilation);
 
         return new SerializerInfo(
             GetNamespace(symbol),
@@ -362,7 +362,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             protocolTypeFullName,
             symbol.DeclaredAccessibility,
             formatters,
-            instantiations);
+            closedGenericRegistrations);
     }
 
     /// <summary>
@@ -372,20 +372,20 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// <see cref="MessageInfo"/> is built from the constructed symbol, so all field types arrive
     /// already substituted. Invalid targets are recorded with a null message so AKKASG020 fires.
     /// </summary>
-    private static ImmutableArray<InstantiationInfo> ExtractInstantiations(INamedTypeSymbol symbol, Compilation compilation)
+    private static ImmutableArray<ClosedGenericRegistrationInfo> ExtractClosedGenericRegistrations(INamedTypeSymbol symbol, Compilation compilation)
     {
         var genericSerializableAttribute = compilation.GetTypeByMetadataName(GenericSerializableAttributeFullName);
         if (genericSerializableAttribute == null)
-            return ImmutableArray<InstantiationInfo>.Empty;
+            return ImmutableArray<ClosedGenericRegistrationInfo>.Empty;
 
         var attributes = symbol.GetAttributes()
             .Where(attr => attr.AttributeClass is { IsGenericType: true } ac && SymbolEqualityComparer.Default.Equals(ac.OriginalDefinition, genericSerializableAttribute))
             .ToImmutableArray();
         if (attributes.IsEmpty)
-            return ImmutableArray<InstantiationInfo>.Empty;
+            return ImmutableArray<ClosedGenericRegistrationInfo>.Empty;
 
         var knownTypes = KnownTypes.From(compilation);
-        var builder = ImmutableArray.CreateBuilder<InstantiationInfo>(attributes.Length);
+        var builder = ImmutableArray.CreateBuilder<ClosedGenericRegistrationInfo>(attributes.Length);
         foreach (var attribute in attributes)
         {
             var manifest = string.Empty;
@@ -405,7 +405,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             if (!isValidTarget)
             {
                 var displayName = attribute.AttributeClass!.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                builder.Add(new InstantiationInfo(displayName, message: null));
+                builder.Add(new ClosedGenericRegistrationInfo(displayName, message: null));
                 continue;
             }
 
@@ -422,7 +422,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 knownTypes,
                 compilation,
                 definitionFullName: GetFullyQualifiedTypeName(target!.OriginalDefinition));
-            builder.Add(new InstantiationInfo(message.FullyQualifiedName, message));
+            builder.Add(new ClosedGenericRegistrationInfo(message.FullyQualifiedName, message));
         }
 
         return builder.ToImmutable();
@@ -583,24 +583,24 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         return isValid;
     }
 
-    private static bool ValidateInstantiations(SourceProductionContext context, SerializerInfo serializer)
+    private static bool ValidateClosedGenericRegistrations(SourceProductionContext context, SerializerInfo serializer)
     {
-        if (serializer.Instantiations.IsDefaultOrEmpty)
+        if (serializer.ClosedGenericRegistrations.IsDefaultOrEmpty)
             return true;
 
         var isValid = true;
-        foreach (var instantiation in serializer.Instantiations.Where(instantiation => instantiation.Message == null))
+        foreach (var registration in serializer.ClosedGenericRegistrations.Where(registration => registration.Message == null))
         {
-            context.ReportDiagnostic(Diagnostic.Create(InvalidInstantiationTarget, Location.None, instantiation.TargetDisplayName, serializer.ClassName));
+            context.ReportDiagnostic(Diagnostic.Create(InvalidClosedGenericRegistration, Location.None, registration.TargetDisplayName, serializer.ClassName));
             isValid = false;
         }
 
-        foreach (var duplicate in serializer.Instantiations
-                     .Where(instantiation => instantiation.Message != null)
-                     .GroupBy(instantiation => instantiation.TargetDisplayName, StringComparer.Ordinal)
+        foreach (var duplicate in serializer.ClosedGenericRegistrations
+                     .Where(registration => registration.Message != null)
+                     .GroupBy(registration => registration.TargetDisplayName, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
         {
-            context.ReportDiagnostic(Diagnostic.Create(DuplicateInstantiation, Location.None, serializer.ClassName, duplicate.Key));
+            context.ReportDiagnostic(Diagnostic.Create(DuplicateClosedGenericRegistration, Location.None, serializer.ClassName, duplicate.Key));
             isValid = false;
         }
 
@@ -624,13 +624,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             if (!definition.Protocols.Any(protocol => SymbolEqualityComparer.Default.Equals(protocol, serializer.ProtocolType)))
                 continue;
 
-            var hasInstantiation = serializer.Instantiations.Any(instantiation =>
-                instantiation.Message != null &&
-                string.Equals(instantiation.Message.DefinitionFullName, definition.FullyQualifiedName, StringComparison.Ordinal));
-            if (hasInstantiation)
+            var hasRegistration = serializer.ClosedGenericRegistrations.Any(registration =>
+                registration.Message != null &&
+                string.Equals(registration.Message.DefinitionFullName, definition.FullyQualifiedName, StringComparison.Ordinal));
+            if (hasRegistration)
                 continue;
 
-            context.ReportDiagnostic(Diagnostic.Create(GenericSerializableRequiresInstantiation, Location.None, definition.FullyQualifiedName, serializer.ProtocolTypeFullName, serializer.ClassName));
+            context.ReportDiagnostic(Diagnostic.Create(GenericSerializableRequiresRegistration, Location.None, definition.FullyQualifiedName, serializer.ProtocolTypeFullName, serializer.ClassName));
             isValid = false;
         }
 
@@ -2649,7 +2649,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             string protocolTypeFullName,
             Accessibility declaredAccessibility,
             ImmutableArray<FormatterInfo> formatters,
-            ImmutableArray<InstantiationInfo> instantiations)
+            ImmutableArray<ClosedGenericRegistrationInfo> closedGenericRegistrations)
         {
             Namespace = ns;
             ClassName = className;
@@ -2660,7 +2660,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             ProtocolTypeFullName = protocolTypeFullName;
             DeclaredAccessibility = declaredAccessibility;
             Formatters = formatters;
-            Instantiations = instantiations;
+            ClosedGenericRegistrations = closedGenericRegistrations;
         }
 
         public string Namespace { get; }
@@ -2672,7 +2672,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string ProtocolTypeFullName { get; }
         public Accessibility DeclaredAccessibility { get; }
         public ImmutableArray<FormatterInfo> Formatters { get; }
-        public ImmutableArray<InstantiationInfo> Instantiations { get; }
+        public ImmutableArray<ClosedGenericRegistrationInfo> ClosedGenericRegistrations { get; }
     }
 
     private sealed class KnownTypes
@@ -2739,7 +2739,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         /// <summary>
         /// For a registered closed construction: the arity-less fully-qualified name of its generic
-        /// definition, linking the instantiation back to the definition for the AKKASG022 check.
+        /// definition, linking the registration back to the definition for the AKKASG022 check.
         /// Empty for ordinary non-generic messages.
         /// </summary>
         public string DefinitionFullName { get; }
@@ -2755,9 +2755,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// when the target was invalid (not a type, non-generic, unbound, or its definition lacks
     /// <c>[AkkaSerializable]</c>) so AKKASG020 fires instead of the registration silently vanishing.
     /// </summary>
-    private sealed class InstantiationInfo
+    private sealed class ClosedGenericRegistrationInfo
     {
-        public InstantiationInfo(string targetDisplayName, MessageInfo? message)
+        public ClosedGenericRegistrationInfo(string targetDisplayName, MessageInfo? message)
         {
             TargetDisplayName = targetDisplayName;
             Message = message;

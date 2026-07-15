@@ -1116,8 +1116,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG018" && diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
-    [Fact(DisplayName = "Generator should report AKKASG020 when an instantiation target is not generic")]
-    public void Generator_should_report_AKKASG020_when_instantiation_target_is_not_generic()
+    [Fact(DisplayName = "Generator should report AKKASG020 when a closed generic registration target is not generic")]
+    public void Generator_should_report_AKKASG020_when_closed_generic_registration_target_is_not_generic()
     {
         const string source = """
             #nullable enable
@@ -1146,8 +1146,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG020" && diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
-    [Fact(DisplayName = "Generator should report AKKASG022 when a generic protocol message has no instantiations")]
-    public void Generator_should_report_AKKASG022_when_generic_message_has_no_instantiations()
+    [Fact(DisplayName = "Generator should report AKKASG022 when a generic protocol message has no closed generic registrations")]
+    public void Generator_should_report_AKKASG022_when_generic_message_has_no_closed_generic_registrations()
     {
         const string source = """
             #nullable enable
