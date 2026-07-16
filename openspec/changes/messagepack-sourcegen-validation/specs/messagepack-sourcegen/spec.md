@@ -121,6 +121,14 @@ Generated serializers SHALL initially support immutable message designs and nest
 - **WHEN** a message uses a record primary constructor or supported constructor-bound immutable shape
 - **THEN** the generator SHALL emit read and write code for the message
 
+#### Scenario: Constructor argument matched by field name
+- **WHEN** the generator selects a constructor to reconstruct an `[AkkaSerializable]` type on deserialize
+- **THEN** it SHALL match each non-default constructor parameter to an `[AkkaField]` property by name, preferring an ordinal case-sensitive match and falling back to a unique case-insensitive match
+
+#### Scenario: Init-only property or field message
+- **WHEN** a message assigns some or all of its `[AkkaField]` members through init-only property or field assignment rather than exclusively through a constructor
+- **THEN** the generator SHALL emit read code that combines any covering constructor arguments with object-initializer assignment for the remaining settable or init-only members
+
 #### Scenario: Nested generated type
 - **WHEN** a message contains a nested generated type with explicit field IDs
 - **THEN** the generator SHALL serialize and deserialize the nested structure without runtime reflection
@@ -140,6 +148,82 @@ Generated serializers SHALL initially support immutable message designs and nest
 #### Scenario: Mutable or factory-only shape
 - **WHEN** a message requires mutable setter-centric hydration, arbitrary factory methods, or unsupported polymorphic discovery
 - **THEN** the generator SHALL reject it with a diagnostic
+
+#### Scenario: No usable constructor
+- **WHEN** no accessible constructor of an `[AkkaSerializable]` type maps every required parameter to an `[AkkaField]` property by name with an assignable type, and no uncovered property has an accessible setter
+- **THEN** the generator SHALL fail compilation with a diagnostic
+
+#### Scenario: Ambiguous constructor parameter match
+- **WHEN** a constructor parameter matches more than one `[AkkaField]` property case-insensitively
+- **THEN** the generator SHALL fail compilation with a diagnostic
+
+#### Scenario: Defaulted constructor parameter left uncovered
+- **WHEN** the selected constructor has a defaulted parameter that is not covered by any `[AkkaField]` property
+- **THEN** the generator SHALL emit a diagnostic warning that the parameter silently resets to its default value on every deserialize
+
+#### Scenario: Inaccessible field property
+- **WHEN** an `[AkkaField]` property is static or has no accessible getter
+- **THEN** the generator SHALL fail compilation with a diagnostic
+
+### Requirement: Generated serializers support manifest-discriminated closed unions
+
+The system SHALL support declaring a closed, explicitly-enumerated set of concrete `[AkkaSerializable]` member types for a field via `[AkkaUnion]`, encoded structurally inline and discriminated by manifest, distinct from the runtime-resolved `[AkkaEnvelopePayload]` serializer boundary.
+
+#### Scenario: Type-level union declaration
+- **WHEN** a union base interface or abstract class is annotated with `[AkkaUnion]`
+- **THEN** every `[AkkaField]` property whose static type is that base type SHALL inherit its declared member set
+
+#### Scenario: Field-level union override
+- **WHEN** an `[AkkaField]` property is itself annotated with `[AkkaUnion]`
+- **THEN** the generator SHALL use that field's declared member set instead of any type-level declaration for the field's static type
+
+#### Scenario: Union wire format
+- **WHEN** a generated serializer writes a union field
+- **THEN** it SHALL encode a 2-entry map of the member's manifest and its inline field map
+
+#### Scenario: Union write dispatch matches exact runtime type
+- **WHEN** a generated serializer writes a union field whose runtime value's exact type is not a declared member of the union, including an undeclared subtype of a declared member
+- **THEN** serialization SHALL fail
+
+#### Scenario: Union read fails on unknown manifest
+- **WHEN** a generated serializer reads a union field whose manifest does not match any declared member
+- **THEN** deserialization SHALL fail
+
+#### Scenario: Union read skips unknown frame keys
+- **WHEN** a generated serializer reads a union field whose frame contains keys other than the manifest and payload
+- **THEN** it SHALL skip the unknown keys and continue reading the known ones
+
+#### Scenario: Union member validation
+- **WHEN** a declared union member type is not `[AkkaSerializable]`, has no manifest, has a manifest that collides with another member of the same union, has an invalid member set, or is not assignable to the field's static type
+- **THEN** the generator SHALL fail compilation with a diagnostic
+
+#### Scenario: Unsealed union member advisory
+- **WHEN** a union member type is not sealed
+- **THEN** the generator SHALL emit an informational diagnostic, since write dispatch matches exact runtime type and an unsealed member can have undeclared subtypes
+
+### Requirement: Generated serializers support closed generic type registrations
+
+The system SHALL support registering closed generic constructions of a generic `[AkkaSerializable]` type via `[AkkaSerializable<T>]` on the `[AkkaSerializer]` class, since a source generator cannot emit serialization code for an open generic definition.
+
+#### Scenario: Closed construction registered
+- **WHEN** a generic `[AkkaSerializable]` type has an `[AkkaSerializable<T>(Manifest = ...)]` registration on the serializer class
+- **THEN** the generator SHALL emit dispatch for that closed construction as its own top-level message with its own manifest, with generic fields resolved against the concrete type arguments
+
+#### Scenario: Closed construction as nested field
+- **WHEN** a registered closed generic construction is used as the type of an ordinary message's field
+- **THEN** the generator SHALL serialize and deserialize it inline the same way it would an ordinary nested generated type
+
+#### Scenario: Open generic definition never serialized
+- **WHEN** a generic `[AkkaSerializable]` type has no registered closed construction
+- **THEN** the open generic definition SHALL NOT be directly serializable
+
+#### Scenario: Generic definition implementing protocol requires registration
+- **WHEN** a generic `[AkkaSerializable]` type implements a serializer's protocol interface
+- **THEN** the generator SHALL fail compilation unless at least one closed construction of that type is registered on the serializer
+
+#### Scenario: Unregistered closed generic field
+- **WHEN** a message field is typed as a closed generic construction that is not registered on the owning serializer
+- **THEN** the generator SHALL fail compilation with a diagnostic
 
 ### Requirement: Generated serializers validate SerializerV2 API
 

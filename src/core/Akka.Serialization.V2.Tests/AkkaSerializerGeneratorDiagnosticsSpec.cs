@@ -2060,6 +2060,273 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
+    [Fact(DisplayName = "Generator should report advisory AKKASG035 when a field declares both [AkkaEnvelopePayload] and [AkkaUnion]")]
+    public void Generator_should_report_AKKASG035_when_envelope_and_union_share_a_field()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            public interface IEvent
+            {
+            }
+
+            [AkkaSerializable(Manifest = "inner-v1")]
+            public sealed record Inner([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializer<IProtocol>("sample", 140101)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1), AkkaEnvelopePayload, AkkaUnion(typeof(Inner))] IEvent Event) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // Advisory only: envelope payload wins (its documented precedence), the union declaration
+        // is dropped during extraction, and the serializer still generates without errors.
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG035" &&
+            diagnostic.Severity == DiagnosticSeverity.Info &&
+            diagnostic.GetMessage(null).Contains("Event", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("Outer", StringComparison.Ordinal));
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG035 for an envelope payload field whose static type declares a type-level [AkkaUnion]")]
+    public void Generator_should_not_report_AKKASG035_for_type_level_union()
+    {
+        // The type-level [AkkaUnion] on IEvent serves that interface's other, non-envelope fields;
+        // its presence on an envelope payload field's static type is incidental, not a conflicting
+        // author intent, so the advisory deliberately stays quiet here.
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaUnion(typeof(Inner))]
+            public interface IEvent
+            {
+            }
+
+            [AkkaSerializable(Manifest = "inner-v1")]
+            public sealed record Inner([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializer<IProtocol>("sample", 140102)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1), AkkaEnvelopePayload] IEvent Event) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG035");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should report advisory AKKASG036 when a union member is abstract")]
+    public void Generator_should_report_AKKASG036_when_union_member_is_abstract()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaUnion(typeof(AbstractMember), typeof(OpenMember), typeof(SealedMember))]
+            public interface IEvent
+            {
+            }
+
+            [AkkaSerializable(Manifest = "abstract-v1")]
+            public abstract record AbstractMember([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializable(Manifest = "open-v1")]
+            public record OpenMember([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializable(Manifest = "sealed-v1")]
+            public sealed record SealedMember([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializer<IProtocol>("sample", 140201)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1)] IEvent Event) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // Exact-runtime-type dispatch can never select an abstract member -- Warning, not Info.
+        // (Other, pre-existing errors fire alongside it here: an abstract record cannot be
+        // reconstructed on deserialize either, so AKKASG026 also triggers -- 036 exists precisely
+        // to name the root cause of that confusing combination.)
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG036" &&
+            diagnostic.Severity == DiagnosticSeverity.Warning &&
+            diagnostic.GetMessage(null).Contains("AbstractMember", StringComparison.Ordinal));
+
+        // An abstract member fires AKKASG036 ONLY -- stacking the weaker unsealed advisory on the
+        // same member would be noise; the merely-unsealed member keeps its AKKASG025.
+        diagnostics.Should().NotContain(diagnostic =>
+            diagnostic.Id == "AKKASG025" &&
+            diagnostic.GetMessage(null).Contains("AbstractMember", StringComparison.Ordinal));
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG025" &&
+            diagnostic.Severity == DiagnosticSeverity.Info &&
+            diagnostic.GetMessage(null).Contains("OpenMember", StringComparison.Ordinal));
+        diagnostics.Should().NotContain(diagnostic =>
+            (diagnostic.Id == "AKKASG025" || diagnostic.Id == "AKKASG036") &&
+            diagnostic.GetMessage(null).Contains("SealedMember", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG036 when every union member is concrete")]
+    public void Generator_should_not_report_AKKASG036_for_concrete_members()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaUnion(typeof(OpenMember), typeof(SealedMember))]
+            public interface IEvent
+            {
+            }
+
+            [AkkaSerializable(Manifest = "open-v1")]
+            public record OpenMember([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializable(Manifest = "sealed-v1")]
+            public sealed record SealedMember([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializer<IProtocol>("sample", 140202)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1)] IEvent Event) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG036");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should report advisory AKKASG037 when a generic [AkkaSerializable] definition specifies Manifest")]
+    public void Generator_should_report_AKKASG037_when_generic_definition_specifies_manifest()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializable(Manifest = "wrapper-v1")]
+            public sealed record Wrapper<T>(
+                [property: AkkaField(1)] string Id,
+                [property: AkkaField(2)] T Payload) : IProtocol;
+
+            [AkkaSerializer<IProtocol>("sample", 140301)]
+            [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // Advisory only: the definition's Manifest is silently ignored (each registered closed
+        // construction supplies its own), and the serializer still generates without errors.
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG037" &&
+            diagnostic.Severity == DiagnosticSeverity.Info &&
+            diagnostic.GetMessage(null).Contains("Wrapper", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("wrapper-v1", StringComparison.Ordinal));
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG037 for a manifest-less generic definition or a non-generic message with Manifest")]
+    public void Generator_should_not_report_AKKASG037_without_manifest_on_definition()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializable]
+            public sealed record Wrapper<T>(
+                [property: AkkaField(1)] string Id,
+                [property: AkkaField(2)] T Payload) : IProtocol;
+
+            [AkkaSerializer<IProtocol>("sample", 140302)]
+            [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG037");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
