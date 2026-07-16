@@ -1,0 +1,9 @@
+﻿case: union-member-order-note-struct
+message-type: UnionEnvelope
+manifest: union-envelope-v1
+serializer-id: 120303
+byte-count: 46
+
+0000  82 01 a5 65 6e 76 2d 33  02 82 01 ad 6f 72 64 65  |...env-3....orde|
+0010  72 2d 6e 6f 74 65 2d 76  31 02 82 01 a7 6f 72 64  |r-note-v1....ord|
+0020  65 72 2d 33 02 a8 65 78  70 65 64 69 74 65        |er-3..expedite|

@@ -21,5 +21,19 @@
     <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Verify.XunitV3" Version="$(VerifyXunitV3Version)" />
+    <PackageReference Include="Verify.DiffPlex" Version="$(VerifyDiffPlexVersion)" />
+  </ItemGroup>
+
+  <!--
+    Committed wire-format snapshot artifacts (see WireSnapshots/README.md). These are plain text
+    that ship with the repository so wire-format changes are reviewable in a PR diff. They are
+    NOT compiled, and (IsPackable is already false above, so nothing from this project is ever
+    packed) are explicitly marked None/not-copied so they never leak into a build or test output
+    directory.
+  -->
+  <ItemGroup>
+    <None Update="WireSnapshots\**\*.verified.txt" CopyToOutputDirectory="Never" />
+    <None Update="WireSnapshots\README.md" CopyToOutputDirectory="Never" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,11 @@
+﻿case: envelope-payload-fixed-inner-serializer
+message-type: OpaqueEnvelope
+manifest: opaque-envelope-v1
+serializer-id: 120101
+byte-count: 70
+
+0000  82 01 aa 65 6e 76 65 6c  6f 70 65 2d 31 02 83 01  |...envelope-1...|
+0010  ce 00 01 d5 8a 02 b2 63  75 73 74 6f 6d 2d 70 72  |.......custom-pr|
+0020  6f 74 6f 62 75 66 2d 76  31 03 c4 1a 66 61 6b 65  |otobuf-v1...fake|
+0030  2d 70 72 6f 74 6f 62 75  66 7c 70 61 79 6c 6f 61  |-protobuf|payloa|
+0040  64 2d 31 7c 31 37                                 |d-1|17|

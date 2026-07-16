@@ -1,0 +1,7 @@
+﻿case: collection-array-populated
+message-type: IntArrayMessage
+manifest: coll-int-array-v1
+serializer-id: 120105
+byte-count: 6
+
+0000  81 01 93 0a 14 1e                                 |......|

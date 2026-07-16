@@ -1,0 +1,8 @@
+﻿case: closed-generic-wrapper-order-request
+message-type: Wrapper<OrderRequest>
+manifest: wrap-request-v1
+serializer-id: 120404
+byte-count: 24
+
+0000  83 01 a6 77 72 61 70 2d  31 02 82 01 a7 6f 72 64  |...wrap-1....ord|
+0010  65 72 2d 31 02 05 03 03                           |er-1....|
