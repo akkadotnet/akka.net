@@ -21,7 +21,11 @@ using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+// Akka.IO types aliased individually rather than imported wholesale: `using Akka.IO;` would make
+// Tcp/TcpExt ambiguous with the Akka.Streams.Dsl Tcp/TcpExt this file uses for the transport.
 using Inet = Akka.IO.Inet;
+using IOwnedSequenceSegment = Akka.IO.IOwnedSequenceSegment;
+using OwnedSequenceSegment = Akka.IO.OwnedSequenceSegment;
 
 namespace Akka.Remote.Artery
 {
@@ -1169,11 +1173,25 @@ namespace Akka.Remote.Artery
                 // MergeHub -> transport-wide kill switch (Shutdown() tears every association's
                 // streams down) -> this assembly's OWN shared kill switch -> watch termination
                 // (write-side completion signal, exactly like MaterializeOutboundStream's
-                // "TERMINATION SIGNAL" remarks) -> restart-wrapped OutgoingConnection (above).
+                // "TERMINATION SIGNAL" remarks) -> frame batching (below) -> restart-wrapped
+                // OutgoingConnection (above).
+                //
+                // FRAME BATCHING: crossing into the restart-wrapped connection flow costs
+                // per-ELEMENT, so under load the merge tail collapses whatever already-encoded
+                // frames are immediately available into ONE multi-segment sequence of up to
+                // LaneWriteBatchMaxBytes before crossing (AppendFrameToBatch chains the segments
+                // zero-copy; see its remarks for the ownership-transfer invariant). Wire bytes are
+                // IDENTICAL either way -- the inbound side parses frames off the byte stream and
+                // never sees element boundaries. When the connection keeps up,
+                // LaneWriteBatchStage is a 1:1 pass-through; under downstream backpressure, frames
+                // coalesce. Placed AFTER WatchTermination so the termination-signal wiring is
+                // unchanged. Unlike generic BatchWeighted, its PostStop returns owners retained in
+                // an aggregate or pending frame when cancellation interrupts the stage.
                 ((mergeSink, mergeTailTermination), _) = mergeHubSource
                     .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
                     .Via(laneKillSwitch.Flow<ReadOnlySequence<byte>>())
                     .WatchTermination(Keep.Both)
+                    .Via(Flow.FromGraph(new LaneWriteBatchStage(LaneWriteBatchMaxBytes)))
                     .Via(connectionWithRestart)
                     .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer!);
@@ -1785,55 +1803,103 @@ namespace Akka.Remote.Artery
         private const int OrdinaryConnectionMaxInnerRestarts = 3;
 
         /// <summary>
-        /// State-based filter for the two <see cref="InvalidOperationException"/> materialization
-        /// catches: is this system (or this transport's slice of it) shutting down, so the
-        /// exception can be attributed to the shutdown race rather than a genuine fault on a live
-        /// system?
+        /// Weight cap for <see cref="LaneWriteBatchStage"/> on the ordinary-lanes merge tail: the most
+        /// bytes of already-encoded frames one batched element may carry. Mirrors the TCP
+        /// write-coalescing cap it feeds into
+        /// (<c>Akka.Streams.Implementation.IO.TcpStages.TcpStreamLogic.WriteBufferCap</c>, 16 KiB):
+        /// that is the largest accumulation the connection stage itself builds before it stops
+        /// pulling, so batching further upstream past it buys nothing.
+        /// </summary>
+        private const long LaneWriteBatchMaxBytes = 16 * 1024;
+
+        /// <summary>
+        /// Aggregate operation used by <see cref="LaneWriteBatchStage"/> on the ordinary-lanes merge tail (see
+        /// <see cref="MaterializeOrdinaryOutboundWithLanes"/>): chains every segment of
+        /// <paramref name="frame"/> onto the tail of <paramref name="batch"/>'s segment chain --
+        /// zero-copy, no memcpy anywhere -- and returns a single <see cref="ReadOnlySequence{T}"/>
+        /// spanning both. The ownership transfer follows
+        /// <c>Akka.Streams.Implementation.IO.TcpStages.TcpStreamLogic.AppendToWriteBuffer</c>
+        /// exactly: each source segment's owner is detached exactly once
+        /// (<see cref="IOwnedSequenceSegment.DetachOwner"/>) and re-carried by the new link appended
+        /// to the batch, so every pooled buffer always has exactly one segment responsible for
+        /// eventually disposing it. Mutating the batch's tail here is safe: the Batch stage's logic
+        /// is single-threaded, and a pushed batch is never aggregated onto again (the next
+        /// accumulation starts from a fresh seed).
         ///
         /// <para>
-        /// Why <c>Run()</c> throws <see cref="InvalidOperationException"/> at all: it creates the
-        /// graph-interpreter actor as a CHILD of the materializer's StreamSupervisor
-        /// (<c>ExtendedActorMaterializer.ActorOf</c> -&gt; <c>ActorCell.AttachChild</c>). The
-        /// StreamSupervisor is a /user top-level actor, so it starts terminating as soon as the
-        /// /user guardian tears down -- WELL BEFORE <see cref="Shutdown"/> flips
-        /// <c>_isShutdown</c> (gated behind /system's RemotingTerminator phase, later in
-        /// <see cref="CoordinatedShutdown"/>). A child-creation attempt in that window throws
-        /// from one of three sites, depending on where the attaching thread lands relative to
-        /// the supervisor's own termination: <c>ActorCell.Children.cs:462</c> (MakeChild's
-        /// up-front terminating check), <c>TerminatingChildrenContainer.cs:68</c> or
-        /// <c>TerminatedChildrenContainer.cs:50</c> (the non-atomic ReserveChild step losing the
-        /// same race a moment later).
+        /// <b>Invariant (throws if violated).</b> Both inputs are always
+        /// <see cref="OwnedSequenceSegment"/>-backed. Every element on this path is pushed by
+        /// <see cref="ArteryEncodeStage"/> as <c>OwnedSequenceSegment.Create(owner)</c> -- a
+        /// single-segment, owner-carrying, segment-backed sequence -- and reaches the batch stage
+        /// unchanged: the kill-switch flows, <c>WatchTermination</c>, <c>RecoverWithRetries</c> and
+        /// the <c>MergeHub</c> are all pass-through, and the connection preamble is prepended
+        /// INSIDE the downstream restart factory, so it never passes through this stage. The batch
+        /// side holds by induction: <see cref="LaneWriteBatchStage"/> seeds from the first frame, so an accumulator
+        /// is either a raw encode-stage frame or a previous return value of this method. A
+        /// violation means a foreign producer got wired into the merge tail -- failing the stage
+        /// loudly (settling the assembly, whose restart tier takes over) beats silently copying, or
+        /// worse dropping, bytes of unknown provenance.
         /// </para>
-        ///
-        /// <para>
-        /// The signals checked, cheapest first -- their union covers the whole window from
-        /// "termination begun" to "termination complete":
-        /// <list type="bullet">
-        /// <item><description><c>_isShutdown</c> / <c>_materializer.IsShutdown</c>: this
-        /// transport's own teardown (the late end of the window; the same flags the sibling
-        /// <c>IllegalStateException</c> catches consult).</description></item>
-        /// <item><description><see cref="IsStreamSupervisorTerminating"/>: the DIRECT cause --
-        /// the cell <c>Run()</c> attaches children to is terminating/terminated. All three throw
-        /// sites above fire precisely when that cell's <c>ChildrenContainer</c> has entered a
-        /// terminating state, and that state never reverts (a Termination reason is terminal),
-        /// so this check -- evaluated at throw time, since <c>when</c> filters run before
-        /// unwinding -- is equivalent to the union of the three throw conditions.</description></item>
-        /// <item><description><see cref="CoordinatedShutdown.ShutdownReason"/> non-null:
-        /// "termination started" -- set atomically the instant a CoordinatedShutdown run begins
-        /// (<see cref="ActorSystem.Terminate"/> routes through it by default).
-        /// <c>TryGetExtension</c> avoids instantiating the extension from inside an exception
-        /// filter (a throwing filter silently evaluates to false).</description></item>
-        /// <item><description><c>ActorSystemImpl.Aborting</c>: <c>ActorSystem.Abort()</c>
-        /// skips CoordinatedShutdown entirely; this is its flag.</description></item>
-        /// <item><description><c>WhenTerminated.IsCompleted</c>: the belt-and-suspenders late
-        /// signal (termination already finished).</description></item>
-        /// </list>
-        /// There is no <c>ActorSystem.WhenTerminating</c> in Akka.NET --
-        /// <c>ShutdownReason</c>/<c>Aborting</c> are the earliest "termination has begun" state
-        /// available. Used to NARROW the materialization catches so a spurious
-        /// <see cref="InvalidOperationException"/> from a live system propagates instead of being
-        /// silently swallowed.
-        /// </para>
+        /// </summary>
+        /// <param name="batch">The accumulated batch. Its backing chain is extended in place.</param>
+        /// <param name="frame">The incoming encoded frame whose segments (and their owners) move onto the batch.</param>
+        /// <returns>One sequence over the batch's head through the newly appended tail.</returns>
+        internal static ReadOnlySequence<byte> AppendFrameToBatch(ReadOnlySequence<byte> batch, ReadOnlySequence<byte> frame)
+        {
+            if (batch.Start.GetObject() is not OwnedSequenceSegment head ||
+                batch.End.GetObject() is not OwnedSequenceSegment tail)
+                throw new InvalidOperationException(
+                    "Artery lane frame batching requires OwnedSequenceSegment-backed batches, got " +
+                    $"[{batch.Start.GetObject()?.GetType().ToString() ?? "null"}]: every ordinary-lanes " +
+                    "element must originate from ArteryEncodeStage.");
+
+            if (frame.Start.GetObject() is not ReadOnlySequenceSegment<byte> startObject)
+                throw new InvalidOperationException(
+                    "Artery lane frame batching requires segment-backed frames, got a memory-backed " +
+                    $"sequence of [{frame.Length}] bytes: every ordinary-lanes element must originate " +
+                    "from ArteryEncodeStage.");
+
+            // Same bounded, slice-aware walk as AppendToWriteBuffer: never run past the tail this
+            // sequence actually references, and honor the frame's own start/end offsets on the
+            // first/last links.
+            var endSegment = frame.End.GetObject() as ReadOnlySequenceSegment<byte>;
+            var startIndex = frame.Start.GetInteger();
+            var endIndex = frame.End.GetInteger();
+
+            var segment = startObject;
+            while (segment is not null)
+            {
+                var memory = segment.Memory;
+                var isFirst = ReferenceEquals(segment, startObject);
+                var isLast = ReferenceEquals(segment, endSegment);
+
+                if (isFirst)
+                    memory = memory.Slice(startIndex);
+                if (isLast)
+                    memory = memory.Slice(0, isFirst ? endIndex - startIndex : endIndex);
+
+                var owner = (segment as IOwnedSequenceSegment)?.DetachOwner();
+                if (owner is null)
+                    throw new InvalidOperationException(
+                        $"Artery lane frame batching found a frame segment ([{segment.GetType()}]) " +
+                        "carrying no live pooled-buffer owner: every ordinary-lanes frame segment " +
+                        "must carry the ownership ArteryEncodeStage minted for it.");
+
+                tail = tail.Append(memory, owner);
+
+                if (isLast)
+                    break;
+
+                segment = segment.Next;
+            }
+
+            return new ReadOnlySequence<byte>(head, batch.Start.GetInteger(), tail, tail.Memory.Length);
+        }
+
+        /// <summary>
+        /// Returns whether the actor system, materializer, or transport has entered termination.
+        /// This state-based filter narrows the materialization catches so an unrelated
+        /// <see cref="InvalidOperationException"/> from a live system still propagates.
         /// </summary>
         private bool IsActorSystemTerminating() =>
             _isShutdown
