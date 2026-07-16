@@ -1265,6 +1265,262 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
+    [Fact(DisplayName = "Generator should report AKKASG026 when no constructor maps every required parameter to an [AkkaField] property")]
+    public void Generator_should_report_AKKASG026_when_no_constructor_matches_fields()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121101)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "no-ctor-v1")]
+            public sealed class NoMatchingCtorMessage : IProtocol
+            {
+                public NoMatchingCtorMessage(int notAField)
+                {
+                }
+
+                [AkkaField(1)] public string Value { get; set; } = string.Empty;
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG026" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("NoMatchingCtorMessage", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG026 when a property not covered by the constructor has no accessible setter")]
+    public void Generator_should_report_AKKASG026_when_leftover_property_is_unsettable()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121102)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "unsettable-v1")]
+            public sealed class UnsettableLeftoverMessage : IProtocol
+            {
+                public UnsettableLeftoverMessage(string a)
+                {
+                    A = a;
+                }
+
+                [AkkaField(1)] public string A { get; }
+
+                [AkkaField(2)] public string B { get; } = string.Empty;
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // "a" maps to "A" (unique case-insensitive match); "B" is left over with no setter at all.
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG026" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("'B'", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG026 when a constructor parameter ambiguously matches multiple fields case-insensitively")]
+    public void Generator_should_report_AKKASG026_when_case_insensitive_mapping_is_ambiguous()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121103)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "ambiguous-v1")]
+            public sealed class AmbiguousMappingMessage : IProtocol
+            {
+                public AmbiguousMappingMessage(string id)
+                {
+                    Id = id;
+                    ID = id;
+                }
+
+                [AkkaField(1)] public string Id { get; }
+
+                [AkkaField(2)] public string ID { get; }
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // "id" matches both "Id" and "ID" case-insensitively -- ambiguous, so it maps to neither;
+        // the parameter has no default value, so the (only) constructor is not eligible at all.
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG026" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("AmbiguousMappingMessage", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG027 when the selected constructor has a defaulted parameter not covered by any [AkkaField]")]
+    public void Generator_should_report_AKKASG027_when_defaulted_parameter_uncovered()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121104)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "defaulted-param-v1")]
+            public sealed class DefaultedParameterMessage : IProtocol
+            {
+                public DefaultedParameterMessage(string id, int maxRetries = 3)
+                {
+                    Id = id;
+                    MaxRetries = maxRetries;
+                }
+
+                [AkkaField(1)] public string Id { get; }
+
+                public int MaxRetries { get; }
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG027" &&
+            diagnostic.Severity == DiagnosticSeverity.Warning &&
+            diagnostic.GetMessage(null).Contains("maxRetries", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("DefaultedParameterMessage", StringComparison.Ordinal));
+
+        // Advisory only: the constructor is still eligible (maxRetries simply keeps its default), so
+        // the type still generates and compiles cleanly.
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG028 when an [AkkaField] property is static")]
+    public void Generator_should_report_AKKASG028_when_field_property_is_static()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121105)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "static-field-v1")]
+            public sealed class StaticFieldMessage : IProtocol
+            {
+                [AkkaField(1)] public static string StaticValue { get; set; } = string.Empty;
+
+                [AkkaField(2)] public string Value { get; set; } = string.Empty;
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG028" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("StaticValue", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("static", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG028 when an [AkkaField] property has no accessible getter")]
+    public void Generator_should_report_AKKASG028_when_field_property_is_private()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121106)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "private-field-v1")]
+            public sealed class PrivateFieldMessage : IProtocol
+            {
+                public PrivateFieldMessage(string other)
+                {
+                    Other = other;
+                }
+
+                [AkkaField(1)] private string PrivateValue { get; set; } = string.Empty;
+
+                [AkkaField(2)] public string Other { get; }
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG028" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("PrivateValue", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("accessible getter", StringComparison.Ordinal));
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);

@@ -518,6 +518,67 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
         reader.Consumed.Should().Be(bytes.Length);
     }
 
+    [Fact(DisplayName = "Generated serializer should not swap same-typed fields whose [AkkaField] index order differs from constructor parameter order")]
+    public void Generated_serializer_should_not_swap_same_typed_out_of_order_fields()
+    {
+        var message = new SwapRiskMessage(Second: "second-value", First: "first-value");
+
+        var roundTripped = RoundTrip(message);
+
+        roundTripped.First.Should().Be("first-value");
+        roundTripped.Second.Should().Be("second-value");
+        roundTripped.Should().Be(message);
+    }
+
+    [Fact(DisplayName = "Generated serializer should round-trip differently-typed fields whose [AkkaField] index order differs from constructor parameter order")]
+    public void Generated_serializer_should_round_trip_differently_typed_out_of_order_fields()
+    {
+        var message = new SwapRiskTypedMessage(Label: "widget", Quantity: 7);
+
+        RoundTrip(message).Should().Be(message);
+    }
+
+    [Fact(DisplayName = "Generated serializer should round-trip an init-only POCO reconstructed via a parameterless constructor and object initializer")]
+    public void Generated_serializer_should_round_trip_init_only_poco_with_parameterless_constructor()
+    {
+        var message = new InitOnlyPocoMessage { Name = "widget", Age = 7 };
+
+        var roundTripped = RoundTrip(message);
+
+        roundTripped.Name.Should().Be("widget");
+        roundTripped.Age.Should().Be(7);
+    }
+
+    [Fact(DisplayName = "Generated serializer should round-trip a type reconstructed via a mix of constructor arguments and object-initializer assignments")]
+    public void Generated_serializer_should_round_trip_mixed_constructor_and_initializer_shape()
+    {
+        var message = new MixedShapeMessage("order-9", 3) { Notes = "handle with care" };
+
+        var roundTripped = RoundTrip(message);
+
+        roundTripped.Id.Should().Be("order-9");
+        roundTripped.Quantity.Should().Be(3);
+        roundTripped.Notes.Should().Be("handle with care");
+    }
+
+    [Fact(DisplayName = "Generated serializer should round-trip properties whose names collide with generator-owned read-method locals")]
+    public void Generated_serializer_should_round_trip_adversarial_property_names()
+    {
+        var message = new AdversarialNamesMessage(FieldCount: 3, EntryIndex: 9, Foo: "value", HasFoo: true);
+
+        RoundTrip(message).Should().Be(message);
+    }
+
+    [Fact(DisplayName = "Generated serializer should round-trip a keyword-named property bound to a lowercase-keyword constructor parameter")]
+    public void Generated_serializer_should_round_trip_keyword_named_property_and_constructor_parameter()
+    {
+        var message = new KeywordNamedMessage("something-happened");
+
+        var roundTripped = RoundTrip(message);
+
+        roundTripped.Event.Should().Be("something-happened");
+    }
+
     private static DateTime ReadDateTime(ref MessagePackReader reader)
     {
         var arrayLength = reader.ReadArrayHeader();
@@ -794,3 +855,78 @@ public sealed record WarehouseLocation(
 [AkkaSerializable]
 public sealed record CountryInfo(
     [property: AkkaField(1)] string IsoCode);
+
+// -------------------------------------------------------------------------------------------
+// Named-argument, hybrid construction coverage (constructor selection replaced positional
+// field-index-order emission -- see AkkaSerializerGenerator.SelectConstructor).
+// -------------------------------------------------------------------------------------------
+
+/// <summary>
+/// [AkkaField] index order (Second=1... no, Second=2, First=1) is the REVERSE of the primary
+/// constructor's declared parameter order (Second, First). Both fields are the same type
+/// (string), so a positional emission in index order would compile but silently swap the two
+/// values on every deserialize.
+/// </summary>
+[AkkaSerializable(Manifest = "swap-risk-v1")]
+public sealed record SwapRiskMessage(
+    [property: AkkaField(2)] string Second,
+    [property: AkkaField(1)] string First) : IGeneratedTestProtocol;
+
+/// <summary>Same shape as <see cref="SwapRiskMessage"/>, but the two out-of-order fields are
+/// differently typed: a positional emission would not even compile (CS1503).</summary>
+[AkkaSerializable(Manifest = "swap-risk-typed-v1")]
+public sealed record SwapRiskTypedMessage(
+    [property: AkkaField(2)] string Label,
+    [property: AkkaField(1)] int Quantity) : IGeneratedTestProtocol;
+
+/// <summary>No declared constructor: the implicit parameterless constructor is used, and every
+/// [AkkaField] property is assigned through an object initializer via its 'init' accessor.</summary>
+[AkkaSerializable(Manifest = "init-only-poco-v1")]
+public sealed class InitOnlyPocoMessage : IGeneratedTestProtocol
+{
+    [AkkaField(1)] public string Name { get; init; } = string.Empty;
+    [AkkaField(2)] public int Age { get; init; }
+}
+
+/// <summary>Id/Quantity are supplied as NAMED constructor arguments; Notes is not a constructor
+/// parameter at all and is assigned afterward through an object-initializer 'set'.</summary>
+[AkkaSerializable(Manifest = "mixed-shape-v1")]
+public sealed class MixedShapeMessage : IGeneratedTestProtocol
+{
+    public MixedShapeMessage(string id, int quantity)
+    {
+        Id = id;
+        Quantity = quantity;
+    }
+
+    [AkkaField(1)] public string Id { get; }
+    [AkkaField(2)] public int Quantity { get; }
+    [AkkaField(3)] public string? Notes { get; set; }
+}
+
+/// <summary>Property names that collide with the generator's OWN read-method locals
+/// (__fieldCount/__entryIndex, and the has-guard for a differently-named field) before the C4
+/// hygiene fix: FieldCount/EntryIndex camel-case into "fieldCount"/"entryIndex", and Foo's
+/// has-guard used to be "hasFoo" -- the same camelCase local a property literally named "HasFoo"
+/// produces for itself.</summary>
+[AkkaSerializable(Manifest = "adversarial-names-v1")]
+public sealed record AdversarialNamesMessage(
+    [property: AkkaField(1)] int FieldCount,
+    [property: AkkaField(2)] int EntryIndex,
+    [property: AkkaField(3)] string Foo,
+    [property: AkkaField(4)] bool HasFoo) : IGeneratedTestProtocol;
+
+/// <summary>Regression for the pre-existing local-identifier keyword escaping (property "Event"
+/// camel-cases to the reserved keyword "event"), extended to NAMED constructor arguments: the
+/// hand-written constructor parameter is literally "event" (lowercase), matched to "Event" by a
+/// unique case-insensitive lookup, and must be emitted as "@event:" to compile.</summary>
+[AkkaSerializable(Manifest = "keyword-named-v1")]
+public sealed class KeywordNamedMessage : IGeneratedTestProtocol
+{
+    public KeywordNamedMessage(string @event)
+    {
+        Event = @event;
+    }
+
+    [AkkaField(1)] public string Event { get; }
+}

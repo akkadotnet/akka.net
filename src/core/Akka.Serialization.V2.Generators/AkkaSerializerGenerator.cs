@@ -231,6 +231,30 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor NoMatchingConstructor = new(
+        "AKKASG026",
+        "No matching constructor",
+        "[AkkaSerializable] type '{0}' cannot be reconstructed on deserialize: {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ConstructorParameterNotCovered = new(
+        "AKKASG027",
+        "Constructor parameter not covered by [AkkaField]",
+        "Constructor parameter '{0}' of [AkkaSerializable] type '{1}' has a default value and is not covered by any [AkkaField] property; it silently resets to its default value on every deserialize",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor FieldPropertyNotAccessible = new(
+        "AKKASG028",
+        "[AkkaField] must be on an accessible instance property",
+        "[AkkaField] property '{0}' on type '{1}' {2}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var serializers = context.SyntaxProvider
@@ -668,7 +692,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 symbol.AllInterfaces.ToImmutableArray(),
                 allowEmpty: true,
                 isGenericDefinition: true,
-                definitionFullName: GetFullyQualifiedTypeName(symbol));
+                definitionFullName: GetFullyQualifiedTypeName(symbol),
+                invalidFields: ImmutableArray<InvalidFieldInfo>.Empty,
+                constructionPlan: ConstructionPlan.Empty);
         }
 
         return ExtractMessageCore(symbol, GetFullyQualifiedTypeName(symbol), manifest, allowEmpty, knownTypes, compilation, definitionFullName: string.Empty);
@@ -692,12 +718,30 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         string definitionFullName)
     {
         var fields = new List<FieldInfo>();
+        var fieldSymbols = new List<IPropertySymbol>();
+        var invalidFields = ImmutableArray.CreateBuilder<InvalidFieldInfo>();
         foreach (var member in symbol.GetMembers().OfType<IPropertySymbol>())
         {
             var fieldAttribute = member.GetAttributes()
                 .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.FieldAttribute));
             if (fieldAttribute == null || fieldAttribute.ConstructorArguments.Length != 1)
                 continue;
+
+            // A static or getter-inaccessible [AkkaField] property can never be read by the
+            // generated Write path (`message.Property`) -- record it as invalid (AKKASG028) instead
+            // of emitting uncompilable code, and exclude it from both ordinary field extraction and
+            // constructor selection below.
+            if (member.IsStatic)
+            {
+                invalidFields.Add(new InvalidFieldInfo(member.Name, "is static; [AkkaField] requires an instance property"));
+                continue;
+            }
+
+            if (member.GetMethod == null || !IsAccessibleFromGeneratedCode(member.GetMethod.DeclaredAccessibility))
+            {
+                invalidFields.Add(new InvalidFieldInfo(member.Name, "has no accessible getter"));
+                continue;
+            }
 
             var index = (int)fieldAttribute.ConstructorArguments[0].Value!;
             var isNullable = member.NullableAnnotation == NullableAnnotation.Annotated || IsNullableValueType(member.Type);
@@ -717,7 +761,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 mapping,
                 isNullable,
                 unionMembers: isEnvelopePayload ? default : unionMembers));
+            fieldSymbols.Add(member);
         }
+
+        var constructionPlan = SelectConstructor(symbol, fields, fieldSymbols, compilation);
 
         return new MessageInfo(
             symbol.Name,
@@ -727,7 +774,152 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             symbol.AllInterfaces.ToImmutableArray(),
             allowEmpty,
             isGenericDefinition: false,
-            definitionFullName: definitionFullName);
+            definitionFullName: definitionFullName,
+            invalidFields: invalidFields.ToImmutable(),
+            constructionPlan: constructionPlan);
+    }
+
+    /// <summary>
+    /// Whether a member with this accessibility, declared on the message type, can be referenced
+    /// from the generated serializer partial class. The generated class is never nested inside the
+    /// message type and never derives from it, so only Public/Internal/ProtectedOrInternal (the
+    /// internal-or-protected union, satisfied by same-assembly access) are reachable -- Protected and
+    /// PrivateProtected both require a subtype relationship the generated code does not have.
+    /// </summary>
+    private static bool IsAccessibleFromGeneratedCode(Accessibility accessibility)
+    {
+        return accessibility is Accessibility.Public or Accessibility.Internal or Accessibility.ProtectedOrInternal;
+    }
+
+    /// <summary>
+    /// Selects the constructor used to reconstruct <paramref name="symbol"/> on deserialize and
+    /// plans how each valid [AkkaField] property is supplied: as a NAMED constructor argument (when
+    /// it maps to a parameter of the chosen constructor) or as an object-initializer assignment
+    /// (when it does not, provided it has an accessible 'set'/'init' accessor). See
+    /// <see cref="ConstructionPlan"/>. <paramref name="fields"/>/<paramref name="fieldSymbols"/> are
+    /// parallel: <c>fieldSymbols[i]</c> is the property backing <c>fields[i]</c>.
+    /// </summary>
+    private static ConstructionPlan SelectConstructor(
+        INamedTypeSymbol symbol,
+        IReadOnlyList<FieldInfo> fields,
+        IReadOnlyList<IPropertySymbol> fieldSymbols,
+        Compilation compilation)
+    {
+        var candidates = new List<(IMethodSymbol Ctor, ImmutableArray<ConstructorArgumentPlan> Arguments, ImmutableArray<string> UncoveredDefaulted, int DeclarationOrder)>();
+        var declarationOrder = 0;
+        foreach (var ctor in symbol.InstanceConstructors)
+        {
+            var order = declarationOrder++;
+            if (!IsAccessibleFromGeneratedCode(ctor.DeclaredAccessibility))
+                continue;
+
+            var argumentsBuilder = ImmutableArray.CreateBuilder<ConstructorArgumentPlan>();
+            var uncoveredDefaultedBuilder = ImmutableArray.CreateBuilder<string>();
+            var eligible = true;
+            foreach (var parameter in ctor.Parameters)
+            {
+                var matchIndex = MatchParameterToFieldIndex(parameter, fields, fieldSymbols, compilation);
+                if (matchIndex >= 0)
+                {
+                    argumentsBuilder.Add(new ConstructorArgumentPlan(parameter.Name, fields[matchIndex].Name));
+                    continue;
+                }
+
+                // A parameter without a default value MUST map to a field, or the constructor
+                // cannot reconstruct the type at all -- not eligible. A defaulted, unmapped
+                // parameter keeps the constructor eligible but is remembered for AKKASG027: its
+                // value silently resets to the default on every deserialize.
+                if (!parameter.HasExplicitDefaultValue)
+                {
+                    eligible = false;
+                    break;
+                }
+
+                uncoveredDefaultedBuilder.Add(parameter.Name);
+            }
+
+            if (!eligible)
+                continue;
+
+            candidates.Add((ctor, argumentsBuilder.ToImmutable(), uncoveredDefaultedBuilder.ToImmutable(), order));
+        }
+
+        if (candidates.Count == 0)
+        {
+            return new ConstructionPlan(
+                ImmutableArray<ConstructorArgumentPlan>.Empty,
+                ImmutableArray<string>.Empty,
+                ImmutableArray<string>.Empty,
+                ImmutableArray.Create("no accessible constructor maps every non-default parameter to an [AkkaField] property by name with an assignable type"));
+        }
+
+        // Most field-mapped parameters wins (fewer leftover properties needing initializer
+        // assignment); ties break on fewest total parameters, then declaration order, for a
+        // deterministic choice across identical-shaped candidates.
+        var chosen = candidates
+            .OrderByDescending(candidate => candidate.Arguments.Length)
+            .ThenBy(candidate => candidate.Ctor.Parameters.Length)
+            .ThenBy(candidate => candidate.DeclarationOrder)
+            .First();
+
+        var mappedFieldNames = new HashSet<string>(chosen.Arguments.Select(argument => argument.FieldName), StringComparer.Ordinal);
+        var initializerFieldNames = ImmutableArray.CreateBuilder<string>();
+        var errors = ImmutableArray.CreateBuilder<string>();
+        for (var i = 0; i < fields.Count; i++)
+        {
+            var field = fields[i];
+            if (mappedFieldNames.Contains(field.Name))
+                continue;
+
+            var property = fieldSymbols[i];
+            var hasAccessibleSetter = property.SetMethod != null && IsAccessibleFromGeneratedCode(property.SetMethod.DeclaredAccessibility);
+            if (!hasAccessibleSetter)
+            {
+                errors.Add($"property '{field.Name}' is not covered by the selected constructor and has no accessible 'set' or 'init' accessor");
+                continue;
+            }
+
+            initializerFieldNames.Add(field.Name);
+        }
+
+        return new ConstructionPlan(chosen.Arguments, initializerFieldNames.ToImmutable(), chosen.UncoveredDefaulted, errors.ToImmutable());
+    }
+
+    /// <summary>
+    /// Matches a constructor parameter to a field by name -- ordinal (case-sensitive) first, then a
+    /// UNIQUE case-insensitive match; an ambiguous case-insensitive match (more than one field name
+    /// differs only by case) counts as no match at all rather than guessing. A name match still
+    /// requires the property's type to be implicitly convertible to the parameter's type. Returns
+    /// the matched field's index into <paramref name="fields"/>, or -1 for no match.
+    /// </summary>
+    private static int MatchParameterToFieldIndex(
+        IParameterSymbol parameter,
+        IReadOnlyList<FieldInfo> fields,
+        IReadOnlyList<IPropertySymbol> fieldSymbols,
+        Compilation compilation)
+    {
+        for (var i = 0; i < fields.Count; i++)
+        {
+            if (string.Equals(fields[i].Name, parameter.Name, StringComparison.Ordinal))
+                return compilation.HasImplicitConversion(fieldSymbols[i].Type, parameter.Type) ? i : -1;
+        }
+
+        var matchIndex = -1;
+        for (var i = 0; i < fields.Count; i++)
+        {
+            if (!string.Equals(fields[i].Name, parameter.Name, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (matchIndex >= 0)
+                return -1;
+
+            matchIndex = i;
+        }
+
+        if (matchIndex < 0)
+            return -1;
+
+        return compilation.HasImplicitConversion(fieldSymbols[matchIndex].Type, parameter.Type) ? matchIndex : -1;
     }
 
     /// <summary>
@@ -930,6 +1122,32 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             {
                 context.ReportDiagnostic(Diagnostic.Create(DuplicateFieldIndex, Location.None, message.FullyQualifiedName, duplicate.Key));
                 isValid = false;
+            }
+
+            // Structural [AkkaField] problems found during extraction (static property, or a
+            // getter the generated Write path could not call): these properties never made it into
+            // message.Fields, so they cannot double-report through any of the checks below.
+            foreach (var invalidField in message.InvalidFields)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(FieldPropertyNotAccessible, Location.None, invalidField.PropertyName, message.FullyQualifiedName, invalidField.Reason));
+                isValid = false;
+            }
+
+            // Read-side reconstruction: either no constructor could be selected, or the selected
+            // constructor leaves [AkkaField] properties uncovered with no accessible setter to fall
+            // back on -- both make deserialize impossible to generate.
+            foreach (var error in message.ConstructionPlan.Errors)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(NoMatchingConstructor, Location.None, message.FullyQualifiedName, error));
+                isValid = false;
+            }
+
+            // Advisory only: the selected constructor still works (its defaulted parameter is simply
+            // never supplied), but the parameter's value silently reverts to its default on every
+            // deserialize because no [AkkaField] property feeds it.
+            foreach (var parameterName in message.ConstructionPlan.UncoveredDefaultedParameters)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(ConstructorParameterNotCovered, Location.None, parameterName, message.FullyQualifiedName));
             }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Unsupported))
@@ -1404,7 +1622,11 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.Append("    private ").Append(message.FullyQualifiedName).Append(" Read").Append(GetMessageMethodName(message))
             .AppendLine("(ref global::MessagePack.MessagePackReader reader)");
         sb.AppendLine("    {");
-        sb.AppendLine("        var fieldCount = reader.ReadMapHeader();");
+        // Generator-owned locals are prefixed "__" so they cannot collide with a per-field local
+        // (ToCamelCase(field.Name)/GetHasLocalName below), no matter what the [AkkaField] property
+        // is named -- including adversarial names like "FieldCount" or "EntryIndex" that would
+        // otherwise camel-case straight into these identifiers (CS0128/CS0136).
+        sb.AppendLine("        var __fieldCount = reader.ReadMapHeader();");
         var alloc = new NameAlloc();
         foreach (var field in message.Fields)
         {
@@ -1414,10 +1636,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 sb.Append("        var ").Append(GetHasLocalName(field)).AppendLine(" = false;");
         }
 
-        sb.AppendLine("        for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)");
+        sb.AppendLine("        for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)");
         sb.AppendLine("        {");
-        sb.AppendLine("            var fieldId = reader.ReadInt32();");
-        sb.AppendLine("            switch (fieldId)");
+        sb.AppendLine("            var __fieldId = reader.ReadInt32();");
+        sb.AppendLine("            switch (__fieldId)");
         sb.AppendLine("            {");
         foreach (var field in message.Fields)
         {
@@ -1446,11 +1668,41 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 .Append(Escape(message.FullyQualifiedName)).AppendLine("].\");");
         }
 
-        sb.Append("        return new ").Append(message.FullyQualifiedName).Append('(')
-            .Append(string.Join(", ", message.Fields.Select(GetConstructorArgument)))
-            .AppendLine(");");
+        GenerateReadMessageConstruction(sb, message);
         sb.AppendLine("    }");
         sb.AppendLine();
+    }
+
+    /// <summary>
+    /// Emits the final <c>return new T(...)</c> of a read method from <see cref="MessageInfo.ConstructionPlan"/>:
+    /// NAMED arguments (escaped where the parameter name is a C# keyword, e.g. <c>@event:</c>) for
+    /// every constructor-mapped [AkkaField] property, followed by an object initializer for whatever
+    /// is left over. The plan stores field NAMES rather than <see cref="FieldInfo"/> references so it
+    /// stays correct across <see cref="MessageInfo.WithFields"/> (formatter resolution can replace a
+    /// field's mapping without touching its name).
+    /// </summary>
+    private static void GenerateReadMessageConstruction(StringBuilder sb, MessageInfo message)
+    {
+        var fieldsByName = message.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
+        var plan = message.ConstructionPlan;
+
+        sb.Append("        return new ").Append(message.FullyQualifiedName).Append('(');
+        sb.Append(string.Join(", ", plan.Arguments.Select(argument =>
+            EscapeIfKeyword(argument.ParameterName) + ": " + GetFieldValueExpression(fieldsByName[argument.FieldName]))));
+        sb.Append(')');
+
+        if (plan.InitializerFieldNames.Length > 0)
+        {
+            sb.Append(" { ");
+            sb.Append(string.Join(", ", plan.InitializerFieldNames.Select(name =>
+            {
+                var field = fieldsByName[name];
+                return EscapeIfKeyword(field.Name) + " = " + GetFieldValueExpression(field);
+            })));
+            sb.Append(" }");
+        }
+
+        sb.AppendLine(";");
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -2482,12 +2734,18 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         return false;
     }
 
+    /// <summary>
+    /// "__has" prefix (not the field's own camelCase local, which lacks it): guarantees no collision
+    /// with an unrelated property's OWN value local under the pigeon-hole pairing this field name
+    /// with another property's name, for example fields "Foo" and "HasFoo" -- "Foo"'s has-guard is
+    /// "__hasFoo", distinct from "HasFoo"'s value local "hasFoo".
+    /// </summary>
     private static string GetHasLocalName(FieldInfo field)
     {
-        return "has" + field.Name;
+        return "__has" + field.Name;
     }
 
-    private static string GetConstructorArgument(FieldInfo field)
+    private static string GetFieldValueExpression(FieldInfo field)
     {
         var name = ToCamelCase(field.Name);
         return IsRequired(field) && IsReferenceLike(field) ? name + "!" : name;
@@ -2629,7 +2887,19 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         // which cannot be used as a local identifier. Escape with '@' (a runtime no-op). The escaped
         // form composes safely with the suffixes appended elsewhere ('@eventSize', '@eventBytes'):
         // '@' is legal on any identifier, keyword or not.
-        return SyntaxFacts.GetKeywordKind(name) == SyntaxKind.None ? name : "@" + name;
+        return EscapeIfKeyword(name);
+    }
+
+    /// <summary>
+    /// '@'-escapes <paramref name="identifier"/> if it is a reserved C# keyword, a runtime no-op that
+    /// makes the text legal as an identifier. Shared by <see cref="ToCamelCase"/> (per-field read
+    /// locals) and the constructor-argument label in <see cref="GenerateReadMessageConstruction"/>: a
+    /// constructor parameter literally named <c>event</c> (matched to an [AkkaField] property named
+    /// <c>Event</c>) must emit the NAMED argument as <c>@event:</c>, not <c>event:</c>.
+    /// </summary>
+    private static string EscapeIfKeyword(string identifier)
+    {
+        return SyntaxFacts.GetKeywordKind(identifier) == SyntaxKind.None ? identifier : "@" + identifier;
     }
 
     private static string Escape(string value)
@@ -2710,7 +2980,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private sealed class MessageInfo
     {
-        public MessageInfo(string simpleName, string fullyQualifiedName, string manifest, ImmutableArray<FieldInfo> fields, ImmutableArray<INamedTypeSymbol> protocols, bool allowEmpty, bool isGenericDefinition = false, string definitionFullName = "")
+        public MessageInfo(
+            string simpleName,
+            string fullyQualifiedName,
+            string manifest,
+            ImmutableArray<FieldInfo> fields,
+            ImmutableArray<INamedTypeSymbol> protocols,
+            bool allowEmpty,
+            ImmutableArray<InvalidFieldInfo> invalidFields,
+            ConstructionPlan constructionPlan,
+            bool isGenericDefinition = false,
+            string definitionFullName = "")
         {
             SimpleName = simpleName;
             FullyQualifiedName = fullyQualifiedName;
@@ -2718,6 +2998,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             Fields = fields;
             Protocols = protocols;
             AllowEmpty = allowEmpty;
+            InvalidFields = invalidFields;
+            ConstructionPlan = constructionPlan;
             IsGenericDefinition = isGenericDefinition;
             DefinitionFullName = definitionFullName;
         }
@@ -2728,6 +3010,19 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public ImmutableArray<FieldInfo> Fields { get; }
         public ImmutableArray<INamedTypeSymbol> Protocols { get; }
         public bool AllowEmpty { get; }
+
+        /// <summary>
+        /// [AkkaField] properties excluded from <see cref="Fields"/> because they are structurally
+        /// unusable (static, or an inaccessible getter) -- see AKKASG028. Empty for a valid message.
+        /// </summary>
+        public ImmutableArray<InvalidFieldInfo> InvalidFields { get; }
+
+        /// <summary>
+        /// How the read method reconstructs this type on deserialize: the chosen constructor's
+        /// NAMED-argument bindings plus any leftover object-initializer assignments, or the reasons
+        /// no plan could be built (AKKASG026/027). See <see cref="ConstructionPlan"/>.
+        /// </summary>
+        public ConstructionPlan ConstructionPlan { get; }
 
         /// <summary>
         /// True for a generic <c>[AkkaSerializable]</c> DEFINITION (e.g. <c>Wrapper&lt;T&gt;</c>):
@@ -2744,10 +3039,82 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         /// </summary>
         public string DefinitionFullName { get; }
 
+        /// <summary>
+        /// Used by formatter resolution to swap in fields with a resolved <see cref="TypeMapping"/>.
+        /// <see cref="ConstructionPlan"/> is keyed by field NAME, not by <see cref="FieldInfo"/>
+        /// reference, so it stays valid across this substitution without needing to be rebuilt.
+        /// </summary>
         public MessageInfo WithFields(ImmutableArray<FieldInfo> fields)
         {
-            return new MessageInfo(SimpleName, FullyQualifiedName, Manifest, fields, Protocols, AllowEmpty, IsGenericDefinition, DefinitionFullName);
+            return new MessageInfo(SimpleName, FullyQualifiedName, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName);
         }
+    }
+
+    /// <summary>
+    /// A single <c>[AkkaField]</c> property found unusable during extraction: static, or its getter
+    /// is not accessible to the generated code. See AKKASG028.
+    /// </summary>
+    private sealed class InvalidFieldInfo
+    {
+        public InvalidFieldInfo(string propertyName, string reason)
+        {
+            PropertyName = propertyName;
+            Reason = reason;
+        }
+
+        public string PropertyName { get; }
+
+        /// <summary>Free-text reason, e.g. "is static; ..." or "has no accessible getter".</summary>
+        public string Reason { get; }
+    }
+
+    /// <summary>
+    /// How a message's constructor is called on deserialize. <see cref="Arguments"/> supplies NAMED
+    /// constructor arguments (parameter name -&gt; field name); <see cref="InitializerFieldNames"/>
+    /// lists [AkkaField] properties assigned afterward via object initializer. Both are non-empty only
+    /// when <see cref="IsValid"/>; otherwise <see cref="Errors"/> explains what could not be satisfied
+    /// (AKKASG026). <see cref="UncoveredDefaultedParameters"/> is advisory (AKKASG027) and can be
+    /// non-empty even when <see cref="IsValid"/> is true.
+    /// </summary>
+    private sealed class ConstructionPlan
+    {
+        public static readonly ConstructionPlan Empty = new(
+            ImmutableArray<ConstructorArgumentPlan>.Empty,
+            ImmutableArray<string>.Empty,
+            ImmutableArray<string>.Empty,
+            ImmutableArray<string>.Empty);
+
+        public ConstructionPlan(
+            ImmutableArray<ConstructorArgumentPlan> arguments,
+            ImmutableArray<string> initializerFieldNames,
+            ImmutableArray<string> uncoveredDefaultedParameters,
+            ImmutableArray<string> errors)
+        {
+            Arguments = arguments;
+            InitializerFieldNames = initializerFieldNames;
+            UncoveredDefaultedParameters = uncoveredDefaultedParameters;
+            Errors = errors;
+        }
+
+        public ImmutableArray<ConstructorArgumentPlan> Arguments { get; }
+        public ImmutableArray<string> InitializerFieldNames { get; }
+        public ImmutableArray<string> UncoveredDefaultedParameters { get; }
+
+        /// <summary>Human-readable reasons construction is impossible; empty when valid.</summary>
+        public ImmutableArray<string> Errors { get; }
+    }
+
+    /// <summary>A single NAMED constructor argument: <see cref="ParameterName"/> supplied from the field named <see cref="FieldName"/>.</summary>
+    private readonly struct ConstructorArgumentPlan
+    {
+        public ConstructorArgumentPlan(string parameterName, string fieldName)
+        {
+            ParameterName = parameterName;
+            FieldName = fieldName;
+        }
+
+        public string ParameterName { get; }
+        public string FieldName { get; }
     }
 
     /// <summary>
