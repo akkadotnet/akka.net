@@ -31,9 +31,9 @@ namespace Akka.Remote.Tests.Artery
     /// During that window BOTH <c>_isShutdown</c> and <c>_materializer.IsShutdown</c> are still
     /// <see langword="false"/>, so materializing a BRAND-NEW outbound stream in that window used to
     /// surface <see cref="InvalidOperationException"/> ("Cannot create child while terminating or
-    /// terminated") uncaught -- this fix's <c>InvalidOperationException</c> catch (deliberately
-    /// WITHOUT a flag guard, unlike the sibling <c>Akka.Pattern.IllegalStateException</c> catch)
-    /// swallows it and logs at Debug instead.
+    /// terminated") uncaught -- this fix's <c>InvalidOperationException</c> catch (guarded by
+    /// termination-state checks, see <c>ArteryRemoting.IsActorSystemTerminating</c>) swallows it
+    /// and logs at Debug instead.
     ///
     /// <para>
     /// <b>Why reflection, and why no live peer.</b> <c>ArteryRemoting.EnqueueControl</c> is

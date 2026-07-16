@@ -18,9 +18,10 @@ namespace Akka.Serialization.V2;
 /// <remarks>
 /// <para>
 /// Register an implementation for a specific <typeparamref name="T"/> on a generated serializer
-/// using <see cref="AkkaSerializerFormatterAttribute"/>. The generator then routes every field of
-/// type <typeparamref name="T"/> (including <c>Nullable&lt;T&gt;</c> for value types) through this
-/// formatter instead of requiring a nested <see cref="AkkaSerializableAttribute"/> definition.
+/// using <c>[AkkaSerializerFormatter&lt;T, TFormatter&gt;]</c>. The generator then routes every
+/// field of type <typeparamref name="T"/> (including <c>Nullable&lt;T&gt;</c> for value types)
+/// through this formatter instead of requiring a nested <see cref="AkkaSerializableAttribute"/>
+/// definition.
 /// </para>
 /// <para>
 /// <see cref="Write"/> and <see cref="Read"/> must be symmetric: reading the bytes written by

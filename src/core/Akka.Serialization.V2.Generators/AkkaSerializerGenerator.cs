@@ -12,6 +12,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Akka.Serialization.V2.Generators;
@@ -19,26 +20,33 @@ namespace Akka.Serialization.V2.Generators;
 [Generator]
 public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 {
-    private const string SerializerAttributeFullName = "Akka.Serialization.V2.AkkaSerializerAttribute";
+    private const string SerializerAttributeFullName = "Akka.Serialization.V2.AkkaSerializerAttribute`1";
     private const string SerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializableAttribute";
     private const string FieldAttributeFullName = "Akka.Serialization.V2.AkkaFieldAttribute";
     private const string EnvelopePayloadAttributeFullName = "Akka.Serialization.V2.AkkaEnvelopePayloadAttribute";
-    private const string FormatterAttributeFullName = "Akka.Serialization.V2.AkkaSerializerFormatterAttribute";
-    private const string FormatterInterfaceFullName = "Akka.Serialization.V2.IAkkaMessagePackFormatter`1";
+    private const string UnionAttributeFullName = "Akka.Serialization.V2.AkkaUnionAttribute";
+    private const string GenericSerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializableAttribute`1";
+    private const string FormatterAttributeFullName = "Akka.Serialization.V2.AkkaSerializerFormatterAttribute`2";
     private const string ExtendedActorSystemFullName = "Akka.Actor.ExtendedActorSystem";
+    private const string AkkaSerializerBaseTypeFullName = "Akka.Serialization.V2.AkkaSerializer";
 
-    private static readonly DiagnosticDescriptor MissingSerializerName = new(
+    // AkkaSerializerAttribute<TProtocol>(string name, int serializerId) requires both arguments at
+    // every call site -- there is no longer a way to OMIT Name or SerializerId, so AKKASG001/002
+    // no longer guard "missing" registration. They still guard the argument VALUES: a caller can
+    // still write [AkkaSerializer<T>(null!, 0)] or an empty/whitespace name or a non-positive id,
+    // and those remain compile-time errors from this generator.
+    private static readonly DiagnosticDescriptor InvalidSerializerName = new(
         "AKKASG001",
-        "Serializer name is required",
-        "[AkkaSerializer] class '{0}' must specify Name for explicit registration",
+        "Serializer name must be a non-empty string",
+        "[AkkaSerializer] class '{0}' specifies an invalid Name: it must not be null, empty, or consist only of whitespace",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor MissingSerializerId = new(
+    private static readonly DiagnosticDescriptor InvalidSerializerId = new(
         "AKKASG002",
-        "Serializer id is required for POC generator",
-        "[AkkaSerializer] class '{0}' must specify SerializerId for the POC generator",
+        "Serializer id must be a positive integer",
+        "[AkkaSerializer] class '{0}' specifies SerializerId {1}, which must be a positive, non-zero integer unique within the actor system",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -83,10 +91,16 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    // The `where TFormatter : IAkkaMessagePackFormatter<TTarget>` constraint on
+    // AkkaSerializerFormatterAttribute<TTarget, TFormatter> now makes interface conformance a
+    // compile-time error at the attribute usage site, so this narrows to the one thing a generic
+    // constraint cannot express: TFormatter must not be abstract (an abstract type still satisfies
+    // the constraint, and there is deliberately no `new()` clause to rule it out, since a formatter
+    // with only an ExtendedActorSystem constructor is legitimate).
     private static readonly DiagnosticDescriptor InvalidFormatterType = new(
         "AKKASG008",
-        "Formatter type is invalid",
-        "Formatter '{0}' on serializer '{1}' must be a non-abstract, non-generic class implementing IAkkaMessagePackFormatter<{2}>",
+        "Formatter type must not be abstract",
+        "Formatter '{0}' on serializer '{1}' must not be abstract: it cannot be instantiated as the runtime IAkkaMessagePackFormatter<{2}>",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -140,6 +154,158 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor UnionMemberNotSerializable = new(
+        "AKKASG015",
+        "Union member type is not serializable",
+        "Union member '{0}' on property '{1}' of type '{2}' must be an [AkkaSerializable] class or struct handled by this serializer",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberMissingManifest = new(
+        "AKKASG016",
+        "Union member manifest is required",
+        "Union member '{0}' on property '{1}' of type '{2}' must specify Manifest in its [AkkaSerializable] attribute: the manifest is the union discriminator",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberManifestCollision = new(
+        "AKKASG017",
+        "Union member manifests must be unique",
+        "Union on property '{0}' of type '{1}' has multiple members with manifest '{2}': {3}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberNotAssignable = new(
+        "AKKASG018",
+        "Union member is not assignable to the field type",
+        "Union member '{0}' on property '{1}' of type '{2}' is not implicitly convertible to the field type '{3}'",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidUnionMemberSet = new(
+        "AKKASG019",
+        "Union member set is invalid",
+        "Union on property '{0}' of type '{1}' has an invalid member set: {2}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidClosedGenericRegistration = new(
+        "AKKASG020",
+        "Closed generic registration is invalid",
+        "[AkkaSerializable<T>] registration '{0}' on serializer '{1}' must be a closed generic construction of a generic type annotated with [AkkaSerializable]",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateClosedGenericRegistration = new(
+        "AKKASG021",
+        "Duplicate closed generic registration",
+        "Serializer '{0}' registers the closed construction '{1}' more than once",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor GenericSerializableRequiresRegistration = new(
+        "AKKASG022",
+        "Generic serializable type requires closed generic registrations",
+        "Generic [AkkaSerializable] type '{0}' implements protocol '{1}' of serializer '{2}' but has no [AkkaSerializable<T>] registrations; a source generator cannot serialize an open generic, so register each closed construction with [AkkaSerializable<T>(Manifest = ...)] on the serializer class",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnregisteredClosedGenericField = new(
+        "AKKASG023",
+        "Closed generic field type is not registered",
+        "Property '{0}' on type '{1}' uses closed generic [AkkaSerializable] type '{2}', which must be registered on serializer '{3}' with [AkkaSerializable<T>]",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberNotSealed = new(
+        "AKKASG025",
+        "Union member type is not sealed",
+        "Union member '{0}' on property '{1}' of type '{2}' is not sealed; union write dispatch matches the exact runtime type, so an undeclared subtype of '{0}' fails serialization -- consider sealing it",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateGeneratedName = new(
+        "AKKASG024",
+        "Generated member name collision",
+        "Serializer '{0}' produces the same generated member name '{1}' for distinct message types {2}; rename one of the types to disambiguate",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor NoMatchingConstructor = new(
+        "AKKASG026",
+        "No matching constructor",
+        "[AkkaSerializable] type '{0}' cannot be reconstructed on deserialize: {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ConstructorParameterNotCovered = new(
+        "AKKASG027",
+        "Constructor parameter not covered by [AkkaField]",
+        "Constructor parameter '{0}' of [AkkaSerializable] type '{1}' has a default value and is not covered by any [AkkaField] property; it silently resets to its default value on every deserialize",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor FieldPropertyNotAccessible = new(
+        "AKKASG028",
+        "[AkkaField] must be on an accessible instance property",
+        "[AkkaField] property '{0}' on type '{1}' {2}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ProtocolMessageNotSerializable = new(
+        "AKKASG029",
+        "Protocol message type is not [AkkaSerializable]",
+        "Type '{0}' implements protocol '{1}' of serializer '{2}' but is not [AkkaSerializable]; it is invisible to the generated Manifest/Serialize/Deserialize switches and fails only at runtime, when it is first sent",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateProtocolBinding = new(
+        "AKKASG031",
+        "Protocol interface bound by multiple serializers",
+        "Protocol '{0}' is bound by multiple [AkkaSerializer] classes: {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidSerializerShape = new(
+        "AKKASG032",
+        "Serializer class shape is invalid",
+        "[AkkaSerializer] class '{0}' {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ProtocolTypeMustBeInterface = new(
+        "AKKASG033",
+        "Protocol type must be an interface",
+        "[AkkaSerializer<{1}>] class '{0}' specifies a protocol type that is not an interface; dispatch matches messages via AllInterfaces, so a non-interface protocol type silently generates a serializer with empty Manifest/Serialize/Deserialize switches",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ClosedGenericRegistrationNotInProtocol = new(
+        "AKKASG034",
+        "Registered closed generic type does not implement the serializer protocol",
+        "Closed generic construction '{0}' registered on serializer '{1}' does not implement protocol '{2}' and is not referenced by any [AkkaField] property of a message reachable from it; the registration has no effect",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var serializers = context.SyntaxProvider
@@ -158,12 +324,20 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             .Where(static info => info != null)
             .Collect();
 
-        context.RegisterSourceOutput(serializers.Combine(messages), static (ctx, pair) =>
+        // Combined only at this final, terminal stage -- not stored in any cached IncrementalValueProvider
+        // node upstream of it -- so AKKASG029's whole-compilation scan (ValidateProtocolCoverage) can see
+        // every source-declared type. This necessarily costs incrementality for the WHOLE generator (the
+        // Compilation input changes on every edit anywhere in this project), not just that one check: there
+        // is no cheaper place to compute "does any type implement this protocol interface without
+        // [AkkaSerializable]" than the terminal stage that already has a Compilation in hand.
+        context.RegisterSourceOutput(serializers.Combine(messages).Combine(context.CompilationProvider), static (ctx, tuple) =>
         {
+            var (pair, compilation) = tuple;
+
             var duplicateSerializerIds = pair.Left
                 .Where(s => s != null)
                 .Cast<SerializerInfo>()
-                .Where(s => s.SerializerId != 0)
+                .Where(s => s.SerializerId > 0)
                 .GroupBy(s => s.SerializerId)
                 .Where(group => group.Count() > 1)
                 .ToImmutableDictionary(group => group.Key, group => string.Join(", ", group.Select(s => s.ClassName)));
@@ -173,6 +347,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 ctx.ReportDiagnostic(Diagnostic.Create(DuplicateSerializerId, Location.None, duplicate.Key, duplicate.Value));
             }
 
+            // Same computation as duplicateSerializerIds above, grouped on the protocol interface
+            // instead of the numeric id: two [AkkaSerializer] classes bound to the same protocol is
+            // silent last-wins at runtime registration today (AKKASG031).
+            var duplicateProtocolBindings = pair.Left
+                .Where(s => s != null)
+                .Cast<SerializerInfo>()
+                .Where(s => !string.IsNullOrEmpty(s.ProtocolTypeFullName))
+                .GroupBy(s => s.ProtocolTypeFullName, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .ToImmutableDictionary(group => group.Key, group => string.Join(", ", group.Select(s => s.ClassName)), StringComparer.Ordinal);
+
+            foreach (var duplicate in duplicateProtocolBindings)
+            {
+                ctx.ReportDiagnostic(Diagnostic.Create(DuplicateProtocolBinding, Location.None, ToDisplayName(duplicate.Key), duplicate.Value));
+            }
+
             foreach (var serializer in pair.Left)
             {
                 if (serializer == null)
@@ -180,25 +370,57 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
                 if (string.IsNullOrWhiteSpace(serializer.Name))
                 {
-                    ctx.ReportDiagnostic(Diagnostic.Create(MissingSerializerName, Location.None, serializer.ClassName));
+                    ctx.ReportDiagnostic(Diagnostic.Create(InvalidSerializerName, Location.None, serializer.ClassName));
                     continue;
                 }
 
-                if (serializer.SerializerId == 0)
+                if (serializer.SerializerId <= 0)
                 {
-                    ctx.ReportDiagnostic(Diagnostic.Create(MissingSerializerId, Location.None, serializer.ClassName));
+                    ctx.ReportDiagnostic(Diagnostic.Create(InvalidSerializerId, Location.None, serializer.ClassName, serializer.SerializerId));
                     continue;
                 }
 
                 if (duplicateSerializerIds.ContainsKey(serializer.SerializerId))
                     continue;
 
+                if (duplicateProtocolBindings.ContainsKey(serializer.ProtocolTypeFullName))
+                    continue;
+
+                if (!ValidateSerializerShape(ctx, serializer))
+                    continue;
+
+                if (!ValidateProtocolType(ctx, serializer))
+                    continue;
+
                 if (!ValidateFormatters(ctx, serializer))
                     continue;
 
-                var allMessages = pair.Right
+                if (!ValidateClosedGenericRegistrations(ctx, serializer))
+                    continue;
+
+                var declaredMessages = pair.Right
                     .Where(message => message != null)
                     .Cast<MessageInfo>()
+                    .ToImmutableArray();
+
+                // Generic definitions are placeholders: never serialized, never top-level, never in
+                // the message dictionary (their arity-less key could even collide with a same-named
+                // non-generic type). They exist only for the AKKASG022 check below.
+                var genericDefinitions = declaredMessages
+                    .Where(message => message.IsGenericDefinition)
+                    .ToImmutableArray();
+
+                if (!ValidateGenericDefinitions(ctx, serializer, genericDefinitions))
+                    continue;
+
+                if (!ValidateProtocolCoverage(ctx, serializer, compilation))
+                    continue;
+
+                var allMessages = declaredMessages
+                    .Where(message => !message.IsGenericDefinition)
+                    .Concat(serializer.ClosedGenericRegistrations
+                        .Where(registration => registration.Message != null)
+                        .Select(registration => registration.Message!))
                     .ToImmutableArray();
                 var allMessagesByType = allMessages.ToImmutableDictionary(message => message.FullyQualifiedName);
                 var resolvedMessagesByType = ResolveMessages(allMessagesByType, serializer.Formatters);
@@ -208,10 +430,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     .ToImmutableArray();
                 var reachableMessages = CollectReachableMessages(topLevelMessages, resolvedMessagesByType);
 
-                if (!ValidateMessages(ctx, serializer, topLevelMessages, reachableMessages))
+                if (!ValidateMessages(ctx, serializer, topLevelMessages, reachableMessages, resolvedMessagesByType))
                     continue;
 
-                ctx.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, topLevelMessages, reachableMessages));
+                if (!ValidateClosedGenericProtocolCoverage(ctx, serializer, reachableMessages))
+                    continue;
+
+                ctx.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, topLevelMessages, reachableMessages, resolvedMessagesByType));
             }
         });
     }
@@ -219,39 +444,38 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static SerializerInfo? ExtractSerializer(GeneratorAttributeSyntaxContext context)
     {
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
+
+        // Reading only the first attribute is safe: AkkaSerializerAttribute<TProtocol> declares
+        // AllowMultiple = false, and empirically (see AkkaSerializerGeneratorDiagnosticsSpec)
+        // the C# compiler enforces that against the OPEN generic attribute definition, not each
+        // closed construction -- [AkkaSerializer<IA>][AkkaSerializer<IB>] on the same class is
+        // rejected with CS0579 ("Duplicate 'AkkaSerializer<>' attribute") even though IA and IB
+        // differ, so at most one [AkkaSerializer<T>] ever reaches this method. No AKKASG030 is
+        // needed for this case.
         var attribute = context.Attributes[0];
         var compilation = context.SemanticModel.Compilation;
-        var messagePackSerializer = compilation.GetTypeByMetadataName("Akka.Serialization.V2.MessagePackSerializer`1");
         string? name = null;
         var serializerId = 0;
 
-        foreach (var argument in attribute.NamedArguments)
+        // AkkaSerializerAttribute<TProtocol>(string name, int serializerId): both arguments are
+        // mandatory POSITIONAL constructor arguments now -- the attribute has no settable
+        // properties left, so `[AkkaSerializer<T>(Name = "x", SerializerId = 1)]` named-property
+        // syntax cannot compile and NamedArguments can never carry either value. A length other
+        // than 2 cannot occur for a successfully-compiled use of this attribute.
+        if (attribute.ConstructorArguments.Length == 2)
         {
-            if (argument.Key == "Name" && argument.Value.Value is string value)
-                name = value;
-            else if (argument.Key == "SerializerId" && argument.Value.Value is int id)
+            name = attribute.ConstructorArguments[0].Value as string;
+            if (attribute.ConstructorArguments[1].Value is int id)
                 serializerId = id;
         }
 
-        var baseType = symbol.BaseType;
-        string protocolTypeFullName = string.Empty;
-        INamedTypeSymbol? protocolType = null;
-        while (baseType != null)
-        {
-            if (messagePackSerializer != null && SymbolEqualityComparer.Default.Equals(baseType.OriginalDefinition, messagePackSerializer))
-            {
-                protocolType = baseType.TypeArguments[0] as INamedTypeSymbol;
-                protocolTypeFullName = baseType.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                break;
-            }
-
-            baseType = baseType.BaseType;
-        }
+        var protocolType = attribute.AttributeClass?.TypeArguments.FirstOrDefault() as INamedTypeSymbol;
+        var protocolTypeFullName = protocolType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? string.Empty;
 
         var formatterAttributeType = compilation.GetTypeByMetadataName(FormatterAttributeFullName);
-        var formatterInterfaceType = compilation.GetTypeByMetadataName(FormatterInterfaceFullName);
         var extendedActorSystemType = compilation.GetTypeByMetadataName(ExtendedActorSystemFullName);
-        var formatters = ExtractFormatters(symbol, formatterAttributeType, formatterInterfaceType, extendedActorSystemType);
+        var formatters = ExtractFormatters(symbol, formatterAttributeType, extendedActorSystemType);
+        var closedGenericRegistrations = ExtractClosedGenericRegistrations(symbol, compilation);
 
         return new SerializerInfo(
             GetNamespace(symbol),
@@ -262,20 +486,154 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             protocolType,
             protocolTypeFullName,
             symbol.DeclaredAccessibility,
-            formatters);
+            formatters,
+            closedGenericRegistrations,
+            IsPartial(symbol),
+            symbol.IsGenericType,
+            DerivesFromAkkaSerializerBase(symbol, compilation));
+    }
+
+    /// <summary>
+    /// Whether EVERY syntax declaration of <paramref name="symbol"/> carries the 'partial'
+    /// modifier -- a class with a single non-partial declaration, or with any one part missing
+    /// 'partial', is already a compile error (CS0260) once the generator emits its own partial
+    /// declaration of the same class; AKKASG032 replaces that cryptic error with a direct one.
+    /// A declaring reference that is not a <see cref="ClassDeclarationSyntax"/> cannot occur here
+    /// in practice (the extraction pipeline only targets <see cref="ClassDeclarationSyntax"/>
+    /// nodes, and every partial part of one class shares the same declaration kind) and is
+    /// conservatively treated as satisfying the check rather than asserted against.
+    /// </summary>
+    private static bool IsPartial(INamedTypeSymbol symbol)
+    {
+        foreach (var reference in symbol.DeclaringSyntaxReferences)
+        {
+            if (reference.GetSyntax() is ClassDeclarationSyntax declaration && !declaration.Modifiers.Any(SyntaxKind.PartialKeyword))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="symbol"/> derives (directly or transitively) from
+    /// <see cref="AkkaSerializerBaseTypeFullName"/> -- the generated overrides (<c>Identifier</c>,
+    /// <c>Manifest</c>, <c>Serialize</c>, <c>Deserialize</c>, <c>SizeHint</c>) require it as a base,
+    /// or they fail to compile as overrides (CS0115) against whatever base the class actually has.
+    /// </summary>
+    private static bool DerivesFromAkkaSerializerBase(INamedTypeSymbol symbol, Compilation compilation)
+    {
+        var akkaSerializerBaseType = compilation.GetTypeByMetadataName(AkkaSerializerBaseTypeFullName);
+        if (akkaSerializerBaseType == null)
+            return false;
+
+        for (var baseType = symbol.BaseType; baseType != null; baseType = baseType.BaseType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(baseType, akkaSerializerBaseType))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Extracts <c>[AkkaSerializable&lt;T&gt;]</c> registrations from the serializer class. A
+    /// valid target is a CLOSED generic construction (no unbound generics, no type parameters
+    /// anywhere in its arguments) whose definition is annotated <c>[AkkaSerializable]</c>; its
+    /// <see cref="MessageInfo"/> is built from the constructed symbol, so all field types arrive
+    /// already substituted. Invalid targets are recorded with a null message so AKKASG020 fires.
+    /// </summary>
+    private static ImmutableArray<ClosedGenericRegistrationInfo> ExtractClosedGenericRegistrations(INamedTypeSymbol symbol, Compilation compilation)
+    {
+        var genericSerializableAttribute = compilation.GetTypeByMetadataName(GenericSerializableAttributeFullName);
+        if (genericSerializableAttribute == null)
+            return ImmutableArray<ClosedGenericRegistrationInfo>.Empty;
+
+        var attributes = symbol.GetAttributes()
+            .Where(attr => attr.AttributeClass is { IsGenericType: true } ac && SymbolEqualityComparer.Default.Equals(ac.OriginalDefinition, genericSerializableAttribute))
+            .ToImmutableArray();
+        if (attributes.IsEmpty)
+            return ImmutableArray<ClosedGenericRegistrationInfo>.Empty;
+
+        var knownTypes = KnownTypes.From(compilation);
+        var builder = ImmutableArray.CreateBuilder<ClosedGenericRegistrationInfo>(attributes.Length);
+        foreach (var attribute in attributes)
+        {
+            var manifest = string.Empty;
+            foreach (var argument in attribute.NamedArguments)
+            {
+                if (argument.Key == "Manifest" && argument.Value.Value is string value)
+                    manifest = value;
+            }
+
+            var target = attribute.AttributeClass!.TypeArguments[0] as INamedTypeSymbol;
+            var serializableAttribute = target?.OriginalDefinition.GetAttributes()
+                .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
+            var isValidTarget = target is { IsGenericType: true, IsUnboundGenericType: false }
+                && IsFullyClosed(target)
+                && serializableAttribute != null;
+
+            if (!isValidTarget)
+            {
+                var displayName = attribute.AttributeClass!.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+                builder.Add(new ClosedGenericRegistrationInfo(displayName, message: null));
+                continue;
+            }
+
+            // AllowEmpty travels with the definition's [AkkaSerializable]; the manifest is
+            // per-construction (each closed form needs its own identity) and comes from the
+            // registration attribute.
+            var allowEmpty = serializableAttribute!.NamedArguments
+                .Any(argument => argument.Key == "AllowEmpty" && argument.Value.Value is true);
+            var message = ExtractMessageCore(
+                target!,
+                GetMessageDictionaryKey(target!),
+                manifest,
+                allowEmpty,
+                knownTypes,
+                compilation,
+                definitionFullName: GetFullyQualifiedTypeName(target!.OriginalDefinition));
+            builder.Add(new ClosedGenericRegistrationInfo(message.FullyQualifiedName, message));
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Whether every type argument of a construction (recursively) is a concrete type -- i.e. no
+    /// type parameter appears anywhere. <c>Wrapper&lt;Foo&gt;</c> and
+    /// <c>Wrapper&lt;Pair&lt;Foo, Bar&gt;&gt;</c> qualify; <c>Wrapper&lt;T&gt;</c> inside another
+    /// generic declaration does not.
+    /// </summary>
+    private static bool IsFullyClosed(INamedTypeSymbol type)
+    {
+        foreach (var argument in type.TypeArguments)
+        {
+            switch (argument)
+            {
+                case ITypeParameterSymbol:
+                    return false;
+                case INamedTypeSymbol { IsGenericType: true } nested when !IsFullyClosed(nested):
+                    return false;
+            }
+        }
+
+        return true;
     }
 
     private static ImmutableArray<FormatterInfo> ExtractFormatters(
         INamedTypeSymbol symbol,
         INamedTypeSymbol? formatterAttributeType,
-        INamedTypeSymbol? formatterInterfaceType,
         INamedTypeSymbol? extendedActorSystemType)
     {
         if (formatterAttributeType == null)
             return ImmutableArray<FormatterInfo>.Empty;
 
+        // AkkaSerializerFormatterAttribute<TTarget, TFormatter> where TFormatter :
+        // IAkkaMessagePackFormatter<TTarget> -- a constructed generic attribute, so matching
+        // requires comparing against OriginalDefinition (the same pattern used for
+        // AkkaSerializableAttribute<TMessage> in ExtractClosedGenericRegistrations).
         var formatterAttributes = symbol.GetAttributes()
-            .Where(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, formatterAttributeType))
+            .Where(attr => attr.AttributeClass is { IsGenericType: true } ac && SymbolEqualityComparer.Default.Equals(ac.OriginalDefinition, formatterAttributeType))
             .ToImmutableArray();
 
         if (formatterAttributes.IsEmpty)
@@ -284,37 +642,39 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var builder = ImmutableArray.CreateBuilder<FormatterInfo>(formatterAttributes.Length);
         foreach (var attribute in formatterAttributes)
         {
-            if (attribute.ConstructorArguments.Length != 2)
-                continue;
+            // TTarget and TFormatter come from the constructed attribute's own type arguments, not
+            // ConstructorArguments -- there is no constructor argument carrying either type
+            // anymore. Both slots are always present for a successfully-compiled two-arity
+            // construction: neither a null target nor an unbound generic target/formatter can be
+            // written here (the compiler rejects both at the attribute usage site), so unlike the
+            // former Type-typed constructor arguments, these can never be "missing" or "not a
+            // type" -- AKKASG011's former null-target check is unreachable and has been removed.
+            var targetTypeSymbol = attribute.AttributeClass!.TypeArguments[0];
+            var formatterTypeSymbol = attribute.AttributeClass!.TypeArguments[1];
 
-            // Never silently drop a registration: malformed arguments (null, or something that is
-            // not a type at all) are recorded as invalid entries so a diagnostic fires instead of
-            // the registration silently doing nothing.
-            var targetTypeSymbol = attribute.ConstructorArguments[0].Value as ITypeSymbol;
-            var formatterTypeSymbol = attribute.ConstructorArguments[1].Value as ITypeSymbol;
-
-            // Formatter targets must be plain named types: arrays are not INamedTypeSymbol, and
-            // generic targets (open or closed) would collide on the arity-less fully-qualified
-            // name used for field matching. Null/non-type targets are equally unsupported.
-            // All of these are recorded with IsTargetSupported = false so AKKASG011 fires.
+            // Formatter targets must still be plain named types: arrays are not INamedTypeSymbol,
+            // and CLOSED generic targets (e.g. List<int>) -- now directly expressible as TTarget --
+            // would still collide on the arity-less fully-qualified name used for field matching.
+            // Both remain recorded with IsTargetSupported = false so AKKASG011 fires.
             var targetNamedType = targetTypeSymbol as INamedTypeSymbol;
             var isTargetSupported = targetNamedType is { IsGenericType: false };
             var targetTypeFullName = isTargetSupported
                 ? GetFullyQualifiedTypeName(targetNamedType!)
-                : targetTypeSymbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? "<null>";
+                : targetTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             var formatterNamedType = formatterTypeSymbol as INamedTypeSymbol;
             var formatterTypeFullName = formatterNamedType != null
                 ? GetFullyQualifiedTypeName(formatterNamedType)
-                : formatterTypeSymbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? "<null>";
+                : formatterTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-            var implementsInterface = isTargetSupported &&
-                formatterInterfaceType != null &&
-                formatterNamedType is { TypeKind: TypeKind.Class, IsAbstract: false, IsGenericType: false } &&
-                formatterNamedType.AllInterfaces.Any(candidate =>
-                    SymbolEqualityComparer.Default.Equals(candidate.OriginalDefinition, formatterInterfaceType) &&
-                    candidate.TypeArguments.Length == 1 &&
-                    SymbolEqualityComparer.Default.Equals(candidate.TypeArguments[0], targetTypeSymbol));
+            // The `where TFormatter : IAkkaMessagePackFormatter<TTarget>` constraint is enforced by
+            // the compiler at the attribute usage site, so AKKASG008's former interface-conformance
+            // check can never fire here and has been removed. A generic constraint cannot express
+            // "and not abstract", though: an abstract TFormatter still satisfies the constraint
+            // (it has no `new()` clause to rule that out either -- formatters with an
+            // ExtendedActorSystem-only constructor are legitimate), so AKKASG008 now guards
+            // abstractness alone.
+            var isAbstract = formatterNamedType?.IsAbstract ?? false;
 
             var ctorKind = formatterNamedType != null
                 ? GetFormatterCtorKind(formatterNamedType, extendedActorSystemType)
@@ -322,9 +682,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
             builder.Add(new FormatterInfo(
                 targetTypeFullName,
-                targetTypeSymbol?.IsValueType ?? false,
+                targetTypeSymbol.IsValueType,
                 formatterTypeFullName,
-                implementsInterface,
+                isAbstract,
                 ctorKind,
                 isTargetSupported));
         }
@@ -357,6 +717,138 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         return hasParameterlessCtor ? FormatterCtorKind.Parameterless : FormatterCtorKind.None;
     }
 
+    /// <summary>
+    /// Fires AKKASG032 for each way the [AkkaSerializer] class declaration itself is unusable as
+    /// a codegen target: not partial, not derived from the AkkaSerializer base class, or generic.
+    /// Today each of these produces a wall of raw CS errors (CS0260/CS0759/CS0115/CS0264) pointing
+    /// at the GENERATED file instead of the user's declaration; this replaces that with one direct
+    /// diagnostic per violated rule, still on the user's class.
+    /// </summary>
+    private static bool ValidateSerializerShape(SourceProductionContext context, SerializerInfo serializer)
+    {
+        var isValid = true;
+
+        if (!serializer.IsPartial)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
+                "must be declared 'partial': the generator emits a second declaration of this class"));
+            isValid = false;
+        }
+
+        if (!serializer.DerivesFromAkkaSerializerBase)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
+                "must derive from Akka.Serialization.V2.AkkaSerializer: the generated members (Identifier, Manifest, Serialize, Deserialize, SizeHint) are declared as overrides of that base"));
+            isValid = false;
+        }
+
+        if (serializer.IsGeneric)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
+                "cannot be a generic type: the generator emits one concrete, closed partial class per [AkkaSerializer] declaration"));
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    /// <summary>
+    /// Fires AKKASG033 when <c>TProtocol</c> in <c>[AkkaSerializer&lt;TProtocol&gt;]</c> is not an
+    /// interface. Top-level dispatch matches a message via <c>message.Protocols</c>, which is
+    /// populated from <c>INamedTypeSymbol.AllInterfaces</c> (see <see cref="ExtractMessageCore"/>)
+    /// -- a class or struct can never appear there, so a non-interface protocol type silently
+    /// produces a serializer whose Manifest/Serialize/Deserialize switches have no cases at all.
+    /// </summary>
+    private static bool ValidateProtocolType(SourceProductionContext context, SerializerInfo serializer)
+    {
+        if (serializer.ProtocolType == null || serializer.ProtocolType.TypeKind == TypeKind.Interface)
+            return true;
+
+        context.ReportDiagnostic(Diagnostic.Create(ProtocolTypeMustBeInterface, Location.None, serializer.ClassName, ToDisplayName(serializer.ProtocolTypeFullName)));
+        return false;
+    }
+
+    /// <summary>
+    /// Fires AKKASG029 when a named type declared IN THIS COMPILATION implements the serializer's
+    /// protocol interface but is not [AkkaSerializable]. Exempt: interfaces and abstract classes
+    /// (never concrete runtime message types -- their concrete subtypes are checked individually),
+    /// and [AkkaSerializable]-marked open generic definitions (governed entirely by AKKASG022's
+    /// registration machinery). An unmarked OPEN GENERIC definition that implements the protocol is
+    /// still an error here: with no [AkkaSerializable] on the definition, none of its closed
+    /// constructions could ever be registered with [AkkaSerializable&lt;T&gt;] in the first place.
+    /// A type this flags is invisible to the generated Manifest/Serialize/Deserialize switches
+    /// today and only fails at runtime, the first time it is sent.
+    /// </summary>
+    private static bool ValidateProtocolCoverage(SourceProductionContext context, SerializerInfo serializer, Compilation compilation)
+    {
+        if (serializer.ProtocolType == null)
+            return true;
+
+        var knownTypes = KnownTypes.From(compilation);
+        if (knownTypes.SerializableAttribute == null)
+            return true;
+
+        var isValid = true;
+        foreach (var candidate in GetSourceDeclaredTypes(compilation))
+        {
+            if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct))
+                continue;
+
+            if (candidate.IsAbstract)
+                continue;
+
+            if (!candidate.AllInterfaces.Contains(serializer.ProtocolType, SymbolEqualityComparer.Default))
+                continue;
+
+            var isMarked = candidate.GetAttributes()
+                .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
+            if (isMarked)
+                continue;
+
+            context.ReportDiagnostic(Diagnostic.Create(ProtocolMessageNotSerializable, Location.None,
+                ToDisplayName(GetFullyQualifiedTypeName(candidate)), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    /// <summary>
+    /// Every named type declared in <paramref name="compilation"/>'s OWN source (never a referenced
+    /// assembly: <see cref="Compilation.Assembly"/> is the assembly being compiled), recursively
+    /// including nested types. Used only by <see cref="ValidateProtocolCoverage"/>, transiently,
+    /// inside the terminal source-production callback -- never stored in a cached provider.
+    /// </summary>
+    private static IEnumerable<INamedTypeSymbol> GetSourceDeclaredTypes(Compilation compilation)
+    {
+        return GetSourceDeclaredTypes(compilation.Assembly.GlobalNamespace);
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetSourceDeclaredTypes(INamespaceSymbol ns)
+    {
+        foreach (var type in ns.GetTypeMembers())
+        {
+            foreach (var nested in GetSourceDeclaredTypesIncludingSelf(type))
+                yield return nested;
+        }
+
+        foreach (var nestedNamespace in ns.GetNamespaceMembers())
+        {
+            foreach (var type in GetSourceDeclaredTypes(nestedNamespace))
+                yield return type;
+        }
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetSourceDeclaredTypesIncludingSelf(INamedTypeSymbol type)
+    {
+        yield return type;
+        foreach (var nested in type.GetTypeMembers())
+        {
+            foreach (var descendant in GetSourceDeclaredTypesIncludingSelf(nested))
+                yield return descendant;
+        }
+    }
+
     private static bool ValidateFormatters(SourceProductionContext context, SerializerInfo serializer)
     {
         if (serializer.Formatters.IsDefaultOrEmpty)
@@ -367,21 +859,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             if (!formatter.IsTargetSupported)
             {
-                context.ReportDiagnostic(Diagnostic.Create(FormatterTargetNotSupported, Location.None, formatter.TargetTypeFullName, serializer.ClassName));
+                context.ReportDiagnostic(Diagnostic.Create(FormatterTargetNotSupported, Location.None, ToDisplayName(formatter.TargetTypeFullName), serializer.ClassName));
                 isValid = false;
                 continue;
             }
 
-            if (!formatter.ImplementsInterface)
+            if (formatter.IsAbstract)
             {
-                context.ReportDiagnostic(Diagnostic.Create(InvalidFormatterType, Location.None, formatter.FormatterTypeFullName, serializer.ClassName, formatter.TargetTypeFullName));
+                context.ReportDiagnostic(Diagnostic.Create(InvalidFormatterType, Location.None, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName, ToDisplayName(formatter.TargetTypeFullName)));
                 isValid = false;
                 continue;
             }
 
             if (formatter.CtorKind == FormatterCtorKind.None)
             {
-                context.ReportDiagnostic(Diagnostic.Create(FormatterConstructorNotUsable, Location.None, formatter.FormatterTypeFullName, serializer.ClassName));
+                context.ReportDiagnostic(Diagnostic.Create(FormatterConstructorNotUsable, Location.None, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName));
                 isValid = false;
             }
         }
@@ -391,7 +883,61 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                      .GroupBy(formatter => formatter.TargetTypeFullName, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
         {
-            context.ReportDiagnostic(Diagnostic.Create(DuplicateFormatterRegistration, Location.None, serializer.ClassName, duplicate.Key));
+            context.ReportDiagnostic(Diagnostic.Create(DuplicateFormatterRegistration, Location.None, serializer.ClassName, ToDisplayName(duplicate.Key)));
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    private static bool ValidateClosedGenericRegistrations(SourceProductionContext context, SerializerInfo serializer)
+    {
+        if (serializer.ClosedGenericRegistrations.IsDefaultOrEmpty)
+            return true;
+
+        var isValid = true;
+        foreach (var registration in serializer.ClosedGenericRegistrations.Where(registration => registration.Message == null))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidClosedGenericRegistration, Location.None, ToDisplayName(registration.TargetDisplayName), serializer.ClassName));
+            isValid = false;
+        }
+
+        foreach (var duplicate in serializer.ClosedGenericRegistrations
+                     .Where(registration => registration.Message != null)
+                     .GroupBy(registration => registration.TargetDisplayName, StringComparer.Ordinal)
+                     .Where(group => group.Count() > 1))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(DuplicateClosedGenericRegistration, Location.None, serializer.ClassName, ToDisplayName(duplicate.Key)));
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    /// <summary>
+    /// Fires AKKASG022 when a generic <c>[AkkaSerializable]</c> definition implements this
+    /// serializer's protocol interface but no closed construction of it is registered: without a
+    /// registration the type would silently never serialize, which is exactly the confusing
+    /// broken-codegen failure mode this diagnostic replaces.
+    /// </summary>
+    private static bool ValidateGenericDefinitions(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> genericDefinitions)
+    {
+        if (genericDefinitions.IsDefaultOrEmpty || serializer.ProtocolType == null)
+            return true;
+
+        var isValid = true;
+        foreach (var definition in genericDefinitions)
+        {
+            if (!definition.Protocols.Any(protocol => SymbolEqualityComparer.Default.Equals(protocol, serializer.ProtocolType)))
+                continue;
+
+            var hasRegistration = serializer.ClosedGenericRegistrations.Any(registration =>
+                registration.Message != null &&
+                string.Equals(registration.Message.DefinitionFullName, definition.FullyQualifiedName, StringComparison.Ordinal));
+            if (hasRegistration)
+                continue;
+
+            context.ReportDiagnostic(Diagnostic.Create(GenericSerializableRequiresRegistration, Location.None, ToDisplayName(definition.FullyQualifiedName), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
             isValid = false;
         }
 
@@ -402,7 +948,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
         var attribute = context.Attributes[0];
-        var knownTypes = KnownTypes.From(context.SemanticModel.Compilation);
+        var compilation = context.SemanticModel.Compilation;
+        var knownTypes = KnownTypes.From(compilation);
         var manifest = string.Empty;
         var allowEmpty = false;
         foreach (var argument in attribute.NamedArguments)
@@ -413,7 +960,49 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 allowEmpty = allowEmptyValue;
         }
 
+        // A generic [AkkaSerializable] DEFINITION is never a message itself -- a source generator
+        // cannot reify an open generic. Only its registered closed constructions serialize
+        // ([AkkaSerializable<T>], AKKASG020/022). Extract it as a flagged placeholder
+        // carrying its protocols (for the AKKASG022 check) but no fields: a T-typed field would map
+        // as Unsupported and produce a misleading AKKASG003 against the definition.
+        if (symbol.IsGenericType)
+        {
+            return new MessageInfo(
+                symbol.Name,
+                GetFullyQualifiedTypeName(symbol),
+                manifest,
+                ImmutableArray<FieldInfo>.Empty,
+                symbol.AllInterfaces.ToImmutableArray(),
+                allowEmpty: true,
+                isGenericDefinition: true,
+                definitionFullName: GetFullyQualifiedTypeName(symbol),
+                invalidFields: ImmutableArray<InvalidFieldInfo>.Empty,
+                constructionPlan: ConstructionPlan.Empty);
+        }
+
+        return ExtractMessageCore(symbol, GetFullyQualifiedTypeName(symbol), manifest, allowEmpty, knownTypes, compilation, definitionFullName: string.Empty);
+    }
+
+    /// <summary>
+    /// Builds the <see cref="MessageInfo"/> for a concrete serializable type: either an ordinary
+    /// non-generic <c>[AkkaSerializable]</c> declaration or a registered closed generic
+    /// construction. For a closed construction, <see cref="INamedTypeSymbol.GetMembers"/> returns
+    /// SUBSTITUTED members -- a property declared as <c>T Payload</c> surfaces here with its
+    /// concrete type argument -- so ordinary field inference applies with no type-parameter
+    /// special-casing.
+    /// </summary>
+    private static MessageInfo ExtractMessageCore(
+        INamedTypeSymbol symbol,
+        string fullyQualifiedName,
+        string manifest,
+        bool allowEmpty,
+        KnownTypes knownTypes,
+        Compilation compilation,
+        string definitionFullName)
+    {
         var fields = new List<FieldInfo>();
+        var fieldSymbols = new List<IPropertySymbol>();
+        var invalidFields = ImmutableArray.CreateBuilder<InvalidFieldInfo>();
         foreach (var member in symbol.GetMembers().OfType<IPropertySymbol>())
         {
             var fieldAttribute = member.GetAttributes()
@@ -421,21 +1010,286 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             if (fieldAttribute == null || fieldAttribute.ConstructorArguments.Length != 1)
                 continue;
 
+            // A static or getter-inaccessible [AkkaField] property can never be read by the
+            // generated Write path (`message.Property`) -- record it as invalid (AKKASG028) instead
+            // of emitting uncompilable code, and exclude it from both ordinary field extraction and
+            // constructor selection below.
+            if (member.IsStatic)
+            {
+                invalidFields.Add(new InvalidFieldInfo(member.Name, "is static; [AkkaField] requires an instance property"));
+                continue;
+            }
+
+            if (member.GetMethod == null || !IsAccessibleFromGeneratedCode(member.GetMethod.DeclaredAccessibility))
+            {
+                invalidFields.Add(new InvalidFieldInfo(member.Name, "has no accessible getter"));
+                continue;
+            }
+
             var index = (int)fieldAttribute.ConstructorArguments[0].Value!;
             var isNullable = member.NullableAnnotation == NullableAnnotation.Annotated || IsNullableValueType(member.Type);
             var isEnvelopePayload = member.GetAttributes()
                 .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.EnvelopePayloadAttribute));
-            var mapping = isEnvelopePayload ? new TypeMapping(FieldKind.EnvelopePayload) : MapType(member.Type, knownTypes);
-            fields.Add(new FieldInfo(index, member.Name, member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), mapping, isNullable));
+            var unionMembers = ExtractUnionMembers(member, knownTypes, compilation, out var hasUnionAttribute);
+
+            // Precedence: [AkkaEnvelopePayload] always wins (matching its documented precedence over
+            // formatter registrations), then [AkkaUnion], then ordinary inference.
+            var mapping = isEnvelopePayload ? new TypeMapping(FieldKind.EnvelopePayload)
+                : hasUnionAttribute ? new TypeMapping(FieldKind.Union)
+                : MapType(member.Type, knownTypes);
+            fields.Add(new FieldInfo(
+                index,
+                member.Name,
+                member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                mapping,
+                isNullable,
+                unionMembers: isEnvelopePayload ? default : unionMembers));
+            fieldSymbols.Add(member);
         }
+
+        var constructionPlan = SelectConstructor(symbol, fields, fieldSymbols, compilation);
 
         return new MessageInfo(
             symbol.Name,
-            GetFullyQualifiedTypeName(symbol),
+            fullyQualifiedName,
             manifest,
             fields.OrderBy(f => f.Index).ToImmutableArray(),
             symbol.AllInterfaces.ToImmutableArray(),
-            allowEmpty);
+            allowEmpty,
+            isGenericDefinition: false,
+            definitionFullName: definitionFullName,
+            invalidFields: invalidFields.ToImmutable(),
+            constructionPlan: constructionPlan);
+    }
+
+    /// <summary>
+    /// Whether a member with this accessibility, declared on the message type, can be referenced
+    /// from the generated serializer partial class. The generated class is never nested inside the
+    /// message type and never derives from it, so only Public/Internal/ProtectedOrInternal (the
+    /// internal-or-protected union, satisfied by same-assembly access) are reachable -- Protected and
+    /// PrivateProtected both require a subtype relationship the generated code does not have.
+    /// </summary>
+    private static bool IsAccessibleFromGeneratedCode(Accessibility accessibility)
+    {
+        return accessibility is Accessibility.Public or Accessibility.Internal or Accessibility.ProtectedOrInternal;
+    }
+
+    /// <summary>
+    /// Selects the constructor used to reconstruct <paramref name="symbol"/> on deserialize and
+    /// plans how each valid [AkkaField] property is supplied: as a NAMED constructor argument (when
+    /// it maps to a parameter of the chosen constructor) or as an object-initializer assignment
+    /// (when it does not, provided it has an accessible 'set'/'init' accessor). See
+    /// <see cref="ConstructionPlan"/>. <paramref name="fields"/>/<paramref name="fieldSymbols"/> are
+    /// parallel: <c>fieldSymbols[i]</c> is the property backing <c>fields[i]</c>.
+    /// </summary>
+    private static ConstructionPlan SelectConstructor(
+        INamedTypeSymbol symbol,
+        IReadOnlyList<FieldInfo> fields,
+        IReadOnlyList<IPropertySymbol> fieldSymbols,
+        Compilation compilation)
+    {
+        var candidates = new List<(IMethodSymbol Ctor, ImmutableArray<ConstructorArgumentPlan> Arguments, ImmutableArray<string> UncoveredDefaulted, int DeclarationOrder)>();
+        var declarationOrder = 0;
+        foreach (var ctor in symbol.InstanceConstructors)
+        {
+            var order = declarationOrder++;
+            if (!IsAccessibleFromGeneratedCode(ctor.DeclaredAccessibility))
+                continue;
+
+            var argumentsBuilder = ImmutableArray.CreateBuilder<ConstructorArgumentPlan>();
+            var uncoveredDefaultedBuilder = ImmutableArray.CreateBuilder<string>();
+            var eligible = true;
+            foreach (var parameter in ctor.Parameters)
+            {
+                var matchIndex = MatchParameterToFieldIndex(parameter, fields, fieldSymbols, compilation);
+                if (matchIndex >= 0)
+                {
+                    argumentsBuilder.Add(new ConstructorArgumentPlan(parameter.Name, fields[matchIndex].Name));
+                    continue;
+                }
+
+                // A parameter without a default value MUST map to a field, or the constructor
+                // cannot reconstruct the type at all -- not eligible. A defaulted, unmapped
+                // parameter keeps the constructor eligible but is remembered for AKKASG027: its
+                // value silently resets to the default on every deserialize.
+                if (!parameter.HasExplicitDefaultValue)
+                {
+                    eligible = false;
+                    break;
+                }
+
+                uncoveredDefaultedBuilder.Add(parameter.Name);
+            }
+
+            if (!eligible)
+                continue;
+
+            candidates.Add((ctor, argumentsBuilder.ToImmutable(), uncoveredDefaultedBuilder.ToImmutable(), order));
+        }
+
+        if (candidates.Count == 0)
+        {
+            return new ConstructionPlan(
+                ImmutableArray<ConstructorArgumentPlan>.Empty,
+                ImmutableArray<string>.Empty,
+                ImmutableArray<string>.Empty,
+                ImmutableArray.Create("no accessible constructor maps every non-default parameter to an [AkkaField] property by name with an assignable type"));
+        }
+
+        // Most field-mapped parameters wins (fewer leftover properties needing initializer
+        // assignment); ties break on fewest total parameters, then declaration order, for a
+        // deterministic choice across identical-shaped candidates.
+        var chosen = candidates
+            .OrderByDescending(candidate => candidate.Arguments.Length)
+            .ThenBy(candidate => candidate.Ctor.Parameters.Length)
+            .ThenBy(candidate => candidate.DeclarationOrder)
+            .First();
+
+        var mappedFieldNames = new HashSet<string>(chosen.Arguments.Select(argument => argument.FieldName), StringComparer.Ordinal);
+        var initializerFieldNames = ImmutableArray.CreateBuilder<string>();
+        var errors = ImmutableArray.CreateBuilder<string>();
+        for (var i = 0; i < fields.Count; i++)
+        {
+            var field = fields[i];
+            if (mappedFieldNames.Contains(field.Name))
+                continue;
+
+            var property = fieldSymbols[i];
+            var hasAccessibleSetter = property.SetMethod != null && IsAccessibleFromGeneratedCode(property.SetMethod.DeclaredAccessibility);
+            if (!hasAccessibleSetter)
+            {
+                errors.Add($"property '{field.Name}' is not covered by the selected constructor and has no accessible 'set' or 'init' accessor");
+                continue;
+            }
+
+            initializerFieldNames.Add(field.Name);
+        }
+
+        return new ConstructionPlan(chosen.Arguments, initializerFieldNames.ToImmutable(), chosen.UncoveredDefaulted, errors.ToImmutable());
+    }
+
+    /// <summary>
+    /// Matches a constructor parameter to a field by name -- ordinal (case-sensitive) first, then a
+    /// UNIQUE case-insensitive match; an ambiguous case-insensitive match (more than one field name
+    /// differs only by case) counts as no match at all rather than guessing. A name match still
+    /// requires the property's type to be implicitly convertible to the parameter's type. Returns
+    /// the matched field's index into <paramref name="fields"/>, or -1 for no match.
+    /// </summary>
+    private static int MatchParameterToFieldIndex(
+        IParameterSymbol parameter,
+        IReadOnlyList<FieldInfo> fields,
+        IReadOnlyList<IPropertySymbol> fieldSymbols,
+        Compilation compilation)
+    {
+        for (var i = 0; i < fields.Count; i++)
+        {
+            if (string.Equals(fields[i].Name, parameter.Name, StringComparison.Ordinal))
+                return compilation.HasImplicitConversion(fieldSymbols[i].Type, parameter.Type) ? i : -1;
+        }
+
+        var matchIndex = -1;
+        for (var i = 0; i < fields.Count; i++)
+        {
+            if (!string.Equals(fields[i].Name, parameter.Name, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (matchIndex >= 0)
+                return -1;
+
+            matchIndex = i;
+        }
+
+        if (matchIndex < 0)
+            return -1;
+
+        return compilation.HasImplicitConversion(fieldSymbols[matchIndex].Type, parameter.Type) ? matchIndex : -1;
+    }
+
+    /// <summary>
+    /// Extracts the declared member set of a union field. The member set comes from the field's
+    /// own <c>[AkkaUnion]</c> when present (a per-field override), otherwise from an
+    /// <c>[AkkaUnion]</c> on the field's STATIC TYPE -- the natural declaration site, where the
+    /// union is stated once for every field of that interface/abstract base. For a field declared
+    /// as a type parameter inside a registered closed construction, the type-level lookup runs
+    /// against the SUBSTITUTED type argument, so <c>T Body</c> with <c>T := IOrderEvent</c> picks
+    /// up the union declared on <c>IOrderEvent</c>.
+    /// Symbol-dependent facts (assignability to the field's static type, unbound-generic detection)
+    /// are captured here; facts that need the whole message set (serializability, manifests) are
+    /// validated later in <see cref="ValidateMessages"/> against the serializer's message
+    /// dictionary. Malformed arguments (null, not a type, unbound generic) are recorded as
+    /// unsupported entries so a diagnostic fires instead of the member silently vanishing.
+    /// </summary>
+    private static ImmutableArray<UnionMemberInfo> ExtractUnionMembers(
+        IPropertySymbol member,
+        KnownTypes knownTypes,
+        Compilation compilation,
+        out bool hasUnionAttribute)
+    {
+        hasUnionAttribute = false;
+        if (knownTypes.UnionAttribute == null)
+            return ImmutableArray<UnionMemberInfo>.Empty;
+
+        // Field-level override wins; otherwise inherit the type-level declaration from the field's
+        // static type. OriginalDefinition covers a generic union base, where the attribute lives on
+        // the definition.
+        var unionAttribute = member.GetAttributes()
+            .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
+        if (unionAttribute == null && member.Type is INamedTypeSymbol fieldType)
+        {
+            unionAttribute = fieldType.OriginalDefinition.GetAttributes()
+                .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
+        }
+
+        // AkkaUnionAttribute(Type first, params Type[] rest): TWO constructor arguments now, not
+        // one -- [0] is the mandatory `first` member, [1] is the `params` array holding the rest.
+        // The full declared member set is the concatenation of both; reading only
+        // ConstructorArguments[0].Values (the pre-Seed-2 shape, when the whole set arrived as a
+        // single `params Type[] memberTypes` array) would silently see only `first` and drop every
+        // other declared member.
+        if (unionAttribute == null || unionAttribute.ConstructorArguments.Length != 2)
+            return ImmutableArray<UnionMemberInfo>.Empty;
+
+        hasUnionAttribute = true;
+        var restArguments = unionAttribute.ConstructorArguments[1].Values;
+        var arguments = ImmutableArray.CreateBuilder<TypedConstant>(1 + restArguments.Length);
+        arguments.Add(unionAttribute.ConstructorArguments[0]);
+        arguments.AddRange(restArguments);
+
+        var builder = ImmutableArray.CreateBuilder<UnionMemberInfo>(arguments.Count);
+        foreach (var argument in arguments)
+        {
+            if (argument.Value is not INamedTypeSymbol memberType || memberType.IsUnboundGenericType)
+            {
+                var displayName = argument.Value is ITypeSymbol typeSymbol
+                    ? typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+                    : "<null>";
+                builder.Add(new UnionMemberInfo(displayName, isValueType: false, isAssignable: false, isSupported: false, isSealed: false));
+                continue;
+            }
+
+            builder.Add(new UnionMemberInfo(
+                GetMessageDictionaryKey(memberType),
+                memberType.IsValueType,
+                compilation.HasImplicitConversion(memberType, member.Type),
+                isSupported: true,
+                isSealed: memberType.IsSealed || memberType.IsValueType));
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// The key a type is looked up under in the serializer's message dictionary. Non-generic types
+    /// use the arity-less <see cref="GetFullyQualifiedTypeName"/> (the existing key for every
+    /// <c>[AkkaSerializable]</c> message); closed generic constructions use the full,
+    /// fully-qualified display string (e.g. <c>Ns.Wrapper&lt;Ns.Foo&gt;</c>) so distinct
+    /// constructions stay distinct.
+    /// </summary>
+    private static string GetMessageDictionaryKey(INamedTypeSymbol type)
+    {
+        return type.IsGenericType
+            ? type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
+            : GetFullyQualifiedTypeName(type);
     }
 
     private static ImmutableDictionary<string, MessageInfo> ResolveMessages(
@@ -494,7 +1348,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             messages.Add(message);
             var referencedObjectTypes = new HashSet<string>(StringComparer.Ordinal);
             foreach (var field in message.Fields)
+            {
                 CollectObjectTypeNames(field.Mapping, referencedObjectTypes);
+
+                // Union members are reachable exactly like nested Object fields: each member needs
+                // its Write/Read/SizeOf methods generated for the union dispatch to call into.
+                foreach (var unionMember in field.UnionMembers)
+                {
+                    if (unionMember.IsSupported)
+                        referencedObjectTypes.Add(unionMember.TypeFullName);
+                }
+            }
 
             foreach (var typeName in referencedObjectTypes)
             {
@@ -521,12 +1385,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             CollectObjectTypeNames(argument, into);
     }
 
-    private static bool ValidateMessages(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages)
+    private static bool ValidateMessages(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages, ImmutableDictionary<string, MessageInfo> messagesByType)
     {
         var isValid = true;
         foreach (var message in topLevelMessages.Where(message => string.IsNullOrWhiteSpace(message.Manifest)))
         {
-            context.ReportDiagnostic(Diagnostic.Create(MissingManifest, Location.None, message.FullyQualifiedName));
+            context.ReportDiagnostic(Diagnostic.Create(MissingManifest, Location.None, ToDisplayName(message.FullyQualifiedName)));
             isValid = false;
         }
 
@@ -535,7 +1399,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                      .GroupBy(m => m.Manifest, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
         {
-            var typeNames = string.Join(", ", duplicate.Select(m => m.FullyQualifiedName));
+            var typeNames = string.Join(", ", duplicate.Select(m => ToDisplayName(m.FullyQualifiedName)));
             context.ReportDiagnostic(Diagnostic.Create(DuplicateManifest, Location.None, serializer.ClassName, duplicate.Key, typeNames));
             isValid = false;
         }
@@ -544,39 +1408,201 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             if (message.Fields.Length == 0 && !message.AllowEmpty)
             {
-                context.ReportDiagnostic(Diagnostic.Create(MissingFields, Location.None, message.FullyQualifiedName));
+                context.ReportDiagnostic(Diagnostic.Create(MissingFields, Location.None, ToDisplayName(message.FullyQualifiedName)));
                 isValid = false;
             }
 
             foreach (var duplicate in message.Fields.GroupBy(field => field.Index).Where(group => group.Count() > 1))
             {
-                context.ReportDiagnostic(Diagnostic.Create(DuplicateFieldIndex, Location.None, message.FullyQualifiedName, duplicate.Key));
+                context.ReportDiagnostic(Diagnostic.Create(DuplicateFieldIndex, Location.None, ToDisplayName(message.FullyQualifiedName), duplicate.Key));
                 isValid = false;
+            }
+
+            // Structural [AkkaField] problems found during extraction (static property, or a
+            // getter the generated Write path could not call): these properties never made it into
+            // message.Fields, so they cannot double-report through any of the checks below.
+            foreach (var invalidField in message.InvalidFields)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(FieldPropertyNotAccessible, Location.None, invalidField.PropertyName, ToDisplayName(message.FullyQualifiedName), invalidField.Reason));
+                isValid = false;
+            }
+
+            // Read-side reconstruction: either no constructor could be selected, or the selected
+            // constructor leaves [AkkaField] properties uncovered with no accessible setter to fall
+            // back on -- both make deserialize impossible to generate.
+            foreach (var error in message.ConstructionPlan.Errors)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(NoMatchingConstructor, Location.None, ToDisplayName(message.FullyQualifiedName), error));
+                isValid = false;
+            }
+
+            // Advisory only: the selected constructor still works (its defaulted parameter is simply
+            // never supplied), but the parameter's value silently reverts to its default on every
+            // deserialize because no [AkkaField] property feeds it.
+            foreach (var parameterName in message.ConstructionPlan.UncoveredDefaultedParameters)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(ConstructorParameterNotCovered, Location.None, parameterName, ToDisplayName(message.FullyQualifiedName)));
             }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Unsupported))
             {
-                context.ReportDiagnostic(Diagnostic.Create(UnsupportedFieldType, Location.None, field.Name, message.FullyQualifiedName, field.TypeFullName));
+                context.ReportDiagnostic(Diagnostic.Create(UnsupportedFieldType, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
                 isValid = false;
             }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.MissingSerializableDefinition))
             {
-                context.ReportDiagnostic(Diagnostic.Create(MissingNestedSerializableDefinition, Location.None, field.Name, message.FullyQualifiedName, field.TypeFullName));
+                context.ReportDiagnostic(Diagnostic.Create(MissingNestedSerializableDefinition, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
                 isValid = false;
             }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.UnsupportedEnumUnderlyingType))
             {
-                context.ReportDiagnostic(Diagnostic.Create(UnsupportedEnumUnderlyingType, Location.None, field.Name, message.FullyQualifiedName, field.Mapping.TypeFullName, field.Mapping.EnumUnderlyingTypeName));
+                context.ReportDiagnostic(Diagnostic.Create(UnsupportedEnumUnderlyingType, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.Mapping.TypeFullName), ToDisplayName(field.Mapping.EnumUnderlyingTypeName)));
                 isValid = false;
             }
+
+            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Union))
+            {
+                if (!ValidateUnionField(context, message, field, messagesByType))
+                    isValid = false;
+            }
+
+            // An Object mapping that resolves to no known message would generate a call to a
+            // nonexistent Write/Read/SizeOf method. The only way to hit this from within one
+            // compilation is a closed generic [AkkaSerializable] field type whose construction was
+            // never registered with [AkkaSerializable<T>] (non-generic [AkkaSerializable]
+            // types are always extracted). AKKASG023 names the fix.
+            foreach (var field in message.Fields)
+            {
+                var objectTypeNames = new HashSet<string>(StringComparer.Ordinal);
+                CollectObjectTypeNames(field.Mapping, objectTypeNames);
+                foreach (var objectTypeName in objectTypeNames.Where(typeName => !messagesByType.ContainsKey(typeName)))
+                {
+                    context.ReportDiagnostic(Diagnostic.Create(UnregisteredClosedGenericField, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(objectTypeName), serializer.ClassName));
+                    isValid = false;
+                }
+            }
+        }
+
+        // Flattening generic constructions into generated member names is collision-prone in
+        // principle (mirrors System.Text.Json's DuplicateTypeName handling): detect and fail
+        // instead of silently emitting duplicate members.
+        foreach (var collision in reachableMessages
+                     .GroupBy(GetMessageMethodName, StringComparer.Ordinal)
+                     .Where(group => group.Select(m => m.FullyQualifiedName).Distinct(StringComparer.Ordinal).Count() > 1))
+        {
+            var typeNames = string.Join(", ", collision.Select(m => ToDisplayName(m.FullyQualifiedName)));
+            context.ReportDiagnostic(Diagnostic.Create(DuplicateGeneratedName, Location.None, serializer.ClassName, collision.Key, typeNames));
+            isValid = false;
         }
 
         return isValid;
     }
 
-    private static string Generate(SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages)
+    /// <summary>
+    /// Fires AKKASG034 when a valid <c>[AkkaSerializable&lt;T&gt;]</c> registration's construction
+    /// neither implements the serializer's protocol (so it can never become a top-level message)
+    /// nor is referenced by any [AkkaField] property of a message reachable from a top-level
+    /// message (so it can never be emitted as a nested Object field either, AKKASG023's mechanism).
+    /// Such a registration compiles clean today and simply does nothing: <see cref="CollectReachableMessages"/>
+    /// never reaches it, so it gets no generated Write/Read/SizeOf methods at all. A construction
+    /// registered ONLY for nested-field use (legitimate; it need not implement the protocol) is
+    /// exempt as long as it is actually reachable.
+    /// </summary>
+    private static bool ValidateClosedGenericProtocolCoverage(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> reachableMessages)
+    {
+        if (serializer.ClosedGenericRegistrations.IsDefaultOrEmpty || serializer.ProtocolType == null)
+            return true;
+
+        var reachableNames = new HashSet<string>(reachableMessages.Select(message => message.FullyQualifiedName), StringComparer.Ordinal);
+        var isValid = true;
+        foreach (var registration in serializer.ClosedGenericRegistrations)
+        {
+            if (registration.Message == null)
+                continue;
+
+            if (registration.Message.Protocols.Any(protocol => SymbolEqualityComparer.Default.Equals(protocol, serializer.ProtocolType)))
+                continue;
+
+            if (reachableNames.Contains(registration.Message.FullyQualifiedName))
+                continue;
+
+            context.ReportDiagnostic(Diagnostic.Create(ClosedGenericRegistrationNotInProtocol, Location.None,
+                ToDisplayName(registration.TargetDisplayName), serializer.ClassName, ToDisplayName(serializer.ProtocolTypeFullName)));
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    private static bool ValidateUnionField(
+        SourceProductionContext context,
+        MessageInfo message,
+        FieldInfo field,
+        ImmutableDictionary<string, MessageInfo> messagesByType)
+    {
+        var isValid = true;
+
+        // AkkaUnionAttribute(Type first, params Type[] rest) makes an empty member set
+        // unrepresentable: `first` is a mandatory constructor argument, so [AkkaUnion()] does not
+        // compile and field.UnionMembers can never be empty here. The "at least one member type is
+        // required" half of AKKASG019 that used to guard this is gone along with it.
+        foreach (var duplicate in field.UnionMembers
+                     .GroupBy(member => member.TypeFullName, StringComparer.Ordinal)
+                     .Where(group => group.Count() > 1))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidUnionMemberSet, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), $"member type '{ToDisplayName(duplicate.Key)}' is declared more than once"));
+            isValid = false;
+        }
+
+        var manifests = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var member in field.UnionMembers)
+        {
+            if (!member.IsSupported || !messagesByType.TryGetValue(member.TypeFullName, out var memberMessage))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotSerializable, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
+                isValid = false;
+                continue;
+            }
+
+            if (!member.IsAssignable)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotAssignable, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
+                isValid = false;
+            }
+
+            // Advisory only (Info): an unsealed member works, but an undeclared subtype of it fails
+            // at write time under exact-runtime-type dispatch -- worth surfacing, not worth failing.
+            if (!member.IsSealed)
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotSealed, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
+
+            if (string.IsNullOrWhiteSpace(memberMessage.Manifest))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberMissingManifest, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
+                isValid = false;
+                continue;
+            }
+
+            if (!manifests.TryGetValue(memberMessage.Manifest, out var typesWithManifest))
+            {
+                typesWithManifest = new List<string>();
+                manifests[memberMessage.Manifest] = typesWithManifest;
+            }
+
+            typesWithManifest.Add(member.TypeFullName);
+        }
+
+        foreach (var collision in manifests.Where(pair => pair.Value.Distinct(StringComparer.Ordinal).Count() > 1))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(UnionMemberManifestCollision, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), collision.Key, string.Join(", ", collision.Value.Select(ToDisplayName))));
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    private static string Generate(SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages, ImmutableDictionary<string, MessageInfo> messagesByType)
     {
         var usedFormatters = CollectUsedFormatters(reachableMessages);
 
@@ -617,12 +1643,15 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         GenerateSizeHint(sb, topLevelMessages);
         GenerateCountingBufferWriter(sb);
 
+        var unionHelpers = PlanUnionHelpers(reachableMessages);
         foreach (var message in reachableMessages)
         {
-            GenerateSizeMessage(sb, message);
-            GenerateWriteMessage(sb, message);
-            GenerateReadMessage(sb, message);
+            GenerateSizeMessage(sb, message, unionHelpers);
+            GenerateWriteMessage(sb, message, unionHelpers);
+            GenerateReadMessage(sb, message, unionHelpers);
         }
+
+        GenerateUnionHelpers(sb, unionHelpers, messagesByType);
 
         sb.AppendLine("}");
         return sb.ToString();
@@ -778,7 +1807,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.AppendLine();
     }
 
-    private static void GenerateSizeMessage(StringBuilder sb, MessageInfo message)
+    private static void GenerateSizeMessage(StringBuilder sb, MessageInfo message, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers)
     {
         sb.Append("    private int SizeOf").Append(GetMessageMethodName(message))
             .Append('(').Append(message.FullyQualifiedName).AppendLine(" message)");
@@ -788,14 +1817,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.Append("            var size = SizeOfMapHeader(").Append(message.Fields.Length).AppendLine(");");
         var alloc = new NameAlloc();
         foreach (var field in message.Fields)
-            GenerateSizeField(sb, field, alloc);
+            GenerateSizeField(sb, unionHelpers, field, alloc);
         sb.AppendLine("            return size;");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine();
     }
 
-    private static void GenerateSizeField(StringBuilder sb, FieldInfo field, NameAlloc alloc)
+    private static void GenerateSizeField(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, NameAlloc alloc)
     {
         var value = "message." + field.Name;
         var localName = ToCamelCase(field.Name) + "Size";
@@ -815,7 +1844,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         }
 
         sb.Append("            var ").Append(localName).Append(" = ");
-        GenerateSizeExpression(sb, field, value);
+        GenerateSizeExpression(sb, unionHelpers, field, value);
         sb.AppendLine(";");
         sb.Append("            if (").Append(localName).AppendLine(" < 0)");
         sb.AppendLine("                return global::Akka.Serialization.SerializerV2.UnknownSize;");
@@ -824,12 +1853,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static bool TryGetInlineSizeExpression(FieldInfo field, string value, out string expression)
     {
-        // Object and EnvelopePayload always route through the general GenerateSizeExpression path
-        // below (they call a generated SizeOfXxx/SizeOfEnvelopePayload method, not a scalar
-        // MessagePackSizes helper) -- including when the field is a nullable [AkkaSerializable]
-        // struct, which would otherwise match IsNullableValueField below and get an inline scalar
-        // expression that GetScalarSizeExpression cannot produce for FieldKind.Object.
-        if (field.Mapping.Kind is FieldKind.Formatted or FieldKind.Object or FieldKind.EnvelopePayload)
+        // Object, EnvelopePayload, and Union always route through the general
+        // GenerateSizeExpression path below (they call a generated SizeOfXxx/SizeOfEnvelopePayload/
+        // SizeOfUnion method, not a scalar MessagePackSizes helper) -- including when the field is a
+        // nullable [AkkaSerializable] struct, which would otherwise match IsNullableValueField below
+        // and get an inline scalar expression that GetScalarSizeExpression cannot produce for
+        // FieldKind.Object. Union sizes can also be UnknownSize and need the < 0 guard.
+        if (field.Mapping.Kind is FieldKind.Formatted or FieldKind.Object or FieldKind.EnvelopePayload or FieldKind.Union)
         {
             expression = string.Empty;
             return false;
@@ -845,12 +1875,18 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         return true;
     }
 
-    private static void GenerateSizeExpression(StringBuilder sb, FieldInfo field, string value)
+    private static void GenerateSizeExpression(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, string value)
     {
         switch (field.Mapping.Kind)
         {
             case FieldKind.EnvelopePayload:
                 sb.Append("SizeOfEnvelopePayload(").Append(value).Append(')');
+                break;
+            case FieldKind.Union when field.IsNullable:
+                sb.Append(value).Append(" is null ? SizeOfNil() : SizeOf").Append(unionHelpers[BuildUnionSignature(field)].HelperName).Append('(').Append(value).Append(')');
+                break;
+            case FieldKind.Union:
+                sb.Append("SizeOf").Append(unionHelpers[BuildUnionSignature(field)].HelperName).Append('(').Append(value).Append(')');
                 break;
             case FieldKind.Object when IsNullableValueField(field):
                 sb.Append(value).Append(" is null ? SizeOfNil() : SizeOf").Append(GetObjectMethodName(field.Mapping)).Append('(').Append(value).Append(".Value)");
@@ -896,7 +1932,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         };
     }
 
-    private static void GenerateWriteMessage(StringBuilder sb, MessageInfo message)
+    private static void GenerateWriteMessage(StringBuilder sb, MessageInfo message, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers)
     {
         sb.Append("    private void Write").Append(GetMessageMethodName(message))
             .Append("(ref global::MessagePack.MessagePackWriter writer, ").Append(message.FullyQualifiedName).AppendLine(" message)");
@@ -904,17 +1940,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         sb.Append("        writer.WriteMapHeader(").Append(message.Fields.Length).AppendLine(");");
         var alloc = new NameAlloc();
         foreach (var field in message.Fields)
-            GenerateWriteField(sb, field, alloc);
+            GenerateWriteField(sb, unionHelpers, field, alloc);
         sb.AppendLine("    }");
         sb.AppendLine();
     }
 
-    private static void GenerateReadMessage(StringBuilder sb, MessageInfo message)
+    private static void GenerateReadMessage(StringBuilder sb, MessageInfo message, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers)
     {
         sb.Append("    private ").Append(message.FullyQualifiedName).Append(" Read").Append(GetMessageMethodName(message))
             .AppendLine("(ref global::MessagePack.MessagePackReader reader)");
         sb.AppendLine("    {");
-        sb.AppendLine("        var fieldCount = reader.ReadMapHeader();");
+        // Generator-owned locals are prefixed "__" so they cannot collide with a per-field local
+        // (ToCamelCase(field.Name)/GetHasLocalName below), no matter what the [AkkaField] property
+        // is named -- including adversarial names like "FieldCount" or "EntryIndex" that would
+        // otherwise camel-case straight into these identifiers (CS0128/CS0136).
+        sb.AppendLine("        var __fieldCount = reader.ReadMapHeader();");
         var alloc = new NameAlloc();
         foreach (var field in message.Fields)
         {
@@ -924,15 +1964,15 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 sb.Append("        var ").Append(GetHasLocalName(field)).AppendLine(" = false;");
         }
 
-        sb.AppendLine("        for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)");
+        sb.AppendLine("        for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)");
         sb.AppendLine("        {");
-        sb.AppendLine("            var fieldId = reader.ReadInt32();");
-        sb.AppendLine("            switch (fieldId)");
+        sb.AppendLine("            var __fieldId = reader.ReadInt32();");
+        sb.AppendLine("            switch (__fieldId)");
         sb.AppendLine("            {");
         foreach (var field in message.Fields)
         {
             sb.Append("                case ").Append(field.Index).AppendLine(":");
-            GenerateReadField(sb, field, alloc);
+            GenerateReadField(sb, unionHelpers, field, alloc);
             if (IsRequired(field))
                 sb.Append("                    ").Append(GetHasLocalName(field)).AppendLine(" = true;");
             sb.AppendLine("                    break;");
@@ -956,14 +1996,226 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 .Append(Escape(message.FullyQualifiedName)).AppendLine("].\");");
         }
 
-        sb.Append("        return new ").Append(message.FullyQualifiedName).Append('(')
-            .Append(string.Join(", ", message.Fields.Select(GetConstructorArgument)))
-            .AppendLine(");");
+        GenerateReadMessageConstruction(sb, message);
         sb.AppendLine("    }");
         sb.AppendLine();
     }
 
-    private static void GenerateWriteField(StringBuilder sb, FieldInfo field, NameAlloc alloc)
+    /// <summary>
+    /// Emits the final <c>return new T(...)</c> of a read method from <see cref="MessageInfo.ConstructionPlan"/>:
+    /// NAMED arguments (escaped where the parameter name is a C# keyword, e.g. <c>@event:</c>) for
+    /// every constructor-mapped [AkkaField] property, followed by an object initializer for whatever
+    /// is left over. The plan stores field NAMES rather than <see cref="FieldInfo"/> references so it
+    /// stays correct across <see cref="MessageInfo.WithFields"/> (formatter resolution can replace a
+    /// field's mapping without touching its name).
+    /// </summary>
+    private static void GenerateReadMessageConstruction(StringBuilder sb, MessageInfo message)
+    {
+        var fieldsByName = message.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
+        var plan = message.ConstructionPlan;
+
+        sb.Append("        return new ").Append(message.FullyQualifiedName).Append('(');
+        sb.Append(string.Join(", ", plan.Arguments.Select(argument =>
+            EscapeIfKeyword(argument.ParameterName) + ": " + GetFieldValueExpression(fieldsByName[argument.FieldName]))));
+        sb.Append(')');
+
+        if (plan.InitializerFieldNames.Length > 0)
+        {
+            sb.Append(" { ");
+            sb.Append(string.Join(", ", plan.InitializerFieldNames.Select(name =>
+            {
+                var field = fieldsByName[name];
+                return EscapeIfKeyword(field.Name) + " = " + GetFieldValueExpression(field);
+            })));
+            sb.Append(" }");
+        }
+
+        sb.AppendLine(";");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Union emission ([AkkaUnion] fields).
+    //
+    // A union value encodes as a 2-entry int-keyed map: { 1: <member manifest string>, 2: <the
+    // member's ordinary inline field map> }. The manifest is the discriminator -- the same
+    // serializer-owned manifest the member would carry as a top-level message -- so a value reads
+    // identically whether it arrived through union dispatch or ordinary manifest dispatch. Contrast
+    // with [AkkaEnvelopePayload]'s { 1: serializerId, 2: manifest, 3: opaque bytes }: the union
+    // omits the serializer id (every member is owned by this serializer) and inlines the member's
+    // fields directly instead of double-buffering them into a length-prefixed blob.
+    //
+    // Write dispatch matches the runtime type EXACTLY (value.GetType() == typeof(Member)) rather
+    // than pattern matching, so an undeclared subtype of a declared member fails serialization
+    // instead of silently truncating to its base -- the same default System.Text.Json applies to
+    // [JsonDerivedType] sets (UnknownDerivedTypeHandling.FailSerialization). The size path returns
+    // UnknownSize for an undeclared type instead of throwing; the write path throws.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// The dedup identity of a union dispatch helper: the field's static type plus the ordered
+    /// member set. Two fields (in the same or different messages) with the same static type and
+    /// member set -- the common case under type-level [AkkaUnion] declarations -- share one
+    /// generated Write/Read/SizeOf helper trio instead of emitting duplicates per field.
+    /// </summary>
+    private static string BuildUnionSignature(FieldInfo field)
+    {
+        return field.TypeFullName + "|" + string.Join("|", field.UnionMembers.Select(member => member.TypeFullName));
+    }
+
+    /// <summary>
+    /// Plans one helper per distinct union signature across all reachable messages. Helpers are
+    /// named after the union's folded static type ("Union_IOrderEvent"); when several distinct
+    /// member sets share a static type (field-level overrides), later ones -- ordered by signature
+    /// for determinism -- get a numeric suffix.
+    /// </summary>
+    private static ImmutableDictionary<string, (string HelperName, FieldInfo Field)> PlanUnionHelpers(ImmutableArray<MessageInfo> reachableMessages)
+    {
+        var representatives = new Dictionary<string, FieldInfo>(StringComparer.Ordinal);
+        foreach (var message in reachableMessages)
+        {
+            foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Union))
+            {
+                var signature = BuildUnionSignature(field);
+                if (!representatives.ContainsKey(signature))
+                    representatives[signature] = field;
+            }
+        }
+
+        var builder = ImmutableDictionary.CreateBuilder<string, (string, FieldInfo)>(StringComparer.Ordinal);
+        foreach (var group in representatives.GroupBy(pair => FoldTypeName(pair.Value.TypeFullName), StringComparer.Ordinal))
+        {
+            var ordered = group.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToList();
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                var helperName = i == 0 ? "Union_" + group.Key : "Union_" + group.Key + "_" + (i + 1);
+                builder[ordered[i].Key] = (helperName, ordered[i].Value);
+            }
+        }
+
+        return builder.ToImmutable();
+    }
+
+    private static void GenerateUnionHelpers(
+        StringBuilder sb,
+        ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers,
+        ImmutableDictionary<string, MessageInfo> messagesByType)
+    {
+        foreach (var plan in unionHelpers.Values.OrderBy(plan => plan.HelperName, StringComparer.Ordinal))
+        {
+            var field = plan.Field;
+            var members = field.UnionMembers
+                .Where(member => member.IsSupported && messagesByType.ContainsKey(member.TypeFullName))
+                .Select(member => (Member: member, Message: messagesByType[member.TypeFullName]))
+                .ToImmutableArray();
+
+            GenerateUnionWrite(sb, field, plan.HelperName, members);
+            GenerateUnionRead(sb, field, plan.HelperName, members);
+            GenerateUnionSize(sb, field, plan.HelperName, members);
+        }
+    }
+
+    private static void GenerateUnionWrite(StringBuilder sb, FieldInfo field, string helperName, ImmutableArray<(UnionMemberInfo Member, MessageInfo Message)> members)
+    {
+        sb.Append("    private void Write").Append(helperName)
+            .Append("(ref global::MessagePack.MessagePackWriter writer, ").Append(field.TypeFullName).AppendLine(" value)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var runtimeType = value.GetType();");
+        foreach (var (member, memberMessage) in members)
+        {
+            sb.Append("        if (runtimeType == typeof(").Append(member.TypeFullName).AppendLine("))");
+            sb.AppendLine("        {");
+            sb.AppendLine("            writer.WriteMapHeader(2);");
+            sb.AppendLine("            writer.Write(1);");
+            sb.Append("            writer.Write(\"").Append(Escape(memberMessage.Manifest)).AppendLine("\");");
+            sb.AppendLine("            writer.Write(2);");
+            sb.Append("            Write").Append(GetMessageMethodName(memberMessage)).Append("(ref writer, (").Append(member.TypeFullName).AppendLine(")value);");
+            sb.AppendLine("            return;");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+        }
+
+        sb.Append("        throw new global::System.Runtime.Serialization.SerializationException($\"Type [{runtimeType}] is not a declared union member for union [")
+            .Append(Escape(field.TypeFullName)).AppendLine("].\");");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateUnionRead(StringBuilder sb, FieldInfo field, string helperName, ImmutableArray<(UnionMemberInfo Member, MessageInfo Message)> members)
+    {
+        sb.Append("    private ").Append(field.TypeFullName).Append(" Read").Append(helperName)
+            .AppendLine("(ref global::MessagePack.MessagePackReader reader)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var fieldCount = reader.ReadMapHeader();");
+        sb.AppendLine("        string? manifest = null;");
+        sb.Append("        ").Append(field.TypeFullName).AppendLine("? result = default;");
+        sb.AppendLine("        var hasPayload = false;");
+        sb.AppendLine("        for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            var fieldId = reader.ReadInt32();");
+        sb.AppendLine("            switch (fieldId)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                case 1:");
+        sb.AppendLine("                    manifest = reader.ReadString();");
+        sb.AppendLine("                    break;");
+        sb.AppendLine("                case 2:");
+        sb.AppendLine("                    switch (manifest)");
+        sb.AppendLine("                    {");
+        foreach (var (_, memberMessage) in members)
+        {
+            sb.Append("                        case \"").Append(Escape(memberMessage.Manifest)).AppendLine("\":");
+            sb.Append("                            result = Read").Append(GetMessageMethodName(memberMessage)).AppendLine("(ref reader);");
+            sb.AppendLine("                            break;");
+        }
+
+        sb.AppendLine("                        case null:");
+        sb.Append("                            throw new global::System.Runtime.Serialization.SerializationException(\"Union manifest must precede the payload for union [")
+            .Append(Escape(field.TypeFullName)).AppendLine("].\");");
+        sb.AppendLine("                        default:");
+        sb.Append("                            throw new global::System.Runtime.Serialization.SerializationException($\"Unknown union manifest [{manifest}] for union [")
+            .Append(Escape(field.TypeFullName)).AppendLine("].\");");
+        sb.AppendLine("                    }");
+        sb.AppendLine();
+        sb.AppendLine("                    hasPayload = true;");
+        sb.AppendLine("                    break;");
+        sb.AppendLine("                default:");
+        sb.AppendLine("                    reader.Skip();");
+        sb.AppendLine("                    break;");
+        sb.AppendLine("            }");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        if (!hasPayload || result is null)");
+        sb.Append("            throw new global::System.Runtime.Serialization.SerializationException(\"Missing union payload for union [")
+            .Append(Escape(field.TypeFullName)).AppendLine("].\");");
+        sb.AppendLine("        return result;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateUnionSize(StringBuilder sb, FieldInfo field, string helperName, ImmutableArray<(UnionMemberInfo Member, MessageInfo Message)> members)
+    {
+        sb.Append("    private int SizeOf").Append(helperName)
+            .Append('(').Append(field.TypeFullName).AppendLine(" value)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var runtimeType = value.GetType();");
+        foreach (var (member, memberMessage) in members)
+        {
+            sb.Append("        if (runtimeType == typeof(").Append(member.TypeFullName).AppendLine("))");
+            sb.AppendLine("        {");
+            sb.Append("            var payloadSize = SizeOf").Append(GetMessageMethodName(memberMessage)).Append("((").Append(member.TypeFullName).AppendLine(")value);");
+            sb.AppendLine("            if (payloadSize < 0)");
+            sb.AppendLine("                return global::Akka.Serialization.SerializerV2.UnknownSize;");
+            sb.Append("            return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString(\"").Append(Escape(memberMessage.Manifest))
+                .AppendLine("\") + SizeOfInt32(2) + payloadSize);");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("        return global::Akka.Serialization.SerializerV2.UnknownSize;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+    }
+
+    private static void GenerateWriteField(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, NameAlloc alloc)
     {
         var value = "message." + field.Name;
         sb.Append("        writer.Write(").Append(field.Index).AppendLine(");");
@@ -972,14 +2224,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.Append("        if (").Append(value).AppendLine(" is null)");
             sb.AppendLine("            writer.WriteNil();");
             sb.AppendLine("        else");
-            GenerateWriteFieldValue(sb, field, value + ".Value", "            ", alloc);
+            GenerateWriteFieldValue(sb, unionHelpers, field, value + ".Value", "            ", alloc);
             return;
         }
 
-        GenerateWriteFieldValue(sb, field, value, "        ", alloc);
+        GenerateWriteFieldValue(sb, unionHelpers, field, value, "        ", alloc);
     }
 
-    private static void GenerateWriteFieldValue(StringBuilder sb, FieldInfo field, string value, string indent, NameAlloc alloc)
+    private static void GenerateWriteFieldValue(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, string value, string indent, NameAlloc alloc)
     {
         if (IsCollectionKind(field.Mapping.Kind))
         {
@@ -1059,10 +2311,25 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                     sb.Append(indent).Append(GetFormatterFieldName(field.Formatter!)).Append(".Write(ref writer, ").Append(value).AppendLine(");");
                 }
                 break;
+            case FieldKind.Union:
+                // Union fields are always reference-like (the static type is an interface or
+                // abstract base), so only the nullable-reference guard is needed here.
+                if (field.IsNullable)
+                {
+                    sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
+                    sb.Append(indent).AppendLine("    writer.WriteNil();");
+                    sb.Append(indent).AppendLine("else");
+                    sb.Append(indent).Append("    Write").Append(unionHelpers[BuildUnionSignature(field)].HelperName).Append("(ref writer, ").Append(value).AppendLine(");");
+                }
+                else
+                {
+                    sb.Append(indent).Append("Write").Append(unionHelpers[BuildUnionSignature(field)].HelperName).Append("(ref writer, ").Append(value).AppendLine(");");
+                }
+                break;
         }
     }
 
-    private static void GenerateReadField(StringBuilder sb, FieldInfo field, NameAlloc alloc)
+    private static void GenerateReadField(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, NameAlloc alloc)
     {
         var target = ToCamelCase(field.Name);
 
@@ -1072,7 +2339,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         // non-nullable collection slot exactly as it does for any other non-nullable reference field.
         if (IsCollectionKind(field.Mapping.Kind))
         {
-            GenerateReadFieldValue(sb, field, target, "                    ", alloc);
+            GenerateReadFieldValue(sb, unionHelpers, field, target, "                    ", alloc);
             return;
         }
 
@@ -1081,11 +2348,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.AppendLine("                    if (reader.TryReadNil())");
             sb.Append("                        ").Append(target).AppendLine(" = null;");
             sb.AppendLine("                    else");
-            GenerateReadFieldValue(sb, field, target, "                        ", alloc);
+            GenerateReadFieldValue(sb, unionHelpers, field, target, "                        ", alloc);
             return;
         }
 
         var isNullableReferenceLikeSlot = field.Mapping.Kind == FieldKind.EnvelopePayload
+            || field.Mapping.Kind == FieldKind.Union
             || (field.Mapping.Kind == FieldKind.Object && IsReferenceLike(field))
             || (field.Mapping.Kind == FieldKind.Formatted && IsReferenceLike(field));
 
@@ -1094,14 +2362,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             sb.AppendLine("                    if (reader.TryReadNil())");
             sb.Append("                        ").Append(target).AppendLine(" = null;");
             sb.AppendLine("                    else");
-            GenerateReadFieldValue(sb, field, target, "                        ", alloc);
+            GenerateReadFieldValue(sb, unionHelpers, field, target, "                        ", alloc);
             return;
         }
 
-        GenerateReadFieldValue(sb, field, target, "                    ", alloc);
+        GenerateReadFieldValue(sb, unionHelpers, field, target, "                    ", alloc);
     }
 
-    private static void GenerateReadFieldValue(StringBuilder sb, FieldInfo field, string target, string indent, NameAlloc alloc)
+    private static void GenerateReadFieldValue(StringBuilder sb, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, string target, string indent, NameAlloc alloc)
     {
         if (IsCollectionKind(field.Mapping.Kind))
         {
@@ -1156,6 +2424,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 break;
             case FieldKind.Formatted:
                 sb.Append(indent).Append(target).Append(" = ").Append(GetFormatterFieldName(field.Formatter!)).AppendLine(".Read(ref reader);");
+                break;
+            case FieldKind.Union:
+                sb.Append(indent).Append(target).Append(" = Read").Append(unionHelpers[BuildUnionSignature(field)].HelperName).AppendLine("(ref reader);");
                 break;
         }
     }
@@ -1567,8 +2838,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         if (type is IArrayTypeSymbol { ElementType.SpecialType: SpecialType.System_Byte })
             return new TypeMapping(FieldKind.ByteArray);
 
-        if (type is INamedTypeSymbol namedType && namedType.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
-            return new TypeMapping(FieldKind.Object, GetFullyQualifiedTypeName(namedType), namedType.IsValueType);
+        // OriginalDefinition covers both shapes: for a non-generic type it is the type itself; for a
+        // closed generic construction (Wrapper<Foo>) the [AkkaSerializable] attribute lives on the
+        // definition. The mapping name is arity-aware (GetMessageDictionaryKey) so a closed
+        // construction resolves to its registered [AkkaSerializable<T>] message -- or, if
+        // unregistered, fails AKKASG023 instead of silently dropping its type arguments.
+        if (type is INamedTypeSymbol namedType && namedType.OriginalDefinition.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
+            return new TypeMapping(FieldKind.Object, GetMessageDictionaryKey(namedType), namedType.IsValueType);
 
         var mapping = type.SpecialType switch
         {
@@ -1726,6 +3002,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             FieldKind.Decimal => "0m",
             FieldKind.ActorRef => "global::Akka.Actor.ActorRefs.NoSender",
             FieldKind.EnvelopePayload => "null",
+            FieldKind.Union => "null",
             // A required (non-nullable) [AkkaSerializable] struct nested field gets a non-nullable
             // local (see GetLocalType/IsReferenceLike): "null" would not compile for it, so fall
             // back to "default" the same way every other non-reference-like kind does below.
@@ -1758,7 +3035,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         if (field.Mapping.Kind == FieldKind.Object)
             return !field.Mapping.IsValueType;
 
-        return field.Mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload;
+        // Union fields are always reference-like: the static type is an interface or abstract base
+        // (a struct cannot be the static type of a multi-member union).
+        return field.Mapping.Kind is FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload or FieldKind.Union;
     }
 
     private static bool IsNullableValueField(FieldInfo field)
@@ -1783,12 +3062,18 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         return false;
     }
 
+    /// <summary>
+    /// "__has" prefix (not the field's own camelCase local, which lacks it): guarantees no collision
+    /// with an unrelated property's OWN value local under the pigeon-hole pairing this field name
+    /// with another property's name, for example fields "Foo" and "HasFoo" -- "Foo"'s has-guard is
+    /// "__hasFoo", distinct from "HasFoo"'s value local "hasFoo".
+    /// </summary>
     private static string GetHasLocalName(FieldInfo field)
     {
-        return "has" + field.Name;
+        return "__has" + field.Name;
     }
 
-    private static string GetConstructorArgument(FieldInfo field)
+    private static string GetFieldValueExpression(FieldInfo field)
     {
         var name = ToCamelCase(field.Name);
         return IsRequired(field) && IsReferenceLike(field) ? name + "!" : name;
@@ -1796,7 +3081,71 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static string GetObjectMethodName(TypeMapping mapping)
     {
-        return SanitizeTypeName(mapping.TypeFullName);
+        return FoldTypeName(mapping.TypeFullName);
+    }
+
+    /// <summary>
+    /// Folds a fully-qualified type name into a compact generated-member identifier the way
+    /// System.Text.Json's <c>GetTypeInfoPropertyName</c> does: namespaces are dropped, each type
+    /// identifier keeps only its simple name, and generic type arguments are concatenated --
+    /// <c>Ns.Wrapper&lt;Ns.OrderRequest&gt;</c> becomes <c>WrapperOrderRequest</c>.
+    /// These names appear in stack traces (WriteWrapperOrderRequest), so compactness matters.
+    /// Flattening is collision-prone by construction (same simple name in two namespaces, marker
+    /// ambiguity); AKKASG024 detects collisions among generated members and fails compilation
+    /// instead of silently emitting duplicates -- the same trade System.Text.Json makes with its
+    /// DuplicateTypeName diagnostic.
+    /// </summary>
+    private static string FoldTypeName(string typeFullName)
+    {
+        var sb = new StringBuilder(typeFullName.Length);
+        var segment = new StringBuilder();
+
+        void FlushSegment()
+        {
+            if (segment.Length == 0)
+                return;
+
+            sb.Append(char.ToUpperInvariant(segment[0]));
+            if (segment.Length > 1)
+                sb.Append(segment.ToString(1, segment.Length - 1));
+            segment.Clear();
+        }
+
+        var source = typeFullName.Replace("global::", string.Empty);
+        foreach (var ch in source)
+        {
+            switch (ch)
+            {
+                case '.':
+                case '+':
+                    // Keep only the last identifier of a dotted/nested chain: the segment
+                    // accumulated so far was a namespace or containing type.
+                    segment.Clear();
+                    break;
+                case '<':
+                case '>':
+                case ',':
+                case ' ':
+                    FlushSegment();
+                    break;
+                case '[':
+                    FlushSegment();
+                    break;
+                case ']':
+                    sb.Append("Array");
+                    break;
+                case '?':
+                    FlushSegment();
+                    sb.Append("Nullable");
+                    break;
+                default:
+                    segment.Append(ch);
+                    break;
+            }
+        }
+
+        FlushSegment();
+        return sb.ToString();
     }
 
     private static string GetFormatterFieldName(FormatterInfo formatter)
@@ -1806,9 +3155,11 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static string SanitizeTypeName(string typeFullName)
     {
-        // Escape literal underscores FIRST so sanitization is collision-free:
-        // 'My.Ns.Foo_Bar' -> 'My_Ns_Foo__Bar' and 'My.Ns.Foo.Bar' -> 'My_Ns_Foo_Bar' stay
-        // distinct instead of both collapsing to 'My_Ns_Foo_Bar' (duplicate generated members).
+        // Used only for formatter field names, whose target types are validated non-generic
+        // (AKKASG011) -- generated METHOD names go through FoldTypeName instead. Escape literal
+        // underscores FIRST so sanitization is collision-free: 'My.Ns.Foo_Bar' -> 'My_Ns_Foo__Bar'
+        // and 'My.Ns.Foo.Bar' -> 'My_Ns_Foo_Bar' stay distinct instead of both collapsing to
+        // 'My_Ns_Foo_Bar' (duplicate generated members).
         return typeFullName
             .Replace("global::", string.Empty)
             .Replace("_", "__")
@@ -1818,7 +3169,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static string GetMessageMethodName(MessageInfo message)
     {
-        return SanitizeTypeName(message.FullyQualifiedName);
+        return FoldTypeName(message.FullyQualifiedName);
+    }
+
+    /// <summary>
+    /// Strips a leading <c>global::</c> prefix from a fully-qualified type name string for display
+    /// in a <see cref="Diagnostic"/> message ONLY. Every internal use of a fully-qualified name --
+    /// dictionary keys, equality/grouping comparisons, and text appended into emitted source --
+    /// keeps the raw <c>global::</c>-qualified form produced by <see cref="GetFullyQualifiedTypeName"/>
+    /// and <see cref="SymbolDisplayFormat.FullyQualifiedFormat"/>; this helper must be applied only
+    /// to the arguments passed to <c>Diagnostic.Create(...)</c> at each reporting call site.
+    /// </summary>
+    private static string ToDisplayName(string fullyQualifiedName)
+    {
+        return fullyQualifiedName.StartsWith("global::", StringComparison.Ordinal)
+            ? fullyQualifiedName.Substring("global::".Length)
+            : fullyQualifiedName;
     }
 
     private static string GetFullyQualifiedTypeName(INamedTypeSymbol symbol)
@@ -1855,7 +3221,28 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static string ToCamelCase(string value)
     {
-        return string.IsNullOrEmpty(value) ? value : char.ToLowerInvariant(value[0]) + value.Substring(1);
+        if (string.IsNullOrEmpty(value))
+            return value;
+
+        var name = char.ToLowerInvariant(value[0]) + value.Substring(1);
+
+        // A property named 'Event', 'Lock', 'Object', etc. camel-cases to a reserved C# keyword,
+        // which cannot be used as a local identifier. Escape with '@' (a runtime no-op). The escaped
+        // form composes safely with the suffixes appended elsewhere ('@eventSize', '@eventBytes'):
+        // '@' is legal on any identifier, keyword or not.
+        return EscapeIfKeyword(name);
+    }
+
+    /// <summary>
+    /// '@'-escapes <paramref name="identifier"/> if it is a reserved C# keyword, a runtime no-op that
+    /// makes the text legal as an identifier. Shared by <see cref="ToCamelCase"/> (per-field read
+    /// locals) and the constructor-argument label in <see cref="GenerateReadMessageConstruction"/>: a
+    /// constructor parameter literally named <c>event</c> (matched to an [AkkaField] property named
+    /// <c>Event</c>) must emit the NAMED argument as <c>@event:</c>, not <c>event:</c>.
+    /// </summary>
+    private static string EscapeIfKeyword(string identifier)
+    {
+        return SyntaxFacts.GetKeywordKind(identifier) == SyntaxKind.None ? identifier : "@" + identifier;
     }
 
     private static string Escape(string value)
@@ -1874,7 +3261,11 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             INamedTypeSymbol? protocolType,
             string protocolTypeFullName,
             Accessibility declaredAccessibility,
-            ImmutableArray<FormatterInfo> formatters)
+            ImmutableArray<FormatterInfo> formatters,
+            ImmutableArray<ClosedGenericRegistrationInfo> closedGenericRegistrations,
+            bool isPartial,
+            bool isGeneric,
+            bool derivesFromAkkaSerializerBase)
         {
             Namespace = ns;
             ClassName = className;
@@ -1885,6 +3276,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             ProtocolTypeFullName = protocolTypeFullName;
             DeclaredAccessibility = declaredAccessibility;
             Formatters = formatters;
+            ClosedGenericRegistrations = closedGenericRegistrations;
+            IsPartial = isPartial;
+            IsGeneric = isGeneric;
+            DerivesFromAkkaSerializerBase = derivesFromAkkaSerializerBase;
         }
 
         public string Namespace { get; }
@@ -1896,6 +3291,16 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string ProtocolTypeFullName { get; }
         public Accessibility DeclaredAccessibility { get; }
         public ImmutableArray<FormatterInfo> Formatters { get; }
+        public ImmutableArray<ClosedGenericRegistrationInfo> ClosedGenericRegistrations { get; }
+
+        /// <summary>Whether every syntax declaration of this class carries 'partial'. See AKKASG032.</summary>
+        public bool IsPartial { get; }
+
+        /// <summary>Whether the serializer class itself is a generic type definition. See AKKASG032.</summary>
+        public bool IsGeneric { get; }
+
+        /// <summary>Whether the class derives (directly or transitively) from <c>Akka.Serialization.V2.AkkaSerializer</c>. See AKKASG032.</summary>
+        public bool DerivesFromAkkaSerializerBase { get; }
     }
 
     private sealed class KnownTypes
@@ -1904,6 +3309,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             FieldAttribute = compilation.GetTypeByMetadataName(FieldAttributeFullName);
             EnvelopePayloadAttribute = compilation.GetTypeByMetadataName(EnvelopePayloadAttributeFullName);
+            UnionAttribute = compilation.GetTypeByMetadataName(UnionAttributeFullName);
             SerializableAttribute = compilation.GetTypeByMetadataName(SerializableAttributeFullName);
             Guid = compilation.GetTypeByMetadataName("System.Guid");
             DateTimeOffset = compilation.GetTypeByMetadataName("System.DateTimeOffset");
@@ -1915,6 +3321,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         public INamedTypeSymbol? FieldAttribute { get; }
         public INamedTypeSymbol? EnvelopePayloadAttribute { get; }
+        public INamedTypeSymbol? UnionAttribute { get; }
         public INamedTypeSymbol? SerializableAttribute { get; }
         public INamedTypeSymbol? Guid { get; }
         public INamedTypeSymbol? DateTimeOffset { get; }
@@ -1931,7 +3338,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private sealed class MessageInfo
     {
-        public MessageInfo(string simpleName, string fullyQualifiedName, string manifest, ImmutableArray<FieldInfo> fields, ImmutableArray<INamedTypeSymbol> protocols, bool allowEmpty)
+        public MessageInfo(
+            string simpleName,
+            string fullyQualifiedName,
+            string manifest,
+            ImmutableArray<FieldInfo> fields,
+            ImmutableArray<INamedTypeSymbol> protocols,
+            bool allowEmpty,
+            ImmutableArray<InvalidFieldInfo> invalidFields,
+            ConstructionPlan constructionPlan,
+            bool isGenericDefinition = false,
+            string definitionFullName = "")
         {
             SimpleName = simpleName;
             FullyQualifiedName = fullyQualifiedName;
@@ -1939,6 +3356,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             Fields = fields;
             Protocols = protocols;
             AllowEmpty = allowEmpty;
+            InvalidFields = invalidFields;
+            ConstructionPlan = constructionPlan;
+            IsGenericDefinition = isGenericDefinition;
+            DefinitionFullName = definitionFullName;
         }
 
         public string SimpleName { get; }
@@ -1948,15 +3369,132 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public ImmutableArray<INamedTypeSymbol> Protocols { get; }
         public bool AllowEmpty { get; }
 
+        /// <summary>
+        /// [AkkaField] properties excluded from <see cref="Fields"/> because they are structurally
+        /// unusable (static, or an inaccessible getter) -- see AKKASG028. Empty for a valid message.
+        /// </summary>
+        public ImmutableArray<InvalidFieldInfo> InvalidFields { get; }
+
+        /// <summary>
+        /// How the read method reconstructs this type on deserialize: the chosen constructor's
+        /// NAMED-argument bindings plus any leftover object-initializer assignments, or the reasons
+        /// no plan could be built (AKKASG026/027). See <see cref="ConstructionPlan"/>.
+        /// </summary>
+        public ConstructionPlan ConstructionPlan { get; }
+
+        /// <summary>
+        /// True for a generic <c>[AkkaSerializable]</c> DEFINITION (e.g. <c>Wrapper&lt;T&gt;</c>):
+        /// a placeholder that is never serialized, never top-level, and never reachable -- it exists
+        /// only so AKKASG022 can fire when the definition implements a serializer protocol but has
+        /// no registered closed constructions.
+        /// </summary>
+        public bool IsGenericDefinition { get; }
+
+        /// <summary>
+        /// For a registered closed construction: the arity-less fully-qualified name of its generic
+        /// definition, linking the registration back to the definition for the AKKASG022 check.
+        /// Empty for ordinary non-generic messages.
+        /// </summary>
+        public string DefinitionFullName { get; }
+
+        /// <summary>
+        /// Used by formatter resolution to swap in fields with a resolved <see cref="TypeMapping"/>.
+        /// <see cref="ConstructionPlan"/> is keyed by field NAME, not by <see cref="FieldInfo"/>
+        /// reference, so it stays valid across this substitution without needing to be rebuilt.
+        /// </summary>
         public MessageInfo WithFields(ImmutableArray<FieldInfo> fields)
         {
-            return new MessageInfo(SimpleName, FullyQualifiedName, Manifest, fields, Protocols, AllowEmpty);
+            return new MessageInfo(SimpleName, FullyQualifiedName, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName);
         }
+    }
+
+    /// <summary>
+    /// A single <c>[AkkaField]</c> property found unusable during extraction: static, or its getter
+    /// is not accessible to the generated code. See AKKASG028.
+    /// </summary>
+    private sealed class InvalidFieldInfo
+    {
+        public InvalidFieldInfo(string propertyName, string reason)
+        {
+            PropertyName = propertyName;
+            Reason = reason;
+        }
+
+        public string PropertyName { get; }
+
+        /// <summary>Free-text reason, e.g. "is static; ..." or "has no accessible getter".</summary>
+        public string Reason { get; }
+    }
+
+    /// <summary>
+    /// How a message's constructor is called on deserialize. <see cref="Arguments"/> supplies NAMED
+    /// constructor arguments (parameter name -&gt; field name); <see cref="InitializerFieldNames"/>
+    /// lists [AkkaField] properties assigned afterward via object initializer. Both are non-empty only
+    /// when <see cref="IsValid"/>; otherwise <see cref="Errors"/> explains what could not be satisfied
+    /// (AKKASG026). <see cref="UncoveredDefaultedParameters"/> is advisory (AKKASG027) and can be
+    /// non-empty even when <see cref="IsValid"/> is true.
+    /// </summary>
+    private sealed class ConstructionPlan
+    {
+        public static readonly ConstructionPlan Empty = new(
+            ImmutableArray<ConstructorArgumentPlan>.Empty,
+            ImmutableArray<string>.Empty,
+            ImmutableArray<string>.Empty,
+            ImmutableArray<string>.Empty);
+
+        public ConstructionPlan(
+            ImmutableArray<ConstructorArgumentPlan> arguments,
+            ImmutableArray<string> initializerFieldNames,
+            ImmutableArray<string> uncoveredDefaultedParameters,
+            ImmutableArray<string> errors)
+        {
+            Arguments = arguments;
+            InitializerFieldNames = initializerFieldNames;
+            UncoveredDefaultedParameters = uncoveredDefaultedParameters;
+            Errors = errors;
+        }
+
+        public ImmutableArray<ConstructorArgumentPlan> Arguments { get; }
+        public ImmutableArray<string> InitializerFieldNames { get; }
+        public ImmutableArray<string> UncoveredDefaultedParameters { get; }
+
+        /// <summary>Human-readable reasons construction is impossible; empty when valid.</summary>
+        public ImmutableArray<string> Errors { get; }
+    }
+
+    /// <summary>A single NAMED constructor argument: <see cref="ParameterName"/> supplied from the field named <see cref="FieldName"/>.</summary>
+    private readonly struct ConstructorArgumentPlan
+    {
+        public ConstructorArgumentPlan(string parameterName, string fieldName)
+        {
+            ParameterName = parameterName;
+            FieldName = fieldName;
+        }
+
+        public string ParameterName { get; }
+        public string FieldName { get; }
+    }
+
+    /// <summary>
+    /// A single <c>[AkkaSerializable&lt;T&gt;]</c> registration. <see cref="Message"/> is null
+    /// when the target was invalid (not a type, non-generic, unbound, or its definition lacks
+    /// <c>[AkkaSerializable]</c>) so AKKASG020 fires instead of the registration silently vanishing.
+    /// </summary>
+    private sealed class ClosedGenericRegistrationInfo
+    {
+        public ClosedGenericRegistrationInfo(string targetDisplayName, MessageInfo? message)
+        {
+            TargetDisplayName = targetDisplayName;
+            Message = message;
+        }
+
+        public string TargetDisplayName { get; }
+        public MessageInfo? Message { get; }
     }
 
     private sealed class FieldInfo
     {
-        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null)
+        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default)
         {
             Index = index;
             Name = name;
@@ -1964,6 +3502,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             Mapping = mapping;
             IsNullable = isNullable;
             Formatter = formatter;
+            UnionMembers = unionMembers.IsDefault ? ImmutableArray<UnionMemberInfo>.Empty : unionMembers;
         }
 
         public int Index { get; }
@@ -1973,9 +3512,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public bool IsNullable { get; }
         public FormatterInfo? Formatter { get; }
 
+        /// <summary>Declared members for a <see cref="FieldKind.Union"/> field; empty otherwise.</summary>
+        public ImmutableArray<UnionMemberInfo> UnionMembers { get; }
+
         public FieldInfo WithFormatter(TypeMapping mapping, FormatterInfo formatter)
         {
-            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter);
+            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers);
         }
     }
 
@@ -2050,18 +3592,18 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     /// <summary>
     /// A serializer-scoped hand-written formatter registration extracted from
-    /// <c>[AkkaSerializerFormatter(typeof(TTarget), typeof(TFormatter))]</c>. Carries only
+    /// <c>[AkkaSerializerFormatter&lt;TTarget, TFormatter&gt;]</c>. Carries only
     /// strings/bools/enums (no <see cref="ISymbol"/> references) so it stays cheap to hold across
     /// incremental generator passes.
     /// </summary>
     private sealed class FormatterInfo
     {
-        public FormatterInfo(string targetTypeFullName, bool isTargetValueType, string formatterTypeFullName, bool implementsInterface, FormatterCtorKind ctorKind, bool isTargetSupported)
+        public FormatterInfo(string targetTypeFullName, bool isTargetValueType, string formatterTypeFullName, bool isAbstract, FormatterCtorKind ctorKind, bool isTargetSupported)
         {
             TargetTypeFullName = targetTypeFullName;
             IsTargetValueType = isTargetValueType;
             FormatterTypeFullName = formatterTypeFullName;
-            ImplementsInterface = implementsInterface;
+            IsAbstract = isAbstract;
             CtorKind = ctorKind;
             IsTargetSupported = isTargetSupported;
         }
@@ -2069,7 +3611,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string TargetTypeFullName { get; }
         public bool IsTargetValueType { get; }
         public string FormatterTypeFullName { get; }
-        public bool ImplementsInterface { get; }
+
+        /// <summary>
+        /// Whether TFormatter is an abstract type. The `where TFormatter :
+        /// IAkkaMessagePackFormatter&lt;TTarget&gt;` constraint does not rule this out (there is no
+        /// `new()` clause), so it is checked here instead (AKKASG008).
+        /// </summary>
+        public bool IsAbstract { get; }
         public FormatterCtorKind CtorKind { get; }
         public bool IsTargetSupported { get; }
     }
@@ -2104,6 +3652,40 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         List,
         ReadOnlyList,
         Dictionary,
-        UnsupportedEnumUnderlyingType
+        UnsupportedEnumUnderlyingType,
+        Union
+    }
+
+    /// <summary>
+    /// A single declared member of an <c>[AkkaUnion]</c> field. Carries only strings/bools (no
+    /// <see cref="ISymbol"/> references) so it stays cheap across incremental generator passes.
+    /// Facts requiring symbol access (assignability, unbound-generic detection) are captured at
+    /// extraction time; facts requiring the whole-compilation message set (serializability,
+    /// manifests) are resolved later against the serializer's message dictionary.
+    /// </summary>
+    private sealed class UnionMemberInfo
+    {
+        public UnionMemberInfo(string typeFullName, bool isValueType, bool isAssignable, bool isSupported, bool isSealed)
+        {
+            TypeFullName = typeFullName;
+            IsValueType = isValueType;
+            IsAssignable = isAssignable;
+            IsSupported = isSupported;
+            IsSealed = isSealed;
+        }
+
+        /// <summary>Message-dictionary key for the member type (arity-aware for generics).</summary>
+        public string TypeFullName { get; }
+
+        public bool IsValueType { get; }
+
+        /// <summary>Whether the member type is implicitly convertible to the field's static type.</summary>
+        public bool IsAssignable { get; }
+
+        /// <summary>False when the attribute argument was null, not a type, or an unbound generic.</summary>
+        public bool IsSupported { get; }
+
+        /// <summary>Whether undeclared subtypes are impossible (sealed class, struct). Advisory AKKASG025 fires otherwise.</summary>
+        public bool IsSealed { get; }
     }
 }

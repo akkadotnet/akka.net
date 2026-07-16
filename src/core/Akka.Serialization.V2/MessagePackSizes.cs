@@ -14,7 +14,7 @@ using MessagePack;
 namespace Akka.Serialization.V2;
 
 /// <summary>
-/// Exact-size MessagePack encoding math shared by <see cref="MessagePackSerializer{TProtocol}"/>,
+/// Exact-size MessagePack encoding math shared by <see cref="AkkaSerializer"/>,
 /// the built-in foreign-type formatters (<see cref="AddressFormatter"/>, <see cref="ActorPathFormatter"/>),
 /// and external hand-written <see cref="IAkkaMessagePackFormatter{T}"/> implementations.
 /// </summary>
@@ -163,7 +163,7 @@ public static class MessagePackSizes
     /// <param name="actorRef">The actor reference; <see cref="ActorRefs.NoSender"/> and null encode as an empty string.</param>
     public static int SizeOfActorRef(IActorRef? actorRef)
     {
-        return SizeOfString(global::Akka.Serialization.Serialization.SerializedActorPath(actorRef));
+        return SizeOfString(Serialization.SerializedActorPath(actorRef));
     }
 
     /// <summary>
