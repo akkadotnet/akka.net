@@ -88,9 +88,17 @@ namespace Akka.Remote.Tests.MultiNode
                 EnterBarrier("watch-established");
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
 
+                // Pin the fresh system to the SAME wire address for BOTH transports. Under
+                // AKKA_MNTR_TRANSPORT=artery the inherited config carries `canonical.port = 0`
+                // (MultiNodeSpec.SelfPort defaults to 0 -> random port), so without the explicit
+                // artery override the restarted system binds a DIFFERENT port and `first` can
+                // never re-associate with `secondAddress`. Pekko's version of this spec pins both
+                // ports the same way (RemoteNodeRestartDeathWatchSpec.scala's freshSystem config).
                 var sb = new StringBuilder().AppendLine("akka.remote.dot-netty.tcp {").AppendLine("hostname = " + addr.Host)
                         .AppendLine("port = " + addr.Port)
-                        .AppendLine("}");
+                        .AppendLine("}")
+                        .AppendLine("akka.remote.artery.canonical.hostname = " + addr.Host)
+                        .AppendLine("akka.remote.artery.canonical.port = " + addr.Port);
                 var freshSystem = ActorSystem.Create(Sys.Name,
                     ConfigurationFactory.ParseString(sb.ToString()).WithFallback(Sys.Settings.Config));
                 freshSystem.ActorOf(Props.Create(() => new Subject()), "subject");
