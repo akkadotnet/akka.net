@@ -15,6 +15,7 @@ using Akka.Actor.Internal;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Akka.Util.Internal;
+using SysDebug = System.Diagnostics.Debug;
 
 namespace Akka.Actor
 {
@@ -81,8 +82,8 @@ namespace Akka.Actor
                     ClearActor(Actor);
                 }
 
-                global::System.Diagnostics.Debug.Assert(Mailbox != null, $"{nameof(Mailbox)} should never be null at this point");
-                global::System.Diagnostics.Debug.Assert(Mailbox!.IsSuspended(), $"{nameof(Mailbox)} must be suspended during restart, status=" + Mailbox.CurrentStatus());
+                SysDebug.Assert(Mailbox != null, $"{nameof(Mailbox)} should never be null at this point");
+                SysDebug.Assert(Mailbox!.IsSuspended(), $"{nameof(Mailbox)} must be suspended during restart, status=" + Mailbox.CurrentStatus());
                 if (!SetChildrenTerminationReason(new SuspendReason.Recreation(cause)))
                 {
                     FinishRecreate(cause, failedActor);
@@ -145,9 +146,9 @@ namespace Akka.Actor
         /// </summary>
         private void FaultCreate()
         {
-            global::System.Diagnostics.Debug.Assert(Mailbox != null, $"{nameof(Mailbox)} should never be null at this point");
-            global::System.Diagnostics.Debug.Assert(Mailbox!.IsSuspended(), $"{nameof(Mailbox)} must be suspended during failed creation, status=" + Mailbox.CurrentStatus());
-            global::System.Diagnostics.Debug.Assert(_self.Equals(Perpetrator), $"{nameof(Perpetrator)} should be self");
+            SysDebug.Assert(Mailbox != null, $"{nameof(Mailbox)} should never be null at this point");
+            SysDebug.Assert(Mailbox!.IsSuspended(), $"{nameof(Mailbox)} must be suspended during failed creation, status=" + Mailbox.CurrentStatus());
+            SysDebug.Assert(_self.Equals(Perpetrator), $"{nameof(Perpetrator)} should be self");
 
             SetReceiveTimeout(null);
             CancelReceiveTimeout();
@@ -401,7 +402,7 @@ namespace Akka.Actor
             //the UID protects against reception of a Failed from a child which was
             //killed in preRestart and re-created in postRestart
 
-            global::System.Diagnostics.Debug.Assert(Actor != null, $"{nameof(Actor)} should never be null at this point");
+            SysDebug.Assert(Actor != null, $"{nameof(Actor)} should never be null at this point");
             if (TryGetChildStatsByRef(failedChild, out var childStats))
             {
                 var statsUid = childStats.Child.Path.Uid;

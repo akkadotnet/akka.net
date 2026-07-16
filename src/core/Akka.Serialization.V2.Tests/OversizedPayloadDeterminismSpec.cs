@@ -18,14 +18,14 @@ namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
 /// Pins deterministic oversized-payload failure for generated serializers (messagepack-sourcegen
-/// task 6.8): a caller-imposed cap (<see cref="global::Akka.Serialization.PooledPayloadWriter"/>
+/// task 6.8): a caller-imposed cap (<see cref="PooledPayloadWriter"/>
 /// with <c>maxCapacity</c>, the transport maximum-frame-size hook) makes an oversized payload fail
-/// AT ENCODE TIME with a typed <see cref="global::Akka.Serialization.PayloadSizeExceededException"/>
+/// AT ENCODE TIME with a typed <see cref="PayloadSizeExceededException"/>
 /// carrying the attempted size and the cap — never a truncated or corrupt frame observed
 /// downstream. Writer mechanics themselves are covered by <c>Akka.Tests.Serialization.PooledPayloadWriterSpec</c>;
 /// this spec pins the SERIALIZER-side contract: the exception surfaces from <c>Serialize</c>, the
 /// generated serializer stays stateless across the failure, and the writer is reusable after
-/// <see cref="global::Akka.Serialization.PooledPayloadWriter.Reset"/>.
+/// <see cref="PooledPayloadWriter.Reset"/>.
 /// </summary>
 public sealed class OversizedPayloadDeterminismSpec : IAsyncLifetime
 {
@@ -50,11 +50,11 @@ public sealed class OversizedPayloadDeterminismSpec : IAsyncLifetime
     public void Generated_serializer_should_throw_PayloadSizeExceededException_when_payload_exceeds_writer_cap()
     {
         var oversized = new RequiredMessage(new string('x', 100), 42);
-        using var writer = new global::Akka.Serialization.PooledPayloadWriter(initialCapacityHint: 16, maxCapacity: MaxCapacity);
+        using var writer = new PooledPayloadWriter(initialCapacityHint: 16, maxCapacity: MaxCapacity);
 
         Action serialize = () => _serializer.Serialize(oversized, writer);
 
-        var exception = serialize.Should().Throw<global::Akka.Serialization.PayloadSizeExceededException>().Which;
+        var exception = serialize.Should().Throw<PayloadSizeExceededException>().Which;
         exception.MaxCapacity.Should().Be(MaxCapacity);
         exception.AttemptedSize.Should().BeGreaterThan(MaxCapacity);
     }
@@ -63,10 +63,10 @@ public sealed class OversizedPayloadDeterminismSpec : IAsyncLifetime
     public void Generated_serializer_should_remain_usable_after_an_oversized_payload_failure()
     {
         var oversized = new RequiredMessage(new string('x', 100), 42);
-        using (var cappedWriter = new global::Akka.Serialization.PooledPayloadWriter(initialCapacityHint: 16, maxCapacity: MaxCapacity))
+        using (var cappedWriter = new PooledPayloadWriter(initialCapacityHint: 16, maxCapacity: MaxCapacity))
         {
             Action serialize = () => _serializer.Serialize(oversized, cappedWriter);
-            serialize.Should().Throw<global::Akka.Serialization.PayloadSizeExceededException>();
+            serialize.Should().Throw<PayloadSizeExceededException>();
         }
 
         // Generated serializers are stateless: the SAME instance must round-trip a small message
@@ -83,10 +83,10 @@ public sealed class OversizedPayloadDeterminismSpec : IAsyncLifetime
     {
         var oversized = new RequiredMessage(new string('x', 100), 42);
         var small = new RequiredMessage("a", 1);
-        using var writer = new global::Akka.Serialization.PooledPayloadWriter(initialCapacityHint: 16, maxCapacity: MaxCapacity);
+        using var writer = new PooledPayloadWriter(initialCapacityHint: 16, maxCapacity: MaxCapacity);
 
         Action serialize = () => _serializer.Serialize(oversized, writer);
-        serialize.Should().Throw<global::Akka.Serialization.PayloadSizeExceededException>();
+        serialize.Should().Throw<PayloadSizeExceededException>();
 
         // The transport dead-letter-then-reuse pattern: Reset the SAME writer, encode the next
         // (smaller) message into it, and decode it back from the written bytes.
@@ -102,10 +102,10 @@ public sealed class OversizedPayloadDeterminismSpec : IAsyncLifetime
     public void Capped_writer_should_never_exceed_its_cap_when_an_oversized_payload_fails_mid_encode()
     {
         var oversized = new RequiredMessage(new string('x', 100), 42);
-        using var writer = new global::Akka.Serialization.PooledPayloadWriter(initialCapacityHint: 16, maxCapacity: MaxCapacity);
+        using var writer = new PooledPayloadWriter(initialCapacityHint: 16, maxCapacity: MaxCapacity);
 
         Action serialize = () => _serializer.Serialize(oversized, writer);
-        serialize.Should().Throw<global::Akka.Serialization.PayloadSizeExceededException>();
+        serialize.Should().Throw<PayloadSizeExceededException>();
 
         // The cap is a hard encode-time boundary: no oversized partial frame ever exists to hand
         // to a transport.
@@ -122,12 +122,12 @@ public sealed class OversizedPayloadDeterminismSpec : IAsyncLifetime
             var payload = new RequiredMessage(new string('x', 100), 42);
             var envelope = new AttributeOuterEnvelope("outer-1", new AttributeInnerEnvelope("inner-1", payload));
             var serializer = system.Serialization.FindSerializerFor(envelope)
-                .Should().BeAssignableTo<global::Akka.Serialization.SerializerV2>().Subject;
+                .Should().BeAssignableTo<SerializerV2>().Subject;
 
-            using var writer = new global::Akka.Serialization.PooledPayloadWriter(initialCapacityHint: 16, maxCapacity: 64);
+            using var writer = new PooledPayloadWriter(initialCapacityHint: 16, maxCapacity: 64);
             Action serialize = () => serializer.Serialize(envelope, writer);
 
-            var exception = serialize.Should().Throw<global::Akka.Serialization.PayloadSizeExceededException>().Which;
+            var exception = serialize.Should().Throw<PayloadSizeExceededException>().Which;
             exception.MaxCapacity.Should().Be(64);
             exception.AttemptedSize.Should().BeGreaterThan(64);
         }

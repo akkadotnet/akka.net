@@ -229,7 +229,8 @@ public sealed record GapPlainMessage(
 /// <summary>
 /// Mirrors Akka.Remote.Artery's <c>UniqueAddress</c> shape, but handled directly by the
 /// generator's native nested-Object path (annotated with <see cref="AkkaSerializableAttribute"/>)
-/// instead of the <see cref="AkkaSerializerFormatterAttribute"/> foreign-type escape hatch.
+/// instead of the <c>[AkkaSerializerFormatter&lt;TTarget, TFormatter&gt;]</c> foreign-type escape
+/// hatch.
 /// </summary>
 [AkkaSerializable]
 public readonly record struct GapUniqueAddress(
@@ -250,9 +251,9 @@ public sealed record GapOptionalHandshakeMessage(
     public const string ManifestName = "gap-optional-handshake-v1";
 }
 
-[AkkaSerializer(Name = "gap-fix", SerializerId = 120801)]
-[AkkaSerializerFormatter(typeof(Address), typeof(AddressFormatter))]
-public sealed partial class GapFixSerializer : MessagePackSerializer<IGapFixProtocol>
+[AkkaSerializer<IGapFixProtocol>("gap-fix", 120801)]
+[AkkaSerializerFormatter<Address, AddressFormatter>]
+public sealed partial class GapFixSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }

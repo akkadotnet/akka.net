@@ -13,6 +13,7 @@ using Akka.Dispatch;
 using Akka.Dispatch.SysMsg;
 using Akka.Event;
 using Debug = Akka.Event.Debug;
+using SysDebug = System.Diagnostics.Debug;
 using System.Globalization;
 using Akka.Actor.Scheduler;
 
@@ -219,8 +220,8 @@ namespace Akka.Actor
         {
             if(IsWaitingForChildren) return SuspendedWaitForChildrenState;
 
-            global::System.Diagnostics.Debug.Assert(
-                condition: Mailbox != null, 
+            SysDebug.Assert(
+                condition: Mailbox != null,
                 message: $"{nameof(Mailbox)} should never be null at this point. " +
                          $"A null {nameof(Mailbox)} should have triggered a catastrophic actor initialization failure " +
                          "and killed this actor before ever reaching this point.");
@@ -303,8 +304,8 @@ namespace Akka.Actor
                             Supervise(s.Child, s.Async);
                             break;
                         default:
-                            global::System.Diagnostics.Debug.Assert(
-                                condition: message != null, 
+                            SysDebug.Assert(
+                                condition: message != null,
                                 message: $"Something really bad happened in {nameof(SysMsgInvokeAll)}, {nameof(message)} should never be null");
                             throw new NotSupportedException($"Unknown message {message!.GetType().Name}");
                     }
