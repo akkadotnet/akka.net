@@ -37,7 +37,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120501)]
+            [AkkaSerializer<IProtocol>("sample", 120501)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -73,7 +73,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120502)]
+            [AkkaSerializer<IProtocol>("sample", 120502)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -98,41 +98,12 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostic.Should().NotBeNull();
     }
 
-    [Fact(DisplayName = "Generator should report AKKASG008 when a registered formatter does not implement IAkkaMessagePackFormatter<T>")]
-    public void Generator_should_report_AKKASG008_when_formatter_does_not_implement_interface()
-    {
-        const string source = """
-            #nullable enable
-            using Akka.Actor;
-            using Akka.Serialization.V2;
-
-            namespace DiagnosticSample;
-
-            public interface IProtocol
-            {
-            }
-
-            public sealed record Foreign(string Value);
-
-            public sealed class NotAFormatter
-            {
-            }
-
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120601)]
-            [AkkaSerializerFormatter(typeof(Foreign), typeof(NotAFormatter))]
-            public sealed partial class SampleSerializer : AkkaSerializer
-            {
-                public static partial SerializerRegistration CreateRegistration();
-            }
-
-            [AkkaSerializable(Manifest = "outer-v1")]
-            public sealed record Outer([property: AkkaField(1)] Foreign Value) : IProtocol;
-            """;
-
-        var diagnostics = RunGenerator(source);
-
-        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG008" && diagnostic.Severity == DiagnosticSeverity.Error);
-    }
+    // "Generator should report AKKASG008 when a registered formatter does not implement
+    // IAkkaMessagePackFormatter<T>" was deleted here: with AkkaSerializerFormatterAttribute<TTarget,
+    // TFormatter> constrained `where TFormatter : IAkkaMessagePackFormatter<TTarget>`, a formatter
+    // that does not implement the interface for the target type is now a compile-time error
+    // (CS0311) at the attribute usage site -- [AkkaSerializerFormatter<Foreign, NotAFormatter>]
+    // cannot compile, so the generator diagnostic this test asserted on can never fire.
 
     [Fact(DisplayName = "Generator should report AKKASG008 when a registered formatter is abstract")]
     public void Generator_should_report_AKKASG008_when_formatter_is_abstract()
@@ -158,8 +129,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 public abstract int SizeOf(Foreign value);
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120602)]
-            [AkkaSerializerFormatter(typeof(Foreign), typeof(AbstractFormatter))]
+            [AkkaSerializer<IProtocol>("sample", 120602)]
+            [AkkaSerializerFormatter<Foreign, AbstractFormatter>]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -205,9 +176,9 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 public int SizeOf(Foreign value) => Akka.Serialization.SerializerV2.UnknownSize;
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120603)]
-            [AkkaSerializerFormatter(typeof(Foreign), typeof(FirstFormatter))]
-            [AkkaSerializerFormatter(typeof(Foreign), typeof(SecondFormatter))]
+            [AkkaSerializer<IProtocol>("sample", 120603)]
+            [AkkaSerializerFormatter<Foreign, FirstFormatter>]
+            [AkkaSerializerFormatter<Foreign, SecondFormatter>]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -250,8 +221,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 public int SizeOf(Foreign value) => Akka.Serialization.SerializerV2.UnknownSize;
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120604)]
-            [AkkaSerializerFormatter(typeof(Foreign), typeof(NoUsableCtorFormatter))]
+            [AkkaSerializer<IProtocol>("sample", 120604)]
+            [AkkaSerializerFormatter<Foreign, NoUsableCtorFormatter>]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -290,8 +261,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 public int SizeOf(Foreign value) => Akka.Serialization.SerializerV2.UnknownSize;
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120605)]
-            [AkkaSerializerFormatter(typeof(Foreign), typeof(ForeignFormatter))]
+            [AkkaSerializer<IProtocol>("sample", 120605)]
+            [AkkaSerializerFormatter<Foreign, ForeignFormatter>]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -329,8 +300,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 public int SizeOf(int[] value) => Akka.Serialization.SerializerV2.UnknownSize;
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120606)]
-            [AkkaSerializerFormatter(typeof(int[]), typeof(IntArrayFormatter))]
+            [AkkaSerializer<IProtocol>("sample", 120606)]
+            [AkkaSerializerFormatter<int[], IntArrayFormatter>]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -368,8 +339,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 public int SizeOf(List<int> value) => Akka.Serialization.SerializerV2.UnknownSize;
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120607)]
-            [AkkaSerializerFormatter(typeof(List<int>), typeof(IntListFormatter))]
+            [AkkaSerializer<IProtocol>("sample", 120607)]
+            [AkkaSerializerFormatter<List<int>, IntListFormatter>]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -414,8 +385,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 public int SizeOf(Result value) => Akka.Serialization.SerializerV2.UnknownSize;
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120608)]
-            [AkkaSerializerFormatter(typeof(Result), typeof(ResultFormatter))]
+            [AkkaSerializer<IProtocol>("sample", 120608)]
+            [AkkaSerializerFormatter<Result, ResultFormatter>]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -434,35 +405,12 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "CS1503");
     }
 
-    [Fact(DisplayName = "Generator should report AKKASG011 when a formatter target argument is null")]
-    public void Generator_should_report_AKKASG011_when_formatter_target_argument_is_null()
-    {
-        const string source = """
-            #nullable enable
-            using Akka.Actor;
-            using Akka.Serialization.V2;
-
-            namespace DiagnosticSample;
-
-            public interface IProtocol
-            {
-            }
-
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120609)]
-            [AkkaSerializerFormatter(null!, typeof(AddressFormatter))]
-            public sealed partial class SampleSerializer : AkkaSerializer
-            {
-                public static partial SerializerRegistration CreateRegistration();
-            }
-
-            [AkkaSerializable(Manifest = "outer-v1")]
-            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
-            """;
-
-        var diagnostics = RunGenerator(source);
-
-        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG011" && diagnostic.Severity == DiagnosticSeverity.Error);
-    }
+    // "Generator should report AKKASG011 when a formatter target argument is null" was deleted
+    // here: TTarget is now a generic type argument of AkkaSerializerFormatterAttribute<TTarget,
+    // TFormatter>, and a type argument can never be null -- there is no syntax to write "no type"
+    // where a type argument is expected, so [AkkaSerializerFormatter<null, ...>] cannot even be
+    // written, let alone compile. AKKASG011's former null-target check is unreachable and was
+    // removed from ExtractFormatters along with it.
 
     [Fact(DisplayName = "Generator should still report AKKASG004 for a fieldless message that does not opt into AllowEmpty")]
     public void Generator_should_report_AKKASG004_for_fieldless_message_without_AllowEmpty()
@@ -478,7 +426,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120701)]
+            [AkkaSerializer<IProtocol>("sample", 120701)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -513,7 +461,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120703)]
+            [AkkaSerializer<IProtocol>("sample", 120703)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -543,7 +491,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120702)]
+            [AkkaSerializer<IProtocol>("sample", 120702)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -580,7 +528,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120704)]
+            [AkkaSerializer<IProtocol>("sample", 120704)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -613,7 +561,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120901)]
+            [AkkaSerializer<IProtocol>("sample", 120901)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -659,13 +607,13 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocolA>(Name = "sample-a", SerializerId = 120902)]
+            [AkkaSerializer<IProtocolA>("sample-a", 120902)]
             public sealed partial class SampleSerializerA : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
 
-            [AkkaSerializer<IProtocolB>(Name = "sample-b", SerializerId = 120903)]
+            [AkkaSerializer<IProtocolB>("sample-b", 120903)]
             public sealed partial class SampleSerializerB : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -702,13 +650,13 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocolA>(Name = "sample-a", SerializerId = 120904)]
+            [AkkaSerializer<IProtocolA>("sample-a", 120904)]
             public sealed partial class SampleSerializerA : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
 
-            [AkkaSerializer<IProtocolB>(Name = "sample-b", SerializerId = 120904)]
+            [AkkaSerializer<IProtocolB>("sample-b", 120904)]
             public sealed partial class SampleSerializerB : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -748,7 +696,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121001)]
+            [AkkaSerializer<IProtocol>("sample", 121001)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -793,7 +741,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121002)]
+            [AkkaSerializer<IProtocol>("sample", 121002)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -827,7 +775,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121003)]
+            [AkkaSerializer<IProtocol>("sample", 121003)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -860,7 +808,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121004)]
+            [AkkaSerializer<IProtocol>("sample", 121004)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -897,7 +845,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 Big = long.MaxValue
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121005)]
+            [AkkaSerializer<IProtocol>("sample", 121005)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -939,7 +887,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 Big = uint.MaxValue
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121006)]
+            [AkkaSerializer<IProtocol>("sample", 121006)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -987,7 +935,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 B = 1
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121007)]
+            [AkkaSerializer<IProtocol>("sample", 121007)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1026,7 +974,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
 
             public sealed record NotSerializable(string Value) : IEvent;
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120701)]
+            [AkkaSerializer<IProtocol>("sample", 120701)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1063,7 +1011,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             [AkkaSerializable]
             public sealed record ManifestlessMember([property: AkkaField(1)] string Value) : IEvent;
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120702)]
+            [AkkaSerializer<IProtocol>("sample", 120702)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1100,7 +1048,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             [AkkaSerializable(Manifest = "unrelated-v1")]
             public sealed record Unrelated([property: AkkaField(1)] string Value);
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120703)]
+            [AkkaSerializer<IProtocol>("sample", 120703)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1114,6 +1062,51 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         var diagnostics = RunGenerator(source);
 
         diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG018" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG019 when a union member type is declared more than once")]
+    public void Generator_should_report_AKKASG019_when_union_member_declared_twice()
+    {
+        // AkkaUnionAttribute(Type first, params Type[] rest) makes an EMPTY member set
+        // unrepresentable (the "at least one member type is required" half of AKKASG019 was
+        // removed along with its impossible-to-write test), but a REPEATED member is still fully
+        // representable -- [AkkaUnion(typeof(Repeated), typeof(Repeated))] compiles fine -- so this
+        // half of the check remains.
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            public interface IEvent
+            {
+            }
+
+            [AkkaSerializable(Manifest = "repeated-v1")]
+            public sealed record Repeated([property: AkkaField(1)] string Value) : IEvent;
+
+            [AkkaSerializer<IProtocol>("sample", 120704)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1), AkkaUnion(typeof(Repeated), typeof(Repeated))] IEvent Event) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG019" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("declared more than once", StringComparison.Ordinal));
     }
 
     [Fact(DisplayName = "Generator should report AKKASG020 when a closed generic registration target is not generic")]
@@ -1133,7 +1126,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             [AkkaSerializable(Manifest = "plain-v1")]
             public sealed record Plain([property: AkkaField(1)] string Value) : IProtocol;
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120705)]
+            [AkkaSerializer<IProtocol>("sample", 120705)]
             [AkkaSerializable<Plain>(Manifest = "plain-again-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
@@ -1165,7 +1158,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 [property: AkkaField(1)] string Id,
                 [property: AkkaField(2)] T Payload) : IProtocol;
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120706)]
+            [AkkaSerializer<IProtocol>("sample", 120706)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1199,7 +1192,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             [AkkaSerializable]
             public sealed record Payload([property: AkkaField(1)] string Value);
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120707)]
+            [AkkaSerializer<IProtocol>("sample", 120707)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1240,7 +1233,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             [AkkaSerializable(Manifest = "sealed-v1")]
             public sealed record SealedMember([property: AkkaField(1)] string Value) : IEvent;
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 120708)]
+            [AkkaSerializer<IProtocol>("sample", 120708)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1279,7 +1272,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121101)]
+            [AkkaSerializer<IProtocol>("sample", 121101)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1318,7 +1311,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121102)]
+            [AkkaSerializer<IProtocol>("sample", 121102)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1361,7 +1354,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121103)]
+            [AkkaSerializer<IProtocol>("sample", 121103)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1406,7 +1399,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121104)]
+            [AkkaSerializer<IProtocol>("sample", 121104)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1454,7 +1447,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121105)]
+            [AkkaSerializer<IProtocol>("sample", 121105)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1492,7 +1485,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 121106)]
+            [AkkaSerializer<IProtocol>("sample", 121106)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1535,7 +1528,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130001)]
+            [AkkaSerializer<IProtocol>("sample", 130001)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1571,7 +1564,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130002)]
+            [AkkaSerializer<IProtocol>("sample", 130002)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1610,7 +1603,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 [property: AkkaField(1)] string Id,
                 [property: AkkaField(2)] T Payload) : IProtocol;
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130003)]
+            [AkkaSerializer<IProtocol>("sample", 130003)]
             [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
@@ -1638,7 +1631,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130004)]
+            [AkkaSerializer<IProtocol>("sample", 130004)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1677,8 +1670,8 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocolA>(Name = "sample-a", SerializerId = 130005)]
-            [AkkaSerializer<IProtocolB>(Name = "sample-b", SerializerId = 130006)]
+            [AkkaSerializer<IProtocolA>("sample-a", 130005)]
+            [AkkaSerializer<IProtocolB>("sample-b", 130006)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1709,13 +1702,13 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample-a", SerializerId = 130007)]
+            [AkkaSerializer<IProtocol>("sample-a", 130007)]
             public sealed partial class SerializerA : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample-b", SerializerId = 130008)]
+            [AkkaSerializer<IProtocol>("sample-b", 130008)]
             public sealed partial class SerializerB : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1752,13 +1745,13 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocolA>(Name = "sample-a", SerializerId = 130009)]
+            [AkkaSerializer<IProtocolA>("sample-a", 130009)]
             public sealed partial class SerializerA : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
             }
 
-            [AkkaSerializer<IProtocolB>(Name = "sample-b", SerializerId = 130010)]
+            [AkkaSerializer<IProtocolB>("sample-b", 130010)]
             public sealed partial class SerializerB : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1790,7 +1783,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130011)]
+            [AkkaSerializer<IProtocol>("sample", 130011)]
             public sealed class NotPartialSerializer : AkkaSerializer
             {
                 public NotPartialSerializer(ExtendedActorSystem system) : base(system)
@@ -1822,7 +1815,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130012)]
+            [AkkaSerializer<IProtocol>("sample", 130012)]
             public sealed partial class WrongBaseSerializer
             {
             }
@@ -1851,7 +1844,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130013)]
+            [AkkaSerializer<IProtocol>("sample", 130013)]
             public sealed partial class GenericSerializer<T> : AkkaSerializer
             {
                 public GenericSerializer(ExtendedActorSystem system) : base(system)
@@ -1883,7 +1876,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130014)]
+            [AkkaSerializer<IProtocol>("sample", 130014)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1912,7 +1905,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<ClassProtocol>(Name = "sample", SerializerId = 130015)]
+            [AkkaSerializer<ClassProtocol>("sample", 130015)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1942,7 +1935,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             {
             }
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130016)]
+            [AkkaSerializer<IProtocol>("sample", 130016)]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
                 public static partial SerializerRegistration CreateRegistration();
@@ -1976,7 +1969,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 [property: AkkaField(1)] string Id,
                 [property: AkkaField(2)] T Payload);
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130017)]
+            [AkkaSerializer<IProtocol>("sample", 130017)]
             [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
@@ -2018,7 +2011,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             [AkkaSerializable]
             public sealed record Payload([property: AkkaField(1)] string Value);
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130018)]
+            [AkkaSerializer<IProtocol>("sample", 130018)]
             [AkkaSerializable<Wrapper<Payload>>]
             public sealed partial class SampleSerializer : AkkaSerializer
             {
@@ -2054,7 +2047,7 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
                 [property: AkkaField(1)] string Id,
                 [property: AkkaField(2)] T Payload) : IProtocol;
 
-            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130019)]
+            [AkkaSerializer<IProtocol>("sample", 130019)]
             [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
             public sealed partial class SampleSerializer : AkkaSerializer
             {

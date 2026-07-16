@@ -25,14 +25,31 @@ namespace Akka.Serialization.V2;
 public sealed class AkkaSerializerAttribute<TProtocol> : Attribute
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="AkkaSerializerAttribute{TProtocol}"/> class.
+    /// </summary>
+    /// <param name="name">Logical serializer alias used for Akka serializer registration.</param>
+    /// <param name="serializerId">Explicit Akka serializer identifier. Must be unique in the actor system.</param>
+    /// <remarks>
+    /// Both arguments are mandatory and always explicit -- there is no auto-assignment. A source
+    /// generator's registration order across a compilation is nondeterministic, and a collision
+    /// with a serializer id or alias defined elsewhere (for example in HOCON config) is invisible
+    /// to the generator, so there is no value it could safely default either argument to.
+    /// </remarks>
+    public AkkaSerializerAttribute(string name, int serializerId)
+    {
+        Name = name;
+        SerializerId = serializerId;
+    }
+
+    /// <summary>
     /// Logical serializer alias used for Akka serializer registration.
     /// </summary>
-    public string? Name { get; init; }
+    public string Name { get; }
 
     /// <summary>
     /// Explicit Akka serializer identifier. Must be unique in the actor system.
     /// </summary>
-    public int SerializerId { get; init; }
+    public int SerializerId { get; }
 }
 
 /// <summary>
@@ -114,9 +131,16 @@ public sealed class AkkaUnionAttribute : Attribute
     /// <summary>
     /// Initializes a new instance of the <see cref="AkkaUnionAttribute"/> class.
     /// </summary>
-    /// <param name="memberTypes">The closed set of concrete member types this field may hold.</param>
-    public AkkaUnionAttribute(params Type[] memberTypes)
+    /// <param name="first">
+    /// The first concrete member type this field may hold. A union is never empty: at least one
+    /// member is always required, so <c>[AkkaUnion()]</c> (an empty member set) does not compile.
+    /// </param>
+    /// <param name="rest">Any additional concrete member types this field may hold.</param>
+    public AkkaUnionAttribute(Type first, params Type[] rest)
     {
+        var memberTypes = new Type[rest.Length + 1];
+        memberTypes[0] = first;
+        rest.CopyTo(memberTypes, 1);
         MemberTypes = memberTypes;
     }
 
@@ -160,41 +184,31 @@ public sealed class AkkaSerializableAttribute<TMessage> : Attribute
 /// that cannot reference <c>Akka.Serialization.V2</c>).
 /// </summary>
 /// <remarks>
-/// Apply to the <c>[AkkaSerializer]</c> partial class. The registration is serializer-scoped: the
-/// same foreign type may be handled by different formatters (or not at all) in different
-/// serializers. A formatter registration overrides every field-kind resolution the generator would
-/// otherwise infer for <see cref="SerializedType"/> (including <c>Nullable&lt;T&gt;</c> of a value
-/// type), except an <see cref="AkkaEnvelopePayloadAttribute"/>-marked field, which always wins.
+/// Apply to the <c>[AkkaSerializer]</c> partial class, for example
+/// <c>[AkkaSerializerFormatter&lt;Address, AddressFormatter&gt;]</c>. The registration is
+/// serializer-scoped: the same foreign type may be handled by different formatters (or not at all)
+/// in different serializers. A formatter registration overrides every field-kind resolution the
+/// generator would otherwise infer for <typeparamref name="TTarget"/> (including
+/// <c>Nullable&lt;T&gt;</c> of a value type), except an
+/// <see cref="AkkaEnvelopePayloadAttribute"/>-marked field, which always wins.
+/// The <c>where TFormatter : IAkkaMessagePackFormatter&lt;TTarget&gt;</c> constraint is enforced by
+/// the compiler at the attribute usage site: <typeparamref name="TFormatter"/> can never be
+/// something that does not implement the formatter interface for <typeparamref name="TTarget"/>.
+/// Deliberately no <c>new()</c> constraint: a formatter with only a public constructor taking an
+/// <see cref="Akka.Actor.ExtendedActorSystem"/> (no parameterless constructor) is legitimate (see
+/// <typeparamref name="TFormatter"/>).
 /// </remarks>
+/// <typeparam name="TTarget">The foreign type handled by <typeparamref name="TFormatter"/>.</typeparam>
+/// <typeparam name="TFormatter">
+/// A non-abstract class implementing <see cref="IAkkaMessagePackFormatter{T}"/> for
+/// <typeparamref name="TTarget"/>, with either a public parameterless constructor or a public
+/// constructor taking an <see cref="Akka.Actor.ExtendedActorSystem"/>. When both constructors are
+/// present, the generated serializer prefers the <see cref="Akka.Actor.ExtendedActorSystem"/>
+/// constructor: the serializer always has the system in hand, and system context is why a
+/// formatter declares that constructor.
+/// </typeparam>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
-public sealed class AkkaSerializerFormatterAttribute : Attribute
+public sealed class AkkaSerializerFormatterAttribute<TTarget, TFormatter> : Attribute
+    where TFormatter : IAkkaMessagePackFormatter<TTarget>
 {
-    /// <summary>
-    /// Initializes a new instance of the <see cref="AkkaSerializerFormatterAttribute"/> class.
-    /// </summary>
-    /// <param name="serializedType">The foreign type handled by <paramref name="formatterType"/>.</param>
-    /// <param name="formatterType">
-    /// A non-abstract, non-generic class implementing <see cref="IAkkaMessagePackFormatter{T}"/>
-    /// for <paramref name="serializedType"/>, with either a public parameterless constructor or a
-    /// public constructor taking an <see cref="Akka.Actor.ExtendedActorSystem"/>. When both
-    /// constructors are present, the generated serializer prefers the
-    /// <see cref="Akka.Actor.ExtendedActorSystem"/> constructor: the serializer always has the
-    /// system in hand, and system context is why a formatter declares that constructor.
-    /// </param>
-    public AkkaSerializerFormatterAttribute(Type serializedType, Type formatterType)
-    {
-        SerializedType = serializedType;
-        FormatterType = formatterType;
-    }
-
-    /// <summary>
-    /// The foreign type handled by <see cref="FormatterType"/>.
-    /// </summary>
-    public Type SerializedType { get; }
-
-    /// <summary>
-    /// The formatter type implementing <see cref="IAkkaMessagePackFormatter{T}"/> for
-    /// <see cref="SerializedType"/>.
-    /// </summary>
-    public Type FormatterType { get; }
 }

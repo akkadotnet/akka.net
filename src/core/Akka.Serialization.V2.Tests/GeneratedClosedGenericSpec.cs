@@ -136,7 +136,7 @@ public interface IClosedGenericTestProtocol
 {
 }
 
-[AkkaSerializer<IClosedGenericTestProtocol>(Name = "closed-generic-test", SerializerId = 120404)]
+[AkkaSerializer<IClosedGenericTestProtocol>("closed-generic-test", 120404)]
 [AkkaSerializable<Wrapper<OrderRequest>>(Manifest = "wrap-request-v1")]
 [AkkaSerializable<Wrapper<OrderReceipt>>(Manifest = "wrap-receipt-v1")]
 [AkkaSerializable<EventWrapper<IOrderEvent>>(Manifest = "event-wrap-v1")]

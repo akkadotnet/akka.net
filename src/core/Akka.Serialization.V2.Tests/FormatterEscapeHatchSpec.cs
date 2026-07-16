@@ -18,10 +18,10 @@ using Xunit;
 namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
-/// Validates the <see cref="AkkaSerializerFormatterAttribute"/> escape hatch: hand-written
-/// <see cref="IAkkaMessagePackFormatter{T}"/> registrations for foreign types (core Akka types
-/// like <see cref="Address"/> and <see cref="ActorPath"/>) that the generator cannot annotate
-/// with <see cref="AkkaSerializableAttribute"/>.
+/// Validates the <c>[AkkaSerializerFormatter&lt;TTarget, TFormatter&gt;]</c> escape hatch:
+/// hand-written <see cref="IAkkaMessagePackFormatter{T}"/> registrations for foreign types (core
+/// Akka types like <see cref="Address"/> and <see cref="ActorPath"/>) that the generator cannot
+/// annotate with <see cref="AkkaSerializableAttribute"/>.
 /// </summary>
 public sealed class FormatterEscapeHatchSpec : IAsyncLifetime
 {
@@ -368,10 +368,10 @@ public sealed record MirrorActorPathMessage(
     public const string ManifestName = "mirror-actor-path-v1";
 }
 
-[AkkaSerializer<IControlMirrorProtocol>(Name = "control-mirror", SerializerId = 120102)]
-[AkkaSerializerFormatter(typeof(Address), typeof(AddressFormatter))]
-[AkkaSerializerFormatter(typeof(TestUniqueAddress), typeof(TestUniqueAddressFormatter))]
-[AkkaSerializerFormatter(typeof(ActorPath), typeof(ActorPathFormatter))]
+[AkkaSerializer<IControlMirrorProtocol>("control-mirror", 120102)]
+[AkkaSerializerFormatter<Address, AddressFormatter>]
+[AkkaSerializerFormatter<TestUniqueAddress, TestUniqueAddressFormatter>]
+[AkkaSerializerFormatter<ActorPath, ActorPathFormatter>]
 public sealed partial class ControlMirrorSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
@@ -427,8 +427,8 @@ public sealed record SystemTaggedMessage(
     public const string ManifestName = "system-tagged-v1";
 }
 
-[AkkaSerializer<ISystemFormatterProtocol>(Name = "system-formatter", SerializerId = 120103)]
-[AkkaSerializerFormatter(typeof(SystemTaggedValue), typeof(SystemTaggedValueFormatter))]
+[AkkaSerializer<ISystemFormatterProtocol>("system-formatter", 120103)]
+[AkkaSerializerFormatter<SystemTaggedValue, SystemTaggedValueFormatter>]
 public sealed partial class SystemFormatterSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
@@ -445,7 +445,7 @@ internal sealed record InternalMirrorMessage(
     public const string ManifestName = "internal-mirror-v1";
 }
 
-[AkkaSerializer<IInternalMirrorProtocol>(Name = "internal-mirror", SerializerId = 120104)]
+[AkkaSerializer<IInternalMirrorProtocol>("internal-mirror", 120104)]
 internal sealed partial class InternalMirrorSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();

@@ -121,7 +121,7 @@ namespace RemotePingPong.RealPayload.V2
     /// range (0-40, see akka.conf) and the ids used elsewhere in this repo (e.g. Artery control's 23,
     /// the V2 test suite's ~120101-120202) to avoid any collision with a real Akka.NET serializer.
     /// </remarks>
-    [AkkaSerializer<IRealBenchmarkMessage>(Name = "real-benchmark-v2", SerializerId = 987001)]
+    [AkkaSerializer<IRealBenchmarkMessage>("real-benchmark-v2", 987001)]
     internal sealed partial class RealBenchmarkSerializer : AkkaSerializer
     {
         /// <summary>

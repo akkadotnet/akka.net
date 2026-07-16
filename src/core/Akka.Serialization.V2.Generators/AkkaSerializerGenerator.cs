@@ -26,23 +26,27 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private const string EnvelopePayloadAttributeFullName = "Akka.Serialization.V2.AkkaEnvelopePayloadAttribute";
     private const string UnionAttributeFullName = "Akka.Serialization.V2.AkkaUnionAttribute";
     private const string GenericSerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializableAttribute`1";
-    private const string FormatterAttributeFullName = "Akka.Serialization.V2.AkkaSerializerFormatterAttribute";
-    private const string FormatterInterfaceFullName = "Akka.Serialization.V2.IAkkaMessagePackFormatter`1";
+    private const string FormatterAttributeFullName = "Akka.Serialization.V2.AkkaSerializerFormatterAttribute`2";
     private const string ExtendedActorSystemFullName = "Akka.Actor.ExtendedActorSystem";
     private const string AkkaSerializerBaseTypeFullName = "Akka.Serialization.V2.AkkaSerializer";
 
-    private static readonly DiagnosticDescriptor MissingSerializerName = new(
+    // AkkaSerializerAttribute<TProtocol>(string name, int serializerId) requires both arguments at
+    // every call site -- there is no longer a way to OMIT Name or SerializerId, so AKKASG001/002
+    // no longer guard "missing" registration. They still guard the argument VALUES: a caller can
+    // still write [AkkaSerializer<T>(null!, 0)] or an empty/whitespace name or a non-positive id,
+    // and those remain compile-time errors from this generator.
+    private static readonly DiagnosticDescriptor InvalidSerializerName = new(
         "AKKASG001",
-        "Serializer name is required",
-        "[AkkaSerializer] class '{0}' must specify Name for explicit registration",
+        "Serializer name must be a non-empty string",
+        "[AkkaSerializer] class '{0}' specifies an invalid Name: it must not be null, empty, or consist only of whitespace",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor MissingSerializerId = new(
+    private static readonly DiagnosticDescriptor InvalidSerializerId = new(
         "AKKASG002",
-        "Serializer id is required for POC generator",
-        "[AkkaSerializer] class '{0}' must specify SerializerId for the POC generator",
+        "Serializer id must be a positive integer",
+        "[AkkaSerializer] class '{0}' specifies SerializerId {1}, which must be a positive, non-zero integer unique within the actor system",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -87,10 +91,16 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    // The `where TFormatter : IAkkaMessagePackFormatter<TTarget>` constraint on
+    // AkkaSerializerFormatterAttribute<TTarget, TFormatter> now makes interface conformance a
+    // compile-time error at the attribute usage site, so this narrows to the one thing a generic
+    // constraint cannot express: TFormatter must not be abstract (an abstract type still satisfies
+    // the constraint, and there is deliberately no `new()` clause to rule it out, since a formatter
+    // with only an ExtendedActorSystem constructor is legitimate).
     private static readonly DiagnosticDescriptor InvalidFormatterType = new(
         "AKKASG008",
-        "Formatter type is invalid",
-        "Formatter '{0}' on serializer '{1}' must be a non-abstract, non-generic class implementing IAkkaMessagePackFormatter<{2}>",
+        "Formatter type must not be abstract",
+        "Formatter '{0}' on serializer '{1}' must not be abstract: it cannot be instantiated as the runtime IAkkaMessagePackFormatter<{2}>",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -327,7 +337,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             var duplicateSerializerIds = pair.Left
                 .Where(s => s != null)
                 .Cast<SerializerInfo>()
-                .Where(s => s.SerializerId != 0)
+                .Where(s => s.SerializerId > 0)
                 .GroupBy(s => s.SerializerId)
                 .Where(group => group.Count() > 1)
                 .ToImmutableDictionary(group => group.Key, group => string.Join(", ", group.Select(s => s.ClassName)));
@@ -360,13 +370,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
                 if (string.IsNullOrWhiteSpace(serializer.Name))
                 {
-                    ctx.ReportDiagnostic(Diagnostic.Create(MissingSerializerName, Location.None, serializer.ClassName));
+                    ctx.ReportDiagnostic(Diagnostic.Create(InvalidSerializerName, Location.None, serializer.ClassName));
                     continue;
                 }
 
-                if (serializer.SerializerId == 0)
+                if (serializer.SerializerId <= 0)
                 {
-                    ctx.ReportDiagnostic(Diagnostic.Create(MissingSerializerId, Location.None, serializer.ClassName));
+                    ctx.ReportDiagnostic(Diagnostic.Create(InvalidSerializerId, Location.None, serializer.ClassName, serializer.SerializerId));
                     continue;
                 }
 
@@ -447,11 +457,15 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         string? name = null;
         var serializerId = 0;
 
-        foreach (var argument in attribute.NamedArguments)
+        // AkkaSerializerAttribute<TProtocol>(string name, int serializerId): both arguments are
+        // mandatory POSITIONAL constructor arguments now -- the attribute has no settable
+        // properties left, so `[AkkaSerializer<T>(Name = "x", SerializerId = 1)]` named-property
+        // syntax cannot compile and NamedArguments can never carry either value. A length other
+        // than 2 cannot occur for a successfully-compiled use of this attribute.
+        if (attribute.ConstructorArguments.Length == 2)
         {
-            if (argument.Key == "Name" && argument.Value.Value is string value)
-                name = value;
-            else if (argument.Key == "SerializerId" && argument.Value.Value is int id)
+            name = attribute.ConstructorArguments[0].Value as string;
+            if (attribute.ConstructorArguments[1].Value is int id)
                 serializerId = id;
         }
 
@@ -459,9 +473,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var protocolTypeFullName = protocolType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? string.Empty;
 
         var formatterAttributeType = compilation.GetTypeByMetadataName(FormatterAttributeFullName);
-        var formatterInterfaceType = compilation.GetTypeByMetadataName(FormatterInterfaceFullName);
         var extendedActorSystemType = compilation.GetTypeByMetadataName(ExtendedActorSystemFullName);
-        var formatters = ExtractFormatters(symbol, formatterAttributeType, formatterInterfaceType, extendedActorSystemType);
+        var formatters = ExtractFormatters(symbol, formatterAttributeType, extendedActorSystemType);
         var closedGenericRegistrations = ExtractClosedGenericRegistrations(symbol, compilation);
 
         return new SerializerInfo(
@@ -610,14 +623,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static ImmutableArray<FormatterInfo> ExtractFormatters(
         INamedTypeSymbol symbol,
         INamedTypeSymbol? formatterAttributeType,
-        INamedTypeSymbol? formatterInterfaceType,
         INamedTypeSymbol? extendedActorSystemType)
     {
         if (formatterAttributeType == null)
             return ImmutableArray<FormatterInfo>.Empty;
 
+        // AkkaSerializerFormatterAttribute<TTarget, TFormatter> where TFormatter :
+        // IAkkaMessagePackFormatter<TTarget> -- a constructed generic attribute, so matching
+        // requires comparing against OriginalDefinition (the same pattern used for
+        // AkkaSerializableAttribute<TMessage> in ExtractClosedGenericRegistrations).
         var formatterAttributes = symbol.GetAttributes()
-            .Where(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, formatterAttributeType))
+            .Where(attr => attr.AttributeClass is { IsGenericType: true } ac && SymbolEqualityComparer.Default.Equals(ac.OriginalDefinition, formatterAttributeType))
             .ToImmutableArray();
 
         if (formatterAttributes.IsEmpty)
@@ -626,37 +642,39 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var builder = ImmutableArray.CreateBuilder<FormatterInfo>(formatterAttributes.Length);
         foreach (var attribute in formatterAttributes)
         {
-            if (attribute.ConstructorArguments.Length != 2)
-                continue;
+            // TTarget and TFormatter come from the constructed attribute's own type arguments, not
+            // ConstructorArguments -- there is no constructor argument carrying either type
+            // anymore. Both slots are always present for a successfully-compiled two-arity
+            // construction: neither a null target nor an unbound generic target/formatter can be
+            // written here (the compiler rejects both at the attribute usage site), so unlike the
+            // former Type-typed constructor arguments, these can never be "missing" or "not a
+            // type" -- AKKASG011's former null-target check is unreachable and has been removed.
+            var targetTypeSymbol = attribute.AttributeClass!.TypeArguments[0];
+            var formatterTypeSymbol = attribute.AttributeClass!.TypeArguments[1];
 
-            // Never silently drop a registration: malformed arguments (null, or something that is
-            // not a type at all) are recorded as invalid entries so a diagnostic fires instead of
-            // the registration silently doing nothing.
-            var targetTypeSymbol = attribute.ConstructorArguments[0].Value as ITypeSymbol;
-            var formatterTypeSymbol = attribute.ConstructorArguments[1].Value as ITypeSymbol;
-
-            // Formatter targets must be plain named types: arrays are not INamedTypeSymbol, and
-            // generic targets (open or closed) would collide on the arity-less fully-qualified
-            // name used for field matching. Null/non-type targets are equally unsupported.
-            // All of these are recorded with IsTargetSupported = false so AKKASG011 fires.
+            // Formatter targets must still be plain named types: arrays are not INamedTypeSymbol,
+            // and CLOSED generic targets (e.g. List<int>) -- now directly expressible as TTarget --
+            // would still collide on the arity-less fully-qualified name used for field matching.
+            // Both remain recorded with IsTargetSupported = false so AKKASG011 fires.
             var targetNamedType = targetTypeSymbol as INamedTypeSymbol;
             var isTargetSupported = targetNamedType is { IsGenericType: false };
             var targetTypeFullName = isTargetSupported
                 ? GetFullyQualifiedTypeName(targetNamedType!)
-                : targetTypeSymbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? "<null>";
+                : targetTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
             var formatterNamedType = formatterTypeSymbol as INamedTypeSymbol;
             var formatterTypeFullName = formatterNamedType != null
                 ? GetFullyQualifiedTypeName(formatterNamedType)
-                : formatterTypeSymbol?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? "<null>";
+                : formatterTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-            var implementsInterface = isTargetSupported &&
-                formatterInterfaceType != null &&
-                formatterNamedType is { TypeKind: TypeKind.Class, IsAbstract: false, IsGenericType: false } &&
-                formatterNamedType.AllInterfaces.Any(candidate =>
-                    SymbolEqualityComparer.Default.Equals(candidate.OriginalDefinition, formatterInterfaceType) &&
-                    candidate.TypeArguments.Length == 1 &&
-                    SymbolEqualityComparer.Default.Equals(candidate.TypeArguments[0], targetTypeSymbol));
+            // The `where TFormatter : IAkkaMessagePackFormatter<TTarget>` constraint is enforced by
+            // the compiler at the attribute usage site, so AKKASG008's former interface-conformance
+            // check can never fire here and has been removed. A generic constraint cannot express
+            // "and not abstract", though: an abstract TFormatter still satisfies the constraint
+            // (it has no `new()` clause to rule that out either -- formatters with an
+            // ExtendedActorSystem-only constructor are legitimate), so AKKASG008 now guards
+            // abstractness alone.
+            var isAbstract = formatterNamedType?.IsAbstract ?? false;
 
             var ctorKind = formatterNamedType != null
                 ? GetFormatterCtorKind(formatterNamedType, extendedActorSystemType)
@@ -664,9 +682,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
             builder.Add(new FormatterInfo(
                 targetTypeFullName,
-                targetTypeSymbol?.IsValueType ?? false,
+                targetTypeSymbol.IsValueType,
                 formatterTypeFullName,
-                implementsInterface,
+                isAbstract,
                 ctorKind,
                 isTargetSupported));
         }
@@ -846,7 +864,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 continue;
             }
 
-            if (!formatter.ImplementsInterface)
+            if (formatter.IsAbstract)
             {
                 context.ReportDiagnostic(Diagnostic.Create(InvalidFormatterType, Location.None, formatter.FormatterTypeFullName, serializer.ClassName, formatter.TargetTypeFullName));
                 isValid = false;
@@ -1222,12 +1240,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
         }
 
-        if (unionAttribute == null || unionAttribute.ConstructorArguments.Length != 1)
+        // AkkaUnionAttribute(Type first, params Type[] rest): TWO constructor arguments now, not
+        // one -- [0] is the mandatory `first` member, [1] is the `params` array holding the rest.
+        // The full declared member set is the concatenation of both; reading only
+        // ConstructorArguments[0].Values (the pre-Seed-2 shape, when the whole set arrived as a
+        // single `params Type[] memberTypes` array) would silently see only `first` and drop every
+        // other declared member.
+        if (unionAttribute == null || unionAttribute.ConstructorArguments.Length != 2)
             return ImmutableArray<UnionMemberInfo>.Empty;
 
         hasUnionAttribute = true;
-        var arguments = unionAttribute.ConstructorArguments[0].Values;
-        var builder = ImmutableArray.CreateBuilder<UnionMemberInfo>(arguments.Length);
+        var restArguments = unionAttribute.ConstructorArguments[1].Values;
+        var arguments = ImmutableArray.CreateBuilder<TypedConstant>(1 + restArguments.Length);
+        arguments.Add(unionAttribute.ConstructorArguments[0]);
+        arguments.AddRange(restArguments);
+
+        var builder = ImmutableArray.CreateBuilder<UnionMemberInfo>(arguments.Count);
         foreach (var argument in arguments)
         {
             if (argument.Value is not INamedTypeSymbol memberType || memberType.IsUnboundGenericType)
@@ -1515,12 +1543,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         var isValid = true;
 
-        if (field.UnionMembers.Length == 0)
-        {
-            context.ReportDiagnostic(Diagnostic.Create(InvalidUnionMemberSet, Location.None, field.Name, message.FullyQualifiedName, "at least one member type is required"));
-            return false;
-        }
-
+        // AkkaUnionAttribute(Type first, params Type[] rest) makes an empty member set
+        // unrepresentable: `first` is a mandatory constructor argument, so [AkkaUnion()] does not
+        // compile and field.UnionMembers can never be empty here. The "at least one member type is
+        // required" half of AKKASG019 that used to guard this is gone along with it.
         foreach (var duplicate in field.UnionMembers
                      .GroupBy(member => member.TypeFullName, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
@@ -3550,18 +3576,18 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     /// <summary>
     /// A serializer-scoped hand-written formatter registration extracted from
-    /// <c>[AkkaSerializerFormatter(typeof(TTarget), typeof(TFormatter))]</c>. Carries only
+    /// <c>[AkkaSerializerFormatter&lt;TTarget, TFormatter&gt;]</c>. Carries only
     /// strings/bools/enums (no <see cref="ISymbol"/> references) so it stays cheap to hold across
     /// incremental generator passes.
     /// </summary>
     private sealed class FormatterInfo
     {
-        public FormatterInfo(string targetTypeFullName, bool isTargetValueType, string formatterTypeFullName, bool implementsInterface, FormatterCtorKind ctorKind, bool isTargetSupported)
+        public FormatterInfo(string targetTypeFullName, bool isTargetValueType, string formatterTypeFullName, bool isAbstract, FormatterCtorKind ctorKind, bool isTargetSupported)
         {
             TargetTypeFullName = targetTypeFullName;
             IsTargetValueType = isTargetValueType;
             FormatterTypeFullName = formatterTypeFullName;
-            ImplementsInterface = implementsInterface;
+            IsAbstract = isAbstract;
             CtorKind = ctorKind;
             IsTargetSupported = isTargetSupported;
         }
@@ -3569,7 +3595,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string TargetTypeFullName { get; }
         public bool IsTargetValueType { get; }
         public string FormatterTypeFullName { get; }
-        public bool ImplementsInterface { get; }
+
+        /// <summary>
+        /// Whether TFormatter is an abstract type. The `where TFormatter :
+        /// IAkkaMessagePackFormatter&lt;TTarget&gt;` constraint does not rule this out (there is no
+        /// `new()` clause), so it is checked here instead (AKKASG008).
+        /// </summary>
+        public bool IsAbstract { get; }
         public FormatterCtorKind CtorKind { get; }
         public bool IsTargetSupported { get; }
     }

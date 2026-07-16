@@ -42,8 +42,9 @@ namespace Akka.Remote.Artery
     /// <para>
     /// <see cref="Address"/> is a core <c>Akka.Actor</c> type this change may not annotate with
     /// <c>[AkkaSerializable]</c>; it is instead handled via the built-in <see cref="AddressFormatter"/>
-    /// escape hatch (<see cref="AkkaSerializerFormatterAttribute"/>), which produces the identical
-    /// 4-element-array wire format the old hand-rolled <c>WriteAddress</c>/<c>ReadAddress</c> used.
+    /// escape hatch (<c>[AkkaSerializerFormatter&lt;Address, AddressFormatter&gt;]</c>), which
+    /// produces the identical 4-element-array wire format the old hand-rolled
+    /// <c>WriteAddress</c>/<c>ReadAddress</c> used.
     /// </para>
     /// <para>
     /// Class name and serializer identifier (23) are unchanged from the hand-rolled version, so the
@@ -51,8 +52,8 @@ namespace Akka.Remote.Artery
     /// on <see cref="IArteryControlMessage"/>, <c>serialization-identifiers</c> entry) requires no edits.
     /// </para>
     /// </summary>
-    [AkkaSerializer<IArteryControlMessage>(Name = "artery-control", SerializerId = 23)]
-    [AkkaSerializerFormatter(typeof(Address), typeof(AddressFormatter))]
+    [AkkaSerializer<IArteryControlMessage>("artery-control", 23)]
+    [AkkaSerializerFormatter<Address, AddressFormatter>]
     internal sealed partial class ArteryControlMessageSerializer : AkkaSerializer
     {
         /// <summary>
