@@ -160,16 +160,24 @@ public abstract class MultiNodeConfig
     {
         get
         {
+            // TestTransport = true turns on BOTH transports' failure-injection machinery,
+            // exactly like Pekko's MultiNodeSpec.testTransport (which injects the classic
+            // trttl/gremlin adapters AND `artery.advanced.test-mode = on` from the one flag):
+            // whichever transport the run actually uses picks up its own half; the other key is
+            // inert. Artery test-mode supports blackhole/passThrough only -- a rate throttle
+            // still requires the classic adapters (pin such specs to classic with
+            // `akka.remote.artery.enabled = off` in their CommonConfig, which sits ABOVE the
+            // arteryConfig tier below and therefore wins).
             var transportConfig = _testTransport ?
-                ConfigurationFactory.ParseString("akka.remote.dot-netty.tcp.applied-adapters = [trttl, gremlin]")
+                ConfigurationFactory.ParseString(@"
+                    akka.remote.dot-netty.tcp.applied-adapters = [trttl, gremlin]
+                    akka.remote.artery.advanced.test-mode = on")
                 : ConfigurationFactory.Empty;
 
             // AKKA_MNTR_TRANSPORT=artery: layer in Artery's canonical host/port (mirroring
             // MultiNodeSpec.NodeConfig's classic dot-netty.tcp block below) as a fallback tier
             // below CommonConfig/per-role NodeConfig but above BaseConfig, so specs are never
-            // silently overridden. See `UseArteryTransport` above for the full rationale; note
-            // this does NOT provide any equivalent to `_testTransport`'s throttle/blackhole
-            // adapters -- Artery has no failure-injection/test-mode equivalent today.
+            // silently overridden. See `UseArteryTransport` above for the full rationale.
             var arteryConfig = UseArteryTransport
                 ? ConfigurationFactory.ParseString(string.Format(
                     @"akka.remote.artery {{

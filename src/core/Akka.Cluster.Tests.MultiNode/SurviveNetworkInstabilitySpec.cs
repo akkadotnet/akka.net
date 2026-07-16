@@ -54,7 +54,14 @@ public class SurviveNetworkInstabilitySpecConfig : MultiNodeConfig
 
         CommonConfig = DebugConfig(false)
             .WithFallback(ConfigurationFactory.ParseString(@"
+                    ## BOTH transports' system-message buffers must be shrunk to 100 so the
+                    ## quarantine scenario's SysMsgBufferSize+1 Watch flood deterministically
+                    ## overflows whichever transport the run uses (Pekko pins the same pair in its
+                    ## SurviveNetworkInstabilitySpec). Artery buffers system messages in TWO tiers
+                    ## (outbound control queue + SystemMessageDeliveryStage's unacked buffer), so a
+                    ## flood sized against the classic setting alone could never overflow it.
                     akka.remote.system-message-buffer-size = 100
+                    akka.remote.artery.advanced.system-message-buffer-size = 100
                     akka.remote.dot-netty.tcp.connection-timeout = 10s
                 "))
             .WithFallback(MultiNodeClusterSpec.ClusterConfig());
