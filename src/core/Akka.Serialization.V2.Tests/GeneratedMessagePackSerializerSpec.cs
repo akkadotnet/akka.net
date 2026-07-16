@@ -324,10 +324,10 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     [Fact(DisplayName = "Generated MessagePack wrapper should preserve opaque custom serializer payload")]
     public async Task Generated_MessagePack_wrapper_should_preserve_opaque_custom_serializer_payload()
     {
-        var setup = ActorSystemSetup.Create(global::Akka.Serialization.SerializationSetup.Create(extendedSystem =>
+        var setup = ActorSystemSetup.Create(SerializationSetup.Create(extendedSystem =>
         {
             var generated = GeneratedTestSerializer.CreateRegistration().CreateDetails(extendedSystem);
-            var custom = global::Akka.Serialization.SerializerDetails.Create(
+            var custom = SerializerDetails.Create(
                 "custom-protobuf",
                 new CustomProtobufPayloadSerializer(extendedSystem),
                 ImmutableHashSet.Create<Type>(typeof(CustomProtobufPayload)));
@@ -355,7 +355,7 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
 
             AssertOpaqueEnvelopeBytes(envelopeBytes, expectedInnerBytes);
 
-            var envelopeManifest = global::Akka.Serialization.Serialization.ManifestFor(envelopeSerializer, envelope);
+            var envelopeManifest = Serialization.ManifestFor(envelopeSerializer, envelope);
             var recoveredEnvelope = system.Serialization.Deserialize(envelopeBytes, envelopeSerializer.Identifier, envelopeManifest)
                 .Should().BeOfType<OpaqueEnvelope>().Subject;
             recoveredEnvelope.EnvelopeId.Should().Be("envelope-1");
@@ -375,10 +375,10 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     [Fact(DisplayName = "Generated serializer should round-trip nested envelope payloads through Akka serialization")]
     public async Task Generated_serializer_should_round_trip_nested_envelope_payloads_through_Akka_serialization()
     {
-        var setup = ActorSystemSetup.Create(global::Akka.Serialization.SerializationSetup.Create(extendedSystem =>
+        var setup = ActorSystemSetup.Create(SerializationSetup.Create(extendedSystem =>
         {
             var generated = GeneratedTestSerializer.CreateRegistration().CreateDetails(extendedSystem);
-            var custom = global::Akka.Serialization.SerializerDetails.Create(
+            var custom = SerializerDetails.Create(
                 "custom-protobuf",
                 new CustomProtobufPayloadSerializer(extendedSystem),
                 ImmutableHashSet.Create<Type>(typeof(CustomProtobufPayload)));
@@ -392,12 +392,12 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
             var customEnvelope = new AttributeOuterEnvelope("outer-custom", new AttributeInnerEnvelope("inner-custom", customPayload));
             var generatedEnvelope = new AttributeOuterEnvelope("outer-generated", new AttributeInnerEnvelope("inner-generated", generatedPayload));
             var envelopeSerializer = system.Serialization.FindSerializerFor(generatedEnvelope)
-                .Should().BeAssignableTo<global::Akka.Serialization.SerializerV2>().Subject;
+                .Should().BeAssignableTo<SerializerV2>().Subject;
 
             var customRecovered = RoundTripThroughSerialization<AttributeOuterEnvelope>(system, customEnvelope);
             customRecovered.Should().Be(customEnvelope);
             customRecovered.Inner.Payload.Should().BeOfType<CustomProtobufPayload>();
-            envelopeSerializer.SizeHint(customEnvelope).Should().Be(global::Akka.Serialization.SerializerV2.UnknownSize);
+            envelopeSerializer.SizeHint(customEnvelope).Should().Be(SerializerV2.UnknownSize);
 
             var generatedRecovered = RoundTripThroughSerialization<AttributeOuterEnvelope>(system, generatedEnvelope);
             generatedRecovered.Should().Be(generatedEnvelope);
@@ -430,7 +430,7 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
 
             var serializer = system.Serialization.FindSerializerFor(message);
             var bytes = system.Serialization.Serialize(message);
-            var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, message);
+            var manifest = Serialization.ManifestFor(serializer, message);
             var deserialized = system.Serialization.Deserialize(bytes, serializer.Identifier, manifest)
                 .Should().BeOfType<ReplyMessage>().Subject;
 
@@ -665,7 +665,7 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     private static OpaqueSerializedPayload CaptureOpaquePayload(ExtendedActorSystem system, object payload)
     {
         var serializer = system.Serialization.FindSerializerFor(payload);
-        var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, payload);
+        var manifest = Serialization.ManifestFor(serializer, payload);
         return new OpaqueSerializedPayload(serializer.Identifier, manifest, serializer.ToBinary(payload));
     }
 
@@ -678,7 +678,7 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
     {
         var serializer = system.Serialization.FindSerializerFor(message!);
         var bytes = system.Serialization.Serialize(message!);
-        var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, message!);
+        var manifest = Serialization.ManifestFor(serializer, message!);
         return system.Serialization.Deserialize(bytes, serializer.Identifier, manifest).Should().BeOfType<TMessage>().Subject;
     }
 
@@ -764,7 +764,7 @@ public sealed record AttributeInnerEnvelope(
 
 public sealed record CustomProtobufPayload(string PayloadId, int Value);
 
-public sealed class CustomProtobufPayloadSerializer : global::Akka.Serialization.SerializerWithStringManifest
+public sealed class CustomProtobufPayloadSerializer : SerializerWithStringManifest
 {
     public const int IdentifierValue = 120202;
     public const string ManifestName = "custom-protobuf-v1";

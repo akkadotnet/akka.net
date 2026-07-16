@@ -17,11 +17,11 @@ namespace Akka.Serialization.V2;
 /// </summary>
 public sealed class SerializerRegistration
 {
-    private readonly Func<ExtendedActorSystem, global::Akka.Serialization.SerializerV2> _createSerializer;
+    private readonly Func<ExtendedActorSystem, SerializerV2> _createSerializer;
 
     private SerializerRegistration(
         string alias,
-        Func<ExtendedActorSystem, global::Akka.Serialization.SerializerV2> createSerializer,
+        Func<ExtendedActorSystem, SerializerV2> createSerializer,
         ImmutableHashSet<Type> useFor)
     {
         Alias = alias;
@@ -35,7 +35,7 @@ public sealed class SerializerRegistration
 
     public static SerializerRegistration Create(
         string alias,
-        Func<ExtendedActorSystem, global::Akka.Serialization.SerializerV2> createSerializer,
+        Func<ExtendedActorSystem, SerializerV2> createSerializer,
         ImmutableHashSet<Type> useFor)
     {
         if (string.IsNullOrWhiteSpace(alias))
@@ -44,21 +44,21 @@ public sealed class SerializerRegistration
         return new SerializerRegistration(alias, createSerializer ?? throw new ArgumentNullException(nameof(createSerializer)), useFor);
     }
 
-    public global::Akka.Serialization.SerializerDetails CreateDetails(ExtendedActorSystem system)
+    public SerializerDetails CreateDetails(ExtendedActorSystem system)
     {
-        return global::Akka.Serialization.SerializerDetails.Create(Alias, _createSerializer(system), UseFor);
+        return SerializerDetails.Create(Alias, _createSerializer(system), UseFor);
     }
 
-    public global::Akka.Serialization.SerializationSetup CreateSetup()
+    public SerializationSetup CreateSetup()
     {
-        return global::Akka.Serialization.SerializationSetup.Create(system => ImmutableHashSet.Create(CreateDetails(system)));
+        return SerializationSetup.Create(system => ImmutableHashSet.Create(CreateDetails(system)));
     }
 
-    public static global::Akka.Serialization.SerializationSetup CreateSetup(params SerializerRegistration[] registrations)
+    public static SerializationSetup CreateSetup(params SerializerRegistration[] registrations)
     {
-        return global::Akka.Serialization.SerializationSetup.Create(system =>
+        return SerializationSetup.Create(system =>
         {
-            var builder = ImmutableHashSet.CreateBuilder<global::Akka.Serialization.SerializerDetails>();
+            var builder = ImmutableHashSet.CreateBuilder<SerializerDetails>();
             foreach (var registration in registrations)
             {
                 builder.Add(registration.CreateDetails(system));

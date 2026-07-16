@@ -360,7 +360,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
             foreach (var duplicate in duplicateProtocolBindings)
             {
-                ctx.ReportDiagnostic(Diagnostic.Create(DuplicateProtocolBinding, Location.None, duplicate.Key, duplicate.Value));
+                ctx.ReportDiagnostic(Diagnostic.Create(DuplicateProtocolBinding, Location.None, ToDisplayName(duplicate.Key), duplicate.Value));
             }
 
             foreach (var serializer in pair.Left)
@@ -764,7 +764,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         if (serializer.ProtocolType == null || serializer.ProtocolType.TypeKind == TypeKind.Interface)
             return true;
 
-        context.ReportDiagnostic(Diagnostic.Create(ProtocolTypeMustBeInterface, Location.None, serializer.ClassName, serializer.ProtocolTypeFullName));
+        context.ReportDiagnostic(Diagnostic.Create(ProtocolTypeMustBeInterface, Location.None, serializer.ClassName, ToDisplayName(serializer.ProtocolTypeFullName)));
         return false;
     }
 
@@ -806,7 +806,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 continue;
 
             context.ReportDiagnostic(Diagnostic.Create(ProtocolMessageNotSerializable, Location.None,
-                GetFullyQualifiedTypeName(candidate), serializer.ProtocolTypeFullName, serializer.ClassName));
+                ToDisplayName(GetFullyQualifiedTypeName(candidate)), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
             isValid = false;
         }
 
@@ -859,21 +859,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             if (!formatter.IsTargetSupported)
             {
-                context.ReportDiagnostic(Diagnostic.Create(FormatterTargetNotSupported, Location.None, formatter.TargetTypeFullName, serializer.ClassName));
+                context.ReportDiagnostic(Diagnostic.Create(FormatterTargetNotSupported, Location.None, ToDisplayName(formatter.TargetTypeFullName), serializer.ClassName));
                 isValid = false;
                 continue;
             }
 
             if (formatter.IsAbstract)
             {
-                context.ReportDiagnostic(Diagnostic.Create(InvalidFormatterType, Location.None, formatter.FormatterTypeFullName, serializer.ClassName, formatter.TargetTypeFullName));
+                context.ReportDiagnostic(Diagnostic.Create(InvalidFormatterType, Location.None, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName, ToDisplayName(formatter.TargetTypeFullName)));
                 isValid = false;
                 continue;
             }
 
             if (formatter.CtorKind == FormatterCtorKind.None)
             {
-                context.ReportDiagnostic(Diagnostic.Create(FormatterConstructorNotUsable, Location.None, formatter.FormatterTypeFullName, serializer.ClassName));
+                context.ReportDiagnostic(Diagnostic.Create(FormatterConstructorNotUsable, Location.None, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName));
                 isValid = false;
             }
         }
@@ -883,7 +883,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                      .GroupBy(formatter => formatter.TargetTypeFullName, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
         {
-            context.ReportDiagnostic(Diagnostic.Create(DuplicateFormatterRegistration, Location.None, serializer.ClassName, duplicate.Key));
+            context.ReportDiagnostic(Diagnostic.Create(DuplicateFormatterRegistration, Location.None, serializer.ClassName, ToDisplayName(duplicate.Key)));
             isValid = false;
         }
 
@@ -898,7 +898,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var isValid = true;
         foreach (var registration in serializer.ClosedGenericRegistrations.Where(registration => registration.Message == null))
         {
-            context.ReportDiagnostic(Diagnostic.Create(InvalidClosedGenericRegistration, Location.None, registration.TargetDisplayName, serializer.ClassName));
+            context.ReportDiagnostic(Diagnostic.Create(InvalidClosedGenericRegistration, Location.None, ToDisplayName(registration.TargetDisplayName), serializer.ClassName));
             isValid = false;
         }
 
@@ -907,7 +907,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                      .GroupBy(registration => registration.TargetDisplayName, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
         {
-            context.ReportDiagnostic(Diagnostic.Create(DuplicateClosedGenericRegistration, Location.None, serializer.ClassName, duplicate.Key));
+            context.ReportDiagnostic(Diagnostic.Create(DuplicateClosedGenericRegistration, Location.None, serializer.ClassName, ToDisplayName(duplicate.Key)));
             isValid = false;
         }
 
@@ -937,7 +937,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             if (hasRegistration)
                 continue;
 
-            context.ReportDiagnostic(Diagnostic.Create(GenericSerializableRequiresRegistration, Location.None, definition.FullyQualifiedName, serializer.ProtocolTypeFullName, serializer.ClassName));
+            context.ReportDiagnostic(Diagnostic.Create(GenericSerializableRequiresRegistration, Location.None, ToDisplayName(definition.FullyQualifiedName), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
             isValid = false;
         }
 
@@ -1281,8 +1281,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// <summary>
     /// The key a type is looked up under in the serializer's message dictionary. Non-generic types
     /// use the arity-less <see cref="GetFullyQualifiedTypeName"/> (the existing key for every
-    /// <c>[AkkaSerializable]</c> message); closed generic constructions use the full display string
-    /// (e.g. <c>global::Ns.Wrapper&lt;global::Ns.Foo&gt;</c>) so distinct constructions stay distinct.
+    /// <c>[AkkaSerializable]</c> message); closed generic constructions use the full,
+    /// fully-qualified display string (e.g. <c>Ns.Wrapper&lt;Ns.Foo&gt;</c>) so distinct
+    /// constructions stay distinct.
     /// </summary>
     private static string GetMessageDictionaryKey(INamedTypeSymbol type)
     {
@@ -1389,7 +1390,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var isValid = true;
         foreach (var message in topLevelMessages.Where(message => string.IsNullOrWhiteSpace(message.Manifest)))
         {
-            context.ReportDiagnostic(Diagnostic.Create(MissingManifest, Location.None, message.FullyQualifiedName));
+            context.ReportDiagnostic(Diagnostic.Create(MissingManifest, Location.None, ToDisplayName(message.FullyQualifiedName)));
             isValid = false;
         }
 
@@ -1398,7 +1399,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                      .GroupBy(m => m.Manifest, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
         {
-            var typeNames = string.Join(", ", duplicate.Select(m => m.FullyQualifiedName));
+            var typeNames = string.Join(", ", duplicate.Select(m => ToDisplayName(m.FullyQualifiedName)));
             context.ReportDiagnostic(Diagnostic.Create(DuplicateManifest, Location.None, serializer.ClassName, duplicate.Key, typeNames));
             isValid = false;
         }
@@ -1407,13 +1408,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             if (message.Fields.Length == 0 && !message.AllowEmpty)
             {
-                context.ReportDiagnostic(Diagnostic.Create(MissingFields, Location.None, message.FullyQualifiedName));
+                context.ReportDiagnostic(Diagnostic.Create(MissingFields, Location.None, ToDisplayName(message.FullyQualifiedName)));
                 isValid = false;
             }
 
             foreach (var duplicate in message.Fields.GroupBy(field => field.Index).Where(group => group.Count() > 1))
             {
-                context.ReportDiagnostic(Diagnostic.Create(DuplicateFieldIndex, Location.None, message.FullyQualifiedName, duplicate.Key));
+                context.ReportDiagnostic(Diagnostic.Create(DuplicateFieldIndex, Location.None, ToDisplayName(message.FullyQualifiedName), duplicate.Key));
                 isValid = false;
             }
 
@@ -1422,7 +1423,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             // message.Fields, so they cannot double-report through any of the checks below.
             foreach (var invalidField in message.InvalidFields)
             {
-                context.ReportDiagnostic(Diagnostic.Create(FieldPropertyNotAccessible, Location.None, invalidField.PropertyName, message.FullyQualifiedName, invalidField.Reason));
+                context.ReportDiagnostic(Diagnostic.Create(FieldPropertyNotAccessible, Location.None, invalidField.PropertyName, ToDisplayName(message.FullyQualifiedName), invalidField.Reason));
                 isValid = false;
             }
 
@@ -1431,7 +1432,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             // back on -- both make deserialize impossible to generate.
             foreach (var error in message.ConstructionPlan.Errors)
             {
-                context.ReportDiagnostic(Diagnostic.Create(NoMatchingConstructor, Location.None, message.FullyQualifiedName, error));
+                context.ReportDiagnostic(Diagnostic.Create(NoMatchingConstructor, Location.None, ToDisplayName(message.FullyQualifiedName), error));
                 isValid = false;
             }
 
@@ -1440,24 +1441,24 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             // deserialize because no [AkkaField] property feeds it.
             foreach (var parameterName in message.ConstructionPlan.UncoveredDefaultedParameters)
             {
-                context.ReportDiagnostic(Diagnostic.Create(ConstructorParameterNotCovered, Location.None, parameterName, message.FullyQualifiedName));
+                context.ReportDiagnostic(Diagnostic.Create(ConstructorParameterNotCovered, Location.None, parameterName, ToDisplayName(message.FullyQualifiedName)));
             }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Unsupported))
             {
-                context.ReportDiagnostic(Diagnostic.Create(UnsupportedFieldType, Location.None, field.Name, message.FullyQualifiedName, field.TypeFullName));
+                context.ReportDiagnostic(Diagnostic.Create(UnsupportedFieldType, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
                 isValid = false;
             }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.MissingSerializableDefinition))
             {
-                context.ReportDiagnostic(Diagnostic.Create(MissingNestedSerializableDefinition, Location.None, field.Name, message.FullyQualifiedName, field.TypeFullName));
+                context.ReportDiagnostic(Diagnostic.Create(MissingNestedSerializableDefinition, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
                 isValid = false;
             }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.UnsupportedEnumUnderlyingType))
             {
-                context.ReportDiagnostic(Diagnostic.Create(UnsupportedEnumUnderlyingType, Location.None, field.Name, message.FullyQualifiedName, field.Mapping.TypeFullName, field.Mapping.EnumUnderlyingTypeName));
+                context.ReportDiagnostic(Diagnostic.Create(UnsupportedEnumUnderlyingType, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.Mapping.TypeFullName), ToDisplayName(field.Mapping.EnumUnderlyingTypeName)));
                 isValid = false;
             }
 
@@ -1478,7 +1479,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 CollectObjectTypeNames(field.Mapping, objectTypeNames);
                 foreach (var objectTypeName in objectTypeNames.Where(typeName => !messagesByType.ContainsKey(typeName)))
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(UnregisteredClosedGenericField, Location.None, field.Name, message.FullyQualifiedName, objectTypeName, serializer.ClassName));
+                    context.ReportDiagnostic(Diagnostic.Create(UnregisteredClosedGenericField, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(objectTypeName), serializer.ClassName));
                     isValid = false;
                 }
             }
@@ -1491,7 +1492,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                      .GroupBy(GetMessageMethodName, StringComparer.Ordinal)
                      .Where(group => group.Select(m => m.FullyQualifiedName).Distinct(StringComparer.Ordinal).Count() > 1))
         {
-            var typeNames = string.Join(", ", collision.Select(m => m.FullyQualifiedName));
+            var typeNames = string.Join(", ", collision.Select(m => ToDisplayName(m.FullyQualifiedName)));
             context.ReportDiagnostic(Diagnostic.Create(DuplicateGeneratedName, Location.None, serializer.ClassName, collision.Key, typeNames));
             isValid = false;
         }
@@ -1528,7 +1529,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 continue;
 
             context.ReportDiagnostic(Diagnostic.Create(ClosedGenericRegistrationNotInProtocol, Location.None,
-                registration.TargetDisplayName, serializer.ClassName, serializer.ProtocolTypeFullName));
+                ToDisplayName(registration.TargetDisplayName), serializer.ClassName, ToDisplayName(serializer.ProtocolTypeFullName)));
             isValid = false;
         }
 
@@ -1551,7 +1552,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                      .GroupBy(member => member.TypeFullName, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
         {
-            context.ReportDiagnostic(Diagnostic.Create(InvalidUnionMemberSet, Location.None, field.Name, message.FullyQualifiedName, $"member type '{duplicate.Key}' is declared more than once"));
+            context.ReportDiagnostic(Diagnostic.Create(InvalidUnionMemberSet, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), $"member type '{ToDisplayName(duplicate.Key)}' is declared more than once"));
             isValid = false;
         }
 
@@ -1560,25 +1561,25 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             if (!member.IsSupported || !messagesByType.TryGetValue(member.TypeFullName, out var memberMessage))
             {
-                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotSerializable, Location.None, member.TypeFullName, field.Name, message.FullyQualifiedName));
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotSerializable, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
                 isValid = false;
                 continue;
             }
 
             if (!member.IsAssignable)
             {
-                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotAssignable, Location.None, member.TypeFullName, field.Name, message.FullyQualifiedName, field.TypeFullName));
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotAssignable, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
                 isValid = false;
             }
 
             // Advisory only (Info): an unsealed member works, but an undeclared subtype of it fails
             // at write time under exact-runtime-type dispatch -- worth surfacing, not worth failing.
             if (!member.IsSealed)
-                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotSealed, Location.None, member.TypeFullName, field.Name, message.FullyQualifiedName));
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotSealed, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
 
             if (string.IsNullOrWhiteSpace(memberMessage.Manifest))
             {
-                context.ReportDiagnostic(Diagnostic.Create(UnionMemberMissingManifest, Location.None, member.TypeFullName, field.Name, message.FullyQualifiedName));
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberMissingManifest, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
                 isValid = false;
                 continue;
             }
@@ -1594,7 +1595,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         foreach (var collision in manifests.Where(pair => pair.Value.Distinct(StringComparer.Ordinal).Count() > 1))
         {
-            context.ReportDiagnostic(Diagnostic.Create(UnionMemberManifestCollision, Location.None, field.Name, message.FullyQualifiedName, collision.Key, string.Join(", ", collision.Value)));
+            context.ReportDiagnostic(Diagnostic.Create(UnionMemberManifestCollision, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), collision.Key, string.Join(", ", collision.Value.Select(ToDisplayName))));
             isValid = false;
         }
 
@@ -3087,7 +3088,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// Folds a fully-qualified type name into a compact generated-member identifier the way
     /// System.Text.Json's <c>GetTypeInfoPropertyName</c> does: namespaces are dropped, each type
     /// identifier keeps only its simple name, and generic type arguments are concatenated --
-    /// <c>global::Ns.Wrapper&lt;global::Ns.OrderRequest&gt;</c> becomes <c>WrapperOrderRequest</c>.
+    /// <c>Ns.Wrapper&lt;Ns.OrderRequest&gt;</c> becomes <c>WrapperOrderRequest</c>.
     /// These names appear in stack traces (WriteWrapperOrderRequest), so compactness matters.
     /// Flattening is collision-prone by construction (same simple name in two namespaces, marker
     /// ambiguity); AKKASG024 detects collisions among generated members and fails compilation
@@ -3169,6 +3170,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static string GetMessageMethodName(MessageInfo message)
     {
         return FoldTypeName(message.FullyQualifiedName);
+    }
+
+    /// <summary>
+    /// Strips a leading <c>global::</c> prefix from a fully-qualified type name string for display
+    /// in a <see cref="Diagnostic"/> message ONLY. Every internal use of a fully-qualified name --
+    /// dictionary keys, equality/grouping comparisons, and text appended into emitted source --
+    /// keeps the raw <c>global::</c>-qualified form produced by <see cref="GetFullyQualifiedTypeName"/>
+    /// and <see cref="SymbolDisplayFormat.FullyQualifiedFormat"/>; this helper must be applied only
+    /// to the arguments passed to <c>Diagnostic.Create(...)</c> at each reporting call site.
+    /// </summary>
+    private static string ToDisplayName(string fullyQualifiedName)
+    {
+        return fullyQualifiedName.StartsWith("global::", StringComparison.Ordinal)
+            ? fullyQualifiedName.Substring("global::".Length)
+            : fullyQualifiedName;
     }
 
     private static string GetFullyQualifiedTypeName(INamedTypeSymbol symbol)

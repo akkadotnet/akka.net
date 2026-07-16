@@ -8,6 +8,7 @@
 #nullable enable
 using System;
 using System.Buffers;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using MessagePack;
 
@@ -16,7 +17,7 @@ namespace Akka.Serialization.V2;
 /// <summary>
 /// Base class for source-generated MessagePack serializers scoped to a protocol marker type.
 /// </summary>
-public abstract class AkkaSerializer : global::Akka.Serialization.SerializerV2
+public abstract class AkkaSerializer : SerializerV2
 {
     protected AkkaSerializer(ExtendedActorSystem system) : base(system)
     {
@@ -30,15 +31,15 @@ public abstract class AkkaSerializer : global::Akka.Serialization.SerializerV2
         return writer.WrittenMemory.ToArray();
     }
 
-    protected global::Akka.Actor.IActorRef? ReadActorRef(ref MessagePackReader reader)
+    protected IActorRef? ReadActorRef(ref MessagePackReader reader)
     {
         var path = reader.ReadString();
         return string.IsNullOrEmpty(path) ? ActorRefs.NoSender : system.Provider.ResolveActorRef(path);
     }
 
-    protected static void WriteActorRef(ref MessagePackWriter writer, global::Akka.Actor.IActorRef? actorRef)
+    protected static void WriteActorRef(ref MessagePackWriter writer, IActorRef? actorRef)
     {
-        writer.Write(global::Akka.Serialization.Serialization.SerializedActorPath(actorRef));
+        writer.Write(Serialization.SerializedActorPath(actorRef));
     }
 
     protected void WriteEnvelopePayload(ref MessagePackWriter writer, object? payload)
@@ -50,14 +51,14 @@ public abstract class AkkaSerializer : global::Akka.Serialization.SerializerV2
         }
 
         var serializer = system.Serialization.FindSerializerFor(payload);
-        var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, payload);
+        var manifest = Serialization.ManifestFor(serializer, payload);
 
-        if (serializer is global::Akka.Serialization.SerializerV2 serializerV2)
+        if (serializer is SerializerV2 serializerV2)
         {
             using var buffer = new AkkaPooledBufferWriter();
             var bytesWritten = serializerV2.Serialize(payload, buffer);
             if (bytesWritten != buffer.WrittenCount)
-                throw new global::System.Runtime.Serialization.SerializationException(
+                throw new SerializationException(
                     $"Serializer [{serializer.GetType()}] reported [{bytesWritten}] bytes but wrote [{buffer.WrittenCount}] bytes.");
 
             writer.WriteMapHeader(3);
@@ -112,9 +113,9 @@ public abstract class AkkaSerializer : global::Akka.Serialization.SerializerV2
         }
 
         if (serializerId is null)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing envelope payload serializer id.");
+            throw new SerializationException("Missing envelope payload serializer id.");
         if (bytes is null)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing envelope payload bytes.");
+            throw new SerializationException("Missing envelope payload bytes.");
 
         return system.Serialization.Deserialize(bytes.Value, serializerId.Value, manifest);
     }
@@ -125,14 +126,14 @@ public abstract class AkkaSerializer : global::Akka.Serialization.SerializerV2
             return SizeOfNil();
 
         var serializer = system.Serialization.FindSerializerFor(payload);
-        if (serializer is not global::Akka.Serialization.SerializerV2 serializerV2)
-            return global::Akka.Serialization.SerializerV2.UnknownSize;
+        if (serializer is not SerializerV2 serializerV2)
+            return SerializerV2.UnknownSize;
 
         var payloadSize = serializerV2.SizeHint(payload);
         if (payloadSize < 0)
-            return global::Akka.Serialization.SerializerV2.UnknownSize;
+            return SerializerV2.UnknownSize;
 
-        var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, payload);
+        var manifest = Serialization.ManifestFor(serializer, payload);
         return checked(
             SizeOfMapHeader(3) +
             SizeOfInt32(1) + SizeOfInt32(serializer.Identifier) +
@@ -168,7 +169,7 @@ public abstract class AkkaSerializer : global::Akka.Serialization.SerializerV2
 
     protected static int SizeOfDecimal(decimal value) => MessagePackSizes.SizeOfDecimal(value);
 
-    protected static int SizeOfActorRef(global::Akka.Actor.IActorRef? actorRef) => MessagePackSizes.SizeOfActorRef(actorRef);
+    protected static int SizeOfActorRef(IActorRef? actorRef) => MessagePackSizes.SizeOfActorRef(actorRef);
 
     protected static int SizeOfBinHeader(int byteCount) => MessagePackSizes.SizeOfBinHeader(byteCount);
 
@@ -240,7 +241,7 @@ public abstract class AkkaSerializer : global::Akka.Serialization.SerializerV2
         if (payload is TPayload typed)
             return typed;
 
-        throw new global::System.Runtime.Serialization.SerializationException(
+        throw new SerializationException(
             $"Envelope payload [{payload?.GetType().FullName ?? "<null>"}] is not assignable to [{typeof(TPayload).FullName}].");
     }
 

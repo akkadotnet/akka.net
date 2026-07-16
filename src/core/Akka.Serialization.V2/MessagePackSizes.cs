@@ -163,7 +163,7 @@ public static class MessagePackSizes
     /// <param name="actorRef">The actor reference; <see cref="ActorRefs.NoSender"/> and null encode as an empty string.</param>
     public static int SizeOfActorRef(IActorRef? actorRef)
     {
-        return SizeOfString(global::Akka.Serialization.Serialization.SerializedActorPath(actorRef));
+        return SizeOfString(Serialization.SerializedActorPath(actorRef));
     }
 
     /// <summary>

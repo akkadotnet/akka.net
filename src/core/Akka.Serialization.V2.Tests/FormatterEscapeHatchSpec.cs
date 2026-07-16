@@ -332,7 +332,7 @@ public sealed class TestUniqueAddressFormatter : IAkkaMessagePackFormatter<TestU
     {
         var addressSize = _addressFormatter.SizeOf(value.Address);
         if (addressSize < 0)
-            return global::Akka.Serialization.SerializerV2.UnknownSize;
+            return SerializerV2.UnknownSize;
 
         return MessagePackSizes.SizeOfArrayHeader(2) + addressSize + MessagePackSizes.SizeOfInt64(value.Uid);
     }
@@ -417,7 +417,7 @@ public sealed class SystemTaggedValueFormatter : IAkkaMessagePackFormatter<Syste
         return new SystemTaggedValue(separatorIndex >= 0 ? raw.Substring(separatorIndex + 1) : raw);
     }
 
-    public int SizeOf(SystemTaggedValue value) => global::Akka.Serialization.SerializerV2.UnknownSize;
+    public int SizeOf(SystemTaggedValue value) => SerializerV2.UnknownSize;
 }
 
 [AkkaSerializable(Manifest = SystemTaggedMessage.ManifestName)]

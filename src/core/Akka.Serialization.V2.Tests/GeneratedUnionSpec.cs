@@ -162,7 +162,7 @@ public sealed class GeneratedUnionSpec : IAsyncLifetime
     {
         var message = new UnionEnvelope("env-9", new UndeclaredEvent());
 
-        _serializer.SizeHint(message).Should().Be(global::Akka.Serialization.SerializerV2.UnknownSize);
+        _serializer.SizeHint(message).Should().Be(SerializerV2.UnknownSize);
     }
 
     [Fact(DisplayName = "Union read should fail on an unknown manifest")]
