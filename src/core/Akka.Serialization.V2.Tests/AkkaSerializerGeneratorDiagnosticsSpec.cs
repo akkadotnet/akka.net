@@ -1521,6 +1521,552 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
             diagnostic.GetMessage(null).Contains("accessible getter", StringComparison.Ordinal));
     }
 
+    [Fact(DisplayName = "Generator should report AKKASG029 when a protocol message forgets [AkkaSerializable]")]
+    public void Generator_should_report_AKKASG029_when_protocol_message_missing_attribute()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130001)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
+
+            // Forgotten [AkkaSerializable]: silently invisible to the generated switches today.
+            public sealed record Forgotten(string Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG029" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("Forgotten", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("SampleSerializer", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG029 for an abstract base implementing the protocol")]
+    public void Generator_should_not_report_AKKASG029_for_abstract_base()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130002)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            // Never a concrete runtime message type; its concrete subtypes are checked individually.
+            public abstract class AbstractBase : IProtocol
+            {
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG029");
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG029 for an [AkkaSerializable]-marked generic definition with a registration")]
+    public void Generator_should_not_report_AKKASG029_for_marked_generic_definition()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializable]
+            public sealed record Wrapper<T>(
+                [property: AkkaField(1)] string Id,
+                [property: AkkaField(2)] T Payload) : IProtocol;
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130003)]
+            [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // Governed entirely by AKKASG022's registration machinery -- this compiles fully clean.
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG029 for an unmarked generic definition implementing the protocol")]
+    public void Generator_should_report_AKKASG029_for_unmarked_generic_definition()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130004)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            // No [AkkaSerializable]: none of its closed constructions could ever be registered.
+            public sealed record UnmarkedWrapper<T>(T Payload) : IProtocol;
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG029" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("UnmarkedWrapper", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator observes the compiler reject multiple [AkkaSerializer<T>] attributes on one class (CS0579, no AKKASG030 needed)")]
+    public void Generator_observes_compiler_rejects_multiple_serializer_attributes()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocolA
+            {
+            }
+
+            public interface IProtocolB
+            {
+            }
+
+            [AkkaSerializer<IProtocolA>(Name = "sample-a", SerializerId = 130005)]
+            [AkkaSerializer<IProtocolB>(Name = "sample-b", SerializerId = 130006)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // AkkaSerializerAttribute<TProtocol> declares AllowMultiple = false; the C# compiler
+        // enforces that against the OPEN generic attribute definition, not each closed
+        // construction, so two [AkkaSerializer<T>] attributes with DIFFERENT protocol types on
+        // one class are already rejected at the language level (CS0579) -- pinning this so a
+        // future compiler/language change that silently admits it does not go unnoticed.
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "CS0579");
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG031 when two [AkkaSerializer] classes bind the same protocol")]
+    public void Generator_should_report_AKKASG031_when_protocol_bound_by_multiple_serializers()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample-a", SerializerId = 130007)]
+            public sealed partial class SerializerA : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample-b", SerializerId = 130008)]
+            public sealed partial class SerializerB : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG031" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("SerializerA", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("SerializerB", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG031 when two [AkkaSerializer] classes bind different protocols")]
+    public void Generator_should_not_report_AKKASG031_for_distinct_protocols()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocolA
+            {
+            }
+
+            public interface IProtocolB
+            {
+            }
+
+            [AkkaSerializer<IProtocolA>(Name = "sample-a", SerializerId = 130009)]
+            public sealed partial class SerializerA : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializer<IProtocolB>(Name = "sample-b", SerializerId = 130010)]
+            public sealed partial class SerializerB : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-a-v1")]
+            public sealed record OuterA([property: AkkaField(1)] string Value) : IProtocolA;
+
+            [AkkaSerializable(Manifest = "outer-b-v1")]
+            public sealed record OuterB([property: AkkaField(1)] string Value) : IProtocolB;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG031");
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG032 when the [AkkaSerializer] class is not partial")]
+    public void Generator_should_report_AKKASG032_when_not_partial()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130011)]
+            public sealed class NotPartialSerializer : AkkaSerializer
+            {
+                public NotPartialSerializer(ExtendedActorSystem system) : base(system)
+                {
+                }
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG032" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("NotPartialSerializer", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("partial", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG032 when the [AkkaSerializer] class does not derive from AkkaSerializer")]
+    public void Generator_should_report_AKKASG032_when_wrong_base_class()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130012)]
+            public sealed partial class WrongBaseSerializer
+            {
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG032" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("WrongBaseSerializer", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("AkkaSerializer", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG032 when the [AkkaSerializer] class is generic")]
+    public void Generator_should_report_AKKASG032_when_generic()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130013)]
+            public sealed partial class GenericSerializer<T> : AkkaSerializer
+            {
+                public GenericSerializer(ExtendedActorSystem system) : base(system)
+                {
+                }
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG032" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("GenericSerializer", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("generic", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG032 for a well-formed [AkkaSerializer] class")]
+    public void Generator_should_not_report_AKKASG032_for_valid_shape()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130014)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG032");
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG033 when the protocol type is not an interface")]
+    public void Generator_should_report_AKKASG033_when_protocol_type_not_interface()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public class ClassProtocol
+            {
+            }
+
+            [AkkaSerializer<ClassProtocol>(Name = "sample", SerializerId = 130015)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG033" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("SampleSerializer", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("ClassProtocol", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG033 when the protocol type is an interface")]
+    public void Generator_should_not_report_AKKASG033_for_interface_protocol()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130016)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG033");
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG034 when a closed generic registration neither implements the protocol nor is referenced anywhere")]
+    public void Generator_should_report_AKKASG034_when_registration_is_orphaned()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializable]
+            public sealed record Wrapper<T>(
+                [property: AkkaField(1)] string Id,
+                [property: AkkaField(2)] T Payload);
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130017)]
+            [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] string Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG034" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("Wrapper", StringComparison.Ordinal) &&
+            diagnostic.GetMessage(null).Contains("SampleSerializer", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG034 when a closed generic registration is reachable as a nested field")]
+    public void Generator_should_not_report_AKKASG034_when_registration_reachable_as_nested_field()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializable]
+            public sealed record Wrapper<T>(
+                [property: AkkaField(1)] string Id,
+                [property: AkkaField(2)] T Payload);
+
+            [AkkaSerializable]
+            public sealed record Payload([property: AkkaField(1)] string Value);
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130018)]
+            [AkkaSerializable<Wrapper<Payload>>]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer(
+                [property: AkkaField(1)] Wrapper<Payload> Inner) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG034");
+    }
+
+    [Fact(DisplayName = "Generator should not report AKKASG034 when a closed generic registration implements the protocol")]
+    public void Generator_should_not_report_AKKASG034_when_registration_implements_protocol()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializable]
+            public sealed record Wrapper<T>(
+                [property: AkkaField(1)] string Id,
+                [property: AkkaField(2)] T Payload) : IProtocol;
+
+            [AkkaSerializer<IProtocol>(Name = "sample", SerializerId = 130019)]
+            [AkkaSerializable<Wrapper<int>>(Manifest = "wrapper-int-v1")]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);

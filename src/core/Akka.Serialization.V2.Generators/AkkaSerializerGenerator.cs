@@ -29,6 +29,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private const string FormatterAttributeFullName = "Akka.Serialization.V2.AkkaSerializerFormatterAttribute";
     private const string FormatterInterfaceFullName = "Akka.Serialization.V2.IAkkaMessagePackFormatter`1";
     private const string ExtendedActorSystemFullName = "Akka.Actor.ExtendedActorSystem";
+    private const string AkkaSerializerBaseTypeFullName = "Akka.Serialization.V2.AkkaSerializer";
 
     private static readonly DiagnosticDescriptor MissingSerializerName = new(
         "AKKASG001",
@@ -255,6 +256,46 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor ProtocolMessageNotSerializable = new(
+        "AKKASG029",
+        "Protocol message type is not [AkkaSerializable]",
+        "Type '{0}' implements protocol '{1}' of serializer '{2}' but is not [AkkaSerializable]; it is invisible to the generated Manifest/Serialize/Deserialize switches and fails only at runtime, when it is first sent",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor DuplicateProtocolBinding = new(
+        "AKKASG031",
+        "Protocol interface bound by multiple serializers",
+        "Protocol '{0}' is bound by multiple [AkkaSerializer] classes: {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor InvalidSerializerShape = new(
+        "AKKASG032",
+        "Serializer class shape is invalid",
+        "[AkkaSerializer] class '{0}' {1}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ProtocolTypeMustBeInterface = new(
+        "AKKASG033",
+        "Protocol type must be an interface",
+        "[AkkaSerializer<{1}>] class '{0}' specifies a protocol type that is not an interface; dispatch matches messages via AllInterfaces, so a non-interface protocol type silently generates a serializer with empty Manifest/Serialize/Deserialize switches",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ClosedGenericRegistrationNotInProtocol = new(
+        "AKKASG034",
+        "Registered closed generic type does not implement the serializer protocol",
+        "Closed generic construction '{0}' registered on serializer '{1}' does not implement protocol '{2}' and is not referenced by any [AkkaField] property of a message reachable from it; the registration has no effect",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var serializers = context.SyntaxProvider
@@ -273,8 +314,16 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             .Where(static info => info != null)
             .Collect();
 
-        context.RegisterSourceOutput(serializers.Combine(messages), static (ctx, pair) =>
+        // Combined only at this final, terminal stage -- not stored in any cached IncrementalValueProvider
+        // node upstream of it -- so AKKASG029's whole-compilation scan (ValidateProtocolCoverage) can see
+        // every source-declared type. This necessarily costs incrementality for the WHOLE generator (the
+        // Compilation input changes on every edit anywhere in this project), not just that one check: there
+        // is no cheaper place to compute "does any type implement this protocol interface without
+        // [AkkaSerializable]" than the terminal stage that already has a Compilation in hand.
+        context.RegisterSourceOutput(serializers.Combine(messages).Combine(context.CompilationProvider), static (ctx, tuple) =>
         {
+            var (pair, compilation) = tuple;
+
             var duplicateSerializerIds = pair.Left
                 .Where(s => s != null)
                 .Cast<SerializerInfo>()
@@ -286,6 +335,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             foreach (var duplicate in duplicateSerializerIds)
             {
                 ctx.ReportDiagnostic(Diagnostic.Create(DuplicateSerializerId, Location.None, duplicate.Key, duplicate.Value));
+            }
+
+            // Same computation as duplicateSerializerIds above, grouped on the protocol interface
+            // instead of the numeric id: two [AkkaSerializer] classes bound to the same protocol is
+            // silent last-wins at runtime registration today (AKKASG031).
+            var duplicateProtocolBindings = pair.Left
+                .Where(s => s != null)
+                .Cast<SerializerInfo>()
+                .Where(s => !string.IsNullOrEmpty(s.ProtocolTypeFullName))
+                .GroupBy(s => s.ProtocolTypeFullName, StringComparer.Ordinal)
+                .Where(group => group.Count() > 1)
+                .ToImmutableDictionary(group => group.Key, group => string.Join(", ", group.Select(s => s.ClassName)), StringComparer.Ordinal);
+
+            foreach (var duplicate in duplicateProtocolBindings)
+            {
+                ctx.ReportDiagnostic(Diagnostic.Create(DuplicateProtocolBinding, Location.None, duplicate.Key, duplicate.Value));
             }
 
             foreach (var serializer in pair.Left)
@@ -306,6 +371,15 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 }
 
                 if (duplicateSerializerIds.ContainsKey(serializer.SerializerId))
+                    continue;
+
+                if (duplicateProtocolBindings.ContainsKey(serializer.ProtocolTypeFullName))
+                    continue;
+
+                if (!ValidateSerializerShape(ctx, serializer))
+                    continue;
+
+                if (!ValidateProtocolType(ctx, serializer))
                     continue;
 
                 if (!ValidateFormatters(ctx, serializer))
@@ -329,6 +403,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 if (!ValidateGenericDefinitions(ctx, serializer, genericDefinitions))
                     continue;
 
+                if (!ValidateProtocolCoverage(ctx, serializer, compilation))
+                    continue;
+
                 var allMessages = declaredMessages
                     .Where(message => !message.IsGenericDefinition)
                     .Concat(serializer.ClosedGenericRegistrations
@@ -346,6 +423,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 if (!ValidateMessages(ctx, serializer, topLevelMessages, reachableMessages, resolvedMessagesByType))
                     continue;
 
+                if (!ValidateClosedGenericProtocolCoverage(ctx, serializer, reachableMessages))
+                    continue;
+
                 ctx.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, topLevelMessages, reachableMessages, resolvedMessagesByType));
             }
         });
@@ -354,6 +434,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static SerializerInfo? ExtractSerializer(GeneratorAttributeSyntaxContext context)
     {
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
+
+        // Reading only the first attribute is safe: AkkaSerializerAttribute<TProtocol> declares
+        // AllowMultiple = false, and empirically (see AkkaSerializerGeneratorDiagnosticsSpec)
+        // the C# compiler enforces that against the OPEN generic attribute definition, not each
+        // closed construction -- [AkkaSerializer<IA>][AkkaSerializer<IB>] on the same class is
+        // rejected with CS0579 ("Duplicate 'AkkaSerializer<>' attribute") even though IA and IB
+        // differ, so at most one [AkkaSerializer<T>] ever reaches this method. No AKKASG030 is
+        // needed for this case.
         var attribute = context.Attributes[0];
         var compilation = context.SemanticModel.Compilation;
         string? name = null;
@@ -386,7 +474,52 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             protocolTypeFullName,
             symbol.DeclaredAccessibility,
             formatters,
-            closedGenericRegistrations);
+            closedGenericRegistrations,
+            IsPartial(symbol),
+            symbol.IsGenericType,
+            DerivesFromAkkaSerializerBase(symbol, compilation));
+    }
+
+    /// <summary>
+    /// Whether EVERY syntax declaration of <paramref name="symbol"/> carries the 'partial'
+    /// modifier -- a class with a single non-partial declaration, or with any one part missing
+    /// 'partial', is already a compile error (CS0260) once the generator emits its own partial
+    /// declaration of the same class; AKKASG032 replaces that cryptic error with a direct one.
+    /// A declaring reference that is not a <see cref="ClassDeclarationSyntax"/> cannot occur here
+    /// in practice (the extraction pipeline only targets <see cref="ClassDeclarationSyntax"/>
+    /// nodes, and every partial part of one class shares the same declaration kind) and is
+    /// conservatively treated as satisfying the check rather than asserted against.
+    /// </summary>
+    private static bool IsPartial(INamedTypeSymbol symbol)
+    {
+        foreach (var reference in symbol.DeclaringSyntaxReferences)
+        {
+            if (reference.GetSyntax() is ClassDeclarationSyntax declaration && !declaration.Modifiers.Any(SyntaxKind.PartialKeyword))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="symbol"/> derives (directly or transitively) from
+    /// <see cref="AkkaSerializerBaseTypeFullName"/> -- the generated overrides (<c>Identifier</c>,
+    /// <c>Manifest</c>, <c>Serialize</c>, <c>Deserialize</c>, <c>SizeHint</c>) require it as a base,
+    /// or they fail to compile as overrides (CS0115) against whatever base the class actually has.
+    /// </summary>
+    private static bool DerivesFromAkkaSerializerBase(INamedTypeSymbol symbol, Compilation compilation)
+    {
+        var akkaSerializerBaseType = compilation.GetTypeByMetadataName(AkkaSerializerBaseTypeFullName);
+        if (akkaSerializerBaseType == null)
+            return false;
+
+        for (var baseType = symbol.BaseType; baseType != null; baseType = baseType.BaseType)
+        {
+            if (SymbolEqualityComparer.Default.Equals(baseType, akkaSerializerBaseType))
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -564,6 +697,138 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             return FormatterCtorKind.System;
 
         return hasParameterlessCtor ? FormatterCtorKind.Parameterless : FormatterCtorKind.None;
+    }
+
+    /// <summary>
+    /// Fires AKKASG032 for each way the [AkkaSerializer] class declaration itself is unusable as
+    /// a codegen target: not partial, not derived from the AkkaSerializer base class, or generic.
+    /// Today each of these produces a wall of raw CS errors (CS0260/CS0759/CS0115/CS0264) pointing
+    /// at the GENERATED file instead of the user's declaration; this replaces that with one direct
+    /// diagnostic per violated rule, still on the user's class.
+    /// </summary>
+    private static bool ValidateSerializerShape(SourceProductionContext context, SerializerInfo serializer)
+    {
+        var isValid = true;
+
+        if (!serializer.IsPartial)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
+                "must be declared 'partial': the generator emits a second declaration of this class"));
+            isValid = false;
+        }
+
+        if (!serializer.DerivesFromAkkaSerializerBase)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
+                "must derive from Akka.Serialization.V2.AkkaSerializer: the generated members (Identifier, Manifest, Serialize, Deserialize, SizeHint) are declared as overrides of that base"));
+            isValid = false;
+        }
+
+        if (serializer.IsGeneric)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
+                "cannot be a generic type: the generator emits one concrete, closed partial class per [AkkaSerializer] declaration"));
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    /// <summary>
+    /// Fires AKKASG033 when <c>TProtocol</c> in <c>[AkkaSerializer&lt;TProtocol&gt;]</c> is not an
+    /// interface. Top-level dispatch matches a message via <c>message.Protocols</c>, which is
+    /// populated from <c>INamedTypeSymbol.AllInterfaces</c> (see <see cref="ExtractMessageCore"/>)
+    /// -- a class or struct can never appear there, so a non-interface protocol type silently
+    /// produces a serializer whose Manifest/Serialize/Deserialize switches have no cases at all.
+    /// </summary>
+    private static bool ValidateProtocolType(SourceProductionContext context, SerializerInfo serializer)
+    {
+        if (serializer.ProtocolType == null || serializer.ProtocolType.TypeKind == TypeKind.Interface)
+            return true;
+
+        context.ReportDiagnostic(Diagnostic.Create(ProtocolTypeMustBeInterface, Location.None, serializer.ClassName, serializer.ProtocolTypeFullName));
+        return false;
+    }
+
+    /// <summary>
+    /// Fires AKKASG029 when a named type declared IN THIS COMPILATION implements the serializer's
+    /// protocol interface but is not [AkkaSerializable]. Exempt: interfaces and abstract classes
+    /// (never concrete runtime message types -- their concrete subtypes are checked individually),
+    /// and [AkkaSerializable]-marked open generic definitions (governed entirely by AKKASG022's
+    /// registration machinery). An unmarked OPEN GENERIC definition that implements the protocol is
+    /// still an error here: with no [AkkaSerializable] on the definition, none of its closed
+    /// constructions could ever be registered with [AkkaSerializable&lt;T&gt;] in the first place.
+    /// A type this flags is invisible to the generated Manifest/Serialize/Deserialize switches
+    /// today and only fails at runtime, the first time it is sent.
+    /// </summary>
+    private static bool ValidateProtocolCoverage(SourceProductionContext context, SerializerInfo serializer, Compilation compilation)
+    {
+        if (serializer.ProtocolType == null)
+            return true;
+
+        var knownTypes = KnownTypes.From(compilation);
+        if (knownTypes.SerializableAttribute == null)
+            return true;
+
+        var isValid = true;
+        foreach (var candidate in GetSourceDeclaredTypes(compilation))
+        {
+            if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct))
+                continue;
+
+            if (candidate.IsAbstract)
+                continue;
+
+            if (!candidate.AllInterfaces.Contains(serializer.ProtocolType, SymbolEqualityComparer.Default))
+                continue;
+
+            var isMarked = candidate.GetAttributes()
+                .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
+            if (isMarked)
+                continue;
+
+            context.ReportDiagnostic(Diagnostic.Create(ProtocolMessageNotSerializable, Location.None,
+                GetFullyQualifiedTypeName(candidate), serializer.ProtocolTypeFullName, serializer.ClassName));
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    /// <summary>
+    /// Every named type declared in <paramref name="compilation"/>'s OWN source (never a referenced
+    /// assembly: <see cref="Compilation.Assembly"/> is the assembly being compiled), recursively
+    /// including nested types. Used only by <see cref="ValidateProtocolCoverage"/>, transiently,
+    /// inside the terminal source-production callback -- never stored in a cached provider.
+    /// </summary>
+    private static IEnumerable<INamedTypeSymbol> GetSourceDeclaredTypes(Compilation compilation)
+    {
+        return GetSourceDeclaredTypes(compilation.Assembly.GlobalNamespace);
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetSourceDeclaredTypes(INamespaceSymbol ns)
+    {
+        foreach (var type in ns.GetTypeMembers())
+        {
+            foreach (var nested in GetSourceDeclaredTypesIncludingSelf(type))
+                yield return nested;
+        }
+
+        foreach (var nestedNamespace in ns.GetNamespaceMembers())
+        {
+            foreach (var type in GetSourceDeclaredTypes(nestedNamespace))
+                yield return type;
+        }
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetSourceDeclaredTypesIncludingSelf(INamedTypeSymbol type)
+    {
+        yield return type;
+        foreach (var nested in type.GetTypeMembers())
+        {
+            foreach (var descendant in GetSourceDeclaredTypesIncludingSelf(nested))
+                yield return descendant;
+        }
     }
 
     private static bool ValidateFormatters(SourceProductionContext context, SerializerInfo serializer)
@@ -1200,6 +1465,42 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             var typeNames = string.Join(", ", collision.Select(m => m.FullyQualifiedName));
             context.ReportDiagnostic(Diagnostic.Create(DuplicateGeneratedName, Location.None, serializer.ClassName, collision.Key, typeNames));
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    /// <summary>
+    /// Fires AKKASG034 when a valid <c>[AkkaSerializable&lt;T&gt;]</c> registration's construction
+    /// neither implements the serializer's protocol (so it can never become a top-level message)
+    /// nor is referenced by any [AkkaField] property of a message reachable from a top-level
+    /// message (so it can never be emitted as a nested Object field either, AKKASG023's mechanism).
+    /// Such a registration compiles clean today and simply does nothing: <see cref="CollectReachableMessages"/>
+    /// never reaches it, so it gets no generated Write/Read/SizeOf methods at all. A construction
+    /// registered ONLY for nested-field use (legitimate; it need not implement the protocol) is
+    /// exempt as long as it is actually reachable.
+    /// </summary>
+    private static bool ValidateClosedGenericProtocolCoverage(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> reachableMessages)
+    {
+        if (serializer.ClosedGenericRegistrations.IsDefaultOrEmpty || serializer.ProtocolType == null)
+            return true;
+
+        var reachableNames = new HashSet<string>(reachableMessages.Select(message => message.FullyQualifiedName), StringComparer.Ordinal);
+        var isValid = true;
+        foreach (var registration in serializer.ClosedGenericRegistrations)
+        {
+            if (registration.Message == null)
+                continue;
+
+            if (registration.Message.Protocols.Any(protocol => SymbolEqualityComparer.Default.Equals(protocol, serializer.ProtocolType)))
+                continue;
+
+            if (reachableNames.Contains(registration.Message.FullyQualifiedName))
+                continue;
+
+            context.ReportDiagnostic(Diagnostic.Create(ClosedGenericRegistrationNotInProtocol, Location.None,
+                registration.TargetDisplayName, serializer.ClassName, serializer.ProtocolTypeFullName));
             isValid = false;
         }
 
@@ -2919,7 +3220,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             string protocolTypeFullName,
             Accessibility declaredAccessibility,
             ImmutableArray<FormatterInfo> formatters,
-            ImmutableArray<ClosedGenericRegistrationInfo> closedGenericRegistrations)
+            ImmutableArray<ClosedGenericRegistrationInfo> closedGenericRegistrations,
+            bool isPartial,
+            bool isGeneric,
+            bool derivesFromAkkaSerializerBase)
         {
             Namespace = ns;
             ClassName = className;
@@ -2931,6 +3235,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             DeclaredAccessibility = declaredAccessibility;
             Formatters = formatters;
             ClosedGenericRegistrations = closedGenericRegistrations;
+            IsPartial = isPartial;
+            IsGeneric = isGeneric;
+            DerivesFromAkkaSerializerBase = derivesFromAkkaSerializerBase;
         }
 
         public string Namespace { get; }
@@ -2943,6 +3250,15 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public Accessibility DeclaredAccessibility { get; }
         public ImmutableArray<FormatterInfo> Formatters { get; }
         public ImmutableArray<ClosedGenericRegistrationInfo> ClosedGenericRegistrations { get; }
+
+        /// <summary>Whether every syntax declaration of this class carries 'partial'. See AKKASG032.</summary>
+        public bool IsPartial { get; }
+
+        /// <summary>Whether the serializer class itself is a generic type definition. See AKKASG032.</summary>
+        public bool IsGeneric { get; }
+
+        /// <summary>Whether the class derives (directly or transitively) from <c>Akka.Serialization.V2.AkkaSerializer</c>. See AKKASG032.</summary>
+        public bool DerivesFromAkkaSerializerBase { get; }
     }
 
     private sealed class KnownTypes
