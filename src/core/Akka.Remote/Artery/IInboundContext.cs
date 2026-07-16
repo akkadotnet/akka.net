@@ -63,6 +63,16 @@ namespace Akka.Remote.Artery
         /// <see cref="InboundHandshakeStage"/> instance would otherwise never observe one).
         /// </summary>
         bool IsKnownOrigin(long originUid);
+
+        /// <summary>
+        /// Resolves <paramref name="originUid"/> to the remote address of its (handshake-completed)
+        /// association per the same shared-registry reverse index <see cref="IsKnownOrigin"/> uses,
+        /// or <see langword="null"/> when the uid is unknown. Used by <see cref="InboundTestStage"/>
+        /// and the lanes&gt;1 lane path (<c>akka.remote.artery.advanced.test-mode</c> failure
+        /// injection) for the blackhole address check — the analog of Pekko's
+        /// <c>InboundEnvelope.association.remoteAddress</c> lookup.
+        /// </summary>
+        Address? TryResolveOriginAddress(long originUid);
     }
 
     /// <summary>
@@ -103,5 +113,8 @@ namespace Akka.Remote.Artery
 
         /// <inheritdoc/>
         public bool IsKnownOrigin(long originUid) => _registry.TryGetByUid(originUid) is not null;
+
+        /// <inheritdoc/>
+        public Address? TryResolveOriginAddress(long originUid) => _registry.TryGetByUid(originUid)?.RemoteAddress;
     }
 }

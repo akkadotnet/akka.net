@@ -283,6 +283,26 @@ namespace Akka.Remote.Artery
         private int _controlHealthy;
 
         /// <summary>
+        /// Consecutive FAULTED restart attempts of each outbound stream (one counter per stream,
+        /// exactly like the per-stream <see cref="MaterializeOnceGate"/> instances above):
+        /// incremented by the transport's outbound-stream fault continuation via
+        /// <see cref="RegisterOutboundRestartFault"/> on every faulted termination, and reset by
+        /// <see cref="ResetOutboundRestartFaults"/> when a subsequent materialization actually
+        /// ESTABLISHES its TCP connection. Drives <c>ArteryRemoting</c>'s per-outage reconnect-log
+        /// cadence (first fault and every Nth attempt at WARNING, the rest at DEBUG, recovery at
+        /// INFO). The paired <c>*OutageStartTicks</c> fields capture <see cref="DateTime.UtcNow"/>
+        /// at each outage's 0-&gt;1 transition -- DIAGNOSTIC log display only, never asserted-on
+        /// timing. <see cref="Interlocked"/> throughout: incremented on termination continuations,
+        /// reset on connection-established continuations, different threads.
+        /// </summary>
+        private int _outboundRestartFaults;
+        private int _controlRestartFaults;
+        private int _largeRestartFaults;
+        private long _outboundOutageStartTicks;
+        private long _controlOutageStartTicks;
+        private long _largeOutageStartTicks;
+
+        /// <summary>
         /// Set (independently per stream) by <see cref="CompleteOutbound"/>/<see cref="CompleteControlOutbound"/>
         /// -- design.md group 9's restart guard: "no restart after transport <c>Shutdown()</c>".
         /// <see cref="ArteryRemoting.Shutdown"/> is the only production caller of either
@@ -577,6 +597,70 @@ namespace Akka.Remote.Artery
         /// See <see cref="_controlHealthy"/> / <see cref="_outboundKillSwitch"/>.
         /// </summary>
         public bool TryConsumeControlHealthy() => Interlocked.Exchange(ref _controlHealthy, 0) == 1;
+
+        /// <summary>
+        /// Records one FAULTED restart attempt of <paramref name="streamId"/>'s outbound stream and
+        /// returns the new consecutive count (1 = first fault of a fresh outage). On the 0-&gt;1
+        /// transition the outage's start timestamp is captured -- exactly one caller ever observes
+        /// that transition (<see cref="Interlocked.Increment(ref int)"/> returns 1 to a single
+        /// thread), so the timestamp write is single-writer. See <see cref="_outboundRestartFaults"/>.
+        /// </summary>
+        public int RegisterOutboundRestartFault(ArteryStreamId streamId)
+        {
+            switch (streamId)
+            {
+                case ArteryStreamId.Control:
+                    return RegisterRestartFault(ref _controlRestartFaults, ref _controlOutageStartTicks);
+                case ArteryStreamId.Large:
+                    return RegisterRestartFault(ref _largeRestartFaults, ref _largeOutageStartTicks);
+                default:
+                    return RegisterRestartFault(ref _outboundRestartFaults, ref _outboundOutageStartTicks);
+            }
+        }
+
+        private static int RegisterRestartFault(ref int counter, ref long outageStartTicks)
+        {
+            var attempt = Interlocked.Increment(ref counter);
+            if (attempt == 1)
+                Interlocked.Exchange(ref outageStartTicks, DateTime.UtcNow.Ticks);
+            return attempt;
+        }
+
+        /// <summary>
+        /// How long <paramref name="streamId"/>'s current outage has been going, measured from the
+        /// timestamp <see cref="RegisterOutboundRestartFault"/> captured on its first fault.
+        /// DIAGNOSTIC display only (log text) -- see <see cref="_outboundRestartFaults"/>.
+        /// <see cref="TimeSpan.Zero"/> when no outage has ever been recorded.
+        /// </summary>
+        public TimeSpan OutboundOutageDuration(ArteryStreamId streamId)
+        {
+            var startTicks = streamId switch
+            {
+                ArteryStreamId.Control => Interlocked.Read(ref _controlOutageStartTicks),
+                ArteryStreamId.Large => Interlocked.Read(ref _largeOutageStartTicks),
+                _ => Interlocked.Read(ref _outboundOutageStartTicks)
+            };
+            return startTicks == 0 ? TimeSpan.Zero : TimeSpan.FromTicks(Math.Max(0, DateTime.UtcNow.Ticks - startTicks));
+        }
+
+        /// <summary>
+        /// Resets <paramref name="streamId"/>'s consecutive-fault count (a subsequent
+        /// materialization ESTABLISHED its TCP connection -- the outage is over) and returns the
+        /// count that had accumulated, so the caller can report a genuine recovery (nonzero)
+        /// exactly once. See <see cref="_outboundRestartFaults"/>.
+        /// </summary>
+        public int ResetOutboundRestartFaults(ArteryStreamId streamId)
+        {
+            switch (streamId)
+            {
+                case ArteryStreamId.Control:
+                    return Interlocked.Exchange(ref _controlRestartFaults, 0);
+                case ArteryStreamId.Large:
+                    return Interlocked.Exchange(ref _largeRestartFaults, 0);
+                default:
+                    return Interlocked.Exchange(ref _outboundRestartFaults, 0);
+            }
+        }
 
         /// <summary>
         /// Whether the ORDINARY outbound stream should be (re-)materialized right now (design.md

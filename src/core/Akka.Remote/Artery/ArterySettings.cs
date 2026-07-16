@@ -102,6 +102,17 @@ namespace Akka.Remote.Artery
         public int OutboundLanes { get; }
 
         /// <summary>
+        /// <c>akka.remote.artery.advanced.test-mode</c> (Pekko key parity): enables the
+        /// failure-injection test stages (<see cref="OutboundTestStage"/> /
+        /// <see cref="InboundTestStage"/>) used by the multi-node TestConductor's
+        /// blackhole/passThrough commands. Off (the default) composes the exact same stream
+        /// pipelines as before this setting existed -- no test stage, no shared test state, no
+        /// per-element checks are ever materialized; <c>ArteryRemoting.ManagementCommand</c>
+        /// reports <see langword="false"/> for every command. Never enable in production.
+        /// </summary>
+        public bool TestMode { get; }
+
+        /// <summary>
         /// How long an association will wait for a handshake to complete before failing and
         /// retrying.
         /// </summary>
@@ -305,6 +316,8 @@ namespace Akka.Remote.Artery
             if (InboundLaneBufferSize <= 0)
                 throw new ConfigurationException(
                     $"akka.remote.artery.advanced.inbound-lane-buffer-size must be greater than 0, but was [{InboundLaneBufferSize}].");
+
+            TestMode = arteryConfig.GetBoolean("advanced.test-mode", false);
 
             OutboundLanes = arteryConfig.GetInt("advanced.outbound-lanes", 1);
             if (OutboundLanes < 1)
