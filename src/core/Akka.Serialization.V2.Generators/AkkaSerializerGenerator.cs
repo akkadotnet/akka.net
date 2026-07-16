@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -306,143 +307,280 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor UnionDeclarationIgnoredOnEnvelopePayload = new(
+        "AKKASG035",
+        "Union declaration is ignored on an envelope payload field",
+        "Property '{0}' on type '{1}' has both [AkkaEnvelopePayload] and [AkkaUnion]; the union declaration is ignored -- envelope payload takes precedence",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnionMemberAbstract = new(
+        "AKKASG036",
+        "Union member type is abstract",
+        "Union member '{0}' on property '{1}' of type '{2}' is abstract; union write dispatch matches the exact runtime type, and an abstract type is never a runtime type, so this member's dispatch branch is dead code -- declare its concrete subtypes as union members instead",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor ManifestIgnoredOnGenericDefinition = new(
+        "AKKASG037",
+        "Manifest on a generic [AkkaSerializable] definition is ignored",
+        "Generic [AkkaSerializable] type '{0}' specifies Manifest '{1}', which is ignored: a generic definition is never serialized directly, and each closed construction registered with [AkkaSerializable<T>] supplies its own Manifest",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Stable names for the pipeline's cache-relevant incremental nodes. Exposed publicly for the
+    /// incrementality regression spec, which runs the generator twice over compilations differing
+    /// only by an unrelated edit and asserts every step named here reports
+    /// <see cref="IncrementalStepRunReason.Cached"/> or <see cref="IncrementalStepRunReason.Unchanged"/>.
+    /// </summary>
+    public static class TrackingNames
+    {
+        public const string ExtractedSerializers = nameof(ExtractedSerializers);
+        public const string CollectedSerializers = nameof(CollectedSerializers);
+        public const string ExtractedMessages = nameof(ExtractedMessages);
+        public const string CollectedMessages = nameof(CollectedMessages);
+
+        public static ImmutableArray<string> All { get; } = ImmutableArray.Create(
+            ExtractedSerializers, CollectedSerializers, ExtractedMessages, CollectedMessages);
+    }
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var serializers = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 SerializerAttributeFullName,
                 static (node, _) => node is ClassDeclarationSyntax,
-                static (ctx, _) => ExtractSerializer(ctx))
+                static (ctx, cancellationToken) => ExtractSerializer(ctx, cancellationToken))
+            .WithTrackingName(TrackingNames.ExtractedSerializers)
             .Where(static info => info != null)
-            .Collect();
+            .Collect()
+            .WithTrackingName(TrackingNames.CollectedSerializers);
 
         var messages = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 SerializableAttributeFullName,
                 static (node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax,
-                static (ctx, _) => ExtractMessage(ctx))
+                static (ctx, cancellationToken) => ExtractMessage(ctx, cancellationToken))
+            .WithTrackingName(TrackingNames.ExtractedMessages)
             .Where(static info => info != null)
-            .Collect();
+            .Collect()
+            .WithTrackingName(TrackingNames.CollectedMessages);
 
-        // Combined only at this final, terminal stage -- not stored in any cached IncrementalValueProvider
-        // node upstream of it -- so AKKASG029's whole-compilation scan (ValidateProtocolCoverage) can see
-        // every source-declared type. This necessarily costs incrementality for the WHOLE generator (the
-        // Compilation input changes on every edit anywhere in this project), not just that one check: there
-        // is no cheaper place to compute "does any type implement this protocol interface without
-        // [AkkaSerializable]" than the terminal stage that already has a Compilation in hand.
-        context.RegisterSourceOutput(serializers.Combine(messages).Combine(context.CompilationProvider), static (ctx, tuple) =>
-        {
-            var (pair, compilation) = tuple;
+        // Code emission consumes ONLY the collected, value-equatable, symbol-free models -- never
+        // the Compilation. An edit anywhere that does not change an extracted model therefore
+        // reuses the cached emission output instead of regenerating every serializer per keystroke.
+        context.RegisterSourceOutput(
+            serializers.Combine(messages),
+            static (ctx, pair) => EmitSerializers(ctx, pair.Left, pair.Right));
 
-            var duplicateSerializerIds = pair.Left
-                .Where(s => s != null)
-                .Cast<SerializerInfo>()
-                .Where(s => s.SerializerId > 0)
-                .GroupBy(s => s.SerializerId)
-                .Where(group => group.Count() > 1)
-                .ToImmutableDictionary(group => group.Key, group => string.Join(", ", group.Select(s => s.ClassName)));
-
-            foreach (var duplicate in duplicateSerializerIds)
-            {
-                ctx.ReportDiagnostic(Diagnostic.Create(DuplicateSerializerId, Location.None, duplicate.Key, duplicate.Value));
-            }
-
-            // Same computation as duplicateSerializerIds above, grouped on the protocol interface
-            // instead of the numeric id: two [AkkaSerializer] classes bound to the same protocol is
-            // silent last-wins at runtime registration today (AKKASG031).
-            var duplicateProtocolBindings = pair.Left
-                .Where(s => s != null)
-                .Cast<SerializerInfo>()
-                .Where(s => !string.IsNullOrEmpty(s.ProtocolTypeFullName))
-                .GroupBy(s => s.ProtocolTypeFullName, StringComparer.Ordinal)
-                .Where(group => group.Count() > 1)
-                .ToImmutableDictionary(group => group.Key, group => string.Join(", ", group.Select(s => s.ClassName)), StringComparer.Ordinal);
-
-            foreach (var duplicate in duplicateProtocolBindings)
-            {
-                ctx.ReportDiagnostic(Diagnostic.Create(DuplicateProtocolBinding, Location.None, ToDisplayName(duplicate.Key), duplicate.Value));
-            }
-
-            foreach (var serializer in pair.Left)
-            {
-                if (serializer == null)
-                    continue;
-
-                if (string.IsNullOrWhiteSpace(serializer.Name))
-                {
-                    ctx.ReportDiagnostic(Diagnostic.Create(InvalidSerializerName, Location.None, serializer.ClassName));
-                    continue;
-                }
-
-                if (serializer.SerializerId <= 0)
-                {
-                    ctx.ReportDiagnostic(Diagnostic.Create(InvalidSerializerId, Location.None, serializer.ClassName, serializer.SerializerId));
-                    continue;
-                }
-
-                if (duplicateSerializerIds.ContainsKey(serializer.SerializerId))
-                    continue;
-
-                if (duplicateProtocolBindings.ContainsKey(serializer.ProtocolTypeFullName))
-                    continue;
-
-                if (!ValidateSerializerShape(ctx, serializer))
-                    continue;
-
-                if (!ValidateProtocolType(ctx, serializer))
-                    continue;
-
-                if (!ValidateFormatters(ctx, serializer))
-                    continue;
-
-                if (!ValidateClosedGenericRegistrations(ctx, serializer))
-                    continue;
-
-                var declaredMessages = pair.Right
-                    .Where(message => message != null)
-                    .Cast<MessageInfo>()
-                    .ToImmutableArray();
-
-                // Generic definitions are placeholders: never serialized, never top-level, never in
-                // the message dictionary (their arity-less key could even collide with a same-named
-                // non-generic type). They exist only for the AKKASG022 check below.
-                var genericDefinitions = declaredMessages
-                    .Where(message => message.IsGenericDefinition)
-                    .ToImmutableArray();
-
-                if (!ValidateGenericDefinitions(ctx, serializer, genericDefinitions))
-                    continue;
-
-                if (!ValidateProtocolCoverage(ctx, serializer, compilation))
-                    continue;
-
-                var allMessages = declaredMessages
-                    .Where(message => !message.IsGenericDefinition)
-                    .Concat(serializer.ClosedGenericRegistrations
-                        .Where(registration => registration.Message != null)
-                        .Select(registration => registration.Message!))
-                    .ToImmutableArray();
-                var allMessagesByType = allMessages.ToImmutableDictionary(message => message.FullyQualifiedName);
-                var resolvedMessagesByType = ResolveMessages(allMessagesByType, serializer.Formatters);
-                var topLevelMessages = allMessages
-                    .Where(message => serializer.ProtocolType != null && message.Protocols.Any(protocol => SymbolEqualityComparer.Default.Equals(protocol, serializer.ProtocolType)))
-                    .Select(message => resolvedMessagesByType[message.FullyQualifiedName])
-                    .ToImmutableArray();
-                var reachableMessages = CollectReachableMessages(topLevelMessages, resolvedMessagesByType);
-
-                if (!ValidateMessages(ctx, serializer, topLevelMessages, reachableMessages, resolvedMessagesByType))
-                    continue;
-
-                if (!ValidateClosedGenericProtocolCoverage(ctx, serializer, reachableMessages))
-                    continue;
-
-                ctx.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, topLevelMessages, reachableMessages, resolvedMessagesByType));
-            }
-        });
+        // AKKASG029's whole-compilation protocol-coverage scan (ValidateProtocolCoverage) is the
+        // one check that genuinely needs the Compilation ("does any source-declared type implement
+        // this protocol interface without [AkkaSerializable]?"), so it lives in this SEPARATE,
+        // diagnostics-only output: the Compilation input changes on every edit, but only this cheap
+        // re-scan pays for that -- code emission above stays cached.
+        //
+        // Design decision: coverage errors no longer gate emission (the old terminal stage skipped
+        // AddSource for a serializer whose coverage check failed). This is the standard split for
+        // whole-compilation diagnostics, and it is build-outcome-equivalent: AKKASG029 is an Error,
+        // so a coverage gap still fails the build and the source emitted alongside it never ships.
+        // Emitting anyway gives strictly better IDE behavior (the generated members stay resolvable
+        // while the user fixes the gap) and lets the emission stage surface OTHER diagnostics that
+        // the old early-return used to hide until the coverage error was fixed.
+        context.RegisterSourceOutput(
+            serializers.Combine(messages).Combine(context.CompilationProvider),
+            static (ctx, tuple) => ReportProtocolCoverage(ctx, tuple.Left.Left, tuple.Left.Right, tuple.Right));
     }
 
-    private static SerializerInfo? ExtractSerializer(GeneratorAttributeSyntaxContext context)
+    private static void EmitSerializers(
+        SourceProductionContext context,
+        ImmutableArray<SerializerInfo?> serializers,
+        ImmutableArray<MessageInfo?> messages)
     {
+        var duplicateSerializerIds = ComputeDuplicateSerializerIds(serializers);
+
+        foreach (var duplicate in duplicateSerializerIds)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(DuplicateSerializerId, Location.None, duplicate.Key, duplicate.Value));
+        }
+
+        // Same computation as duplicateSerializerIds above, grouped on the protocol interface
+        // instead of the numeric id: two [AkkaSerializer] classes bound to the same protocol is
+        // silent last-wins at runtime registration today (AKKASG031).
+        var duplicateProtocolBindings = ComputeDuplicateProtocolBindings(serializers);
+
+        foreach (var duplicate in duplicateProtocolBindings)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(DuplicateProtocolBinding, Location.None, ToDisplayName(duplicate.Key), duplicate.Value));
+        }
+
+        var declaredMessages = messages
+            .Where(message => message != null)
+            .Cast<MessageInfo>()
+            .ToImmutableArray();
+
+        // Advisory only (AKKASG037): a Manifest on a generic [AkkaSerializable] DEFINITION is
+        // silently ignored -- the definition is never serialized directly (see ExtractMessage),
+        // and every registered closed construction carries its own per-construction Manifest from
+        // [AkkaSerializable<T>]. Reported once per definition, independent of any serializer.
+        foreach (var definition in declaredMessages.Where(message => message.IsGenericDefinition && !string.IsNullOrWhiteSpace(message.Manifest)))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(ManifestIgnoredOnGenericDefinition, Location.None, ToDisplayName(definition.FullyQualifiedName), definition.Manifest));
+        }
+
+        // Generic definitions are placeholders: never serialized, never top-level, never in
+        // the message dictionary (their arity-less key could even collide with a same-named
+        // non-generic type). They exist only for the AKKASG022/AKKASG037 checks.
+        var genericDefinitions = declaredMessages
+            .Where(message => message.IsGenericDefinition)
+            .ToImmutableArray();
+
+        foreach (var serializer in serializers)
+        {
+            if (serializer == null)
+                continue;
+
+            if (string.IsNullOrWhiteSpace(serializer.Name))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerName, Location.None, serializer.ClassName));
+                continue;
+            }
+
+            if (serializer.SerializerId <= 0)
+            {
+                context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerId, Location.None, serializer.ClassName, serializer.SerializerId));
+                continue;
+            }
+
+            if (duplicateSerializerIds.ContainsKey(serializer.SerializerId))
+                continue;
+
+            if (duplicateProtocolBindings.ContainsKey(serializer.ProtocolTypeFullName))
+                continue;
+
+            if (!ValidateSerializerShape(serializer, context.ReportDiagnostic))
+                continue;
+
+            if (!ValidateProtocolType(serializer, context.ReportDiagnostic))
+                continue;
+
+            if (!ValidateFormatters(serializer, context.ReportDiagnostic))
+                continue;
+
+            if (!ValidateClosedGenericRegistrations(serializer, context.ReportDiagnostic))
+                continue;
+
+            if (!ValidateGenericDefinitions(serializer, genericDefinitions, context.ReportDiagnostic))
+                continue;
+
+            var allMessages = declaredMessages
+                .Where(message => !message.IsGenericDefinition)
+                .Concat(serializer.ClosedGenericRegistrations
+                    .Where(registration => registration.Message != null)
+                    .Select(registration => registration.Message!))
+                .ToImmutableArray();
+            var allMessagesByType = allMessages.ToImmutableDictionary(message => message.FullyQualifiedName);
+            var resolvedMessagesByType = ResolveMessages(allMessagesByType, serializer.Formatters);
+            var topLevelMessages = allMessages
+                .Where(message => serializer.ProtocolTypeFullName.Length > 0 && message.Protocols.Contains(serializer.ProtocolTypeFullName))
+                .Select(message => resolvedMessagesByType[message.FullyQualifiedName])
+                .ToImmutableArray();
+            var reachableMessages = CollectReachableMessages(topLevelMessages, resolvedMessagesByType);
+
+            if (!ValidateMessages(context, serializer, topLevelMessages, reachableMessages, resolvedMessagesByType))
+                continue;
+
+            if (!ValidateClosedGenericProtocolCoverage(context, serializer, reachableMessages))
+                continue;
+
+            context.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, topLevelMessages, reachableMessages, resolvedMessagesByType));
+        }
+    }
+
+    /// <summary>
+    /// Diagnostics-only output for AKKASG029 (see the comment in <see cref="Initialize"/>). To
+    /// preserve the old terminal stage's semantics, a serializer only reaches the coverage scan
+    /// after it passes every check that used to precede <see cref="ValidateProtocolCoverage"/> in
+    /// the single-output pipeline -- those checks run here SILENTLY (null reporter): the emission
+    /// output above is the one that reports them, and reporting them twice would duplicate every
+    /// pre-coverage diagnostic.
+    /// </summary>
+    private static void ReportProtocolCoverage(
+        SourceProductionContext context,
+        ImmutableArray<SerializerInfo?> serializers,
+        ImmutableArray<MessageInfo?> messages,
+        Compilation compilation)
+    {
+        var duplicateSerializerIds = ComputeDuplicateSerializerIds(serializers);
+        var duplicateProtocolBindings = ComputeDuplicateProtocolBindings(serializers);
+        var genericDefinitions = messages
+            .Where(message => message != null)
+            .Cast<MessageInfo>()
+            .Where(message => message.IsGenericDefinition)
+            .ToImmutableArray();
+
+        foreach (var serializer in serializers)
+        {
+            if (serializer == null)
+                continue;
+
+            if (string.IsNullOrWhiteSpace(serializer.Name) || serializer.SerializerId <= 0)
+                continue;
+
+            if (duplicateSerializerIds.ContainsKey(serializer.SerializerId))
+                continue;
+
+            if (duplicateProtocolBindings.ContainsKey(serializer.ProtocolTypeFullName))
+                continue;
+
+            if (!ValidateSerializerShape(serializer, report: null))
+                continue;
+
+            if (!ValidateProtocolType(serializer, report: null))
+                continue;
+
+            if (!ValidateFormatters(serializer, report: null))
+                continue;
+
+            if (!ValidateClosedGenericRegistrations(serializer, report: null))
+                continue;
+
+            if (!ValidateGenericDefinitions(serializer, genericDefinitions, report: null))
+                continue;
+
+            ValidateProtocolCoverage(context, serializer, compilation);
+        }
+    }
+
+    private static ImmutableDictionary<int, string> ComputeDuplicateSerializerIds(ImmutableArray<SerializerInfo?> serializers)
+    {
+        return serializers
+            .Where(s => s != null)
+            .Cast<SerializerInfo>()
+            .Where(s => s.SerializerId > 0)
+            .GroupBy(s => s.SerializerId)
+            .Where(group => group.Count() > 1)
+            .ToImmutableDictionary(group => group.Key, group => string.Join(", ", group.Select(s => s.ClassName)));
+    }
+
+    private static ImmutableDictionary<string, string> ComputeDuplicateProtocolBindings(ImmutableArray<SerializerInfo?> serializers)
+    {
+        return serializers
+            .Where(s => s != null)
+            .Cast<SerializerInfo>()
+            .Where(s => !string.IsNullOrEmpty(s.ProtocolTypeFullName))
+            .GroupBy(s => s.ProtocolTypeFullName, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .ToImmutableDictionary(group => group.Key, group => string.Join(", ", group.Select(s => s.ClassName)), StringComparer.Ordinal);
+    }
+
+    private static SerializerInfo? ExtractSerializer(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
 
         // Reading only the first attribute is safe: AkkaSerializerAttribute<TProtocol> declares
@@ -469,8 +607,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 serializerId = id;
         }
 
+        // The protocol type symbol is consumed HERE and only here: everything the pipeline needs
+        // downstream is its fully-qualified name (dispatch/grouping keys) and whether it is an
+        // interface (AKKASG033). Retaining the INamedTypeSymbol in the cached model would defeat
+        // incremental caching outright -- symbols never compare equal across compilations.
         var protocolType = attribute.AttributeClass?.TypeArguments.FirstOrDefault() as INamedTypeSymbol;
         var protocolTypeFullName = protocolType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? string.Empty;
+        var protocolTypeIsInterface = protocolType?.TypeKind == TypeKind.Interface;
 
         var formatterAttributeType = compilation.GetTypeByMetadataName(FormatterAttributeFullName);
         var extendedActorSystemType = compilation.GetTypeByMetadataName(ExtendedActorSystemFullName);
@@ -483,8 +626,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             GetFullyQualifiedTypeName(symbol),
             name ?? string.Empty,
             serializerId,
-            protocolType,
             protocolTypeFullName,
+            protocolTypeIsInterface,
             symbol.DeclaredAccessibility,
             formatters,
             closedGenericRegistrations,
@@ -723,28 +866,30 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// Today each of these produces a wall of raw CS errors (CS0260/CS0759/CS0115/CS0264) pointing
     /// at the GENERATED file instead of the user's declaration; this replaces that with one direct
     /// diagnostic per violated rule, still on the user's class.
+    /// A null <paramref name="report"/> evaluates the check silently -- the coverage output uses
+    /// that to replicate the emission stage's gating without duplicating its diagnostics.
     /// </summary>
-    private static bool ValidateSerializerShape(SourceProductionContext context, SerializerInfo serializer)
+    private static bool ValidateSerializerShape(SerializerInfo serializer, Action<Diagnostic>? report)
     {
         var isValid = true;
 
         if (!serializer.IsPartial)
         {
-            context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
+            report?.Invoke(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
                 "must be declared 'partial': the generator emits a second declaration of this class"));
             isValid = false;
         }
 
         if (!serializer.DerivesFromAkkaSerializerBase)
         {
-            context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
+            report?.Invoke(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
                 "must derive from Akka.Serialization.V2.AkkaSerializer: the generated members (Identifier, Manifest, Serialize, Deserialize, SizeHint) are declared as overrides of that base"));
             isValid = false;
         }
 
         if (serializer.IsGeneric)
         {
-            context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
+            report?.Invoke(Diagnostic.Create(InvalidSerializerShape, Location.None, serializer.ClassName,
                 "cannot be a generic type: the generator emits one concrete, closed partial class per [AkkaSerializer] declaration"));
             isValid = false;
         }
@@ -758,13 +903,16 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// populated from <c>INamedTypeSymbol.AllInterfaces</c> (see <see cref="ExtractMessageCore"/>)
     /// -- a class or struct can never appear there, so a non-interface protocol type silently
     /// produces a serializer whose Manifest/Serialize/Deserialize switches have no cases at all.
+    /// An empty <see cref="SerializerInfo.ProtocolTypeFullName"/> means the attribute's type
+    /// argument was not a named type at all (the extraction stored no name for it) and is exempt,
+    /// exactly as the former null-symbol check was.
     /// </summary>
-    private static bool ValidateProtocolType(SourceProductionContext context, SerializerInfo serializer)
+    private static bool ValidateProtocolType(SerializerInfo serializer, Action<Diagnostic>? report)
     {
-        if (serializer.ProtocolType == null || serializer.ProtocolType.TypeKind == TypeKind.Interface)
+        if (serializer.ProtocolTypeFullName.Length == 0 || serializer.ProtocolTypeIsInterface)
             return true;
 
-        context.ReportDiagnostic(Diagnostic.Create(ProtocolTypeMustBeInterface, Location.None, serializer.ClassName, ToDisplayName(serializer.ProtocolTypeFullName)));
+        report?.Invoke(Diagnostic.Create(ProtocolTypeMustBeInterface, Location.None, serializer.ClassName, ToDisplayName(serializer.ProtocolTypeFullName)));
         return false;
     }
 
@@ -778,26 +926,34 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// constructions could ever be registered with [AkkaSerializable&lt;T&gt;] in the first place.
     /// A type this flags is invisible to the generated Manifest/Serialize/Deserialize switches
     /// today and only fails at runtime, the first time it is sent.
+    /// The protocol interface is matched by fully-qualified name against each candidate's
+    /// <see cref="ITypeSymbol.AllInterfaces"/>: the cached <see cref="SerializerInfo"/> is
+    /// deliberately symbol-free, and within one compilation a fully-qualified name identifies
+    /// exactly one type, so the string comparison is equivalent to the former
+    /// <see cref="SymbolEqualityComparer.Default"/> lookup.
     /// </summary>
-    private static bool ValidateProtocolCoverage(SourceProductionContext context, SerializerInfo serializer, Compilation compilation)
+    private static void ValidateProtocolCoverage(SourceProductionContext context, SerializerInfo serializer, Compilation compilation)
     {
-        if (serializer.ProtocolType == null)
-            return true;
+        if (serializer.ProtocolTypeFullName.Length == 0)
+            return;
 
         var knownTypes = KnownTypes.From(compilation);
         if (knownTypes.SerializableAttribute == null)
-            return true;
+            return;
 
-        var isValid = true;
         foreach (var candidate in GetSourceDeclaredTypes(compilation))
         {
+            // This whole-compilation walk re-runs on every edit (its output combines the
+            // CompilationProvider by necessity); honor IDE cancellation between candidates.
+            context.CancellationToken.ThrowIfCancellationRequested();
+
             if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct))
                 continue;
 
             if (candidate.IsAbstract)
                 continue;
 
-            if (!candidate.AllInterfaces.Contains(serializer.ProtocolType, SymbolEqualityComparer.Default))
+            if (!ImplementsProtocol(candidate, serializer.ProtocolTypeFullName))
                 continue;
 
             var isMarked = candidate.GetAttributes()
@@ -807,17 +963,25 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
             context.ReportDiagnostic(Diagnostic.Create(ProtocolMessageNotSerializable, Location.None,
                 ToDisplayName(GetFullyQualifiedTypeName(candidate)), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
-            isValid = false;
+        }
+    }
+
+    private static bool ImplementsProtocol(INamedTypeSymbol candidate, string protocolTypeFullName)
+    {
+        foreach (var implemented in candidate.AllInterfaces)
+        {
+            if (string.Equals(implemented.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), protocolTypeFullName, StringComparison.Ordinal))
+                return true;
         }
 
-        return isValid;
+        return false;
     }
 
     /// <summary>
     /// Every named type declared in <paramref name="compilation"/>'s OWN source (never a referenced
     /// assembly: <see cref="Compilation.Assembly"/> is the assembly being compiled), recursively
     /// including nested types. Used only by <see cref="ValidateProtocolCoverage"/>, transiently,
-    /// inside the terminal source-production callback -- never stored in a cached provider.
+    /// inside the diagnostics-only coverage callback -- never stored in a cached provider.
     /// </summary>
     private static IEnumerable<INamedTypeSymbol> GetSourceDeclaredTypes(Compilation compilation)
     {
@@ -849,7 +1013,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         }
     }
 
-    private static bool ValidateFormatters(SourceProductionContext context, SerializerInfo serializer)
+    private static bool ValidateFormatters(SerializerInfo serializer, Action<Diagnostic>? report)
     {
         if (serializer.Formatters.IsDefaultOrEmpty)
             return true;
@@ -859,21 +1023,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             if (!formatter.IsTargetSupported)
             {
-                context.ReportDiagnostic(Diagnostic.Create(FormatterTargetNotSupported, Location.None, ToDisplayName(formatter.TargetTypeFullName), serializer.ClassName));
+                report?.Invoke(Diagnostic.Create(FormatterTargetNotSupported, Location.None, ToDisplayName(formatter.TargetTypeFullName), serializer.ClassName));
                 isValid = false;
                 continue;
             }
 
             if (formatter.IsAbstract)
             {
-                context.ReportDiagnostic(Diagnostic.Create(InvalidFormatterType, Location.None, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName, ToDisplayName(formatter.TargetTypeFullName)));
+                report?.Invoke(Diagnostic.Create(InvalidFormatterType, Location.None, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName, ToDisplayName(formatter.TargetTypeFullName)));
                 isValid = false;
                 continue;
             }
 
             if (formatter.CtorKind == FormatterCtorKind.None)
             {
-                context.ReportDiagnostic(Diagnostic.Create(FormatterConstructorNotUsable, Location.None, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName));
+                report?.Invoke(Diagnostic.Create(FormatterConstructorNotUsable, Location.None, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName));
                 isValid = false;
             }
         }
@@ -883,14 +1047,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                      .GroupBy(formatter => formatter.TargetTypeFullName, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
         {
-            context.ReportDiagnostic(Diagnostic.Create(DuplicateFormatterRegistration, Location.None, serializer.ClassName, ToDisplayName(duplicate.Key)));
+            report?.Invoke(Diagnostic.Create(DuplicateFormatterRegistration, Location.None, serializer.ClassName, ToDisplayName(duplicate.Key)));
             isValid = false;
         }
 
         return isValid;
     }
 
-    private static bool ValidateClosedGenericRegistrations(SourceProductionContext context, SerializerInfo serializer)
+    private static bool ValidateClosedGenericRegistrations(SerializerInfo serializer, Action<Diagnostic>? report)
     {
         if (serializer.ClosedGenericRegistrations.IsDefaultOrEmpty)
             return true;
@@ -898,7 +1062,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var isValid = true;
         foreach (var registration in serializer.ClosedGenericRegistrations.Where(registration => registration.Message == null))
         {
-            context.ReportDiagnostic(Diagnostic.Create(InvalidClosedGenericRegistration, Location.None, ToDisplayName(registration.TargetDisplayName), serializer.ClassName));
+            report?.Invoke(Diagnostic.Create(InvalidClosedGenericRegistration, Location.None, ToDisplayName(registration.TargetDisplayName), serializer.ClassName));
             isValid = false;
         }
 
@@ -907,7 +1071,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                      .GroupBy(registration => registration.TargetDisplayName, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
         {
-            context.ReportDiagnostic(Diagnostic.Create(DuplicateClosedGenericRegistration, Location.None, serializer.ClassName, ToDisplayName(duplicate.Key)));
+            report?.Invoke(Diagnostic.Create(DuplicateClosedGenericRegistration, Location.None, serializer.ClassName, ToDisplayName(duplicate.Key)));
             isValid = false;
         }
 
@@ -920,15 +1084,15 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// registration the type would silently never serialize, which is exactly the confusing
     /// broken-codegen failure mode this diagnostic replaces.
     /// </summary>
-    private static bool ValidateGenericDefinitions(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> genericDefinitions)
+    private static bool ValidateGenericDefinitions(SerializerInfo serializer, ImmutableArray<MessageInfo> genericDefinitions, Action<Diagnostic>? report)
     {
-        if (genericDefinitions.IsDefaultOrEmpty || serializer.ProtocolType == null)
+        if (genericDefinitions.IsDefaultOrEmpty || serializer.ProtocolTypeFullName.Length == 0)
             return true;
 
         var isValid = true;
         foreach (var definition in genericDefinitions)
         {
-            if (!definition.Protocols.Any(protocol => SymbolEqualityComparer.Default.Equals(protocol, serializer.ProtocolType)))
+            if (!definition.Protocols.Contains(serializer.ProtocolTypeFullName))
                 continue;
 
             var hasRegistration = serializer.ClosedGenericRegistrations.Any(registration =>
@@ -937,15 +1101,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             if (hasRegistration)
                 continue;
 
-            context.ReportDiagnostic(Diagnostic.Create(GenericSerializableRequiresRegistration, Location.None, ToDisplayName(definition.FullyQualifiedName), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
+            report?.Invoke(Diagnostic.Create(GenericSerializableRequiresRegistration, Location.None, ToDisplayName(definition.FullyQualifiedName), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
             isValid = false;
         }
 
         return isValid;
     }
 
-    private static MessageInfo? ExtractMessage(GeneratorAttributeSyntaxContext context)
+    private static MessageInfo? ExtractMessage(GeneratorAttributeSyntaxContext context, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
         var attribute = context.Attributes[0];
         var compilation = context.SemanticModel.Compilation;
@@ -972,7 +1138,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 GetFullyQualifiedTypeName(symbol),
                 manifest,
                 ImmutableArray<FieldInfo>.Empty,
-                symbol.AllInterfaces.ToImmutableArray(),
+                GetProtocolNames(symbol),
                 allowEmpty: true,
                 isGenericDefinition: true,
                 definitionFullName: GetFullyQualifiedTypeName(symbol),
@@ -1030,10 +1196,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             var isNullable = member.NullableAnnotation == NullableAnnotation.Annotated || IsNullableValueType(member.Type);
             var isEnvelopePayload = member.GetAttributes()
                 .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.EnvelopePayloadAttribute));
-            var unionMembers = ExtractUnionMembers(member, knownTypes, compilation, out var hasUnionAttribute);
+            var unionMembers = ExtractUnionMembers(member, knownTypes, compilation, out var hasUnionAttribute, out var unionDeclaredOnField);
 
             // Precedence: [AkkaEnvelopePayload] always wins (matching its documented precedence over
-            // formatter registrations), then [AkkaUnion], then ordinary inference.
+            // formatter registrations), then [AkkaUnion], then ordinary inference. When the envelope
+            // suppresses a FIELD-LEVEL [AkkaUnion] the conflict is remembered for the AKKASG035
+            // advisory: both attributes on one property are conflicting author intent. A TYPE-LEVEL
+            // [AkkaUnion] on the field's static type is deliberately exempt -- it serves that
+            // interface's other, non-envelope fields, so its presence here is incidental.
             var mapping = isEnvelopePayload ? new TypeMapping(FieldKind.EnvelopePayload)
                 : hasUnionAttribute ? new TypeMapping(FieldKind.Union)
                 : MapType(member.Type, knownTypes);
@@ -1043,7 +1213,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 mapping,
                 isNullable,
-                unionMembers: isEnvelopePayload ? default : unionMembers));
+                unionMembers: isEnvelopePayload ? default : unionMembers,
+                unionSuppressedByEnvelope: isEnvelopePayload && unionDeclaredOnField));
             fieldSymbols.Add(member);
         }
 
@@ -1054,7 +1225,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             fullyQualifiedName,
             manifest,
             fields.OrderBy(f => f.Index).ToImmutableArray(),
-            symbol.AllInterfaces.ToImmutableArray(),
+            GetProtocolNames(symbol),
             allowEmpty,
             isGenericDefinition: false,
             definitionFullName: definitionFullName,
@@ -1223,17 +1394,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         IPropertySymbol member,
         KnownTypes knownTypes,
         Compilation compilation,
-        out bool hasUnionAttribute)
+        out bool hasUnionAttribute,
+        out bool unionDeclaredOnField)
     {
         hasUnionAttribute = false;
+        unionDeclaredOnField = false;
         if (knownTypes.UnionAttribute == null)
             return ImmutableArray<UnionMemberInfo>.Empty;
 
         // Field-level override wins; otherwise inherit the type-level declaration from the field's
         // static type. OriginalDefinition covers a generic union base, where the attribute lives on
-        // the definition.
+        // the definition. Whether the declaration sits on the FIELD itself is reported separately
+        // (unionDeclaredOnField) for the AKKASG035 envelope-conflict advisory.
         var unionAttribute = member.GetAttributes()
             .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
+        unionDeclaredOnField = unionAttribute != null;
         if (unionAttribute == null && member.Type is INamedTypeSymbol fieldType)
         {
             unionAttribute = fieldType.OriginalDefinition.GetAttributes()
@@ -1263,7 +1438,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 var displayName = argument.Value is ITypeSymbol typeSymbol
                     ? typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
                     : "<null>";
-                builder.Add(new UnionMemberInfo(displayName, isValueType: false, isAssignable: false, isSupported: false, isSealed: false));
+                builder.Add(new UnionMemberInfo(displayName, isValueType: false, isAssignable: false, isSupported: false, isSealed: false, isAbstract: false));
                 continue;
             }
 
@@ -1272,7 +1447,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 memberType.IsValueType,
                 compilation.HasImplicitConversion(memberType, member.Type),
                 isSupported: true,
-                isSealed: memberType.IsSealed || memberType.IsValueType));
+                isSealed: memberType.IsSealed || memberType.IsValueType,
+                isAbstract: memberType.IsAbstract));
         }
 
         return builder.ToImmutable();
@@ -1444,6 +1620,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 context.ReportDiagnostic(Diagnostic.Create(ConstructorParameterNotCovered, Location.None, parameterName, ToDisplayName(message.FullyQualifiedName)));
             }
 
+            // Advisory only (AKKASG035): both [AkkaEnvelopePayload] and a field-level [AkkaUnion]
+            // were declared on this property; extraction dropped the union member set because
+            // envelope payload takes precedence (see ExtractMessageCore).
+            foreach (var field in message.Fields.Where(field => field.UnionSuppressedByEnvelope))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(UnionDeclarationIgnoredOnEnvelopePayload, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName)));
+            }
+
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Unsupported))
             {
                 context.ReportDiagnostic(Diagnostic.Create(UnsupportedFieldType, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
@@ -1512,7 +1696,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// </summary>
     private static bool ValidateClosedGenericProtocolCoverage(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> reachableMessages)
     {
-        if (serializer.ClosedGenericRegistrations.IsDefaultOrEmpty || serializer.ProtocolType == null)
+        if (serializer.ClosedGenericRegistrations.IsDefaultOrEmpty || serializer.ProtocolTypeFullName.Length == 0)
             return true;
 
         var reachableNames = new HashSet<string>(reachableMessages.Select(message => message.FullyQualifiedName), StringComparer.Ordinal);
@@ -1522,7 +1706,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             if (registration.Message == null)
                 continue;
 
-            if (registration.Message.Protocols.Any(protocol => SymbolEqualityComparer.Default.Equals(protocol, serializer.ProtocolType)))
+            if (registration.Message.Protocols.Contains(serializer.ProtocolTypeFullName))
                 continue;
 
             if (reachableNames.Contains(registration.Message.FullyQualifiedName))
@@ -1572,9 +1756,16 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 isValid = false;
             }
 
-            // Advisory only (Info): an unsealed member works, but an undeclared subtype of it fails
-            // at write time under exact-runtime-type dispatch -- worth surfacing, not worth failing.
-            if (!member.IsSealed)
+            // Advisory tier for member types whose exact-runtime-type dispatch is compromised:
+            //  - abstract member (AKKASG036, Warning): dispatch can NEVER select it -- an abstract
+            //    type is never a runtime type, so its branch is dead code;
+            //  - merely unsealed member (AKKASG025, Info): works, but an undeclared subtype of it
+            //    fails at write time -- worth surfacing, not worth failing.
+            // An abstract member fires AKKASG036 ONLY: it is definitionally unsealed, and stacking
+            // the weaker AKKASG025 on top of it would be noise.
+            if (member.IsAbstract)
+                context.ReportDiagnostic(Diagnostic.Create(UnionMemberAbstract, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
+            else if (!member.IsSealed)
                 context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotSealed, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
 
             if (string.IsNullOrWhiteSpace(memberMessage.Manifest))
@@ -3187,6 +3378,28 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             : fullyQualifiedName;
     }
 
+    /// <summary>
+    /// The fully-qualified display names of every interface (direct and transitive) implemented by
+    /// <paramref name="symbol"/>, in <see cref="ITypeSymbol.AllInterfaces"/> order. These are the
+    /// cached, symbol-free stand-in for the former <c>ImmutableArray&lt;INamedTypeSymbol&gt;</c>
+    /// protocol list: within one compilation a fully-qualified name identifies exactly one type, so
+    /// ordinal comparison against <see cref="SerializerInfo.ProtocolTypeFullName"/> (produced by the
+    /// same <see cref="SymbolDisplayFormat.FullyQualifiedFormat"/>) is equivalent to the former
+    /// <see cref="SymbolEqualityComparer.Default"/> matching.
+    /// </summary>
+    private static ImmutableArray<string> GetProtocolNames(INamedTypeSymbol symbol)
+    {
+        var interfaces = symbol.AllInterfaces;
+        if (interfaces.IsDefaultOrEmpty)
+            return ImmutableArray<string>.Empty;
+
+        var builder = ImmutableArray.CreateBuilder<string>(interfaces.Length);
+        foreach (var implemented in interfaces)
+            builder.Add(implemented.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+
+        return builder.MoveToImmutable();
+    }
+
     private static string GetFullyQualifiedTypeName(INamedTypeSymbol symbol)
     {
         var parts = new Stack<string>();
@@ -3250,7 +3463,62 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
-    private sealed class SerializerInfo
+    // ---------------------------------------------------------------------------------------------
+    // Cached pipeline models.
+    //
+    // Every type below flows through cached incremental nodes (the ForAttributeWithMetadataName
+    // transforms and their Collect()ed results), so each one must be (a) SYMBOL-FREE -- an ISymbol
+    // never compares equal across compilations, so retaining one silently defeats caching for the
+    // whole downstream pipeline -- and (b) VALUE-EQUATABLE, because the incremental engine decides
+    // "unchanged" via EqualityComparer<T>.Default. ImmutableArray<T> fields get explicit sequence
+    // comparison in each Equals: the struct's own Equals compares the underlying array REFERENCE.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Structural-equality helpers shared by the cached pipeline models below.
+    /// </summary>
+    private static class ValueEquality
+    {
+        public static bool SequenceEquals<T>(ImmutableArray<T> left, ImmutableArray<T> right)
+        {
+            if (left.IsDefault || right.IsDefault)
+                return left.IsDefault && right.IsDefault;
+
+            if (left.Length != right.Length)
+                return false;
+
+            for (var i = 0; i < left.Length; i++)
+            {
+                if (!EqualityComparer<T>.Default.Equals(left[i], right[i]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        public const int Seed = 17;
+
+        public static int Combine(int hash, int value) => unchecked(hash * 31 + value);
+
+        public static int Combine(int hash, bool value) => Combine(hash, value ? 1 : 0);
+
+        public static int Combine(int hash, string? value)
+            => Combine(hash, value == null ? 0 : StringComparer.Ordinal.GetHashCode(value));
+
+        public static int Combine<T>(int hash, ImmutableArray<T> values)
+        {
+            if (values.IsDefault)
+                return Combine(hash, -1);
+
+            hash = Combine(hash, values.Length);
+            foreach (var value in values)
+                hash = Combine(hash, value == null ? 0 : EqualityComparer<T>.Default.GetHashCode(value));
+
+            return hash;
+        }
+    }
+
+    private sealed class SerializerInfo : IEquatable<SerializerInfo>
     {
         public SerializerInfo(
             string ns,
@@ -3258,8 +3526,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             string fullyQualifiedName,
             string name,
             int serializerId,
-            INamedTypeSymbol? protocolType,
             string protocolTypeFullName,
+            bool protocolTypeIsInterface,
             Accessibility declaredAccessibility,
             ImmutableArray<FormatterInfo> formatters,
             ImmutableArray<ClosedGenericRegistrationInfo> closedGenericRegistrations,
@@ -3272,8 +3540,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             FullyQualifiedName = fullyQualifiedName;
             Name = name;
             SerializerId = serializerId;
-            ProtocolType = protocolType;
             ProtocolTypeFullName = protocolTypeFullName;
+            ProtocolTypeIsInterface = protocolTypeIsInterface;
             DeclaredAccessibility = declaredAccessibility;
             Formatters = formatters;
             ClosedGenericRegistrations = closedGenericRegistrations;
@@ -3287,8 +3555,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string FullyQualifiedName { get; }
         public string Name { get; }
         public int SerializerId { get; }
-        public INamedTypeSymbol? ProtocolType { get; }
+
+        /// <summary>
+        /// Fully-qualified display name of the <c>[AkkaSerializer&lt;TProtocol&gt;]</c> type
+        /// argument; empty when the type argument was not a named type. All protocol matching runs
+        /// on this string (ordinal) -- the symbol itself is never retained.
+        /// </summary>
         public string ProtocolTypeFullName { get; }
+
+        /// <summary>Whether the protocol type argument is an interface. See AKKASG033.</summary>
+        public bool ProtocolTypeIsInterface { get; }
+
         public Accessibility DeclaredAccessibility { get; }
         public ImmutableArray<FormatterInfo> Formatters { get; }
         public ImmutableArray<ClosedGenericRegistrationInfo> ClosedGenericRegistrations { get; }
@@ -3301,6 +3578,50 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         /// <summary>Whether the class derives (directly or transitively) from <c>Akka.Serialization.V2.AkkaSerializer</c>. See AKKASG032.</summary>
         public bool DerivesFromAkkaSerializerBase { get; }
+
+        public bool Equals(SerializerInfo? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return string.Equals(Namespace, other.Namespace, StringComparison.Ordinal)
+                && string.Equals(ClassName, other.ClassName, StringComparison.Ordinal)
+                && string.Equals(FullyQualifiedName, other.FullyQualifiedName, StringComparison.Ordinal)
+                && string.Equals(Name, other.Name, StringComparison.Ordinal)
+                && SerializerId == other.SerializerId
+                && string.Equals(ProtocolTypeFullName, other.ProtocolTypeFullName, StringComparison.Ordinal)
+                && ProtocolTypeIsInterface == other.ProtocolTypeIsInterface
+                && DeclaredAccessibility == other.DeclaredAccessibility
+                && IsPartial == other.IsPartial
+                && IsGeneric == other.IsGeneric
+                && DerivesFromAkkaSerializerBase == other.DerivesFromAkkaSerializerBase
+                && ValueEquality.SequenceEquals(Formatters, other.Formatters)
+                && ValueEquality.SequenceEquals(ClosedGenericRegistrations, other.ClosedGenericRegistrations);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as SerializerInfo);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, Namespace);
+            hash = ValueEquality.Combine(hash, ClassName);
+            hash = ValueEquality.Combine(hash, FullyQualifiedName);
+            hash = ValueEquality.Combine(hash, Name);
+            hash = ValueEquality.Combine(hash, SerializerId);
+            hash = ValueEquality.Combine(hash, ProtocolTypeFullName);
+            hash = ValueEquality.Combine(hash, ProtocolTypeIsInterface);
+            hash = ValueEquality.Combine(hash, (int)DeclaredAccessibility);
+            hash = ValueEquality.Combine(hash, IsPartial);
+            hash = ValueEquality.Combine(hash, IsGeneric);
+            hash = ValueEquality.Combine(hash, DerivesFromAkkaSerializerBase);
+            hash = ValueEquality.Combine(hash, Formatters);
+            hash = ValueEquality.Combine(hash, ClosedGenericRegistrations);
+            return hash;
+        }
     }
 
     private sealed class KnownTypes
@@ -3336,14 +3657,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         }
     }
 
-    private sealed class MessageInfo
+    private sealed class MessageInfo : IEquatable<MessageInfo>
     {
         public MessageInfo(
             string simpleName,
             string fullyQualifiedName,
             string manifest,
             ImmutableArray<FieldInfo> fields,
-            ImmutableArray<INamedTypeSymbol> protocols,
+            ImmutableArray<string> protocols,
             bool allowEmpty,
             ImmutableArray<InvalidFieldInfo> invalidFields,
             ConstructionPlan constructionPlan,
@@ -3366,7 +3687,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string FullyQualifiedName { get; }
         public string Manifest { get; }
         public ImmutableArray<FieldInfo> Fields { get; }
-        public ImmutableArray<INamedTypeSymbol> Protocols { get; }
+
+        /// <summary>
+        /// Fully-qualified display names of every implemented interface (see
+        /// <see cref="GetProtocolNames"/>) -- the symbol-free protocol list matched ordinally
+        /// against <see cref="SerializerInfo.ProtocolTypeFullName"/> for top-level dispatch.
+        /// </summary>
+        public ImmutableArray<string> Protocols { get; }
+
         public bool AllowEmpty { get; }
 
         /// <summary>
@@ -3406,13 +3734,51 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             return new MessageInfo(SimpleName, FullyQualifiedName, Manifest, fields, Protocols, AllowEmpty, InvalidFields, ConstructionPlan, IsGenericDefinition, DefinitionFullName);
         }
+
+        public bool Equals(MessageInfo? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return string.Equals(SimpleName, other.SimpleName, StringComparison.Ordinal)
+                && string.Equals(FullyQualifiedName, other.FullyQualifiedName, StringComparison.Ordinal)
+                && string.Equals(Manifest, other.Manifest, StringComparison.Ordinal)
+                && AllowEmpty == other.AllowEmpty
+                && IsGenericDefinition == other.IsGenericDefinition
+                && string.Equals(DefinitionFullName, other.DefinitionFullName, StringComparison.Ordinal)
+                && ConstructionPlan.Equals(other.ConstructionPlan)
+                && ValueEquality.SequenceEquals(Fields, other.Fields)
+                && ValueEquality.SequenceEquals(Protocols, other.Protocols)
+                && ValueEquality.SequenceEquals(InvalidFields, other.InvalidFields);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as MessageInfo);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, SimpleName);
+            hash = ValueEquality.Combine(hash, FullyQualifiedName);
+            hash = ValueEquality.Combine(hash, Manifest);
+            hash = ValueEquality.Combine(hash, AllowEmpty);
+            hash = ValueEquality.Combine(hash, IsGenericDefinition);
+            hash = ValueEquality.Combine(hash, DefinitionFullName);
+            hash = ValueEquality.Combine(hash, ConstructionPlan.GetHashCode());
+            hash = ValueEquality.Combine(hash, Fields);
+            hash = ValueEquality.Combine(hash, Protocols);
+            hash = ValueEquality.Combine(hash, InvalidFields);
+            return hash;
+        }
     }
 
     /// <summary>
     /// A single <c>[AkkaField]</c> property found unusable during extraction: static, or its getter
     /// is not accessible to the generated code. See AKKASG028.
     /// </summary>
-    private sealed class InvalidFieldInfo
+    private sealed class InvalidFieldInfo : IEquatable<InvalidFieldInfo>
     {
         public InvalidFieldInfo(string propertyName, string reason)
         {
@@ -3424,6 +3790,28 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         /// <summary>Free-text reason, e.g. "is static; ..." or "has no accessible getter".</summary>
         public string Reason { get; }
+
+        public bool Equals(InvalidFieldInfo? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return string.Equals(PropertyName, other.PropertyName, StringComparison.Ordinal)
+                && string.Equals(Reason, other.Reason, StringComparison.Ordinal);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as InvalidFieldInfo);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, PropertyName);
+            hash = ValueEquality.Combine(hash, Reason);
+            return hash;
+        }
     }
 
     /// <summary>
@@ -3434,7 +3822,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// (AKKASG026). <see cref="UncoveredDefaultedParameters"/> is advisory (AKKASG027) and can be
     /// non-empty even when <see cref="IsValid"/> is true.
     /// </summary>
-    private sealed class ConstructionPlan
+    private sealed class ConstructionPlan : IEquatable<ConstructionPlan>
     {
         public static readonly ConstructionPlan Empty = new(
             ImmutableArray<ConstructorArgumentPlan>.Empty,
@@ -3460,10 +3848,36 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         /// <summary>Human-readable reasons construction is impossible; empty when valid.</summary>
         public ImmutableArray<string> Errors { get; }
+
+        public bool Equals(ConstructionPlan? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return ValueEquality.SequenceEquals(Arguments, other.Arguments)
+                && ValueEquality.SequenceEquals(InitializerFieldNames, other.InitializerFieldNames)
+                && ValueEquality.SequenceEquals(UncoveredDefaultedParameters, other.UncoveredDefaultedParameters)
+                && ValueEquality.SequenceEquals(Errors, other.Errors);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as ConstructionPlan);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, Arguments);
+            hash = ValueEquality.Combine(hash, InitializerFieldNames);
+            hash = ValueEquality.Combine(hash, UncoveredDefaultedParameters);
+            hash = ValueEquality.Combine(hash, Errors);
+            return hash;
+        }
     }
 
     /// <summary>A single NAMED constructor argument: <see cref="ParameterName"/> supplied from the field named <see cref="FieldName"/>.</summary>
-    private readonly struct ConstructorArgumentPlan
+    private readonly struct ConstructorArgumentPlan : IEquatable<ConstructorArgumentPlan>
     {
         public ConstructorArgumentPlan(string parameterName, string fieldName)
         {
@@ -3473,6 +3887,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         public string ParameterName { get; }
         public string FieldName { get; }
+
+        public bool Equals(ConstructorArgumentPlan other)
+        {
+            return string.Equals(ParameterName, other.ParameterName, StringComparison.Ordinal)
+                && string.Equals(FieldName, other.FieldName, StringComparison.Ordinal);
+        }
+
+        public override bool Equals(object? obj) => obj is ConstructorArgumentPlan other && Equals(other);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, ParameterName);
+            hash = ValueEquality.Combine(hash, FieldName);
+            return hash;
+        }
     }
 
     /// <summary>
@@ -3480,7 +3910,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// when the target was invalid (not a type, non-generic, unbound, or its definition lacks
     /// <c>[AkkaSerializable]</c>) so AKKASG020 fires instead of the registration silently vanishing.
     /// </summary>
-    private sealed class ClosedGenericRegistrationInfo
+    private sealed class ClosedGenericRegistrationInfo : IEquatable<ClosedGenericRegistrationInfo>
     {
         public ClosedGenericRegistrationInfo(string targetDisplayName, MessageInfo? message)
         {
@@ -3490,11 +3920,33 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         public string TargetDisplayName { get; }
         public MessageInfo? Message { get; }
+
+        public bool Equals(ClosedGenericRegistrationInfo? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return string.Equals(TargetDisplayName, other.TargetDisplayName, StringComparison.Ordinal)
+                && Equals(Message, other.Message);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as ClosedGenericRegistrationInfo);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, TargetDisplayName);
+            hash = ValueEquality.Combine(hash, Message?.GetHashCode() ?? 0);
+            return hash;
+        }
     }
 
-    private sealed class FieldInfo
+    private sealed class FieldInfo : IEquatable<FieldInfo>
     {
-        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default)
+        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default, bool unionSuppressedByEnvelope = false)
         {
             Index = index;
             Name = name;
@@ -3503,6 +3955,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             IsNullable = isNullable;
             Formatter = formatter;
             UnionMembers = unionMembers.IsDefault ? ImmutableArray<UnionMemberInfo>.Empty : unionMembers;
+            UnionSuppressedByEnvelope = unionSuppressedByEnvelope;
         }
 
         public int Index { get; }
@@ -3515,13 +3968,54 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         /// <summary>Declared members for a <see cref="FieldKind.Union"/> field; empty otherwise.</summary>
         public ImmutableArray<UnionMemberInfo> UnionMembers { get; }
 
+        /// <summary>
+        /// True when the property carried BOTH [AkkaEnvelopePayload] and a field-level [AkkaUnion]:
+        /// extraction dropped the union member set because envelope payload takes precedence.
+        /// Advisory AKKASG035 fires on it.
+        /// </summary>
+        public bool UnionSuppressedByEnvelope { get; }
+
         public FieldInfo WithFormatter(TypeMapping mapping, FormatterInfo formatter)
         {
-            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers);
+            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers, UnionSuppressedByEnvelope);
+        }
+
+        public bool Equals(FieldInfo? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return Index == other.Index
+                && string.Equals(Name, other.Name, StringComparison.Ordinal)
+                && string.Equals(TypeFullName, other.TypeFullName, StringComparison.Ordinal)
+                && Mapping.Equals(other.Mapping)
+                && IsNullable == other.IsNullable
+                && UnionSuppressedByEnvelope == other.UnionSuppressedByEnvelope
+                && Equals(Formatter, other.Formatter)
+                && ValueEquality.SequenceEquals(UnionMembers, other.UnionMembers);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as FieldInfo);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, Index);
+            hash = ValueEquality.Combine(hash, Name);
+            hash = ValueEquality.Combine(hash, TypeFullName);
+            hash = ValueEquality.Combine(hash, Mapping.GetHashCode());
+            hash = ValueEquality.Combine(hash, IsNullable);
+            hash = ValueEquality.Combine(hash, UnionSuppressedByEnvelope);
+            hash = ValueEquality.Combine(hash, Formatter?.GetHashCode() ?? 0);
+            hash = ValueEquality.Combine(hash, UnionMembers);
+            return hash;
         }
     }
 
-    private readonly struct TypeMapping
+    private readonly struct TypeMapping : IEquatable<TypeMapping>
     {
         public TypeMapping(
             FieldKind kind,
@@ -3588,6 +4082,35 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         public TypeMapping AsCollectionElement(string declaredTypeName, bool isNullable)
             => new(Kind, TypeFullName, IsValueType, declaredTypeName, isNullable, TypeArguments, EnumUnderlyingTypeName);
+
+        // Explicit IEquatable implementation: the compiler-provided struct equality would compare
+        // the TypeArguments ImmutableArray by underlying-array REFERENCE, breaking value equality
+        // for every collection mapping (and with it, incremental caching of any model carrying one).
+        public bool Equals(TypeMapping other)
+        {
+            return Kind == other.Kind
+                && string.Equals(TypeFullName, other.TypeFullName, StringComparison.Ordinal)
+                && IsValueType == other.IsValueType
+                && string.Equals(DeclaredTypeName, other.DeclaredTypeName, StringComparison.Ordinal)
+                && IsNullable == other.IsNullable
+                && string.Equals(EnumUnderlyingTypeName, other.EnumUnderlyingTypeName, StringComparison.Ordinal)
+                && ValueEquality.SequenceEquals(TypeArguments, other.TypeArguments);
+        }
+
+        public override bool Equals(object? obj) => obj is TypeMapping other && Equals(other);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, (int)Kind);
+            hash = ValueEquality.Combine(hash, TypeFullName);
+            hash = ValueEquality.Combine(hash, IsValueType);
+            hash = ValueEquality.Combine(hash, DeclaredTypeName);
+            hash = ValueEquality.Combine(hash, IsNullable);
+            hash = ValueEquality.Combine(hash, EnumUnderlyingTypeName);
+            hash = ValueEquality.Combine(hash, TypeArguments);
+            return hash;
+        }
     }
 
     /// <summary>
@@ -3596,7 +4119,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// strings/bools/enums (no <see cref="ISymbol"/> references) so it stays cheap to hold across
     /// incremental generator passes.
     /// </summary>
-    private sealed class FormatterInfo
+    private sealed class FormatterInfo : IEquatable<FormatterInfo>
     {
         public FormatterInfo(string targetTypeFullName, bool isTargetValueType, string formatterTypeFullName, bool isAbstract, FormatterCtorKind ctorKind, bool isTargetSupported)
         {
@@ -3620,6 +4143,36 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public bool IsAbstract { get; }
         public FormatterCtorKind CtorKind { get; }
         public bool IsTargetSupported { get; }
+
+        public bool Equals(FormatterInfo? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return string.Equals(TargetTypeFullName, other.TargetTypeFullName, StringComparison.Ordinal)
+                && IsTargetValueType == other.IsTargetValueType
+                && string.Equals(FormatterTypeFullName, other.FormatterTypeFullName, StringComparison.Ordinal)
+                && IsAbstract == other.IsAbstract
+                && CtorKind == other.CtorKind
+                && IsTargetSupported == other.IsTargetSupported;
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as FormatterInfo);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, TargetTypeFullName);
+            hash = ValueEquality.Combine(hash, IsTargetValueType);
+            hash = ValueEquality.Combine(hash, FormatterTypeFullName);
+            hash = ValueEquality.Combine(hash, IsAbstract);
+            hash = ValueEquality.Combine(hash, (int)CtorKind);
+            hash = ValueEquality.Combine(hash, IsTargetSupported);
+            return hash;
+        }
     }
 
     private enum FormatterCtorKind
@@ -3663,15 +4216,16 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// extraction time; facts requiring the whole-compilation message set (serializability,
     /// manifests) are resolved later against the serializer's message dictionary.
     /// </summary>
-    private sealed class UnionMemberInfo
+    private sealed class UnionMemberInfo : IEquatable<UnionMemberInfo>
     {
-        public UnionMemberInfo(string typeFullName, bool isValueType, bool isAssignable, bool isSupported, bool isSealed)
+        public UnionMemberInfo(string typeFullName, bool isValueType, bool isAssignable, bool isSupported, bool isSealed, bool isAbstract)
         {
             TypeFullName = typeFullName;
             IsValueType = isValueType;
             IsAssignable = isAssignable;
             IsSupported = isSupported;
             IsSealed = isSealed;
+            IsAbstract = isAbstract;
         }
 
         /// <summary>Message-dictionary key for the member type (arity-aware for generics).</summary>
@@ -3685,7 +4239,44 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         /// <summary>False when the attribute argument was null, not a type, or an unbound generic.</summary>
         public bool IsSupported { get; }
 
-        /// <summary>Whether undeclared subtypes are impossible (sealed class, struct). Advisory AKKASG025 fires otherwise.</summary>
+        /// <summary>Whether undeclared subtypes are impossible (sealed class, struct). Advisory AKKASG025 fires otherwise -- unless the member is abstract, which escalates to AKKASG036.</summary>
         public bool IsSealed { get; }
+
+        /// <summary>
+        /// Whether the member type is abstract. Exact-runtime-type write dispatch can never select
+        /// an abstract member (an abstract type is never a runtime type), so its dispatch branch is
+        /// dead code. Advisory AKKASG036 (Warning) fires on it instead of AKKASG025.
+        /// </summary>
+        public bool IsAbstract { get; }
+
+        public bool Equals(UnionMemberInfo? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return string.Equals(TypeFullName, other.TypeFullName, StringComparison.Ordinal)
+                && IsValueType == other.IsValueType
+                && IsAssignable == other.IsAssignable
+                && IsSupported == other.IsSupported
+                && IsSealed == other.IsSealed
+                && IsAbstract == other.IsAbstract;
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as UnionMemberInfo);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, TypeFullName);
+            hash = ValueEquality.Combine(hash, IsValueType);
+            hash = ValueEquality.Combine(hash, IsAssignable);
+            hash = ValueEquality.Combine(hash, IsSupported);
+            hash = ValueEquality.Combine(hash, IsSealed);
+            hash = ValueEquality.Combine(hash, IsAbstract);
+            return hash;
+        }
     }
 }
