@@ -121,6 +121,30 @@ namespace Akka.Remote.Tests.MultiNode
 
             await RunOnAsync(async () =>
             {
+                await TestConductor.PassThroughAsync(_config.Second, _config.First, ThrottleTransportAdapter.Direction.Both);
+            }, _config.First);
+
+            await RunOnAsync(async () =>
+            {
+                var firstEcho = await NodeAsync(_config.First) / "user" / "echo";
+                var sel = tempSys.ActorSelection(firstEcho);
+                var probe = CreateTestProbe(tempSys);
+                await probe.WithinAsync(TimeSpan.FromSeconds(15), async () =>
+                {
+                    await probe.AwaitAssertAsync(async () =>
+                    {
+                        sel.Tell(new Identify("id-echo-again"), probe.Ref);
+                        var identity = await probe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(3));
+                        if (identity.Subject is null)
+                            throw new InvalidOperationException("echo on `first` not reachable yet");
+                    });
+                });
+            }, _config.Second);
+
+            await EnterBarrierAsync("ready-again");
+
+            await RunOnAsync(async () =>
+            {
                 var p = CreateTestProbe(tempSys);
                 tempSys.ActorOf(EchoProps(p.Ref), "echo");
                 p.Send(tempSys.ActorOf(Props.Create(() => new Parent()), "parent"),
@@ -148,6 +172,13 @@ namespace Akka.Remote.Tests.MultiNode
             await EnterBarrierAsync("the-end");
 
             await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+
+            await EnterBarrierAsync("stopping");
+
+            await RunOnAsync(async () =>
+            {
+                await tempSys.Terminate().WaitAsync(TimeSpan.FromSeconds(10));
+            }, _config.Second);
         }
 
         private Props EchoProps(IActorRef target)
