@@ -121,7 +121,7 @@ public sealed class ManifestContractSpec : IAsyncLifetime
         });
     }
 
-    private void AssertForEachMessage(Action<global::Akka.Serialization.SerializerV2, object> assertion)
+    private void AssertForEachMessage(Action<SerializerV2, object> assertion)
     {
         var extendedSystem = (ExtendedActorSystem)_system;
         AssertForEachSerializer((createSerializer, messages) =>
@@ -133,7 +133,7 @@ public sealed class ManifestContractSpec : IAsyncLifetime
     }
 
     private static void AssertForEachSerializer(
-        Action<Func<ExtendedActorSystem, global::Akka.Serialization.SerializerV2>, IEnumerable<object>> assertion)
+        Action<Func<ExtendedActorSystem, SerializerV2>, IEnumerable<object>> assertion)
     {
         assertion(system => new GeneratedTestSerializer(system), GeneratedTestProtocolMessages());
         assertion(system => new ControlMirrorSerializer(system), ControlMirrorProtocolMessages());

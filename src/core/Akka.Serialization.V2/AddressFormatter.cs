@@ -19,8 +19,8 @@ namespace Akka.Serialization.V2;
 /// The wire format is byte-identical to Akka.Remote's hand-rolled Artery control-message
 /// serializer (<c>ArteryControlMessageSerializer.WriteAddress</c> / <c>ReadAddress</c> /
 /// <c>SizeOfAddress</c>): a 4-element array of <c>[Protocol, System, Host-or-nil, Port-or-nil]</c>.
-/// Registering this formatter via <see cref="AkkaSerializerFormatterAttribute"/> lets
-/// <see cref="Address"/> fields be used on any generated serializer, including ones that must
+/// Registering this formatter via <c>[AkkaSerializerFormatter&lt;Address, AddressFormatter&gt;]</c>
+/// lets <see cref="Address"/> fields be used on any generated serializer, including ones that must
 /// interoperate with that hand-rolled format.
 /// </remarks>
 public sealed class AddressFormatter : IAkkaMessagePackFormatter<Address>

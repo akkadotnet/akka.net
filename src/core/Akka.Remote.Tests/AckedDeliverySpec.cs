@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Akka.TestKit;
 using Akka.Util;
@@ -396,7 +397,7 @@ namespace Akka.Remote.Tests
             };
 
             //Dropping phase
-            global::System.Diagnostics.Debug.WriteLine("Starting unreliable delivery for {0} messages, with delivery probably P = {1}", msgCount, deliveryProbability);
+            Debug.WriteLine("Starting unreliable delivery for {0} messages, with delivery probably P = {1}", msgCount, deliveryProbability);
             var nextSteps = msgCount*2;
             while (nextSteps > 0)
             {
@@ -405,8 +406,8 @@ namespace Akka.Remote.Tests
                 receiverStep(deliveryProbability);
                 nextSteps--;
             }
-            global::System.Diagnostics.Debug.WriteLine("Successfully delivered {0} messages from {1}", received.Count, msgCount);
-            global::System.Diagnostics.Debug.WriteLine("Entering reliable phase");
+            Debug.WriteLine("Successfully delivered {0} messages from {1}", received.Count, msgCount);
+            Debug.WriteLine("Entering reliable phase");
 
             //Finalizing phase
             for (var i = 1; i <= msgCount; i++)
@@ -417,13 +418,13 @@ namespace Akka.Remote.Tests
 
             if (!received.SequenceEqual(referenceList))
             {
-                global::System.Diagnostics.Debug.WriteLine(string.Join(Environment.NewLine, log));
-                global::System.Diagnostics.Debug.WriteLine("Received: ");
-                global::System.Diagnostics.Debug.WriteLine(string.Join(Environment.NewLine, received.Select(x => x.ToString())));
+                Debug.WriteLine(string.Join(Environment.NewLine, log));
+                Debug.WriteLine("Received: ");
+                Debug.WriteLine(string.Join(Environment.NewLine, received.Select(x => x.ToString())));
                 Assert.Fail("Not all messages were received");
             }
 
-            global::System.Diagnostics.Debug.WriteLine("All messages have been successfully delivered");
+            Debug.WriteLine("All messages have been successfully delivered");
         }
 
         #endregion

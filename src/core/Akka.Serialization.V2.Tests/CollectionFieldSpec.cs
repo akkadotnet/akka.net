@@ -466,8 +466,8 @@ public interface ICollectionProtocol
 {
 }
 
-[AkkaSerializer(Name = "collection-test", SerializerId = 120105)]
-public sealed partial class CollectionTestSerializer : MessagePackSerializer<ICollectionProtocol>
+[AkkaSerializer<ICollectionProtocol>("collection-test", 120105)]
+public sealed partial class CollectionTestSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }

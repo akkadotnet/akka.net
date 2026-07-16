@@ -92,7 +92,7 @@ public sealed class ActorPathFormatter : IAkkaMessagePackFormatter<ActorPath>
 
     private string GetSerializationFormat(ActorPath value)
     {
-        var info = global::Akka.Serialization.Serialization.CurrentTransportInformation;
+        var info = Serialization.CurrentTransportInformation;
         if (info is not null)
             return value.ToSerializationFormatWithAddress(info.Address);
 
