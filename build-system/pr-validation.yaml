@@ -143,39 +143,17 @@ jobs:
   # still runs and reports its own pass/fail per PR (visible in the Checks
   # list), but it can never fail PR validation as a whole.
   #
-  # Known/accepted noise: Artery has no failure-injection test-mode yet
-  # (no equivalent to classic DotNetty's trttl/gremlin transport adapters),
-  # so any spec that calls TestConductor Throttle/Blackhole/PassThrough will
-  # fail fast on the RequireTestConductorTransport() check in
-  # src/core/Akka.Remote.TestKit/Conductor.cs instead of exercising real
-  # behavior. The incrementalist config (.incrementalist/mutliNodeOnly.json)
-  # is the sanctioned mechanism for dictating which test PROJECTS run in CI,
-  # so if this lane ever needs a different project set than the classic job,
-  # the clean lever is a dedicated incrementalist config file for it. That
-  # doesn't cover the specs below, though: they are individual test classes
-  # inside projects full of otherwise Artery-relevant specs, and per-class
-  # exclusion would mean touching every one of the spec files (via the
-  # MultiNodeFact Skip/SkipWhen mechanism). Until an Artery test-mode
-  # transport lands, treat failures from this stage as expected noise on top
-  # of the specs listed here (~29-30 known offenders, grouped by project):
-  #   Akka.Cluster.Sharding.Tests.MultiNode: ClusterShardCoordinatorDowning2Spec,
-  #     ClusterShardCoordinatorDowningSpec, ClusterShardingFailureSpec,
-  #     ClusterShardingSingleShardPerEntitySpec
-  #   Akka.Cluster.Tools.Tests.MultiNode: ClusterClientSpec,
-  #     ClusterSingletonManagerDownedSpec
-  #   Akka.DistributedData.Tests.MultiNode: JepsenInspiredInsertSpec,
-  #     ReplicatorChaosSpec, ReplicatorSpec
-  #   Akka.Cluster.Tests.MultiNode: AttemptSysMsgRedeliverySpec,
-  #     ClusterAccrualFailureDetectorSpec, InitialHeartbeatSpec,
-  #     MemberWeaklyUpSpec, RestartNode3Spec, ClusterRoundRobinSpec,
-  #     DownAllIndirectlyConnected5NodeSpec, DownAllUnstable5NodeSpec,
-  #     IndirectlyConnected3NodeSpec, IndirectlyConnected5NodeSpec,
-  #     LeaseMajority5NodeSpec, SplitBrainResolverDowningSpec, SplitBrainSpec,
-  #     StressSpec, SurviveNetworkInstabilitySpec, UnreachableNodeJoinsAgainSpec
-  #   Akka.Remote.Tests.MultiNode: AttemptSysMsgRedeliverySpec,
-  #     RemoteNodeRestartDeathWatchSpec, RemoteNodeShutdownAndComesBackSpec,
-  #     RemoteReDeploymentSpec (+ its Fast/Medium/Slow MultiNet variants),
-  #     TestConductorSpec
+  # Failure injection runs for real in this lane: AKKA_MNTR_TRANSPORT=artery
+  # also enables akka.remote.artery.advanced.test-mode (see
+  # src/core/Akka.Remote.TestKit/MultiNodeSpec.cs), which supports
+  # TestConductor Blackhole/PassThrough. Rate throttles are not supported by
+  # test-mode, so throttle-using specs (e.g. TestConductorSpec) stay pinned to
+  # classic remoting and fail fast on the RequireTestConductorTransport()
+  # check in src/core/Akka.Remote.TestKit/Conductor.cs. Treat everything else
+  # failing in this lane as a real Artery finding. If this lane ever needs a
+  # different test-project set than the classic job, the clean lever is a
+  # dedicated incrementalist config file (.incrementalist/mutliNodeOnly.json
+  # is the sanctioned mechanism for dictating which test projects run in CI).
   - template: azure-pipeline.mntr-template.yaml
     parameters:
       name: "net_mntr_windows_artery"
