@@ -266,7 +266,7 @@ namespace Akka.Remote.Tests.Artery
 
             Akka.Serialization.Serialization.WithTransport((ExtendedActorSystem)_system, () =>
             {
-                _serializer.SizeHint(envelope).Should().Be(global::Akka.Serialization.SerializerV2.UnknownSize);
+                _serializer.SizeHint(envelope).Should().Be(Akka.Serialization.SerializerV2.UnknownSize);
                 return true;
             });
         }
