@@ -997,7 +997,7 @@ namespace Akka.Remote.Artery
         /// </summary>
         private void HandleControlOverflow(Address remoteAddress, Association association, object message)
         {
-            if (association.IsControlShutDown)
+            if (_isShutdown || association.IsControlShutDown)
             {
                 _log.Debug(
                     "Outbound control channel to [{0}] already closed during shutdown; dropping {1} to dead letters.",
