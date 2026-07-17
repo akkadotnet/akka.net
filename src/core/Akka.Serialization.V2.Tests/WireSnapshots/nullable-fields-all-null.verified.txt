@@ -1,0 +1,8 @@
+﻿case: nullable-fields-all-null
+message-type: OptionalMessage
+manifest: optional-v1
+serializer-id: 120101
+byte-count: 25
+
+0000  87 01 aa 6f 70 74 69 6f  6e 61 6c 2d 32 02 c0 03  |...optional-2...|
+0010  c0 04 c0 05 c0 06 c0 07  c0                       |.........|

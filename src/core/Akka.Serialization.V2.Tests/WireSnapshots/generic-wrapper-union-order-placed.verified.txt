@@ -1,0 +1,9 @@
+﻿case: generic-wrapper-union-order-placed
+message-type: EventWrapper<IOrderEvent>
+manifest: event-wrap-v1
+serializer-id: 120404
+byte-count: 41
+
+0000  82 01 a5 65 76 74 2d 31  02 82 01 af 6f 72 64 65  |...evt-1....orde|
+0010  72 2d 70 6c 61 63 65 64  2d 76 31 02 82 01 a8 6f  |r-placed-v1....o|
+0020  72 64 65 72 2d 31 30 02  02                       |rder-10..|

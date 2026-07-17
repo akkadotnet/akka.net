@@ -1,0 +1,9 @@
+﻿case: union-member-order-placed-class
+message-type: UnionEnvelope
+manifest: union-envelope-v1
+serializer-id: 120303
+byte-count: 40
+
+0000  82 01 a5 65 6e 76 2d 34  02 82 01 af 6f 72 64 65  |...env-4....orde|
+0010  72 2d 70 6c 61 63 65 64  2d 76 31 02 82 01 a7 6f  |r-placed-v1....o|
+0020  72 64 65 72 2d 34 02 07                           |rder-4..|

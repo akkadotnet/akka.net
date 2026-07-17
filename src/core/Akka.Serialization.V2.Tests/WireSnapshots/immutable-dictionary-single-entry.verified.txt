@@ -1,0 +1,7 @@
+﻿case: immutable-dictionary-single-entry
+message-type: ImmutableDictionaryMessage
+manifest: imm-dict-v1
+serializer-id: 120106
+byte-count: 7
+
+0000  81 01 81 a2 68 69 05                              |....hi.|

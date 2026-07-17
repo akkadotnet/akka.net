@@ -1,0 +1,7 @@
+﻿case: readonly-collection-populated
+message-type: ReadOnlyCollectionMessage
+manifest: imm-readonly-collection-v1
+serializer-id: 120106
+byte-count: 6
+
+0000  81 01 93 01 02 03                                 |......|

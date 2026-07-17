@@ -1,0 +1,7 @@
+﻿case: readonly-dictionary-populated
+message-type: ReadOnlyDictionaryMessage
+manifest: imm-readonly-dict-v1
+serializer-id: 120106
+byte-count: 9
+
+0000  81 01 82 a1 61 01 a1 62  02                       |....a..b.|
