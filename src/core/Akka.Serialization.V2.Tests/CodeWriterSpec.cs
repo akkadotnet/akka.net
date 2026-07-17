@@ -20,7 +20,8 @@ namespace Akka.Serialization.V2.Tests;
 /// </summary>
 public sealed class CodeWriterSpec
 {
-    private static readonly string NL = Environment.NewLine;
+    // CodeWriter emits LF unconditionally (platform-invariant output; golden baselines are LF-pinned).
+    private const string NL = "\n";
 
     private static (CodeWriter Writer, StringBuilder Sb) Create(int indentLevel = 0)
     {

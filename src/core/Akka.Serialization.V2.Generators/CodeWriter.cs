@@ -92,7 +92,7 @@ internal sealed class CodeWriter
     /// <summary>Ends the current line.</summary>
     public CodeWriter NewLine()
     {
-        _sb.AppendLine();
+        _sb.Append('\n');
         _atLineStart = true;
         return this;
     }
@@ -103,7 +103,7 @@ internal sealed class CodeWriter
         if (!_atLineStart)
             throw new InvalidOperationException("BlankLine() is only legal at the start of a line; end the current line first.");
 
-        _sb.AppendLine();
+        _sb.Append('\n');
         return this;
     }
 
