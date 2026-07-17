@@ -47,6 +47,8 @@
     <MsExtVersion>[6.0.*,)</MsExtVersion>
     <MsExtTestVersion>10.0.9</MsExtTestVersion>
     <AkkaAnalyzerVersion>0.3.3</AkkaAnalyzerVersion>
+    <VerifyXunitV3Version>31.24.2</VerifyXunitV3Version>
+    <VerifyDiffPlexVersion>3.0.0</VerifyDiffPlexVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>

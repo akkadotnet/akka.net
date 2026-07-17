@@ -1,0 +1,8 @@
+﻿case: collection-dictionary-non-string-key
+message-type: IntStringDictMessage
+manifest: coll-int-string-dict-v1
+serializer-id: 120105
+byte-count: 20
+
+0000  81 01 83 01 a3 6f 6e 65  02 a3 74 77 6f 03 a5 74  |.....one..two..t|
+0010  68 72 65 65                                       |hree|

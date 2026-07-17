@@ -1,0 +1,7 @@
+﻿case: sparse-field-indices
+message-type: SparseFieldMessage
+manifest: sparse-v1
+serializer-id: 120101
+byte-count: 10
+
+0000  82 02 11 0a a5 61 6c 70  68 61                    |.....alpha|

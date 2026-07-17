@@ -1,0 +1,10 @@
+﻿case: union-member-order-cancelled-nested-only
+message-type: UnionEnvelope
+manifest: union-envelope-v1
+serializer-id: 120303
+byte-count: 59
+
+0000  82 01 a5 65 6e 76 2d 32  02 82 01 b2 6f 72 64 65  |...env-2....orde|
+0010  72 2d 63 61 6e 63 65 6c  6c 65 64 2d 76 31 02 82  |r-cancelled-v1..|
+0020  01 a7 6f 72 64 65 72 2d  32 02 b0 63 75 73 74 6f  |..order-2..custo|
+0030  6d 65 72 20 72 65 71 75  65 73 74                 |mer request|

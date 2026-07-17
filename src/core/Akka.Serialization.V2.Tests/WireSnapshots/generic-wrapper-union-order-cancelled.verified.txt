@@ -1,0 +1,9 @@
+﻿case: generic-wrapper-union-order-cancelled
+message-type: EventWrapper<IOrderEvent>
+manifest: event-wrap-v1
+serializer-id: 120404
+byte-count: 48
+
+0000  82 01 a5 65 76 74 2d 32  02 82 01 b2 6f 72 64 65  |...evt-2....orde|
+0010  72 2d 63 61 6e 63 65 6c  6c 65 64 2d 76 31 02 82  |r-cancelled-v1..|
+0020  01 a8 6f 72 64 65 72 2d  31 31 02 a4 6c 61 74 65  |..order-11..late|
