@@ -1,0 +1,7 @@
+﻿case: fieldless-message-allow-empty
+message-type: GapHeartbeat
+manifest: gap-heartbeat-v1
+serializer-id: 120801
+byte-count: 1
+
+0000  80                                                |.|

@@ -832,8 +832,14 @@ namespace Akka.Remote.Artery
         /// </summary>
         public void CompleteControlOutbound()
         {
-            _controlChannel.Writer.TryComplete();
+            // Latch BEFORE completing the writer: BoundedChannel guards both TryComplete and
+            // TryWrite under the same monitor, so any thread that observes TryWrite == false
+            // (writer completed) is guaranteed to observe _controlShutDown == true. In the old
+            // order a control send landing between TryComplete and the latch write read the
+            // latch as false and took HandleControlOverflow's ERROR + Quarantine branch during
+            // graceful shutdown.
             _controlShutDown = true;
+            _controlChannel.Writer.TryComplete();
         }
 
         /// <summary>

@@ -1,0 +1,7 @@
+﻿case: immutable-array-populated
+message-type: ImmutableArrayMessage
+manifest: imm-array-v1
+serializer-id: 120106
+byte-count: 6
+
+0000  81 01 93 0a 14 1e                                 |......|

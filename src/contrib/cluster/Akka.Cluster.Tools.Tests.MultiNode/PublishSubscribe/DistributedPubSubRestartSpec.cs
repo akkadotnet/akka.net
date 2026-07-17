@@ -5,6 +5,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.PublishSubscribe;
@@ -15,7 +17,6 @@ using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using FluentAssertions;
 using FluentAssertions.Extensions;
-using System.Threading.Tasks;
 
 namespace Akka.Cluster.Tools.Tests.MultiNode.PublishSubscribe;
 
@@ -37,6 +38,19 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
                 akka.cluster.pub-sub.gossip-interval = 500ms
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off
+
+                # De-flake: while third's dying system is still unbinding its port, first's
+                # associate attempt can connect at the TCP level but never complete the Akka
+                # protocol handshake. With dot-netty enabled, AkkaProtocolSettings.HandshakeTimeout
+                # is read from connection-timeout (default 15s), so one such poisoned attempt plus
+                # the default 5s retry gate burned ~20s of the identify window on loaded CI agents.
+                # Fail fast and retry fast so multiple association cycles fit into the window.
+                akka.remote.dot-netty.tcp.connection-timeout = 5s
+                akka.remote.retry-gate-closed-for = 1s # fast restart
+
+                # second waits at the ""end"" barrier for the full identify window on first,
+                # which can exceed the default 30s barrier timeout
+                akka.testconductor.barrier-timeout = 60s
             ").WithFallback(DistributedPubSub.DefaultConfig());
 
         TestTransport = true;
@@ -88,7 +102,11 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
     public async Task A_Cluster_with_DistributedPubSub_must_handle_restart_of_nodes_with_same_address()
     {
-        await WithinAsync(30.Seconds(), async () =>
+        // Sized to hold the pre-shutdown steps (~10s worst case), the 45s identify window
+        // on first (which WithinAsync clamps to whatever remains here), and the post-barrier
+        // delta checks. The JVM spec's 30s proved too tight on loaded Windows agents once a
+        // single poisoned association cycle was in play.
+        await WithinAsync(60.Seconds(), async () =>
         {
             Mediator.Tell(new Subscribe("topic1", TestActor));
             await ExpectMsgAsync<SubscribeAck>();
@@ -125,12 +143,20 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                 var thirdAddress = (await NodeAsync(_config.Third)).Address;
                 await TestConductor.Shutdown(_config.Third).WaitAsync(30.Seconds());
 
-                // Use a probe for Identify to avoid polluting TestActor mailbox with stray responses
-                var identifyProbe = CreateTestProbe();
-                await WithinAsync(25.Seconds(), async () =>
+                // Must outlast third's full serial restart (old system termination, port rebind,
+                // self-join, SubscribeAck, 5s gossip-isolation check) plus at least two failed
+                // association cycles (connection-timeout + retry gate) against the dying endpoint.
+                await WithinAsync(45.Seconds(), async () =>
                 {
                     await AwaitAssertAsync(async () =>
                     {
+                        // JVM parity (DistributedPubSubRestartSpec.scala): a FRESH probe per attempt.
+                        // Reusing one probe across attempts livelocks: association establishment
+                        // flushes the Identify messages buffered by the EndpointWriter as one burst
+                        // of ActorIdentity(null) replies, and from then on every attempt sends one
+                        // new Identify but reads one STALE null reply - the backlog never drains,
+                        // so the loop fails fast forever even after /user/shutdown exists.
+                        var identifyProbe = CreateTestProbe();
                         Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null), identifyProbe.Ref);
                         (await identifyProbe.ExpectMsgAsync<ActorIdentity>(2.Seconds())).Subject.Should().NotBeNull();
                     });
@@ -191,6 +217,15 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
     }
 
     protected override int InitialParticipantsValueFactory => Roles.Count;
+
+    /// <summary>
+    /// TestKitBase.Shutdown force-kills the ActorSystem after 5s by default ("Failed to stop
+    /// [...] within [00:00:05]" in CI logs). On first, teardown races the draining of the
+    /// gated / half-open association left over from third's restart, so give remoting time
+    /// to flush and close cleanly instead of hard-stopping the guardian.
+    /// </summary>
+    protected override void Shutdown(ActorSystem system, TimeSpan? duration = null, bool verifySystemShutdown = false)
+        => base.Shutdown(system, duration ?? TimeSpan.FromSeconds(30), verifySystemShutdown);
 
     private IActorRef CreateMediator()
     {
