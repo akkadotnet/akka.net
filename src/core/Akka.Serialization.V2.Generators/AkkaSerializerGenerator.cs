@@ -2023,7 +2023,34 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         if (IsCollectionKind(field.Mapping.Kind))
         {
             var fieldSize = alloc.Next("size");
-            EmitSizeCollectionBody(sb, field.Mapping, value, fieldSize, "            ", alloc);
+
+            // Only reachable for a Nullable<T>-wrapped VALUE-typed collection field (today: only
+            // ImmutableArray<T>? -- every other collection kind is a reference type, so its
+            // "nullable" comes from reference-nullability, not Nullable<T>, and IsNullableValueField
+            // is always false for it). EmitSizeCollectionBody itself accesses members like .IsDefault
+            // and .Length on `value` directly, which do not exist on the Nullable<T> WRAPPER -- so the
+            // Nullable<T> layer must be peeled off (mirroring GenerateWriteField's identical
+            // "if (value is null) ... else ...value.Value..." unwrap) before EmitSizeCollectionBody
+            // ever sees the value.
+            if (IsNullableValueField(field))
+            {
+                var unwrappedSize = alloc.Next("size");
+                sb.Append("            int ").Append(fieldSize).AppendLine(";");
+                sb.Append("            if (").Append(value).AppendLine(" is null)");
+                sb.AppendLine("            {");
+                sb.Append("                ").Append(fieldSize).AppendLine(" = SizeOfNil();");
+                sb.AppendLine("            }");
+                sb.AppendLine("            else");
+                sb.AppendLine("            {");
+                EmitSizeCollectionBody(sb, field.Mapping, value + ".Value", unwrappedSize, "                ", alloc);
+                sb.Append("                ").Append(fieldSize).Append(" = ").Append(unwrappedSize).AppendLine(";");
+                sb.AppendLine("            }");
+            }
+            else
+            {
+                EmitSizeCollectionBody(sb, field.Mapping, value, fieldSize, "            ", alloc);
+            }
+
             sb.Append("            size += ").Append(fieldSize).AppendLine(";");
             return;
         }
@@ -2623,11 +2650,57 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Native collection emission (T[], List<T>, IReadOnlyList<T>, Dictionary<TKey, TValue>).
+    // Native collection emission: T[], List<T>, IReadOnlyList<T>, IReadOnlyCollection<T>,
+    // Dictionary<TKey,TValue>, IReadOnlyDictionary<TKey,TValue>, ImmutableArray<T>, ImmutableList<T>,
+    // ImmutableHashSet<T>, ImmutableDictionary<TKey,TValue>.
     //
     // Collections encode as MessagePack array/map framing wrapped around per-element encodings that
     // reuse the same scalar/object primitives as ordinary fields, and compose recursively so nested
-    // collections (List<List<int>>, Dictionary<string, List<Reading>>) work with no special cases.
+    // collections (List<List<int>>, Dictionary<string, List<Reading>>, ImmutableDictionary<string,
+    // List<int>>) work with no special cases. Every collection kind shares this SAME wire framing --
+    // an ImmutableList<int> field is byte-identical on the wire to the same data in a List<int> field
+    // (see CollectionFieldSpec.cs); only the in-memory construction on read differs per kind:
+    //   - T[]                                -> T[] (indexer-set, pre-sized)
+    //   - List<T>, IReadOnlyList<T>,
+    //     IReadOnlyCollection<T>             -> List<T> (Add, pre-sized capacity)
+    //   - Dictionary<K,V>,
+    //     IReadOnlyDictionary<K,V>           -> Dictionary<K,V> (indexer-set, pre-sized capacity)
+    //   - ImmutableArray<T>                  -> ImmutableArray.CreateBuilder<T>(capacity), then
+    //                                            Builder.MoveToImmutable() (zero-copy handoff; the
+    //                                            builder is pre-sized to the wire's element count, so
+    //                                            Count always equals Capacity when the loop finishes)
+    //   - ImmutableList<T>, ImmutableHashSet<T>,
+    //     ImmutableDictionary<K,V>           -> the type's own Builder (no capacity parameter -- these
+    //                                            are tree/trie-backed, not array-backed), then
+    //                                            Builder.ToImmutable()
+    // A duplicate key written into a Dictionary/IReadOnlyDictionary/ImmutableDictionary on read is
+    // last-write-wins (indexer-set), matching Dictionary<K,V>'s own semantics. A duplicate element
+    // written into an ImmutableHashSet on read is silently deduplicated (Builder.Add returns false
+    // for an already-present value; the return is ignored), matching a normal set's Add semantics.
+    // Set/map ITERATION ORDER on write is whatever GetEnumerator() yields for that runtime type --
+    // NOT guaranteed stable for ImmutableHashSet<T>/ImmutableDictionary<K,V> across instances built
+    // from the same logical content in a different order, so tests must not byte-compare a written
+    // multi-element set/dictionary; only its round-tripped VALUES are guaranteed (see
+    // CollectionFieldSpec.cs's ImmutableHashSet/ImmutableDictionary tests, which sort before
+    // comparing).
+    //
+    // ImmutableArray<T> is the one VALUE-typed (struct) collection kind (IsStructCollectionKind), so
+    // it cannot use "value is null" (CS0037: not convertible from a non-nullable value type) -- its
+    // null-ish state is default(ImmutableArray<T>).IsDefault, which is DISTINCT from
+    // ImmutableArray<T>.Empty (Length 0, IsDefault false). This generator maps that distinction onto
+    // the SAME nil-vs-empty wire framing every other collection kind already uses:
+    //   - write: value.IsDefault  -> MessagePack nil   (mirrors "value is null" for every other kind)
+    //   - write: value.Empty (or any non-default, zero-length array) -> array header 0
+    //   - read:  nil  -> default(ImmutableArray<T>)    (mirrors "target = null" for every other kind)
+    //   - read:  array header 0 (non-nil) -> a Builder(0).MoveToImmutable(), which is
+    //            ImmutableArray<T>.Empty (Length 0, IsDefault FALSE) -- distinct from the nil case
+    // This makes default(ImmutableArray<T>) round-trip losslessly as itself, exactly as null already
+    // round-trips for every reference collection kind, while a genuinely empty array stays
+    // distinguishable from both on the wire and after deserialization. Accessing .Length or
+    // enumerating a default ImmutableArray<T> throws NullReferenceException at runtime (verified
+    // against the in-box System.Collections.Immutable on net10.0), so EVERY code path touching an
+    // ImmutableArray<T> value (write, size) MUST check .IsDefault first -- never assume "not null"
+    // is enough, the way it is for a reference collection.
     // null encodes as MessagePack nil; empty encodes as a zero-length array/map header. The two are
     // distinct on the wire and round-trip as distinct values. This framing is permanent wire format --
     // see the encoding matrix in the PR body for the full table.
@@ -2641,16 +2714,25 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string Next(string hint) => "__" + hint + _counter++;
     }
 
-    private static string CollectionCountMember(FieldKind kind) => kind == FieldKind.Array ? "Length" : "Count";
+    // ImmutableArray<T> has no public Count (it is an explicit ICollection<T>/IReadOnlyCollection<T>
+    // implementation, inaccessible on the struct type directly) -- only Length, exactly like T[].
+    private static string CollectionCountMember(FieldKind kind) => kind is FieldKind.Array or FieldKind.ImmutableArray ? "Length" : "Count";
 
     /// <summary>
     /// Whether a value of this element mapping is stored as a reference in its strongly-typed collection
     /// slot. Reference elements are declared as nullable read temporaries and stored with the
     /// null-forgiving operator (a runtime no-op) so the generated code stays warning-clean under
     /// <c>#nullable enable</c> while still round-tripping a genuine null element.
+    /// <see cref="FieldKind.ImmutableArray"/> is deliberately excluded even though it is a collection
+    /// kind: it is a VALUE type element (see <see cref="IsStructCollectionKind"/>), so wrapping its read
+    /// temporary in <c>Nullable&lt;ImmutableArray&lt;T&gt;&gt;</c> and null-forgiving it back would not
+    /// even compile against a <c>List&lt;ImmutableArray&lt;T&gt;&gt;.Add(ImmutableArray&lt;T&gt;)</c> slot.
     /// </summary>
     private static bool ElementIsReference(TypeMapping mapping)
     {
+        if (IsStructCollectionKind(mapping.Kind))
+            return false;
+
         if (IsCollectionKind(mapping.Kind))
             return true;
 
@@ -2676,7 +2758,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static void EmitWriteCollectionBody(StringBuilder sb, TypeMapping mapping, string value, string indent, NameAlloc alloc)
     {
-        sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
+        var nullCheck = IsStructCollectionKind(mapping.Kind) ? value + ".IsDefault" : value + " is null";
+        sb.Append(indent).Append("if (").Append(nullCheck).AppendLine(")");
         sb.Append(indent).AppendLine("{");
         sb.Append(indent).AppendLine("    writer.WriteNil();");
         sb.Append(indent).AppendLine("}");
@@ -2685,7 +2768,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         var bodyIndent = indent + "    ";
         var loopIndent = bodyIndent + "    ";
-        if (mapping.Kind == FieldKind.Dictionary)
+        if (IsMapLikeKind(mapping.Kind))
         {
             var kvp = alloc.Next("kvp");
             sb.Append(bodyIndent).Append("writer.WriteMapHeader(").Append(value).AppendLine(".Count);");
@@ -2783,7 +2866,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         sb.Append(indent).AppendLine("if (reader.TryReadNil())");
         sb.Append(indent).AppendLine("{");
-        sb.Append(indent).Append("    ").Append(target).AppendLine(" = null;");
+        sb.Append(indent).Append("    ").Append(target).Append(" = ").Append(NilCollectionValue(mapping.Kind)).AppendLine(";");
         sb.Append(indent).AppendLine("}");
         sb.Append(indent).AppendLine("else");
         sb.Append(indent).AppendLine("{");
@@ -2794,19 +2877,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         var collection = alloc.Next("col");
         var index = alloc.Next("i");
 
-        if (mapping.Kind == FieldKind.Dictionary)
+        if (IsMapLikeKind(mapping.Kind))
         {
             var key = mapping.TypeArguments[0];
             var val = mapping.TypeArguments[1];
             var keyVar = alloc.Next("key");
             var valVar = alloc.Next("val");
             sb.Append(bodyIndent).Append("var ").Append(length).AppendLine(" = reader.ReadMapHeader();");
-            sb.Append(bodyIndent).Append("var ").Append(collection).Append(" = new global::System.Collections.Generic.Dictionary<")
-                .Append(key.DeclaredTypeName).Append(", ").Append(val.DeclaredTypeName).Append(">(").Append(length).AppendLine(");");
+            EmitMapLikeAllocation(sb, mapping.Kind, key.DeclaredTypeName, val.DeclaredTypeName, collection, length, bodyIndent);
             sb.Append(bodyIndent).Append("for (var ").Append(index).Append(" = 0; ").Append(index).Append(" < ").Append(length).Append("; ").Append(index).AppendLine("++)");
             sb.Append(bodyIndent).AppendLine("{");
             EmitReadElement(sb, key, keyVar, loopIndent, alloc);
             EmitReadElement(sb, val, valVar, loopIndent, alloc);
+            // Last-write-wins on a duplicate key, matching Dictionary<K,V>'s own indexer semantics
+            // -- true for the plain Dictionary allocation above AND for ImmutableDictionary.Builder's
+            // indexer (verified: Builder[key] = value overwrites an existing entry, same as Dictionary).
             sb.Append(loopIndent).Append(collection).Append('[').Append(ElementStore(key, keyVar)).Append("] = ").Append(ElementStore(val, valVar)).AppendLine(";");
             sb.Append(bodyIndent).AppendLine("}");
         }
@@ -2815,22 +2900,110 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             var element = mapping.TypeArguments[0];
             var itemVar = alloc.Next("item");
             sb.Append(bodyIndent).Append("var ").Append(length).AppendLine(" = reader.ReadArrayHeader();");
-            if (mapping.Kind == FieldKind.Array)
-                sb.Append(bodyIndent).Append("var ").Append(collection).Append(" = ").Append(GetArrayAllocationExpression(element.DeclaredTypeName, length)).AppendLine(";");
-            else
-                sb.Append(bodyIndent).Append("var ").Append(collection).Append(" = new global::System.Collections.Generic.List<").Append(element.DeclaredTypeName).Append(">(").Append(length).AppendLine(");");
+            EmitListLikeAllocation(sb, mapping.Kind, element.DeclaredTypeName, collection, length, bodyIndent);
             sb.Append(bodyIndent).Append("for (var ").Append(index).Append(" = 0; ").Append(index).Append(" < ").Append(length).Append("; ").Append(index).AppendLine("++)");
             sb.Append(bodyIndent).AppendLine("{");
             EmitReadElement(sb, element, itemVar, loopIndent, alloc);
             if (mapping.Kind == FieldKind.Array)
                 sb.Append(loopIndent).Append(collection).Append('[').Append(index).Append("] = ").Append(ElementStore(element, itemVar)).AppendLine(";");
             else
+                // Add() on every non-array kind: List<T>'s own Add, ImmutableArray<T>.Builder.Add
+                // (array-backed, pre-sized -- see EmitListLikeAllocation), ImmutableList<T>.Builder.Add,
+                // or ImmutableHashSet<T>.Builder.Add (silently ignores an already-present duplicate,
+                // matching a normal set's Add semantics -- its bool return is intentionally discarded).
                 sb.Append(loopIndent).Append(collection).Append(".Add(").Append(ElementStore(element, itemVar)).AppendLine(");");
             sb.Append(bodyIndent).AppendLine("}");
         }
 
-        sb.Append(bodyIndent).Append(target).Append(" = ").Append(collection).AppendLine(";");
+        sb.Append(bodyIndent).Append(target).Append(" = ").Append(FinalizeCollectionExpression(mapping.Kind, collection)).AppendLine(";");
         sb.Append(indent).AppendLine("}");
+    }
+
+    /// <summary>
+    /// The value assigned to the read target when the wire holds MessagePack nil. Every reference
+    /// collection kind mirrors ordinary reference-field nil handling ("target = null"). The one
+    /// VALUE-typed kind, <see cref="FieldKind.ImmutableArray"/>, cannot be assigned "null" (its local
+    /// is declared as the plain non-nullable struct type -- see <see cref="IsReferenceLike"/> /
+    /// <see cref="ElementIsReference"/>), so nil instead decodes to "default", i.e.
+    /// <c>default(ImmutableArray&lt;T&gt;)</c>, whose <c>IsDefault</c> is true -- the read-side mirror
+    /// of the write-side <c>value.IsDefault</c> check in <see cref="EmitWriteCollectionBody"/>.
+    /// </summary>
+    private static string NilCollectionValue(FieldKind kind) => IsStructCollectionKind(kind) ? "default" : "null";
+
+    /// <summary>
+    /// Emits the "var col = ...;" allocation that a list-like collection read builds into before the
+    /// element loop. <see cref="FieldKind.Array"/> allocates the exact target array (jagged-aware, via
+    /// <see cref="GetArrayAllocationExpression"/>); <see cref="FieldKind.ImmutableArray"/> allocates its
+    /// array-backed <c>Builder</c> pre-sized to <paramref name="lengthVar"/> so the loop's <c>Add</c>
+    /// calls never resize and the final <c>MoveToImmutable()</c> (see
+    /// <see cref="FinalizeCollectionExpression"/>) is a zero-copy handoff instead of a defensive copy;
+    /// every other list-like kind (<see cref="FieldKind.List"/>, <see cref="FieldKind.ReadOnlyList"/>,
+    /// <see cref="FieldKind.ReadOnlyCollection"/>) materializes a pre-sized <c>List&lt;T&gt;</c>, and
+    /// <see cref="FieldKind.ImmutableList"/>/<see cref="FieldKind.ImmutableHashSet"/> allocate their own
+    /// tree/trie-backed <c>Builder</c> (no capacity parameter exists for either -- there is nothing
+    /// array-like to pre-size).
+    /// </summary>
+    private static void EmitListLikeAllocation(StringBuilder sb, FieldKind kind, string elementTypeName, string collectionVar, string lengthVar, string indent)
+    {
+        switch (kind)
+        {
+            case FieldKind.Array:
+                sb.Append(indent).Append("var ").Append(collectionVar).Append(" = ").Append(GetArrayAllocationExpression(elementTypeName, lengthVar)).AppendLine(";");
+                break;
+            case FieldKind.ImmutableArray:
+                sb.Append(indent).Append("var ").Append(collectionVar).Append(" = global::System.Collections.Immutable.ImmutableArray.CreateBuilder<").Append(elementTypeName).Append(">(").Append(lengthVar).AppendLine(");");
+                break;
+            case FieldKind.ImmutableList:
+                sb.Append(indent).Append("var ").Append(collectionVar).Append(" = global::System.Collections.Immutable.ImmutableList.CreateBuilder<").Append(elementTypeName).AppendLine(">();");
+                break;
+            case FieldKind.ImmutableHashSet:
+                sb.Append(indent).Append("var ").Append(collectionVar).Append(" = global::System.Collections.Immutable.ImmutableHashSet.CreateBuilder<").Append(elementTypeName).AppendLine(">();");
+                break;
+            default:
+                sb.Append(indent).Append("var ").Append(collectionVar).Append(" = new global::System.Collections.Generic.List<").Append(elementTypeName).Append(">(").Append(lengthVar).AppendLine(");");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Emits the "var col = ...;" allocation that a map-like collection read builds into before the
+    /// entry loop. <see cref="FieldKind.ImmutableDictionary"/> allocates its own trie-backed
+    /// <c>Builder</c> (no capacity parameter -- there is nothing array-like to pre-size); every other
+    /// map-like kind (<see cref="FieldKind.Dictionary"/>, <see cref="FieldKind.ReadOnlyDictionary"/>)
+    /// materializes a pre-sized <c>Dictionary&lt;TKey,TValue&gt;</c>.
+    /// </summary>
+    private static void EmitMapLikeAllocation(StringBuilder sb, FieldKind kind, string keyTypeName, string valueTypeName, string collectionVar, string lengthVar, string indent)
+    {
+        if (kind == FieldKind.ImmutableDictionary)
+        {
+            sb.Append(indent).Append("var ").Append(collectionVar).Append(" = global::System.Collections.Immutable.ImmutableDictionary.CreateBuilder<")
+                .Append(keyTypeName).Append(", ").Append(valueTypeName).AppendLine(">();");
+            return;
+        }
+
+        sb.Append(indent).Append("var ").Append(collectionVar).Append(" = new global::System.Collections.Generic.Dictionary<")
+            .Append(keyTypeName).Append(", ").Append(valueTypeName).Append(">(").Append(lengthVar).AppendLine(");");
+    }
+
+    /// <summary>
+    /// The expression assigned to the read target once the element/entry loop finishes. Every kind
+    /// that allocated its FINAL storage directly (<see cref="FieldKind.Array"/>, <see cref="FieldKind.List"/>
+    /// and the read-only interfaces backed by it, <see cref="FieldKind.Dictionary"/> and
+    /// <see cref="FieldKind.ReadOnlyDictionary"/>) assigns the collection variable as-is. Every kind
+    /// that allocated a <c>Builder</c> instead (see <see cref="EmitListLikeAllocation"/> /
+    /// <see cref="EmitMapLikeAllocation"/>) finalizes it here: <see cref="FieldKind.ImmutableArray"/>'s
+    /// array-backed builder via <c>MoveToImmutable()</c> (zero-copy -- valid because the builder was
+    /// pre-sized to exactly the element count the loop adds), every other <c>Immutable*</c> kind via
+    /// <c>ToImmutable()</c>.
+    /// </summary>
+    private static string FinalizeCollectionExpression(FieldKind kind, string collectionVar)
+    {
+        return kind switch
+        {
+            FieldKind.ImmutableArray => collectionVar + ".MoveToImmutable()",
+            FieldKind.ImmutableList or FieldKind.ImmutableHashSet or FieldKind.ImmutableDictionary => collectionVar + ".ToImmutable()",
+            _ => collectionVar
+        };
     }
 
     /// <summary>
@@ -2917,7 +3090,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private static void EmitSizeCollectionBody(StringBuilder sb, TypeMapping mapping, string value, string sizeVar, string indent, NameAlloc alloc)
     {
         sb.Append(indent).Append("int ").Append(sizeVar).AppendLine(";");
-        sb.Append(indent).Append("if (").Append(value).AppendLine(" is null)");
+        var nullCheck = IsStructCollectionKind(mapping.Kind) ? value + ".IsDefault" : value + " is null";
+        sb.Append(indent).Append("if (").Append(nullCheck).AppendLine(")");
         sb.Append(indent).AppendLine("{");
         sb.Append(indent).Append("    ").Append(sizeVar).AppendLine(" = SizeOfNil();");
         sb.Append(indent).AppendLine("}");
@@ -2926,7 +3100,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
         var bodyIndent = indent + "    ";
         var loopIndent = bodyIndent + "    ";
-        if (mapping.Kind == FieldKind.Dictionary)
+        if (IsMapLikeKind(mapping.Kind))
         {
             var kvp = alloc.Next("kvp");
             sb.Append(bodyIndent).Append(sizeVar).Append(" = SizeOfMapHeader(").Append(value).AppendLine(".Count);");
@@ -3065,9 +3239,15 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Maps the four natively-supported collection shapes -- <c>T[]</c>, <c>List&lt;T&gt;</c>,
-    /// <c>IReadOnlyList&lt;T&gt;</c>, and <c>Dictionary&lt;TKey,TValue&gt;</c> -- to their collection
-    /// <see cref="FieldKind"/>, recursively mapping element/key/value types so collections compose.
+    /// Maps the ten natively-supported collection shapes to their collection <see cref="FieldKind"/>,
+    /// recursively mapping element/key/value types so collections compose. Single-type-argument shapes
+    /// (<c>T[]</c>, <c>List&lt;T&gt;</c>, <c>IReadOnlyList&lt;T&gt;</c>, <c>IReadOnlyCollection&lt;T&gt;</c>,
+    /// <c>ImmutableArray&lt;T&gt;</c>, <c>ImmutableList&lt;T&gt;</c>, <c>ImmutableHashSet&lt;T&gt;</c>) and
+    /// key/value shapes (<c>Dictionary&lt;TKey,TValue&gt;</c>, <c>IReadOnlyDictionary&lt;TKey,TValue&gt;</c>,
+    /// <c>ImmutableDictionary&lt;TKey,TValue&gt;</c>) are matched by <see cref="TryMatchSingleArgumentKind"/>
+    /// and <see cref="TryMatchKeyValueKind"/> against the field's OWN declared generic type definition (not
+    /// an "is-assignable" relationship, so e.g. a field declared <c>IReadOnlyList&lt;T&gt;</c> never matches
+    /// the <c>IReadOnlyCollection&lt;T&gt;</c> shape even though the former extends the latter).
     /// A collection whose element/key/value is itself unsupported collapses to
     /// <see cref="FieldKind.Unsupported"/> so AKKASG003 fires with the full field type -- except an
     /// enum element with an unsupported underlying type, which propagates as
@@ -3091,35 +3271,110 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             return false;
 
         var definition = namedType.OriginalDefinition;
+
+        if (TryMatchSingleArgumentKind(definition, knownTypes, out var singleArgumentKind))
+        {
+            mapping = MapSingleArgumentCollection(singleArgumentKind, namedType, knownTypes);
+            return true;
+        }
+
+        if (TryMatchKeyValueKind(definition, knownTypes, out var keyValueKind))
+        {
+            mapping = MapKeyValueCollection(keyValueKind, namedType, knownTypes);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Matches <paramref name="definition"/> against every single-type-argument collection shape's OWN
+    /// generic type definition symbol. Order is irrelevant: each shape's definition symbol is distinct
+    /// (interface inheritance, e.g. <c>IReadOnlyList&lt;T&gt; : IReadOnlyCollection&lt;T&gt;</c>, does not
+    /// make the two definitions equal), so at most one branch can ever match.
+    /// </summary>
+    private static bool TryMatchSingleArgumentKind(INamedTypeSymbol definition, KnownTypes knownTypes, out FieldKind kind)
+    {
         if (knownTypes.ListOfT != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.ListOfT))
         {
-            var element = MapCollectionElement(namedType.TypeArguments[0], knownTypes);
-            mapping = TryCollapseBadElement(element, out var collapsed)
-                ? collapsed
-                : new TypeMapping(FieldKind.List, typeArguments: ImmutableArray.Create(element));
+            kind = FieldKind.List;
             return true;
         }
 
         if (knownTypes.ReadOnlyListOfT != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.ReadOnlyListOfT))
         {
-            var element = MapCollectionElement(namedType.TypeArguments[0], knownTypes);
-            mapping = TryCollapseBadElement(element, out var collapsed)
-                ? collapsed
-                : new TypeMapping(FieldKind.ReadOnlyList, typeArguments: ImmutableArray.Create(element));
+            kind = FieldKind.ReadOnlyList;
             return true;
         }
 
+        if (knownTypes.ReadOnlyCollectionOfT != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.ReadOnlyCollectionOfT))
+        {
+            kind = FieldKind.ReadOnlyCollection;
+            return true;
+        }
+
+        if (knownTypes.ImmutableArrayOfT != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.ImmutableArrayOfT))
+        {
+            kind = FieldKind.ImmutableArray;
+            return true;
+        }
+
+        if (knownTypes.ImmutableListOfT != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.ImmutableListOfT))
+        {
+            kind = FieldKind.ImmutableList;
+            return true;
+        }
+
+        if (knownTypes.ImmutableHashSetOfT != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.ImmutableHashSetOfT))
+        {
+            kind = FieldKind.ImmutableHashSet;
+            return true;
+        }
+
+        kind = default;
+        return false;
+    }
+
+    /// <summary>Matches <paramref name="definition"/> against every key/value collection shape's OWN generic type definition symbol. See <see cref="TryMatchSingleArgumentKind"/> for why match order does not matter.</summary>
+    private static bool TryMatchKeyValueKind(INamedTypeSymbol definition, KnownTypes knownTypes, out FieldKind kind)
+    {
         if (knownTypes.DictionaryOfKeyValue != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.DictionaryOfKeyValue))
         {
-            var key = MapCollectionElement(namedType.TypeArguments[0], knownTypes);
-            var value = MapCollectionElement(namedType.TypeArguments[1], knownTypes);
-            mapping = TryCollapseBadElement(key, out var collapsedKey) ? collapsedKey
-                : TryCollapseBadElement(value, out var collapsedValue) ? collapsedValue
-                : new TypeMapping(FieldKind.Dictionary, typeArguments: ImmutableArray.Create(key, value));
+            kind = FieldKind.Dictionary;
             return true;
         }
 
+        if (knownTypes.ReadOnlyDictionaryOfKeyValue != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.ReadOnlyDictionaryOfKeyValue))
+        {
+            kind = FieldKind.ReadOnlyDictionary;
+            return true;
+        }
+
+        if (knownTypes.ImmutableDictionaryOfKeyValue != null && SymbolEqualityComparer.Default.Equals(definition, knownTypes.ImmutableDictionaryOfKeyValue))
+        {
+            kind = FieldKind.ImmutableDictionary;
+            return true;
+        }
+
+        kind = default;
         return false;
+    }
+
+    private static TypeMapping MapSingleArgumentCollection(FieldKind kind, INamedTypeSymbol namedType, KnownTypes knownTypes)
+    {
+        var element = MapCollectionElement(namedType.TypeArguments[0], knownTypes);
+        return TryCollapseBadElement(element, out var collapsed)
+            ? collapsed
+            : new TypeMapping(kind, typeArguments: ImmutableArray.Create(element));
+    }
+
+    private static TypeMapping MapKeyValueCollection(FieldKind kind, INamedTypeSymbol namedType, KnownTypes knownTypes)
+    {
+        var key = MapCollectionElement(namedType.TypeArguments[0], knownTypes);
+        var value = MapCollectionElement(namedType.TypeArguments[1], knownTypes);
+        return TryCollapseBadElement(key, out var collapsedKey) ? collapsedKey
+            : TryCollapseBadElement(value, out var collapsedValue) ? collapsedValue
+            : new TypeMapping(kind, typeArguments: ImmutableArray.Create(key, value));
     }
 
     /// <summary>
@@ -3175,7 +3430,26 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     }
 
     private static bool IsCollectionKind(FieldKind kind)
-        => kind is FieldKind.Array or FieldKind.List or FieldKind.ReadOnlyList or FieldKind.Dictionary;
+        => kind is FieldKind.Array or FieldKind.List or FieldKind.ReadOnlyList or FieldKind.Dictionary
+            or FieldKind.ReadOnlyCollection or FieldKind.ReadOnlyDictionary
+            or FieldKind.ImmutableArray or FieldKind.ImmutableList or FieldKind.ImmutableHashSet or FieldKind.ImmutableDictionary;
+
+    /// <summary>Whether a collection kind encodes as a MessagePack MAP (key/value pairs) rather than an ARRAY.</summary>
+    private static bool IsMapLikeKind(FieldKind kind)
+        => kind is FieldKind.Dictionary or FieldKind.ReadOnlyDictionary or FieldKind.ImmutableDictionary;
+
+    /// <summary>
+    /// Whether a collection kind is a VALUE type (struct) rather than a reference type. Only
+    /// <see cref="FieldKind.ImmutableArray"/> qualifies today: every other collection kind (arrays,
+    /// <c>List&lt;T&gt;</c>, the read-only interfaces, <c>ImmutableList/HashSet/Dictionary</c>) is a
+    /// reference type, so a null-ish value is a genuine CLR <c>null</c> and "<c>value is null</c>"
+    /// compiles. <c>ImmutableArray&lt;T&gt;</c> cannot be compared to <c>null</c> at all (CS0037) --
+    /// its null-ish state is <c>default(ImmutableArray&lt;T&gt;).IsDefault</c>, a distinct state from
+    /// <c>ImmutableArray&lt;T&gt;.Empty</c> (which is NOT default). See the design note above
+    /// <see cref="EmitWriteCollectionBody"/> for the write/read/size handling this drives.
+    /// </summary>
+    private static bool IsStructCollectionKind(FieldKind kind)
+        => kind == FieldKind.ImmutableArray;
 
     private static string DefaultValue(FieldInfo field)
     {
@@ -3214,6 +3488,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private static bool IsReferenceLike(FieldInfo field)
     {
+        // ImmutableArray<T> is a collection kind but a VALUE type (struct): a required field is
+        // handled like any other non-nullable struct kind (Guid, DateTime, ...) below -- only the
+        // "has this field index been seen" guard applies, never a "target is null" check (which
+        // would not compile for a struct). See IsStructCollectionKind and the design note above
+        // EmitWriteCollectionBody for the full default/IsDefault-vs-null story.
+        if (IsStructCollectionKind(field.Mapping.Kind))
+            return false;
+
         if (IsCollectionKind(field.Mapping.Kind))
             return true;
 
@@ -3637,7 +3919,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             ActorRef = compilation.GetTypeByMetadataName("Akka.Actor.IActorRef");
             ListOfT = compilation.GetTypeByMetadataName("System.Collections.Generic.List`1");
             ReadOnlyListOfT = compilation.GetTypeByMetadataName("System.Collections.Generic.IReadOnlyList`1");
+            ReadOnlyCollectionOfT = compilation.GetTypeByMetadataName("System.Collections.Generic.IReadOnlyCollection`1");
             DictionaryOfKeyValue = compilation.GetTypeByMetadataName("System.Collections.Generic.Dictionary`2");
+            ReadOnlyDictionaryOfKeyValue = compilation.GetTypeByMetadataName("System.Collections.Generic.IReadOnlyDictionary`2");
+            ImmutableArrayOfT = compilation.GetTypeByMetadataName("System.Collections.Immutable.ImmutableArray`1");
+            ImmutableListOfT = compilation.GetTypeByMetadataName("System.Collections.Immutable.ImmutableList`1");
+            ImmutableHashSetOfT = compilation.GetTypeByMetadataName("System.Collections.Immutable.ImmutableHashSet`1");
+            ImmutableDictionaryOfKeyValue = compilation.GetTypeByMetadataName("System.Collections.Immutable.ImmutableDictionary`2");
         }
 
         public INamedTypeSymbol? FieldAttribute { get; }
@@ -3649,7 +3937,20 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public INamedTypeSymbol? ActorRef { get; }
         public INamedTypeSymbol? ListOfT { get; }
         public INamedTypeSymbol? ReadOnlyListOfT { get; }
+        public INamedTypeSymbol? ReadOnlyCollectionOfT { get; }
         public INamedTypeSymbol? DictionaryOfKeyValue { get; }
+        public INamedTypeSymbol? ReadOnlyDictionaryOfKeyValue { get; }
+
+        /// <summary>
+        /// <c>System.Collections.Immutable.ImmutableArray&lt;T&gt;</c> -- a VALUE type (struct), unlike
+        /// every other recognized collection kind. <c>default(ImmutableArray&lt;T&gt;)</c> is a distinct
+        /// "uninitialized" state (<c>IsDefault</c>) from <c>ImmutableArray&lt;T&gt;.Empty</c>; see the
+        /// write/read handling gated on <see cref="FieldKind.ImmutableArray"/> throughout this file.
+        /// </summary>
+        public INamedTypeSymbol? ImmutableArrayOfT { get; }
+        public INamedTypeSymbol? ImmutableListOfT { get; }
+        public INamedTypeSymbol? ImmutableHashSetOfT { get; }
+        public INamedTypeSymbol? ImmutableDictionaryOfKeyValue { get; }
 
         public static KnownTypes From(Compilation compilation)
         {
@@ -4064,9 +4365,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public bool IsNullable { get; }
 
         /// <summary>
-        /// Child mappings for a collection kind: a single element mapping for
-        /// <see cref="FieldKind.Array"/>/<see cref="FieldKind.List"/>/<see cref="FieldKind.ReadOnlyList"/>,
-        /// and [key, value] for <see cref="FieldKind.Dictionary"/>. Empty for every non-collection kind.
+        /// Child mappings for a collection kind: a single element mapping for every single-type-argument
+        /// kind (<see cref="FieldKind.Array"/>, <see cref="FieldKind.List"/>, <see cref="FieldKind.ReadOnlyList"/>,
+        /// <see cref="FieldKind.ReadOnlyCollection"/>, <see cref="FieldKind.ImmutableArray"/>,
+        /// <see cref="FieldKind.ImmutableList"/>, <see cref="FieldKind.ImmutableHashSet"/>), and [key, value]
+        /// for every key/value kind (<see cref="FieldKind.Dictionary"/>, <see cref="FieldKind.ReadOnlyDictionary"/>,
+        /// <see cref="FieldKind.ImmutableDictionary"/>). Empty for every non-collection kind.
         /// </summary>
         public ImmutableArray<TypeMapping> TypeArguments { get; }
 
@@ -4206,7 +4510,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         ReadOnlyList,
         Dictionary,
         UnsupportedEnumUnderlyingType,
-        Union
+        Union,
+        ReadOnlyCollection,
+        ReadOnlyDictionary,
+        ImmutableArray,
+        ImmutableList,
+        ImmutableHashSet,
+        ImmutableDictionary
     }
 
     /// <summary>

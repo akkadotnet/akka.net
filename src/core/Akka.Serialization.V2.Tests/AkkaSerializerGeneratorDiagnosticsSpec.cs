@@ -2327,6 +2327,134 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
+    // ------------------------------------------------------------------------------------------
+    // Immutable / read-only collection shapes (openspec task 5.7): ImmutableArray<T>,
+    // ImmutableList<T>, ImmutableHashSet<T>, ImmutableDictionary<TKey,TValue>,
+    // IReadOnlyCollection<T>, IReadOnlyDictionary<TKey,TValue>. Round-trip/wire-format coverage
+    // lives in ImmutableCollectionFieldSpec.cs; these tests are the AKKASG003 scope-boundary
+    // checks (compiles cleanly when supported, still collapses to Unsupported when the
+    // element/value type is not).
+    // ------------------------------------------------------------------------------------------
+
+    [Fact(DisplayName = "Generator should not report AKKASG003 and should compile cleanly for immutable/read-only collection shapes")]
+    public void Generator_should_not_report_AKKASG003_for_immutable_collection_shapes()
+    {
+        const string source = """
+            #nullable enable
+            using System.Collections.Generic;
+            using System.Collections.Immutable;
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>("sample", 121005)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable]
+            public sealed record Reading([property: AkkaField(1)] string SensorId, [property: AkkaField(2)] double Value);
+
+            [AkkaSerializable(Manifest = "immutable-collections-v1")]
+            public sealed record ImmutableCollections(
+                [property: AkkaField(1)] ImmutableArray<int> Ints,
+                [property: AkkaField(2)] ImmutableList<string> Names,
+                [property: AkkaField(3)] ImmutableHashSet<int> UniqueInts,
+                [property: AkkaField(4)] ImmutableDictionary<int, string> Map,
+                [property: AkkaField(5)] IReadOnlyCollection<Reading> Readings,
+                [property: AkkaField(6)] IReadOnlyDictionary<string, int> Counts,
+                [property: AkkaField(7)] ImmutableList<Reading> NestedReadings,
+                [property: AkkaField(8)] ImmutableDictionary<string, List<int>> Grouped,
+                [property: AkkaField(9)] ImmutableList<int>? MaybeInts,
+                [property: AkkaField(10)] ImmutableList<int?> OptionalInts) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().NotContain(diagnostic => diagnostic.Id == "AKKASG003");
+        diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Generator should report AKKASG003 for each immutable/read-only collection shape when its element or value type is unsupported")]
+    public void Generator_should_report_AKKASG003_for_immutable_collection_of_unsupported_element()
+    {
+        const string source = """
+            #nullable enable
+            using System.Collections.Generic;
+            using System.Collections.Immutable;
+            using System.Text;
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>("sample", 121006)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "bad-elements-v1")]
+            public sealed record BadElements(
+                [property: AkkaField(1)] ImmutableArray<StringBuilder> ImmutableArrayValues,
+                [property: AkkaField(2)] ImmutableList<StringBuilder> ImmutableListValues,
+                [property: AkkaField(3)] ImmutableHashSet<StringBuilder> ImmutableHashSetValues,
+                [property: AkkaField(4)] ImmutableDictionary<string, StringBuilder> ImmutableDictionaryValues,
+                [property: AkkaField(5)] IReadOnlyCollection<StringBuilder> ReadOnlyCollectionValues,
+                [property: AkkaField(6)] IReadOnlyDictionary<string, StringBuilder> ReadOnlyDictionaryValues) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // Every one of the six shapes must independently collapse its field to Unsupported so
+        // AKKASG003 fires once per field -- none may silently emit ill-typed code instead.
+        diagnostics.Count(diagnostic => diagnostic.Id == "AKKASG003" && diagnostic.Severity == DiagnosticSeverity.Error).Should().Be(6);
+    }
+
+    [Fact(DisplayName = "Generator should still report AKKASG003 for a mutable HashSet<T>/Dictionary<K,V>-adjacent type outside the immutable scope boundary")]
+    public void Generator_should_report_AKKASG003_for_types_outside_immutable_scope_boundary()
+    {
+        const string source = """
+            #nullable enable
+            using System.Collections.Immutable;
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>("sample", 121007)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            // ImmutableSortedSet<T>/ImmutableSortedDictionary/ImmutableQueue/ImmutableStack are
+            // deliberately outside the approved scope (ImmutableArray<T>, ImmutableList<T>,
+            // ImmutableHashSet<T>, ImmutableDictionary<TKey,TValue> only) -- the boundary must still
+            // fail with AKKASG003 rather than silently widening support.
+            [AkkaSerializable(Manifest = "exotic-immutable-v1")]
+            public sealed record ExoticImmutable([property: AkkaField(1)] ImmutableSortedSet<int> Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG003" && diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
