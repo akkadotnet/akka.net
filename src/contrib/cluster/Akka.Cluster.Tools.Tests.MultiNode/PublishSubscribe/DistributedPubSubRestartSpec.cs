@@ -105,8 +105,10 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
         // Sized to hold the pre-shutdown steps (~10s worst case), the 45s identify window
         // on first (which WithinAsync clamps to whatever remains here), and the post-barrier
         // delta checks. The JVM spec's 30s proved too tight on loaded Windows agents once a
-        // single poisoned association cycle was in play.
-        await WithinAsync(60.Seconds(), async () =>
+        // single poisoned association cycle was in play. Also has to cover third's worst case
+        // (~13s restart prelude plus its 45s receive window), which must out-last first's 45s
+        // identify/deliver window - see the WhenTerminated comment below.
+        await WithinAsync(90.Seconds(), async () =>
         {
             Mediator.Tell(new Subscribe("topic1", TestActor));
             await ExpectMsgAsync<SubscribeAck>();
@@ -162,7 +164,15 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                     });
                 });
 
-                Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell("shutdown");
+                // At-most-once send across an association that is being re-established -
+                // resend covers a lost first delivery.
+                for (var attempt = 0; attempt < 3; attempt++)
+                {
+                    if (attempt > 0)
+                        await Task.Delay(TimeSpan.FromSeconds(2));
+
+                    Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell("shutdown");
+                }
 
                 await EnterBarrierAsync("end");
 
@@ -206,11 +216,15 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                     newSystem.Log.Info("Creating shutdown actor on {0}", node3Address);
                     newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
 
-                    await newSystem.WhenTerminated.WaitAsync(30.Seconds());
+                    // Invariant: third's receive deadline must be >= first's 45s identify/deliver
+                    // deadline. #8400 widened the sender (first) without widening the receiver
+                    // (third), inverting this and producing the build-129150 failure: third gave
+                    // up at exactly its old 30s mark while first's delivery landed ~2s later.
+                    await newSystem.WhenTerminated.WaitAsync(45.Seconds());
                 }
                 finally
                 {
-                    await newSystem.Terminate().WaitAsync(30.Seconds());
+                    await newSystem.Terminate().WaitAsync(45.Seconds());
                 }
             }, _config.Third);
         });
