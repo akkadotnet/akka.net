@@ -213,11 +213,14 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                 newSystem.Log.Info("Creating shutdown actor on {0}", node3Address);
                 newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
 
-                // Invariant: third's receive deadline must be >= first's 45s identify/deliver
-                // deadline. #8400 widened the sender (first) without widening the receiver
-                // (third), inverting this and producing the build-129150 failure: third gave
-                // up at exactly its old 30s mark while first's delivery landed ~2s later.
-                await newSystem.WhenTerminated.WaitAsync(45.Seconds());
+                // Third's receive deadline must dominate first's WHOLE worst-case delivery pipeline,
+                // not just first's 45s identify window: first's window is anchored on
+                // TestConductor.Shutdown(third) RETURNING (an ack bounded by its own 30s WaitAsync),
+                // so first's deadline can slide up to ~30s later than third's restart-anchored clock.
+                // 90s = 30s anchor skew + 45s identify window + resend spacing + margin. Third timing
+                // out earlier adds no diagnostic value - if first genuinely fails, first's own window
+                // reports it; third giving up first just races clocks (builds 129150 and 129166).
+                await newSystem.WhenTerminated.WaitAsync(90.Seconds());
             }
             finally
             {
