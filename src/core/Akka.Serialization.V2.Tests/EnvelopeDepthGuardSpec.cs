@@ -9,9 +9,8 @@
 using System;
 using System.Buffers;
 using System.Runtime.Serialization;
-using System.Threading.Tasks;
-using Akka.Actor;
-using Akka.Actor.Setup;
+using Akka.Configuration;
+using Akka.TestKit;
 using FluentAssertions;
 using MessagePack;
 using Xunit;
@@ -27,23 +26,33 @@ namespace Akka.Serialization.V2.Tests;
 /// <see cref="AttributeInnerEnvelope"/> test type from the sibling generated-serializer spec, whose
 /// <c>[AkkaEnvelopePayload] object Payload</c> field can hold another envelope.
 /// </summary>
-public sealed class EnvelopeDepthGuardSpec : IAsyncLifetime
+public sealed class EnvelopeDepthGuardSpec : AkkaSpec
 {
     // Comfortably past the internal limit (100) so the test never straddles the exact boundary.
     private const int OverLimitDepth = 250;
     private const int GeneratedTestSerializerId = 120101;
     private const string InnerEnvelopeManifest = "attribute-inner-envelope-v1";
 
-    private ActorSystem _system = null!;
+    // Register the source-generated serializer the way a real application would: via the classic HOCON
+    // akka.actor.serializers / serialization-bindings blocks (mirrors ClassicRemotingSpec in this project
+    // and Akka.Tests' CustomSerializerSpec), binding the IGeneratedTestProtocol marker interface -- which
+    // AttributeInnerEnvelope and RequiredMessage both implement -- to the GeneratedTestSerializer. The
+    // generated serializer exposes a fixed Identifier (120101) and an (ExtendedActorSystem) constructor,
+    // so HOCON reflection-based registration resolves it exactly like the setup-based registration did.
+    private static readonly Config SerializerConfig = ConfigurationFactory.ParseString(@"
+        akka.actor {
+            serializers {
+                generated-test = ""Akka.Serialization.V2.Tests.GeneratedTestSerializer, Akka.Serialization.V2.Tests""
+            }
+            serialization-bindings {
+                ""Akka.Serialization.V2.Tests.IGeneratedTestProtocol, Akka.Serialization.V2.Tests"" = generated-test
+            }
+        }");
 
-    public ValueTask InitializeAsync()
+    public EnvelopeDepthGuardSpec(ITestOutputHelper output)
+        : base(SerializerConfig, output)
     {
-        var setup = ActorSystemSetup.Create(GeneratedTestSerializer.CreateRegistration().CreateSetup());
-        _system = ActorSystem.Create("envelope-depth-guard-spec", setup);
-        return default;
     }
-
-    public async ValueTask DisposeAsync() => await _system.Terminate();
 
     private static AttributeInnerEnvelope BuildChain(int depth)
     {
@@ -59,8 +68,8 @@ public sealed class EnvelopeDepthGuardSpec : IAsyncLifetime
     {
         var shallow = BuildChain(5);
 
-        var bytes = _system.Serialization.Serialize(shallow);
-        var recovered = _system.Serialization.Deserialize(bytes, GeneratedTestSerializerId, InnerEnvelopeManifest);
+        var bytes = Sys.Serialization.Serialize(shallow);
+        var recovered = Sys.Serialization.Deserialize(bytes, GeneratedTestSerializerId, InnerEnvelopeManifest);
 
         recovered.Should().Be(shallow);
     }
@@ -72,7 +81,7 @@ public sealed class EnvelopeDepthGuardSpec : IAsyncLifetime
 
         // The point of the guard: this returns (throws) rather than crashing the process with an
         // uncatchable StackOverflowException. A test that merely completes proves the process survived.
-        Action serialize = () => _system.Serialization.Serialize(deep);
+        Action serialize = () => Sys.Serialization.Serialize(deep);
 
         serialize.Should().Throw<SerializationException>().WithMessage("*maximum depth*");
     }
@@ -81,7 +90,7 @@ public sealed class EnvelopeDepthGuardSpec : IAsyncLifetime
     public void Deep_envelope_chain_throws_on_size()
     {
         var deep = BuildChain(OverLimitDepth);
-        var serializer = _system.Serialization.FindSerializerFor(deep)
+        var serializer = Sys.Serialization.FindSerializerFor(deep)
             .Should().BeAssignableTo<SerializerV2>().Subject;
 
         Action size = () => serializer.SizeHint(deep);
@@ -95,7 +104,7 @@ public sealed class EnvelopeDepthGuardSpec : IAsyncLifetime
         // A depth-100 chain is writable (exactly at the limit); serialize it to obtain valid inner bytes,
         // then hand-wrap one more envelope level so decoding trips the limit on the way down.
         var atLimit = BuildChain(100);
-        var innerBytes = _system.Serialization.Serialize(atLimit);
+        var innerBytes = Sys.Serialization.Serialize(atLimit);
 
         var buffer = new ArrayBufferWriter<byte>();
         var writer = new MessagePackWriter(buffer);
@@ -114,8 +123,30 @@ public sealed class EnvelopeDepthGuardSpec : IAsyncLifetime
         var overLimitBytes = buffer.WrittenMemory.ToArray();
 
         Action deserialize = () =>
-            _system.Serialization.Deserialize(overLimitBytes, GeneratedTestSerializerId, InnerEnvelopeManifest);
+            Sys.Serialization.Deserialize(overLimitBytes, GeneratedTestSerializerId, InnerEnvelopeManifest);
 
         deserialize.Should().Throw<SerializationException>().WithMessage("*maximum depth*");
+    }
+
+    [Fact(DisplayName = "The depth counter unwinds to zero after an over-limit failure so later serializations on the same thread still succeed (no thread poisoning)")]
+    public void Depth_counter_unwinds_after_failure_leaving_thread_usable()
+    {
+        // The guard tracks nesting in a [ThreadStatic] counter guarded by try/finally. A regression that
+        // left the counter unbalanced after an exception (enter without a matching exit) would poison
+        // every subsequent serialization on the same thread. This test runs synchronously, so both steps
+        // below execute on the same thread -- exactly the surface such a leak would corrupt.
+
+        // 1. Trip the guard on the write path and confirm it throws (not crashes).
+        var deep = BuildChain(OverLimitDepth);
+        Action overLimit = () => Sys.Serialization.Serialize(deep);
+        overLimit.Should().Throw<SerializationException>().WithMessage("*maximum depth*");
+
+        // 2. Immediately, on the same thread, a normal shallow message must still serialize AND round-trip.
+        //    Success proves the counter unwound back to zero rather than staying elevated from the failure.
+        var shallow = BuildChain(5);
+        var bytes = Sys.Serialization.Serialize(shallow);
+        var recovered = Sys.Serialization.Deserialize(bytes, GeneratedTestSerializerId, InnerEnvelopeManifest);
+
+        recovered.Should().Be(shallow);
     }
 }
