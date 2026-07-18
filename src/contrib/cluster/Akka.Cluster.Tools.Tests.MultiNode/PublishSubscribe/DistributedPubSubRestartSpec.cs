@@ -188,10 +188,14 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
         {
             var node3Address = Cluster.Get(Sys).SelfAddress;
             await Sys.WhenTerminated.WaitAsync(30.Seconds());
+            // Pin the fresh system to the SAME wire address for BOTH transports - under
+            // AKKA_MNTR_TRANSPORT=artery the classic dot-netty key is inert and the fresh
+            // system would bind a random artery canonical.port instead.
             var newSystem = ActorSystem.Create(
                 Sys.Name,
                 ConfigurationFactory
-                    .ParseString($"akka.remote.dot-netty.tcp.port={node3Address.Port}")
+                    .ParseString($"akka.remote.dot-netty.tcp.port={node3Address.Port}\n" +
+                        $"akka.remote.artery.canonical.port={node3Address.Port}")
                     .WithFallback(Sys.Settings.Config));
 
             try
