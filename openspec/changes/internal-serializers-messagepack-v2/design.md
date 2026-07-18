@@ -58,7 +58,7 @@ Verified against `Serialization.cs`: reads are id-dispatched (`_serializersById`
 
 **Decision: a single central code hook in `Serialization` construction, driven purely by HOCON.** This was Open Question 1 in the design draft; the maintainer selected the central-hook option. `SerializationSetup`-based and Akka.Hosting-based flag surfaces are rejected **for now** — `SerializationSetup` would require code changes per application to flip a subsystem (defeating the "operator turns a knob" goal), and an Akka.Hosting extension is blocked on Hosting being inlined into this repository (`messagepack-sourcegen-validation` tasks.md 8.8, still open). Akka.Hosting can wrap the HOCON flag with a typed extension method later without changing the underlying mechanism.
 
-Because HOCON can't branch and the interface-resolution loop is non-deterministic (Decision 1), the flip is applied by a single central code hook that runs during `Serialization` construction. Each subsystem contributes a static descriptor `{ interfaceKey, legacyName, v2Name, flagPath }`; the hook, for each effectively-on subsystem, replaces `serialization-bindings[interfaceKey] = v2Name` deterministically (exact-key overwrite, avoiding the arbitrary-order hazard described in Decision 1). This keeps the operator surface pure-HOCON.
+Because HOCON can't branch and the interface-resolution loop is non-deterministic (Decision 1), the flip is applied by a single central code hook that runs during `Serialization` construction (`Serialization.ApplyV2WriteBindings`), after the HOCON `serialization-bindings` are installed and before `SerializationSetup` bindings (Setup always wins). Each subsystem contributes its descriptor **declaratively in its own reference configuration** under `akka.actor.serialization.v2.write-bindings.<subsystem>` (type FQCN → v2 serializer config name) — not via a static code registry, which core Akka couldn't host without referencing downstream assemblies and which would be process-global rather than per-`ActorSystem`. The `<subsystem>` key doubles as the flag name. For each effectively-on subsystem the hook re-points each declared binding deterministically (exact-key overwrite of `_serializerMap`, avoiding the arbitrary-order hazard described in Decision 1, and deliberately bypassing the `log-serializer-override-on-start` warning for this operator-requested flip). This keeps the operator surface pure-HOCON and requires no code call from subsystems.
 
 ### 3. HOCON shape — global flag + per-subsystem override
 
@@ -70,16 +70,23 @@ akka.actor.serialization.v2 {
   # v2 serializers registered (see Decision 6).
   enabled = off
 
-  # Per-subsystem overrides; each inherits `enabled` when left unset.
-  reliable-delivery = ${akka.actor.serialization.v2.enabled}
-  distributed-data  = ${akka.actor.serialization.v2.enabled}
-  pub-sub           = ${akka.actor.serialization.v2.enabled}
-  cluster-client    = ${akka.actor.serialization.v2.enabled}
-  cluster-metrics   = ${akka.actor.serialization.v2.enabled}
-  sharding          = ${akka.actor.serialization.v2.enabled}   # routing subset only
-  cluster           = ${akka.actor.serialization.v2.enabled}
+  # Per-subsystem overrides. An explicit on/off always wins over `enabled`,
+  # in both directions; empty ("") inherits the master switch.
+  reliable-delivery = ""
+  distributed-data  = ""
+  pub-sub           = ""
+  cluster-client    = ""
+  cluster-metrics   = ""
+  sharding          = ""   # routing subset only
+  cluster           = ""
+
+  # INTERNAL: subsystems declare their write-side rebinding here in their own
+  # reference config (type FQCN -> v2 serializer name); see Decision 2.
+  write-bindings {}
 }
 ```
+
+Inheritance is resolved in code (`SerializationV2WriteBindings.IsEnabledFor`: unset/empty → master switch), **not** via HOCON `${...}` substitution — Akka.NET's parser resolves substitutions at parse time within a single document, before user config is merged over the reference config, so a reference-config substitution would freeze at `off` and never observe a user's `enabled = on` override.
 
 ### 4. Serializer-id strategy — new ids from a reserved internal block (settled)
 

@@ -1,10 +1,10 @@
 ## 1. Feature flag + registration infrastructure
 
-- [ ] 1.1 Add `akka.actor.serialization.v2.{enabled, <subsystem>}` config keys + docs (default off) to `reference.conf`
-- [ ] 1.2 Add central binding-rewrite hook in `Serialization` construction: subsystem descriptor `{ interfaceKey, legacyName, v2Name, flagPath }`; deterministic exact-key override (see design.md Decision 2)
-- [ ] 1.3 Reserve serializer-id block 40-79; document `legacy + 40` mapping in code comments and design docs
-- [ ] 1.4 Spec/tests: both serializers registered regardless of flag; read either format by id; write per flag
-- [ ] 1.5 Spec/tests: interface binding override is deterministic (exact-key, last-write-wins)
+- [x] 1.1 Add `akka.actor.serialization.v2.{enabled, <subsystem>}` config keys + docs (default off) to `reference.conf` — `src/core/Akka/Configuration/akka.conf` (`akka.actor.serialization.v2`: master `enabled = off`, 7 per-subsystem overrides, rolling-upgrade rule in comments)
+- [x] 1.2 Add central binding-rewrite hook in `Serialization` construction with deterministic exact-key override (see design.md Decision 2) — `Serialization.ApplyV2WriteBindings` (`src/core/Akka/Serialization/Serialization.cs`) + `SerializationV2WriteBindings` contract type; subsystem descriptor is HOCON-declared under `write-bindings.<subsystem>` (not a static code registry — Decision 2 as amended), applied after HOCON bindings and before `SerializationSetup` (Setup always wins)
+- [ ] 1.3 Reserve serializer-id block 40-79; document `legacy + 40` mapping in code comments and design docs (design docs done in this change; code-comment reservation lands with the first forked serializer)
+- [x] 1.4 Spec/tests: both serializers registered regardless of flag; read either format by id; write per flag — `src/core/Akka.Tests/Serialization/SerializationV2WriteFlagSpec.cs` (6 specs incl. deserialize-by-id under flag off and on)
+- [x] 1.5 Spec/tests: interface binding override is deterministic (exact-key, last-write-wins) — `SerializationV2WriteFlagSpec` (override asserted in both directions: explicit subsystem `on`/`off` vs. master); exact-key overwrite is structural (`_serializerMap[type] = v2`, no competing binding added)
 
 ## 2. Subsystem 1 — ReliableDelivery (id 36 -> 76) [lowest risk, first]
 
