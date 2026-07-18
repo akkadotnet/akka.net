@@ -460,6 +460,43 @@ namespace Akka.Remote.Artery
                     System.DeadLetters)));
             }
 
+            // Drain the INBOUND remote-deploy retry buffers the same way: first-messages still
+            // waiting for a DaemonMsgCreate that will now never be processed are published as
+            // Dropped rather than silently vanishing when their retry timer chain dies with the
+            // scheduler. Whoever wins an entry's Done latch -- this drain, or a concurrently-firing
+            // RetryResolveRemoteDeployedRecipient tick -- flushes AND accounts (TryRemove +
+            // counter decrement) that entry exactly once; the loser observes Done under the gate
+            // and backs off without touching the accounting.
+            foreach (var kvp in _pendingRemoteDeployedResolves)
+            {
+                var pendingResolve = kvp.Value;
+                var wonDrain = false;
+                lock (pendingResolve.Gate)
+                {
+                    if (!pendingResolve.Done)
+                    {
+                        wonDrain = true;
+                        while (pendingResolve.Buffered.Count > 0)
+                        {
+                            var (message, _) = pendingResolve.Buffered.Dequeue();
+                            System.EventStream.Publish(new Dropped(
+                                message,
+                                $"Inbound message for unresolved remote-deployed recipient [{kvp.Key}] drained on transport shutdown",
+                                ActorRefs.NoSender,
+                                System.DeadLetters));
+                        }
+
+                        pendingResolve.Done = true;
+                    }
+                }
+
+                if (wonDrain)
+                {
+                    _pendingRemoteDeployedResolves.TryRemove(kvp.Key, out _);
+                    Interlocked.Decrement(ref _pendingRemoteDeployedResolveCount);
+                }
+            }
+
             // Tear every remaining stream down via the shared kill switch first (every inbound and
             // outbound graph is woven through it) -- the graceful path, mirroring Pekko's
             // transportKillSwitch abort.
@@ -850,6 +887,16 @@ namespace Akka.Remote.Artery
         /// </summary>
         private void BufferUnresolvedRemoteDeployedRecipient(string recipientPath, object message, string? senderPath, IActorRef emptyRecipient)
         {
+            // Shutdown guard: the transport is tearing down, so the DaemonMsgCreate this message is
+            // waiting on will never be processed, Shutdown()'s drain of the pending buffers may
+            // already have run, and starting a new retry chain could ScheduleOnce against a stopping
+            // scheduler. Account the message to dead letters immediately instead.
+            if (_isShutdown)
+            {
+                DeliverOrdinaryMessage(emptyRecipient, message, senderPath);
+                return;
+            }
+
             while (true)
             {
                 bool banned;
@@ -958,6 +1005,12 @@ namespace Akka.Remote.Artery
 
             lock (pending.Gate)
             {
+                // Shutdown drain race: if Shutdown()'s drain of _pendingRemoteDeployedResolves won
+                // this entry's Done latch first, it has already flushed the buffer (to Dropped) and
+                // done the TryRemove + counter decrement -- back off without double-accounting.
+                if (pending.Done)
+                    return;
+
                 while (pending.Buffered.Count > 0)
                 {
                     var (message, senderPath) = pending.Buffered.Dequeue();
