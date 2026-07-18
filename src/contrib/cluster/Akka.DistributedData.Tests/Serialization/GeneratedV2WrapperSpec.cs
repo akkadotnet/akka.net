@@ -91,8 +91,8 @@ namespace Akka.DistributedData.Tests.Serialization
     {
     }
 
-    [AkkaSerializer(Name = "distributed-data-test", SerializerId = 120420)]
-    public sealed partial class CargoProtocolSerializer : MessagePackSerializer<ICargoProtocol>
+    [AkkaSerializer<ICargoProtocol>("distributed-data-test", 120420)]
+    public sealed partial class CargoProtocolSerializer : AkkaSerializer
     {
         public static partial SerializerRegistration CreateRegistration();
     }

@@ -113,8 +113,8 @@ public interface IReliableDeliveryIntegrationProtocol
 {
 }
 
-[AkkaSerializer(Name = "reliable-delivery-test", SerializerId = 120410)]
-public sealed partial class ReliableDeliveryIntegrationSerializer : MessagePackSerializer<IReliableDeliveryIntegrationProtocol>
+[AkkaSerializer<IReliableDeliveryIntegrationProtocol>("reliable-delivery-test", 120410)]
+public sealed partial class ReliableDeliveryIntegrationSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }

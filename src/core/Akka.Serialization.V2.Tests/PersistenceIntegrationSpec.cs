@@ -37,7 +37,7 @@ namespace Akka.Serialization.V2.Tests;
 /// format. <see cref="WireFormatJournal"/> below is a small test-only journal that does what every real
 /// journal plugin does: look up the bound Akka serializer for the payload (<c>FindSerializerFor</c>),
 /// call its real <c>ToBinary</c>/<c>FromBinary</c>, and store only the resulting bytes + manifest +
-/// serializer id. That is what actually exercises the generated <see cref="MessagePackSerializer{TProtocol}"/>.
+/// serializer id. That is what actually exercises the generated <see cref="AkkaSerializer"/>.
 /// </para>
 ///
 /// <para>
@@ -86,12 +86,12 @@ public class PersistenceIntegrationSpec : AkkaSpec
             var persistenceId = "order-" + Guid.NewGuid().ToString("N");
 
             var actor1 = system.ActorOf(OrderActor.Props(persistenceId, probe.Ref), "order-actor-1");
-            actor1.Tell(new OrderPlaced(persistenceId, 5, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
-            var firstEcho = await probe.ExpectMsgAsync<OrderPlaced>(TimeSpan.FromSeconds(10));
+            actor1.Tell(new PersistedOrderPlaced(persistenceId, 5, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
+            var firstEcho = await probe.ExpectMsgAsync<PersistedOrderPlaced>(TimeSpan.FromSeconds(10));
             firstEcho.Quantity.Should().Be(5);
 
-            actor1.Tell(new OrderPlaced(persistenceId, 3, new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc)));
-            await probe.ExpectMsgAsync<OrderPlaced>(TimeSpan.FromSeconds(10));
+            actor1.Tell(new PersistedOrderPlaced(persistenceId, 3, new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc)));
+            await probe.ExpectMsgAsync<PersistedOrderPlaced>(TimeSpan.FromSeconds(10));
 
             probe.Watch(actor1);
             actor1.Tell(PoisonPill.Instance);
@@ -101,9 +101,9 @@ public class PersistenceIntegrationSpec : AkkaSpec
             // deserialize the events from the bytes the journal actually stored.
             var actor2 = system.ActorOf(OrderActor.Props(persistenceId, probe.Ref), "order-actor-2");
             actor2.Tell(GetState.Instance);
-            var recovered = await probe.ExpectMsgAsync<OrderState>(TimeSpan.FromSeconds(10));
+            var recovered = await probe.ExpectMsgAsync<PersistedOrderState>(TimeSpan.FromSeconds(10));
 
-            recovered.Should().Be(new OrderState(persistenceId, 8));
+            recovered.Should().Be(new PersistedOrderState(persistenceId, 8));
         }
         finally
         {
@@ -121,8 +121,8 @@ public class PersistenceIntegrationSpec : AkkaSpec
             var persistenceId = "order-snap-" + Guid.NewGuid().ToString("N");
 
             var actor1 = system.ActorOf(OrderActor.Props(persistenceId, probe.Ref), "order-snap-actor-1");
-            actor1.Tell(new OrderPlaced(persistenceId, 7, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
-            await probe.ExpectMsgAsync<OrderPlaced>(TimeSpan.FromSeconds(10));
+            actor1.Tell(new PersistedOrderPlaced(persistenceId, 7, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
+            await probe.ExpectMsgAsync<PersistedOrderPlaced>(TimeSpan.FromSeconds(10));
 
             actor1.Tell(TakeSnapshot.Instance);
             var success = await probe.ExpectMsgAsync<SaveSnapshotSuccess>(TimeSpan.FromSeconds(10));
@@ -137,9 +137,9 @@ public class PersistenceIntegrationSpec : AkkaSpec
             // through PersistenceSnapshotSerializer -> our generated MessagePack serializer.
             var actor2 = system.ActorOf(OrderActor.Props(persistenceId, probe.Ref), "order-snap-actor-2");
             actor2.Tell(GetState.Instance);
-            var recovered = await probe.ExpectMsgAsync<OrderState>(TimeSpan.FromSeconds(10));
+            var recovered = await probe.ExpectMsgAsync<PersistedOrderState>(TimeSpan.FromSeconds(10));
 
-            recovered.Should().Be(new OrderState(persistenceId, 7));
+            recovered.Should().Be(new PersistedOrderState(persistenceId, 7));
         }
         finally
         {
@@ -182,15 +182,15 @@ internal sealed class OrderActor : ReceivePersistentActor
     public override string PersistenceId { get; }
 
     private readonly IActorRef _probe;
-    private OrderState _state;
+    private PersistedOrderState _state;
 
     public OrderActor(string persistenceId, IActorRef probe)
     {
         PersistenceId = persistenceId;
         _probe = probe;
-        _state = new OrderState(persistenceId, 0);
+        _state = new PersistedOrderState(persistenceId, 0);
 
-        Command<OrderPlaced>(cmd => Persist(cmd, evt =>
+        Command<PersistedOrderPlaced>(cmd => Persist(cmd, evt =>
         {
             _state = _state with { TotalQuantity = _state.TotalQuantity + evt.Quantity };
             _probe.Tell(evt);
@@ -201,8 +201,8 @@ internal sealed class OrderActor : ReceivePersistentActor
         Command<SaveSnapshotFailure>(msg => _probe.Tell(msg));
         Command<GetState>(_ => _probe.Tell(_state));
 
-        Recover<OrderPlaced>(evt => _state = _state with { TotalQuantity = _state.TotalQuantity + evt.Quantity });
-        Recover<SnapshotOffer>(offer => _state = (OrderState)offer.Snapshot);
+        Recover<PersistedOrderPlaced>(evt => _state = _state with { TotalQuantity = _state.TotalQuantity + evt.Quantity });
+        Recover<SnapshotOffer>(offer => _state = (PersistedOrderState)offer.Snapshot);
         Recover<RecoveryCompleted>(_ => { });
     }
 }
@@ -211,20 +211,20 @@ public interface IPersistenceIntegrationProtocol
 {
 }
 
-[AkkaSerializer(Name = "persistence-integration-test", SerializerId = 120320)]
-public sealed partial class PersistenceIntegrationSerializer : MessagePackSerializer<IPersistenceIntegrationProtocol>
+[AkkaSerializer<IPersistenceIntegrationProtocol>("persistence-integration-test", 120320)]
+public sealed partial class PersistenceIntegrationSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }
 
-[AkkaSerializable(Manifest = "order-placed-v1")]
-public sealed record OrderPlaced(
+[AkkaSerializable(Manifest = "persisted-order-placed-v1")]
+public sealed record PersistedOrderPlaced(
     [property: AkkaField(1)] string OrderId,
     [property: AkkaField(2)] int Quantity,
     [property: AkkaField(3)] DateTime PlacedAt) : IPersistenceIntegrationProtocol;
 
-[AkkaSerializable(Manifest = "order-state-v1")]
-public sealed record OrderState(
+[AkkaSerializable(Manifest = "persisted-order-state-v1")]
+public sealed record PersistedOrderState(
     [property: AkkaField(1)] string OrderId,
     [property: AkkaField(2)] int TotalQuantity) : IPersistenceIntegrationProtocol;
 

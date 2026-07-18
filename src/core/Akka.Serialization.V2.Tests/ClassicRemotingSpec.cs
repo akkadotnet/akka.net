@@ -18,7 +18,7 @@ namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
 /// Integration proof for openspec task 6.4 (and, together with the assertions below, task 8.5):
-/// a source-generated <see cref="MessagePackSerializer{TProtocol}"/> registered the same way a real
+/// a source-generated <see cref="AkkaSerializer"/> registered the same way a real
 /// application would -- via the classic HOCON <c>akka.actor.serializers</c> /
 /// <c>serialization-bindings</c> blocks, mirroring how <c>Akka.Remote.Artery.ArteryControlMessageSerializer</c>
 /// is registered in <c>Remote.conf</c> (see <c>Akka.Remote.Tests.Artery.ArteryControlMessageSerializerSpec</c>)
@@ -120,8 +120,8 @@ public interface IClassicRemotingProtocol
 {
 }
 
-[AkkaSerializer(Name = "classic-remoting-test", SerializerId = 120310)]
-public sealed partial class ClassicRemotingSerializer : MessagePackSerializer<IClassicRemotingProtocol>
+[AkkaSerializer<IClassicRemotingProtocol>("classic-remoting-test", 120310)]
+public sealed partial class ClassicRemotingSerializer : AkkaSerializer
 {
     public static partial SerializerRegistration CreateRegistration();
 }
