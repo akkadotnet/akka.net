@@ -1018,27 +1018,42 @@ public abstract class ClusterShardingSpec : MultiNodeClusterShardingSpec<Cluster
                     });
                 });
 
-                counter1.Tell(new Get(1));
-                await ExpectMsgAsync(1);
+                // Bounded, retrying check with a fresh probe per attempt - a slow
+                // remember-entities recovery can leave counter1 unresponsive for a while
+                // after the Identify above succeeds, and a bare ExpectMsgAsync here would
+                // otherwise inherit (and drain) the enclosing Within budget.
+                await AwaitAssertAsync(async () =>
+                {
+                    var probe = CreateTestProbe();
+                    counter1.Tell(new Get(1), probe.Ref);
+                    await probe.ExpectMsgAsync(1, TimeSpan.FromSeconds(3));
+                }, TimeSpan.FromSeconds(20), TimeSpan.FromMilliseconds(500));
             }, Config.Third);
-            await EnterBarrierAsync("after-shard-restart");
-
-            await RunOnAsync(async () =>
-            {
-                //Check a second region does not share the same persistent shards
-
-                //Create a separate 13 counter
-                _anotherPersistentRegion.Value.Tell(new EntityEnvelope(13, Increment.Instance));
-                _anotherPersistentRegion.Value.Tell(new Get(13));
-                await ExpectMsgAsync(1);
-
-                //Check that no counter "1" exists in this shard
-                var secondCounter1 = Sys.ActorSelection(LastSender.Path.Parent / "1");
-                secondCounter1.Tell(new Identify(3));
-                await ExpectMsgAsync(new ActorIdentity(3, null), TimeSpan.FromSeconds(3));
-            }, Config.Fourth);
-            await EnterBarrierAsync("after-12");
         });
+
+        // Barriers must not run inside a Within scope: EnterBarrierAsync derives its
+        // timeout from RemainingOr(barrier-timeout), which clamps to zero once the
+        // enclosing Within's deadline has passed - and unlike JVM Akka, Akka.NET's
+        // Within does not dilate by timefactor. The recovery step above can eat most
+        // of its 50s budget, so everything from here on runs outside any Within and
+        // gets the full testconductor barrier-timeout.
+        await EnterBarrierAsync("after-shard-restart");
+
+        await RunOnAsync(async () =>
+        {
+            //Check a second region does not share the same persistent shards
+
+            //Create a separate 13 counter
+            _anotherPersistentRegion.Value.Tell(new EntityEnvelope(13, Increment.Instance));
+            _anotherPersistentRegion.Value.Tell(new Get(13));
+            await ExpectMsgAsync(1, TimeSpan.FromSeconds(3));
+
+            //Check that no counter "1" exists in this shard
+            var secondCounter1 = Sys.ActorSelection(LastSender.Path.Parent / "1");
+            secondCounter1.Tell(new Identify(3));
+            await ExpectMsgAsync(new ActorIdentity(3, null), TimeSpan.FromSeconds(3));
+        }, Config.Fourth);
+        await EnterBarrierAsync("after-12");
     }
 
     private async Task PersistentClusterSharding_should_permanently_stop_entities_which_passivate()
