@@ -48,9 +48,10 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
                 akka.remote.dot-netty.tcp.connection-timeout = 5s
                 akka.remote.retry-gate-closed-for = 1s # fast restart
 
-                # second waits at the ""end"" barrier for the full identify window on first,
-                # which can exceed the default 30s barrier timeout
-                akka.testconductor.barrier-timeout = 60s
+                # second waits at the ""end"" barrier while first runs its whole delivery
+                # pipeline: the conductor-shutdown ack (up to 30s), the 45s identify window,
+                # then the 30s shutdown resend span - far past the default 30s barrier timeout
+                akka.testconductor.barrier-timeout = 120s
             ").WithFallback(DistributedPubSub.DefaultConfig());
 
         TestTransport = true;
@@ -161,12 +162,14 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                 });
             });
 
-            // At-most-once send across an association that is being re-established -
-            // resend covers a lost first delivery.
-            for (var attempt = 0; attempt < 3; attempt++)
+            // At-most-once sends across an association churning through gate/handshake cycles on
+            // the rebound port: build 129171 proved a successful Identify round-trip can be followed
+            // by a window that swallows several seconds of sends. Resend on a span (30s) that
+            // outlasts any gate/handshake/quarantine cycle; extras dead-letter harmlessly.
+            for (var attempt = 0; attempt < 10; attempt++)
             {
                 if (attempt > 0)
-                    await Task.Delay(TimeSpan.FromSeconds(2));
+                    await Task.Delay(TimeSpan.FromSeconds(3));
 
                 Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell("shutdown");
             }
@@ -217,10 +220,12 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                 // not just first's 45s identify window: first's window is anchored on
                 // TestConductor.Shutdown(third) RETURNING (an ack bounded by its own 30s WaitAsync),
                 // so first's deadline can slide up to ~30s later than third's restart-anchored clock.
-                // 90s = 30s anchor skew + 45s identify window + resend spacing + margin. Third timing
+                // 120s: node1's Shutdown-ack anchor can trail third's clock by ~19s (30s ack bound minus
+                // the ~11s restart prelude), plus node1's 45s identify window, plus the 27s resend span,
+                // plus margin (builds 129150/129166/129171). Third timing
                 // out earlier adds no diagnostic value - if first genuinely fails, first's own window
                 // reports it; third giving up first just races clocks (builds 129150 and 129166).
-                await newSystem.WhenTerminated.WaitAsync(90.Seconds());
+                await newSystem.WhenTerminated.WaitAsync(120.Seconds());
             }
             finally
             {
