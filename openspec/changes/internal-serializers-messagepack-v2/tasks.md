@@ -41,7 +41,7 @@
 
 - [ ] 6.1 Add a v2 arm to `ClusterMessageSerializerBenchmarks`, `DDataSerializationBenchmarks`, and the DData CRDT benchmarks (`MemoryDiagnoser` + payload-size column)
 - [ ] 6.2 Extend the `RemotePingPong --serializer` harness with real subsystem message shapes; add a DData write-throughput / cluster-formation-time end-to-end check
-- [ ] 6.3 Record per-subsystem protobuf-vs-v2 results; gate the default-on recommendation on CPU + allocation wins + payload size within the ~10% tolerance on tiny hot messages (design.md Decision 9)
+- [ ] 6.3 Record per-subsystem protobuf-vs-v2 results (CPU, allocations, payload size per message type); results inform the default-on recommendation and optimization targets — subsystems migrate as a unit, no per-message carve-outs (design.md Decision 9, as amended)
 - [ ] 6.4 STOP for maintainer review of numbers before any subsystem's shipped default changes
 
 ## 7. Rolling-upgrade + compatibility tests

@@ -48,9 +48,10 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
                 akka.remote.dot-netty.tcp.connection-timeout = 5s
                 akka.remote.retry-gate-closed-for = 1s # fast restart
 
-                # second waits at the ""end"" barrier for the full identify window on first,
-                # which can exceed the default 30s barrier timeout
-                akka.testconductor.barrier-timeout = 60s
+                # second waits at the ""end"" barrier while first runs its whole delivery
+                # pipeline: the conductor-shutdown ack (up to 30s), the 45s identify window,
+                # then the 30s shutdown resend span - far past the default 30s barrier timeout
+                akka.testconductor.barrier-timeout = 120s
             ").WithFallback(DistributedPubSub.DefaultConfig());
 
         TestTransport = true;
@@ -91,129 +92,146 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
     public async Task A_Cluster_with_DistributedPubSub_must_startup_3_node_cluster()
     {
-        await WithinAsync(15.Seconds(), async () =>
-        {
-            await JoinAsync(_config.First, _config.First);
-            await JoinAsync(_config.Second, _config.First);
-            await JoinAsync(_config.Third, _config.First);
-            await EnterBarrierAsync("after-1");
-        });
+        // No Within wrapper: JoinAsync and "after-1" are barrier waits, and barriers must
+        // not run inside a Within (see the comment on the restart test below).
+        await JoinAsync(_config.First, _config.First);
+        await JoinAsync(_config.Second, _config.First);
+        await JoinAsync(_config.Third, _config.First);
+        await EnterBarrierAsync("after-1");
     }
 
     public async Task A_Cluster_with_DistributedPubSub_must_handle_restart_of_nodes_with_same_address()
     {
-        // Sized to hold the pre-shutdown steps (~10s worst case), the 45s identify window
-        // on first (which WithinAsync clamps to whatever remains here), and the post-barrier
-        // delta checks. The JVM spec's 30s proved too tight on loaded Windows agents once a
-        // single poisoned association cycle was in play.
-        await WithinAsync(60.Seconds(), async () =>
+        // Barriers must not run inside a Within: EnterBarrier's timeout is
+        // RemainingOr(barrier-timeout), which clamps toward zero as a Within deadline
+        // approaches, and Akka.NET's Within does not dilate by timefactor. So no outer
+        // umbrella here - every wait below carries its own explicit bound instead.
+        Mediator.Tell(new Subscribe("topic1", TestActor));
+        await ExpectMsgAsync<SubscribeAck>();
+        await CountAsync(3);
+
+        await RunOnAsync(() =>
         {
-            Mediator.Tell(new Subscribe("topic1", TestActor));
-            await ExpectMsgAsync<SubscribeAck>();
-            await CountAsync(3);
+            Mediator.Tell(new Publish("topic1", "msg1"));
+            return Task.CompletedTask;
+        }, _config.First);
+        await EnterBarrierAsync("pub-msg1");
 
-            await RunOnAsync(() =>
+        // Cross-node delivery over established associations; CountAsync above already
+        // proved the subscription gossip converged.
+        await ExpectMsgAsync("msg1", 10.Seconds());
+        await EnterBarrierAsync("got-msg1");
+
+        // All nodes capture baseline DeltaCount before node-specific logic
+        Mediator.Tell(DeltaCount.Instance);
+        var oldDeltaCount = await ExpectMsgAsync<long>();
+        await EnterBarrierAsync("old-delta-count");
+
+        await RunOnAsync(async () =>
+        {
+            await EnterBarrierAsync("end");
+
+            // Use a probe to isolate DeltaCount query from any stray messages in TestActor mailbox
+            var probe = CreateTestProbe();
+            Mediator.Tell(DeltaCount.Instance, probe.Ref);
+            var deltaCount = await probe.ExpectMsgAsync<long>(5.Seconds());
+            deltaCount.Should().Be(oldDeltaCount);
+        }, _config.Second);
+
+        await RunOnAsync(async () =>
+        {
+            var thirdAddress = (await NodeAsync(_config.Third)).Address;
+            await TestConductor.Shutdown(_config.Third).WaitAsync(30.Seconds());
+
+            // Must outlast third's full serial restart (old system termination, port rebind,
+            // self-join, SubscribeAck, 5s gossip-isolation check) plus at least two failed
+            // association cycles (connection-timeout + retry gate) against the dying endpoint.
+            await WithinAsync(45.Seconds(), async () =>
             {
-                Mediator.Tell(new Publish("topic1", "msg1"));
-                return Task.CompletedTask;
-            }, _config.First);
-            await EnterBarrierAsync("pub-msg1");
-
-            await ExpectMsgAsync("msg1");
-            await EnterBarrierAsync("got-msg1");
-
-            // All nodes capture baseline DeltaCount before node-specific logic
-            Mediator.Tell(DeltaCount.Instance);
-            var oldDeltaCount = await ExpectMsgAsync<long>();
-            await EnterBarrierAsync("old-delta-count");
-
-            await RunOnAsync(async () =>
-            {
-                await EnterBarrierAsync("end");
-
-                // Use a probe to isolate DeltaCount query from any stray messages in TestActor mailbox
-                var probe = CreateTestProbe();
-                Mediator.Tell(DeltaCount.Instance, probe.Ref);
-                var deltaCount = await probe.ExpectMsgAsync<long>(5.Seconds());
-                deltaCount.Should().Be(oldDeltaCount);
-            }, _config.Second);
-
-            await RunOnAsync(async () =>
-            {
-                var thirdAddress = (await NodeAsync(_config.Third)).Address;
-                await TestConductor.Shutdown(_config.Third).WaitAsync(30.Seconds());
-
-                // Must outlast third's full serial restart (old system termination, port rebind,
-                // self-join, SubscribeAck, 5s gossip-isolation check) plus at least two failed
-                // association cycles (connection-timeout + retry gate) against the dying endpoint.
-                await WithinAsync(45.Seconds(), async () =>
+                await AwaitAssertAsync(async () =>
                 {
-                    await AwaitAssertAsync(async () =>
-                    {
-                        // JVM parity (DistributedPubSubRestartSpec.scala): a FRESH probe per attempt.
-                        // Reusing one probe across attempts livelocks: association establishment
-                        // flushes the Identify messages buffered by the EndpointWriter as one burst
-                        // of ActorIdentity(null) replies, and from then on every attempt sends one
-                        // new Identify but reads one STALE null reply - the backlog never drains,
-                        // so the loop fails fast forever even after /user/shutdown exists.
-                        var identifyProbe = CreateTestProbe();
-                        Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null), identifyProbe.Ref);
-                        (await identifyProbe.ExpectMsgAsync<ActorIdentity>(2.Seconds())).Subject.Should().NotBeNull();
-                    });
+                    // JVM parity (DistributedPubSubRestartSpec.scala): a FRESH probe per attempt.
+                    // Reusing one probe across attempts livelocks: association establishment
+                    // flushes the Identify messages buffered by the EndpointWriter as one burst
+                    // of ActorIdentity(null) replies, and from then on every attempt sends one
+                    // new Identify but reads one STALE null reply - the backlog never drains,
+                    // so the loop fails fast forever even after /user/shutdown exists.
+                    var identifyProbe = CreateTestProbe();
+                    Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell(new Identify(null), identifyProbe.Ref);
+                    (await identifyProbe.ExpectMsgAsync<ActorIdentity>(2.Seconds())).Subject.Should().NotBeNull();
                 });
+            });
+
+            // At-most-once sends across an association churning through gate/handshake cycles on
+            // the rebound port: build 129171 proved a successful Identify round-trip can be followed
+            // by a window that swallows several seconds of sends. Resend on a span (30s) that
+            // outlasts any gate/handshake/quarantine cycle; extras dead-letter harmlessly.
+            for (var attempt = 0; attempt < 10; attempt++)
+            {
+                if (attempt > 0)
+                    await Task.Delay(TimeSpan.FromSeconds(3));
 
                 Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown").Tell("shutdown");
+            }
 
-                await EnterBarrierAsync("end");
+            await EnterBarrierAsync("end");
 
-                // Use a probe to isolate DeltaCount query from stray ActorIdentity messages
-                // that may still be arriving from AwaitAssertAsync Identify retries
-                var deltaProbe = CreateTestProbe();
-                Mediator.Tell(DeltaCount.Instance, deltaProbe.Ref);
-                var deltaCount = await deltaProbe.ExpectMsgAsync<long>(5.Seconds());
-                deltaCount.Should().Be(oldDeltaCount);
-            }, _config.First);
+            // Use a probe to isolate DeltaCount query from stray ActorIdentity messages
+            // that may still be arriving from AwaitAssertAsync Identify retries
+            var deltaProbe = CreateTestProbe();
+            Mediator.Tell(DeltaCount.Instance, deltaProbe.Ref);
+            var deltaCount = await deltaProbe.ExpectMsgAsync<long>(5.Seconds());
+            deltaCount.Should().Be(oldDeltaCount);
+        }, _config.First);
 
-            await RunOnAsync(async () =>
+        await RunOnAsync(async () =>
+        {
+            var node3Address = Cluster.Get(Sys).SelfAddress;
+            await Sys.WhenTerminated.WaitAsync(30.Seconds());
+            var newSystem = ActorSystem.Create(
+                Sys.Name,
+                ConfigurationFactory
+                    .ParseString($"akka.remote.dot-netty.tcp.port={node3Address.Port}")
+                    .WithFallback(Sys.Settings.Config));
+
+            try
             {
-                var node3Address = Cluster.Get(Sys).SelfAddress;
-                await Sys.WhenTerminated.WaitAsync(30.Seconds());
-                var newSystem = ActorSystem.Create(
-                    Sys.Name,
-                    ConfigurationFactory
-                        .ParseString($"akka.remote.dot-netty.tcp.port={node3Address.Port}")
-                        .WithFallback(Sys.Settings.Config));
+                // don't join the old cluster
+                await Cluster.Get(newSystem).JoinAsync(Cluster.Get(newSystem).SelfAddress);
+                var newMediator = DistributedPubSub.Get(newSystem).Mediator;
+                var probe = CreateTestProbe(newSystem);
 
-                try
-                {
-                    // don't join the old cluster
-                    await Cluster.Get(newSystem).JoinAsync(Cluster.Get(newSystem).SelfAddress);
-                    var newMediator = DistributedPubSub.Get(newSystem).Mediator;
-                    var probe = CreateTestProbe(newSystem);
+                newMediator.Tell(new Subscribe("topic2", probe.Ref), probe.Ref);
+                await probe.ExpectMsgAsync<SubscribeAck>();
 
-                    newMediator.Tell(new Subscribe("topic2", probe.Ref), probe.Ref);
-                    await probe.ExpectMsgAsync<SubscribeAck>();
+                // let them gossip, but Delta should not be exchanged
+                await probe.ExpectNoMsgAsync(5.Seconds());
+                newMediator.Tell(DeltaCount.Instance, probe.Ref);
+                await probe.ExpectMsgAsync(0L);
 
-                    // let them gossip, but Delta should not be exchanged
-                    await probe.ExpectNoMsgAsync(5.Seconds());
-                    newMediator.Tell(DeltaCount.Instance, probe.Ref);
-                    await probe.ExpectMsgAsync(0L);
+                // Create shutdown actor AFTER verifying gossip isolation.
+                // First node will find this actor and send "shutdown" to terminate newSystem.
+                // We must complete the DeltaCount check above before this, otherwise there's
+                // a race where First triggers shutdown while we're still verifying.
+                newSystem.Log.Info("Creating shutdown actor on {0}", node3Address);
+                newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
 
-                    // Create shutdown actor AFTER verifying gossip isolation.
-                    // First node will find this actor and send "shutdown" to terminate newSystem.
-                    // We must complete the DeltaCount check above before this, otherwise there's
-                    // a race where First triggers shutdown while we're still verifying.
-                    newSystem.Log.Info("Creating shutdown actor on {0}", node3Address);
-                    newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
-
-                    await newSystem.WhenTerminated.WaitAsync(30.Seconds());
-                }
-                finally
-                {
-                    await newSystem.Terminate().WaitAsync(30.Seconds());
-                }
-            }, _config.Third);
-        });
+                // Third's receive deadline must dominate first's WHOLE worst-case delivery pipeline,
+                // not just first's 45s identify window: first's window is anchored on
+                // TestConductor.Shutdown(third) RETURNING (an ack bounded by its own 30s WaitAsync),
+                // so first's deadline can slide up to ~30s later than third's restart-anchored clock.
+                // 120s: node1's Shutdown-ack anchor can trail third's clock by ~19s (30s ack bound minus
+                // the ~11s restart prelude), plus node1's 45s identify window, plus the 27s resend span,
+                // plus margin (builds 129150/129166/129171). Third timing
+                // out earlier adds no diagnostic value - if first genuinely fails, first's own window
+                // reports it; third giving up first just races clocks (builds 129150 and 129166).
+                await newSystem.WhenTerminated.WaitAsync(120.Seconds());
+            }
+            finally
+            {
+                await newSystem.Terminate().WaitAsync(45.Seconds());
+            }
+        }, _config.Third);
     }
 
     protected override int InitialParticipantsValueFactory => Roles.Count;
@@ -254,10 +272,12 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
     private async Task CountAsync(int expected)
     {
         var probe = CreateTestProbe();
+        // Gossip-propagation check: registrations spread on the 500ms pub-sub gossip tick,
+        // so bound it explicitly instead of relying on the 3s single-expect default.
         await AwaitAssertAsync(async () =>
         {
             Mediator.Tell(Count.Instance, probe.Ref);
             (await probe.ExpectMsgAsync<int>()).Should().Be(expected);
-        });
+        }, 10.Seconds(), 500.Milliseconds());
     }
 }
