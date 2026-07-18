@@ -1,37 +1,28 @@
 ## ADDED Requirements
 
-### Requirement: Write-side flag controls serializer selection only
+### Requirement: Migrated subsystems write MessagePack by default, with legacy readers registered forever
 
-The system SHALL provide a write-side-only feature flag (`akka.actor.serialization.v2.enabled` plus per-subsystem overrides) that selects which registered serializer a migrated subsystem writes with, and SHALL always register both the legacy protobuf serializer and the new MessagePack V2 serializer for a migrated subsystem regardless of the flag's value.
+Once a subsystem's migration flips its `reference.conf` `serialization-bindings` entry, the system SHALL write that subsystem's messages with the forked MessagePack V2 serializer by default, and SHALL always register both the legacy protobuf serializer and the MessagePack V2 serializer (each under its own stable id) regardless of which one the binding selects.
 
-#### Scenario: Flag disabled writes legacy protobuf
+#### Scenario: Flipped subsystem writes MessagePack V2 by default
 
-- **WHEN** a subsystem's effective flag is `off` (the default)
-- **THEN** the system SHALL write that subsystem's messages using the legacy protobuf serializer
-
-#### Scenario: Flag enabled writes MessagePack V2
-
-- **WHEN** a subsystem's effective flag is `on`
+- **WHEN** a subsystem's shipped binding has flipped and no operator override is present
 - **THEN** the system SHALL write that subsystem's messages using the forked MessagePack V2 serializer
 
-#### Scenario: Both formats remain readable regardless of flag state
+#### Scenario: Both formats remain readable regardless of the binding
 
 - **WHEN** a node receives a message serialized with either the legacy protobuf serializer id or the MessagePack V2 serializer id for a migrated subsystem
-- **THEN** the node SHALL deserialize the message successfully, independent of that subsystem's flag value
+- **THEN** the node SHALL deserialize the message successfully, independent of which serializer the node's own binding currently selects
 
-### Requirement: Deterministic binding override
+### Requirement: Operator opt-out through standard binding overrides
 
-The system SHALL apply the write-side flag by deterministically overwriting the exact `serialization-bindings` entry for a subsystem's marker interface, and SHALL NOT add a competing overlapping binding.
+The system SHALL honor a standard `application.conf` `serialization-bindings` override pinning a migrated subsystem's marker interface back to the legacy serializer, and SHALL NOT introduce any new configuration surface (feature flags, switches, or registries) for selecting a subsystem's write format.
 
-#### Scenario: Central hook overwrites exact binding key
+#### Scenario: Binding override restores legacy writes
 
-- **WHEN** a subsystem's flag is effectively `on` during `Serialization` construction
-- **THEN** the system SHALL overwrite the marker interface's existing binding entry with the MessagePack V2 serializer name using an exact-key, last-write-wins replacement
-
-#### Scenario: No new overlapping binding is introduced
-
-- **WHEN** the flag-driven binding override runs
-- **THEN** the system SHALL NOT register an additional `serialization-bindings` entry that overlaps with the subsystem's existing marker-interface binding
+- **WHEN** an operator overrides a migrated subsystem's marker-interface binding to the legacy serializer name in `application.conf`
+- **THEN** the system SHALL write that subsystem's messages using the legacy protobuf serializer
+- **AND** reads of both wire formats SHALL continue to succeed
 
 ### Requirement: Reserved internal serializer-id block
 
@@ -45,16 +36,17 @@ The system SHALL assign each forked MessagePack V2 serializer a serializer id in
 
 ### Requirement: Durable and persisted writes excluded from this migration
 
-The system SHALL keep DistributedData's durable (LMDB) store writes and Cluster Sharding's remember-entities persisted state on the legacy protobuf serializer regardless of the corresponding subsystem flag.
+The system SHALL keep DistributedData's durable (LMDB) store data and Cluster Sharding's remember-entities persisted state on the legacy protobuf serializer — for both writes and recovery — independent of any subsystem binding flip.
 
-#### Scenario: DData durable store ignores the distributed-data flag
+#### Scenario: DData durable store is pinned by exact-type binding
 
-- **WHEN** the `distributed-data` flag is `on` and a value is written to the durable (LMDB) store
-- **THEN** the system SHALL serialize that durable write using the legacy protobuf serializer
+- **WHEN** DistributedData's `IReplicatorMessage` interface binding has flipped to the MessagePack V2 serializer
+- **THEN** an exact-type `serialization-bindings` entry SHALL pin `DurableDataEnvelope` to the legacy protobuf serializer
+- **AND** recovery of durable data written before the flip SHALL succeed, because the LMDB store resolves its serializer from the current binding rather than a stored serializer id
 
-#### Scenario: Sharding remember-entities state ignores the sharding flag
+#### Scenario: Sharding remember-entities state stays on protobuf
 
-- **WHEN** the `sharding` flag is `on` and remember-entities state (`CoordinatorState`, `EntityState`, `EntitiesStarted`, `EntitiesStopped`) is persisted
+- **WHEN** the sharding routing binding has flipped and remember-entities state (`CoordinatorState`, `EntityState`, `EntitiesStarted`, `EntitiesStopped`) is persisted
 - **THEN** the system SHALL serialize that persisted state using the legacy protobuf serializer
 
 ### Requirement: Envelope and nested payloads are preserved as serializer boundaries
@@ -67,9 +59,9 @@ Forked MessagePack V2 wrapper serializers SHALL preserve a wrapped payload's own
 - **THEN** it SHALL store the payload's serializer id, manifest, and opaque serialized bytes
 - **AND** it SHALL recover the original payload through normal Akka deserialization using that stored id, manifest, and bytes
 
-### Requirement: Benchmark acceptance gate governs default-on transitions
+### Requirement: Benchmark acceptance gate governs binding-flip timing
 
-The system's migrated subsystems SHALL be evaluated with matched protobuf-vs-MessagePack-V2 benchmarks reporting CPU cost, allocations, and payload size before any subsystem's shipped default flag value changes from `off`.
+The system's migrated subsystems SHALL be evaluated with matched protobuf-vs-MessagePack-V2 benchmarks reporting CPU cost, allocations, and payload size before that subsystem's shipped `reference.conf` binding flips to the MessagePack V2 serializer.
 
 #### Scenario: Subsystem benchmark reports all three gate metrics
 
@@ -78,20 +70,20 @@ The system's migrated subsystems SHALL be evaluated with matched protobuf-vs-Mes
 
 #### Scenario: Subsystems migrate as a unit
 
-- **WHEN** a subsystem's effective flag is `on`
+- **WHEN** a subsystem's shipped binding flips
 - **THEN** every message type handled by that subsystem's serializer SHALL be written with the forked MessagePack V2 serializer, with no per-message-type carve-out to the legacy protobuf binding
-- **AND** any measured payload-size or CPU regression on individual message types SHALL be recorded in the benchmark results and addressed through serializer optimization, informing when the subsystem's shipped default changes rather than which messages migrate
+- **AND** any measured payload-size or CPU regression on individual message types SHALL be recorded in the benchmark results and addressed through serializer optimization, informing flip timing rather than which messages migrate
 
-### Requirement: Rolling-upgrade safety through default-off and operator documentation
+### Requirement: Rolling-upgrade safety through read-forever registration and a documented roll recipe
 
-The system SHALL ship every migrated subsystem's flag defaulted to `off`, and SHALL document that all cluster nodes must be running a version with the MessagePack V2 serializer registered before any node enables a subsystem's flag.
+The system SHALL keep every v1.6 node able to read both wire formats at all times, and SHALL document that a rolling upgrade from a pre-v1.6 version — where a flipped subsystem is in use — requires pinning that subsystem's binding to the legacy serializer for the duration of the roll.
 
-#### Scenario: Freshly upgraded node writes legacy protobuf until an operator opts in
+#### Scenario: Mixed v1.6 clusters interoperate without configuration
 
-- **WHEN** a node is upgraded to a version containing this change and no configuration override is applied
-- **THEN** the node SHALL continue writing every migrated subsystem's messages using the legacy protobuf serializer
+- **WHEN** some v1.6 nodes write MessagePack V2 for a subsystem and other v1.6 nodes write legacy protobuf for the same subsystem (for example mid-roll of a binding override change)
+- **THEN** all nodes SHALL deserialize all of that subsystem's messages successfully
 
 #### Scenario: A node without the V2 serializer registered cannot decode a V2 id
 
-- **WHEN** a node that does not have a migrated subsystem's MessagePack V2 serializer registered receives a message with that serializer's id
-- **THEN** deserialization SHALL fail with a "cannot find serializer with id" error, which is the documented precondition for requiring all nodes to be upgraded before enabling any subsystem flag
+- **WHEN** a node that does not have a migrated subsystem's MessagePack V2 serializer registered (any pre-v1.6 node) receives a message with that serializer's id
+- **THEN** deserialization SHALL fail with a "cannot find serializer with id" error, which is the documented reason the binding-override recipe MUST be applied during mixed pre-v1.6 rolls
