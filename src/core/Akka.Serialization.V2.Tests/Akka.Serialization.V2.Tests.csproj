@@ -13,6 +13,15 @@
     <ProjectReference Include="..\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
     <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" ReferenceOutputAssembly="true" PrivateAssets="all" />
+
+    <!-- Test-only integration proofs (openspec messagepack-sourcegen-validation tasks 6.4-6.6, 8.5-8.6):
+         classic (non-Artery) Akka.Remote round-tripping and Akka.Persistence journal/snapshot-store
+         round-tripping of generated V2 serializers. These are ProjectReferences from the test project
+         only; Akka.Serialization.V2 itself gains no new runtime dependency. Akka.Tests.Shared.Internals.Xunit3
+         supplies the shared xunit3-compatible AkkaSpec base (transitively brings in Akka.TestKit.Xunit). -->
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
+    <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
+    <ProjectReference Include="..\Akka.Persistence\Akka.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>

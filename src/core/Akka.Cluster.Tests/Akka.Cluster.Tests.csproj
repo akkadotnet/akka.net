@@ -10,6 +10,12 @@
   <ItemGroup>
     <ProjectReference Include="..\Akka.Cluster\Akka.Cluster.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
+
+    <!-- Test-only, for openspec messagepack-sourcegen-validation task 6.9: proves generated V2
+         payloads survive Akka.Cluster's real ReliableDeliverySerializer (Akka.Delivery wrapper). -->
+    <ProjectReference Include="..\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
+    <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" ReferenceOutputAssembly="true" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
