@@ -34,20 +34,20 @@ The system SHALL assign each forked MessagePack V2 serializer a serializer id in
 - **THEN** the new serializer's id SHALL equal the legacy serializer's id plus 40
 - **AND** the new serializer's id SHALL fall within the 40-79 range
 
-### Requirement: Durable and persisted writes excluded from this migration
+### Requirement: Durable records are self-describing and recover by stored format
 
-The system SHALL keep DistributedData's durable (LMDB) store data and Cluster Sharding's remember-entities persisted state on the legacy protobuf serializer — for both writes and recovery — independent of any subsystem binding flip.
+Every durable record the migration touches SHALL carry a signal of the serializer that wrote it, and recovery SHALL dispatch on that signal rather than on the current write-side binding, so that records written before and after a subsystem's flip both recover correctly.
 
-#### Scenario: DData durable store is pinned by exact-type binding
+#### Scenario: Legacy headerless LMDB records recover after the DData flip
 
-- **WHEN** DistributedData's `IReplicatorMessage` interface binding has flipped to the MessagePack V2 serializer
-- **THEN** an exact-type `serialization-bindings` entry SHALL pin `DurableDataEnvelope` to the legacy protobuf serializer
-- **AND** recovery of durable data written before the flip SHALL succeed, because the LMDB store resolves its serializer from the current binding rather than a stored serializer id
+- **WHEN** DistributedData's binding has flipped to the MessagePack V2 serializer and the durable (LMDB) store contains records written before this change (no format header)
+- **THEN** the store SHALL recover each headerless record as the legacy protobuf `DurableDataEnvelope`
+- **AND** records written after the change SHALL carry a `(serializerId, manifest)` header and recover by that stored id
 
-#### Scenario: Sharding remember-entities state stays on protobuf
+#### Scenario: Stamped persistence recovers old and new entries by stored id
 
-- **WHEN** the sharding routing binding has flipped and remember-entities state (`CoordinatorState`, `EntityState`, `EntitiesStarted`, `EntitiesStopped`) is persisted
-- **THEN** the system SHALL serialize that persisted state using the legacy protobuf serializer
+- **WHEN** a durable store that stamps the serializer id per record (Akka.Persistence journals/snapshots behind `EventSourcedProducerQueue`, or Sharding remember-entities) contains a mix of pre-flip protobuf entries and post-flip MessagePack entries
+- **THEN** recovery SHALL deserialize each entry using its own stored serializer id and manifest, independent of the current write-side binding
 
 ### Requirement: Envelope and nested payloads are preserved as serializer boundaries
 

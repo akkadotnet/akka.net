@@ -19,9 +19,9 @@
 - [ ] 3.1 DTO mirrors for the `ReplicatorMessage` set; hand-written `IAkkaMessagePackFormatter<T>` for `UniqueAddress`/`VersionVector` (design.md Decision 10)
 - [ ] 3.2 Preserve/re-evaluate gzip on `Gossip`/`ORSet`/`ORMap`; `OtherMessage` -> `[AkkaEnvelopePayload]`
 - [ ] 3.3 `ReplicatedData` CRDT mirrors + delta-op serializers
-- [ ] 3.4 Register v2 ids additively; **exact-type `DurableDataEnvelope` pin to the legacy serializer** (MANDATORY — ships in the same PR as the binding flip; design.md Decision 11 LMDB structural finding)
-- [ ] 3.5 Golden + cross-read tests, plus durable-read-back proof: write durable store pre-flip, flip the binding, restart, recover successfully via the pin
-- [ ] 3.6 Flip PR: binding -> V2 (with 3.4's pin), ledger + runbook
+- [ ] 3.4 **Prerequisite PR — make `LmdbDurableStore` self-describing**: prepend a per-record `(serializerId, manifest)` header; recover headerless records as legacy protobuf `DurableDataEnvelope`; disambiguate with a leading `0x00` sentinel (invalid as a protobuf record start). Lands BEFORE the DData flip (design.md Decision 11)
+- [ ] 3.5 Register v2 ids additively; golden + cross-read tests; durable-read-back proof: write a pre-header (protobuf, headerless) LMDB database, flip the binding, restart, recover successfully; plus mixed old/new records recover by their stored header
+- [ ] 3.6 Flip PR: binding -> V2 (after 3.4 ships), ledger + runbook
 
 ## 4. Subsystems 3-4 — Cluster tools (9, 15, 10; optional 14) + Sharding routing subset (13)
 
