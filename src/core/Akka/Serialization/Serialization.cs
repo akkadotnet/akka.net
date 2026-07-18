@@ -271,6 +271,12 @@ namespace Akka.Serialization
                 AddSerializationMap(messageType, serializer);
             }
 
+            // Apply the write-side V2 serializer rebinding declared under
+            // `akka.actor.serialization.v2` AFTER the HOCON serialization-bindings above
+            // (deterministic exact-key overwrite) and BEFORE the SerializationSetup bindings
+            // below (SerializationSetup ALWAYS wins). Inert while all flags are off (the default).
+            ApplyV2WriteBindings(system);
+
             // Add any serializer bindings that are registered via the SerializationSetup
             // This has to be done here because SerializationSetup ALWAYS win.
             foreach (var details in _serializerDetails)
@@ -279,6 +285,70 @@ namespace Akka.Serialization
                 foreach (var t in details.UseFor)
                 {
                     AddSerializationMap(t, details.SerializerV2);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Applies the write-side V2 serializer rebinding declared under
+        /// <c>akka.actor.serialization.v2.write-bindings</c>; see
+        /// <see cref="SerializationV2WriteBindings"/> for the contract. For every subsystem whose
+        /// effective flag resolves to on, each declared type is re-pointed at its V2 serializer -
+        /// a deliberate, deterministic exact-key overwrite of the binding installed from
+        /// <c>akka.actor.serialization-bindings</c>. The legacy serializer stays registered by id,
+        /// so the READ side keeps decoding both wire formats. Resolved once here, during
+        /// construction - never on the per-message hot path.
+        /// </summary>
+        private void ApplyV2WriteBindings(ExtendedActorSystem system)
+        {
+            var v2Config = system.Settings.Config.GetConfig(SerializationV2WriteBindings.ConfigPath);
+            if (v2Config.IsNullOrEmpty())
+                return;
+
+            var writeBindings = v2Config.GetConfig(SerializationV2WriteBindings.WriteBindingsKey);
+            if (writeBindings.IsNullOrEmpty())
+                return; // no subsystem has declared a V2 write-binding - nothing to do
+
+            foreach (var subsystemKvp in writeBindings.AsEnumerable())
+            {
+                var subsystem = subsystemKvp.Key;
+                if (!SerializationV2WriteBindings.IsEnabledFor(v2Config, subsystem))
+                    continue; // flag is off (the default): write-side bindings stay exactly as configured
+
+                var subsystemBindings = writeBindings.GetConfig(subsystem);
+                if (subsystemBindings.IsNullOrEmpty())
+                    continue;
+
+                foreach (var kvp in subsystemBindings.AsEnumerable())
+                {
+                    var typename = kvp.Key;
+                    var serializerName = kvp.Value.GetString();
+                    var messageType = Type.GetType(typename);
+
+                    if (messageType == null)
+                    {
+                        system.Log.Warning(
+                            "The type name for serialization.v2 write-binding '{0}' in subsystem '{1}' did not resolve to an actual Type: '{2}'",
+                            serializerName, subsystem, typename);
+                        continue;
+                    }
+
+                    if (!_serializersByName.TryGetValue(serializerName, out var serializer))
+                    {
+                        system.Log.Warning(
+                            "serialization.v2 write-binding for subsystem '{0}' points to non existing serializer: '{1}'",
+                            subsystem, serializerName);
+                        continue;
+                    }
+
+                    // Bypasses AddSerializationMap on purpose: this overwrite is operator-requested,
+                    // so the `log-serializer-override-on-start` "Did you mean to do this?" warning
+                    // does not apply.
+                    _serializerMap[messageType] = serializer;
+
+                    system.Log.Info(
+                        "serialization.v2: write-side flag for subsystem '{0}' is ON - messages of type [{1}] will now be written with serializer '{2}' (id [{3}]). Reads of the legacy wire format remain supported.",
+                        subsystem, messageType, serializerName, serializer.Identifier);
                 }
             }
         }
