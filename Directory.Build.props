@@ -32,10 +32,10 @@
     <ProtobufVersion>3.35.1</ProtobufVersion>
     <GrpcToolsVersion>2.82.0</GrpcToolsVersion>
     <BenchmarkDotNetVersion>0.15.8</BenchmarkDotNetVersion>
-    <MessagePackVersion>3.1.7</MessagePackVersion>
+    <MessagePackVersion>3.1.8</MessagePackVersion>
     <MicrosoftCodeAnalysisCSharpVersion>4.13.0</MicrosoftCodeAnalysisCSharpVersion>
     <NetTestVersion>net10.0</NetTestVersion>
-    <FsharpVersion>10.1.301</FsharpVersion>
+    <FsharpVersion>10.1.302</FsharpVersion>
     <NetStandardLibVersion>net10.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
@@ -47,6 +47,8 @@
     <MsExtVersion>[6.0.*,)</MsExtVersion>
     <MsExtTestVersion>10.0.9</MsExtTestVersion>
     <AkkaAnalyzerVersion>0.3.3</AkkaAnalyzerVersion>
+    <VerifyXunitV3Version>31.24.2</VerifyXunitV3Version>
+    <VerifyDiffPlexVersion>3.0.0</VerifyDiffPlexVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>

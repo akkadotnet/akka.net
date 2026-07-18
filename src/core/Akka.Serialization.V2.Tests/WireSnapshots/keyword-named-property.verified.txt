@@ -1,0 +1,8 @@
+﻿case: keyword-named-property
+message-type: KeywordNamedMessage
+manifest: keyword-named-v1
+serializer-id: 120101
+byte-count: 21
+
+0000  81 01 b2 73 6f 6d 65 74  68 69 6e 67 2d 68 61 70  |...something-hap|
+0010  70 65 6e 65 64                                    |pened|

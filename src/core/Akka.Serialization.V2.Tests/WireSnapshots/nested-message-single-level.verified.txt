@@ -1,0 +1,8 @@
+﻿case: nested-message-single-level
+message-type: ShipmentMessage
+manifest: shipment-v1
+serializer-id: 120101
+byte-count: 32
+
+0000  82 01 a7 6f 72 64 65 72  2d 31 02 82 01 a9 31 20  |...order-1....1 |
+0010  4d 61 69 6e 20 53 74 02  a7 53 65 61 74 74 6c 65  |Main St..Seattle|

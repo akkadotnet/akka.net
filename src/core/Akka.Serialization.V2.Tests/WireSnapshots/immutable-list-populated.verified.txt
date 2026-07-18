@@ -1,0 +1,8 @@
+﻿case: immutable-list-populated
+message-type: ImmutableListMessage
+manifest: imm-list-v1
+serializer-id: 120106
+byte-count: 20
+
+0000  81 01 93 a5 61 6c 70 68  61 a4 62 65 74 61 a5 67  |....alpha.beta.g|
+0010  61 6d 6d 61                                       |amma|

@@ -524,9 +524,14 @@ internal class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
                     var self = Self;
                     cmdTask.ContinueWith(t =>
                     {
-                        if (t.IsFaulted)
+                        // Fault OR a `false` result both mean the transport did not apply the
+                        // command (e.g. artery without test-mode, or a rate throttle / any command
+                        // artery's blackhole-only test-mode does not support) -- fail loudly
+                        // instead of reporting Done for a command that silently no-oped. Mirrors
+                        // Pekko's Player (`case true => Done; case _ => throw`).
+                        if (t.IsFaulted || !t.Result)
                             throw new ConfigurationException("Throttle was requested from the TestConductor, but no transport " +
-                                "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
+                                "adapters available that support throttling. Specify 'TestTransport = true' in your MultiNodeConfig");
                         self.Tell(new ToServer<Done>(Done.Instance));
                     });
                     return Stay();

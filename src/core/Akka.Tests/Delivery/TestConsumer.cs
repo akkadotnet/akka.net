@@ -76,7 +76,7 @@ public sealed class TestConsumer : ReceiveActor, IWithTimers
                 throw new InvalidOperationException($"Received duplicate [{nextMsg}]");
 
             _log.Info("processed [{0}] [msg: {1}] from [{2}]", job.SeqNr, job.Msg.Payload, job.ProducerId);
-            job.ConfirmTo.Tell(global::Akka.Delivery.ConsumerController.Confirmed.Instance);
+            job.ConfirmTo.Tell(Akka.Delivery.ConsumerController.Confirmed.Instance);
 
             if (EndCondition(job) && (_messageCount > 0 || _supportRestarts))
             {

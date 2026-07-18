@@ -32,7 +32,13 @@ namespace Akka.Remote.Tests.MultiNode.TestConductor
         {
             Master = Role("master");
             Slave = Role("slave");
-            CommonConfig = DebugConfig(true);
+            // Pinned to CLASSIC remoting even under AKKA_MNTR_TRANSPORT=artery: this spec
+            // exercises genuine token-bucket RATE throttling, which artery's blackhole-only
+            // test-mode does not support (Pekko's artery does not either -- its TestConductorSpec
+            // runs classic-only). CommonConfig sits above MultiNodeConfig's artery tier in the
+            // fallback chain, so this override always wins.
+            CommonConfig = ConfigurationFactory.ParseString("akka.remote.artery.enabled = off")
+                .WithFallback(DebugConfig(true));
             TestTransport = true;
         }
     }

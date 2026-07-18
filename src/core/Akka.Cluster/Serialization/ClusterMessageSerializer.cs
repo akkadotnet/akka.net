@@ -591,7 +591,7 @@ namespace Akka.Cluster.Serialization
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static string GetObjectManifest(Serializer serializer, object obj)
         {
-            return global::Akka.Serialization.Serialization.ManifestFor(serializer, obj);
+            return Akka.Serialization.Serialization.ManifestFor(serializer, obj);
         }
     }
 }
