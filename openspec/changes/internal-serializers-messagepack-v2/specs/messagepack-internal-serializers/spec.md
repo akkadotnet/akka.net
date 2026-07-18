@@ -76,10 +76,11 @@ The system's migrated subsystems SHALL be evaluated with matched protobuf-vs-Mes
 - **WHEN** a migrated subsystem's benchmark suite runs
 - **THEN** it SHALL report serialize+deserialize CPU cost, allocated bytes, and payload size for both the legacy protobuf serializer and the forked MessagePack V2 serializer
 
-#### Scenario: Payload-size regression beyond tolerance without substantial wins keeps the legacy binding
+#### Scenario: Subsystems migrate as a unit
 
-- **WHEN** a message type's MessagePack V2 payload size exceeds its protobuf payload size by more than approximately 10% and the corresponding CPU or allocation improvement is not substantial
-- **THEN** that message type SHALL remain on the legacy protobuf binding even if the rest of its subsystem is otherwise eligible to migrate
+- **WHEN** a subsystem's effective flag is `on`
+- **THEN** every message type handled by that subsystem's serializer SHALL be written with the forked MessagePack V2 serializer, with no per-message-type carve-out to the legacy protobuf binding
+- **AND** any measured payload-size or CPU regression on individual message types SHALL be recorded in the benchmark results and addressed through serializer optimization, informing when the subsystem's shipped default changes rather than which messages migrate
 
 ### Requirement: Rolling-upgrade safety through default-off and operator documentation
 
