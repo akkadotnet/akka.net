@@ -155,9 +155,10 @@ public class PersistenceIntegrationSpec : AkkaSpec
             if (Directory.Exists(_snapshotDir))
                 Directory.Delete(_snapshotDir, true);
         }
-        catch (IOException)
+        catch (IOException ex)
         {
-            // best effort cleanup
+            // best-effort cleanup: LocalSnapshotStore may still hold file handles during teardown
+            Output?.WriteLine($"Could not delete snapshot dir [{_snapshotDir}]: {ex.Message}");
         }
     }
 }
