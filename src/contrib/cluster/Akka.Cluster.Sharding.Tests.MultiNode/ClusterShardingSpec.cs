@@ -959,86 +959,98 @@ public abstract class ClusterShardingSpec : MultiNodeClusterShardingSpec<Cluster
 
     private async Task PersistentClusterSharding_should_recover_entities_upon_restart()
     {
-        await WithinAsync(TimeSpan.FromSeconds(50), async () =>
+        // Barriers must not run inside a Within scope: EnterBarrierAsync derives its
+        // timeout from RemainingOr(barrier-timeout), which clamps to zero once the
+        // enclosing Within's deadline has passed - and unlike JVM Akka, Akka.NET's
+        // Within does not dilate by timefactor. This phase therefore has no outer
+        // Within: every wait carries its own explicit bound, and all five barriers
+        // run outside any Within so each rendezvous gets the full testconductor
+        // barrier-timeout instead of a starved remainder.
+        RunOn(() =>
         {
-            RunOn(() =>
+            _ = _persistentEntitiesRegion.Value;
+            _ = _anotherPersistentRegion.Value;
+        }, Config.Third, Config.Fourth, Config.Fifth);
+        await EnterBarrierAsync("persistent-start");
+
+        // watch-out, region var is only init on 3rd node
+        ActorSelection region = null;
+        await RunOnAsync(async () =>
+        {
+            //Create an increment counter 1
+            _persistentEntitiesRegion.Value.Tell(new EntityEnvelope(1, Increment.Instance));
+            _persistentEntitiesRegion.Value.Tell(new Get(1));
+            await ExpectMsgAsync(1, TimeSpan.FromSeconds(5));
+
+            region = Sys.ActorSelection(LastSender.Path.Parent.Parent);
+        }, Config.Third);
+        await EnterBarrierAsync("counter-incremented");
+
+
+        // clean up shard cache everywhere
+        await RunOnAsync(async () =>
+        {
+            _persistentEntitiesRegion.Value.Tell(new BeginHandOff("1"));
+            await ExpectMsgAsync(new BeginHandOffAck("1"), TimeSpan.FromSeconds(10), "ShardStopped not received");
+        }, Config.Third, Config.Fourth, Config.Fifth);
+        await EnterBarrierAsync("everybody-hand-off-ack");
+
+
+
+        await RunOnAsync(async () =>
+        {
+            //Stop the shard cleanly
+            region.Tell(new HandOff("1"));
+            await ExpectMsgAsync(new ShardStopped("1"), TimeSpan.FromSeconds(10), "ShardStopped not received");
+
+            //Get the path to where the shard now resides
+            await AwaitAssertAsync(async () =>
             {
-                _ = _persistentEntitiesRegion.Value;
-                _ = _anotherPersistentRegion.Value;
-            }, Config.Third, Config.Fourth, Config.Fifth);
-            await EnterBarrierAsync("persistent-start");
+                _persistentEntitiesRegion.Value.Tell(new Get(13));
+                await ExpectMsgAsync(0);
+            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
-            // watch-out, region var is only init on 3rd node
-            ActorSelection region = null;
-            await RunOnAsync(async () =>
+            //Check that counter 1 is now alive again, even though we have
+            // not sent a message to it via the ShardRegion
+            var counter1 = Sys.ActorSelection(LastSender.Path.Parent / "1");
+            await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
-                //Create an increment counter 1
-                _persistentEntitiesRegion.Value.Tell(new EntityEnvelope(1, Increment.Instance));
-                _persistentEntitiesRegion.Value.Tell(new Get(1));
-                await ExpectMsgAsync(1);
-
-                region = Sys.ActorSelection(LastSender.Path.Parent.Parent);
-            }, Config.Third);
-            await EnterBarrierAsync("counter-incremented");
-
-
-            // clean up shard cache everywhere
-            await RunOnAsync(async () =>
-            {
-                _persistentEntitiesRegion.Value.Tell(new BeginHandOff("1"));
-                await ExpectMsgAsync(new BeginHandOffAck("1"), TimeSpan.FromSeconds(10), "ShardStopped not received");
-            }, Config.Third, Config.Fourth, Config.Fifth);
-            await EnterBarrierAsync("everybody-hand-off-ack");
-
-
-
-            await RunOnAsync(async () =>
-            {
-                //Stop the shard cleanly
-                region.Tell(new HandOff("1"));
-                await ExpectMsgAsync(new ShardStopped("1"), TimeSpan.FromSeconds(10), "ShardStopped not received");
-
-                //Get the path to where the shard now resides
                 await AwaitAssertAsync(async () =>
                 {
-                    _persistentEntitiesRegion.Value.Tell(new Get(13));
-                    await ExpectMsgAsync(0);
-                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
-
-                //Check that counter 1 is now alive again, even though we have
-                // not sent a message to it via the ShardRegion
-                var counter1 = Sys.ActorSelection(LastSender.Path.Parent / "1");
-                await WithinAsync(TimeSpan.FromSeconds(5), async () =>
-                {
-                    await AwaitAssertAsync(async () =>
-                    {
-                        var probe2 = CreateTestProbe();
-                        counter1.Tell(new Identify(2), probe2.Ref);
-                        await probe2.ExpectMsgAsync<ActorIdentity>(i => i.Subject != null, TimeSpan.FromSeconds(2));
-                    });
+                    var probe2 = CreateTestProbe();
+                    counter1.Tell(new Identify(2), probe2.Ref);
+                    await probe2.ExpectMsgAsync<ActorIdentity>(i => i.Subject != null, TimeSpan.FromSeconds(2));
                 });
+            });
 
-                counter1.Tell(new Get(1));
-                await ExpectMsgAsync(1);
-            }, Config.Third);
-            await EnterBarrierAsync("after-shard-restart");
-
-            await RunOnAsync(async () =>
+            // Bounded, retrying check with a fresh probe per attempt - a slow
+            // remember-entities recovery can leave counter1 unresponsive for a while
+            // after the Identify above succeeds, so give it a generous retry budget
+            // rather than a single short-bounded expect.
+            await AwaitAssertAsync(async () =>
             {
-                //Check a second region does not share the same persistent shards
+                var probe = CreateTestProbe();
+                counter1.Tell(new Get(1), probe.Ref);
+                await probe.ExpectMsgAsync(1, TimeSpan.FromSeconds(3));
+            }, TimeSpan.FromSeconds(20), TimeSpan.FromMilliseconds(500));
+        }, Config.Third);
+        await EnterBarrierAsync("after-shard-restart");
 
-                //Create a separate 13 counter
-                _anotherPersistentRegion.Value.Tell(new EntityEnvelope(13, Increment.Instance));
-                _anotherPersistentRegion.Value.Tell(new Get(13));
-                await ExpectMsgAsync(1);
+        await RunOnAsync(async () =>
+        {
+            //Check a second region does not share the same persistent shards
 
-                //Check that no counter "1" exists in this shard
-                var secondCounter1 = Sys.ActorSelection(LastSender.Path.Parent / "1");
-                secondCounter1.Tell(new Identify(3));
-                await ExpectMsgAsync(new ActorIdentity(3, null), TimeSpan.FromSeconds(3));
-            }, Config.Fourth);
-            await EnterBarrierAsync("after-12");
-        });
+            //Create a separate 13 counter
+            _anotherPersistentRegion.Value.Tell(new EntityEnvelope(13, Increment.Instance));
+            _anotherPersistentRegion.Value.Tell(new Get(13));
+            await ExpectMsgAsync(1, TimeSpan.FromSeconds(3));
+
+            //Check that no counter "1" exists in this shard
+            var secondCounter1 = Sys.ActorSelection(LastSender.Path.Parent / "1");
+            secondCounter1.Tell(new Identify(3));
+            await ExpectMsgAsync(new ActorIdentity(3, null), TimeSpan.FromSeconds(3));
+        }, Config.Fourth);
+        await EnterBarrierAsync("after-12");
     }
 
     private async Task PersistentClusterSharding_should_permanently_stop_entities_which_passivate()
