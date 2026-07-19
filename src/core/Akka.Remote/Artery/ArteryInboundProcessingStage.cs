@@ -141,9 +141,12 @@ namespace Akka.Remote.Artery
         /// </param>
         /// <param name="inboundContext">
         /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: an Ordinary-stream connection's
-        /// lane path bypasses <see cref="InboundHandshakeStage"/> for its own ordinary traffic (see
-        /// the type-level remarks on why that stage is a structural no-op for such a connection)
-        /// but still needs its <see cref="IInboundContext.IsKnownOrigin"/> gate, reused as-is here.
+        /// lane path bypasses <see cref="InboundHandshakeStage"/> AND <see cref="InboundQuarantineCheckStage"/>
+        /// for its own ordinary traffic (see the type-level remarks on why those stages are
+        /// structural no-ops for such a connection) but still needs their
+        /// <see cref="IInboundContext.IsKnownOrigin"/> / <see cref="IInboundContext.IsQuarantined"/>
+        /// gates, reused as-is here (plus <see cref="IInboundContext.SendControl"/> for the
+        /// quarantine gate's reactive re-notification).
         /// </param>
         /// <param name="dispatchOrdinary">
         /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: invoked by each lane's consumer
@@ -755,6 +758,48 @@ namespace Akka.Remote.Artery
                     Log.Debug(
                         "Dropping inbound lane-routed Artery message from unknown origin uid [{0}] (no completed handshake for this uid yet).",
                         decoded.Header.OriginUid);
+                    return true;
+                }
+
+                // Inbound quarantine enforcement for the lane path -- mirrors
+                // InboundQuarantineCheckStage exactly (lane-routed traffic bypasses the connection
+                // sink where that stage sits, just like it bypasses InboundHandshakeStage and
+                // InboundTestStage, whose gates are inlined above/below). Cold by definition (only
+                // frames from a quarantined uid ever enter), so deserializing INLINE here -- the
+                // one thing lane mode otherwise defers to the lane consumer -- costs nothing on
+                // the healthy path and is required for the shared reactive-notification skip set
+                // (InboundQuarantineCheckStage.ShouldNotifyOrigin) to see the actual message.
+                if (_stage.InboundContext!.IsQuarantined(decoded.Header.OriginUid))
+                {
+                    var quarantinedOrigin = _stage.InboundContext!.TryResolveOriginAddress(decoded.Header.OriginUid);
+                    object quarantinedMessage;
+                    try
+                    {
+                        quarantinedMessage = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
+                    }
+                    catch (Exception ex)
+                    {
+                        // The frame is dropped either way; a deserialization failure only costs
+                        // the reactive re-notification for THIS frame (the next dropped frame
+                        // re-sends it) -- same per-frame error isolation as the healthy path.
+                        Log.Debug(
+                            ex,
+                            "Dropping message (serializer id [{0}]) from [{1}#{2}] because the system is quarantined (payload not deserializable).",
+                            decoded.Header.SerializerId, quarantinedOrigin, decoded.Header.OriginUid);
+                        return true;
+                    }
+
+                    Log.Debug(
+                        "Dropping message [{0}] from [{1}#{2}] because the system is quarantined",
+                        quarantinedMessage.GetType(), quarantinedOrigin, decoded.Header.OriginUid);
+
+                    if (InboundQuarantineCheckStage.ShouldNotifyOrigin(quarantinedMessage) && quarantinedOrigin is not null)
+                    {
+                        _stage.InboundContext!.SendControl(
+                            quarantinedOrigin,
+                            new ArteryQuarantined(_stage.InboundContext!.LocalAddress, decoded.Header.OriginUid));
+                    }
+
                     return true;
                 }
 

@@ -26,7 +26,12 @@ namespace Akka.Remote.Artery
     /// <see cref="SystemMessageAckerStage"/>/dispatch. This codebase has only ONE physical inbound
     /// sink (ordinary, control, and large connections all feed the same shape -- see
     /// <c>ArteryRemoting.HandleIncomingConnection</c>'s remarks), so composing this stage once,
-    /// between those same two stages, covers both of Pekko's sink insertion points.
+    /// between those same two stages, covers both of Pekko's sink insertion points -- with ONE
+    /// carve-out: at <c>inbound-lanes &gt; 1</c>, an Ordinary connection's lane-routed traffic
+    /// bypasses the sink entirely, so <c>ArteryInboundProcessingStage.ProcessFrameLaneMode</c>
+    /// inlines the SAME drop-and-renotify gate (sharing <see cref="ShouldNotifyOrigin"/> so the
+    /// two sites cannot drift), exactly as it already inlines the known-origin and test-mode
+    /// blackhole gates for that path.
     ///
     /// <para>
     /// <b>Logic (mirrors Pekko's <c>onPush</c> exactly).</b> For every envelope: resolve whether
@@ -75,6 +80,41 @@ namespace Akka.Remote.Artery
 
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
+        /// <summary>
+        /// The SHARED reactive-notification skip set: whether dropping <paramref name="message"/>
+        /// (already established to be from a quarantined uid) should ALSO send the origin a fresh
+        /// <see cref="ArteryQuarantined"/> notice. <see langword="false"/> for the peer's own
+        /// <see cref="ArteryQuarantined"/> notice and for heartbeat-class messages (Pekko's
+        /// <c>case _: Quarantined</c> / <c>isHeartbeat</c> carve-out: avoids starting an outbound
+        /// stream for routine liveness traffic and avoids notification ping-pong). Applies ONLY to
+        /// whether we react, never to whether we drop. Called from BOTH inbound quarantine
+        /// enforcement sites -- this stage's <c>OnPush</c> (the connection-sink path) and
+        /// <c>ArteryInboundProcessingStage.ProcessFrameLaneMode</c> (the inbound-lanes &gt; 1 lane
+        /// path, which bypasses this stage entirely) -- shared so the two can never drift.
+        /// </summary>
+        internal static bool ShouldNotifyOrigin(object message) =>
+            message is not ArteryQuarantined && !IsHeartbeat(message);
+
+        /// <summary>
+        /// Pekko's <c>isHeartbeat</c>: matches its own control-channel liveness ping/pong
+        /// (<see cref="ArteryHeartbeat"/>/<see cref="ArteryHeartbeatRsp"/> -- the artery analog
+        /// of Pekko's <c>RemoteWatcher.ArteryHeartbeat</c>/<c>ArteryHeartbeatRsp</c>, both
+        /// <c>HeartbeatMessage</c>) plus <see cref="RemoteWatcher"/>'s own ordinary-stream
+        /// heartbeat (<see cref="IPriorityMessage"/> -- the marker <see cref="RemoteWatcher.Heartbeat"/>/
+        /// <see cref="RemoteWatcher.HeartbeatRsp"/> implement, this codebase's analog of Pekko's
+        /// shared <c>HeartbeatMessage</c> trait), including when it arrives wrapped in an
+        /// <see cref="ActorSelectionMessage"/> (Pekko's <c>ActorSelectionMessage(_: HeartbeatMessage, _, _)</c>
+        /// -- <see cref="RemoteWatcher"/> sends its heartbeat via <c>Context.ActorSelection(...).Tell</c>).
+        /// </summary>
+        private static bool IsHeartbeat(object message) => message switch
+        {
+            ArteryHeartbeat => true,
+            ArteryHeartbeatRsp => true,
+            IPriorityMessage => true,
+            ActorSelectionMessage { Message: IPriorityMessage } => true,
+            _ => false
+        };
+
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
         {
             private readonly InboundQuarantineCheckStage _stage;
@@ -101,12 +141,10 @@ namespace Akka.Remote.Artery
                         "Dropping message [{0}] from [{1}#{2}] because the system is quarantined",
                         envelope.Message.GetType(), _stage.Context.TryResolveOriginAddress(envelope.OriginUid), envelope.OriginUid);
 
-                // Avoid starting an outbound stream / a notification ping-pong for a routine
-                // heartbeat or for the peer's own Quarantined notice -- mirrors Pekko's
-                // isHeartbeat/Quarantined carve-out (applies ONLY to whether we react, never to
-                // whether we drop: every message from a quarantined uid is dropped either way,
-                // just below).
-                if (envelope.Message is not ArteryQuarantined && !IsHeartbeat(envelope.Message))
+                // Reactive re-notification, per the SHARED skip set (see ShouldNotifyOrigin's
+                // remarks -- applies ONLY to whether we react, never to whether we drop: every
+                // message from a quarantined uid is dropped either way, just below).
+                if (ShouldNotifyOrigin(envelope.Message))
                 {
                     var origin = _stage.Context.TryResolveOriginAddress(envelope.OriginUid);
                     if (origin is not null)
@@ -117,26 +155,6 @@ namespace Akka.Remote.Artery
 
                 Pull(_stage.In); // drop message
             }
-
-            /// <summary>
-            /// Pekko's <c>isHeartbeat</c>: matches its own control-channel liveness ping/pong
-            /// (<see cref="ArteryHeartbeat"/>/<see cref="ArteryHeartbeatRsp"/> -- the artery analog
-            /// of Pekko's <c>RemoteWatcher.ArteryHeartbeat</c>/<c>ArteryHeartbeatRsp</c>, both
-            /// <c>HeartbeatMessage</c>) plus <see cref="RemoteWatcher"/>'s own ordinary-stream
-            /// heartbeat (<see cref="IPriorityMessage"/> -- the marker <see cref="RemoteWatcher.Heartbeat"/>/
-            /// <see cref="RemoteWatcher.HeartbeatRsp"/> implement, this codebase's analog of Pekko's
-            /// shared <c>HeartbeatMessage</c> trait), including when it arrives wrapped in an
-            /// <see cref="ActorSelectionMessage"/> (Pekko's <c>ActorSelectionMessage(_: HeartbeatMessage, _, _)</c>
-            /// -- <see cref="RemoteWatcher"/> sends its heartbeat via <c>Context.ActorSelection(...).Tell</c>).
-            /// </summary>
-            private static bool IsHeartbeat(object message) => message switch
-            {
-                ArteryHeartbeat => true,
-                ArteryHeartbeatRsp => true,
-                IPriorityMessage => true,
-                ActorSelectionMessage { Message: IPriorityMessage } => true,
-                _ => false
-            };
 
             public void OnPull() => Pull(_stage.In);
 

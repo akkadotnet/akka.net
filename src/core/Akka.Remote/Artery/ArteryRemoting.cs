@@ -338,8 +338,9 @@ namespace Akka.Remote.Artery
             _log.Info("Starting Artery TCP remoting on [{0}:{1}]", _settings.CanonicalHostname, _settings.CanonicalPort);
             _log.Warning(
                 "Artery TCP remoting is EXPERIMENTAL and under active development -- reliable system-message " +
-                "delivery (seq/Ack/Nack/resend over the control stream) and outbound lanes " +
-                "(akka.remote.artery.advanced.outbound-lanes) have landed; no inbound lanes/compression yet. " +
+                "delivery (seq/Ack/Nack/resend over the control stream), outbound lanes " +
+                "(akka.remote.artery.advanced.outbound-lanes), and inbound lanes " +
+                "(akka.remote.artery.advanced.inbound-lanes) have landed; no compression yet. " +
                 "Do not use in production.");
 
             _materializer = ActorMaterializer.Create(System);
@@ -735,8 +736,12 @@ namespace Akka.Remote.Artery
             // (_testState null, the default) this composes the identical chain as before, no test
             // stage and no per-element checks ever exist. Covers ALL accepted connections
             // (Ordinary/Control/Large feed this same shape); a lanes>1 Ordinary connection's
-            // lane-routed traffic bypasses this sink and gets the equivalent check inside
-            // ArteryInboundProcessingStage's lane path (see the _testState ctor argument above).
+            // lane-routed traffic bypasses this sink entirely and instead gets ALL THREE of this
+            // sink's per-envelope gates inlined in ArteryInboundProcessingStage.ProcessFrameLaneMode:
+            // the known-origin gate (InboundHandshakeStage's), the test-mode blackhole check (this
+            // stage's -- see the _testState ctor argument above), and the quarantine
+            // drop-and-renotify gate (InboundQuarantineCheckStage's, sharing its
+            // ShouldNotifyOrigin skip set).
             if (_testState is { } inboundTestState)
                 decoded = decoded.Via(Flow.FromGraph(new InboundTestStage(_inboundContext!, inboundTestState)));
 
