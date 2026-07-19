@@ -740,8 +740,19 @@ namespace Akka.Remote.Artery
             if (_testState is { } inboundTestState)
                 decoded = decoded.Via(Flow.FromGraph(new InboundTestStage(_inboundContext!, inboundTestState)));
 
+            // InboundQuarantineCheckStage (Pekko parity: ArteryTransport.inboundSink/
+            // inboundControlSink both insert InboundQuarantineCheck right here -- after
+            // InboundHandshake, before the [control-only in Pekko] SystemMessageAcker/dispatch).
+            // This codebase has only ONE physical inbound sink for every connection kind
+            // (Ordinary/Control/Large all feed this same shape -- see the type-level
+            // "Ordinary, Control, AND Large connections" remarks above), so composing it once here
+            // covers both of Pekko's insertion points: drops inbound traffic from a uid THIS system
+            // has quarantined (including system-message Ack/Nack/Watch/Unwatch, which would
+            // otherwise still reach SystemMessageAckerStage below) and reactively re-notifies the
+            // origin per dropped message -- see InboundQuarantineCheckStage's remarks.
             var inboundSink = decoded
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!)))
+                .Via(Flow.FromGraph(new InboundQuarantineCheckStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
                 .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));
 
@@ -2066,7 +2077,12 @@ namespace Akka.Remote.Artery
             if (streamId == ArteryStreamId.Large)
             {
                 if (!association.ShouldRestartLargeOutbound())
+                {
+                    // See the matching Ordinary-branch remarks below -- same quarantine-wedge fix.
+                    if (!association.IsLargeShutDown)
+                        association.ResetLargeGate();
                     return;
+                }
 
                 association.ResetLargeGate();
                 System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
@@ -2081,7 +2097,26 @@ namespace Akka.Remote.Artery
             }
 
             if (!association.ShouldRestartOutbound())
+            {
+                // Quarantine (not shutdown) declined the TIMER-driven restart. Release the
+                // materialize-once gate anyway: leaving it latched "started" with NO stream
+                // materialized permanently wedges this association's ordinary sends -- the
+                // on-demand path (EnqueueOutbound's !IsOutboundMaterialized check) can then never
+                // re-materialize, so a quarantine-PIERCING ActorSelectionMessage (which Send()
+                // deliberately lets through) never dials the peer, and even a NEW incarnation
+                // (uid swapped by a completed handshake, no longer quarantined -- exactly the
+                // "free to reconnect normally" case ShouldRestartOutbound's remarks promise)
+                // stays unreachable in this direction forever. With the gate released, the
+                // timer-driven auto-reconnect stays suppressed (nothing is scheduled here --
+                // honoring the "don't waste a connection on a quarantined peer" rationale) but a
+                // genuine send attempt re-materializes on demand, re-handshakes (ForceReqOnStart),
+                // and discovers the restarted peer -- Pekko-parity piercing semantics
+                // (RemoteQuarantinePiercingSpec over artery is what surfaced this wedge). The
+                // permanent-shutdown case keeps the gate latched: that stream must stay dead.
+                if (!association.IsOutboundShutDown)
+                    association.ResetOutboundGate();
                 return;
+            }
 
             association.ResetOutboundGate();
             System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>

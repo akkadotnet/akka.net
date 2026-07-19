@@ -122,9 +122,18 @@ namespace Akka.Remote.Tests.MultiNode
                 await EnterBarrierAsync("actor-identified");
                 await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(30));
 
+                // Pin BOTH transports' host/port so the fresh incarnation comes back at the SAME
+                // address regardless of which transport the run uses (classic ignores the artery
+                // keys and vice versa) -- mirrors Pekko's RemoteQuarantinePiercingSpec, whose fresh
+                // system pins classic.netty.tcp.port AND artery.canonical.port. Without the artery
+                // pin the MultiNodeSpec-injected artery tier's canonical.port = 0 wins under
+                // AKKA_MNTR_TRANSPORT=artery and the restarted system binds a random port `first`
+                // can never reach.
                 var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
                     akka.remote.dot-netty.tcp.hostname = {addr.Host}
                     akka.remote.dot-netty.tcp.port = {addr.Port}
+                    akka.remote.artery.canonical.hostname = {addr.Host}
+                    akka.remote.artery.canonical.port = {addr.Port}
                 ").WithFallback(Sys.Settings.Config));
 
                 freshSystem.ActorOf(Props.Create<RemoteQuarantinePiercingSpecConfig.Subject>(), "subject");
