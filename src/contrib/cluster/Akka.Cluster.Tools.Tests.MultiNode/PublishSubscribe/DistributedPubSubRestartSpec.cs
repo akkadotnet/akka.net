@@ -39,18 +39,17 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off
 
-                # De-flake: while third's dying system is still unbinding its port, first's
-                # associate attempt can connect at the TCP level but never complete the Akka
-                # protocol handshake. With dot-netty enabled, AkkaProtocolSettings.HandshakeTimeout
-                # is read from connection-timeout (default 15s), so one such poisoned attempt plus
-                # the default 5s retry gate burned ~20s of the identify window on loaded CI agents.
-                # Fail fast and retry fast so multiple association cycles fit into the window.
-                akka.remote.dot-netty.tcp.connection-timeout = 5s
-                akka.remote.retry-gate-closed-for = 1s # fast restart
+                # NOTE: deliberately NO connection-timeout / retry-gate-closed-for overrides here -
+                # the JVM spec (akka/akka DistributedPubSubRestartSpec) sets none and relies on the
+                # 15s defaults. A prior de-flake set connection-timeout = 5s to ""fail fast"", but on
+                # dot-netty AkkaProtocolSettings.HandshakeTimeout is read FROM connection-timeout, so
+                # that override silently crushed the handshake budget to 5s. First's associate to
+                # third's restarted incarnation then timed out at exactly 5000ms on every attempt and
+                # never completed on loaded CI agents (builds 129198/129206). Restoring the defaults
+                # gives the handshake its full 15s budget, matching the JVM spec that does not flake.
 
-                # second waits at the ""end"" barrier while first runs its whole delivery
-                # pipeline: the conductor-shutdown ack (up to 30s) plus the 45s dilated
-                # closed-loop identify/kill window - far past the default 30s barrier timeout
+                # second waits at the ""end"" barrier while first runs its closed-loop identify/kill
+                # window (dilated) plus the conductor-shutdown ack - kept well past the 30s default.
                 akka.testconductor.barrier-timeout = 120s
             ").WithFallback(DistributedPubSub.DefaultConfig());
 
