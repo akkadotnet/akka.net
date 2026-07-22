@@ -39,14 +39,27 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off
 
-                # NOTE: deliberately NO connection-timeout / retry-gate-closed-for overrides here -
-                # the JVM spec (akka/akka DistributedPubSubRestartSpec) sets none and relies on the
-                # 15s defaults. A prior de-flake set connection-timeout = 5s to ""fail fast"", but on
-                # dot-netty AkkaProtocolSettings.HandshakeTimeout is read FROM connection-timeout, so
-                # that override silently crushed the handshake budget to 5s. First's associate to
-                # third's restarted incarnation then timed out at exactly 5000ms on every attempt and
-                # never completed on loaded CI agents (builds 129198/129206). Restoring the defaults
-                # gives the handshake its full 15s budget, matching the JVM spec that does not flake.
+                # THE fix for this spec's flake. Bound the transport failure detector so a peer that
+                # dies without a clean Disassociate PDU gets reaped fast. Under the test transport
+                # (trttl.gremlin, TestTransport = true) the ThrottledAssociation FSM intentionally
+                # swallows the TCP-close event and leans on this failure detector to notice a dead
+                # connection. Its default acceptable-heartbeat-pause is 120s, which leaves first's
+                # EndpointWriter alive on a half-open handle after third restarts on the same address:
+                # every send (Identify, heartbeat, gossip, the ""shutdown"") goes into the dead socket
+                # and is lost silently, so first never re-associates to the restarted incarnation and
+                # its identify loop times out. Every other restart/gate MNTR spec sets this override
+                # for the same reason (ComesBack, RestartDeathWatch, GatePiercing, RestartedQuarantined);
+                # this was the only restart spec missing it. Not a production path - without the
+                # throttler, Disassociated reaches ProtocolStateActor directly and tears the writer
+                # down at once. Bounds the zombie window to <=6s: FD trips, writer fails, gate, then a
+                # fresh association to the restarted incarnation.
+                akka.remote.transport-failure-detector.heartbeat-interval = 1s
+                akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 5s
+
+                # No connection-timeout / retry-gate overrides - use the defaults, like the JVM spec
+                # and the sibling restart specs (a prior de-flake set connection-timeout = 5s, which
+                # via the dot-netty handshake-timeout/connection-timeout conflation starved the
+                # re-association handshake; the default gives it the full 15s budget).
 
                 # second waits at the ""end"" barrier while first runs its closed-loop identify/kill
                 # window (dilated) plus the conductor-shutdown ack - kept well past the 30s default.
