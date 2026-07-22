@@ -58,6 +58,11 @@ public sealed class ClusterClientDiscoverySpecConfig : MultiNodeConfig
                                                           refresh-contacts-interval = 1d
                                                         }
                                                         akka.test.filter-leeway = 10s
+                                                        # AwaitAssertAsync scales its window by akka.test.timefactor
+                                                        # (via RemainingOrDilated), so this dilates the ContactPoints
+                                                        # retry loops on slow CI agents without touching real
+                                                        # assertions or hard-coding a bigger constant.
+                                                        akka.test.timefactor = 2
                                                         """)
             .WithFallback(ClusterClientReceptionist.DefaultConfig())
             .WithFallback(DistributedPubSub.DefaultConfig())
@@ -80,7 +85,14 @@ public sealed class ClusterClientDiscoverySpecConfig : MultiNodeConfig
                                                  discovery
                                                  {
                                                    service-name = test-cluster
-                                                   probe-timeout = 1s
+                                                   # Root cause of MNTR flakiness (CI build 129289): each initial
+                                                   # contact probe is an Akka.Management HTTP round-trip to a
+                                                   # freshly-started receptionist endpoint. On a loaded Windows CI
+                                                   # agent that round-trip regularly takes just over 1s, so a 1s
+                                                   # probe-timeout cancelled every probe and the client never
+                                                   # resolved any ContactPoints. 3s restores the reference.conf
+                                                   # default and gives the round-trip real headroom.
+                                                   probe-timeout = 3s
                                                  }
                                                }
 
