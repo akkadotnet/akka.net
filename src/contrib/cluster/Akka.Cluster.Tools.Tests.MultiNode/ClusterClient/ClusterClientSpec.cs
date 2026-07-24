@@ -49,6 +49,7 @@ public class ClusterClientSpecConfig : MultiNodeConfig
                 akka.actor.provider = cluster
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = 0s
+                akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s # de-flake: cluster-level FD (distinct from client FD below); absorb CI stalls during formation
                 akka.cluster.client.heartbeat-interval = 1s
                 akka.cluster.client.acceptable-heartbeat-pause = 3s
                 akka.cluster.client.refresh-contacts-interval = 1s
