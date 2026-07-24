@@ -1166,21 +1166,6 @@ public class StressSpec : MultiNodeClusterSpec
             });
     }
 
-    public T ReportResult<T>(Func<T> thunk)
-    {
-        var startTime = MonotonicClock.GetTicks();
-        var startStats = ClusterView.LatestStats.GossipStats;
-
-        var returnValue = thunk();
-
-        ClusterResultAggregator().OnSuccess(r =>
-        {
-            r.Tell(new ClusterResult(Cluster.SelfAddress, TimeSpan.FromTicks(MonotonicClock.GetTicks() - startTime), LatestGossipStats - startStats));
-        });
-
-        return returnValue;
-    }
-
     public async Task<T> ReportResult<T>(Func<Task<T>> thunk)
     {
         var startTime = MonotonicClock.GetTicks();
@@ -1188,7 +1173,10 @@ public class StressSpec : MultiNodeClusterSpec
 
         var returnValue = await thunk();
 
-        ClusterResultAggregator().OnSuccess(r =>
+        // Use the retrying, fresh-probe-per-attempt aggregator lookup (matches CreateResultAggregatorAsync /
+        // AwaitClusterResultAsync) rather than the old one-shot ClusterResultAggregator(), whose single
+        // non-retried Identify/ExpectMsg made a lone lost reply under this spec's deliberate churn fatal.
+        (await ClusterResultAggregatorAsync()).OnSuccess(r =>
         {
             r.Tell(new ClusterResult(Cluster.SelfAddress, TimeSpan.FromTicks(MonotonicClock.GetTicks() - startTime), LatestGossipStats - startStats));
         });
