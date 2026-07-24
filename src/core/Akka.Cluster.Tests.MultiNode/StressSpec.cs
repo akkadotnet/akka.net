@@ -839,7 +839,7 @@ public class StressSpec : MultiNodeClusterSpec
             var probe = CreateTestProbe();
             Sys.ActorSelection(new RootActorPath(GetAddress(Roles.First())) / "user" / ("result" + Step))
                 .Tell(new Identify(Step), probe.Ref);
-            aggregatorRef = (await probe.ExpectMsgAsync<ActorIdentity>(Dilated(TimeSpan.FromSeconds(3)))).Subject;
+            aggregatorRef = (await probe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(3))).Subject;
         }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
         return Option<IActorRef>.Create(aggregatorRef);
     }
