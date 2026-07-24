@@ -85,12 +85,13 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortCallTimeoutCb();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            // meant to run as detached task
-            var t = Task.Run(() => breaker.Instance.WithSyncCircuitBreaker(() => Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)))));
-            await AwaitConditionAsync(() => t.Status >= TaskStatus.Running); // need to kick off the task before we can check the latch
+            // Detached: a synchronous call that sleeps 1s — far longer than the 50ms call-timeout.
+            Task.Run(() => breaker.Instance.WithSyncCircuitBreaker(() => Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)))));
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            var epsilon = TimeSpan.FromMilliseconds(500); // need to pad timeouts due to non-determinism of OS scheduler
-            await AwaitConditionAsync(() => breaker.Instance.CurrentFailureCount == 1, TimeSpan.FromMilliseconds(900) + epsilon, TimeSpan.FromMilliseconds(100));
+            // The 50ms call-timeout fires long before the 1s call returns, recording a failure. Wait for it
+            // with the framework's default AwaitAssert budget (event-based retry) rather than polling inside
+            // a hand-padded wall-clock window a loaded OS scheduler can blow past.
+            await AwaitAssertAsync(() => breaker.Instance.CurrentFailureCount.ShouldBe(1));
         }
     }
 
