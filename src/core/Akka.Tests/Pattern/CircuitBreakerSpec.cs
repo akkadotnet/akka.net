@@ -84,13 +84,30 @@ namespace Akka.Tests.Pattern
         public async Task Must_increment_failure_count_on_callTimeout_before_call_finishes()
         {
             var breaker = ShortCallTimeoutCb();
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            // meant to run as detached task
-            var t = Task.Run(() => breaker.Instance.WithSyncCircuitBreaker(() => Thread.Sleep(Dilated(TimeSpan.FromSeconds(1)))));
-            await AwaitConditionAsync(() => t.Status >= TaskStatus.Running); // need to kick off the task before we can check the latch
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            var epsilon = TimeSpan.FromMilliseconds(500); // need to pad timeouts due to non-determinism of OS scheduler
-            await AwaitConditionAsync(() => breaker.Instance.CurrentFailureCount == 1, TimeSpan.FromMilliseconds(900) + epsilon, TimeSpan.FromMilliseconds(100));
+
+            // WithSyncCircuitBreaker blocks its calling thread (GetAwaiter().GetResult()) while the body
+            // itself needs a second thread-pool thread. Driving it from the thread pool therefore makes this
+            // test depend on the pool having threads to spare: under starvation the call may not start for
+            // seconds, CurrentFailureCount stays 0, and the test fails. LongRunning gives it a dedicated
+            // thread instead, so the call always starts promptly regardless of pool pressure, and the
+            // expected timeout failure is captured by the returned Task rather than thrown on a loose thread.
+            var started = new TaskCompletionSource<Done>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var call = Task.Factory.StartNew(() =>
+            {
+                started.TrySetResult(Done.Instance);
+                breaker.Instance.WithSyncCircuitBreaker(() => Thread.Sleep(Dilated(TimeSpan.FromSeconds(1))));
+            }, TaskCreationOptions.LongRunning);
+            await started.Task;
+
+            // The 50ms call-timeout fires long before the 1s call returns, recording the failure. Wait for it
+            // with the framework's default AwaitAssert budget (event-based retry) rather than inside a
+            // hand-padded wall-clock window a loaded OS scheduler can blow past.
+            await AwaitAssertAsync(() => breaker.Instance.CurrentFailureCount.ShouldBe(1));
+
+            // Observe the protected call's expected timeout failure (AtomicState.CallThrough awaits the body
+            // with .WaitAsync(callTimeout), so it throws once the 50ms budget elapses).
+            var callFailure = await Record.ExceptionAsync(() => call);
+            callFailure.Should().BeOfType<TimeoutException>();
         }
     }
 
