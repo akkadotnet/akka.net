@@ -204,7 +204,7 @@ namespace Akka.TestKit
             CancellationToken cancellationToken = default)
         {
             return InternalExpectMsgAsync<T>(
-                    timeout: RemainingOrDilated(RemainingOrDilated(timeout)),
+                    timeout: RemainingOrDilated(timeout),
                     assert: (m, sender) =>
                     {
                         _assertions.AssertTrue(
