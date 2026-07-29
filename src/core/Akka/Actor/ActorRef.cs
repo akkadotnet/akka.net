@@ -354,11 +354,8 @@ namespace Akka.Actor
         
         public override string ToString()
         {
-            // cache Path locally: it is a virtual property and some implementations
-            // (i.e. PromiseActorRef) compute it from mutable state that other threads can change
-            var path = Path;
-            if (path.Uid == ActorCell.UndefinedUid) return $"[{path}]";
-            return $"[{path}#{path.Uid}]";
+            if (Path.Uid == ActorCell.UndefinedUid) return $"[{Path}]";
+            return $"[{Path}#{Path.Uid}]";
         }
 
         
@@ -372,12 +369,11 @@ namespace Akka.Actor
 
         public override int GetHashCode()
         {
-            var path = Path;
             unchecked
             {
                 var hash = 17;
-                hash = hash * 23 + path.Uid.GetHashCode();
-                hash = hash * 23 + path.GetHashCode();
+                hash = hash * 23 + Path.Uid.GetHashCode();
+                hash = hash * 23 + Path.GetHashCode();
                 return hash;
             }
         }
@@ -409,10 +405,8 @@ namespace Akka.Actor
             if (other is null) return false;
             if (ReferenceEquals(this, other)) return true;
 
-            var path = Path;
-            var otherPath = other.Path;
-            return path.Uid == otherPath.Uid
-                && path.Equals(otherPath);
+            return Path.Uid == other.Path.Uid
+                && Path.Equals(other.Path);
         }
 
         
@@ -420,12 +414,10 @@ namespace Akka.Actor
         {
             if (other is null) return 1;
 
-            var path = Path;
-            var otherPath = other.Path;
-            var pathComparisonResult = path.CompareTo(otherPath);
+            var pathComparisonResult = Path.CompareTo(other.Path);
             if (pathComparisonResult != 0) return pathComparisonResult;
-            if (path.Uid < otherPath.Uid) return -1;
-            return path.Uid == otherPath.Uid ? 0 : 1;
+            if (Path.Uid < other.Path.Uid) return -1;
+            return Path.Uid == other.Path.Uid ? 0 : 1;
         }
 
         /// <summary>
