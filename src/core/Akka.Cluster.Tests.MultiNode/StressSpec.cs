@@ -875,6 +875,13 @@ public class StressSpec : MultiNodeClusterSpec
             StatsObserver.Value.Tell(new ReportTo(resultAggregator));
         }, Roles.Take(NbrUsedRoles).ToArray());
 
+        // The RunOnAsync above performs a REMOTE Identify, and RunOnAsync provides no synchronization
+        // whatsoever - it is just `if (IsNode(nodes)) await thunkAsync()`. Without a barrier here, nodes
+        // still resolving the aggregator race whatever the caller does next. PartitionSeveral is where it
+        // bites: the node that owns the aggregator returns from this method and starts blackholing the very
+        // nodes that are still mid-Identify, so their lookup can never complete and they burn the whole
+        // retry budget. Bracket the resolution so every node has finished it before the phase proceeds.
+        await EnterBarrierAsync("result-aggregator-identified-" + Step);
     }
 
     public async Task AwaitClusterResultAsync()
