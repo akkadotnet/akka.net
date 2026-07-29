@@ -91,9 +91,12 @@ akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
 akka.loglevel = INFO
 akka.remote.log-remote-lifecycle-events = off
 
-# NOTE: Akka.NET's Within(max) does NOT dilate by timefactor (unlike JVM/Pekko), so these
-# only reach the Dilated/single-expect paths -- notably the per-phase aggregator Identify --
-# while the raw Within bounds are addressed per-site.
+# NOTE: timefactor scales Within(max) too -- TestKitBase.WithinAsync applies Dilated(max) to the
+# bound, and every Within/WithinAsync overload routes through it. So a phase written as Within(30s)
+# actually gets 30s * timefactor, and inner waits that inherit RemainingOrDefault are bounded by
+# whatever that dilated phase budget has left. Do NOT pre-multiply a Within bound (or pre-Dilate a
+# duration handed to a TestKit expect) to compensate -- it is already scaled once, and doing it
+# twice squares the factor.
 akka.test.single-expect-default = 10s
 akka.test.timefactor = 3
 akka.actor.default-dispatcher = {
