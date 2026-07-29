@@ -1006,8 +1006,13 @@ public class StressSpec : MultiNodeClusterSpec
             {
                 await AwaitAssertAsync(async () =>
                 {
-                    Sys.ActorSelection(new RootActorPath(removeAddress) / "user" / "watchee").Tell(new Identify("watchee"), IdentifyProbe.Ref);
-                    var identity = await IdentifyProbe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(1));
+                    // Fresh probe per attempt, matching ClusterResultAggregatorAsync. The shared IdentifyProbe
+                    // kept a timed-out attempt's late ActorIdentity queued, so the next attempt consumed that
+                    // stale reply instead of its own -- and a reply resolved before the watchee existed carries
+                    // a null Subject, so the retry could never recover no matter how often it ran.
+                    var probe = CreateTestProbe();
+                    Sys.ActorSelection(new RootActorPath(removeAddress) / "user" / "watchee").Tell(new Identify("watchee"), probe.Ref);
+                    var identity = await probe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(1));
                     // Under load the selection can resolve to an ActorIdentity with a null Subject; guard
                     // here so this attempt fails fast and the retry loop retries, instead of passing null
                     // into WatchAsync (ArgumentNullException inside the TestActor -> AskTimeout).
@@ -1022,7 +1027,11 @@ public class StressSpec : MultiNodeClusterSpec
                     // degeneracy), regardless of whether we call the sync or async TestKit method. Bound it
                     // explicitly instead so a slow attempt here still leaves room for AwaitAssertAsync to retry.
                     await WatchAsync(watchee).WaitAsync(Dilated(TimeSpan.FromSeconds(3)));
-                }, interval:TimeSpan.FromSeconds(1.25d));
+                    // Explicit bound: with no duration this retry loop inherited RemainingOrDefault, i.e. the
+                    // enclosing phase's leftover budget, so it could consume the phase and starve the removal
+                    // work that follows. Establishing a watch on a just-created actor is a single round trip;
+                    // 10s of retries is ample and leaves the phase intact.
+                }, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.25d));
                    
             }, Roles.First());
             await EnterBarrierAsync("watchee-established-" + Step);
