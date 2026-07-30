@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="EventFilterApplier.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -74,7 +74,7 @@ namespace Akka.TestKit.Internal
         }
         
         public void ExpectOne(
-            TimeSpan timeout,
+            [AutoDilate] TimeSpan timeout,
             Action action,
             CancellationToken cancellationToken = default)
         {
@@ -86,7 +86,7 @@ namespace Akka.TestKit.Internal
         /// Async version of <see cref="ExpectOne(System.TimeSpan,System.Action,CancellationToken) "/>
         /// </summary>
         public async Task ExpectOneAsync(
-            TimeSpan timeout,
+            [AutoDilate] TimeSpan timeout,
             Func<Task> action,
             CancellationToken cancellationToken = default)
         {
@@ -143,7 +143,7 @@ namespace Akka.TestKit.Internal
         
         public void Expect(
             int expectedCount,
-            TimeSpan timeout,
+            [AutoDilate] TimeSpan timeout,
             Action action,
             CancellationToken cancellationToken = default)
         {
@@ -156,7 +156,7 @@ namespace Akka.TestKit.Internal
         /// </summary>
         public async Task ExpectAsync(
             int expectedCount,
-            TimeSpan timeout,
+            [AutoDilate] TimeSpan timeout,
             Func<Task> action,
             CancellationToken cancellationToken = default)
         {
@@ -169,7 +169,7 @@ namespace Akka.TestKit.Internal
                 ;
         }
 
-        public async Task ExpectAsync(int expectedCount, TimeSpan timeout, Action action, CancellationToken cancellationToken = default)
+        public async Task ExpectAsync(int expectedCount, [AutoDilate] TimeSpan timeout, Action action, CancellationToken cancellationToken = default)
         {
             await ExpectAsync(expectedCount, timeout, Wrapped, cancellationToken);
             return;
@@ -203,7 +203,7 @@ namespace Akka.TestKit.Internal
         }
         
         public T ExpectOne<T>(
-            TimeSpan timeout,
+            [AutoDilate] TimeSpan timeout,
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
@@ -215,7 +215,7 @@ namespace Akka.TestKit.Internal
         /// Async version of ExpectOne
         /// </summary>
         public Task<T> ExpectOneAsync<T>(
-            TimeSpan timeout,
+            [AutoDilate] TimeSpan timeout,
             Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
@@ -256,7 +256,7 @@ namespace Akka.TestKit.Internal
         
         public T Expect<T>(
             int expectedCount,
-            TimeSpan timeout,
+            [AutoDilate] TimeSpan timeout,
             Func<T> func,
             CancellationToken cancellationToken = default)
         {
@@ -270,7 +270,7 @@ namespace Akka.TestKit.Internal
         /// </summary>
         public Task<T> ExpectAsync<T>(
             int expectedCount,
-            TimeSpan timeout,
+            [AutoDilate] TimeSpan timeout,
             Func<Task<T>> func,
             CancellationToken cancellationToken = default)
         {
