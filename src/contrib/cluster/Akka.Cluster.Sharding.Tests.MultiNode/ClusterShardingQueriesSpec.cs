@@ -171,7 +171,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var probe = CreateTestProbe();
                     var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
                     region.Tell(new GetClusterShardingStats(Dilated(TimeSpan.FromSeconds(10))), probe.Ref);
-                    var regions = (await probe.ExpectMsgAsync<ClusterShardingStats>(Dilated(TimeSpan.FromSeconds(10)))).Regions;
+                    var regions = (await probe.ExpectMsgAsync<ClusterShardingStats>(TimeSpan.FromSeconds(10))).Regions;
                     regions.Count.Should().Be(3);
                     var timeouts = NumberOfShards / regions.Count;
 
@@ -197,7 +197,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var probe = CreateTestProbe();
                     var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
                     region.Tell(GetShardRegionState.Instance, probe.Ref);
-                    var state = await probe.ExpectMsgAsync<CurrentShardRegionState>(Dilated(TimeSpan.FromSeconds(10)));
+                    var state = await probe.ExpectMsgAsync<CurrentShardRegionState>(TimeSpan.FromSeconds(10));
                     state.Shards.Should().BeEmpty();
                     state.Failed.Should().HaveCount(2);
                 }, Dilated(TimeSpan.FromSeconds(30)), TimeSpan.FromSeconds(1));
@@ -215,7 +215,7 @@ namespace Akka.Cluster.Sharding.Tests
                     var probe = CreateTestProbe();
                     var region = ClusterSharding.Get(Sys).ShardRegion(ShardTypeName);
                     region.Tell(GetShardRegionState.Instance, probe.Ref);
-                    var state = await probe.ExpectMsgAsync<CurrentShardRegionState>(Dilated(TimeSpan.FromSeconds(10)));
+                    var state = await probe.ExpectMsgAsync<CurrentShardRegionState>(TimeSpan.FromSeconds(10));
                     state.Shards.Should().HaveCount(2);
                     state.Failed.Should().BeEmpty();
                 }, Dilated(TimeSpan.FromSeconds(30)), TimeSpan.FromSeconds(1));
