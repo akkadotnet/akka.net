@@ -328,7 +328,7 @@ namespace Akka.Cluster.TestKit
         public Task AwaitClusterUpAsync(params RoleName[] roles)
             => AwaitClusterUpAsync(CancellationToken.None, roles);
 
-        public void JoinWithin(RoleName joinNode, TimeSpan? max = null, TimeSpan? interval = null)
+        public void JoinWithin(RoleName joinNode, [AutoDilate] TimeSpan? max = null, TimeSpan? interval = null)
         {
             if (max == null) max = RemainingOrDefault;
             if (interval == null) interval = TimeSpan.FromSeconds(1);
@@ -407,7 +407,7 @@ namespace Akka.Cluster.TestKit
         public void AwaitMembersUp(
             int numbersOfMembers,
             ImmutableHashSet<Address> canNotBePartOfMemberRing = null,
-            TimeSpan? timeout = null)
+            [AutoDilate] TimeSpan? timeout = null)
         {
             if (canNotBePartOfMemberRing == null)
                 canNotBePartOfMemberRing = ImmutableHashSet.Create<Address>();
@@ -432,7 +432,7 @@ namespace Akka.Cluster.TestKit
         public async Task AwaitMembersUpAsync(
             int numbersOfMembers,
             ImmutableHashSet<Address> canNotBePartOfMemberRing = null,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             CancellationToken cancellationToken = default)
         {
             canNotBePartOfMemberRing ??= ImmutableHashSet.Create<Address>();
@@ -558,4 +558,3 @@ namespace Akka.Cluster.TestKit
         }
     }
 }
-
