@@ -496,7 +496,11 @@ namespace Akka.Actor
         {
             while (true)
             {
-                switch (State)
+                // snapshot the state once per iteration - another thread can flip it at any time
+                // (i.e. a concurrent Stop() moving us from ActorPath to StoppedWithPath), so
+                // matching on the field and then re-reading it can observe two different values.
+                var state = State;
+                switch (state)
                 {
                     case null when UpdateState(null, Registering.Instance):
                     {
@@ -514,8 +518,8 @@ namespace Akka.Actor
                     }
                     case null:
                         continue;
-                    case ActorPath _:
-                        return State as ActorPath;
+                    case ActorPath path:
+                        return path;
                     case StoppedWithPath stoppedWithPath:
                         return stoppedWithPath.Path;
                     case Stopped _:
