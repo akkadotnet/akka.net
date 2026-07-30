@@ -210,16 +210,16 @@ namespace Akka.Tests.Pattern
             var breaker = LongCallTimeoutCb();
             await InterceptException<TestException>(() =>
                 breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct)).WaitAsync(AwaitTimeout));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await CheckLatchAsync(breaker.OpenLatch);
             breaker.Instance.CurrentFailureCount.ShouldBe(1);
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is closed must increment failure count on async failure")]
-        public void Must_increment_failure_count_on_async_failure()
+        public async Task Must_increment_failure_count_on_async_failure()
         {
             var breaker = LongCallTimeoutCb();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await CheckLatchAsync(breaker.OpenLatch);
             breaker.Instance.CurrentFailureCount.ShouldBe(1);
         }
 
@@ -245,7 +245,7 @@ namespace Akka.Tests.Pattern
                 ThrowException();
             });
 
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await CheckLatchAsync(breaker.OpenLatch);
             breaker.Instance.CurrentFailureCount.ShouldBe(1);
 
             // Since the timeout should have happened before the inner code finishes
@@ -254,11 +254,11 @@ namespace Akka.Tests.Pattern
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is closed must invoke onOpen if call fails and breaker transits to open state")]
-        public void Must_invoke_onOpen_if_call_fails_and_breaker_transits_to_open_state()
+        public async Task Must_invoke_onOpen_if_call_fails_and_breaker_transits_to_open_state()
         {
             var breaker = ShortCallTimeoutCb();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await CheckLatchAsync(breaker.OpenLatch);
         }
     }
 
@@ -269,10 +269,10 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortResetTimeoutCb();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
-            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            await CheckLatchAsync(breaker.HalfOpenLatch);
             var result = await breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)).WaitAsync(AwaitTimeout);
             Assert.Equal("hi", result);
-            Assert.True(CheckLatch(breaker.ClosedLatch));
+            await CheckLatchAsync(breaker.ClosedLatch);
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is half open must re-open on exception in call")]
@@ -280,23 +280,23 @@ namespace Akka.Tests.Pattern
         {
             var breaker = ShortResetTimeoutCb();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
-            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            await CheckLatchAsync(breaker.HalfOpenLatch);
             breaker.OpenLatch.Reset();
             await InterceptException<TestException>(() =>
                 breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct)).WaitAsync(AwaitTimeout));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await CheckLatchAsync(breaker.OpenLatch);
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is half open must re-open on async failure")]
-        public void Must_reopen_on_async_failure()
+        public async Task Must_reopen_on_async_failure()
         {
             var breaker = ShortResetTimeoutCb();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
-            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            await CheckLatchAsync(breaker.HalfOpenLatch);
 
             breaker.OpenLatch.Reset();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await CheckLatchAsync(breaker.OpenLatch);
         }
     }
 
@@ -308,18 +308,18 @@ namespace Akka.Tests.Pattern
             var breaker = LongResetTimeoutCb();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
 
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await CheckLatchAsync(breaker.OpenLatch);
 
             await InterceptException<OpenCircuitException>(
                 () => breaker.Instance.WithCircuitBreaker(ct => Task.Run(SayHi, ct)).WaitAsync(AwaitTimeout));
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is open must transition to half-open on reset timeout")]
-        public void Must_transition_to_half_open_on_reset_timeout()
+        public async Task Must_transition_to_half_open_on_reset_timeout()
         {
             var breaker = ShortResetTimeoutCb();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
-            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            await CheckLatchAsync(breaker.HalfOpenLatch);
         }
 
         [Fact(DisplayName = "An asynchronous circuit breaker that is open must increase the reset timeout after it transits to open again")]
@@ -327,19 +327,19 @@ namespace Akka.Tests.Pattern
         {
             var breaker = NonOneFactorCb();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await CheckLatchAsync(breaker.OpenLatch);
 
             var e1 = await InterceptException<OpenCircuitException>(
                 () => breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct)));
             var shortRemainingDuration = e1.RemainingDuration;
 
             await Task.Delay(Dilated(TimeSpan.FromMilliseconds(1000)));
-            Assert.True(CheckLatch(breaker.HalfOpenLatch));
+            await CheckLatchAsync(breaker.HalfOpenLatch);
 
             // transit to open again
             breaker.OpenLatch.Reset();
             _ = breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct));
-            Assert.True(CheckLatch(breaker.OpenLatch));
+            await CheckLatchAsync(breaker.OpenLatch);
 
             var e2 = await InterceptException<OpenCircuitException>(() =>
                 breaker.Instance.WithCircuitBreaker(_ => Task.FromResult(SayHi())));
@@ -351,9 +351,36 @@ namespace Akka.Tests.Pattern
 
     public class CircuitBreakerSpecBase : AkkaSpec
     {
-        public TimeSpan AwaitTimeout => Dilated(TimeSpan.FromSeconds(2));
+        /// <summary>
+        /// Undilated budget for latch and call waits. <see cref="AwaitTimeout"/> dilates it for the
+        /// raw waits that need it; TestKit methods dilate it themselves, so they get this one.
+        /// </summary>
+        private static readonly TimeSpan LatchTimeout = TimeSpan.FromSeconds(2);
+
+        public TimeSpan AwaitTimeout => Dilated(LatchTimeout);
 
         public bool CheckLatch(CountdownEvent latch) => latch.Wait(AwaitTimeout);
+
+        /// <summary>
+        /// Awaits a breaker-transition latch <b>without blocking the calling thread</b>.
+        /// The breaker signals these latches from callbacks dispatched to the thread pool, and the
+        /// half-open transition additionally waits on the scheduler's reset timer firing there.
+        /// Blocking the test thread inside <see cref="CheckLatch"/>'s <c>CountdownEvent.Wait()</c>
+        /// can starve the very work that sets the latch, so the test ends up holding the thread its
+        /// own signal needs. Polling <c>IsSet</c> yields between checks, and a miss reports which
+        /// condition timed out instead of a bare <c>Assert.True(false)</c>.
+        /// </summary>
+        /// <remarks>
+        /// This passes the undilated <see cref="LatchTimeout"/> because <c>AwaitConditionAsync</c>
+        /// runs its <c>max</c> through <c>RemainingOrDilated</c>. Handing it the already-dilated
+        /// <see cref="AwaitTimeout"/> would square the timefactor.
+        /// </remarks>
+        public async Task CheckLatchAsync(CountdownEvent latch)
+            => await AwaitConditionAsync(
+                () => latch.IsSet,
+                LatchTimeout,
+                TimeSpan.FromMilliseconds(50),
+                "Timed out waiting for the circuit breaker latch to be signaled");
 
         public Task WaitForTaskToBeScheduled(Task childTask)
         {
