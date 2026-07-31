@@ -30,7 +30,7 @@ namespace Akka.TestKit
         /// <param name="epsilonValue">TBD</param>
         /// <param name="cancellationToken"></param>
         public void Within(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Action action,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
@@ -54,7 +54,7 @@ namespace Akka.TestKit
         /// that takes a <see cref="Func{Task}"/> instead of an <see cref="Action"/>
         /// </summary>
         public async Task WithinAsync(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<Task> actionAsync,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
@@ -88,7 +88,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         public void Within(
             TimeSpan min,
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Action action,
             string hint = null,
             TimeSpan? epsilonValue = null,
@@ -114,7 +114,7 @@ namespace Akka.TestKit
         /// </summary>
         public async Task WithinAsync(
             TimeSpan min,
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<Task> actionAsync,
             string hint = null,
             TimeSpan? epsilonValue = null,
@@ -148,7 +148,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
         public T Within<T>(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<T> function,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
@@ -177,7 +177,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
         public Task<T> WithinAsync<T>(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<Task<T>> function,
             TimeSpan? epsilonValue = null,
             CancellationToken cancellationToken = default)
@@ -208,7 +208,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T Within<T>(
             TimeSpan min,
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<T> function,
             string hint = null,
             TimeSpan? epsilonValue = null,
@@ -250,7 +250,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public async Task<T> WithinAsync<T>(
             TimeSpan min,
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             Func<Task<T>> function,
             string hint = null,
             TimeSpan? epsilonValue = null,
