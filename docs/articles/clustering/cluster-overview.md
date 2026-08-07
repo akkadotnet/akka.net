@@ -221,13 +221,48 @@ The cluster leader is chosen by a leader election algorithm that randomly picks 
 
 Each role within the cluster also has a leader, just for that role. Its primary responsibility is enforcing a minimum number of "up" members within the role (if specified in the [cluster config](xref:cluster-configuration)).
 
+### Member States
+
+Every cluster member has a `MemberStatus` (`member.Status`). Status describes where the node is in the membership lifecycle. It is **separate** from reachability (whether other nodes can currently communicate with it).
+
+| Status | Meaning |
+|--------|---------|
+| `Joining` | Node has contacted the cluster and is waiting to be marked `Up` (or `WeaklyUp`). |
+| `WeaklyUp` | Optional intermediate state: the node has joined, but the leader cannot complete convergence (typically because other members are unreachable). Controlled by `akka.cluster.allow-weakly-up-members` (duration before `Joining` → `WeaklyUp` without convergence; default `7s`, set `off` to disable). Full members may already communicate with a `WeaklyUp` node; some features (for example Cluster Singleton) ignore `WeaklyUp` hosts. |
+| `Up` | Full member. Participates in leader decisions and normal cluster features. |
+| `Leaving` | Graceful leave started (`Cluster.Leave`). Still a member until exiting completes. |
+| `Exiting` | Leave is acknowledged cluster-wide; the node is shutting down membership participation. |
+| `Down` | Forcefully removed via `Cluster.Down` / a [downing provider](xref:split-brain-resolver). Treated as removed from active membership; will move to `Removed`. |
+| `Removed` | No longer a member. Seen in removal events; not part of the live member set. |
+
+Typical happy path: `Joining` → `Up` → `Leaving` → `Exiting` → `Removed`.
+
+With unreachable members blocking convergence: `Joining` → `WeaklyUp` → `Up` (once convergence is possible), or leave/down paths as above.
+
+Subscribe to membership changes with the cluster extension (see [Cluster Extension](xref:cluster-extension)):
+
+```csharp
+Cluster.Get(system).Subscribe(
+    Self,
+    ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
+    typeof(ClusterEvent.IMemberEvent));
+```
+
+`IMemberEvent` covers status transitions such as `MemberJoined`, `MemberWeaklyUp`, `MemberUp`, `MemberLeft`, `MemberExited`, `MemberDowned`, and `MemberRemoved`.
+
 ### Reachability
 
-Nodes send each other [heartbeats](<https://en.wikipedia.org/wiki/Heartbeat_(computing)>) on an ongoing basis. If a node misses enough heartbeats, this will trigger `unreachable` gossip messages from its peers. The leader will wait for the node to either become reachable again, restart or get downed. Until that happens, the cluster is not in a consistent state and the leader indicates that it is unable to perform its duties. If the gossip from a quorum of cluster nodes agree that the node is unreachable ("convergence"), the leader will mark it as down and begin removing the node from the cluster. You can control how long the cluster waits for unreachable nodes through the auto-down-unreachable-after setting.
+Reachability is an orthogonal gossip concern: can this node currently see that node?
 
-When marked as unreachable, the node can restart and join the cluster again, however the association will only be formed if that node is identified as the same node that became unreachable. If you use dynamic addressing (port 0), starting a node again might result in a different port being assigned upon restart. The result of that is that the cluster remains in an inconsistent state, waiting to the unreachable node to either become reachable or get downed.
+Nodes exchange [heartbeats](<https://en.wikipedia.org/wiki/Heartbeat_(computing)>). If a node misses enough heartbeats, peers gossip it as **unreachable**. That does **not** immediately change `MemberStatus` to `Down` — the member can remain `Up` (or another status) while unreachable until a [downing provider](xref:split-brain-resolver) / `Cluster.Down` / leave path acts.
 
-A node might also exit the cluster gracefully, preventing it from being marked as unreachable in the first place. Akka.net uses IDowningProvider to take the nodes through all the stages of exiting the cluster. Starting in Akka.NET 1.2 [CoordinatedShutdown](https://github.com/akkadotnet/akka.net/releases/tag/v1.2) was introduced allowing the user to easily invoke that mechanism.
+While important members are unreachable, the cluster may lack **convergence**, so the leader pauses some membership actions (for example promoting joiners to `Up`). That is when `WeaklyUp` can appear if enabled.
+
+`ClusterEvent.UnreachableMember` / `ReachableMember` report reachability changes. Until an unreachable node becomes reachable again, leaves, or is downed, membership progress can stall.
+
+When marked as unreachable, the node can restart and join the cluster again, however the association will only be formed if that node is identified as the same node that became unreachable. If you use dynamic addressing (port 0), starting a node again might result in a different port being assigned upon restart. The result of that is that the cluster remains in an inconsistent state, waiting for the unreachable node to either become reachable or get downed.
+
+A node might also exit the cluster gracefully, preventing it from being marked as unreachable in the first place. Akka.NET uses `IDowningProvider` to take nodes through exiting / downing. [CoordinatedShutdown](xref:coordinated-shutdown) is the recommended way to leave cleanly.
 
 ## Location Transparency
 
