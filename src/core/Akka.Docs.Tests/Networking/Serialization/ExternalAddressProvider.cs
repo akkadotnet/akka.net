@@ -11,6 +11,7 @@ using Akka.Util.Internal;
 
 namespace DocsExamples.Networking.Serialization
 {
+    #region external-address-extension
     public class ExternalAddress : ExtensionIdProvider<ExternalAddressExtension>
     {
         public override ExternalAddressExtension CreateExtension(ExtendedActorSystem system) => new(system);
@@ -27,20 +28,23 @@ namespace DocsExamples.Networking.Serialization
 
         public Address AddressFor(Address remoteAddr)
         {
-            return _system.Provider.GetExternalAddressFor(remoteAddr) 
+            return _system.Provider.GetExternalAddressFor(remoteAddr)
                 ?? throw new InvalidOperationException($"cannot send to {remoteAddr}");
         }
     }
+    #endregion
 
-    public class Test
+    public class ExternalAddressUsage
     {
         private ExtendedActorSystem ExtendedSystem =>
             ActorSystem.Create("test").AsInstanceOf<ExtendedActorSystem>();
 
+        #region serialize-with-external-address
         public string SerializeTo(IActorRef actorRef, Address remote)
         {
             return actorRef.Path.ToSerializationFormatWithAddress(
                 new ExternalAddress().Get(ExtendedSystem).AddressFor(remote));
         }
+        #endregion
     }
 }

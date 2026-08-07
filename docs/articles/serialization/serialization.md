@@ -255,68 +255,27 @@ It's recommended to throw `SerializationException` in `FromBinary` if the manife
 
 ### Serializing ActorRefs
 
-All actors are serializable using the default protobuf serializer, but in cases where custom serializers are used, we need to know how to (de-)serialize them properly.
-In the general case, the local address to be used depends on the type of remote address which shall be the recipient of the serialized
-information.
-Use `Serialization.SerializedActorPath(actorRef)` like this:
+Actor references are serialized as absolute path strings. Built-in Akka.NET serializers (including the protobuf-based remoting serializers) handle `IActorRef` for you. When you write a **custom serializer** — or when you store an actor reference outside of remoting (for example in a database) — serialize and deserialize the path yourself.
 
-```csharp
-using Akka.Actor;
-using Akka.Serialization;
-// Serialize
-// (beneath toBinary)
-string id = Serialization.SerializedActorPath(theActorRef);
+The recommended API pair is:
 
-// Then just serialize the identifier however you like
+* `Serialization.SerializedActorPath` to produce the path string
+* `Serialization.DeserializeActorRef` to resolve it back to an `IActorRef` (available since Akka.NET v1.5.24)
 
-// Deserialize
-// (beneath fromBinary)
-IActorRef deserializedActorRef = extendedSystem.Provider.ResolveActorRef(id);
-// Then just use the IActorRef
-```
+[!code-csharp[SerializeActorRef](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ActorRefSerializationDocSpec.cs?name=serialize-actorref)]
 
-This assumes that serialization happens in the context of sending a message through the remote transport.
-There are other uses of serialization, though, e.g. storing actor references outside of an actor application (database, etc.).
-In this case, it is important to keep in mind that the address part of an actor's path determines how that actor is communicated with. Storing a local actor path might be the right choice if the retrieval happens in the same logical context, but it is not enough when deserializing it on a different network host: for that it would need to include the system's remote transport address.
-An actor system is not limited to having just one remote transport per se, which makes this question a bit more interesting.
-To find out the appropriate address to use when sending to `remoteAddr` you can use `IActorRefProvider.GetExternalAddressFor(remoteAddr)` like this:
+[!code-csharp[DeserializeActorRef](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ActorRefSerializationDocSpec.cs?name=deserialize-actorref)]
 
-```csharp
-public class ExternalAddress : ExtensionIdProvider<ExternalAddressExtension>
-{
-    public override ExternalAddressExtension CreateExtension(ExtendedActorSystem system) =>
-        new ExternalAddressExtension(system);
-}
+> [!TIP]
+> `DeserializeActorRef` is a thin wrapper around `IActorRefProvider.ResolveActorRef`. Prefer the `Serialization` methods so serialize and deserialize live in one place.
 
-public class ExternalAddressExtension : IExtension
-{
-    private readonly ExtendedActorSystem _system;
+`SerializedActorPath` chooses the local address based on the current remoting transport context (when serialization runs while sending a remote message). There are other uses of serialization, though — for example storing actor references outside of an actor application. In that case, the address part of an actor's path determines how that actor is communicated with. Storing a local actor path might be the right choice if the retrieval happens in the same logical context, but it is not enough when deserializing it on a different network host: for that it would need to include the system's remote transport address.
 
-     public ExternalAddressExtension(ExtendedActorSystem system)
-     {
-        _system = system;
-     }
+An actor system is not limited to having just one remote transport. To find out the appropriate address to use when sending to `remoteAddr`, use `IActorRefProvider.GetExternalAddressFor` like this:
 
-    public Address AddressFor(Address remoteAddr)
-    {
-        return _system.Provider.GetExternalAddressFor(remoteAddr) 
-             ?? throw new InvalidOperationException($"cannot send to {remoteAddr}");
-    }
-}
+[!code-csharp[ExternalAddressExtension](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ExternalAddressProvider.cs?name=external-address-extension)]
 
-public class Test
-{
-    private ExtendedActorSystem ExtendedSystem =>
-        ActorSystem.Create("test").AsInstanceOf<ExtendedActorSystem>();
-
-    public string SerializeTo(IActorRef actorRef, Address remote)
-    {
-        return actorRef.Path.ToSerializationFormatWithAddress(
-            new ExternalAddress().Get(ExtendedSystem).AddressFor(remote));
-    }
-}
-
-```
+[!code-csharp[SerializeWithExternalAddress](../../../src/core/Akka.Docs.Tests/Networking/Serialization/ExternalAddressProvider.cs?name=serialize-with-external-address)]
 
 > [!NOTE]
 > `ActorPath.ToSerializationFormatWithAddress` differs from `ToString` if the address does not already have `host` and `port` components, i.e. it only inserts address information for local addresses.
