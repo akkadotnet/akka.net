@@ -153,6 +153,9 @@ examples show some of the most useful constructs (refer to the API documentation
 // Create a source from an Iterable
 Source.From(new List<int> {1, 2, 3});
 
+// Create a source from an IAsyncEnumerable factory (new enumerator per materialization)
+Source.From(() => GetNumbersAsync());
+
 // Create a source from a Task
 Source.FromTask(Task.FromResult("Hello Streams!"));
 
@@ -175,6 +178,10 @@ Sink.Ignore<int>();
 
 // A Sink that executes a side-effecting call for every element of the stream
 Sink.ForEach<string>(Console.WriteLine);
+
+// Run a Source as IAsyncEnumerable (re-materializes on each await foreach)
+// See streams-integration for full examples
+// await foreach (var x in source.RunAsAsyncEnumerable(materializer)) { ... }
 ```  
   
 There are various ways to wire up different parts of a stream, the following examples show some of the available options:

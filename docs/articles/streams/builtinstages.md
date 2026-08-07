@@ -28,6 +28,16 @@ Stream the values of an ``IEnumerable<T>``.
 
 **completes** when the last element of the enumerable has been emitted
 
+### From (IAsyncEnumerable)
+
+Stream values from an ``IAsyncEnumerable<T>`` factory. A new enumerable is created for each materialization.
+
+See [Integrating with IAsyncEnumerable](xref:streams-integration#integrating-with-iasyncenumerable).
+
+**emits** the next value returned from the async enumerator
+
+**completes** when the async enumerable reaches its end
+
 ### Never
 
 A source which never emits any elements, never completes and never fails. Useful for tests.

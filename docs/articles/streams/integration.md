@@ -436,6 +436,29 @@ You may notice two extra parameters here. One of the advantages of Akka.Streams 
 
 Any other `OverflowStrategy` option is not supported by `Source.FromObservable` stage.
 
+### Integrating with IAsyncEnumerable
+
+Akka.Streams can both **consume** and **produce** [`IAsyncEnumerable<T>`](https://learn.microsoft.com/dotnet/api/system.collections.generic.iasyncenumerable-1) sequences. This is useful when bridging streams with `async`/`await` code, libraries that expose async iterators, or C# 8+ `await foreach`.
+
+#### Source from IAsyncEnumerable
+
+Use `Source.From(Func<IAsyncEnumerable<T>>)` so a fresh enumerable is created for every materialization:
+
+[!code-csharp[SourceFromAsyncEnumerable](../../../src/core/Akka.Docs.Tests/Streams/AsyncEnumerableDocTests.cs?name=source-from-asyncenumerable)]
+
+> [!NOTE]
+> Pass a **factory** (`Func<IAsyncEnumerable<T>>`), not a single enumerable instance. Each subscriber / materialization needs its own enumerator.
+
+#### Consuming a Source as IAsyncEnumerable
+
+`RunAsAsyncEnumerable` turns a `Source` into a lazy, re-runnable async sequence. Each `await foreach` re-materializes the stream:
+
+[!code-csharp[RunAsAsyncEnumerable](../../../src/core/Akka.Docs.Tests/Streams/AsyncEnumerableDocTests.cs?name=run-as-asyncenumerable)]
+
+For custom queue buffering / back-pressure, use `RunAsAsyncEnumerableBuffer`:
+
+[!code-csharp[RunAsAsyncEnumerableBuffer](../../../src/core/Akka.Docs.Tests/Streams/AsyncEnumerableDocTests.cs?name=run-as-asyncenumerable-buffer)]
+
 ### Integrating with Event Handlers
 
 C# events can also be used as a potential source of an Akka.NET stream. This is possible using `Source.FromEvent` methods. Example:
