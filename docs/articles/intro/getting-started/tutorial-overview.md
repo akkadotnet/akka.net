@@ -55,3 +55,47 @@ This tutorial is divided into four parts:
 * [Part 2. The Device Actor](../getting-started/tutorial-2.md)
 * [Part 3. Device Groups and Manager](../getting-started/tutorial-3.md)
 * [Part 4. Querying a Group of Devices](../getting-started/tutorial-4.md)
+
+## Prerequisites
+
+Create a .NET console or test project and add these packages:
+
+```shell
+dotnet add package Akka
+dotnet add package Akka.TestKit.Xunit2
+dotnet add package Xunit
+```
+
+Import namespaces as needed:
+
+```csharp
+using System;
+using Akka.Actor;
+using Akka.TestKit.Xunit2;
+using Xunit;
+```
+
+Most snippets in parts 1–4 that use `Sys`, `CreateTestProbe()`, `ExpectMsg`, etc. are meant to run **inside an xUnit test class that inherits `Akka.TestKit.Xunit2.TestKit`**. `Sys` is the `ActorSystem` created by that base class — it is not a standalone type you import.
+
+Example skeleton:
+
+```csharp
+public class MyTutorialSpec : TestKit
+{
+    [Fact]
+    public void Example()
+    {
+        var actor = Sys.ActorOf(Props.Create<MyActor>());
+        // ...
+    }
+}
+```
+
+For a plain console app (no TestKit), create the system yourself:
+
+```csharp
+using var system = ActorSystem.Create("iot-system");
+var actor = system.ActorOf(Props.Create<MyActor>(), "my-actor");
+```
+
+The in-repo samples under `src/core/Akka.Docs.Tutorials` follow the TestKit style used in this tutorial.

@@ -180,7 +180,7 @@ Putting read and write protocol together, the device actor will look like this:
 [!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial2/Device.cs?name=full-device)]
 
 We are also responsible for writing a new test case now, exercising both the read/query and write/record functionality
-together. Note, that your test class should implement Akka.TestKit.XUnit2.TestKit in order to access CreateTestProbe().
+together. Note that your test class should **inherit** `Akka.TestKit.Xunit2.TestKit` (NuGet: `Akka.TestKit.Xunit2`) in order to access `CreateTestProbe()`, `Sys`, and the expectation APIs. See [Tutorial Overview — Prerequisites](xref:tutorial-overview#prerequisites).
 
 [!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial2/DeviceSpec.cs?name=device-write-read-test)]
 

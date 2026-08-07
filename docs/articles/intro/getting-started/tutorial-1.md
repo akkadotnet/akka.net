@@ -67,6 +67,9 @@ Creating a non-top-level actor is possible from any actor, by invoking
 `Context.ActorOf()` which has the exact same signature as its top-level
 counterpart. This is how it looks like in practice:
 
+> [!NOTE]
+> Snippets that call `Sys.ActorOf(...)` assume a test class inheriting `Akka.TestKit.Xunit2.TestKit` (package `Akka.TestKit.Xunit2`). See [Tutorial Overview — Prerequisites](xref:tutorial-overview#prerequisites). In a console app, use `ActorSystem.Create(...).ActorOf(...)` instead.
+
 [!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=print-refs)]
 [!code-csharp[Main](../../../../src/core/Akka.Docs.Tutorials/Tutorial1/ActorHierarchyExperiments.cs?name=print-refs2)]
 
