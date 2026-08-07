@@ -215,6 +215,16 @@ namespace Akka.Remote.Transport.DotNetty
 
         public BatchWriterSettings(Config hocon)
         {
+            // Custom transports (e.g. akka.remote.dot-netty.tcp-eth0) often omit the
+            // batching section. Fall back to defaults instead of NRE on null Config.
+            // See https://github.com/akkadotnet/akka.net/issues/7178
+            if (hocon.IsNullOrEmpty())
+            {
+                EnableBatching = true;
+                MaxExplicitFlushes = DefaultMaxPendingWrites;
+                return;
+            }
+
             EnableBatching = hocon.GetBoolean("enabled", true);
             MaxExplicitFlushes = hocon.GetInt("max-pending-writes", DefaultMaxPendingWrites);
         }

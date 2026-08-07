@@ -75,6 +75,35 @@ namespace Akka.Remote.Tests.Transport
             s.BatchWriterSettings.MaxExplicitFlushes.Should().NotBe(BatchWriterSettings.DefaultMaxPendingWrites);
         }
 
+        [Fact]
+        public void Bugfix7178_should_use_defaults_when_batching_section_is_missing()
+        {
+            // Reproduces multi-homed / custom transport configs that do not fall back
+            // to akka.remote.dot-netty.tcp and therefore omit the batching HOCON block.
+            Config c = @"
+                akka.remote.dot-netty.tcp-eth0 {
+                    transport-class = ""Akka.Remote.Transport.DotNetty.TcpTransport, Akka.Remote""
+                    transport-protocol = tcp
+                    port = 50051
+                    hostname = ""127.0.0.1""
+                }
+            ";
+
+            var s = DotNettyTransportSettings.Create(c.GetConfig("akka.remote.dot-netty.tcp-eth0"));
+
+            s.BatchWriterSettings.EnableBatching.Should().BeTrue();
+            s.BatchWriterSettings.MaxExplicitFlushes.Should().Be(BatchWriterSettings.DefaultMaxPendingWrites);
+        }
+
+        [Fact]
+        public void Bugfix7178_BatchWriterSettings_should_tolerate_null_config()
+        {
+            var settings = new BatchWriterSettings(null);
+
+            settings.EnableBatching.Should().BeTrue();
+            settings.MaxExplicitFlushes.Should().Be(BatchWriterSettings.DefaultMaxPendingWrites);
+        }
+
         /// <summary>
         /// Stay below the write / count and write / byte threshold. Rely on the timer.
         /// </summary>
