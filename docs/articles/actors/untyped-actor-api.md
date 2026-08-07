@@ -269,6 +269,9 @@ protected override void PreStart()
 
 This method is called when the actor is first created. During restarts it is called by the default implementation of `PostRestart`, which means that by overriding that method you can choose whether the initialization code in this method is called only exactly once for this actor or for every restart. Initialization code which is part of the actor's constructor will always be called when an instance of the actor class is created, which happens at every restart.
 
+> [!IMPORTANT]
+> An exception thrown from `PreStart` (or the actor constructor) becomes an `ActorInitializationException`. The default supervisor strategy **stops** the actor in that case — it will not restart. `PostStop` is also not invoked for that failed start. See [Fault Tolerance](xref:fault-tolerance#actorinitializationexception-and-prestart-failures).
+
 ### Restart Hooks
 
 All actors are supervised, i.e. linked to another actor with a fault handling strategy. Actors may be restarted in case an exception is thrown while processing a message (see [Supervision and Monitoring](xref:supervision). This restart involves the hooks mentioned above:

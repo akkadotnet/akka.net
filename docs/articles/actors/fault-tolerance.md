@@ -54,8 +54,23 @@ exceptions are handled by default:
 * `ActorKilledException` will stop the failing child actor; and
 * Any other type of `Exception` will restart the failing child actor.
 
-You can combine your own strategy with the default strategy like this:
+#### `ActorInitializationException` and `PreStart` failures
 
+If an actor throws during construction or in `PreStart`, Akka wraps that failure in `ActorInitializationException` and reports it to the supervisor. Under the **default** strategy that means the child is **stopped**, not restarted — even though a plain `Exception` during normal message handling would restart.
+
+Consequences:
+
+* A failing `PreStart` does not get another chance unless the supervisor explicitly decides `Directive.Restart` for `ActorInitializationException` (or for the inner exception your decider inspects).
+* Because the actor never finished starting, **`PostStop` is not run** for that failed incarnation. Cleanup that only lives in `PostStop` (for example timer teardown via `IWithTimers`) will not run. Prefer try/finally inside `PreStart`, or supervise with a strategy that restarts initialization failures if retry is intended.
+
+Example: restart on every failure, including initialization:
+
+```csharp
+protected override SupervisorStrategy SupervisorStrategy() =>
+    new OneForOneStrategy(_ => Directive.Restart);
+```
+
+You can combine your own strategy with the default strategy like this:
 ```csharp
 protected override SupervisorStrategy SupervisorStrategy()
 {
