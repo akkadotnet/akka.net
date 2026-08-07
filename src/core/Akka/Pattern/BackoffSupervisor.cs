@@ -239,12 +239,47 @@ namespace Akka.Pattern
         /// <summary>
         /// Props for creating a <see cref="BackoffSupervisor"/> actor with a custom supervision strategy.
         /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This is <b>not</b> a shorthand for <c>BackoffSupervisor.Props(Backoff.OnFailure(...))</c>
+        /// or <c>Backoff.OnStop(...)</c>. Those builders create different supervisors:
+        /// </para>
+        /// <list type="bullet">
+        /// <item>
+        /// <description>
+        /// <see cref="Backoff.OnStop"/> also creates a <see cref="BackoffSupervisor"/>, but defaults to a
+        /// stopping strategy so failures become stops and the exponential back-off applies after the child stops.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// <see cref="Backoff.OnFailure"/> creates a different supervisor that translates
+        /// <see cref="Directive.Restart"/> into a stop + delayed restart (back-off on crash/restart).
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// <see cref="PropsWithSupervisorStrategy"/> always creates <see cref="BackoffSupervisor"/>:
+        /// <paramref name="strategy"/> handles exceptions immediately (for example
+        /// <see cref="Actor.SupervisorStrategy.DefaultStrategy"/> restarts the child <b>without</b> delay),
+        /// while the exponential back-off only runs after the child is <see cref="Terminated"/>
+        /// (stop, or a strategy that chooses <see cref="Directive.Stop"/>).
+        /// </description>
+        /// </item>
+        /// </list>
+        /// <para>
+        /// Prefer <see cref="Backoff.OnStop"/> / <see cref="Backoff.OnFailure"/> for new code unless you
+        /// specifically need a custom <see cref="SupervisorStrategy"/> with stop-based back-off.
+        /// Equivalent stop-based setup via options:
+        /// <c>Backoff.OnStop(...).WithSupervisorStrategy(strategy)</c>.
+        /// </para>
+        /// </remarks>
         /// <param name="childProps">The <see cref="Akka.Actor.Props"/> of the child actor that will be started and supervised</param>
         /// <param name="childName">Name of the child actor</param>
         /// <param name="minBackoff">Minimum (initial) duration until the child actor will started again, if it is terminated</param>
         /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
         /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
-        /// <param name="strategy">The supervision strategy to use for handling exceptions in the child</param>
+        /// <param name="strategy">The supervision strategy to use for handling exceptions in the child. Does not by itself enable back-off on <see cref="Directive.Restart"/>; use <see cref="Backoff.OnFailure"/> for that.</param>
         public static Props PropsWithSupervisorStrategy(
             Props childProps,
             string childName,

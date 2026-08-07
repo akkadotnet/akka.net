@@ -157,6 +157,33 @@ var supervisor = BackoffSupervisor.Props(
 
 The above code sets up a back-off supervisor that restarts the child after back-off if `MyException` is thrown, any other exception will be escalated. The back-off is automatically reset if the child does not throw any errors within 10 seconds.
 
+### `PropsWithSupervisorStrategy` vs `Backoff.OnStop` / `Backoff.OnFailure`
+
+`BackoffSupervisor.PropsWithSupervisorStrategy` is easy to confuse with the `Backoff.OnFailure` / `Backoff.OnStop` builders, but it is **not** a shorthand for either of them.
+
+| API | Supervisor created | When exponential back-off applies |
+|-----|--------------------|-----------------------------------|
+| `Backoff.OnStop(...)` | `BackoffSupervisor` | After the child **stops** (failures are typically turned into stops via a stopping strategy) |
+| `Backoff.OnFailure(...)` | Internal restart-oriented supervisor | When the strategy decides **`Directive.Restart`** — that restart is translated into stop + delayed restart |
+| `BackoffSupervisor.PropsWithSupervisorStrategy(...)` | `BackoffSupervisor` | Only after the child is **`Terminated`**. The passed `SupervisorStrategy` still runs first: with `DefaultStrategy`, most exceptions **`Restart` immediately with no delay** |
+
+Example of the older factory with a custom strategy:
+
+```csharp
+var supervisor = BackoffSupervisor.PropsWithSupervisorStrategy(
+    childProps,
+    childName: "myEcho",
+    minBackoff: TimeSpan.FromSeconds(3),
+    maxBackoff: TimeSpan.FromSeconds(30),
+    randomFactor: 0.2,
+    strategy: new OneForOneStrategy(ex =>
+        ex is MyException ? Directive.Stop : Directive.Escalate));
+```
+
+Here `MyException` stops the child, then `BackoffSupervisor` restarts it after the back-off delay. A `Directive.Restart` from this strategy would **not** use that delay.
+
+For new code, prefer the options API — for stop-based back-off with a custom strategy use `Backoff.OnStop(...).WithSupervisorStrategy(...)`, and for restart-based back-off use `Backoff.OnFailure(...)`.
+
 ## One-For-One Strategy vs. All-For-One Strategy
 
 There are two classes of supervision strategies which come with Akka: `OneForOneStrategy` and `AllForOneStrategy`. Both are configured with a mapping from exception type to supervision directive and limits on how often a child is allowed to fail before terminating it. The difference between them is that the former applies the obtained directive only to the failed child, whereas the latter applies it to all siblings as well. Normally, you should use the `OneForOneStrategy`, which also is the default if none is specified explicitly.
