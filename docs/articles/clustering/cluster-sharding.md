@@ -62,13 +62,16 @@ In this example, we first specify way to resolve our message recipients in conte
 
 Second part of an example is registering custom actor type as sharded entity using `ClusterSharding.Start` or `ClusterSharding.StartAsync` methods. Result is the `IActorRef` to shard region used to communicate between current actor system and target entities. Shard region must be specified once per each type on each node, that is expected to participate in sharding entities of that type. Keep in mind, that it's recommended to wait for the current node to first fully join the cluster before initializing a shard regions in order to avoid potential timeouts.
 
+> [!NOTE]
+> If `ClusterShardingSettings` specify a `role` and the current cluster node does **not** have that role, `Start` / `StartAsync` automatically start a **`ShardRegion` in proxy mode** instead of hosting entities on this node. You do not need a separate `StartProxy` call in that case — the returned `IActorRef` still forwards messages to regions that do host the shards.
+
 > N.B. Sharded entity actors are automatically created by the Akka.Cluster.Sharding guardian actor hierarchy, hence why they live under the `/system` portion of the actor hierarchy. This is done intentionally - in the event of an `ActorSystem` termination the `/user` side of the actor hierarchy is always terminated first before the `/system` actors are.
 >
 > Therefore, this design gives the sharding system a chance to hand over all of the sharded entity actors running on the terminating node over to the other remaining nodes in the cluster.
 
 In some cases, the actor may need to know the `entityId` associated with it. This can be achieved using the `entityPropsFactory` parameter to `ClusterSharding.Start` or `ClusterSharding.StartAsync`. The entity ID will be passed to the factory as a parameter, which can then be used in the creation of the actor.
 
-In case when you want to send message to entities from specific node, but you don't want that node to participate in sharding itself, you can use `ShardRegionProxy` for that.
+In case when you want to send message to entities from a node that should never host shards (for example no role configured on settings, or you want the intent to be explicit), you can still call `StartProxy` / `StartProxyAsync` directly:
 
 Example:
 
@@ -79,6 +82,7 @@ var proxy = ClusterSharding.Get(system).StartProxy(
     messageExtractor: new MessageExtractor());
 ```
 
+Prefer `Start` / `StartAsync` with a role on mixed clusters when possible: host nodes get a real `ShardRegion`, other roles get proxy mode automatically.
 ## Shards
 
 Entities are located and managed automatically. They can also be recreated on the other nodes, as new nodes join the cluster or old ones are leaving it. This process is called re-balancing and for performance reasons it never works over a single entity. Instead all entities are organized and managed in so called shards.
@@ -404,9 +408,9 @@ There are two types of sharding coordinator actors:
 * **Proxy coordinator**: only coordinates messages to the proper sharded actors. This coordinator actor is
   used on nodes that needs to talk to the shard region but does not host any of the sharded actors.
 
-Note that you only need one of these coordinator actors to be able to communicate with the actors
-inside the shard region, you don't need a proxy if you already created a regular coordinator.
-We will use the proxy coordinator for the front end and the normal coordinator on the backend nodes.
+You only need one of these on a given node to communicate with sharded entities. If `ClusterShardingSettings` include a `role` and the current node does not have that role, `Start` / `StartAsync` already start proxy mode for you — a separate `StartProxy` call is optional. Explicit `StartProxy` is still useful when you want proxy-only intent without relying on role matching.
+
+In the shopping-cart sample we still show an explicit proxy on the front end and a normal region on the backend:
 
 [!code-csharp[Program.cs](../../../src/examples/Cluster/ClusterSharding/ShoppingCart/Program.cs?name=StartShardRegion "Start sharding region")]
 
