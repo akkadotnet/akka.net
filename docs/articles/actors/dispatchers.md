@@ -169,58 +169,44 @@ private void Form1_Load(object sender, System.EventArgs e)
 
 ### `ChannelExecutor`
 
-In Akka.NET v1.4.19 we will be introducing an opt-in feature, the `ChannelExecutor` - a new dispatcher type that re-uses the same configuration as a `ForkJoinDispatcher` but runs entirely on top of the .NET `ThreadPool` and is able to take advantage of dynamic thread pool scaling to size / resize workloads on the fly.
+Introduced in Akka.NET v1.4.19, the `ChannelExecutor` runs dispatcher work on the .NET `ThreadPool` and can take advantage of dynamic thread pool scaling.
 
 During its initial development and benchmarks, we observed the following:
 
 1. The `ChannelExecutor` tremendously reduced idle CPU and max busy CPU even during peak message throughput, primarily as a result of dynamically shrinking the total `ThreadPool` to only the necessary size. This resolves one of the largest complaints large users of Akka.NET have today.
 2. The `ChannelExecutor` actually beat the `ForkJoinDispatcher` and others on performance even in environments like Docker and bare metal on Windows.
 
-> [!NOTE]
-> We are in the process of gathering data from users on how well `ChannelExecutor` performs in the real world. If you are interested in trying out the `ChannelExecutor`, please read the directions in this document and then comment on [the "Akka.NET v1.4.19: ChannelExecutor performance data" discussion thread](https://github.com/akkadotnet/akka.net/discussions/4983).
+`ChannelExecutor` does **not** use `fork-join-executor` parallelism settings for concurrency. Thread-pool sizing is left to the .NET `ThreadPool`. The executor-specific option is `channel-executor.priority` (default: `normal`), which selects the priority lane used by Akka.NET's channel task scheduler.
 
-The `ChannelExectuor` re-uses the same threading settings as the `ForkJoinExecutor` to determine its effective upper and lower parallelism limits, and you can configure the `ChannelExecutor` to run inside your `ActorSystem` via the following HOCON configuration:
+Allowed values (case-insensitive): `Idle`, `Background`, `Low`, `BelowNormal`, `Normal`, `AboveNormal`, `High`, `Realtime`. Higher-priority lanes are drained before lower-priority ones.
+
+Example HOCON:
 
 ```hocon
 akka.actor.default-dispatcher = {
-    executor = channel-executor
-    fork-join-executor { #channelexecutor will re-use these settings
-      parallelism-min = 2
-      parallelism-factor = 1
-      parallelism-max = 64
-    }
+  executor = channel-executor
+  channel-executor.priority = normal
 }
 
 akka.actor.internal-dispatcher = {
-    executor = channel-executor
-    throughput = 5
-    fork-join-executor {
-      parallelism-min = 4
-      parallelism-factor = 1.0
-      parallelism-max = 64
-    }
+  executor = channel-executor
+  throughput = 5
+  channel-executor.priority = high
 }
 
 akka.remote.default-remote-dispatcher {
-    type = Dispatcher
-    executor = channel-executor
-    fork-join-executor {
-      parallelism-min = 2
-      parallelism-factor = 0.5
-      parallelism-max = 16
-    }
+  type = Dispatcher
+  executor = channel-executor
+  channel-executor.priority = high
 }
 
 akka.remote.backoff-remote-dispatcher {
   executor = channel-executor
-  fork-join-executor {
-    parallelism-min = 2
-    parallelism-max = 2
-  }
+  channel-executor.priority = low
 }
 ```
 
-This will enable the `ChannelExecutor` to run everywhere and all Akka.NET loads, with the exception of anything you manually allocate onto a `ForkJoinDispatcher` or `PinnedDispatcher`, will be managed by the `ThreadPool`.
+This enables the `ChannelExecutor` for those dispatchers; work is scheduled on the `ThreadPool` at the configured priority. Dedicated `ForkJoinDispatcher` / `PinnedDispatcher` assignments are unchanged.
 
 #### Common Dispatcher Configuration
 
