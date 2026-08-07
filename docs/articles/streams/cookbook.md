@@ -214,6 +214,23 @@ var counts = words
     .MergeSubstreams();
 ```
 
+> [!IMPORTANT]
+> `MergeSubstreams`, `MergeSubstreamsWithParallelism`, and `ConcatSubstream` return `IFlow<TOut, TMat>`, not the concrete `Source` / `Flow` you started from. .NET cannot express the higher-kinded typing used by the Scala API, so cast back when you need Source- or Flow-specific operators:
+>
+> ```csharp
+> var merged = words
+>     .GroupBy(MaximumDistinctWords, x => x)
+>     .Select(x => Tuple.Create(x, 1))
+>     .Sum((l, r) => Tuple.Create(l.Item1, l.Item2 + r.Item2))
+>     .MergeSubstreams();
+>
+> // Continue with Source-specific APIs after an explicit cast
+> ((Source<Tuple<string, int>, NotUsed>)merged)
+>     .WireTapMaterialized(Sink.Ignore<Tuple<string, int>>(), Keep.Left);
+> ```
+>
+> Operators that already exist on `IFlow` (for example `Select`, `Where`, `RunWith`) do not need a cast.
+
 By extracting the parts specific to `wordcount` into
 
 * a ``GroupKey`` function that defines the groups

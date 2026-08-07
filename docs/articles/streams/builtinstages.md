@@ -1074,6 +1074,9 @@ a new substream is opened and subsequently fed with all elements belonging to th
 
 > [!WARNING]
 > If `allowClosedSubstreamRecreation` is set to `false` (default behavior) the stage keeps track of all keys of streams that have already been closed. If you expect an infinite number of keys this can cause memory issues. Elements belonging to those keys are drained directly and not send to the substream.
+
+> [!IMPORTANT]
+> After transforming the substreams, call `MergeSubstreams` (or `ConcatSubstream`) to flatten them. Those methods return `IFlow<TOut, TMat>`; cast back to `Source` / `Flow` if you need operators that are not defined on `IFlow`. See [Implementing Reduce-By-Key](xref:streams-cookbook#implementing-reduce-by-key) and [#5381](https://github.com/akkadotnet/akka.net/issues/5381).
 <!-- markdownlint-enable MD028 -->
 
 **emits** an element for which the grouping function returns a group that has not yet been created. Emits the new group

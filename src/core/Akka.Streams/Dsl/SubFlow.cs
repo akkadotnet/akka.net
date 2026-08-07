@@ -75,7 +75,18 @@ namespace Akka.Streams.Dsl
         /// without parallelism limit (i.e. having an unbounded number of sub-flows
         /// active concurrently).
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <remarks>
+        /// Returns <see cref="IFlow{TOut,TMat}"/> rather than the concrete <see cref="Source{TOut,TMat}"/>
+        /// or <see cref="Flow{TIn,TOut,TMat}"/> that produced the sub-flows. .NET cannot express the
+        /// higher-kinded / F-bounded typing used by the Scala API, so cast back when you need
+        /// Source- or Flow-specific operators (for example <c>WireTapMaterialized</c>):
+        /// <code>
+        /// var merged = source.GroupBy(10, x => x % 10).Sum((a, b) => a + b).MergeSubstreams();
+        /// ((Source&lt;int, NotUsed&gt;)merged).WireTapMaterialized(...);
+        /// </code>
+        /// See https://github.com/akkadotnet/akka.net/issues/5381
+        /// </remarks>
+        /// <returns>The flattened flow as an <see cref="IFlow{TOut,TMat}"/>.</returns>
         public virtual IFlow<TOut, TMat> MergeSubstreams() => MergeSubstreamsWithParallelism(int.MaxValue);
 
         /// <summary>
@@ -86,18 +97,28 @@ namespace Akka.Streams.Dsl
         /// be exerted at the operator that creates the substreams when the parallelism
         /// limit is reached.
         /// </summary>
-        /// <param name="parallelism">TBD</param>
-        /// <returns>TBD</returns>
+        /// <remarks>
+        /// Same typing caveat as <see cref="MergeSubstreams"/>: the result is an
+        /// <see cref="IFlow{TOut,TMat}"/> and must be cast back to <see cref="Source{TOut,TMat}"/>
+        /// or <see cref="Flow{TIn,TOut,TMat}"/> to keep using the concrete builder APIs.
+        /// </remarks>
+        /// <param name="parallelism">Maximum number of substreams that may run concurrently.</param>
+        /// <returns>The flattened flow as an <see cref="IFlow{TOut,TMat}"/>.</returns>
         public abstract IFlow<TOut, TMat> MergeSubstreamsWithParallelism(int parallelism);
 
         /// <summary>
         /// Flatten the sub-flows back into the super-flow by concatenating them.
         /// This is usually a bad idea when combined with <see cref="Akka.Streams.Implementation.Fusing.GroupBy{TIn,TKey}"/>
-        /// since it can easily lead to deadlockâ€”the concatenation does not consume from the second
+        /// since it can easily lead to deadlock—the concatenation does not consume from the second
         /// substream until the first has finished and the <see cref="Akka.Streams.Implementation.Fusing.GroupBy{TIn,TKey}"/>
         /// stage will get back-pressure from the second stream.
         /// </summary>
-        /// <returns>TBD</returns>
+        /// <remarks>
+        /// Same typing caveat as <see cref="MergeSubstreams"/>: the result is an
+        /// <see cref="IFlow{TOut,TMat}"/> and must be cast back to the concrete <c>Source</c>/<c>Flow</c>
+        /// type to continue with type-specific operators.
+        /// </remarks>
+        /// <returns>The concatenated flow as an <see cref="IFlow{TOut,TMat}"/>.</returns>
         public virtual IFlow<TOut, TMat> ConcatSubstream() => MergeSubstreamsWithParallelism(1);
     }
 }
