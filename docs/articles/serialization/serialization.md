@@ -420,6 +420,43 @@ akka.actor.serialization-settings.hyperion.disallow-unsafe-type = false
 > preferably inside a closed network system.
 <!-- markdownlint-enable MD028 -->
 
+### Hyperion type filtering (`ITypeFilter`)
+
+In addition to the built-in unsafe-type blocklist, Hyperion can restrict deserialization to an **allow-list** of types via `ITypeFilter`. When a filter is active, types that are not included are rejected at deserialize time (typically as a `SerializationException` wrapping Hyperion's evil-deserialization error).
+
+By default filtering is **off** (`DisabledTypeFilter`): `allowed-types` is empty.
+
+#### HOCON (`allowed-types`)
+
+```hocon
+akka.actor.serialization-settings.hyperion {
+  disallow-unsafe-type = true
+  allowed-types = [
+    "MyApp.Messages.OrderPlaced, MyApp"
+    "MyApp.Messages.OrderCancelled, MyApp"
+  ]
+}
+```
+
+Each entry is a fully qualified type name (with assembly). If any entry cannot be loaded, configuration fails at serializer startup.
+
+#### Programmatic (`TypeFilterBuilder` / `HyperionSerializerSetup`)
+
+```csharp
+using Hyperion;
+
+var hyperionSetup = HyperionSerializerSetup.Empty
+    .WithTypeFilter(TypeFilterBuilder.Create()
+        .Include<MyApp.Messages.OrderPlaced>()
+        .Include<MyApp.Messages.OrderCancelled>()
+        .Build());
+
+var bootstrap = BootstrapSetup.Create().And(hyperionSetup);
+var system = ActorSystem.Create("app", bootstrap);
+```
+
+`HyperionSerializerSetup` overrides HOCON for the same settings when both are provided. Use an allow-list when message contracts are known and you want defense in depth beyond `disallow-unsafe-type`.
+
 ## Cross Platform Serialization Compatibility in Hyperion
 
 There are problems that can arise when migrating from old .NET Framework to the new .NET Core standard, mainly because of breaking namespace and assembly name changes between these platforms.
