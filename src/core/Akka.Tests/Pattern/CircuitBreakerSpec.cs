@@ -174,7 +174,9 @@ namespace Akka.Tests.Pattern
         {
             var breaker = LongResetTimeoutCb();
 
-            InterceptException<TestException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException));
+            // Prefer Fail() to open: WithSyncCircuitBreaker(ThrowException) races CallTimeout vs Task.Run
+            // scheduling under CI load (#7945). Opening does not need to exercise the protected call path.
+            breaker.Instance.Fail();
             Assert.True(CheckLatch(breaker.OpenLatch));
 
             var e = InterceptException<OpenCircuitException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException));
@@ -194,7 +196,7 @@ namespace Akka.Tests.Pattern
         public void Must_still_be_in_open_state_after_calling_success_method()
         {
             var breaker = LongResetTimeoutCb();
-            InterceptException<TestException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException));
+            breaker.Instance.Fail();
             Assert.True(CheckLatch(breaker.OpenLatch));
             breaker.Instance.Succeed();
             breaker.Instance.IsOpen.ShouldBeTrue();
@@ -204,7 +206,7 @@ namespace Akka.Tests.Pattern
         public void Must_still_be_in_open_state_after_calling_fail_method()
         {
             var breaker = LongResetTimeoutCb();
-            InterceptException<TestException>(() => breaker.Instance.WithSyncCircuitBreaker(ThrowException));
+            breaker.Instance.Fail();
             Assert.True(CheckLatch(breaker.OpenLatch));
             breaker.Instance.Fail();
             breaker.Instance.IsOpen.ShouldBeTrue();
@@ -332,8 +334,7 @@ namespace Akka.Tests.Pattern
         public async Task Must_throw_exceptions_when_called_before_reset_timeout()
         {
             var breaker = LongResetTimeoutCb();
-            await InterceptException<TestException>(() =>
-                breaker.Instance.WithCircuitBreaker(ct => Task.Run(ThrowException, ct)));
+            breaker.Instance.Fail();
 
             await CheckLatchAsync(breaker.OpenLatch);
 
@@ -446,8 +447,15 @@ namespace Akka.Tests.Pattern
             new(new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromSeconds(5), Dilated(TimeSpan.FromMilliseconds(500))));
 
         public TimeSpan LongResetTimeout = TimeSpan.FromSeconds(5);
+
+        /// <summary>
+        /// Breaker with a long reset timeout. CallTimeout must stay generous: WithSyncCircuitBreaker
+        /// schedules the body via Task.Run and awaits it with WaitAsync(CallTimeout), so a tight budget
+        /// (previously 100ms) races thread-pool scheduling under CI load and surfaces TimeoutException
+        /// instead of the body's TestException — see https://github.com/akkadotnet/akka.net/issues/7945.
+        /// </summary>
         public TestBreaker LongResetTimeoutCb() =>
-            new(new CircuitBreaker(Sys.Scheduler, 1, Dilated(TimeSpan.FromMilliseconds(100)), Dilated(LongResetTimeout)));
+            new(new CircuitBreaker(Sys.Scheduler, 1, TimeSpan.FromSeconds(5), Dilated(LongResetTimeout)));
 
         public TestBreaker MultiFailureCb() =>
             new(new CircuitBreaker(Sys.Scheduler, 5, Dilated(TimeSpan.FromMilliseconds(200)), Dilated(TimeSpan.FromMilliseconds(500))));
