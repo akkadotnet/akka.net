@@ -63,18 +63,22 @@ namespace Akka.Streams.Dsl
         /// <param name="maximumFramelength">The maximum length of allowed frames while decoding. If the maximum length is exceeded this Flow will fail the stream. This length *includes* the header (i.e the offset and the length of the size field)</param>
         /// <param name="fieldOffset">The offset of the field from the beginning of the frame in bytes</param>
         /// <param name="byteOrder">The <see cref="ByteOrder"/> to be used when decoding the field</param>
+        /// <param name="discardHeaderLengthField">
+        /// When <c>true</c>, the emitted frame excludes the header (<paramref name="fieldOffset"/> + <paramref name="fieldLength"/> bytes).
+        /// When <c>false</c> (default, JVM-compatible), the full frame including the length header is emitted.
+        /// </param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="fieldLength"/> is not equal to either 1, 2, 3 or 4.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A framing flow that emits decoded frames.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> LengthField(int fieldLength, int maximumFramelength,
-            int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian)
+            int fieldOffset = 0, ByteOrder byteOrder = ByteOrder.LittleEndian, bool discardHeaderLengthField = false)
         {
             if (fieldLength is < 1 or > 4)
                 throw new ArgumentException("Length field length must be 1,2,3 or 4", nameof(fieldLength));
 
             return Flow.Create<ReadOnlySequence<byte>>()
-                .Via(new LengthFieldFramingStage(fieldLength, maximumFramelength, fieldOffset, byteOrder))
+                .Via(new LengthFieldFramingStage(fieldLength, maximumFramelength, fieldOffset, byteOrder, discardHeaderLengthField))
                 .Named("LengthFieldFraming");
         }
 
@@ -96,22 +100,27 @@ namespace Akka.Streams.Dsl
         /// Then computeFrameSize can be used to compute the frame size: `(offset bytes, computed size) => (actual frame size)`.
         /// "Actual frame size" must be equal or bigger than sum of `fieldOffset` and `fieldLength`, the operator fails otherwise.
         /// </param>
+        /// <param name="discardHeaderLengthField">
+        /// When <c>true</c>, the emitted frame excludes the header (<paramref name="fieldOffset"/> + <paramref name="fieldLength"/> bytes).
+        /// When <c>false</c> (default, JVM-compatible), the full frame including the length header is emitted.
+        /// </param>
         /// <exception cref="ArgumentException">
         /// This exception is thrown when the specified <paramref name="fieldLength"/> is not equal to either 1, 2, 3 or 4.
         /// </exception>
-        /// <returns>TBD</returns>
+        /// <returns>A framing flow that emits decoded frames.</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> LengthField(
             int fieldLength,
             int fieldOffset,
             int maximumFrameLength,
             ByteOrder byteOrder,
-            Func<IReadOnlyList<byte>, int, int> computeFrameSize)
+            Func<IReadOnlyList<byte>, int, int> computeFrameSize,
+            bool discardHeaderLengthField = false)
         {
             if (fieldLength is < 1 or > 4)
                 throw new ArgumentException("Length field length must be 1,2,3 or 4", nameof(fieldLength));
 
             return Flow.Create<ReadOnlySequence<byte>>()
-                .Via(new LengthFieldFramingStage(fieldLength, maximumFrameLength, fieldOffset, byteOrder, computeFrameSize))
+                .Via(new LengthFieldFramingStage(fieldLength, maximumFrameLength, fieldOffset, byteOrder, computeFrameSize, discardHeaderLengthField))
                 .Named("LengthFieldFraming");
         }
 
@@ -144,7 +153,7 @@ namespace Akka.Streams.Dsl
         /// <returns>TBD</returns>
         public static Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> SimpleFramingProtocolDecoder(int maximumMessageLength)
         {
-            return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian).Select(b => b.Slice(4));
+            return LengthField(4, maximumMessageLength + 4, 0, ByteOrder.BigEndian, discardHeaderLengthField: true);
         }
 
         /// <summary>
@@ -461,6 +470,8 @@ namespace Akka.Streams.Dsl
                     var emit = _buffer.Slice(0, _frameSize);
                     _buffer = _buffer.Slice(_frameSize);
                     _frameSize = int.MaxValue;
+                    if (_stage._discardHeaderLengthField)
+                        emit = emit.Slice(_stage._minimumChunkSize);
                     Push(_stage.Outlet, emit);
                     if (_buffer.IsEmpty && IsClosed(_stage.Inlet))
                         CompleteStage();
@@ -521,14 +532,23 @@ namespace Akka.Streams.Dsl
             private readonly int _minimumChunkSize;
             private readonly IntDecoder _intDecoder;
             private readonly Option<Func<IReadOnlyList<byte>, int, int>> _computeFrameSize;
+            private readonly bool _discardHeaderLengthField;
 
             // For the sake of binary compatibility
             public LengthFieldFramingStage(int lengthFieldLength, int maximumFramelength, int lengthFieldOffset, ByteOrder byteOrder)
-                : this(lengthFieldLength, maximumFramelength, lengthFieldOffset, byteOrder, Option<Func<IReadOnlyList<byte>, int, int>>.None)
+                : this(lengthFieldLength, maximumFramelength, lengthFieldOffset, byteOrder, Option<Func<IReadOnlyList<byte>, int, int>>.None, false)
+            { }
+
+            public LengthFieldFramingStage(int lengthFieldLength, int maximumFramelength, int lengthFieldOffset, ByteOrder byteOrder, bool discardHeaderLengthField)
+                : this(lengthFieldLength, maximumFramelength, lengthFieldOffset, byteOrder, Option<Func<IReadOnlyList<byte>, int, int>>.None, discardHeaderLengthField)
             { }
 
             public LengthFieldFramingStage(int lengthFieldLength, int maximumFramelength, int lengthFieldOffset, ByteOrder byteOrder, Func<IReadOnlyList<byte>, int, int> computeFrameSize)
-                : this(lengthFieldLength, maximumFramelength, lengthFieldOffset, byteOrder, Option<Func<IReadOnlyList<byte>, int, int>>.Create(computeFrameSize))
+                : this(lengthFieldLength, maximumFramelength, lengthFieldOffset, byteOrder, Option<Func<IReadOnlyList<byte>, int, int>>.Create(computeFrameSize), false)
+            { }
+
+            public LengthFieldFramingStage(int lengthFieldLength, int maximumFramelength, int lengthFieldOffset, ByteOrder byteOrder, Func<IReadOnlyList<byte>, int, int> computeFrameSize, bool discardHeaderLengthField)
+                : this(lengthFieldLength, maximumFramelength, lengthFieldOffset, byteOrder, Option<Func<IReadOnlyList<byte>, int, int>>.Create(computeFrameSize), discardHeaderLengthField)
             { }
 
             public LengthFieldFramingStage(
@@ -536,13 +556,15 @@ namespace Akka.Streams.Dsl
                 int maximumFrameLength,
                 int lengthFieldOffset,
                 ByteOrder byteOrder,
-                Option<Func<IReadOnlyList<byte>, int, int>> computeFrameSize) : base("LengthFieldFramingStage")
+                Option<Func<IReadOnlyList<byte>, int, int>> computeFrameSize,
+                bool discardHeaderLengthField = false) : base("LengthFieldFramingStage")
             {
                 _lengthFieldLength = lengthFieldLength;
                 _maximumFramelength = maximumFrameLength;
                 _lengthFieldOffset = lengthFieldOffset;
                 _minimumChunkSize = lengthFieldOffset + lengthFieldLength;
                 _computeFrameSize = computeFrameSize;
+                _discardHeaderLengthField = discardHeaderLengthField;
                 _intDecoder = byteOrder == ByteOrder.BigEndian ? BigEndianDecode : LittleEndianDecode;
             }
 

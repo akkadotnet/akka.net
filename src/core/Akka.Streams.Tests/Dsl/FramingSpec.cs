@@ -551,5 +551,37 @@ namespace Akka.Streams.Tests.Dsl
             for (var i = 0; i < complete.Count; i++)
                 complete[i].ToArray().SequenceEqual(bytes[i].ToArray()).Should().BeTrue();
         }
+
+        [Fact]
+        public async Task Length_field_based_framing_must_discard_header_when_requested()
+        {
+            // See https://github.com/akkadotnet/akka.net/issues/3473
+            var payload = new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("hello"));
+            const int fieldOffset = 2;
+            const int fieldLength = 4;
+            var encoded = Encode(payload, fieldOffset, fieldLength, ByteOrder.LittleEndian);
+
+            var result = await Source.Single(encoded)
+                .Via(Framing.LengthField(fieldLength, int.MaxValue, fieldOffset, ByteOrder.LittleEndian,
+                    discardHeaderLengthField: true))
+                .RunWith(Sink.First<ReadOnlySequence<byte>>(), Materializer)
+                .WaitAsync(3.Seconds());
+
+            result.ToArray().Should().Equal(payload.ToArray());
+        }
+
+        [Fact]
+        public async Task Length_field_based_framing_must_keep_header_by_default()
+        {
+            var payload = new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("hello"));
+            var encoded = Encode(payload, 0, 4, ByteOrder.LittleEndian);
+
+            var result = await Source.Single(encoded)
+                .Via(Framing.LengthField(4, int.MaxValue, 0, ByteOrder.LittleEndian))
+                .RunWith(Sink.First<ReadOnlySequence<byte>>(), Materializer)
+                .WaitAsync(3.Seconds());
+
+            result.ToArray().Should().Equal(encoded.ToArray());
+        }
     }
 }
