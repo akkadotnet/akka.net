@@ -96,7 +96,18 @@ Routers are implemented as actors, so a router is supervised by its parent, and 
 
 *Pool routers* on the other hand create their own children. The router is therefore also the routee's supervisor.
 
-By default, pool routers use a custom strategy that only returns `Escalate` for all exceptions, the router supervising the failing worker will then escalate to its own parent, if the parent of the router decides to restart the router, all the pool workers will also be recreated as a result of this.
+By default, pool routers use the same [default supervisor strategy](xref:supervision) as other actors (`Directive.Restart` for most exceptions). When a routee fails, only that routee is restarted — not the entire pool.
+
+> [!IMPORTANT]
+> Setting a supervisor strategy on the routee `Props` (for example with `Props.Create<Worker>().WithSupervisorStrategy(...)`) has **no effect** on pool routees. The pool router is the supervisor, so you must configure the strategy on the router itself via `WithSupervisorStrategy`.
+
+Programmatically, set the strategy on the pool configuration:
+
+[!code-csharp[PoolWithSupervisorStrategy](../../../src/core/Akka.Docs.Tests/Actors/Routers/RouterSupervisionDocSpec.cs?name=pool-with-supervisor-strategy)]
+
+The same applies when the router type comes from configuration (`FromConfig`):
+
+[!code-csharp[FromConfigWithSupervisorStrategy](../../../src/core/Akka.Docs.Tests/Actors/Routers/RouterSupervisionDocSpec.cs?name=from-config-with-supervisor-strategy)]
 
 ## Routing Strategies
 
