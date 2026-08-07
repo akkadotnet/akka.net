@@ -173,6 +173,44 @@ A seed node is a well-known contact point that a new node must contact in order 
 > [!NOTE]
 > [Lighthouse](https://github.com/petabridge/lighthouse) is a pre-built, dedicated seed node tool that you can use. It's extremely lightweight and only needs to be upgraded when Akka.Cluster itself is upgraded. If you're hosted on a platform like Azure or AWS, you can also tap into the platform-specific APIs to accomplish the same effect.
 
+#### Tuning seed-node joins
+
+When a node joins via configured `seed-nodes` or `Cluster.JoinSeedNodes` / `JoinSeedNodesAsync`, it contacts the seed list and joins the first seed that answers. Several timeouts control that process:
+
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| `akka.cluster.seed-node-timeout` | `5s` | How long to wait for a seed to answer the initial contact. For the **first** seed in the list, if no other seed replies within this timeout the node joins **itself** to bootstrap the cluster. For other nodes, join attempts are retried on this interval. |
+| `akka.cluster.retry-unsuccessful-join-after` | `10s` | After a failed join attempt to a specific seed, wait this long before retrying (contact all seeds again, join whoever answers first). Set to `off` to disable retries. |
+| `akka.cluster.shutdown-after-unsuccessful-join-seed-nodes` | `off` | Optional overall deadline. If joining the configured / programmatic seed list does not succeed within this duration, the node aborts the join and runs [Coordinated Shutdown](xref:coordinated-shutdown), which by default terminates the `ActorSystem`. |
+
+By default, unsuccessful seed joins are retried **indefinitely**. That is usually fine for static seed lists, but when seed addresses are assembled dynamically (for example from a discovery service) you often want a hard abort and a process restart with a fresh seed list:
+
+```hocon
+akka.cluster {
+  seed-node-timeout = 5s
+  retry-unsuccessful-join-after = 10s
+  # Abort join and run CoordinatedShutdown if seeds never answer
+  shutdown-after-unsuccessful-join-seed-nodes = 20s
+}
+```
+
+> [!IMPORTANT]
+> `shutdown-after-unsuccessful-join-seed-nodes` is disabled (`off`) by default. Enable it only when you have an outer supervisor / orchestrator that can restart the process with updated seed configuration. Coordinated Shutdown can also be configured to exit the process entirely — see [Coordinated Shutdown](xref:coordinated-shutdown).
+
+You can also join programmatically without HOCON seed nodes:
+
+```csharp
+var seeds = new[]
+{
+    Address.Parse("akka.tcp://ClusterSystem@host1:2551"),
+    Address.Parse("akka.tcp://ClusterSystem@host2:2552")
+};
+Cluster.Get(system).JoinSeedNodes(seeds);
+// or: await Cluster.Get(system).JoinSeedNodesAsync(seeds);
+```
+
+The same timeout settings apply to programmatic joins. Do not include the current node in the seed list unless it is intended to be the first seed that may bootstrap the cluster.
+
 ## How a Cluster Forms
 
 This is what the process of a node joining the cluster looks like:

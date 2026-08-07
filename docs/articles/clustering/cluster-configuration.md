@@ -14,6 +14,9 @@ Here are the most common options for configuring a [node](xref:cluster-overview#
 * **`min-nr-of-members`**: the minimum number of member nodes required to be present in the cluster before the leader marks nodes as `Up`.
   * **`min size per role`**: the minimum number of member nodes for the given role required to be present in the cluster before the role leader marks nodes with the specified role as `Up`.
 * **`seed-nodes`**: The addresses of the [seed nodes](xref:cluster-overview#seed-nodes) to join automatically at startup. Comma-separated list of URI strings. A node may list itself as a seed node and "self-join."
+* **`seed-node-timeout`**: How long to wait for a seed to reply to the initial join contact (`5s` by default). See [Tuning seed-node joins](xref:cluster-overview#tuning-seed-node-joins).
+* **`retry-unsuccessful-join-after`**: Delay before retrying a failed join (`10s` by default; `off` disables retries).
+* **`shutdown-after-unsuccessful-join-seed-nodes`**: Optional overall join deadline (`off` by default). When set, Coordinated Shutdown runs if joining seed nodes does not succeed in time — useful with dynamically discovered seeds.
 * **`roles`**: the [roles](xref:cluster-overview#key-terms) that this node is to fulfill in the cluster.  List of strings, e.g. `roles = ["A", "B"]`.
 
 You can see all of these options being used in the following HOCON:
