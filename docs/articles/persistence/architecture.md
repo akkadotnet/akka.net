@@ -35,7 +35,7 @@ Persistent actors also offer a set of specialized members:
 * `DeferAsync` is used to perform various operations *after* events will be persisted and their callback handlers will be invoked. Unlike the persist methods, defer won't store an event in persistent storage. Defer method may NOT be invoked in case when the actor is restarted even though the journal will successfully persist events sent.
 * `DeleteMessages` will order attached journal to remove part of its events. It can be only physical deletion, when the messages are removed physically from the journal.
 * `LoadSnapshot` will send a request to the snapshot store to resend the current actor's snapshot.
-* `SaveSnapshot` will send the current actor's internal state as a snapshot to be saved by the configured snapshot store.
+* `SaveSnapshot` will send the current actor's internal state as a snapshot to be saved by the configured snapshot store. The snapshot payload must be immutable (or a defensive copy) — see [Snapshots](xref:snapshots).
 * `DeleteSnapshot` and `DeleteSnapshots` methods may be used to specify snapshots to be removed from the snapshot store in cases where they are no longer needed.
 * `OnReplaySuccess` is a virtual method which will be called when the recovery cycle ends successfully.
 * `OnReplayFailure` is a virtual method which will be called when the recovery cycle fails unexpectedly from some reason.

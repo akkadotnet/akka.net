@@ -8,6 +8,11 @@ Snapshots can dramatically reduce recovery times of persistent actors and views.
 
 Persistent actors can save snapshots of internal state by calling the `SaveSnapshot` method. If saving of a snapshot succeeds, the persistent actor receives a `SaveSnapshotSuccess` message, otherwise a `SaveSnapshotFailure` message.
 
+> [!IMPORTANT]
+> Snapshot payloads must be treated as **immutable messages**. `SaveSnapshot` wraps your state in a `SaveSnapshot` command that is processed asynchronously by the snapshot store plugin — the actor is **not** suspended while the snapshot is being persisted (unlike `Persist` / `PersistAsync` for events). If you keep mutating the same object instance after calling `SaveSnapshot`, the store may serialize a partially updated or corrupted copy.
+>
+> Prefer immutable snapshot types (records, immutable collections, deep copies). If your state is a mutable object, pass a defensive copy into `SaveSnapshot` and do not mutate that copy afterward.
+
 [!code-csharp[Main](../../../src/core/Akka.Docs.Tests/Persistence/PersistentActor/Snapshots.cs?name=Snapshots)]
 
 During recovery, the persistent actor is offered a previously saved snapshot via a `SnapshotOffer` message from which it can initialize internal state.
