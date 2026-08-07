@@ -688,6 +688,8 @@ In the above example a `"shutdown"` message is sent to the target actor to initi
 
 ## Become/Unbecome
 
+> See the dedicated guide: [Behavior Switching (`Become` / `Unbecome`)](xref:behavior-switching).
+
 ### Upgrade
 
 Akka supports hot-swapping the Actor’s message loop (e.g. its implementation) at runtime. Use the `Context.Become` method from within the Actor. The hot-swapped code is kept in a `Stack` which can be pushed (replacing or adding at the top) and popped.

@@ -2,6 +2,8 @@
   href: receive-actor-api.md
 - name: UntypedActor API
   href: untyped-actor-api.md
+- name: Behavior Switching (Become / Unbecome)
+  href: behavior-switching.md
 - name: Routers
   href: routers.md
 - name: Dispatchers
