@@ -125,10 +125,10 @@ When `suppress-validation = true`:
 
 ### Validation Strategies: HOCON vs Programmatic (v1.5.52+)
 
-Two independent validation decisions determine your TLS security posture:
+Three independent validation decisions determine your TLS security posture:
 
 1. **Chain Validation** - Verify certificate against trusted CAs (`suppress-validation`)
-2. **Hostname Validation** - Verify certificate CN/SAN matches target (`validate-certificate-hostname`)
+2. **Hostname Validation** - Verify an outbound server certificate CN/SAN matches the connection target (`validate-certificate-hostname`)
 3. **Mutual Authentication** - Require both sides authenticate (`require-mutual-authentication`)
 
 #### Decision Matrix: Which Combination to Use
@@ -151,9 +151,11 @@ When `validate-certificate-hostname = false` (the default):
 
 When `validate-certificate-hostname = true`:
 
-* Certificate CN (Common Name) or SAN (Subject Alternative Name) must match the target hostname
+* The outbound server certificate CN (Common Name) or SAN (Subject Alternative Name) must match the target hostname
 * Traditional TLS hostname validation as used in HTTPS
 * **Best for:** Client-server architectures with shared certificates and stable DNS names
+
+Hostname validation is an outbound server-identity check: the connecting node knows the hostname it intends to reach. The receiving node does not have an independently known hostname for an inbound client, so this setting does not infer one from the client's IP address or certificate. Use a `DotNettySslSetup` custom validator when inbound clients must satisfy application-specific identity or authorization rules such as certificate pinning, subject/issuer checks, or an explicit expected identity.
 
 **HOCON Example - P2P Cluster (Common Default):**
 
@@ -370,7 +372,7 @@ Perform standard chain validation, then apply custom business logic:
 
 #### Hostname Validation
 
-Enable traditional TLS hostname validation (certificate CN/SAN must match target hostname). Use for client-server architectures with shared certificates:
+Enable traditional outbound TLS hostname validation (the server certificate CN/SAN must match the connection target). Use for client-server architectures with stable DNS names:
 
 [!code-csharp[HostnameValidationExample](../../../src/core/Akka.Docs.Tests/Configuration/TlsConfigurationSample.cs?name=HostnameValidationExample)]
 
@@ -385,7 +387,7 @@ Accept only certificates with specific subject names:
 | Method | Purpose |
 |--------|---------|
 | `ValidateChain()` | CA chain validation with full error details |
-| `ValidateHostname()` | Traditional TLS hostname validation (CN/SAN matching) |
+| `ValidateHostname()` | Uses the outbound hostname-validation result supplied by `SslStream` |
 | `PinnedCertificate()` | Certificate pinning by thumbprint whitelist |
 | `ValidateSubject()` | Subject DN pattern matching (e.g., CN, O, OU) |
 | `ValidateIssuer()` | Issuer DN pattern matching |
