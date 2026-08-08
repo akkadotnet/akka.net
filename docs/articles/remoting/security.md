@@ -387,7 +387,7 @@ Accept only certificates with specific subject names:
 | Method | Purpose |
 |--------|---------|
 | `ValidateChain()` | CA chain validation with full error details |
-| `ValidateHostname()` | Uses the outbound hostname-validation result supplied by `SslStream` |
+| `ValidateHostname()` | Uses the outbound `SslStream` result, or performs a direct CN/SAN comparison when an expected hostname is supplied |
 | `PinnedCertificate()` | Certificate pinning by thumbprint whitelist |
 | `ValidateSubject()` | Subject DN pattern matching (e.g., CN, O, OU) |
 | `ValidateIssuer()` | Issuer DN pattern matching |
