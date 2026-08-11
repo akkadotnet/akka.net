@@ -122,13 +122,13 @@ namespace Akka.Remote.Tests.MultiNode
                 await EnterBarrierAsync("actor-identified");
                 await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(30));
 
-                // Pin BOTH transports' host/port so the fresh incarnation comes back at the SAME
-                // address regardless of which transport the run uses (classic ignores the artery
-                // keys and vice versa) -- mirrors Pekko's RemoteQuarantinePiercingSpec, whose fresh
-                // system pins classic.netty.tcp.port AND artery.canonical.port. Without the artery
-                // pin the MultiNodeSpec-injected artery tier's canonical.port = 0 wins under
-                // AKKA_MNTR_TRANSPORT=artery and the restarted system binds a random port `first`
-                // can never reach.
+                // Set the host and port for both transports, so that the new system starts at the
+                // same address as the old one. Each transport ignores the keys of the other, thus
+                // it is safe to set both.
+                //
+                // The artery keys are necessary. MultiNodeSpec adds a config tier that sets
+                // artery.canonical.port to 0. Without an explicit port here, that tier wins, the
+                // new system binds a random port, and `first` cannot reach it.
                 var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
                     akka.remote.dot-netty.tcp.hostname = {addr.Host}
                     akka.remote.dot-netty.tcp.port = {addr.Port}

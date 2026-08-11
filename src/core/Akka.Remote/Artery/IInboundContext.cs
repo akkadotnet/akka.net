@@ -75,13 +75,23 @@ namespace Akka.Remote.Artery
         Address? TryResolveOriginAddress(long originUid);
 
         /// <summary>
-        /// Whether <paramref name="originUid"/> is currently quarantined for its (handshake-completed)
-        /// association, per the SHARED <see cref="AssociationRegistry"/> reverse index — the same
-        /// lookup <see cref="IsKnownOrigin"/> uses, just also consulting the resolved association's
-        /// quarantine bit. <see langword="false"/> for an unknown uid (no completed handshake, or an
-        /// evicted/superseded incarnation), matching Pekko's <c>InboundQuarantineCheck</c> pass-through
-        /// for <c>env.association == OptionVal.None</c>. Used by
-        /// <see cref="InboundQuarantineCheckStage"/> to drop inbound traffic from a quarantined peer.
+        /// Tells the caller if <paramref name="originUid"/> is quarantined.
+        ///
+        /// <para>
+        /// The lookup uses the <see cref="AssociationRegistry"/> reverse index to find the
+        /// association, then reads that association's quarantine flag.
+        /// <see cref="IsKnownOrigin"/> uses the same index.
+        /// </para>
+        ///
+        /// <para>
+        /// The result is <see langword="false"/> for an unknown uid. A uid is unknown if the
+        /// handshake did not complete, or if a later incarnation replaced it.
+        /// </para>
+        ///
+        /// <para>
+        /// <see cref="InboundQuarantineCheckStage"/> calls this method to discard traffic from a
+        /// quarantined peer.
+        /// </para>
         /// </summary>
         bool IsQuarantined(long originUid);
     }

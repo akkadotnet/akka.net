@@ -92,11 +92,12 @@ namespace Akka.Remote.Tests.MultiNode
                 var secondAddress = Node(_config.Second).Address;
                 var uid = (await _identifyWithUid(_config.Second, "subject")).Item1;
 
-                // Pekko's artery variant inserts this barrier between the identify exchanges and
-                // the Quarantine() call: without it, `second`'s own identify of `first`'s subject
-                // can still be in flight when the quarantine lands, and (with inbound quarantine
-                // enforcement) `first` then DROPS that identify -- `second` receives the
-                // ThisActorSystemQuarantinedEvent instead of its expected (uid, ref) tuple.
+                // This barrier separates the identify exchanges from the Quarantine() call.
+                //
+                // Without it, the identify that `second` sends can still be in flight when the
+                // quarantine starts. Inbound quarantine enforcement then makes `first` discard
+                // that identify, and `second` receives ThisActorSystemQuarantinedEvent in place of
+                // the uid and ref that it expects.
                 await EnterBarrierAsync("before-quarantined");
 
                 RARP.For(Sys).Provider.Transport.Quarantine(Node(_config.Second).Address, uid);
@@ -132,17 +133,19 @@ namespace Akka.Remote.Tests.MultiNode
 
                 await EnterBarrierAsync("quarantined");
 
-                // Check that quarantine is intact. Classic and artery signal this differently:
-                // classic's Endpoint only discovers/logs the quarantine reactively, in response to
-                // ITS OWN attempt to write ("The remote system has quarantined this system" --
-                // Endpoint.cs's InvalidAssociation text), so a Tell is needed to trigger it. Artery
-                // has no such log line -- the quarantining side proactively (and, since the
-                // InboundQuarantineCheck port, reactively per dropped message too) pushes an
-                // ArteryQuarantined control message straight to the quarantined peer, which
-                // publishes ThisActorSystemQuarantinedEvent on arrival with no Tell required --
-                // matches Pekko's artery variant of this spec (remote-tests/.../artery/
-                // RemoteRestartedQuarantinedSpec.scala), which goes straight to its
-                // ThisActorSystemQuarantinedEvent expectation with no intervening send.
+                // Test that the quarantine is still in effect. The two transports tell the
+                // quarantined system about the quarantine in different ways, thus this test needs
+                // two procedures.
+                //
+                // Classic: the endpoint learns about the quarantine only when it tries to write.
+                // It then logs the warning "The remote system has quarantined this system". The
+                // test must therefore send a message to cause the write, and then look for that
+                // warning.
+                //
+                // Artery: the quarantining system sends an ArteryQuarantined control message to the
+                // peer. The peer publishes ThisActorSystemQuarantinedEvent when the message
+                // arrives. No send from the test is necessary, and there is no equivalent warning
+                // to look for.
                 if (Sys.Settings.Config.GetBoolean("akka.remote.artery.enabled", false))
                 {
                     await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
@@ -165,13 +168,13 @@ namespace Akka.Remote.Tests.MultiNode
 
                 await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(10));
 
-                // Pin BOTH transports' host/port so the fresh incarnation comes back at the SAME
-                // address regardless of which transport the run uses (classic ignores the artery
-                // keys and vice versa) -- mirrors Pekko's artery RemoteRestartedQuarantinedSpec,
-                // whose fresh system pins artery.canonical.port. Without the artery pin the
-                // MultiNodeSpec-injected artery tier's canonical.port = 0 wins under
-                // AKKA_MNTR_TRANSPORT=artery and the restarted system binds a random port `first`
-                // can never reach.
+                // Set the host and port for both transports, so that the new system starts at the
+                // same address as the old one. Each transport ignores the keys of the other, thus
+                // it is safe to set both.
+                //
+                // The artery keys are necessary. MultiNodeSpec adds a config tier that sets
+                // artery.canonical.port to 0. Without an explicit port here, that tier wins, the
+                // new system binds a random port, and `first` cannot reach it.
                 var sb = new StringBuilder()
                     .AppendLine("akka.remote.retry-gate-closed-for = 0.5 s")
                     .AppendLine("akka.remote.dot-netty.tcp {")

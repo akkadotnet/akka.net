@@ -18,50 +18,55 @@ namespace Akka.Remote.Artery
     /// <summary>
     /// INTERNAL API.
     ///
-    /// Inbound counterpart of the quarantine gate <see cref="ArteryRemoting.Send"/> already applies
-    /// on the OUTBOUND path. Port of Pekko's <c>InboundQuarantineCheck</c>
-    /// (<c>remote/.../artery/InboundQuarantineCheck.scala</c>) -- positioned exactly where Pekko
-    /// places it in both its <c>inboundSink</c> and <c>inboundControlSink</c>
-    /// (<c>ArteryTransport.scala:919/939</c>): AFTER <see cref="InboundHandshakeStage"/>, BEFORE
-    /// <see cref="SystemMessageAckerStage"/>/dispatch. This codebase has only ONE physical inbound
-    /// sink (ordinary, control, and large connections all feed the same shape -- see
-    /// <c>ArteryRemoting.HandleIncomingConnection</c>'s remarks), so composing this stage once,
-    /// between those same two stages, covers both of Pekko's sink insertion points -- with ONE
-    /// carve-out: at <c>inbound-lanes &gt; 1</c>, an Ordinary connection's lane-routed traffic
-    /// bypasses the sink entirely, so <c>ArteryInboundProcessingStage.ProcessFrameLaneMode</c>
-    /// inlines the SAME drop-and-renotify gate (sharing <see cref="ShouldNotifyOrigin"/> so the
-    /// two sites cannot drift), exactly as it already inlines the known-origin and test-mode
-    /// blackhole gates for that path.
+    /// This stage applies quarantine to the inbound path. <see cref="ArteryRemoting.Send"/> already
+    /// applies quarantine to the outbound path.
+    ///
+    /// <para>The stage does this with each envelope:</para>
+    /// <list type="number">
+    /// <item><description>
+    /// It asks <see cref="IInboundContext.IsQuarantined"/> if the origin uid is quarantined. An
+    /// unknown uid is not quarantined.
+    /// </description></item>
+    /// <item><description>
+    /// If the uid is not quarantined, the stage sends the envelope to the next stage.
+    /// </description></item>
+    /// <item><description>
+    /// If the uid is quarantined, the stage writes a debug log entry and discards the envelope. It
+    /// discards all envelopes from that uid, including heartbeats and quarantine notices.
+    /// </description></item>
+    /// <item><description>
+    /// The stage then sends a new <see cref="ArteryQuarantined"/> notice to the origin.
+    /// <see cref="ShouldNotifyOrigin"/> gives the two conditions when it does not send this notice.
+    /// </description></item>
+    /// </list>
     ///
     /// <para>
-    /// <b>Logic (mirrors Pekko's <c>onPush</c> exactly).</b> For every envelope: resolve whether
-    /// <see cref="IInboundEnvelope.OriginUid"/> is quarantined for its association
-    /// (<see cref="IInboundContext.IsQuarantined"/>, the SAME shared-registry lookup
-    /// <see cref="IInboundContext.IsKnownOrigin"/> uses -- <see langword="false"/> for an unknown
-    /// uid, matching Pekko's <c>OptionVal.None</c> pass-through). If quarantined: log at debug and
-    /// DROP unconditionally -- including a <see cref="ArteryQuarantined"/> notice or a heartbeat
-    /// from that uid, exactly like Pekko drops everything once quarantined -- then, UNLESS the
-    /// dropped message is itself an <see cref="ArteryQuarantined"/> notice or a heartbeat-class
-    /// message (Pekko's <c>isHeartbeat</c>: avoids starting a reply storm for routine liveness
-    /// traffic and avoids notification ping-pong), reactively re-notify the origin with a fresh
-    /// <see cref="ArteryQuarantined"/> over the control channel -- the SAME
-    /// <see cref="ArteryRemoting.EnqueueControl"/> path <see cref="ArteryRemoting.Quarantine"/>'s
-    /// own one-shot proactive notice uses (<see cref="IInboundContext.SendControl"/> ->
-    /// <c>ArteryRemoting.SendControlToAddress</c> -> <c>EnqueueControl</c>), which already carries
-    /// the shutdown/overflow guards that path needs. If NOT quarantined (or the origin is unknown):
-    /// pass through unchanged.
+    /// The notice goes through <see cref="IInboundContext.SendControl"/>.
+    /// <see cref="ArteryRemoting.Quarantine"/> uses the same path for its single notice. Thus the
+    /// notice from this stage gets the same protection against shutdown and queue overflow.
     /// </para>
     ///
     /// <para>
-    /// <b>Pekko keeps its own proactive notice too (verified against <c>Association.quarantine</c>,
-    /// <c>Association.scala:586-589</c>: <c>if (!harmless) sendControl(Quarantined(...))</c> inside
-    /// the SAME transaction that flips the association's quarantined bit) -- so this port does
-    /// likewise: <see cref="ArteryRemoting.Quarantine"/>'s existing one-shot send is UNCHANGED, and
-    /// this stage adds the reactive, per-dropped-message counterpart Pekko's inbound stage
-    /// contributes on top of it. Two notices are strictly more (not less) faithful than one: the
-    /// proactive send may race the peer's own outbound materialization/handshake and be lost, and
-    /// only the reactive path repeats it for as long as the peer keeps trying to talk to us.</b>
+    /// <see cref="ArteryRemoting.Quarantine"/> keeps its single notice, and this stage adds a
+    /// repeated notice. The two notices together are more reliable than one notice. The single
+    /// notice can be lost if it occurs during the handshake of the peer. This stage sends a new
+    /// notice for as long as the peer continues to send messages.
     /// </para>
+    ///
+    /// <para>
+    /// Position in the pipeline: after <see cref="InboundHandshakeStage"/> and before
+    /// <see cref="SystemMessageAckerStage"/>. Ordinary, control and large connections all use one
+    /// inbound sink in this codebase. Thus one instance of this stage is sufficient.
+    /// </para>
+    ///
+    /// <para>
+    /// There is one exception. If <c>inbound-lanes</c> is more than 1, lane-routed traffic on an
+    /// ordinary connection does not go through the sink. Therefore
+    /// <c>ArteryInboundProcessingStage.ProcessFrameLaneMode</c> does the same check in its own code.
+    /// The two sites call <see cref="ShouldNotifyOrigin"/> so that they stay in agreement.
+    /// </para>
+    ///
+    /// <para>This is a port of Pekko's <c>InboundQuarantineCheck</c>.</para>
     /// </summary>
     internal sealed class InboundQuarantineCheckStage : GraphStage<FlowShape<IInboundEnvelope, IInboundEnvelope>>
     {
@@ -81,16 +86,31 @@ namespace Akka.Remote.Artery
         protected override GraphStageLogic CreateLogic(Attributes inheritedAttributes) => new Logic(this);
 
         /// <summary>
-        /// The SHARED reactive-notification skip set: whether dropping <paramref name="message"/>
-        /// (already established to be from a quarantined uid) should ALSO send the origin a fresh
-        /// <see cref="ArteryQuarantined"/> notice. <see langword="false"/> for the peer's own
-        /// <see cref="ArteryQuarantined"/> notice and for heartbeat-class messages (Pekko's
-        /// <c>case _: Quarantined</c> / <c>isHeartbeat</c> carve-out: avoids starting an outbound
-        /// stream for routine liveness traffic and avoids notification ping-pong). Applies ONLY to
-        /// whether we react, never to whether we drop. Called from BOTH inbound quarantine
-        /// enforcement sites -- this stage's <c>OnPush</c> (the connection-sink path) and
-        /// <c>ArteryInboundProcessingStage.ProcessFrameLaneMode</c> (the inbound-lanes &gt; 1 lane
-        /// path, which bypasses this stage entirely) -- shared so the two can never drift.
+        /// Tells the caller if a discarded message must cause a new
+        /// <see cref="ArteryQuarantined"/> notice to the origin. The caller has already found that
+        /// the message comes from a quarantined uid.
+        ///
+        /// <para>The result is <see langword="false"/> for two types of message:</para>
+        /// <list type="bullet">
+        /// <item><description>
+        /// An <see cref="ArteryQuarantined"/> notice from the peer. A reply to this notice would
+        /// cause the two systems to send notices to each other continuously.
+        /// </description></item>
+        /// <item><description>
+        /// A heartbeat message. A reply to a heartbeat would start an outbound stream for routine
+        /// traffic.
+        /// </description></item>
+        /// </list>
+        ///
+        /// <para>
+        /// This result controls only the notice. The caller discards the message in all conditions.
+        /// </para>
+        ///
+        /// <para>
+        /// Two sites call this method: <c>OnPush</c> in this stage, and
+        /// <c>ArteryInboundProcessingStage.ProcessFrameLaneMode</c> for the lane path. They use the
+        /// same method so that they stay in agreement.
+        /// </para>
         /// </summary>
         internal static bool ShouldNotifyOrigin(object message) =>
             message is not ArteryQuarantined && !IsHeartbeat(message);

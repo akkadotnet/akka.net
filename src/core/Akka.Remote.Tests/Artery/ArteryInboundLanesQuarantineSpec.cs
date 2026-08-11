@@ -23,20 +23,27 @@ using Xunit;
 namespace Akka.Remote.Tests.Artery
 {
     /// <summary>
-    /// Locks inbound quarantine enforcement on the INBOUND-LANES path specifically
-    /// (<c>akka.remote.artery.advanced.inbound-lanes</c> &gt; 1): lane-routed ordinary traffic
-    /// bypasses the connection sink where <see cref="InboundQuarantineCheckStage"/> sits, so
-    /// <c>ArteryInboundProcessingStage.ProcessFrameLaneMode</c> inlines the same
-    /// drop-and-renotify gate -- this spec is what makes that inlining load-bearing. The
-    /// receiving system runs lanes = 2 with the <see cref="ArteryTransportSetup"/> lane-count
-    /// observation hook asserting the lane machinery actually materialized for the sender's
-    /// Ordinary connection, so the assertions below cannot silently pass through the (already
-    /// separately covered) non-lane sink path.
+    /// Tests inbound quarantine enforcement on the lane path, which is active when
+    /// <c>akka.remote.artery.advanced.inbound-lanes</c> is more than 1.
     ///
     /// <para>
-    /// <b>Maintainer policy (same as <see cref="ArteryInboundLanesSpec"/>):</b> no wall-clock
-    /// thresholds -- every assertion is progress/order/completion, or a liveness await, plus the
-    /// one standard short <c>ExpectNoMsgAsync</c> negative check for the not-delivered half.
+    /// Lane traffic does not go through the connection sink that holds
+    /// <see cref="InboundQuarantineCheckStage"/>. <c>ProcessFrameLaneMode</c> in
+    /// <c>ArteryInboundProcessingStage</c> therefore does the same check in its own code. This spec
+    /// tests that code.
+    /// </para>
+    ///
+    /// <para>
+    /// The receiving system uses 2 lanes. The <see cref="ArteryTransportSetup"/> hook reports the
+    /// lane count, and this spec asserts on it. Without that assertion, the connection could use
+    /// the sink path and the test would still pass, which would prove nothing about the lane path.
+    /// </para>
+    ///
+    /// <para>
+    /// Policy for maintainers, the same as <see cref="ArteryInboundLanesSpec"/>: do not assert on
+    /// elapsed time. Each assertion tests progress, order or completion, or it waits for a
+    /// condition. The one exception is the short <c>ExpectNoMsgAsync</c> that tests the messages
+    /// which must not arrive.
     /// </para>
     /// </summary>
     public class ArteryInboundLanesQuarantineSpec : AkkaSpec

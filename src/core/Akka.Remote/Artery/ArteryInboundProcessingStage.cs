@@ -140,13 +140,20 @@ namespace Akka.Remote.Artery
         /// &gt; 1. Ignored (and may be 0) at the default <paramref name="inboundLanes"/> of 1.
         /// </param>
         /// <param name="inboundContext">
-        /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: an Ordinary-stream connection's
-        /// lane path bypasses <see cref="InboundHandshakeStage"/> AND <see cref="InboundQuarantineCheckStage"/>
-        /// for its own ordinary traffic (see the type-level remarks on why those stages are
-        /// structural no-ops for such a connection) but still needs their
-        /// <see cref="IInboundContext.IsKnownOrigin"/> / <see cref="IInboundContext.IsQuarantined"/>
-        /// gates, reused as-is here (plus <see cref="IInboundContext.SendControl"/> for the
-        /// quarantine gate's reactive re-notification).
+        /// Necessary only when <paramref name="inboundLanes"/> is more than 1.
+        ///
+        /// <para>
+        /// The ordinary traffic of such a connection goes to the lanes. It does not go through
+        /// <see cref="InboundHandshakeStage"/> or <see cref="InboundQuarantineCheckStage"/>. The
+        /// type-level remarks tell why those two stages do nothing for such a connection.
+        /// </para>
+        ///
+        /// <para>
+        /// The lane path must do the checks of those two stages itself. It calls
+        /// <see cref="IInboundContext.IsKnownOrigin"/> and
+        /// <see cref="IInboundContext.IsQuarantined"/> for the checks, and
+        /// <see cref="IInboundContext.SendControl"/> to send the quarantine notice.
+        /// </para>
         /// </param>
         /// <param name="dispatchOrdinary">
         /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: invoked by each lane's consumer
@@ -761,14 +768,16 @@ namespace Akka.Remote.Artery
                     return true;
                 }
 
-                // Inbound quarantine enforcement for the lane path -- mirrors
-                // InboundQuarantineCheckStage exactly (lane-routed traffic bypasses the connection
-                // sink where that stage sits, just like it bypasses InboundHandshakeStage and
-                // InboundTestStage, whose gates are inlined above/below). Cold by definition (only
-                // frames from a quarantined uid ever enter), so deserializing INLINE here -- the
-                // one thing lane mode otherwise defers to the lane consumer -- costs nothing on
-                // the healthy path and is required for the shared reactive-notification skip set
-                // (InboundQuarantineCheckStage.ShouldNotifyOrigin) to see the actual message.
+                // The quarantine check for the lane path. It does what InboundQuarantineCheckStage
+                // does, because lane traffic does not go through the sink that holds that stage.
+                // The checks from InboundHandshakeStage and InboundTestStage are inlined here for
+                // the same reason.
+                //
+                // This code deserializes the message here, which lane mode otherwise leaves to the
+                // lane consumer. Two reasons make this acceptable:
+                //   - Only frames from a quarantined uid get this far, so a healthy connection
+                //     never runs this code.
+                //   - ShouldNotifyOrigin must examine the message to decide about the notice.
                 if (_stage.InboundContext!.IsQuarantined(decoded.Header.OriginUid))
                 {
                     var quarantinedOrigin = _stage.InboundContext!.TryResolveOriginAddress(decoded.Header.OriginUid);
@@ -779,9 +788,9 @@ namespace Akka.Remote.Artery
                     }
                     catch (Exception ex)
                     {
-                        // The frame is dropped either way; a deserialization failure only costs
-                        // the reactive re-notification for THIS frame (the next dropped frame
-                        // re-sends it) -- same per-frame error isolation as the healthy path.
+                        // The code discards the frame in all conditions. A deserialization failure
+                        // only prevents the notice for this one frame. The next discarded frame
+                        // sends it.
                         Log.Debug(
                             ex,
                             "Dropping message (serializer id [{0}]) from [{1}#{2}] because the system is quarantined (payload not deserializable).",
