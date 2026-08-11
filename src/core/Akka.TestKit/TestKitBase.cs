@@ -513,7 +513,7 @@ namespace Akka.TestKit
         /// <param name="duration">The maximum.</param>
         /// <returns>A finite <see cref="TimeSpan"/> properly dilated</returns>
         /// <exception cref="ArgumentException">Thrown if <paramref name="duration"/> is infinite</exception>
-        public TimeSpan RemainingOrDilated(TimeSpan? duration)
+        public TimeSpan RemainingOrDilated([AutoDilate] TimeSpan? duration)
         {
             if(!duration.HasValue) return RemainingOrDefault;
             if(duration < TimeSpan.Zero) throw new ArgumentException("Must be positive TimeSpan", nameof(duration));
@@ -527,7 +527,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">TBD</param>
         /// <returns>TBD</returns>
-        public TimeSpan Dilated(TimeSpan duration)
+        public TimeSpan Dilated([AutoDilate] TimeSpan duration)
         {
             if (duration < TimeSpan.Zero)
                 throw new ArgumentException("Must not be negative", nameof(duration));
