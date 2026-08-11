@@ -9,6 +9,7 @@
 
 using System;
 using System.Buffers;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Net;
@@ -44,9 +45,17 @@ namespace Akka.Remote.Artery
     /// DeathWatch triple (Watch/Unwatch/DeathWatchNotification) + Terminate now ride the control
     /// stream through <see cref="SystemMessageDeliveryStage"/> (outbound) /
     /// <see cref="SystemMessageAckerStage"/> (inbound) for exactly-once, strictly-in-order delivery;
-    /// every other system message type is unaffected (there are none at this layer -- remote deploy's
-    /// <c>DaemonMsgCreate</c> stays an ORDINARY message, per design.md's explicit non-scope). Message
-    /// sent -> received -> dispatched to the correct actor; classic remoting is unaffected.
+    /// every other system message type is unaffected. Remote deploy's <c>DaemonMsgCreate</c> -- not
+    /// itself an <see cref="ISystemMessage"/> -- ALSO rides the control stream (as a plain, unwrapped
+    /// envelope, bypassing <see cref="SystemMessageDeliveryStage"/>'s delivery/ack sequencing) so it is
+    /// ordered ahead of the reliably-delivered <c>Watch</c> that remote deployment sends immediately
+    /// afterwards; the two used to travel on independent, unordered streams, letting <c>Watch</c>
+    /// systematically win the race against a not-yet-created actor (Pekko <c>Association.scala</c>
+    /// parity). Since first ORDINARY messages can conversely still precede the create across the two
+    /// streams, the inbound dispatch retries remote-deployed recipient resolution on a bounded
+    /// schedule instead of dead-lettering (Pekko <c>Codecs.scala</c> parity -- see
+    /// <see cref="RetryResolveRemoteDeployedRecipient"/>). Message sent -> received -> dispatched to
+    /// the correct actor; classic remoting is unaffected.
     /// </para>
     ///
     /// <para>
@@ -192,6 +201,56 @@ namespace Akka.Remote.Artery
         /// (production default) disables it entirely.
         /// </summary>
         private Func<object, bool>? _dropOutboundControlMessage;
+
+        /// <summary>
+        /// Bounded retry-resolve for REMOTE-DEPLOYED inbound recipients (Pekko <c>Codecs.scala</c>
+        /// Decoder parity: <c>RetryResolveRemoteDeployedRecipient</c>, 20 attempts x 50ms). With
+        /// <see cref="DaemonMsgCreate"/> riding the control stream, the FIRST ordinary messages to a
+        /// freshly-deployed actor can arrive on the ordinary stream before the create has been
+        /// processed; instead of dead-lettering them, the resolve is retried on this schedule and the
+        /// messages buffered (per recipient path, FIFO) until the actor exists. After exhaustion the
+        /// path is banned -- see <see cref="_bannedRemoteDeployedActorRefs"/> -- and everything
+        /// buffered goes to dead letters via the <see cref="EmptyLocalActorRef"/> it resolved to.
+        /// </summary>
+        private static readonly TimeSpan RetryResolveRemoteDeployedRecipientInterval = TimeSpan.FromMilliseconds(50);
+        private const int RetryResolveRemoteDeployedRecipientAttempts = 20;
+
+        /// <summary>
+        /// In-flight retry-resolve state, keyed by recipient path. An entry exists only while its
+        /// retry timer chain is live; it is removed (after its <see cref="PendingRemoteDeployedResolve.Done"/>
+        /// flag latches under the entry's own gate) once the resolve succeeds or gives up.
+        /// <see cref="_pendingRemoteDeployedResolveCount"/> mirrors the entry count so the ordinary
+        /// dispatch hot path can skip the dictionary lookup entirely with one volatile read.
+        /// </summary>
+        private readonly ConcurrentDictionary<string, PendingRemoteDeployedResolve> _pendingRemoteDeployedResolves = new();
+        private int _pendingRemoteDeployedResolveCount;
+
+        /// <summary>
+        /// Recipient paths whose retry-resolve was exhausted without the actor ever appearing --
+        /// Pekko parity: further messages for a banned path skip the (expensive) retry machinery and
+        /// dead-letter immediately, "if many messages are sent to such dead refs the resolve process
+        /// will slow down other messages". Bounded exactly like Pekko's: cleared wholesale at 100
+        /// entries. Guarded by its own lock (Pekko's is stage-local single-threaded state; this one
+        /// is shared across inbound connections/lanes).
+        /// </summary>
+        private readonly HashSet<string> _bannedRemoteDeployedActorRefs = new();
+        private readonly object _bannedRemoteDeployedGate = new();
+
+        /// <summary>
+        /// Per-recipient-path buffer + retry bookkeeping for <see cref="_pendingRemoteDeployedResolves"/>.
+        /// All mutation of <see cref="Buffered"/>/<see cref="Done"/> happens under <see cref="Gate"/>;
+        /// the final flush also DELIVERS under it, so a dispatch thread that observes
+        /// <see cref="Done"/> is guaranteed the flush has fully completed -- preserving per-recipient
+        /// FIFO between buffered and directly-delivered messages. <see cref="AttemptsLeft"/> is only
+        /// touched by the (strictly sequential) retry timer chain.
+        /// </summary>
+        private sealed class PendingRemoteDeployedResolve
+        {
+            public readonly object Gate = new();
+            public readonly Queue<(object Message, string? SenderPath)> Buffered = new();
+            public bool Done;
+            public int AttemptsLeft = RetryResolveRemoteDeployedRecipientAttempts;
+        }
 
         /// <summary>
         /// Test-observability hook (inbound lanes) -- see <see cref="ArteryTransportSetup.OnInboundLanesInitialized"/>.
@@ -401,6 +460,43 @@ namespace Akka.Remote.Artery
                     System.DeadLetters)));
             }
 
+            // Drain the INBOUND remote-deploy retry buffers the same way: first-messages still
+            // waiting for a DaemonMsgCreate that will now never be processed are published as
+            // Dropped rather than silently vanishing when their retry timer chain dies with the
+            // scheduler. Whoever wins an entry's Done latch -- this drain, or a concurrently-firing
+            // RetryResolveRemoteDeployedRecipient tick -- flushes AND accounts (TryRemove +
+            // counter decrement) that entry exactly once; the loser observes Done under the gate
+            // and backs off without touching the accounting.
+            foreach (var kvp in _pendingRemoteDeployedResolves)
+            {
+                var pendingResolve = kvp.Value;
+                var wonDrain = false;
+                lock (pendingResolve.Gate)
+                {
+                    if (!pendingResolve.Done)
+                    {
+                        wonDrain = true;
+                        while (pendingResolve.Buffered.Count > 0)
+                        {
+                            var (message, _) = pendingResolve.Buffered.Dequeue();
+                            System.EventStream.Publish(new Dropped(
+                                message,
+                                $"Inbound message for unresolved remote-deployed recipient [{kvp.Key}] drained on transport shutdown",
+                                ActorRefs.NoSender,
+                                System.DeadLetters));
+                        }
+
+                        pendingResolve.Done = true;
+                    }
+                }
+
+                if (wonDrain)
+                {
+                    _pendingRemoteDeployedResolves.TryRemove(kvp.Key, out _);
+                    Interlocked.Decrement(ref _pendingRemoteDeployedResolveCount);
+                }
+            }
+
             // Tear every remaining stream down via the shared kill switch first (every inbound and
             // outbound graph is woven through it) -- the graceful path, mirroring Pekko's
             // transportKillSwitch abort.
@@ -478,6 +574,22 @@ namespace Akka.Remote.Artery
             }
 
             var senderPath = sender.IsNobody() ? null : sender.Path.ToSerializationFormatWithAddress(DefaultAddress);
+
+            if (message is DaemonMsgCreate)
+            {
+                // Remote deployment orders DaemonMsgCreate ahead of the Watch RemoteDaemon sends
+                // immediately afterwards -- both used to ride DIFFERENT streams (this one ordinary,
+                // Watch control) with no cross-stream ordering guarantee, so Watch systematically won
+                // the race: the receiver watched a not-yet-created actor, replied
+                // DeathWatchNotification(existenceConfirmed: false), and the deployer reaped the
+                // routee before its Supervise landed. Enqueued as a PLAIN control-channel envelope --
+                // NOT wrapped by SystemMessageDeliveryStage, no delivery/ack sequencing -- mirroring
+                // Pekko's direct controlQueue.offer (Association.scala: "must be sent over the control
+                // stream because remote deployment process depends on message ordering for
+                // DaemonMsgCreate and Watch messages").
+                EnqueueDaemonMsgCreate(remoteAddress, message, senderPath, recipientPath);
+                return;
+            }
 
             EnqueueOutbound(remoteAddress, message, senderPath, recipientPath, recipient);
         }
@@ -701,6 +813,46 @@ namespace Akka.Remote.Artery
                 return;
             }
 
+            // A remote-deployed recipient that does not exist YET: with DaemonMsgCreate riding the
+            // control stream (see Send), the first ordinary messages to a freshly-deployed actor can
+            // arrive ahead of its create -- retry the resolve on a bounded schedule instead of
+            // dead-lettering (Pekko Codecs.scala parity: "The remote deployed actor might not be
+            // created yet when resolving the recipient for the first message that is sent to it,
+            // best effort retry").
+            if (IsUnresolvedRemoteDeployedRecipient(recipient))
+            {
+                BufferUnresolvedRemoteDeployedRecipient(recipientPath, message, senderPath, recipient);
+                return;
+            }
+
+            // Per-recipient FIFO preservation: if EARLIER messages to this same (now-resolved)
+            // recipient are still buffered awaiting a retried resolve, append behind them instead of
+            // jumping the queue. The volatile counter keeps this a single read on the (overwhelmingly
+            // common) no-pending-resolves hot path.
+            if (Volatile.Read(ref _pendingRemoteDeployedResolveCount) > 0 &&
+                _pendingRemoteDeployedResolves.TryGetValue(recipientPath, out var pending))
+            {
+                lock (pending.Gate)
+                {
+                    if (!pending.Done)
+                    {
+                        pending.Buffered.Enqueue((message, senderPath));
+                        return;
+                    }
+                }
+            }
+
+            DeliverOrdinaryMessage(recipient, message, senderPath);
+        }
+
+        /// <summary>
+        /// The final Tell of the ordinary dispatch path -- factored out of
+        /// <see cref="DispatchOrdinaryMessage"/> so the remote-deploy retry-resolve flush
+        /// (<see cref="RetryResolveRemoteDeployedRecipient"/>) delivers with EXACTLY the same
+        /// semantics as a direct dispatch.
+        /// </summary>
+        private void DeliverOrdinaryMessage(IActorRef recipient, object message, string? senderPath)
+        {
             var sender = senderPath is { } sp
                 ? Provider.ResolveActorRefWithLocalAddress(sp, DefaultAddress)
                 : (IActorRef)System.DeadLetters;
@@ -709,6 +861,167 @@ namespace Akka.Remote.Artery
             // an unresolvable recipient resolves to an EmptyLocalActorRef, whose Tell publishes a
             // DeadLetter automatically.
             recipient.Tell(message, sender);
+        }
+
+        /// <summary>
+        /// Pekko <c>Decoder.resolveRecipient</c> parity: an <see cref="EmptyLocalActorRef"/> whose
+        /// path starts with <c>/remote</c> is a remote-DEPLOYED recipient that may simply not have
+        /// been created yet (its <see cref="DaemonMsgCreate"/> may still be in flight on the control
+        /// stream) -- ONLY those are retried; every other unresolved path keeps today's immediate
+        /// dead-letter behavior. Note <see cref="DeadLetterActorRef"/> derives from
+        /// <see cref="EmptyLocalActorRef"/> but lives at <c>/deadLetters</c>, so it never matches.
+        /// </summary>
+        private static bool IsUnresolvedRemoteDeployedRecipient(IActorRef recipient) =>
+            recipient is EmptyLocalActorRef empty &&
+            empty.Path.Elements.Count > 0 &&
+            empty.Path.Elements[0] == "remote";
+
+        /// <summary>
+        /// Buffers an ordinary inbound message whose remote-deployed recipient has not been created
+        /// yet and (for the FIRST such message per path) starts the bounded retry timer chain --
+        /// Pekko <c>Codecs.scala</c>'s <c>RetryResolveRemoteDeployedRecipient</c> adapted from a
+        /// stage-timer stall to a scheduler-driven per-path buffer (this dispatch path is a plain
+        /// method on a stream/lane thread with no stage timers, and MUST NOT block). Banned paths
+        /// (prior give-up) skip the machinery and dead-letter immediately, mirroring Pekko's banned
+        /// branch verbatim.
+        /// </summary>
+        private void BufferUnresolvedRemoteDeployedRecipient(string recipientPath, object message, string? senderPath, IActorRef emptyRecipient)
+        {
+            // Shutdown guard: the transport is tearing down, so the DaemonMsgCreate this message is
+            // waiting on will never be processed, Shutdown()'s drain of the pending buffers may
+            // already have run, and starting a new retry chain could ScheduleOnce against a stopping
+            // scheduler. Account the message to dead letters immediately instead.
+            if (_isShutdown)
+            {
+                DeliverOrdinaryMessage(emptyRecipient, message, senderPath);
+                return;
+            }
+
+            while (true)
+            {
+                bool banned;
+                lock (_bannedRemoteDeployedGate)
+                {
+                    banned = _bannedRemoteDeployedActorRefs.Contains(recipientPath);
+                }
+
+                if (banned)
+                {
+                    _log.Warning(
+                        "Message for banned (terminated, unresolved) remote deployed recipient [{0}].",
+                        recipientPath);
+                    DeliverOrdinaryMessage(emptyRecipient, message, senderPath);
+                    return;
+                }
+
+                if (!_pendingRemoteDeployedResolves.TryGetValue(recipientPath, out var pending))
+                {
+                    var fresh = new PendingRemoteDeployedResolve();
+                    if (_pendingRemoteDeployedResolves.TryAdd(recipientPath, fresh))
+                    {
+                        Interlocked.Increment(ref _pendingRemoteDeployedResolveCount);
+                        pending = fresh;
+                        System.Scheduler.Advanced.ScheduleOnce(
+                            RetryResolveRemoteDeployedRecipientInterval,
+                            () => RetryResolveRemoteDeployedRecipient(recipientPath, fresh));
+                    }
+                    else if (!_pendingRemoteDeployedResolves.TryGetValue(recipientPath, out pending))
+                    {
+                        // A racing creator won AND already completed/removed its entry -- re-check
+                        // from the top (the path may now be banned, resolvable, or need a new entry).
+                        if (TryDeliverIfNowResolved(recipientPath, message, senderPath))
+                            return;
+                        continue;
+                    }
+                }
+
+                lock (pending.Gate)
+                {
+                    if (!pending.Done)
+                    {
+                        pending.Buffered.Enqueue((message, senderPath));
+                        return;
+                    }
+                }
+
+                // The entry completed between lookup and lock: its flush has fully finished (Done
+                // latches only after delivery, under the gate). Either the actor exists now, or the
+                // path just got banned -- re-resolve and loop.
+                if (TryDeliverIfNowResolved(recipientPath, message, senderPath))
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Re-resolves <paramref name="recipientPath"/> after a pending retry entry was observed
+        /// completed; delivers and reports <see langword="true"/> if the recipient exists now,
+        /// otherwise <see langword="false"/> so the caller loops back through the ban check /
+        /// fresh-entry path.
+        /// </summary>
+        private bool TryDeliverIfNowResolved(string recipientPath, object message, string? senderPath)
+        {
+            var recipient = Provider.ResolveActorRefWithLocalAddress(recipientPath, DefaultAddress);
+            if (IsUnresolvedRemoteDeployedRecipient(recipient))
+                return false;
+
+            DeliverOrdinaryMessage(recipient, message, senderPath);
+            return true;
+        }
+
+        /// <summary>
+        /// One link of the retry timer chain for a single pending remote-deployed recipient --
+        /// Pekko <c>Codecs.scala</c>'s <c>onTimer</c> <c>RetryResolveRemoteDeployedRecipient</c>
+        /// branch: resolve again; deliver everything buffered (in FIFO order) on success; otherwise
+        /// reschedule until <see cref="PendingRemoteDeployedResolve.AttemptsLeft"/> runs out, then
+        /// ban the path (bounded set, cleared at 100 like Pekko's) and flush to the empty ref (i.e.
+        /// dead letters). The flush happens UNDER the entry's gate and <see cref="PendingRemoteDeployedResolve.Done"/>
+        /// latches only afterwards, so dispatch threads can never overtake buffered messages.
+        /// </summary>
+        private void RetryResolveRemoteDeployedRecipient(string recipientPath, PendingRemoteDeployedResolve pending)
+        {
+            var recipient = Provider.ResolveActorRefWithLocalAddress(recipientPath, DefaultAddress);
+            var resolved = !IsUnresolvedRemoteDeployedRecipient(recipient);
+
+            if (!resolved && --pending.AttemptsLeft > 0 && !_isShutdown)
+            {
+                System.Scheduler.Advanced.ScheduleOnce(
+                    RetryResolveRemoteDeployedRecipientInterval,
+                    () => RetryResolveRemoteDeployedRecipient(recipientPath, pending));
+                return;
+            }
+
+            if (!resolved)
+            {
+                // Attempts exhausted (or the transport is shutting down): give up and ban, exactly
+                // like Pekko -- "if the retried resolve isn't successful the ref is banned and we
+                // will not do the delayed retry resolve again".
+                lock (_bannedRemoteDeployedGate)
+                {
+                    if (_bannedRemoteDeployedActorRefs.Count >= 100)
+                        _bannedRemoteDeployedActorRefs.Clear(); // keep it bounded
+                    _bannedRemoteDeployedActorRefs.Add(recipientPath);
+                }
+            }
+
+            lock (pending.Gate)
+            {
+                // Shutdown drain race: if Shutdown()'s drain of _pendingRemoteDeployedResolves won
+                // this entry's Done latch first, it has already flushed the buffer (to Dropped) and
+                // done the TryRemove + counter decrement -- back off without double-accounting.
+                if (pending.Done)
+                    return;
+
+                while (pending.Buffered.Count > 0)
+                {
+                    var (message, senderPath) = pending.Buffered.Dequeue();
+                    DeliverOrdinaryMessage(recipient, message, senderPath);
+                }
+
+                pending.Done = true;
+            }
+
+            _pendingRemoteDeployedResolves.TryRemove(recipientPath, out _);
+            Interlocked.Decrement(ref _pendingRemoteDeployedResolveCount);
         }
 
         /// <summary>
@@ -912,6 +1225,45 @@ namespace Akka.Remote.Artery
                 association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a, isRestart: a.HasControlEverRestarted));
 
             if (!association.TryEnqueueControl(new OutboundEnvelope(message, null, recipientPath)))
+                HandleControlOverflow(remoteAddress, association, message);
+        }
+
+        /// <summary>
+        /// Enqueues a <see cref="DaemonMsgCreate"/> (remote deployment) onto
+        /// <paramref name="remoteAddress"/>'s CONTROL outbound queue as a PLAIN envelope --
+        /// mechanically identical to <see cref="EnqueueSystemMessage"/>'s control-channel usage (same
+        /// shutdown guard, same materialize-on-first-use, same <see cref="HandleControlOverflow"/> on
+        /// a full queue) but for a message that is NOT an <see cref="ISystemMessage"/>, so it is never
+        /// wrapped by <see cref="SystemMessageDeliveryStage"/> -- that stage's <c>OnPush</c> default
+        /// case forwards anything that is not an <see cref="ISystemMessage"/>/
+        /// <see cref="ClearSystemMessageDelivery"/> straight through unwrapped, exactly like a
+        /// housekeeping control message, with no delivery/ack sequencing (mirroring Pekko's direct
+        /// <c>controlQueue.offer</c>). Both <paramref name="recipientPath"/> (the <c>/remote</c> daemon
+        /// path, so the receiver's <see cref="DispatchInbound"/> resolves it and Tells
+        /// <c>RemoteSystemDaemon</c>) and <paramref name="senderPath"/> are preserved -- unlike a raw
+        /// <see cref="ISystemMessage"/> (always sent with no sender), <see cref="DaemonMsgCreate"/>
+        /// keeps the sender the ordinary path used to carry. Riding the control channel orders this
+        /// ahead of the Watch that remote deployment sends immediately afterwards (see <see cref="Send"/>).
+        /// </summary>
+        private void EnqueueDaemonMsgCreate(Address remoteAddress, object message, string? senderPath, string recipientPath)
+        {
+            var association = _registry.AssociationFor(remoteAddress);
+
+            // Early shutdown guard -- see EnqueueSystemMessage's matching guard for the full rationale
+            // (same race, same quiet drop-to-dead-letters path).
+            if (_isShutdown || association.IsControlShutDown)
+            {
+                _log.Debug(
+                    "Outbound control channel to [{0}] already closed during shutdown; dropping {1} to dead letters.",
+                    remoteAddress, message.GetType());
+                System.DeadLetters.Tell(message, ActorRefs.NoSender);
+                return;
+            }
+
+            if (!association.IsControlOutboundMaterialized)
+                association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a, isRestart: a.HasControlEverRestarted));
+
+            if (!association.TryEnqueueControl(new OutboundEnvelope(message, senderPath, recipientPath)))
                 HandleControlOverflow(remoteAddress, association, message);
         }
 

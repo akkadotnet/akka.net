@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
@@ -58,6 +59,11 @@ public sealed class ClusterClientDiscoverySpecConfig : MultiNodeConfig
                                                           refresh-contacts-interval = 1d
                                                         }
                                                         akka.test.filter-leeway = 10s
+                                                        # AwaitAssertAsync scales its window by akka.test.timefactor
+                                                        # (via RemainingOrDilated), so this dilates the ContactPoints
+                                                        # retry loops on slow CI agents without touching real
+                                                        # assertions or hard-coding a bigger constant.
+                                                        akka.test.timefactor = 2
                                                         """)
             .WithFallback(ClusterClientReceptionist.DefaultConfig())
             .WithFallback(DistributedPubSub.DefaultConfig())
@@ -80,7 +86,14 @@ public sealed class ClusterClientDiscoverySpecConfig : MultiNodeConfig
                                                  discovery
                                                  {
                                                    service-name = test-cluster
-                                                   probe-timeout = 1s
+                                                   # Root cause of MNTR flakiness (CI build 129289): each initial
+                                                   # contact probe is an Akka.Management HTTP round-trip to a
+                                                   # freshly-started receptionist endpoint. On a loaded Windows CI
+                                                   # agent that round-trip regularly takes just over 1s, so a 1s
+                                                   # probe-timeout cancelled every probe and the client never
+                                                   # resolved any ContactPoints. 3s restores the reference.conf
+                                                   # default and gives the round-trip real headroom.
+                                                   probe-timeout = 3s
                                                  }
                                                }
 
@@ -164,19 +177,54 @@ public class ClusterClientDiscoverySpec : MultiNodeClusterSpec
         await EnterBarrierAsync("discovery-entry-added");
     }
 
+    /// <summary>
+    /// Wait — driven by the ClusterClient's own contact-point change events, not by polling
+    /// GetContactPoints — until the client's contact points settle to exactly the single expected node.
+    /// SubscribeContactPoints delivers the current snapshot first and then ContactPointAdded/Removed
+    /// events, so we track the running set and stop when it matches. There is no per-attempt reply
+    /// timeout to race under load, only the outer <paramref name="max"/> bound on reaching the state.
+    /// </summary>
+    private async Task AwaitSingleContactPointAsync(RoleName expected, TimeSpan max)
+    {
+        var expectedAddress = (await NodeAsync(expected)).Address;
+        _clusterClient.Tell(SubscribeContactPoints.Instance, TestActor);
+        try
+        {
+            var contacts = new HashSet<ActorPath>();
+            await FishForMessageAsync(msg =>
+            {
+                switch (msg)
+                {
+                    case ContactPoints cp:
+                        contacts.Clear();
+                        contacts.UnionWith(cp.ContactPointsList);
+                        break;
+                    case ContactPointAdded added:
+                        contacts.Add(added.ContactPoint);
+                        break;
+                    case ContactPointRemoved removed:
+                        contacts.Remove(removed.ContactPoint);
+                        break;
+                    default:
+                        return false;
+                }
+
+                return contacts.Count == 1 && contacts.First().Address.Equals(expectedAddress);
+            }, max);
+        }
+        finally
+        {
+            _clusterClient.Tell(UnsubscribeContactPoints.Instance, TestActor);
+        }
+    }
+
     private async Task ClusterClient_must_establish_connection_to_first_node()
     {
         await RunOnAsync(async () =>
         {
             _clusterClient = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys)), "client1");
                     
-            await AwaitAssertAsync(async () =>
-            {
-                _clusterClient.Tell(GetContactPoints.Instance, TestActor);
-                var contacts = (await ExpectMsgAsync<ContactPoints>(TimeSpan.FromSeconds(1))).ContactPointsList;
-                contacts.Count.Should().Be(1);
-                contacts.First().Address.Should().Be((await NodeAsync(_config.First)).Address);
-            }, 10.Seconds());
+            await AwaitSingleContactPointAsync(_config.First, 10.Seconds());
                     
             _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity:true));
             (await FishForMessageAsync(msg => msg is string)).Should().Be("hello");
@@ -241,13 +289,7 @@ public class ClusterClientDiscoverySpec : MultiNodeClusterSpec
     {
         await RunOnAsync(async () =>
         {
-            await AwaitAssertAsync(async () =>
-            {
-                _clusterClient.Tell(GetContactPoints.Instance, TestActor);
-                var contacts = (await ExpectMsgAsync<ContactPoints>(TimeSpan.FromSeconds(1))).ContactPointsList;
-                contacts.Count.Should().Be(1);
-                contacts.First().Address.Should().Be((await NodeAsync(_config.Second)).Address);
-            }, 10.Seconds());
+            await AwaitSingleContactPointAsync(_config.Second, 10.Seconds());
 
             _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
             (await FishForMessageAsync(msg => msg is string)).Should().Be("hello");
@@ -300,13 +342,7 @@ public class ClusterClientDiscoverySpec : MultiNodeClusterSpec
     {
         await RunOnAsync(async () =>
         {
-            await AwaitAssertAsync(async () =>
-            {
-                _clusterClient.Tell(GetContactPoints.Instance, TestActor);
-                var contacts = (await ExpectMsgAsync<ContactPoints>(TimeSpan.FromSeconds(1))).ContactPointsList;
-                contacts.Count.Should().Be(1);
-                contacts.First().Address.Should().Be((await NodeAsync(_config.Third)).Address);
-            }, 20.Seconds());
+            await AwaitSingleContactPointAsync(_config.Third, 20.Seconds());
 
             _clusterClient.Tell(new ClusterClient.Send("/user/testService", "hello", localAffinity: true));
             (await FishForMessageAsync(msg => msg is string)).Should().Be("hello");

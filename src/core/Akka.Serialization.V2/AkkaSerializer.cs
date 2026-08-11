@@ -19,6 +19,34 @@ namespace Akka.Serialization.V2;
 /// </summary>
 public abstract class AkkaSerializer : SerializerV2
 {
+    /// <summary>
+    /// Maximum depth of nested <see cref="AkkaEnvelopePayloadAttribute"/> payloads permitted within a
+    /// single serialize / deserialize / size operation. Envelopes legitimately nest a level or two (a
+    /// delivery message wraps a user payload that may itself be an enveloped message), but unbounded
+    /// nesting is only reachable when a message type declares itself (directly or transitively) as its own
+    /// envelope payload — an application bug. Left unchecked that recurses until the thread's stack
+    /// overflows, which in .NET is an uncatchable process kill. Past this depth we throw an ordinary,
+    /// catchable <see cref="SerializationException"/> instead, matching the recursion limit
+    /// <c>Google.Protobuf</c> already enforces. This is a robustness guard against accidental self-nesting,
+    /// not a security control: Akka remoting carries one application's own traffic between its own nodes.
+    /// </summary>
+    private const int MaxEnvelopePayloadDepth = 100;
+
+    [ThreadStatic] private static int _envelopePayloadDepth;
+
+    private static void EnterEnvelopePayload()
+    {
+        if (_envelopePayloadDepth >= MaxEnvelopePayloadDepth)
+            throw new SerializationException(
+                $"Envelope payload nesting exceeded the maximum depth of {MaxEnvelopePayloadDepth}. " +
+                "This almost always means a message type declares itself (directly or transitively) as its " +
+                "own [AkkaEnvelopePayload], causing unbounded recursion. Break the self-reference in the message graph.");
+
+        _envelopePayloadDepth++;
+    }
+
+    private static void ExitEnvelopePayload() => _envelopePayloadDepth--;
+
     protected AkkaSerializer(ExtendedActorSystem system) : base(system)
     {
     }
@@ -56,7 +84,17 @@ public abstract class AkkaSerializer : SerializerV2
         if (serializer is SerializerV2 serializerV2)
         {
             using var buffer = new AkkaPooledBufferWriter();
-            var bytesWritten = serializerV2.Serialize(payload, buffer);
+            int bytesWritten;
+            EnterEnvelopePayload();
+            try
+            {
+                bytesWritten = serializerV2.Serialize(payload, buffer);
+            }
+            finally
+            {
+                ExitEnvelopePayload();
+            }
+
             if (bytesWritten != buffer.WrittenCount)
                 throw new SerializationException(
                     $"Serializer [{serializer.GetType()}] reported [{bytesWritten}] bytes but wrote [{buffer.WrittenCount}] bytes.");
@@ -117,7 +155,15 @@ public abstract class AkkaSerializer : SerializerV2
         if (bytes is null)
             throw new SerializationException("Missing envelope payload bytes.");
 
-        return system.Serialization.Deserialize(bytes.Value, serializerId.Value, manifest);
+        EnterEnvelopePayload();
+        try
+        {
+            return system.Serialization.Deserialize(bytes.Value, serializerId.Value, manifest);
+        }
+        finally
+        {
+            ExitEnvelopePayload();
+        }
     }
 
     protected int SizeOfEnvelopePayload(object? payload)
@@ -129,7 +175,17 @@ public abstract class AkkaSerializer : SerializerV2
         if (serializer is not SerializerV2 serializerV2)
             return SerializerV2.UnknownSize;
 
-        var payloadSize = serializerV2.SizeHint(payload);
+        int payloadSize;
+        EnterEnvelopePayload();
+        try
+        {
+            payloadSize = serializerV2.SizeHint(payload);
+        }
+        finally
+        {
+            ExitEnvelopePayload();
+        }
+
         if (payloadSize < 0)
             return SerializerV2.UnknownSize;
 

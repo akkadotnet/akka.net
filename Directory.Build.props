@@ -45,7 +45,7 @@
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>
     <MsExtVersion>[6.0.*,)</MsExtVersion>
-    <MsExtTestVersion>10.0.9</MsExtTestVersion>
+    <MsExtTestVersion>10.0.10</MsExtTestVersion>
     <AkkaAnalyzerVersion>0.3.3</AkkaAnalyzerVersion>
     <VerifyXunitV3Version>31.24.2</VerifyXunitV3Version>
     <VerifyDiffPlexVersion>3.0.0</VerifyDiffPlexVersion>

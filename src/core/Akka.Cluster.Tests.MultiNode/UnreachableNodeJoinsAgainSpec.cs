@@ -210,10 +210,16 @@ namespace Akka.Cluster.Tests.MultiNode
                 Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(10));
 
                 // create new ActorSystem with same host:port
+                // Pin the fresh system to the SAME wire address for BOTH transports - under
+                // AKKA_MNTR_TRANSPORT=artery the classic dot-netty key is inert and the fresh
+                // system would bind a random artery canonical.port instead.
                 var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString(@"akka.remote.dot-netty.tcp{
                     hostname = "+ victimAddress.Host + @"
                     port = "+ victimAddress.Port + @"
-                }").WithFallback(Sys.Settings.Config));
+                }
+                akka.remote.artery.canonical.hostname = "+ victimAddress.Host + @"
+                akka.remote.artery.canonical.port = "+ victimAddress.Port + @"
+                ").WithFallback(Sys.Settings.Config));
 
                 try
                 {
