@@ -8,3 +8,4 @@
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Akka.Cluster.Tests.MultiNode")]
+[assembly: InternalsVisibleTo("Akka.Cluster.Tests")]

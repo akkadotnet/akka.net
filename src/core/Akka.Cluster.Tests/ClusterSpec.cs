@@ -35,7 +35,6 @@ namespace Akka.Cluster.Tests
         private static readonly Config Config = ConfigurationFactory.ParseString(@"    
             akka.loglevel = DEBUG
             akka.cluster {
-              auto-down-unreachable-after = 0s
               periodic-tasks-initial-delay = 120 s
               publish-stats-interval = 0 s # always, when it happens
               run-coordinated-shutdown-when-down = off
@@ -187,7 +186,7 @@ namespace Akka.Cluster.Tests
                 akka.coordinated-shutdown.terminate-actor-system = off
                 akka.coordinated-shutdown.run-by-actor-system-terminate = off
                 akka.cluster.run-coordinated-shutdown-when-down = off
-            ").WithFallback(TestKit.Configs.TestConfigs.DefaultConfig));
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
             InitializeLogger(sys2);
 
             var probe = CreateTestProbe(sys2);
@@ -459,7 +458,7 @@ namespace Akka.Cluster.Tests
                 akka.coordinated-shutdown.terminate-actor-system = off
                 akka.coordinated-shutdown.run-by-actor-system-terminate = off
                 akka.cluster.run-coordinated-shutdown-when-down = off
-            ").WithFallback(TestKit.Configs.TestConfigs.DefaultConfig));
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
             InitializeLogger(sys2);
 
             try
@@ -497,7 +496,7 @@ namespace Akka.Cluster.Tests
                 akka.coordinated-shutdown.run-by-actor-system-terminate = off
                 akka.cluster.run-coordinated-shutdown-when-down = off
                 akka.cluster.min-nr-of-members = 2
-            ").WithFallback(TestKit.Configs.TestConfigs.DefaultConfig));
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
             InitializeLogger(sys2);
             
             try
@@ -529,7 +528,7 @@ namespace Akka.Cluster.Tests
                 akka.actor.provider = ""cluster""
                 akka.remote.dot-netty.tcp.port = 0
                 akka.coordinated-shutdown.terminate-actor-system = on
-            ").WithFallback(TestKit.Configs.TestConfigs.DefaultConfig));
+            ").WithFallback(Akka.TestKit.Configs.TestConfigs.DefaultConfig));
             InitializeLogger(sys2);
 
             try
@@ -590,4 +589,3 @@ namespace Akka.Cluster.Tests
         }
     }
 }
-

@@ -66,10 +66,6 @@ namespace Akka.Cluster
                 ) ? TimeSpan.Zero :
                 clusterConfig.GetTimeSpan("down-removal-margin", null);
 
-#pragma warning disable CS0618
-            AutoDownUnreachableAfter = clusterConfig.GetTimeSpanWithOffSwitch("auto-down-unreachable-after");
-#pragma warning restore CS0618
-
             Roles = clusterConfig.GetStringList("roles", new string[] { }).ToImmutableHashSet();
             AppVersion = Util.AppVersion.Create(clusterConfig.GetString("app-version"));
 
@@ -89,14 +85,22 @@ namespace Akka.Cluster
             VerboseGossipReceivedLogging = clusterConfig.GetBoolean("debug.verbose-receive-gossip-logging", false);
 
             var downingProviderClassName = clusterConfig.GetString("downing-provider-class", null);
-            if (!string.IsNullOrEmpty(downingProviderClassName))
-                DowningProviderType = Type.GetType(downingProviderClassName, true);
-#pragma warning disable CS0618
-            else if (AutoDownUnreachableAfter.HasValue)
-#pragma warning restore CS0618
-                DowningProviderType = typeof(AutoDowning);
-            else
+            if (string.IsNullOrEmpty(downingProviderClassName))
+            {
                 DowningProviderType = typeof(NoDowning);
+            }
+            else
+            {
+                if (IsRemovedAutoDowningProvider(downingProviderClassName))
+                {
+                    throw new ConfigurationException(
+                        "akka.cluster.downing-provider-class references Akka.Cluster.AutoDowning, which was removed in Akka.NET v1.6. " +
+                        "Configure Akka.Cluster.SBR.SplitBrainResolverProvider for production, or " +
+                        "Akka.Cluster.TestKit.AutoDowning from Akka.Cluster.TestKit for tests.");
+                }
+
+                DowningProviderType = Type.GetType(downingProviderClassName, true);
+            }
 
             RunCoordinatedShutdownWhenDown = clusterConfig.GetBoolean("run-coordinated-shutdown-when-down", false);
             
@@ -210,12 +214,6 @@ namespace Akka.Cluster
         public TimeSpan? PublishStatsInterval { get; }
 
         /// <summary>
-        /// Obsolete. No longer used as of Akka.NET v1.5.
-        /// </summary>
-        [Obsolete(message:"Deprecated as of Akka.NET v1.5.2 - clustering defaults to using KeepMajority SBR instead")]
-        public TimeSpan? AutoDownUnreachableAfter { get; }
-
-        /// <summary>
         /// TBD
         /// </summary>
         public ImmutableHashSet<string> Roles { get; }
@@ -308,6 +306,15 @@ namespace Akka.Cluster
         /// Set this to true if you're doing a rolling update from Akka.NET version older than 1.4.19.
         /// </summary>
         public bool UseLegacyHeartbeatMessage { get; }
+
+        private static bool IsRemovedAutoDowningProvider(string providerTypeName)
+        {
+            var typeAndAssembly = providerTypeName.Split(',');
+            if (!string.Equals(typeAndAssembly[0].Trim(), "Akka.Cluster.AutoDowning", StringComparison.Ordinal))
+                return false;
+
+            return typeAndAssembly.Length == 1
+                   || string.Equals(typeAndAssembly[1].Trim(), "Akka.Cluster", StringComparison.Ordinal);
+        }
     }
 }
-

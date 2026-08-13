@@ -35,7 +35,6 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 akka.loglevel = INFO
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = off
             ")
             .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
