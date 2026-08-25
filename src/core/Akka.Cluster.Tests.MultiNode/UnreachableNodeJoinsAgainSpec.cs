@@ -97,10 +97,20 @@ namespace Akka.Cluster.Tests.MultiNode
         // ReSharper disable once InconsistentNaming
         public async Task MarkNodeAsUNREACHABLEWhenWePullTheNetwork()
         {
-            // let them send at least one heartbeat to each other after the gossip convergence
-            // because for new joining nodes we remove them from the failure detector when
-            // receive gossip
-            Thread.Sleep(Dilated(TimeSpan.FromSeconds(2)));
+            // Wait until this node's failure detector has seen a heartbeat from every peer.
+            // A joining node is dropped from the failure detector when gossip arrives, so the
+            // detector has to be warm before we pull the network - otherwise the victim is
+            // never marked unreachable. Every node monitors every other node here, because
+            // akka.cluster.monitored-by-nr-of-members defaults to 9 and this cluster has 4.
+            var peers = AllBut(Myself).Select(GetAddress).ToArray();
+            await AwaitAssertAsync(() =>
+            {
+                foreach (var peer in peers)
+                {
+                    Assert.True(Cluster.FailureDetector.IsMonitoring(peer),
+                        $"Failure detector on [{Cluster.SelfAddress}] is not monitoring [{peer}] yet");
+                }
+            }, TimeSpan.FromSeconds(20));
 
             await RunOnAsync(async () =>
             {
@@ -117,36 +127,42 @@ namespace Akka.Cluster.Tests.MultiNode
             await RunOnAsync(async () =>
             {
                 allButVictim.ForEach(name => MarkNodeAsUnavailable(GetAddress(name)));
+                var expectedUnreachable = allButVictim.Select(GetAddress).ToImmutableHashSet();
                 await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
-                    // victim becomes all alone
+                    // Victim becomes all alone. Snapshot the unreachable set once so the count
+                    // and the address check describe the same cluster view.
                     await AwaitAssertAsync(() =>
                     {
-                        var members = ClusterView.Members; // to snapshot the object
-                        Assert.Equal(Roles.Count - 1, ClusterView.UnreachableMembers.Count);
+                        var unreachable = ClusterView.UnreachableMembers;
+                        Assert.Equal(Roles.Count - 1, unreachable.Count);
+                        Assert.True(unreachable.Select(x => x.Address).All(expectedUnreachable.Contains),
+                            "victim should see every other node as unreachable");
                     });
-                    var addresses = allButVictim.Select(GetAddress).ToList();
-                    Assert.True(ClusterView.UnreachableMembers.Select(x => x.Address).All(y => addresses.Contains(y)));
                 });
             }, _victim.Value);
 
             await RunOnAsync(async () =>
             {
                 MarkNodeAsUnavailable(GetAddress(_victim.Value));
+                var victimNodeAddress = Node(_victim.Value).Address;
                 await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
                     // victim becomes unreachable
-                    await AwaitAssertAsync(() =>
-                    {
-                        var members = ClusterView.Members; // to snapshot the object
-                        Assert.Single(ClusterView.UnreachableMembers);
-                    });
+                    await AwaitAssertAsync(() => Assert.Single(ClusterView.UnreachableMembers));
                     await AwaitSeenSameStateAsync(CancellationToken.None, allButVictim.Select(GetAddress).ToArray());
 
-                    // still once unreachable
-                    Assert.Single(ClusterView.UnreachableMembers);
-                    Assert.Equal(Node(_victim.Value).Address, ClusterView.UnreachableMembers.First().Address);
-                    Assert.Equal(MemberStatus.Up, ClusterView.UnreachableMembers.First().Status);
+                    // Still exactly one unreachable member, and it is the victim. Read the set
+                    // once and assert everything off that snapshot - gossip can move between
+                    // separate reads of the live ClusterView.
+                    await AwaitAssertAsync(() =>
+                    {
+                        var unreachable = ClusterView.UnreachableMembers;
+                        Assert.Single(unreachable);
+                        var victimMember = unreachable.First();
+                        Assert.Equal(victimNodeAddress, victimMember.Address);
+                        Assert.Equal(MemberStatus.Up, victimMember.Status);
+                    });
                 });
             }, allButVictim);
 
@@ -168,8 +184,8 @@ namespace Akka.Cluster.Tests.MultiNode
                 // eventually removed
                 await AwaitMembersUpAsync(Roles.Count - 1, ImmutableHashSet.Create(GetAddress(_victim.Value)));
                 await AwaitAssertAsync(() => Assert.True(ClusterView.UnreachableMembers.IsEmpty), TimeSpan.FromSeconds(15));
-                var addresses = allButVictim.Select(GetAddress).ToList();
-                await AwaitAssertAsync(() => Assert.True(ClusterView.Members.Select(x => x.Address).All(y => addresses.Contains(y))));
+                var addresses = allButVictim.Select(GetAddress).ToImmutableHashSet();
+                await AwaitAssertAsync(() => Assert.True(ClusterView.Members.Select(x => x.Address).All(addresses.Contains)));
             }, allButVictim);
 
             await EndBarrierAsync();
@@ -209,7 +225,20 @@ namespace Akka.Cluster.Tests.MultiNode
             await RunOnAsync(async () =>
             {
                 var victimAddress = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
-                Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(10));
+
+                // The fresh system below rebinds this exact host:port, so the old system has to
+                // release it first. Assert the wait instead of discarding it, otherwise a failed
+                // termination surfaces later as a confusing bind error on the fresh system.
+                var terminationTimeout = TimeSpan.FromSeconds(10);
+                try
+                {
+                    await Sys.WhenTerminated.WaitAsync(terminationTimeout);
+                }
+                catch (TimeoutException)
+                {
+                    Assert.Fail($"Failed to stop [{Sys.Name}] within [{terminationTimeout}]. " +
+                                $"The fresh system cannot rebind [{victimAddress}] until the old one releases it.");
+                }
 
                 // create new ActorSystem with same host:port
                 // Pin the fresh system to the SAME wire address for BOTH transports - under
@@ -226,19 +255,41 @@ namespace Akka.Cluster.Tests.MultiNode
                 try
                 {
                     Cluster.Get(freshSystem).Join(masterAddress);
-                    await WithinAsync(TimeSpan.FromSeconds(15), async () =>
-                    {
-                        await AwaitAssertAsync(() => Assert.Contains(victimAddress, Cluster.Get(freshSystem).State.Members.Select(x => x.Address)));
-                        await AwaitAssertAsync(() => Assert.Equal(expectedNumberOfMembers, Cluster.Get(freshSystem).State.Members.Count));
-                        await AwaitAssertAsync(() => Assert.True(Cluster.Get(freshSystem).State.Members.All(y => y.Status == MemberStatus.Up)));
-                    });
 
-                    // signal to master node that victim is done
+                    // This spec's own Sys is terminated by now, so its TestKit scheduler is dead
+                    // and cannot drive an await loop. Run the wait from a probe attached to the
+                    // live fresh system, and snapshot the member set once so all three checks
+                    // describe the same view.
+                    var freshProbe = CreateTestProbe(freshSystem);
+                    await freshProbe.AwaitAssertAsync(() =>
+                    {
+                        var members = Cluster.Get(freshSystem).State.Members;
+                        Assert.Contains(victimAddress, members.Select(x => x.Address));
+                        Assert.Equal(expectedNumberOfMembers, members.Count);
+                        Assert.True(members.All(y => y.Status == MemberStatus.Up),
+                            "all members should be Up once the fresh node has rejoined");
+                    }, TimeSpan.FromSeconds(25));
+
+                    // Signal to master node that victim is done.
+                    // Resolve the master's end actor first. The Identify round trip proves the
+                    // association to the just-rebound address carries traffic in both directions
+                    // before the handshake depends on it, and a failure names that problem
+                    // instead of showing up as a missing EndAck.
                     var endProbe = CreateTestProbe(freshSystem);
+                    var masterEndActor = await freshSystem
+                        .ActorSelection(new RootActorPath(masterAddress) / "user" / "end")
+                        .ResolveOne(Dilated(TimeSpan.FromSeconds(20)));
+                    Assert.NotNull(masterEndActor);
+
                     var endActor = freshSystem.ActorOf(Props.Create(() => new EndActor(endProbe.Ref, masterAddress)),
                         "end");
                     endActor.Tell(EndActor.SendEnd.Instance);
-                    await endProbe.ExpectMsgAsync<EndActor.EndAck>();
+
+                    // The master waits up to 20s for End, so the victim has to wait longer than
+                    // that for the EndAck. The old code inherited the 15s single-expect default,
+                    // which was the smallest budget in the spec and guarded the step needing the
+                    // most time.
+                    await endProbe.ExpectMsgAsync<EndActor.EndAck>(TimeSpan.FromSeconds(30));
                 }
                 finally
                 {
