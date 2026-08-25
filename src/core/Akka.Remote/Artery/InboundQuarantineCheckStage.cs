@@ -65,8 +65,6 @@ namespace Akka.Remote.Artery
     /// <c>ArteryInboundProcessingStage.ProcessFrameLaneMode</c> does the same check in its own code.
     /// The two sites call <see cref="ShouldNotifyOrigin"/> so that they stay in agreement.
     /// </para>
-    ///
-    /// <para>This is a port of Pekko's <c>InboundQuarantineCheck</c>.</para>
     /// </summary>
     internal sealed class InboundQuarantineCheckStage : GraphStage<FlowShape<IInboundEnvelope, IInboundEnvelope>>
     {
@@ -116,15 +114,23 @@ namespace Akka.Remote.Artery
             message is not ArteryQuarantined && !IsHeartbeat(message);
 
         /// <summary>
-        /// Pekko's <c>isHeartbeat</c>: matches its own control-channel liveness ping/pong
-        /// (<see cref="ArteryHeartbeat"/>/<see cref="ArteryHeartbeatRsp"/> -- the artery analog
-        /// of Pekko's <c>RemoteWatcher.ArteryHeartbeat</c>/<c>ArteryHeartbeatRsp</c>, both
-        /// <c>HeartbeatMessage</c>) plus <see cref="RemoteWatcher"/>'s own ordinary-stream
-        /// heartbeat (<see cref="IPriorityMessage"/> -- the marker <see cref="RemoteWatcher.Heartbeat"/>/
-        /// <see cref="RemoteWatcher.HeartbeatRsp"/> implement, this codebase's analog of Pekko's
-        /// shared <c>HeartbeatMessage</c> trait), including when it arrives wrapped in an
-        /// <see cref="ActorSelectionMessage"/> (Pekko's <c>ActorSelectionMessage(_: HeartbeatMessage, _, _)</c>
-        /// -- <see cref="RemoteWatcher"/> sends its heartbeat via <c>Context.ActorSelection(...).Tell</c>).
+        /// Tells the caller if <paramref name="message"/> is a heartbeat. Three groups of
+        /// messages match:
+        /// <list type="bullet">
+        /// <item><description>
+        /// The control-channel liveness messages <see cref="ArteryHeartbeat"/> and
+        /// <see cref="ArteryHeartbeatRsp"/>.
+        /// </description></item>
+        /// <item><description>
+        /// The <see cref="RemoteWatcher"/> heartbeats on the ordinary stream. They implement
+        /// the marker interface <see cref="IPriorityMessage"/>.
+        /// </description></item>
+        /// <item><description>
+        /// A <see cref="RemoteWatcher"/> heartbeat inside an <see cref="ActorSelectionMessage"/>.
+        /// <see cref="RemoteWatcher"/> sends its heartbeat through an ActorSelection, so the
+        /// heartbeat arrives in that wrapper.
+        /// </description></item>
+        /// </list>
         /// </summary>
         private static bool IsHeartbeat(object message) => message switch
         {

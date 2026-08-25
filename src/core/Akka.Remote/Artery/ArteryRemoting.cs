@@ -755,7 +755,7 @@ namespace Akka.Remote.Artery
             // would let them reach the acker first.
             //
             // Ordinary, control and large connections all use this one sink, so one instance is
-            // sufficient. Pekko has two sinks and inserts its equivalent stage in each.
+            // sufficient.
             var inboundSink = decoded
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new InboundQuarantineCheckStage(_inboundContext!)))

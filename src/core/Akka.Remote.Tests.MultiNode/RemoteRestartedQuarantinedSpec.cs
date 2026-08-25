@@ -128,7 +128,7 @@ namespace Akka.Remote.Tests.MultiNode
 
                 var actorRef = (await _identifyWithUid(_config.First, "subject")).Item2;
 
-                // See the matching barrier in `first`'s block (Pekko artery-variant parity).
+                // See the matching barrier comment in `first`'s block.
                 await EnterBarrierAsync("before-quarantined");
 
                 await EnterBarrierAsync("quarantined");
