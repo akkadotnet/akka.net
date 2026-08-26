@@ -513,7 +513,7 @@ namespace Akka.Cluster
             if (newVersion.Equals(Version))
                 return this;
             else
-                return new Gossip(Members, Overview, newVersion);
+                return Copy(version: newVersion);
         }
 
         public Gossip MarkAsDown(Member member)
