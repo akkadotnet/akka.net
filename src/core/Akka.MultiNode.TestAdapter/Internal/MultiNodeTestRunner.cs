@@ -298,7 +298,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
                     }
                     else
                     {
-                        _sinkCoordinator.Tell(new NodeCompletedSpecWithFail(_test.Node, _test.Role, _test.DisplayName + " passed."));
+                        _sinkCoordinator.Tell(new NodeCompletedSpecWithFail(_test.Node, _test.Role, _test.DisplayName + " failed."));
                     }
                 };
                 opt.OutputDataReceived = OutputHandler;
