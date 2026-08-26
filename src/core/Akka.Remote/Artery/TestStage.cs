@@ -22,18 +22,16 @@ namespace Akka.Remote.Artery
     /// INTERNAL API.
     ///
     /// Thread-safe mutable blackhole state shared among this transport's test stages
-    /// (<see cref="OutboundTestStage"/> / <see cref="InboundTestStage"/>), the port of Pekko's
-    /// <c>SharedTestState</c> (<c>remote/.../artery/TestStage.scala</c>). One instance per
+    /// (<see cref="OutboundTestStage"/> / <see cref="InboundTestStage"/>). One instance per
     /// <see cref="ArteryRemoting"/> transport, created ONLY when
     /// <c>akka.remote.artery.advanced.test-mode = on</c> (<see cref="ArterySettings.TestMode"/>) --
     /// with test-mode off neither this state nor any test stage exists at all.
     ///
     /// <para>
-    /// <b>Semantics (verbatim Pekko parity -- do not "fix").</b> The state is a map of directed
-    /// <c>from -&gt; {to}</c> blackhole pairs. BOTH the outbound and the inbound stage check the
-    /// SAME key order, <c>(localAddress, remoteAddress)</c> -- see
-    /// <c>TestStage.scala</c>'s <c>OutboundTestStage</c>/<c>InboundTestStage</c>. Consequences,
-    /// for a <c>SetThrottle</c> command applied on node <c>a</c> targeting node <c>b</c>:
+    /// <b>Semantics.</b> The state is a map of directed <c>from -&gt; {to}</c> blackhole pairs.
+    /// BOTH the outbound and the inbound stage check the SAME key order,
+    /// <c>(localAddress, remoteAddress)</c>. Consequences, for a <c>SetThrottle</c> command
+    /// applied on node <c>a</c> targeting node <c>b</c>:
     /// <list type="bullet">
     /// <item><description><c>Direction.Send</c> adds <c>(a -&gt; b)</c>, which matches BOTH of
     /// <c>a</c>'s checks -- so <c>a</c> drops its outbound to <c>b</c> AND its inbound from
@@ -42,29 +40,30 @@ namespace Akka.Remote.Artery
     /// at node <c>a</c> the observable effect is the same full cut.</description></item>
     /// <item><description><c>Direction.Receive</c> adds only <c>(b -&gt; a)</c>, which matches
     /// NEITHER of <c>a</c>'s <c>(a, b)</c>-keyed checks -- a Receive-only blackhole produces no
-    /// drops at the commanded node. This mirrors Pekko exactly; no in-tree multi-node spec uses
-    /// Receive-only over artery (the one that does, <c>TestConductorSpec</c>, is pinned to
-    /// classic remoting).</description></item>
+    /// drops at the commanded node. No in-tree multi-node spec uses Receive-only over artery (the
+    /// one that does, <c>TestConductorSpec</c>, is pinned to classic remoting).</description></item>
     /// </list>
     /// This is what lets the TestConductor route a <c>blackhole(a, b, Both)</c> command to node
     /// <c>a</c> ALONE and still produce a symmetric, both-sides-observable partition.
     /// </para>
     ///
     /// <para>
-    /// <b>Empty sets are retained (Pekko parity).</b> <see cref="PassThrough"/> removes the
-    /// destination from the key's set but keeps the (now possibly empty) key in the map, exactly
-    /// like Pekko's <c>removeBlackhole</c> (<c>blackholes.updated(from, destinations - to)</c>) --
-    /// so <see cref="AnyBlackholePresent"/> stays <see langword="true"/> once any blackhole has
-    /// ever been set, and <see cref="InboundTestStage"/>'s unknown-origin gating stays active for
-    /// the remainder of the test run.
+    /// <b>Healed pairs are fully removed.</b> <see cref="PassThrough"/> removes the destination
+    /// from the key's set, and once that leaves the key's set empty the key itself is dropped
+    /// from the map. That keeps <see cref="AnyBlackholePresent"/> in sync with reality: once every
+    /// blackhole a node has ever set has been healed, it returns <see langword="false"/> again and
+    /// <see cref="InboundTestStage"/>'s unknown-origin gate stops applying -- so a fresh incarnation
+    /// of a peer (a new uid, an unknown origin until its handshake completes) is not blocked by a
+    /// blackhole that no longer exists. While at least one blackhole is active anywhere on this
+    /// transport, the gate stays on so a still-blackholed peer cannot be routed around by forging a
+    /// new incarnation.
     /// </para>
     ///
     /// <para>
     /// <b>Threading.</b> Reads (<see cref="IsBlackhole"/> / <see cref="AnyBlackholePresent"/>, the
     /// per-element hot path when test-mode is on) are a single <c>Volatile.Read</c> of an
     /// immutable snapshot -- lock-free, allocation-free. Writes (rare: one per TestConductor
-    /// command) CAS-loop via <c>ImmutableInterlocked.Update</c>, the .NET analog of Pekko's
-    /// <c>AtomicReference</c> + <c>@tailrec</c> compareAndSet loops.
+    /// command) CAS-loop via <c>ImmutableInterlocked.Update</c>.
     /// </para>
     /// </summary>
     internal sealed class SharedTestState
@@ -73,8 +72,10 @@ namespace Akka.Remote.Artery
             ImmutableDictionary<Address, ImmutableHashSet<Address>>.Empty;
 
         /// <summary>
-        /// Whether ANY blackhole entry (including a healed key retaining an empty set -- see the
-        /// type-level "empty sets are retained" remarks) has ever been registered.
+        /// Whether any directed blackhole pair is currently active anywhere in the map. A key
+        /// whose destination set has been fully healed is removed rather than left empty (see the
+        /// type-level remarks), so this returns <see langword="false"/> once every blackhole this
+        /// transport ever set has been passed through.
         /// </summary>
         public bool AnyBlackholePresent() => !Volatile.Read(ref _blackholes).IsEmpty;
 
@@ -88,8 +89,8 @@ namespace Akka.Remote.Artery
 
         /// <summary>
         /// Enables blackholing between <paramref name="a"/> and <paramref name="b"/> in the given
-        /// direction (port of Pekko's <c>SharedTestState.blackhole</c>): <c>Send</c> adds
-        /// <c>(a -&gt; b)</c>, <c>Receive</c> adds <c>(b -&gt; a)</c>, <c>Both</c> adds both.
+        /// direction: <c>Send</c> adds <c>(a -&gt; b)</c>, <c>Receive</c> adds <c>(b -&gt; a)</c>,
+        /// <c>Both</c> adds both.
         /// </summary>
         public void Blackhole(Address a, Address b, ThrottleTransportAdapter.Direction direction)
         {
@@ -109,9 +110,9 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
-        /// Reverses <see cref="Blackhole"/> for the given direction (port of Pekko's
-        /// <c>SharedTestState.passThrough</c>). The key itself is retained (possibly with an empty
-        /// set) -- see the type-level remarks.
+        /// Reverses <see cref="Blackhole"/> for the given direction. A key whose destination set
+        /// becomes empty as a result is removed from the map entirely -- see the type-level
+        /// remarks on <see cref="AnyBlackholePresent"/>.
         /// </summary>
         public void PassThrough(Address a, Address b, ThrottleTransportAdapter.Direction direction)
         {
@@ -143,31 +144,38 @@ namespace Akka.Remote.Artery
         private void RemoveBlackhole(Address from, Address to) =>
             ImmutableInterlocked.Update(
                 ref _blackholes,
-                static (map, pair) => map.TryGetValue(pair.From, out var destinations)
-                    ? map.SetItem(pair.From, destinations.Remove(pair.To))
-                    : map,
+                static (map, pair) =>
+                {
+                    if (!map.TryGetValue(pair.From, out var destinations))
+                        return map;
+
+                    var updated = destinations.Remove(pair.To);
+
+                    // Drop the key entirely once its destination set is empty so
+                    // AnyBlackholePresent() reflects reality instead of leaving stale residue
+                    // behind that keeps the unknown-origin gate on forever.
+                    return updated.IsEmpty ? map.Remove(pair.From) : map.SetItem(pair.From, updated);
+                },
                 (From: from, To: to));
     }
 
     /// <summary>
     /// INTERNAL API.
     ///
-    /// Outbound half of artery test-mode failure injection (port of Pekko's
-    /// <c>OutboundTestStage</c>, <c>TestStage.scala</c>): drops every outbound envelope while
+    /// Outbound half of artery test-mode failure injection: drops every outbound envelope while
     /// <c>(localAddress, remoteAddress)</c> is blackholed in the <see cref="SharedTestState"/>,
     /// passes everything through otherwise. Woven into the outbound pipelines ONLY when
-    /// <see cref="ArterySettings.TestMode"/> is on -- placement per stream (Pekko-faithful):
+    /// <see cref="ArterySettings.TestMode"/> is on -- placement per stream:
     /// <list type="bullet">
     /// <item><description>ordinary (single-lane and per-lane) and large streams: UPSTREAM of
-    /// <see cref="OutboundHandshakeStage"/> (Pekko <c>Association.scala</c>'s
-    /// <c>runOutboundOrdinaryMessagesStream</c>/<c>runOutboundLargeMessagesStream</c>) -- so the
-    /// handshake stage's own injected <see cref="HandshakeReq"/>s enter DOWNSTREAM of this stage
-    /// and are never dropped here;</description></item>
+    /// <see cref="OutboundHandshakeStage"/> -- so the handshake stage's own injected
+    /// <see cref="HandshakeReq"/>s enter DOWNSTREAM of this stage and are never dropped
+    /// here;</description></item>
     /// <item><description>control stream: DOWNSTREAM of <see cref="SystemMessageDeliveryStage"/>,
-    /// immediately before the encoder (Pekko <c>ArteryTransport.outboundControl</c>: "system
-    /// messages must not be dropped before the SystemMessageDelivery stage") -- a blackholed
-    /// system message is already recorded in the delivery stage's resend buffer, so it is
-    /// re-delivered once <c>PassThrough</c> heals the link.</description></item>
+    /// immediately before the encoder -- system messages must not be dropped before the
+    /// SystemMessageDelivery stage, so a blackholed system message is already recorded in the
+    /// delivery stage's resend buffer and is re-delivered once <c>PassThrough</c> heals the
+    /// link.</description></item>
     /// </list>
     /// </summary>
     internal sealed class OutboundTestStage : GraphStage<FlowShape<IOutboundEnvelope, IOutboundEnvelope>>
@@ -230,22 +238,23 @@ namespace Akka.Remote.Artery
     /// <summary>
     /// INTERNAL API.
     ///
-    /// Inbound half of artery test-mode failure injection (port of Pekko's
-    /// <c>InboundTestStage</c>, <c>TestStage.scala</c>). Woven into the inbound sink between the
-    /// deserializing <see cref="ArteryInboundProcessingStage"/> and
-    /// <see cref="InboundHandshakeStage"/> (Pekko: after <c>createDeserializer</c>, before
-    /// <c>InboundHandshake</c>) ONLY when <see cref="ArterySettings.TestMode"/> is on.
+    /// Inbound half of artery test-mode failure injection. Woven into the inbound sink between
+    /// the deserializing <see cref="ArteryInboundProcessingStage"/> and
+    /// <see cref="InboundHandshakeStage"/> ONLY when <see cref="ArterySettings.TestMode"/> is on.
     ///
     /// <para>
-    /// Per-envelope behavior (verbatim Pekko parity):
+    /// Per-envelope behavior:
     /// <list type="bullet">
     /// <item><description>origin uid resolves to a (handshake-completed) association: drop when
     /// <c>(localAddress, originAddress)</c> is blackholed, else pass;</description></item>
-    /// <item><description>origin unknown (handshake not completed) and any blackhole has ever been
-    /// present: let a <see cref="HandshakeReq"/> through (we cannot yet know whether ITS origin is
-    /// blackholed, and dropping it would wedge legitimate new associations), drop everything else
-    /// -- including a <see cref="HandshakeRsp"/>, exactly like Pekko;</description></item>
-    /// <item><description>origin unknown and no blackhole has ever been present: pass.</description></item>
+    /// <item><description>origin unknown (handshake not completed) and at least one blackhole is
+    /// currently active anywhere on this transport: let a <see cref="HandshakeReq"/> through (we
+    /// cannot yet know whether ITS origin is blackholed, and dropping it would wedge legitimate
+    /// new associations), drop everything else -- including a
+    /// <see cref="HandshakeRsp"/>;</description></item>
+    /// <item><description>origin unknown and no blackhole is currently active: pass. This includes
+    /// the case where every blackhole this transport ever set has since been healed -- a fresh
+    /// incarnation of a peer is not blocked by a blackhole that no longer exists.</description></item>
     /// </list>
     /// The lanes&gt;1 ordinary-connection lane path performs the SAME known-origin check inside
     /// <see cref="ArteryInboundProcessingStage"/> (its lane traffic bypasses this stage; its
