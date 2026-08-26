@@ -18,10 +18,10 @@ namespace Akka.Remote.Tests.Artery
 {
     /// <summary>
     /// Pure state tests for <see cref="SharedTestState"/>, the blackhole map behind artery's
-    /// <c>advanced.test-mode</c> failure injection (port of Pekko's <c>SharedTestState</c>,
-    /// <c>TestStage.scala</c>). No actor system required. The direction/key-order assertions here
-    /// are the load-bearing ones: BOTH test stages check <c>(localAddress, remoteAddress)</c>, so
-    /// these directed entries are exactly what determines which node drops what.
+    /// <c>advanced.test-mode</c> failure injection. No actor system required. The
+    /// direction/key-order assertions here are the load-bearing ones: BOTH test stages check
+    /// <c>(localAddress, remoteAddress)</c>, so these directed entries are exactly what
+    /// determines which node drops what.
     /// </summary>
     public class SharedTestStateSpec
     {
@@ -48,7 +48,7 @@ namespace Akka.Remote.Tests.Artery
 
             state.IsBlackhole(B, A).Should().BeTrue();
             state.IsBlackhole(A, B).Should().BeFalse(
-                "Receive adds only (b -> a) -- neither of node a's own (a, b)-keyed stage checks matches it (verbatim Pekko semantics)");
+                "Receive adds only (b -> a) -- neither of node a's own (a, b)-keyed stage checks matches it");
         }
 
         [Fact(DisplayName = "Blackhole(a, b, Both) adds both directed pairs")]
@@ -86,19 +86,35 @@ namespace Akka.Remote.Tests.Artery
             state.IsBlackhole(B, A).Should().BeFalse();
         }
 
-        [Fact(DisplayName = "AnyBlackholePresent stays true after a full PassThrough heal (empty sets retained -- verbatim Pekko parity)")]
-        public void Should_Retain_Keys_After_Heal()
+        [Fact(DisplayName = "AnyBlackholePresent returns false again after a full PassThrough heal (no stale residue)")]
+        public void Should_Clear_AnyBlackholePresent_After_Full_Heal()
         {
             var state = new SharedTestState();
             state.AnyBlackholePresent().Should().BeFalse("pristine state has no entries");
 
             state.Blackhole(A, B, ThrottleTransportAdapter.Direction.Both);
+            state.AnyBlackholePresent().Should().BeTrue();
+
             state.PassThrough(A, B, ThrottleTransportAdapter.Direction.Both);
 
             state.IsBlackhole(A, B).Should().BeFalse();
-            state.AnyBlackholePresent().Should().BeTrue(
-                "Pekko's removeBlackhole keeps the (now empty) key in the map, so the unknown-origin " +
-                "inbound gating stays active for the remainder of the test run -- port this verbatim");
+            state.IsBlackhole(B, A).Should().BeFalse();
+            state.AnyBlackholePresent().Should().BeFalse(
+                "healing the only active pair must drop the now-empty key entirely, otherwise the " +
+                "unknown-origin inbound gate would stay on forever even though nothing is blackholed");
+        }
+
+        [Fact(DisplayName = "AnyBlackholePresent stays true while an unrelated pair is still blackholed")]
+        public void Should_Keep_AnyBlackholePresent_While_Other_Pair_Active()
+        {
+            var state = new SharedTestState();
+            state.Blackhole(A, B, ThrottleTransportAdapter.Direction.Both);
+            state.Blackhole(A, C, ThrottleTransportAdapter.Direction.Send);
+
+            state.PassThrough(A, B, ThrottleTransportAdapter.Direction.Both);
+
+            state.IsBlackhole(A, B).Should().BeFalse();
+            state.AnyBlackholePresent().Should().BeTrue("the unrelated (a -> c) pair is still active");
         }
 
         [Fact(DisplayName = "PassThrough on a pristine state is a harmless no-op")]
@@ -108,7 +124,7 @@ namespace Akka.Remote.Tests.Artery
             state.PassThrough(A, B, ThrottleTransportAdapter.Direction.Both);
 
             state.IsBlackhole(A, B).Should().BeFalse();
-            state.AnyBlackholePresent().Should().BeFalse("no key was ever added, so none is retained");
+            state.AnyBlackholePresent().Should().BeFalse("no key was ever added, so none is present");
         }
 
         [Fact(DisplayName = "concurrent adds from many threads all converge (CAS-loop correctness)")]

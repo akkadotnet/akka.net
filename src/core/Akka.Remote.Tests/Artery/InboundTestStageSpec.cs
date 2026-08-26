@@ -24,11 +24,11 @@ namespace Akka.Remote.Tests.Artery
 {
     /// <summary>
     /// Stage-level tests for <see cref="InboundTestStage"/> (artery <c>advanced.test-mode</c>
-    /// failure injection, port of Pekko's <c>InboundTestStage</c>), including the load-bearing
-    /// pre-handshake special case: an unknown-origin <see cref="HandshakeReq"/> must pass while
-    /// any blackhole is present (or legitimate new associations would wedge), while every OTHER
-    /// unknown-origin envelope -- including a <see cref="HandshakeRsp"/>, verbatim Pekko -- is
-    /// dropped. Drives the stage directly with probes; no TCP.
+    /// failure injection), including the load-bearing pre-handshake special case: an
+    /// unknown-origin <see cref="HandshakeReq"/> must pass while any blackhole is present (or
+    /// legitimate new associations would wedge), while every OTHER unknown-origin envelope --
+    /// including a <see cref="HandshakeRsp"/> -- is dropped. Drives the stage directly with
+    /// probes; no TCP.
     /// </summary>
     public class InboundTestStageSpec : AkkaSpec
     {
@@ -113,7 +113,7 @@ namespace Akka.Remote.Tests.Artery
                 "dropping an unknown origin's HandshakeReq would wedge every legitimate NEW association while any blackhole is active");
         }
 
-        [Fact(DisplayName = "unknown origin + any blackhole present: every other envelope is dropped -- including a HandshakeRsp (verbatim Pekko)")]
+        [Fact(DisplayName = "unknown origin + any blackhole present: every other envelope is dropped -- including a HandshakeRsp")]
         public async Task Should_Drop_Unknown_Origin_NonReq_While_Blackholed()
         {
             var (state, _, pub, sub) = BuildHarness();
@@ -131,18 +131,22 @@ namespace Akka.Remote.Tests.Artery
             (await sub.ExpectNextAsync(TimeSpan.FromSeconds(3))).Message.Should().BeOfType<HandshakeReq>();
         }
 
-        [Fact(DisplayName = "unknown-origin gating STAYS active after a full heal (empty-set retention -- verbatim Pekko)")]
-        public async Task Should_Keep_Unknown_Origin_Gating_After_Heal()
+        [Fact(DisplayName = "unknown-origin gating LIFTS after a full heal: a fresh incarnation's envelopes pass again")]
+        public async Task Should_Lift_Unknown_Origin_Gating_After_Heal()
         {
             var (state, _, pub, sub) = BuildHarness();
             state.Blackhole(Local.Address, Peer.Address, ThrottleTransportAdapter.Direction.Both);
             state.PassThrough(Local.Address, Peer.Address, ThrottleTransportAdapter.Direction.Both);
 
-            await sub.RequestAsync(2);
-            await pub.SendNextAsync(Envelope("still-dropped", originUid: 999L));
-            await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+            // No blackhole is active anywhere on this transport any more, so a message from an
+            // unknown origin (e.g. a fresh incarnation of a peer, a new uid the handshake hasn't
+            // completed for yet) is no longer gated -- it must pass through untouched, exactly as
+            // if no blackhole had ever been set.
+            await sub.RequestAsync(1);
+            await pub.SendNextAsync(Envelope("passes-after-heal", originUid: 999L));
+            (await sub.ExpectNextAsync(TimeSpan.FromSeconds(3))).Message.Should().Be("passes-after-heal");
 
-            // Known origins are unaffected by the retained empty set.
+            // Known origins are unaffected either way.
             var (state2, context2, pub2, sub2) = BuildHarness();
             state2.Blackhole(Local.Address, Peer.Address, ThrottleTransportAdapter.Direction.Both);
             state2.PassThrough(Local.Address, Peer.Address, ThrottleTransportAdapter.Direction.Both);
