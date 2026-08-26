@@ -338,8 +338,9 @@ namespace Akka.Remote.Artery
             _log.Info("Starting Artery TCP remoting on [{0}:{1}]", _settings.CanonicalHostname, _settings.CanonicalPort);
             _log.Warning(
                 "Artery TCP remoting is EXPERIMENTAL and under active development -- reliable system-message " +
-                "delivery (seq/Ack/Nack/resend over the control stream) and outbound lanes " +
-                "(akka.remote.artery.advanced.outbound-lanes) have landed; no inbound lanes/compression yet. " +
+                "delivery (seq/Ack/Nack/resend over the control stream), outbound lanes " +
+                "(akka.remote.artery.advanced.outbound-lanes), and inbound lanes " +
+                "(akka.remote.artery.advanced.inbound-lanes) have landed; no compression yet. " +
                 "Do not use in production.");
 
             _materializer = ActorMaterializer.Create(System);
@@ -734,14 +735,30 @@ namespace Akka.Remote.Artery
             // InboundHandshake). Gated on STAGE INSERTION at materialization -- with test-mode off
             // (_testState null, the default) this composes the identical chain as before, no test
             // stage and no per-element checks ever exist. Covers ALL accepted connections
-            // (Ordinary/Control/Large feed this same shape); a lanes>1 Ordinary connection's
-            // lane-routed traffic bypasses this sink and gets the equivalent check inside
-            // ArteryInboundProcessingStage's lane path (see the _testState ctor argument above).
+            // (Ordinary/Control/Large feed this same shape).
+            //
+            // There is one exception. If inbound-lanes is more than 1, an ordinary connection sends
+            // its traffic to the lanes and not to this sink. ProcessFrameLaneMode in
+            // ArteryInboundProcessingStage therefore does the three per-envelope checks in its own
+            // code: the known-origin check from InboundHandshakeStage, the test-mode blackhole check
+            // from this stage, and the quarantine check from InboundQuarantineCheckStage. The
+            // quarantine check calls the shared ShouldNotifyOrigin method.
             if (_testState is { } inboundTestState)
                 decoded = decoded.Via(Flow.FromGraph(new InboundTestStage(_inboundContext!, inboundTestState)));
 
+            // InboundQuarantineCheckStage discards traffic from a uid that this system has
+            // quarantined, and sends the origin a new quarantine notice. Its remarks give the full
+            // procedure.
+            //
+            // It goes here, after the handshake stage and before the system-message acker, because
+            // system messages (Ack, Nack, Watch, Unwatch) must also be discarded. A later position
+            // would let them reach the acker first.
+            //
+            // Ordinary, control and large connections all use this one sink, so one instance is
+            // sufficient.
             var inboundSink = decoded
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!)))
+                .Via(Flow.FromGraph(new InboundQuarantineCheckStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
                 .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));
 
@@ -2099,7 +2116,12 @@ namespace Akka.Remote.Artery
             if (streamId == ArteryStreamId.Large)
             {
                 if (!association.ShouldRestartLargeOutbound())
+                {
+                    // Same gate release as the ordinary branch below. See its remarks.
+                    if (!association.IsLargeShutDown)
+                        association.ResetLargeGate();
                     return;
+                }
 
                 association.ResetLargeGate();
                 System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
@@ -2114,7 +2136,29 @@ namespace Akka.Remote.Artery
             }
 
             if (!association.ShouldRestartOutbound())
+            {
+                // The quarantine, and not a shutdown, refused the restart from the timer. Release
+                // the materialize-once gate.
+                //
+                // The gate must not stay latched with no stream behind it. In that condition the
+                // on-demand path in EnqueueOutbound also cannot materialize a stream, because it
+                // tests the same gate. Ordinary sends to this peer then stop permanently. Two sends
+                // must still get through:
+                //   - An ActorSelectionMessage, which Send() lets through a quarantine on purpose.
+                //   - Any send to a new incarnation of the peer. A completed handshake replaces the
+                //     uid, which ends the quarantine.
+                // Neither can dial the peer while the gate is latched.
+                //
+                // The release does not start a reconnect. This method schedules nothing here, so
+                // the transport still does not spend a connection on a quarantined peer. A real
+                // send materializes the stream on demand, does a new handshake, and finds the peer
+                // if it restarted.
+                //
+                // A permanent shutdown keeps the gate latched, because that stream must stay dead.
+                if (!association.IsOutboundShutDown)
+                    association.ResetOutboundGate();
                 return;
+            }
 
             association.ResetOutboundGate();
             System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
