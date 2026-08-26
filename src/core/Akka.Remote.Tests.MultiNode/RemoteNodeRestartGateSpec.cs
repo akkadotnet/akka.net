@@ -153,7 +153,12 @@ namespace Akka.Remote.Tests.MultiNode
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(
                 @"akka.loglevel = INFO
                    akka.remote.log-remote-lifecycle-events = INFO
-                   akka.remote.retry-gate-closed-for  = 1d"
+                   akka.remote.retry-gate-closed-for  = 1d
+                   # This spec gates the association with ForceDisassociateExplicitly and
+                   # asserts the classic ""address is now gated"" warning. Artery ignores
+                   # that management command and has no gating concept, so pin this spec
+                   # to classic transport.
+                   akka.remote.artery.enabled = off"
             ));
             TestTransport = true;
         }
