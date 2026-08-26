@@ -29,7 +29,7 @@ namespace Akka.Cluster.Sharding.Internal
             ShardId shardId,
             string typeName,
             ClusterShardingSettings settings,
-            ICanTell replicator,
+            IActorRef replicator,
             int majorityMinCap)
         {
             return Actor.Props.Create(() => new DDataRememberEntitiesShardStore(shardId, typeName, settings, replicator, majorityMinCap));
@@ -130,7 +130,7 @@ namespace Akka.Cluster.Sharding.Internal
         }
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
-        private readonly ICanTell _replicator;
+        private IActorRef _replicator;
 
         private readonly Cluster _node;
         private readonly UniqueAddress _selfUniqueAddress;
@@ -145,7 +145,7 @@ namespace Akka.Cluster.Sharding.Internal
             ShardId shardId,
             string typeName,
             ClusterShardingSettings settings,
-            ICanTell replicator,
+            IActorRef replicator,
             int majorityMinCap)
         {
             _replicator = replicator;
@@ -186,6 +186,9 @@ namespace Akka.Cluster.Sharding.Internal
         {
             switch (message)
             {
+                case ReplicatorChanged changed when ReplaceReplicator(changed):
+                    return true;
+
                 case RememberEntitiesShardStore.GetEntities _:
                     // not supported, but we may get several if the shard timed out and retried
                     _log.Debug("Another get entities request after responding to one, not expected/supported, ignoring");
@@ -229,6 +232,10 @@ namespace Akka.Cluster.Sharding.Internal
             {
                 switch (message)
                 {
+                    case ReplicatorChanged changed when ReplaceReplicator(changed):
+                        LoadEntities(Enumerable.Range(0, numberOfKeys).Where(i => !gotKeys.Contains(i)));
+                        return true;
+
                     case GetSuccess g when g.Request is int i:
                         var key = _keys[i];
                         var ids2 = g.Get(key).Elements;
@@ -305,7 +312,7 @@ namespace Akka.Cluster.Sharding.Internal
 
             foreach (var u in ddataUpdates)
             {
-                _replicator.Tell(u.Value.Update, Self);
+                _replicator.Tell(u.Value.Update);
             }
 
             Context.Become(WaitingForUpdates(Sender, update, ddataUpdates));
@@ -323,6 +330,11 @@ namespace Akka.Cluster.Sharding.Internal
                 {
                     switch (message)
                     {
+                        case ReplicatorChanged changed when ReplaceReplicator(changed):
+                            foreach (var (_, updateForEvents) in updatesLeft)
+                                _replicator.Tell(updateForEvents.Update);
+                            return true;
+
                         case UpdateSuccess m when m.Request is IImmutableSet<IEvt> evts:
                             _log.Debug("The DDataShard state was successfully updated for [{0}]", string.Join(", ", evts));
                             var remainingAfterThis = updatesLeft.Remove(evts);
@@ -341,7 +353,7 @@ namespace Akka.Cluster.Sharding.Internal
                             if (retriesLeft > 0)
                             {
                                 _log.Debug("Retrying update because of write timeout, tries left [{0}]", retriesLeft);
-                                _replicator.Tell(updateForEvts, Self);
+                                _replicator.Tell(updateForEvts);
                                 Context.Become(Next(updatesLeft.SetItem(evts, (updateForEvts, retriesLeft - 1))));
                             }
                             else
@@ -384,11 +396,37 @@ namespace Akka.Cluster.Sharding.Internal
 
         private void LoadAllEntities()
         {
-            foreach (var i in Enumerable.Range(0, numberOfKeys))
+            LoadEntities(Enumerable.Range(0, numberOfKeys));
+        }
+
+        private void LoadEntities(IEnumerable<int> keyIndexes)
+        {
+            foreach (var i in keyIndexes)
             {
                 var key = _keys[i];
-                _replicator.Tell(Dsl.Get(key, _readMajority, i), Self);
+                _replicator.Tell(Dsl.Get(key, _readMajority, i));
             }
+        }
+
+        private bool ReplaceReplicator(ReplicatorChanged changed)
+        {
+            if (!_replicator.Equals(changed.PreviousReplicator))
+                return false;
+
+            _replicator = changed.Replicator;
+            return true;
+        }
+
+        protected override void PreStart()
+        {
+            Context.System.EventStream.Subscribe(Self, typeof(ReplicatorChanged));
+            base.PreStart();
+        }
+
+        protected override void PostStop()
+        {
+            Context.System.EventStream.Unsubscribe(Self, typeof(ReplicatorChanged));
+            base.PostStop();
         }
     }
 }

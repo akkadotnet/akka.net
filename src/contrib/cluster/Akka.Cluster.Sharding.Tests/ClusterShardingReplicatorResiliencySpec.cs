@@ -19,7 +19,7 @@ namespace Akka.Cluster.Sharding.Tests;
 
 public class ClusterShardingReplicatorResiliencySpec : AkkaSpec
 {
-    private sealed record EntityEnvelope(string EntityId);
+    private sealed record ShardEnvelope(string EntityId, string Message);
 
     private sealed class EntityActor : ReceiveActor
     {
@@ -29,18 +29,10 @@ public class ClusterShardingReplicatorResiliencySpec : AkkaSpec
         }
     }
 
-    private sealed class MessageExtractor : IMessageExtractor
-    {
-        public string EntityId(object message) => message is EntityEnvelope envelope ? envelope.EntityId : null;
-
-        public object EntityMessage(object message) =>
-            message is EntityEnvelope envelope ? envelope.EntityId : message;
-
-        public string ShardId(object message) =>
-            message is EntityEnvelope envelope ? ShardId(envelope.EntityId) : null;
-
-        public string ShardId(string entityId, object messageHint = null) => entityId.Split('-')[0];
-    }
+    private static readonly HashCodeMessageExtractor MessageExtractor = HashCodeMessageExtractor.Create(
+        10,
+        message => message is ShardEnvelope envelope ? envelope.EntityId : null,
+        message => message is ShardEnvelope envelope ? envelope.Message : message);
 
     private static Config SpecConfig =>
         ConfigurationFactory.ParseString(@"
@@ -73,26 +65,34 @@ public class ClusterShardingReplicatorResiliencySpec : AkkaSpec
     {
         const string typeName = "replicator-resiliency";
         const string replicatorPath = "/system/sharding/replicator";
+        const string firstEntityId = "entity-1";
+        var firstShardId = MessageExtractor.ShardId(firstEntityId);
+        var existingShardEntityId = Enumerable.Range(2, 100)
+            .Select(i => $"entity-{i}")
+            .First(id => MessageExtractor.ShardId(id) == firstShardId);
+        var newShardEntityId = Enumerable.Range(2, 100)
+            .Select(i => $"entity-{i}")
+            .First(id => MessageExtractor.ShardId(id) != firstShardId);
         var region = ClusterSharding.Get(Sys).Start(
             typeName,
             Props.Create<EntityActor>(),
             ClusterShardingSettings.Create(Sys),
-            new MessageExtractor());
+            MessageExtractor);
 
-        region.Tell(new EntityEnvelope("1-before"));
-        await ExpectMsgAsync("1-before");
+        region.Tell(new ShardEnvelope(firstEntityId, "before"));
+        await ExpectMsgAsync("before");
         var shard = LastSender.Path.Parent;
 
         var coordinator = await Sys.ActorSelection(
                 $"/system/sharding/{typeName}Coordinator/singleton/coordinator")
             .ResolveOne(3.Seconds());
         var coordinatorWatcher = CreateTestProbe();
-        coordinatorWatcher.Watch(coordinator);
+        await coordinatorWatcher.WatchAsync(coordinator);
         var shardWatcher = CreateTestProbe();
-        shardWatcher.Watch(await Sys.ActorSelection(shard).ResolveOne(3.Seconds()));
+        await shardWatcher.WatchAsync(await Sys.ActorSelection(shard).ResolveOne(3.Seconds()));
 
         var firstReplicator = await Sys.ActorSelection(replicatorPath).ResolveOne(3.Seconds());
-        Watch(firstReplicator);
+        await WatchAsync(firstReplicator);
         Sys.Stop(firstReplicator);
         await ExpectTerminatedAsync(firstReplicator);
 
@@ -104,13 +104,13 @@ public class ClusterShardingReplicatorResiliencySpec : AkkaSpec
             replacement.Path.ToStringWithoutAddress().Should().Be(replicatorPath);
         }, 10.Seconds());
 
-        // Existing shard: exercises its DData remember-entities store through the new replicator.
-        region.Tell(new EntityEnvelope("1-after"));
-        await ExpectMsgAsync("1-after");
+        // Existing shard: exercises its existing DData remember-entities store through the new replicator.
+        region.Tell(new ShardEnvelope(existingShardEntityId, "after-existing"));
+        await ExpectMsgAsync("after-existing");
 
-        // New shard: exercises the existing DData coordinator and its remember-entities store.
-        region.Tell(new EntityEnvelope("2-after"));
-        await ExpectMsgAsync("2-after");
+        // New shard: exercises the existing DData coordinator and the updated provider.
+        region.Tell(new ShardEnvelope(newShardEntityId, "after-new"));
+        await ExpectMsgAsync("after-new");
 
         await coordinatorWatcher.ExpectNoMsgAsync(500.Milliseconds());
         await shardWatcher.ExpectNoMsgAsync(500.Milliseconds());
