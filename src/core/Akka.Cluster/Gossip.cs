@@ -85,11 +85,13 @@ namespace Akka.Cluster
         /// </summary>
         public ImmutableSortedSet<Member> Members { get { return _members; } }
         /// <summary>
-        /// TBD
+        /// The seen table and the reachability table for the current members.
         /// </summary>
         public GossipOverview Overview { get { return _overview; } }
         /// <summary>
-        /// TBD
+        /// The vector clock that orders this gossip against gossip from other nodes. Every node that
+        /// changes the cluster state bumps its own entry, so two clocks can be compared to tell which
+        /// gossip is newer - or that the two are concurrent and have to be merged.
         /// </summary>
         public VectorClock Version { get { return _version; } }
 
@@ -111,43 +113,36 @@ namespace Akka.Cluster
         public ImmutableDictionary<UniqueAddress, long> Tombstones { get { return _tombstones; } }
 
         /// <summary>
-        /// TBD
+        /// Creates a gossip for <paramref name="members"/> with an empty overview and a fresh vector clock.
         /// </summary>
-        /// <param name="members">TBD</param>
+        /// <inheritdoc cref="Gossip(ImmutableSortedSet{Member}, GossipOverview, VectorClock, ImmutableDictionary{UniqueAddress, long})"/>
         public Gossip(ImmutableSortedSet<Member> members) : this(members, new GossipOverview(), VectorClock.Create()) { }
 
         /// <summary>
-        /// TBD
+        /// Creates a gossip for <paramref name="members"/> and <paramref name="overview"/> with a fresh vector clock.
         /// </summary>
-        /// <param name="members">TBD</param>
-        /// <param name="overview">TBD</param>
+        /// <inheritdoc cref="Gossip(ImmutableSortedSet{Member}, GossipOverview, VectorClock, ImmutableDictionary{UniqueAddress, long})"/>
         public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview) : this(members, overview, VectorClock.Create()) { }
 
         /// <summary>
-        /// TBD
+        /// Creates the cluster state carried by a single gossip message.
         /// </summary>
-        /// <param name="members">TBD</param>
-        /// <param name="overview">TBD</param>
-        /// <param name="version">TBD</param>
-        /// <exception cref="ArgumentException">TBD</exception>
-        public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview, VectorClock version)
-            : this(members, overview, version, EmptyTombstones) { }
-
-        /// <summary>
-        /// TBD
-        /// </summary>
-        /// <param name="members">TBD</param>
-        /// <param name="overview">TBD</param>
-        /// <param name="version">TBD</param>
-        /// <param name="tombstones">The nodes this cluster has removed. See <see cref="Tombstones"/>.</param>
-        /// <exception cref="ArgumentException">TBD</exception>
+        /// <param name="members">The members of the cluster, sorted by address.</param>
+        /// <param name="overview">The seen table and the reachability table for those members.</param>
+        /// <param name="version">The vector clock that orders this gossip against gossip from other nodes.</param>
+        /// <param name="tombstones">The nodes this cluster has removed. See <see cref="Tombstones"/>. Defaults to none.</param>
+        /// <exception cref="ArgumentException">
+        /// Thrown when the arguments break an invariant - a member with status <see cref="MemberStatus.Removed"/>,
+        /// a seen or reachability entry for a node that is not a member, or a node that is both a member and a
+        /// tombstone. Only checked when <see cref="Cluster.IsAssertInvariantsEnabled"/> is set.
+        /// </exception>
         public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview, VectorClock version,
-            ImmutableDictionary<UniqueAddress, long> tombstones)
+            ImmutableDictionary<UniqueAddress, long> tombstones = null)
         {
             _members = members;
             _overview = overview;
             _version = version;
-            _tombstones = tombstones;
+            _tombstones = tombstones ?? EmptyTombstones;
 
             _membersMap = new Lazy<ImmutableDictionary<UniqueAddress, Member>>(
                 () => members.ToImmutableDictionary(m => m.UniqueAddress, m => m));
@@ -162,13 +157,13 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Creates a gossip that matches this one except for the arguments that are supplied.
         /// </summary>
-        /// <param name="members">TBD</param>
-        /// <param name="overview">TBD</param>
-        /// <param name="version">TBD</param>
-        /// <param name="tombstones">The nodes this cluster has removed. See <see cref="Tombstones"/>.</param>
-        /// <returns>TBD</returns>
+        /// <param name="members">The new members, or <c>null</c> to keep the current ones.</param>
+        /// <param name="overview">The new overview, or <c>null</c> to keep the current one.</param>
+        /// <param name="version">The new vector clock, or <c>null</c> to keep the current one.</param>
+        /// <param name="tombstones">The new tombstones, or <c>null</c> to keep the current ones. See <see cref="Tombstones"/>.</param>
+        /// <returns>A new gossip. This method always allocates, even when nothing changed.</returns>
         public Gossip Copy(ImmutableSortedSet<Member> members = null, GossipOverview overview = null,
             VectorClock version = null, ImmutableDictionary<UniqueAddress, long> tombstones = null)
         {
@@ -219,10 +214,11 @@ namespace Akka.Cluster
         Lazy<ImmutableDictionary<UniqueAddress, Member>> _membersMap;
 
         /// <summary>
-        /// Increments the version for this 'Node'.
+        /// Bumps this node's entry in the vector clock, marking the gossip as changed here. Callers do
+        /// this whenever they alter the cluster state so peers can tell the new gossip descends from the old.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The vector clock entry to bump, normally the caller's own.</param>
+        /// <returns>A copy of this gossip with the bumped clock.</returns>
         public Gossip Increment(VectorClock.Node node)
         {
             return Copy(version: _version.Increment(node));
@@ -231,8 +227,9 @@ namespace Akka.Cluster
         /// <summary>
         /// Adds a member to the member node ring.
         /// </summary>
-        /// <param name="member">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="member">The member to add.</param>
+        /// <returns>This gossip when the ring already holds that node. Membership is keyed by address, so
+        /// this will not replace an existing member that differs only in status - use <see cref="Copy"/> for that.</returns>
         public Gossip AddMember(Member member)
         {
             if (_members.Contains(member)) return this;
@@ -242,8 +239,8 @@ namespace Akka.Cluster
         /// <summary>
         /// Marks the gossip as seen by this node (address) by updating the address entry in the 'gossip.overview.seen'
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The node that has seen this version of the gossip.</param>
+        /// <returns>This gossip when the node had already seen it.</returns>
         public Gossip Seen(UniqueAddress node)
         {
             if (SeenByNode(node)) return this;
@@ -253,8 +250,8 @@ namespace Akka.Cluster
         /// <summary>
         /// Marks the gossip as seen by only this node (address) by replacing the 'gossip.overview.seen'
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The only node that has seen this version of the gossip.</param>
+        /// <returns>A copy of this gossip whose seen table holds <paramref name="node"/> alone.</returns>
         public Gossip OnlySeen(UniqueAddress node)
         {
             return Copy(overview: _overview.Copy(seen: ImmutableHashSet.Create(node)));
@@ -435,12 +432,16 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// The reachability table with every record written by a member with status
+        /// <see cref="MemberStatus.Down"/> stripped out. A downed node's own view no longer counts,
+        /// so its old unreachability records must not keep another node marked unreachable forever.
+        /// Computed once on first read.
         /// </summary>
         public Lazy<Reachability> ReachabilityExcludingDownedObservers { get; }
 
         /// <summary>
-        /// TBD
+        /// Every role held by any current member, deduplicated. Drives the per-role leader table, and the
+        /// serializer uses it to build the role table that member entries index into.
         /// </summary>
         public ImmutableHashSet<string> AllRoles
         {
@@ -448,7 +449,8 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// <c>true</c> when the cluster has exactly one member. The daemon skips gossiping and reaping
+        /// unreachable members in that case - there is no peer to talk to and nobody to watch.
         /// </summary>
         public bool IsSingletonCluster
         {
@@ -459,8 +461,8 @@ namespace Akka.Cluster
         /// Returns `true` if <paramref name="fromAddress"/> should be able to reach <paramref name="toAddress"/> 
         /// based on the unreachability data.
         /// </summary>
-        /// <param name="fromAddress">TBD</param>
-        /// <param name="toAddress">TBD</param>
+        /// <param name="fromAddress">The observing node.</param>
+        /// <param name="toAddress">The node being observed. A node that is not a member is never reachable.</param>
         public bool IsReachable(UniqueAddress fromAddress, UniqueAddress toAddress)
         {
             if (!HasMember(toAddress)) 
@@ -471,10 +473,11 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Looks up a member by address.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The address to look up.</param>
+        /// <returns>The member, or a placeholder with status <see cref="MemberStatus.Removed"/> when the
+        /// node is not in the ring. Callers that need to tell the two apart should use <see cref="HasMember"/>.</returns>
         public Member GetMember(UniqueAddress node)
         {
             return _membersMap.Value.GetOrElse(node,
@@ -482,10 +485,10 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Checks whether a node is in the member ring.
         /// </summary>
-        /// <param name="node">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="node">The address to look for.</param>
+        /// <returns><c>true</c> when the node is a member, whatever its status.</returns>
         public bool HasMember(UniqueAddress node)
         {
             return _membersMap.Value.ContainsKey(node);
@@ -493,7 +496,10 @@ namespace Akka.Cluster
 
 
         /// <summary>
-        /// TBD
+        /// The member that joined most recently, i.e. the one with the highest up-number. A member that
+        /// has not reached <see cref="MemberStatus.Up"/> yet carries an up-number of <see cref="int.MaxValue"/>
+        /// and is counted as 0 here, so it does not outrank a member that is already up. The leader reads
+        /// this to pick the next up-number to hand out.
         /// </summary>
         /// <exception cref="Exception">
         /// This exception is thrown when there are no members in the cluster.
@@ -509,10 +515,14 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Drops a node's entry from the vector clock, leaving members and tombstones alone.
+        ///
+        /// This is the clock half of what <see cref="RemoveAll"/> does. Gossip reception calls it when two
+        /// concurrent gossips disagree about a removal, so the merged clock matches the one the leader
+        /// produced when it removed the node.
         /// </summary>
-        /// <param name="removedNode">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="removedNode">The clock entry to drop, named after the removed node.</param>
+        /// <returns>This gossip when the clock had no entry for that node.</returns>
         public Gossip Prune(VectorClock.Node removedNode)
         {
             var newVersion = Version.Prune(removedNode);
@@ -522,6 +532,12 @@ namespace Akka.Cluster
                 return Copy(version: newVersion);
         }
 
+        /// <summary>
+        /// Sets a member's status to <see cref="MemberStatus.Down"/> and drops it from the seen table, so a
+        /// downed node no longer counts towards convergence.
+        /// </summary>
+        /// <param name="member">The member to mark as down.</param>
+        /// <returns>A copy of this gossip with the member replaced.</returns>
         public Gossip MarkAsDown(Member member)
         {
             // replace member (changed status)
@@ -552,21 +568,22 @@ namespace Akka.Cluster
         readonly Reachability _reachability;
 
         /// <summary>
-        /// TBD
+        /// Creates an overview that nobody has seen and where every node is reachable.
         /// </summary>
+        /// <inheritdoc cref="GossipOverview(ImmutableHashSet{UniqueAddress}, Reachability)"/>
         public GossipOverview() : this(ImmutableHashSet.Create<UniqueAddress>(), Reachability.Empty) { }
 
         /// <summary>
-        /// TBD
+        /// Creates an overview from a reachability table that nobody has seen yet.
         /// </summary>
-        /// <param name="reachability">TBD</param>
+        /// <inheritdoc cref="GossipOverview(ImmutableHashSet{UniqueAddress}, Reachability)"/>
         public GossipOverview(Reachability reachability) : this(ImmutableHashSet.Create<UniqueAddress>(), reachability) { }
 
         /// <summary>
-        /// TBD
+        /// Creates an overview from a seen table and a reachability table.
         /// </summary>
-        /// <param name="seen">TBD</param>
-        /// <param name="reachability">TBD</param>
+        /// <param name="seen">The nodes that have seen the current version of the gossip.</param>
+        /// <param name="reachability">Which observers consider which members unreachable.</param>
         public GossipOverview(ImmutableHashSet<UniqueAddress> seen, Reachability reachability)
         {
             _seen = seen;
@@ -574,22 +591,24 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// TBD
+        /// Creates an overview that matches this one except for the arguments that are supplied.
         /// </summary>
-        /// <param name="seen">TBD</param>
-        /// <param name="reachability">TBD</param>
-        /// <returns>TBD</returns>
+        /// <param name="seen">The new seen table, or <c>null</c> to keep the current one.</param>
+        /// <param name="reachability">The new reachability table, or <c>null</c> to keep the current one.</param>
+        /// <returns>A new overview. This method always allocates, even when nothing changed.</returns>
         public GossipOverview Copy(ImmutableHashSet<UniqueAddress> seen = null, Reachability reachability = null)
         {
             return new GossipOverview(seen ?? _seen, reachability ?? _reachability);
         }
 
         /// <summary>
-        /// TBD
+        /// The nodes that have seen the current version of the gossip. Convergence is reached once every
+        /// member that counts has seen it. Merging two gossips yields a version nobody has seen, so the
+        /// table starts over as empty.
         /// </summary>
         public ImmutableHashSet<UniqueAddress> Seen { get { return _seen; } }
         /// <summary>
-        /// TBD
+        /// Which observers consider which members unreachable, as reported by each node's failure detector.
         /// </summary>
         public Reachability Reachability { get { return _reachability; } }
 
@@ -652,19 +671,20 @@ namespace Akka.Cluster
         readonly VectorClock _version;
 
         /// <summary>
-        /// TBD
+        /// The node that sent this status - either the one opening the chat or the one replying to it.
         /// </summary>
         public UniqueAddress From { get { return _from; } }
         /// <summary>
-        /// TBD
+        /// The vector clock of the sender's gossip. The receiver compares it against its own to decide
+        /// whether to reply with a <see cref="GossipEnvelope"/>, reply with its own status, or say nothing.
         /// </summary>
         public VectorClock Version { get { return _version; } }
 
         /// <summary>
-        /// TBD
+        /// Creates a status message advertising what the sender knows.
         /// </summary>
-        /// <param name="from">TBD</param>
-        /// <param name="version">TBD</param>
+        /// <param name="from">The sending node.</param>
+        /// <param name="version">The vector clock of the sender's gossip.</param>
         public GossipStatus(UniqueAddress from, VectorClock version)
         {
             _from = from;
