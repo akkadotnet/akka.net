@@ -15,8 +15,8 @@ namespace Akka.DistributedData
 {
     internal class ReadAggregator : ReadWriteAggregator
     {
-        internal static Props Props(IKey key, IReadConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, DataEnvelope localValue, IActorRef replyTo) =>
-            Actor.Props.Create(() => new ReadAggregator(key, consistency, req, nodes, unreachable, shuffle, localValue, replyTo)).WithDeploy(Deploy.Local);
+        internal static Props Props(IKey key, IReadConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, DataEnvelope localValue, IActorRef replyTo, ActorPath replicaPath) =>
+            Actor.Props.Create(() => new ReadAggregator(key, consistency, req, nodes, unreachable, shuffle, localValue, replyTo, replicaPath)).WithDeploy(Deploy.Local);
 
         private readonly IKey _key;
         private readonly IReadConsistency _consistency;
@@ -26,8 +26,8 @@ namespace Akka.DistributedData
 
         private DataEnvelope _result;
 
-        public ReadAggregator(IKey key, IReadConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, DataEnvelope localValue, IActorRef replyTo)
-            : base(nodes, unreachable, consistency.Timeout, shuffle)
+        public ReadAggregator(IKey key, IReadConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, DataEnvelope localValue, IActorRef replyTo, ActorPath replicaPath = null)
+            : base(nodes, unreachable, consistency.Timeout, shuffle, replicaPath)
         {
             _key = key;
             _consistency = consistency;

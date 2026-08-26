@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using Akka.Actor;
 using Akka.DistributedData;
+using Akka.DistributedData.Internal;
 using Akka.Event;
 using Akka.Pattern;
 using Akka.Util;
@@ -186,6 +187,9 @@ namespace Akka.Cluster.Sharding.Internal
         {
             switch (message)
             {
+                case ReplicatorStarted started when _replicator.Equals(started.Replicator):
+                    return true;
+
                 case RememberEntitiesShardStore.GetEntities _:
                     // not supported, but we may get several if the shard timed out and retried
                     _log.Debug("Another get entities request after responding to one, not expected/supported, ignoring");
@@ -229,6 +233,10 @@ namespace Akka.Cluster.Sharding.Internal
             {
                 switch (message)
                 {
+                    case ReplicatorStarted started when _replicator.Equals(started.Replicator):
+                        LoadEntities(Enumerable.Range(0, numberOfKeys).Where(i => !gotKeys.Contains(i)));
+                        return true;
+
                     case GetSuccess g when g.Request is int i:
                         var key = _keys[i];
                         var ids2 = g.Get(key).Elements;
@@ -323,6 +331,11 @@ namespace Akka.Cluster.Sharding.Internal
                 {
                     switch (message)
                     {
+                        case ReplicatorStarted started when _replicator.Equals(started.Replicator):
+                            foreach (var (_, updateForEvents) in updatesLeft)
+                                _replicator.Tell(updateForEvents.Update);
+                            return true;
+
                         case UpdateSuccess m when m.Request is IImmutableSet<IEvt> evts:
                             _log.Debug("The DDataShard state was successfully updated for [{0}]", string.Join(", ", evts));
                             var remainingAfterThis = updatesLeft.Remove(evts);
@@ -384,11 +397,28 @@ namespace Akka.Cluster.Sharding.Internal
 
         private void LoadAllEntities()
         {
-            foreach (var i in Enumerable.Range(0, numberOfKeys))
+            LoadEntities(Enumerable.Range(0, numberOfKeys));
+        }
+
+        private void LoadEntities(IEnumerable<int> keyIndexes)
+        {
+            foreach (var i in keyIndexes)
             {
                 var key = _keys[i];
                 _replicator.Tell(Dsl.Get(key, _readMajority, i));
             }
+        }
+
+        protected override void PreStart()
+        {
+            Context.System.EventStream.Subscribe(Self, typeof(ReplicatorStarted));
+            base.PreStart();
+        }
+
+        protected override void PostStop()
+        {
+            Context.System.EventStream.Unsubscribe(Self, typeof(ReplicatorStarted));
+            base.PostStop();
         }
     }
 }

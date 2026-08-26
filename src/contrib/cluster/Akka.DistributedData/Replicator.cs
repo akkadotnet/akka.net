@@ -262,8 +262,24 @@ namespace Akka.DistributedData
     /// </summary>
     internal sealed class Replicator : UntypedActor, IWithUnboundedStash
     {
+        private sealed class PublishReplicatorStarted : INoSerializationVerificationNeeded
+        {
+            public static readonly PublishReplicatorStarted Instance = new();
+
+            private PublishReplicatorStarted()
+            {
+            }
+        }
+
         public static Props Props(ReplicatorSettings settings) =>
-            Actor.Props.Create(() => new Replicator(settings)).WithDeploy(Deploy.Local).WithDispatcher(settings.Dispatcher);
+            Actor.Props.Create(() => new Replicator(settings, false))
+                .WithDeploy(Deploy.Local)
+                .WithDispatcher(settings.Dispatcher);
+
+        internal static Props PropsWithParentReplicaPath(ReplicatorSettings settings) =>
+            Actor.Props.Create(() => new Replicator(settings, true))
+                .WithDeploy(Deploy.Local)
+                .WithDispatcher(settings.Dispatcher);
 
         private static readonly Digest DeletedDigest = ByteString.Empty;
         private static readonly Digest LazyDigest = ByteString.CopyFrom(new byte[] { 0 });
@@ -272,6 +288,8 @@ namespace Akka.DistributedData
         private static readonly DataEnvelope DeletedEnvelope = new(DeletedData.Instance);
 
         private readonly ReplicatorSettings _settings;
+        private readonly ActorPath _replicaPath;
+        private readonly bool _publishReplicatorStarted;
 
         private readonly Cluster.Cluster _cluster;
         private readonly Address _selfAddress;
@@ -363,9 +381,11 @@ namespace Akka.DistributedData
         private int _count;
         private DateTime _startTime;
 
-        public Replicator(ReplicatorSettings settings)
+        public Replicator(ReplicatorSettings settings, bool useParentAsReplicaPath = false)
         {
             _settings = settings;
+            _replicaPath = useParentAsReplicaPath ? Context.Parent.Path : Self.Path;
+            _publishReplicatorStarted = useParentAsReplicaPath;
             _cluster = Cluster.Cluster.Get(Context.System);
             _selfAddress = _cluster.SelfAddress;
             _selfUniqueAddress = _cluster.SelfUniqueAddress;
@@ -447,6 +467,9 @@ namespace Akka.DistributedData
         {
             if (_hasDurableKeys) _durableStore.Tell(LoadAll.Instance);
 
+            if (_publishReplicatorStarted)
+                Self.Tell(PublishReplicatorStarted.Instance);
+
             // not using LeaderChanged/RoleLeaderChanged because here we need one node independent of data center
             _cluster.Subscribe(Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
                 typeof(ClusterEvent.IMemberEvent), typeof(ClusterEvent.IReachabilityEvent));
@@ -480,6 +503,10 @@ namespace Akka.DistributedData
         {
             switch (message)
             {
+                case PublishReplicatorStarted _:
+                    Context.System.EventStream.Publish(new ReplicatorStarted(Context.Parent));
+                    return true;
+
                 case LoadData load:
                     _count += load.Data.Count;
                     foreach (var entry in load.Data)
@@ -539,6 +566,10 @@ namespace Akka.DistributedData
         {
             switch (message)
             {
+                case PublishReplicatorStarted _:
+                    Context.System.EventStream.Publish(new ReplicatorStarted(Context.Parent));
+                    return true;
+
                 case IDestinationSystemUid msg:
                     if (msg.ToSystemUid.HasValue && msg.ToSystemUid != _selfUniqueAddress.Uid)
                     {
@@ -629,7 +660,7 @@ namespace Akka.DistributedData
             {
                 var excludeExiting = consistency is ReadMajorityPlus or ReadAll;
 
-                Context.ActorOf(ReadAggregator.Props(key, consistency, req, NodesForReadWrite(excludeExiting), _unreachable, !_settings.PreferOldest, localValue, Sender)
+                Context.ActorOf(ReadAggregator.Props(key, consistency, req, NodesForReadWrite(excludeExiting), _unreachable, !_settings.PreferOldest, localValue, Sender, _replicaPath)
                     .WithDispatcher(Context.Props.Dispatcher));
             }
         }
@@ -747,7 +778,7 @@ namespace Akka.DistributedData
                     var excludeExiting = consistency is WriteMajorityPlus or WriteAll;
 
                     var writeAggregator = Context.ActorOf(WriteAggregator
-                        .Props(key, writeEnvelope, writeDelta, consistency, request, NodesForReadWrite(excludeExiting), _unreachable, shuffle, Sender, durable)
+                        .Props(key, writeEnvelope, writeDelta, consistency, request, NodesForReadWrite(excludeExiting), _unreachable, shuffle, Sender, durable, _replicaPath)
                         .WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
@@ -873,7 +904,7 @@ namespace Akka.DistributedData
                     var excludeExiting = consistency is WriteMajorityPlus or WriteAll;
 
                     var writeAggregator = Context.ActorOf(WriteAggregator
-                        .Props(key, DeletedEnvelope, null, consistency, request, NodesForReadWrite(excludeExiting), _unreachable, !_settings.PreferOldest, Sender, durable)
+                        .Props(key, DeletedEnvelope, null, consistency, request, NodesForReadWrite(excludeExiting), _unreachable, !_settings.PreferOldest, Sender, durable, _replicaPath)
                         .WithDispatcher(Context.Props.Dispatcher));
 
                     if (durable)
@@ -1137,7 +1168,7 @@ namespace Akka.DistributedData
             return null;
         }
 
-        private ActorSelection Replica(Address address) => Context.ActorSelection(Self.Path.ToStringWithAddress(address));
+        private ActorSelection Replica(Address address) => Context.ActorSelection(_replicaPath.ToStringWithAddress(address));
 
         private bool IsOtherDifferent(string key, Digest otherDigest)
         {

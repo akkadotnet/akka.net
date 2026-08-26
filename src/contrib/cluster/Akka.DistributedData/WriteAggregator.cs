@@ -16,8 +16,8 @@ namespace Akka.DistributedData
 {
     internal class WriteAggregator : ReadWriteAggregator
     {
-        public static Props Props(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, IActorRef replyTo, bool durable) =>
-            Actor.Props.Create(() => new WriteAggregator(key, envelope, delta, consistency, req, nodes, unreachable, shuffle, replyTo, durable)).WithDeploy(Deploy.Local);
+        public static Props Props(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, bool shuffle, IActorRef replyTo, bool durable, ActorPath replicaPath) =>
+            Actor.Props.Create(() => new WriteAggregator(key, envelope, delta, consistency, req, nodes, unreachable, shuffle, replyTo, durable, replicaPath)).WithDeploy(Deploy.Local);
 
         private readonly IKey _key;
         private readonly DataEnvelope _envelope;
@@ -33,8 +33,8 @@ namespace Akka.DistributedData
         private ImmutableHashSet<Address> _gotNackFrom;
 
         public WriteAggregator(IKey key, DataEnvelope envelope, Delta delta, IWriteConsistency consistency, object req, IImmutableList<Address> nodes,
-            IImmutableSet<Address> unreachable, bool shuffle, IActorRef replyTo, bool durable)
-            : base(nodes, unreachable, consistency.Timeout, shuffle)
+            IImmutableSet<Address> unreachable, bool shuffle, IActorRef replyTo, bool durable, ActorPath replicaPath = null)
+            : base(nodes, unreachable, consistency.Timeout, shuffle, replicaPath)
         {
             _selfUniqueAddress = Cluster.Cluster.Get(Context.System).SelfUniqueAddress;
             _key = key;

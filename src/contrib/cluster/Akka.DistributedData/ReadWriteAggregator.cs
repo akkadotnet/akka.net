@@ -33,6 +33,7 @@ namespace Akka.DistributedData
 
         private readonly ICancelable _sendToSecondarySchedule;
         private readonly ICancelable _timeoutSchedule;
+        private readonly ActorPath _replicaPath;
 
         private ILoggingAdapter _log;
 
@@ -47,12 +48,18 @@ namespace Akka.DistributedData
 
         protected IImmutableSet<Address> Remaining;
 
-        protected ReadWriteAggregator(IImmutableList<Address> nodes, IImmutableSet<Address> unreachable, TimeSpan timeout, bool shuffle)
+        protected ReadWriteAggregator(
+            IImmutableList<Address> nodes,
+            IImmutableSet<Address> unreachable,
+            TimeSpan timeout,
+            bool shuffle,
+            ActorPath replicaPath)
         {
             Timeout = timeout;
             Nodes = nodes;
             Unreachable = unreachable;
             Shuffle = shuffle;
+            _replicaPath = replicaPath ?? Context.Parent.Path;
             Reachable = nodes.Except(unreachable).ToImmutableList();
             Remaining = Nodes.ToImmutableHashSet();
             _sendToSecondarySchedule = Context.System.Scheduler.ScheduleTellOnceCancelable((int)Timeout.TotalMilliseconds / 5, Self, SendToSecondary.Instance, Self);
@@ -95,7 +102,7 @@ namespace Akka.DistributedData
 
         protected virtual ActorSelection Replica(Address address)
         {
-            return Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(address));
+            return Context.ActorSelection(_replicaPath.ToStringWithAddress(address));
         }
     }
 }

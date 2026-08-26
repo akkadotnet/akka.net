@@ -15,6 +15,7 @@ using Akka.Cluster.Sharding.Internal;
 using Akka.DistributedData;
 using Akka.Event;
 using Akka.Pattern;
+using ReplicatorStarted = Akka.DistributedData.Internal.ReplicatorStarted;
 
 namespace Akka.Cluster.Sharding
 {
@@ -169,6 +170,10 @@ namespace Akka.Cluster.Sharding
             {
                 switch (message)
                 {
+                    case ReplicatorStarted started when IsReplicator(started):
+                        GetCoordinatorState();
+                        return true;
+
                     case GetSuccess g when g.Key.Equals(_coordinatorStateKey):
                         var existingState = g.Get(_coordinatorStateKey).Value.WithRememberEntities(Settings.RememberEntities);
                         if (VerboseDebug)
@@ -269,6 +274,9 @@ namespace Akka.Cluster.Sharding
         {
             switch (message)
             {
+                case ReplicatorStarted started when IsReplicator(started):
+                    return true;
+
                 case StateInitialized _:
                     UnstashOneGetShardHomeRequest();
                     Stash.UnstashAll();
@@ -334,6 +342,11 @@ namespace Akka.Cluster.Sharding
             {
                 switch (message)
                 {
+                    case ReplicatorStarted started when IsReplicator(started):
+                        if (waitingForStateWrite)
+                            SendCoordinatorStateUpdate(evt);
+                        return true;
+
                     case UpdateSuccess m when m.Key.Equals(_coordinatorStateKey) && m.Request.Equals(evt):
                         if (!waitingForRememberShard)
                         {
@@ -519,7 +532,7 @@ namespace Akka.Cluster.Sharding
 
         private void Activate()
         {
-            Context.Become(msg => _baseImpl.Active(msg) || ReceiveLateRememberedEntities(msg));
+            Context.Become(msg => IsReplicatorStarted(msg) || _baseImpl.Active(msg) || ReceiveLateRememberedEntities(msg));
             Log.Info("{0}: ShardCoordinator was moved to the active state with [{1}] shards", TypeName, State.Shards.Count);
             if (VerboseDebug)
                 Log.Debug("{0}: Full ShardCoordinator initial state {1}", TypeName, State);
@@ -609,6 +622,12 @@ namespace Akka.Cluster.Sharding
                 reg => reg.WithValue(_selfUniqueAddress, s)));
         }
 
+        private bool IsReplicatorStarted(object message) =>
+            message is ReplicatorStarted started && IsReplicator(started);
+
+        private bool IsReplicator(ReplicatorStarted started) =>
+            _replicator.Equals(started.Replicator);
+
         private void RememberShardAllocated(string newShard)
         {
             Log.Debug("{0}: Remembering shard allocation [{1}]", TypeName, newShard);
@@ -658,11 +677,13 @@ namespace Akka.Cluster.Sharding
 
         protected override void PreStart()
         {
+            Context.System.EventStream.Subscribe(Self, typeof(ReplicatorStarted));
             _baseImpl.PreStart();
         }
 
         protected override void PostStop()
         {
+            Context.System.EventStream.Unsubscribe(Self, typeof(ReplicatorStarted));
             base.PostStop();
             _baseImpl.PostStop();
         }

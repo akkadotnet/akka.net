@@ -86,15 +86,20 @@ namespace Akka.DistributedData
             {
                 var name = config.GetString("name", null);
                 Replicator = _settings.RestartReplicatorOnFailure 
-                    ? system.ActorOf(GetSupervisedReplicator(_settings, name), name+"Supervisor")
+                    ? system.ActorOf(SupervisedReplicatorProps(_settings, name), name+"Supervisor")
                     : system.ActorOf(Akka.DistributedData.Replicator.Props(_settings), name);
             }
         }
 
-        private static Props GetSupervisedReplicator(ReplicatorSettings settings, string name) => BackoffSupervisor.Props(
+        internal static Props SupervisedReplicatorProps(
+            ReplicatorSettings settings,
+            string childName,
+            bool useParentAsReplicaPath = false) => BackoffSupervisor.Props(
                         Backoff.OnStop(
-                                childProps: Akka.DistributedData.Replicator.Props(settings),
-                                childName: name,
+                                childProps: useParentAsReplicaPath
+                                    ? Akka.DistributedData.Replicator.PropsWithParentReplicaPath(settings)
+                                    : Akka.DistributedData.Replicator.Props(settings),
+                                childName: childName,
                                 minBackoff: TimeSpan.FromSeconds(3),
                                 maxBackoff: TimeSpan.FromSeconds(300),
                                 randomFactor: 0.2,

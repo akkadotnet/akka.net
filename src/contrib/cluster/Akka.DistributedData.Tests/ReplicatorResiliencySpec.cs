@@ -115,6 +115,48 @@ namespace Akka.DistributedData.Tests
             await DurableStoreActorCrash();
         }
 
+        [Fact]
+        public async Task Parent_path_supervisor_should_interoperate_with_a_direct_replicator()
+        {
+            var settings = ReplicatorSettings.Create(Sys)
+                .WithGossipInterval(TimeSpan.FromSeconds(1))
+                .WithMaxDeltaElements(10);
+            var directReplicator = _sys1.ActorOf(Replicator.Props(settings), "mixedReplicator");
+            var supervisedReplicator = _sys2.ActorOf(
+                DistributedData.SupervisedReplicatorProps(
+                    settings,
+                    childName: "replicator",
+                    useParentAsReplicaPath: true),
+                "mixedReplicator");
+
+            await InitCluster();
+
+            var timeout = Dilated(5.Seconds());
+            var writeTwo = new WriteTo(2, timeout);
+            var sys1Probe = CreateTestProbe(_sys1);
+            var sys2Probe = CreateTestProbe(_sys2);
+
+            var directToSupervisedKey = new GSetKey<string>("direct-to-supervised");
+            directReplicator.Tell(
+                Dsl.Update(directToSupervisedKey, GSet<string>.Empty, writeTwo, set => set.Add("direct")),
+                sys1Probe.Ref);
+            await sys1Probe.ExpectMsgAsync<UpdateSuccess>(timeout);
+
+            supervisedReplicator.Tell(Dsl.Get(directToSupervisedKey, ReadLocal.Instance), sys2Probe.Ref);
+            var directToSupervised = await sys2Probe.ExpectMsgAsync<GetSuccess>(timeout);
+            directToSupervised.Get(directToSupervisedKey).Elements.Should().Contain("direct");
+
+            var supervisedToDirectKey = new GSetKey<string>("supervised-to-direct");
+            supervisedReplicator.Tell(
+                Dsl.Update(supervisedToDirectKey, GSet<string>.Empty, writeTwo, set => set.Add("supervised")),
+                sys2Probe.Ref);
+            await sys2Probe.ExpectMsgAsync<UpdateSuccess>(timeout);
+
+            directReplicator.Tell(Dsl.Get(supervisedToDirectKey, ReadLocal.Instance), sys1Probe.Ref);
+            var supervisedToDirect = await sys1Probe.ExpectMsgAsync<GetSuccess>(timeout);
+            supervisedToDirect.Get(supervisedToDirectKey).Elements.Should().Contain("supervised");
+        }
+
         public async Task DurableStoreActorCrash()
         {
             const string replicatorActorPath = "/user/replicatorSuper/replicator";

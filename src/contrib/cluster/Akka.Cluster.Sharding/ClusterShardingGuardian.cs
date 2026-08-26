@@ -314,15 +314,19 @@ namespace Akka.Cluster.Sharding
             {
                 // one replicator per role
                 var role = settings.Role ?? string.Empty;
-                if (_replicatorsByRole.TryGetValue(role, out var aref)) return aref;
-                else
-                {
-                    var name = string.IsNullOrEmpty(settings.Role) ? "replicator" : Uri.EscapeDataString(settings.Role) + "Replicator";
-                    var replicatorRef = Context.ActorOf(DistributedData.Replicator.Props(GetReplicatorSettings(settings)), name);
+                if (_replicatorsByRole.TryGetValue(role, out var replicator))
+                    return replicator;
 
-                    _replicatorsByRole = _replicatorsByRole.SetItem(role, replicatorRef);
-                    return replicatorRef;
-                }
+                var name = string.IsNullOrEmpty(settings.Role) ? "replicator" : Uri.EscapeDataString(settings.Role) + "Replicator";
+                var replicatorRef = Context.ActorOf(
+                    Akka.DistributedData.DistributedData.SupervisedReplicatorProps(
+                        GetReplicatorSettings(settings),
+                        childName: "replicator",
+                        useParentAsReplicaPath: true),
+                    name);
+
+                _replicatorsByRole = _replicatorsByRole.SetItem(role, replicatorRef);
+                return replicatorRef;
             }
             else
                 return Context.System.DeadLetters;

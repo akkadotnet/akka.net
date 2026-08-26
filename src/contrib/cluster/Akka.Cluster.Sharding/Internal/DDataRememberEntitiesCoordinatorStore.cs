@@ -9,6 +9,7 @@ using System;
 using System.Collections.Immutable;
 using Akka.Actor;
 using Akka.DistributedData;
+using Akka.DistributedData.Internal;
 using Akka.Event;
 
 namespace Akka.Cluster.Sharding.Internal
@@ -71,6 +72,11 @@ namespace Akka.Cluster.Sharding.Internal
         {
             switch (message)
             {
+                case ReplicatorStarted started when _replicator.Equals(started.Replicator):
+                    if (_allShards is null)
+                        GetAllShards();
+                    return true;
+
                 case RememberEntitiesCoordinatorStore.GetShards _:
                     if (_allShards != null)
                     {
@@ -128,6 +134,19 @@ namespace Akka.Cluster.Sharding.Internal
             }
             return false;
         }
+
+        protected override void PreStart()
+        {
+            Context.System.EventStream.Subscribe(Self, typeof(ReplicatorStarted));
+            base.PreStart();
+        }
+
+        protected override void PostStop()
+        {
+            Context.System.EventStream.Unsubscribe(Self, typeof(ReplicatorStarted));
+            base.PostStop();
+        }
+
         private void OnGotAllShards(IImmutableSet<ShardId> shardIds)
         {
             if (_coordinatorWaitingForShards != null)
