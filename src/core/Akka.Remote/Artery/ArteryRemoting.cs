@@ -338,8 +338,9 @@ namespace Akka.Remote.Artery
             _log.Info("Starting Artery TCP remoting on [{0}:{1}]", _settings.CanonicalHostname, _settings.CanonicalPort);
             _log.Warning(
                 "Artery TCP remoting is EXPERIMENTAL and under active development -- reliable system-message " +
-                "delivery (seq/Ack/Nack/resend over the control stream) and outbound lanes " +
-                "(akka.remote.artery.advanced.outbound-lanes) have landed; no inbound lanes/compression yet. " +
+                "delivery (seq/Ack/Nack/resend over the control stream), outbound lanes " +
+                "(akka.remote.artery.advanced.outbound-lanes), and inbound lanes " +
+                "(akka.remote.artery.advanced.inbound-lanes) have landed; no compression yet. " +
                 "Do not use in production.");
 
             _materializer = ActorMaterializer.Create(System);
@@ -734,14 +735,30 @@ namespace Akka.Remote.Artery
             // InboundHandshake). Gated on STAGE INSERTION at materialization -- with test-mode off
             // (_testState null, the default) this composes the identical chain as before, no test
             // stage and no per-element checks ever exist. Covers ALL accepted connections
-            // (Ordinary/Control/Large feed this same shape); a lanes>1 Ordinary connection's
-            // lane-routed traffic bypasses this sink and gets the equivalent check inside
-            // ArteryInboundProcessingStage's lane path (see the _testState ctor argument above).
+            // (Ordinary/Control/Large feed this same shape).
+            //
+            // There is one exception. If inbound-lanes is more than 1, an ordinary connection sends
+            // its traffic to the lanes and not to this sink. ProcessFrameLaneMode in
+            // ArteryInboundProcessingStage therefore does the three per-envelope checks in its own
+            // code: the known-origin check from InboundHandshakeStage, the test-mode blackhole check
+            // from this stage, and the quarantine check from InboundQuarantineCheckStage. The
+            // quarantine check calls the shared ShouldNotifyOrigin method.
             if (_testState is { } inboundTestState)
                 decoded = decoded.Via(Flow.FromGraph(new InboundTestStage(_inboundContext!, inboundTestState)));
 
+            // InboundQuarantineCheckStage discards traffic from a uid that this system has
+            // quarantined, and sends the origin a new quarantine notice. Its remarks give the full
+            // procedure.
+            //
+            // It goes here, after the handshake stage and before the system-message acker, because
+            // system messages (Ack, Nack, Watch, Unwatch) must also be discarded. A later position
+            // would let them reach the acker first.
+            //
+            // Ordinary, control and large connections all use this one sink, so one instance is
+            // sufficient.
             var inboundSink = decoded
                 .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!)))
+                .Via(Flow.FromGraph(new InboundQuarantineCheckStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
                 .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));
 
@@ -1902,25 +1919,58 @@ namespace Akka.Remote.Artery
                     // Ordinary AND large-message (task 10.2) streams share this branch -- neither
                     // has its own heartbeat, so both rely on the CONTROL stream's death detection
                     // to trip their kill switch (see the ordinary-vs-large kill switch dispatch
-                    // just below, and the termination continuation's trip-both call). The
-                    // OutgoingConnection materialized task is captured for the same reason the
-                    // control branch captures it: a successful establish is the per-stream RECOVERY
-                    // signal that ends the reconnect-log outage cadence -- see
-                    // ReportOutboundConnectionEstablished.
+                    // just below, and the termination continuation's trip-both call).
+                    //
+                    // INNER CONNECTION RESTART (same fix, same rationale, and the same backoff
+                    // parameters as MaterializeOrdinaryOutboundWithLanes' connectionWithRestart):
+                    // the TCP connection ALONE is wrapped in RestartFlow.OnFailuresWithBackoff so a
+                    // transient connect/write fault (connection refused at a fresh materialization,
+                    // a port-rebind race, a reset mid-burst) retries the SOCKET -- with backoff, up
+                    // to OrdinaryConnectionMaxInnerRestarts times -- WITHOUT tearing down the
+                    // handshake/encode stages upstream. Before this wrapper, a single connect fault
+                    // tripped this stream's kill switch and discarded whatever the upstream stages
+                    // already had in flight. Only after the inner retries are exhausted does the
+                    // failure propagate and settle this stream, handing control to the OUTER tier
+                    // (ScheduleOutboundRestart) exactly as before.
+                    //
+                    // The [streamId] preamble is prepended INSIDE the restart factory --
+                    // load-bearing, same as the lanes path: every reconnect materializes a fresh
+                    // flow from this factory, so every new socket re-sends the connection header
+                    // first.
+                    var restartSettings = RestartSettings.Create(
+                            minBackoff: _settings.OutboundRestartBackoff,
+                            maxBackoff: TimeSpan.FromTicks(_settings.OutboundRestartBackoff.Ticks * 5),
+                            randomFactor: 0.1)
+                        .WithMaxRestarts(OrdinaryConnectionMaxInnerRestarts, _settings.OutboundRestartBackoff);
+
+                    var connectionWithRestart = RestartFlow.OnFailuresWithBackoff(
+                        () => Flow.Create<ReadOnlySequence<byte>>()
+                            .Prepend(Source.Single(BuildPreamble(streamId)))
+                            .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions), Keep.Right)
+                            .MapMaterializedValue(connectionTask =>
+                            {
+                                // Runs at EVERY (re-)materialization of the socket flow -- including
+                                // the inner RestartFlow retries -- so a successful establish anywhere
+                                // in the retry tiers ends the reconnect-log outage cadence for this
+                                // stream, the same per-stream RECOVERY signal captured before this
+                                // wrapper existed. See ReportOutboundConnectionEstablished.
+                                connectionTask.ContinueWith(ct =>
+                                {
+                                    if (ct.IsCompletedSuccessfully)
+                                        ReportOutboundConnectionEstablished(association, streamId, remoteAddress);
+                                }, TaskContinuationOptions.ExecuteSynchronously);
+                                return NotUsed.Instance;
+                            }),
+                        restartSettings);
+
                     UniqueKillSwitch killSwitch;
-                    Task connectionTask;
-                    (((killSwitch, terminationWatch), connectionTask), _) = preambleAndFrames
+                    ((killSwitch, terminationWatch), _) = frames
+                        .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
                         .ViaMaterialized(KillSwitches.Single<ReadOnlySequence<byte>>(), Keep.Right)
                         .WatchTermination(Keep.Both)
-                        .ViaMaterialized(_tcp!.OutgoingConnection(remoteEndpoint, options: _arterySocketOptions), Keep.Both)
+                        .Via(connectionWithRestart)
                         .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                         .Run(_materializer!);
-
-                    connectionTask.ContinueWith(ct =>
-                    {
-                        if (ct.IsCompletedSuccessfully)
-                            ReportOutboundConnectionEstablished(association, streamId, remoteAddress);
-                    }, TaskContinuationOptions.ExecuteSynchronously);
 
                     if (isLargeStream)
                         association.SetLargeOutboundKillSwitch(killSwitch);
@@ -2066,7 +2116,12 @@ namespace Akka.Remote.Artery
             if (streamId == ArteryStreamId.Large)
             {
                 if (!association.ShouldRestartLargeOutbound())
+                {
+                    // Same gate release as the ordinary branch below. See its remarks.
+                    if (!association.IsLargeShutDown)
+                        association.ResetLargeGate();
                     return;
+                }
 
                 association.ResetLargeGate();
                 System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
@@ -2081,7 +2136,29 @@ namespace Akka.Remote.Artery
             }
 
             if (!association.ShouldRestartOutbound())
+            {
+                // The quarantine, and not a shutdown, refused the restart from the timer. Release
+                // the materialize-once gate.
+                //
+                // The gate must not stay latched with no stream behind it. In that condition the
+                // on-demand path in EnqueueOutbound also cannot materialize a stream, because it
+                // tests the same gate. Ordinary sends to this peer then stop permanently. Two sends
+                // must still get through:
+                //   - An ActorSelectionMessage, which Send() lets through a quarantine on purpose.
+                //   - Any send to a new incarnation of the peer. A completed handshake replaces the
+                //     uid, which ends the quarantine.
+                // Neither can dial the peer while the gate is latched.
+                //
+                // The release does not start a reconnect. This method schedules nothing here, so
+                // the transport still does not spend a connection on a quarantined peer. A real
+                // send materializes the stream on demand, does a new handshake, and finds the peer
+                // if it restarted.
+                //
+                // A permanent shutdown keeps the gate latched, because that stream must stay dead.
+                if (!association.IsOutboundShutDown)
+                    association.ResetOutboundGate();
                 return;
+            }
 
             association.ResetOutboundGate();
             System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
@@ -2146,11 +2223,12 @@ namespace Akka.Remote.Artery
 
         /// <summary>
         /// Maximum number of INNER connection restarts (the <see cref="RestartFlow"/> wrapped
-        /// around the ordinary-lanes assembly's <c>Tcp.OutgoingConnection</c>) before the failure
-        /// is allowed to propagate and settle the whole assembly, handing control to the OUTER
-        /// restart tier (<see cref="ScheduleOutboundRestart"/>). Pekko's message-stream constant
-        /// (<c>ArteryTcpTransport.scala</c>: <c>val maxRestarts = if (streamId == ControlStreamId)
-        /// Int.MaxValue else 3</c>) -- deliberately a constant, not a new HOCON key.
+        /// around a stream's <c>Tcp.OutgoingConnection</c> -- both the ordinary-lanes assembly's
+        /// merged socket in <see cref="MaterializeOrdinaryOutboundWithLanes"/> and the
+        /// single-lane ordinary/large socket in <see cref="MaterializeOutboundStream"/> use this
+        /// same constant) before the failure is allowed to propagate and settle the whole stream,
+        /// handing control to the OUTER restart tier (<see cref="ScheduleOutboundRestart"/>).
+        /// Deliberately a constant, not a new HOCON key.
         /// </summary>
         private const int OrdinaryConnectionMaxInnerRestarts = 3;
 
