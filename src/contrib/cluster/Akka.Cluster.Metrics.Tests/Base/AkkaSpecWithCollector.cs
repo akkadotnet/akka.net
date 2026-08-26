@@ -70,24 +70,64 @@ namespace Akka.Cluster.Metrics.Tests.Base
         protected async Task<NodeMetrics> CreateTestDataAsync(TimeSpan timeout, string[] requiredMetrics)
         {
             using var cts = new CancellationTokenSource(timeout);
-            NodeMetrics metrics;
+            NodeMetrics metrics = null;
+            
+            // Give the collector extra time to initialize on first sample
+            // The DefaultCollector needs time for CPU timing initialization
+            var attemptCount = 0;
+            var exceptionCount = 0;
+            const int maxExceptionAttempts = 3;
             
             do
             {
                 cts.Token.ThrowIfCancellationRequested();
-                metrics = Collector.Sample();
                 
-                if (HasRequiredMetrics(metrics.Metrics, requiredMetrics))
+                try
                 {
-                    return metrics;
+                    metrics = Collector.Sample();
+                    
+                    if (HasRequiredMetrics(metrics.Metrics, requiredMetrics))
+                    {
+                        return metrics;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log but continue - collector might need more time to initialize
+                    // This handles platform-specific issues like process access on Linux
+                    exceptionCount++;
+                    if (exceptionCount >= maxExceptionAttempts)
+                    {
+                        throw new InvalidOperationException($"Metrics collector failed after {maxExceptionAttempts} consecutive exceptions. Last error: {ex.Message}", ex);
+                    }
+                    
+                    // Longer delay after exceptions to allow system to recover
+                    await Task.Delay(1000, cts.Token);
+                    attemptCount++;
+                    continue;
                 }
                 
-                // Small delay between attempts to avoid tight loop
-                await Task.Delay(100, cts.Token);
+                // Reset exception count on successful sample
+                exceptionCount = 0;
+                
+                // Progressive backoff: longer delays for later attempts
+                var delayMs = attemptCount switch
+                {
+                    < 5 => 200,   // First few attempts: 200ms
+                    < 15 => 500,  // Middle attempts: 500ms  
+                    _ => 1000     // Later attempts: 1000ms
+                };
+                
+                attemptCount++;
+                await Task.Delay(delayMs, cts.Token);
                 
             } while (!cts.Token.IsCancellationRequested);
             
-            throw new OperationCanceledException($"Could not collect required metrics {string.Join(", ", requiredMetrics)} within {timeout}");
+            // Provide detailed diagnostics for timeout failures
+            var availableMetrics = string.Join(", ", metrics?.Metrics?.Select(m => m.Name) ?? new[] { "none" });
+            throw new OperationCanceledException(
+                $"Could not collect required metrics [{string.Join(", ", requiredMetrics)}] within {timeout}. " +
+                $"Available metrics: [{availableMetrics}]. Attempts made: {attemptCount}");
         }
 
         private static bool HasRequiredMetrics(ImmutableHashSet<NodeMetrics.Types.Metric> metrics, string[] requiredMetrics)

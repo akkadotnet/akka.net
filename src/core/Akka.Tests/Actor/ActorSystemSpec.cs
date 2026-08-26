@@ -121,11 +121,20 @@ namespace Akka.Tests.Actor
                 var probe = testKit.CreateTestProbe();
                 var a = sys.ActorOf(Props.Create<Terminater>());
 
-                var eventFilter = new EventFilterFactory(new TestKit.Xunit.TestKit(sys));
-                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, () => {
+                // Watch for actor termination to ensure proper synchronization
+                await probe.WatchAsync(a);
+
+                var eventFilter = new EventFilterFactory(testKit);
+                await eventFilter.Info(contains: "not delivered").ExpectAsync(1, async () => {
+                    // Tell the actor to stop
                     a.Tell("run");
+
+                    // Wait for the actor to fully terminate - this ensures the mailbox
+                    // is swapped to DeadLetterMailbox before we send the next message
+                    await probe.ExpectTerminatedAsync(a);
+
+                    // Now send the message that should become a dead letter
                     a.Tell("boom");
-                    return Task.CompletedTask;
                 });
             }
             finally { Shutdown(sys); }

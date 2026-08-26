@@ -104,11 +104,13 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
             await ExpectMsgAsync("msg1");
             await EnterBarrierAsync("got-msg1");
 
+            // All nodes capture baseline DeltaCount before node-specific logic
+            Mediator.Tell(DeltaCount.Instance);
+            var oldDeltaCount = await ExpectMsgAsync<long>();
+            await EnterBarrierAsync("old-delta-count");
+
             await RunOnAsync(async () =>
             {
-                Mediator.Tell(DeltaCount.Instance);
-                var oldDeltaCount = await ExpectMsgAsync<long>();
-
                 await EnterBarrierAsync("end");
 
                 // Use a probe to isolate DeltaCount query from any stray messages in TestActor mailbox
@@ -120,9 +122,6 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
             await RunOnAsync(async () =>
             {
-                Mediator.Tell(DeltaCount.Instance);
-                var oldDeltaCount = await ExpectMsgAsync<long>();
-
                 var thirdAddress = (await NodeAsync(_config.Third)).Address;
                 await TestConductor.Shutdown(_config.Third).WaitAsync(30.Seconds());
 
@@ -166,11 +165,6 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                     var newMediator = DistributedPubSub.Get(newSystem).Mediator;
                     var probe = CreateTestProbe(newSystem);
 
-                    // Create shutdown actor FIRST so First node can find it while we verify gossip isolation
-                    // This fixes the race condition where First node times out waiting for this actor
-                    newSystem.Log.Info("Creating shutdown actor on {0}", node3Address);
-                    newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
-
                     newMediator.Tell(new Subscribe("topic2", probe.Ref), probe.Ref);
                     await probe.ExpectMsgAsync<SubscribeAck>();
 
@@ -178,6 +172,13 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                     await probe.ExpectNoMsgAsync(5.Seconds());
                     newMediator.Tell(DeltaCount.Instance, probe.Ref);
                     await probe.ExpectMsgAsync(0L);
+
+                    // Create shutdown actor AFTER verifying gossip isolation.
+                    // First node will find this actor and send "shutdown" to terminate newSystem.
+                    // We must complete the DeltaCount check above before this, otherwise there's
+                    // a race where First triggers shutdown while we're still verifying.
+                    newSystem.Log.Info("Creating shutdown actor on {0}", node3Address);
+                    newSystem.ActorOf<DistributedPubSubRestartSpecConfig.Shutdown>("shutdown");
 
                     await newSystem.WhenTerminated.WaitAsync(30.Seconds());
                 }

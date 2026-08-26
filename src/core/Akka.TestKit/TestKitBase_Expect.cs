@@ -36,7 +36,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(
-            TimeSpan? duration = null,
+            [AutoDilate] TimeSpan? duration = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -45,7 +45,7 @@ namespace Akka.TestKit
         
         /// <inheritdoc cref="ExpectMsg{T}(TimeSpan?, string, CancellationToken)"/>
         public ValueTask<T> ExpectMsgAsync<T>(
-            TimeSpan? duration = null, 
+            [AutoDilate] TimeSpan? duration = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -68,7 +68,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(
             T message,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -79,7 +79,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ExpectMsg{T}(T, TimeSpan?, string, CancellationToken)"/>
         public ValueTask<T> ExpectMsgAsync<T>(
             T message,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -108,7 +108,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(
             Predicate<T> isMessage,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null, 
             CancellationToken cancellationToken = default)
         {
@@ -119,7 +119,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ExpectMsg{T}(Predicate{T}, TimeSpan?, string, CancellationToken)"/>
         public ValueTask<T> ExpectMsgAsync<T>(
             Predicate<T> isMessage,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -152,7 +152,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(
             Action<T> assert,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -163,7 +163,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ExpectMsg{T}(Action{T}, TimeSpan?, string, CancellationToken)"/>
         public ValueTask<T> ExpectMsgAsync<T>(
             Action<T> assert,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -188,7 +188,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(
             Func<T, IActorRef, bool> isMessageAndSender, 
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -199,12 +199,12 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ExpectMsg{T}(Func{T, IActorRef, bool}, TimeSpan?, string, CancellationToken)"/>
         public ValueTask<T> ExpectMsgAsync<T>(
             Func<T, IActorRef, bool> isMessageAndSender,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
             return InternalExpectMsgAsync<T>(
-                    timeout: RemainingOrDilated(RemainingOrDilated(timeout)),
+                    timeout: RemainingOrDilated(timeout),
                     assert: (m, sender) =>
                     {
                         _assertions.AssertTrue(
@@ -235,7 +235,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public T ExpectMsg<T>(
             Action<T, IActorRef> assertMessageAndSender, 
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -246,7 +246,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ExpectMsg{T}(Action{T, IActorRef}, TimeSpan?, string, CancellationToken)"/>
         public ValueTask<T> ExpectMsgAsync<T>(
             Action<T, IActorRef> assertMessageAndSender,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -272,7 +272,7 @@ namespace Akka.TestKit
         public T ExpectMsg<T>(
             T expected,
             Func<T, T, bool> comparer,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -284,7 +284,7 @@ namespace Akka.TestKit
         public ValueTask<T> ExpectMsgAsync<T>(
             T expected,
             Func<T, T, bool> comparer,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -310,7 +310,7 @@ namespace Akka.TestKit
         /// <returns>TBD</returns>
         public Terminated ExpectTerminated(
             IActorRef target,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -321,7 +321,7 @@ namespace Akka.TestKit
         /// <inheritdoc cref="ExpectTerminated(IActorRef, TimeSpan?, string, CancellationToken)"/>
         public ValueTask<Terminated> ExpectTerminatedAsync(
             IActorRef target,
-            TimeSpan? timeout = null,
+            [AutoDilate] TimeSpan? timeout = null,
             string hint = null,
             CancellationToken cancellationToken = default)
         {
@@ -474,13 +474,13 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">TBD</param>
         /// <param name="cancellationToken"></param>
-        public void ExpectNoMsg(TimeSpan duration, CancellationToken cancellationToken = default)
+        public void ExpectNoMsg([AutoDilate] TimeSpan duration, CancellationToken cancellationToken = default)
         {
             ExpectNoMsgAsync(duration, cancellationToken).GetAwaiter().GetResult();
         }
         
         /// <inheritdoc cref="ExpectNoMsg(TimeSpan, CancellationToken)"/>
-        public ValueTask ExpectNoMsgAsync(TimeSpan duration, CancellationToken cancellationToken = default)
+        public ValueTask ExpectNoMsgAsync([AutoDilate] TimeSpan duration, CancellationToken cancellationToken = default)
         {
             return InternalExpectNoMsgAsync(Dilated(duration), cancellationToken);
         }
@@ -596,7 +596,7 @@ namespace Akka.TestKit
         }
         
         public IReadOnlyCollection<T> ExpectMsgAllOf<T>(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             params T[] messages)
         {
             return ExpectMsgAllOf(max, messages, default(CancellationToken));
@@ -622,7 +622,7 @@ namespace Akka.TestKit
         /// <param name="cancellationToken"></param>
         /// <returns>The received messages in received order</returns>
         public IReadOnlyCollection<T> ExpectMsgAllOf<T>(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             IReadOnlyCollection<T> messages,
             CancellationToken cancellationToken = default)
         {
@@ -632,7 +632,7 @@ namespace Akka.TestKit
         }
         
         public async IAsyncEnumerable<T> ExpectMsgAllOfAsync<T>(
-            TimeSpan max,
+            [AutoDilate] TimeSpan max,
             IReadOnlyCollection<T> messages,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
