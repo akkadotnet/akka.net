@@ -307,6 +307,19 @@ namespace Akka.Remote.TestKit
             var clientDisconnected = message as ClientDisconnected;
             if (clientDisconnected != null && clientDisconnected.Name != null)
             {
+                // A ServerFSM can report its disconnect after the same role has already come back
+                // on a fresh channel, which is exactly what a node that calls StartNewSystem does.
+                // Removing the role by name alone would drop the live registration, and from then
+                // on the barrier coordinator ignores every arrival from that node, so the next
+                // barrier stalls until it times out. Only let a ServerFSM evict the registration
+                // it owns.
+                if (_nodes.TryGetValue(clientDisconnected.Name, out var registered)
+                    && !Equals(registered.FSM, Sender))
+                {
+                    _log.Debug("Ignoring disconnect of superseded connection for {0}", clientDisconnected.Name);
+                    return;
+                }
+
                 _nodes = _nodes.Remove(clientDisconnected.Name);
                 _barrier.Forward(clientDisconnected);
                 return;
