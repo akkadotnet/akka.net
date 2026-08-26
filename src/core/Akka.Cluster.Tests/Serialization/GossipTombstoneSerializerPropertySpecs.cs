@@ -83,6 +83,51 @@ namespace Akka.Cluster.Tests.Serialization
                 "the generator must put the shared host-and-port pair on both sides of the member/tombstone split");
         }
 
+        [Fact(DisplayName = "P12: a gossip that tombstones one of its own members still round trips")]
+        public void P12_Gossip_round_trips_when_a_tombstone_is_also_a_member()
+        {
+            // Shape.Adversarial builds gossips that hold a node as a member AND as a tombstone. The Gossip
+            // constructor rejects exactly that under AKKA_CLUSTER_ASSERT=on, so the input cannot be built
+            // there.
+            Assert.SkipWhen(Cluster.IsAssertInvariantsEnabled,
+                "AKKA_CLUSTER_ASSERT=on rejects the member-and-tombstone gossip this property is about");
+
+            var probe = new GossipEnvelope(Node(0), Node(1), Gossip.Empty);
+            var serializer = Sys.Serialization.FindSerializerFor(probe);
+            var manifest = ((SerializerWithStringManifest)serializer).Manifest(probe);
+
+            // how often a tombstone key was already in the address table the member loop built
+            var tombstoneWasAlreadyMapped = 0;
+
+            Sides(1, Shape.Adversarial).Sample(g =>
+            {
+                var gossip = g[0];
+                var envelope = new GossipEnvelope(Node(0), Node(1), gossip);
+
+                var bytes = serializer.ToBinary(envelope);
+                var back = (GossipEnvelope)serializer.FromBinary(bytes, manifest);
+
+                Describe(back.Gossip).Should().Be(Describe(gossip));
+
+                foreach (var kv in gossip.Tombstones)
+                {
+                    var key = back.Gossip.Tombstones.Keys.Single(k => k.Equals(kv.Key));
+                    key.Uid.Should().Be(kv.Key.Uid);
+                    back.Gossip.Tombstones[key].Should().Be(kv.Value);
+                }
+
+                // The writer appends a tombstone's address to the shared address table only when the
+                // member loop has not already put it there. A tombstone for a node this gossip still holds
+                // as a member takes the other arm - it reuses the member's slot instead of appending a
+                // second one - and nothing else in the suite reaches that arm.
+                if (gossip.Tombstones.Keys.Any(gossip.HasMember))
+                    Interlocked.Increment(ref tombstoneWasAlreadyMapped);
+            }, iter: Iterations, print: Print);
+
+            tombstoneWasAlreadyMapped.Should().BeGreaterThan(Iterations / 10,
+                "Shape.Adversarial must actually produce a tombstone for a node the gossip holds as a member");
+        }
+
         [Fact(DisplayName = "P12: a Welcome carries the same tombstones through a round trip")]
         public void P12_Welcome_round_trips_with_tombstones()
         {

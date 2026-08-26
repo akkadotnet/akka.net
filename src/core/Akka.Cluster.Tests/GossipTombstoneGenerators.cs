@@ -142,7 +142,8 @@ namespace Akka.Cluster.Tests
             public int[] ReachOps { get; }
         }
 
-        private const int ReachOpsPerSide = 4;
+        /// <summary>How many observations one observer's shared op history holds.</summary>
+        private const int ReachOpsPerObserver = 4;
 
         /// <summary>
         /// Generates <paramref name="sides"/> gossips over the shared universe.
@@ -166,7 +167,8 @@ namespace Akka.Cluster.Tests
                 Gen.Long[1L, 4L].Array[perSide],
                 Gen.Int[0, 2].Array[perSide],
                 Gen.Bool.Array[perSide],
-                Gen.Int[0, 999].Array[sides * ReachOpsPerSide],
+                // one shared op history per observer, then one prefix length per side per observer
+                Gen.Int[0, 999].Array[n * ReachOpsPerObserver + perSide],
                 (a, b, c, d, e, f, g, h) => new Draw(a, b, c, d, e, f, g, h));
 
             return draw.Select(d => Build(d, sides, shape));
@@ -211,12 +213,28 @@ namespace Akka.Cluster.Tests
             }
 
             // Reachability observations are drawn from the nodes every side holds and nobody tombstones.
+            // A record whose subject is not a member is filtered out by Reachability.Merge through its
+            // `allowed` set, and which nodes are members depends on how a three-way merge is grouped, so
+            // leaving those in would break associativity on something that has nothing to do with
+            // removals.
             //
-            // Two reasons. Reachability.Merge breaks an equal-version tie by taking whichever side was
-            // passed second, so the same observer at the same version on both sides is not commutative -
-            // that predates tombstones, so each side gets its own observers here. And a record whose
-            // subject is not a member is filtered out by the merge, which would make associativity depend
-            // on the grouping. Neither has anything to do with removals.
+            // Every observer writes its own rows and nothing else in the cluster touches them, so an
+            // observer's row set is always a prefix of that observer's own op history. Each side replays
+            // a prefix of the same history per observer, which is what a real cluster looks like: two
+            // nodes that have seen different amounts of the same observer's work. Sides therefore share
+            // observers at different versions, which is what puts Reachability.Merge's version
+            // arbitration under test, and equal version means equal rows by construction - the invariant
+            // its tie-break relies on. Equal prefixes are drawn often, so the identical-rows tie is
+            // covered too.
+            //
+            // Known wart, deliberately not modelled: Reachability.Remove and Gossip.Merge's `allowed`
+            // filter both drop an observer's rows without touching that observer's version, so a real
+            // cluster can hold the same observer at the same version with different rows. Sketch: two
+            // gossips both hold observer O at version 3 with rows {X unreachable, Y unreachable}; one of
+            // them removes X, so its O drops to {Y unreachable} while O's version stays 3.
+            // Reachability.Merge breaks that tie by taking whichever side was passed second, so the merge
+            // is not commutative there. That predates tombstones, like the Down/Exiting note on
+            // NonTerminalStatuses.
             var core = new List<int>();
             for (var i = 0; i < n; i++)
             {
@@ -225,6 +243,9 @@ namespace Akka.Cluster.Tests
                     everywhere = memberOn[s][i] && !tombstoneOn[s][i];
                 if (everywhere) core.Add(i);
             }
+
+            // the shared per-observer op histories come first in the draw, prefix lengths after them
+            var prefixOffset = n * ReachOpsPerObserver;
 
             var result = new Gossip[sides];
             for (var s = 0; s < sides; s++)
@@ -244,23 +265,29 @@ namespace Akka.Cluster.Tests
                     for (var t = 0; t < d.ClockTicks[s * n + i]; t++)
                         version = version.Increment(VclockNodes[i]);
 
-                // observers are partitioned across the sides so no two sides observe from the same node
-                var observers = core.Where(i => i % sides == s).ToList();
                 var reachability = Reachability.Empty;
-                if (observers.Count > 0 && core.Count > 1)
+                if (core.Count > 1)
                 {
-                    for (var op = 0; op < ReachOpsPerSide; op++)
+                    foreach (var i in core)
                     {
-                        var v = d.ReachOps[s * ReachOpsPerSide + op];
-                        var observer = Universe[observers[v / 100 % observers.Count]];
-                        var subject = Universe[core[v / 10 % core.Count]];
-                        if (observer.Equals(subject)) continue;
-                        reachability = (v % 3) switch
+                        var observer = Universe[i];
+
+                        // nobody observes itself, so the subject pool leaves the observer out rather than
+                        // drawing it and skipping the op - a skipped op is a wasted draw
+                        var subjects = core.Where(c => c != i).ToList();
+                        var take = d.ReachOps[prefixOffset + s * n + i] % (ReachOpsPerObserver + 1);
+
+                        for (var op = 0; op < take; op++)
                         {
-                            0 => reachability.Unreachable(observer, subject),
-                            1 => reachability.Reachable(observer, subject),
-                            _ => reachability.Terminated(observer, subject)
-                        };
+                            var v = d.ReachOps[i * ReachOpsPerObserver + op];
+                            var subject = Universe[subjects[v / 10 % subjects.Count]];
+                            reachability = (v % 3) switch
+                            {
+                                0 => reachability.Unreachable(observer, subject),
+                                1 => reachability.Reachable(observer, subject),
+                                _ => reachability.Terminated(observer, subject)
+                            };
+                        }
                     }
                 }
 
@@ -322,9 +349,14 @@ namespace Akka.Cluster.Tests
                 .Select(v => $"{v.Key}={v.Value}")
                 .OrderBy(x => x, StringComparer.Ordinal);
 
+            var seen = g.Overview.Seen
+                .Select(a => a.ToString())
+                .OrderBy(x => x, StringComparer.Ordinal);
+
             return $"members=[{string.Join("; ", members)}]\n" +
                    $"tombstones=[{string.Join("; ", tombstones)}]\n" +
                    $"reachability=[{string.Join("; ", records)}] versions=[{string.Join("; ", reachVersions)}]\n" +
+                   $"seen=[{string.Join("; ", seen)}]\n" +
                    $"clock=[{string.Join("; ", version)}]";
         }
 

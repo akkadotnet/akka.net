@@ -340,10 +340,11 @@ namespace Akka.Cluster
         /// Adds the tombstones of <paramref name="that"/> to this gossip, keeping the later timestamp
         /// when both sides hold the same node.
         ///
-        /// <see cref="Merge"/> already unions tombstones, but it only runs on the concurrent branch of
-        /// gossip reception. The other three branches pick a whole gossip as the winner, which would
-        /// drop the loser's tombstones. Unioning them here instead keeps a tombstone alive no matter
-        /// which branch a given exchange takes.
+        /// <see cref="Merge"/> takes the same union on the concurrent branch of gossip reception. This
+        /// method covers the branch where the two clocks are equal, where neither gossip descends from
+        /// the other and each may hold a removal the other has not heard about. The branches that pick a
+        /// strictly newer gossip keep the winner's tombstones alone - see
+        /// <c>ClusterCoreDaemon.ReceiveGossip</c> for why the winner cannot be behind on removals.
         /// </summary>
         /// <param name="that">The gossip to take tombstones from.</param>
         /// <returns>This gossip when it already covers every tombstone of <paramref name="that"/>.</returns>
@@ -352,9 +353,14 @@ namespace Akka.Cluster
             if (that._tombstones.Count == 0) return this;
 
             // A node this gossip still holds as a member has not been removed here, so its tombstone is
-            // not adopted - members and tombstones must stay disjoint. Every tombstone write bumps the
-            // vector clock, so the winning gossip of these branches is never behind on removals and this
-            // case cannot arise; the filter is a guard, not a decision.
+            // not adopted: members and tombstones must stay disjoint, and Merge picks a member both sides
+            // hold by status alone, without consulting tombstones.
+            //
+            // That is a real drop, not a formality - the caller loses a removal it was told about. It is
+            // safe because this only runs with two equal clocks: a removal bumps the removing node's clock
+            // entry, so both sides descend from every removal either of them knows about, and a member
+            // that is back after a removal is one whose tombstone has already been pruned. Adopting that
+            // tombstone again would undo the prune.
             var merged = UnionTombstones(_tombstones, that._tombstones.Where(kv => !HasMember(kv.Key)));
             if (ReferenceEquals(merged, _tombstones)) return this;
             return Copy(tombstones: merged);
