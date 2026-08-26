@@ -157,7 +157,6 @@ namespace Akka.Cluster.Sharding
         private readonly int _majorityMinCap = Context.System.Settings.Config.GetInt("akka.cluster.sharding.distributed-data.majority-min-cap", 0);
         private ImmutableDictionary<string, IActorRef> _replicatorsByRole = ImmutableDictionary<string, IActorRef>.Empty;
         private ImmutableDictionary<string, ReplicatorSettings> _replicatorSettingsByRole = ImmutableDictionary<string, ReplicatorSettings>.Empty;
-        private bool _clusterShuttingDown;
 
         private readonly ConcurrentDictionary<string, IActorRef> _regions;
         private readonly ConcurrentDictionary<string, IActorRef> _proxies;
@@ -172,8 +171,6 @@ namespace Akka.Cluster.Sharding
         {
             _regions = regions;
             _proxies = proxies;
-            _cluster.Subscribe(Self, ClusterEvent.SubscriptionInitialStateMode.InitialStateAsEvents,
-                typeof(ClusterEvent.ClusterShuttingDown));
             
             Receive<Start>(start =>
             {
@@ -306,7 +303,6 @@ namespace Akka.Cluster.Sharding
                     _proxies.TryRemove(typeName, out _);
             });
 
-            Receive<ClusterEvent.ClusterShuttingDown>(_ => _clusterShuttingDown = true);
         }
 
         internal static ReplicatorSettings GetReplicatorSettings(ClusterShardingSettings shardingSettings)
@@ -356,7 +352,7 @@ namespace Akka.Cluster.Sharding
                 return;
 
             _replicatorsByRole = _replicatorsByRole.Remove(terminated.Role);
-            if (_clusterShuttingDown || _cluster.IsTerminated)
+            if (_cluster.IsTerminated || CoordinatedShutdown.Get(Context.System).ShutdownReason is not null)
                 return;
 
             _log.Error(
@@ -382,10 +378,5 @@ namespace Akka.Cluster.Sharding
             return encName + "Coordinator";
         }
 
-        protected override void PostStop()
-        {
-            _cluster.Unsubscribe(Self);
-            base.PostStop();
-        }
     }
 }
