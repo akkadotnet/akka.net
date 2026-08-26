@@ -18,7 +18,7 @@ namespace Akka.Cluster.Sharding.Internal
             string typeName,
             ClusterShardingSettings settings,
             int majorityMinCap,
-            IActorRef replicator)
+            ICanTell replicator)
         {
             TypeName = typeName;
             Settings = settings;
@@ -29,13 +29,7 @@ namespace Akka.Cluster.Sharding.Internal
         public string TypeName { get; }
         public ClusterShardingSettings Settings { get; }
         public int MajorityMinCap { get; }
-        public IActorRef Replicator { get; private set; }
-
-        public void ReplaceReplicator(IActorRef previousReplicator, IActorRef replicator)
-        {
-            if (Replicator.Equals(previousReplicator))
-                Replicator = replicator;
-        }
+        public ICanTell Replicator { get; }
 
         public Props CoordinatorStoreProps()
         {

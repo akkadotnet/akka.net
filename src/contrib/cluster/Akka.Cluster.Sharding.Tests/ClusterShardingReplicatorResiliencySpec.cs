@@ -108,7 +108,7 @@ public class ClusterShardingReplicatorResiliencySpec : AkkaSpec
         region.Tell(new ShardEnvelope(existingShardEntityId, "after-existing"));
         await ExpectMsgAsync("after-existing");
 
-        // New shard: exercises the existing DData coordinator and the updated provider.
+        // New shard: exercises the existing DData coordinator and a newly-created remember-entities store.
         region.Tell(new ShardEnvelope(newShardEntityId, "after-new"));
         await ExpectMsgAsync("after-new");
 

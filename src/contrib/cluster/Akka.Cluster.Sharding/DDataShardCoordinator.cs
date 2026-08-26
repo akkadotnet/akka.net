@@ -59,7 +59,7 @@ namespace Akka.Cluster.Sharding
             string typeName,
             ClusterShardingSettings settings,
             IShardAllocationStrategy allocationStrategy,
-            IActorRef replicator,
+            ICanTell replicator,
             int majorityMinCap,
             IRememberEntitiesProvider rememberEntitiesStoreProvider)
         {
@@ -75,7 +75,7 @@ namespace Akka.Cluster.Sharding
 
         private const string RememberEntitiesTimeoutKey = "RememberEntityTimeout";
 
-        private IActorRef _replicator;
+        private readonly ICanTell _replicator;
         private readonly ShardCoordinator _baseImpl;
         private bool VerboseDebug => _baseImpl.VerboseDebug;
 
@@ -102,7 +102,7 @@ namespace Akka.Cluster.Sharding
             string typeName,
             ClusterShardingSettings settings,
             IShardAllocationStrategy allocationStrategy,
-            IActorRef replicator,
+            ICanTell replicator,
             int majorityMinCap,
             IRememberEntitiesProvider? rememberEntitiesStoreProvider)
         {
@@ -169,10 +169,6 @@ namespace Akka.Cluster.Sharding
             {
                 switch (message)
                 {
-                    case ReplicatorChanged changed when ReplaceReplicator(changed):
-                        GetCoordinatorState();
-                        return true;
-
                     case GetSuccess g when g.Key.Equals(_coordinatorStateKey):
                         var existingState = g.Get(_coordinatorStateKey).Value.WithRememberEntities(Settings.RememberEntities);
                         if (VerboseDebug)
@@ -273,9 +269,6 @@ namespace Akka.Cluster.Sharding
         {
             switch (message)
             {
-                case ReplicatorChanged changed when ReplaceReplicator(changed):
-                    return true;
-
                 case StateInitialized _:
                     UnstashOneGetShardHomeRequest();
                     Stash.UnstashAll();
@@ -341,11 +334,6 @@ namespace Akka.Cluster.Sharding
             {
                 switch (message)
                 {
-                    case ReplicatorChanged changed when ReplaceReplicator(changed):
-                        if (waitingForStateWrite)
-                            SendCoordinatorStateUpdate(evt);
-                        return true;
-
                     case UpdateSuccess m when m.Key.Equals(_coordinatorStateKey) && m.Request.Equals(evt):
                         if (!waitingForRememberShard)
                         {
@@ -531,7 +519,7 @@ namespace Akka.Cluster.Sharding
 
         private void Activate()
         {
-            Context.Become(msg => ReplaceReplicator(msg) || _baseImpl.Active(msg) || ReceiveLateRememberedEntities(msg));
+            Context.Become(msg => _baseImpl.Active(msg) || ReceiveLateRememberedEntities(msg));
             Log.Info("{0}: ShardCoordinator was moved to the active state with [{1}] shards", TypeName, State.Shards.Count);
             if (VerboseDebug)
                 Log.Debug("{0}: Full ShardCoordinator initial state {1}", TypeName, State);
@@ -595,7 +583,7 @@ namespace Akka.Cluster.Sharding
 
         private void GetCoordinatorState()
         {
-            _replicator.Tell(Dsl.Get(_coordinatorStateKey, _stateReadConsistency));
+            _replicator.Tell(Dsl.Get(_coordinatorStateKey, _stateReadConsistency), Self);
         }
 
         private void GetAllRememberedShards()
@@ -618,19 +606,7 @@ namespace Akka.Cluster.Sharding
                 new LWWRegister<CoordinatorState>(_selfUniqueAddress, _initEmptyState),
                 _stateWriteConsistency,
                 evt,
-                reg => reg.WithValue(_selfUniqueAddress, s)));
-        }
-
-        private bool ReplaceReplicator(object message) =>
-            message is ReplicatorChanged changed && ReplaceReplicator(changed);
-
-        private bool ReplaceReplicator(ReplicatorChanged changed)
-        {
-            if (!_replicator.Equals(changed.PreviousReplicator))
-                return false;
-
-            _replicator = changed.Replicator;
-            return true;
+                reg => reg.WithValue(_selfUniqueAddress, s)), Self);
         }
 
         private void RememberShardAllocated(string newShard)
@@ -682,13 +658,11 @@ namespace Akka.Cluster.Sharding
 
         protected override void PreStart()
         {
-            Context.System.EventStream.Subscribe(Self, typeof(ReplicatorChanged));
             _baseImpl.PreStart();
         }
 
         protected override void PostStop()
         {
-            Context.System.EventStream.Unsubscribe(Self, typeof(ReplicatorChanged));
             base.PostStop();
             _baseImpl.PostStop();
         }

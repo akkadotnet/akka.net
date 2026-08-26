@@ -157,8 +157,6 @@ namespace Akka.Cluster.Sharding
         private readonly int _majorityMinCap = Context.System.Settings.Config.GetInt("akka.cluster.sharding.distributed-data.majority-min-cap", 0);
         private ImmutableDictionary<string, IActorRef> _replicatorsByRole = ImmutableDictionary<string, IActorRef>.Empty;
         private ImmutableDictionary<string, ReplicatorSettings> _replicatorSettingsByRole = ImmutableDictionary<string, ReplicatorSettings>.Empty;
-        private ImmutableDictionary<string, DDataRememberEntitiesProvider> _rememberEntitiesProviders =
-            ImmutableDictionary<string, DDataRememberEntitiesProvider>.Empty;
         private bool _clusterShuttingDown;
 
         private readonly ConcurrentDictionary<string, IActorRef> _regions;
@@ -196,9 +194,7 @@ namespace Akka.Cluster.Sharding
                         switch (rememberEntitiesProvider)
                         {
                             case RememberEntitiesStore.DData:
-                                var ddataProvider = new DDataRememberEntitiesProvider(start.TypeName, settings, _majorityMinCap, replicator);
-                                rememberEntitiesStoreProvider = ddataProvider;
-                                _rememberEntitiesProviders = _rememberEntitiesProviders.SetItem(start.TypeName, ddataProvider);
+                                rememberEntitiesStoreProvider = new DDataRememberEntitiesProvider(start.TypeName, settings, _majorityMinCap, replicator);
                                 break;
                             case RememberEntitiesStore.Eventsourced:
                                 rememberEntitiesStoreProvider = new EventSourcedRememberEntitiesProvider(start.TypeName, settings);
@@ -325,18 +321,21 @@ namespace Akka.Cluster.Sharding
                 return settingsWithRoles.WithDurableKeys(ImmutableHashSet<string>.Empty);
         }
 
-        private IActorRef Replicator(ClusterShardingSettings settings)
+        private ICanTell Replicator(ClusterShardingSettings settings)
         {
             if (settings.StateStoreMode is StateStoreMode.DData or StateStoreMode.Custom)
             {
                 // one replicator per role
                 var role = settings.Role ?? string.Empty;
-                if (_replicatorsByRole.TryGetValue(role, out var replicator))
-                    return replicator;
+                var name = ReplicatorName(role);
+                if (!_replicatorSettingsByRole.ContainsKey(role))
+                {
+                    var replicatorSettings = GetReplicatorSettings(settings);
+                    _replicatorSettingsByRole = _replicatorSettingsByRole.SetItem(role, replicatorSettings);
+                    CreateReplicator(role, replicatorSettings);
+                }
 
-                var replicatorSettings = GetReplicatorSettings(settings);
-                _replicatorSettingsByRole = _replicatorSettingsByRole.SetItem(role, replicatorSettings);
-                return CreateReplicator(role, replicatorSettings);
+                return Context.ActorSelection(Self.Path / name);
             }
             else
                 return Context.System.DeadLetters;
@@ -364,9 +363,6 @@ namespace Akka.Cluster.Sharding
                 "Cluster Sharding DData replicator [{0}] for role [{1}] terminated; recreating it at the same path",
                 terminated.Replicator.Path, DisplayRole(terminated.Role));
             var replacement = CreateReplicator(terminated.Role, _replicatorSettingsByRole[terminated.Role]);
-            foreach (var provider in _rememberEntitiesProviders.Values)
-                provider.ReplaceReplicator(terminated.Replicator, replacement);
-            Context.System.EventStream.Publish(new ReplicatorChanged(terminated.Replicator, replacement));
             _log.Info("Recreated Cluster Sharding DData replicator [{0}] for role [{1}]",
                 replacement.Path, DisplayRole(terminated.Role));
         }
