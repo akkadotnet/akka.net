@@ -46,6 +46,15 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 # instead of raising any timeout.
                 akka.cluster.singleton.hand-over-retry-interval = 200ms
                 akka.cluster.singleton-proxy.singleton-identification-interval = 200ms
+
+                # The retry count is derived from min-number-of-hand-over-retries, so the
+                # 200ms interval above also shrinks the manager's give-up patience. The
+                # default count gave only 2.4s, and the artery lane caught the manager
+                # giving up (ClusterSingletonManagerIsStuckException) before the new
+                # oldest took over. 28 hand-over retries give 25 take-over retries: 5s
+                # of patience in 200ms ticks, above the observed take-over latency and
+                # below this spec's own 10s expects.
+                akka.cluster.singleton.min-number-of-hand-over-retries = 28
             ")
             .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())
