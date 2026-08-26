@@ -53,6 +53,13 @@ namespace Akka.Cluster
         public static readonly ImmutableSortedSet<Member> EmptyMembers = ImmutableSortedSet.Create<Member>();
 
         /// <summary>
+        /// An empty set of tombstones. Declared before <see cref="Empty"/> because the constructor
+        /// chain reads it.
+        /// </summary>
+        public static readonly ImmutableDictionary<UniqueAddress, long> EmptyTombstones =
+            ImmutableDictionary<UniqueAddress, long>.Empty;
+
+        /// <summary>
         /// An empty <see cref="Gossip"/> object.
         /// </summary>
         public static readonly Gossip Empty = new(EmptyMembers);
@@ -71,6 +78,7 @@ namespace Akka.Cluster
         readonly ImmutableSortedSet<Member> _members;
         readonly GossipOverview _overview;
         readonly VectorClock _version;
+        readonly ImmutableDictionary<UniqueAddress, long> _tombstones;
 
         /// <summary>
         /// The current members of the cluster
@@ -84,6 +92,23 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public VectorClock Version { get { return _version; } }
+
+        /// <summary>
+        /// The nodes this cluster has removed, keyed by <see cref="UniqueAddress"/> and stamped with the
+        /// epoch milliseconds of the removal.
+        ///
+        /// A member status on its own cannot tell "this member was removed" apart from "this node has
+        /// not heard about it yet", so merging two gossips has no way to decide what to do with a member
+        /// that only one side holds. A tombstone answers that directly: it is positive evidence that the
+        /// removal happened, and it travels in the gossip so every peer can apply it.
+        ///
+        /// The key carries the node UID, so a restarted node at the same host and port is never blocked
+        /// by the tombstone of its predecessor.
+        ///
+        /// The timestamp orders nothing. It exists only so the leader can drop tombstones older than
+        /// <c>akka.cluster.prune-gossip-tombstones-after</c>.
+        /// </summary>
+        public ImmutableDictionary<UniqueAddress, long> Tombstones { get { return _tombstones; } }
 
         /// <summary>
         /// TBD
@@ -106,10 +131,23 @@ namespace Akka.Cluster
         /// <param name="version">TBD</param>
         /// <exception cref="ArgumentException">TBD</exception>
         public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview, VectorClock version)
+            : this(members, overview, version, EmptyTombstones) { }
+
+        /// <summary>
+        /// TBD
+        /// </summary>
+        /// <param name="members">TBD</param>
+        /// <param name="overview">TBD</param>
+        /// <param name="version">TBD</param>
+        /// <param name="tombstones">The nodes this cluster has removed. See <see cref="Tombstones"/>.</param>
+        /// <exception cref="ArgumentException">TBD</exception>
+        public Gossip(ImmutableSortedSet<Member> members, GossipOverview overview, VectorClock version,
+            ImmutableDictionary<UniqueAddress, long> tombstones)
         {
             _members = members;
             _overview = overview;
             _version = version;
+            _tombstones = tombstones;
 
             _membersMap = new Lazy<ImmutableDictionary<UniqueAddress, Member>>(
                 () => members.ToImmutableDictionary(m => m.UniqueAddress, m => m));
@@ -129,11 +167,13 @@ namespace Akka.Cluster
         /// <param name="members">TBD</param>
         /// <param name="overview">TBD</param>
         /// <param name="version">TBD</param>
+        /// <param name="tombstones">The nodes this cluster has removed. See <see cref="Tombstones"/>.</param>
         /// <returns>TBD</returns>
         public Gossip Copy(ImmutableSortedSet<Member> members = null, GossipOverview overview = null,
-            VectorClock version = null)
+            VectorClock version = null, ImmutableDictionary<UniqueAddress, long> tombstones = null)
         {
-            return new Gossip(members ?? _members, overview ?? _overview, version ?? _version);
+            return new Gossip(members ?? _members, overview ?? _overview, version ?? _version,
+                tombstones ?? _tombstones);
         }
 
         private void AssertInvariants()
@@ -159,6 +199,14 @@ namespace Akka.Cluster
             IfTrueThrow(!seenButNotMember.IsEmpty,
                 expected: "Nodes not part of cluster have marked the Gossip as seen",
                 actual: string.Join(", ", seenButNotMember.Select(a => a.ToString())));
+
+            // Members and tombstones must stay disjoint. Merge depends on it: a member that appears on
+            // both sides is picked by status alone, without consulting tombstones, which is only correct
+            // while no gossip carries a member and a tombstone for the same node.
+            var tombstonedButStillMember = _members.Where(m => _tombstones.ContainsKey(m.UniqueAddress)).ToList();
+            IfTrueThrow(tombstonedButStillMember.Count > 0,
+                expected: "Removed nodes must not be members",
+                actual: string.Join(", ", tombstonedButStillMember.Select(m => m.ToString())));
             return;
 
             void IfTrueThrow(bool func, string expected, string actual)
@@ -261,20 +309,123 @@ namespace Akka.Cluster
         public Gossip Merge(Gossip that)
         {
             //TODO: Member ordering import?
-            // 1. merge vector clocks
-            var mergedVClock = _version.Merge(that._version);
+            // 1. merge tombstones - steps 2 and 3 both read the result
+            var mergedTombstones = UnionTombstones(_tombstones, that._tombstones);
+            var tombstonedNodes = mergedTombstones.Count == 0
+                ? ImmutableHashSet<UniqueAddress>.Empty
+                : mergedTombstones.Keys.ToImmutableHashSet();
 
-            // 2. merge members by selecting the single Member with highest MemberStatus out of the Member groups
-            var mergedMembers = EmptyMembers.Union(Member.PickHighestPriority(this._members, that._members));
+            // 2. merge vector clocks, then drop the entry of every removed node.
+            //    A clock entry is resurrected by the union the same way a member is, so filtering members
+            //    alone would leave the removed node in the clock forever.
+            var mergedVClock = tombstonedNodes.Aggregate(
+                _version.Merge(that._version),
+                (clock, node) => clock.Prune(VectorClock.Node.Create(ClusterCoreDaemon.VclockName(node))));
 
-            // 3. merge reachability table by picking records with highest version
+            // 3. merge members by selecting the single Member with highest MemberStatus out of the Member groups
+            var mergedMembers = EmptyMembers.Union(Member.PickHighestPriority(this._members, that._members, tombstonedNodes));
+
+            // 4. merge reachability table by picking records with highest version
             var mergedReachability = _overview.Reachability.Merge(mergedMembers.Select(m => m.UniqueAddress).ToImmutableSortedSet(),
                 that._overview.Reachability);
 
-            // 4. Nobody can have seen this new gossip yet
+            // 5. Nobody can have seen this new gossip yet
             var mergedSeen = ImmutableHashSet.Create<UniqueAddress>();
 
-            return new Gossip(mergedMembers, new GossipOverview(mergedSeen, mergedReachability), mergedVClock);
+            return new Gossip(mergedMembers, new GossipOverview(mergedSeen, mergedReachability), mergedVClock,
+                mergedTombstones);
+        }
+
+        /// <summary>
+        /// Adds the tombstones of <paramref name="that"/> to this gossip, keeping the later timestamp
+        /// when both sides hold the same node.
+        ///
+        /// <see cref="Merge"/> already unions tombstones, but it only runs on the concurrent branch of
+        /// gossip reception. The other three branches pick a whole gossip as the winner, which would
+        /// drop the loser's tombstones. Unioning them here instead keeps a tombstone alive no matter
+        /// which branch a given exchange takes.
+        /// </summary>
+        /// <param name="that">The gossip to take tombstones from.</param>
+        /// <returns>This gossip when it already covers every tombstone of <paramref name="that"/>.</returns>
+        public Gossip MergeTombstones(Gossip that)
+        {
+            if (that._tombstones.Count == 0) return this;
+
+            // A node this gossip still holds as a member has not been removed here, so its tombstone is
+            // not adopted - members and tombstones must stay disjoint. Every tombstone write bumps the
+            // vector clock, so the winning gossip of these branches is never behind on removals and this
+            // case cannot arise; the filter is a guard, not a decision.
+            var merged = UnionTombstones(_tombstones, that._tombstones.Where(kv => !HasMember(kv.Key)));
+            if (ReferenceEquals(merged, _tombstones)) return this;
+            return Copy(tombstones: merged);
+        }
+
+        /// <summary>
+        /// Drops every tombstone stamped at or before <paramref name="removeEarlierThan"/>.
+        /// </summary>
+        /// <param name="removeEarlierThan">Epoch milliseconds. Tombstones at or before this are dropped.</param>
+        /// <returns>This gossip when nothing was dropped. The caller compares by reference to decide
+        /// whether the gossip needs to be published, so this identity matters.</returns>
+        public Gossip PruneTombstones(long removeEarlierThan)
+        {
+            if (_tombstones.Count == 0) return this;
+
+            var pruned = _tombstones.Where(kv => kv.Value <= removeEarlierThan).Select(kv => kv.Key).ToList();
+            if (pruned.Count == 0) return this;
+
+            return Copy(tombstones: _tombstones.RemoveRange(pruned));
+        }
+
+        /// <summary>
+        /// Removes nodes from the cluster and records a tombstone for each of them.
+        ///
+        /// Members, the seen table, the reachability table and the vector clock are all stripped in one
+        /// step, so no intermediate gossip that breaks the invariants is ever built.
+        /// </summary>
+        /// <param name="nodes">The nodes being removed.</param>
+        /// <param name="removalTimestamp">Epoch milliseconds of the removal.</param>
+        /// <returns>This gossip when <paramref name="nodes"/> is empty.</returns>
+        public Gossip RemoveAll(IImmutableSet<UniqueAddress> nodes, long removalTimestamp)
+        {
+            if (nodes.Count == 0) return this;
+
+            var newMembers = _members.Where(m => !nodes.Contains(m.UniqueAddress)).ToImmutableSortedSet();
+            var newOverview = _overview.Copy(
+                seen: _overview.Seen.Except(nodes),
+                reachability: _overview.Reachability.Remove(nodes));
+
+            // Clear the VectorClock when a member is removed. The change made by the leader is stamped
+            // and will propagate as is if there are no other changes on other nodes.
+            var newVersion = nodes.Aggregate(_version,
+                (clock, node) => clock.Prune(VectorClock.Node.Create(ClusterCoreDaemon.VclockName(node))));
+
+            var newTombstones = _tombstones;
+            foreach (var node in nodes)
+                newTombstones = newTombstones.SetItem(node, removalTimestamp);
+
+            return new Gossip(newMembers, newOverview, newVersion, newTombstones);
+        }
+
+        /// <summary>
+        /// Unions two tombstone sets, keeping the later timestamp when both hold the same node.
+        ///
+        /// Two nodes merge the same pair of gossips in opposite order, so the result has to be the same
+        /// either way. Taking the later timestamp is commutative and associative, and it errs towards
+        /// keeping a tombstone longer, which is the safe direction.
+        /// </summary>
+        private static ImmutableDictionary<UniqueAddress, long> UnionTombstones(
+            ImmutableDictionary<UniqueAddress, long> current,
+            IEnumerable<KeyValuePair<UniqueAddress, long>> other)
+        {
+            var merged = current;
+            foreach (var kv in other)
+            {
+                if (!merged.TryGetValue(kv.Key, out var existing))
+                    merged = merged.Add(kv.Key, kv.Value);
+                else if (kv.Value > existing)
+                    merged = merged.SetItem(kv.Key, kv.Value);
+            }
+            return merged;
         }
 
         /// <summary>
@@ -381,7 +532,8 @@ namespace Akka.Cluster
         public override string ToString()
         {
             var members = string.Join(", ", _members.Select(m => m.ToString()));
-            return $"Gossip(members = [{members}], overview = {_overview}, version = {_version}";
+            var tombstones = string.Join(", ", _tombstones.Select(t => $"{t.Key} -> {t.Value}"));
+            return $"Gossip(members = [{members}], overview = {_overview}, version = {_version}, tombstones = [{tombstones}])";
         }
     }
 
