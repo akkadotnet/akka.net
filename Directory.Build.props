@@ -70,7 +70,7 @@
 **Akka.TestKit**
 * [Add AutoDilate metadata to TestKit timeouts](https://github.com/akkadotnet/akka.net/pull/8441): Adds AutoDilate dilation metadata to TestKit timeout expectations so dilated deadlines are correctly tracked and reported.
 * [Fix torn read in `PromiseActorRef.GetPath` that made `Path` return null](https://github.com/akkadotnet/akka.net/pull/8436): Fixes a torn read in `PromiseActorRef.GetPath` that could return `null` under concurrent access.
-* [Fix double-dilated timeout in `ExpectMsgAsync<T>(Func<T, IActorRef, bool>, ...)`](https://github.com/akkadotnet/akka.net/pull/8430): Fixes a bug where the overload of `ExpectMsgAsync` that takes a predicate could apply its timeout dilation twice, causing spurious timeout failures.
+* [Fix double-dilated timeout in `ExpectMsgAsync&lt;T&gt;(Func&lt;T, IActorRef, bool&gt;, ...)`](https://github.com/akkadotnet/akka.net/pull/8430): Fixes a bug where the overload of `ExpectMsgAsync` that takes a predicate could apply its timeout dilation twice, causing spurious timeout failures.
 
 **Akka.Cluster.Tools**
 * [Fix ClusterClientDiscovery: preserve contact-point subscriptions across rediscovery](https://github.com/akkadotnet/akka.net/pull/8426): Ensures `ClusterClientDiscovery` keeps its contact-point subscriptions alive across rediscovery cycles instead of dropping them.
