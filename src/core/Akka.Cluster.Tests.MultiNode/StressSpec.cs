@@ -1279,10 +1279,11 @@ public class StressSpec : MultiNodeClusterSpec
             return await Loop(counter + 1, nextAs, nextAddresses);
         }
 
-        (await Loop(1, Option<ActorSystem>.None, ImmutableHashSet<Address>.Empty)).OnSuccess(aSys =>
-        {
-            Shutdown(aSys);
-        });
+        // await the teardown instead of blocking on it: the sync Shutdown pins a thread pool thread for the
+        // whole wait, which on a busy agent starves this node's own heartbeat sender and gets it downed.
+        var lastAs = await Loop(1, Option<ActorSystem>.None, ImmutableHashSet<Address>.Empty);
+        if (lastAs.HasValue)
+            await ShutdownAsync(lastAs.Value);
 
         await WithinAsync(loopDuration, async () =>
         {
