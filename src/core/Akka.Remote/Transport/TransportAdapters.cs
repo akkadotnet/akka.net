@@ -550,8 +550,21 @@ namespace Akka.Remote.Transport
         public override Task<bool> Shutdown()
         {
             var stopTask = manager.GracefulStop((RARP.For(System).Provider).RemoteSettings.FlushWait);
-            var transportStopTask = WrappedTransport.Shutdown();
-            return Task.WhenAll(stopTask, transportStopTask).ContinueWith(x => x.IsCompleted && !(x.IsFaulted || x.IsCanceled), TaskContinuationOptions.ExecuteSynchronously);
+
+            // Sequence the wrapped-transport teardown AFTER the manager (and its child association
+            // actors) have stopped. Those children write the graceful Disassociate PDU as part of
+            // their own shutdown; running WrappedTransport.Shutdown() concurrently (as this used to)
+            // let the underlying transport force-close the channel out from under a not-yet-flushed
+            // Disassociate. Peers then kept a "zombie" association until the transport failure
+            // detector tripped (up to acceptable-heartbeat-pause, 120s by default). The manager stop
+            // is bounded by flush-wait-on-shutdown, and the wrapped transport is torn down regardless
+            // of whether the manager stopped cleanly, so shutdown can never hang on this ordering.
+            var transportStopTask = stopTask.ContinueWith(_ => WrappedTransport.Shutdown(),
+                TaskContinuationOptions.ExecuteSynchronously).Unwrap();
+
+            return Task.WhenAll(stopTask, transportStopTask)
+                .ContinueWith(x => x.IsCompleted && !(x.IsFaulted || x.IsCanceled),
+                    TaskContinuationOptions.ExecuteSynchronously);
         }
     }
 
