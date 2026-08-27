@@ -1,3 +1,37 @@
+#### 1.5.71 August 26th, 2026 ####
+
+Akka.NET v1.5.71 is a maintenance release that fixes a Cluster Sharding private-replicator recovery bug, hardens MultiNodeTestRunner conductor reliability, flushes graceful `Disassociate` PDUs before transport force-close on shutdown, and resolves a handful of TestKit, ClusterClientDiscovery, and DotNetty fixes.
+
+**Akka.Cluster.Sharding**
+* [Fix Cluster Sharding private replicator recovery](https://github.com/akkadotnet/akka.net/pull/8480): Fixes a bug where a Cluster Sharding private replicator could fail to recover its state, leaving shard state inconsistent after a coordinated shutdown / recovery cycle. Adds a `ClusterShardingReplicatorResiliencySpec` covering the recovery path.
+
+**Akka.Remote**
+* [Backport #8421 to v1.5: flush graceful `Disassociate` PDUs before transport force-close on shutdown](https://github.com/akkadotnet/akka.net/pull/8487): Ensures in-flight graceful `Disassociate` control messages are flushed to the wire before the transport force-closes the connection on shutdown, preventing an abrupt teardown from silently dropping them.
+* [Akka.Remote: stop, don't restart, failed throttler children](https://github.com/akkadotnet/akka.net/pull/8437) - Fixes [#8433](https://github.com/akkadotnet/akka.net/issues/8433) and [#8434](https://github.com/akkadotnet/akka.net/issues/8434): A failing outbound-throttler child is now stopped rather than restarted, avoiding an unbounded restart loop that could stall remote message throughput.
+* [Clarify DotNetty hostname validation direction](https://github.com/akkadotnet/akka.net/pull/8464): Clarifies the direction of the DotNetty hostname validation check so it validates the expected peer identity instead of the local endpoint.
+
+**Akka.Remote.TestKit (MultiNodeTestRunner)**
+* [Backport MNTR conductor reliability to v1.5](https://github.com/akkadotnet/akka.net/pull/8488) - Backports [#8431](https://github.com/akkadotnet/akka.net/issues/8431) and [#8485](https://github.com/akkadotnet/akka.net/issues/8485): Hardens the MNTR `BarrierCoordinator`, `Conductor`, `Controller`, `Player`, and `RemoteConnection` against conductor-side races and disconnect handling, reducing multi-node spec flakiness.
+
+**Akka.TestKit**
+* [Add AutoDilate metadata to TestKit timeouts](https://github.com/akkadotnet/akka.net/pull/8441): Adds AutoDilate dilation metadata to TestKit timeout expectations so dilated deadlines are correctly tracked and reported.
+* [Fix torn read in `PromiseActorRef.GetPath` that made `Path` return null](https://github.com/akkadotnet/akka.net/pull/8436): Fixes a torn read in `PromiseActorRef.GetPath` that could return `null` under concurrent access.
+* [Fix double-dilated timeout in `ExpectMsgAsync<T>(Func<T, IActorRef, bool>, ...)`](https://github.com/akkadotnet/akka.net/pull/8430): Fixes a bug where the overload of `ExpectMsgAsync` that takes a predicate could apply its timeout dilation twice, causing spurious timeout failures.
+
+**Akka.Cluster.Tools**
+* [Fix ClusterClientDiscovery: preserve contact-point subscriptions across rediscovery](https://github.com/akkadotnet/akka.net/pull/8426): Ensures `ClusterClientDiscovery` keeps its contact-point subscriptions alive across rediscovery cycles instead of dropping them.
+
+**Tests**
+* [Make `ClusterShardingQueriesSpec` stats/region-state queries converge-then-assert (async)](https://github.com/akkadotnet/akka.net/pull/8311): Hardens `ClusterShardingQueriesSpec` by making its stats and region-state query assertions wait for convergence before asserting, reducing CI flakiness.
+
+1 contributor since release 1.5.70
+
+| COMMITS | LOC+ | LOC- | AUTHOR |
+| --- | --- | --- | --- |
+| 11 | 1376 | 468 | Aaron Stannard |
+
+To see the full set of changes in Akka.NET v1.5.71, [click here](https://github.com/akkadotnet/akka.net/milestone/154?closed=1).
+
 #### 1.5.70 July 2nd, 2026 ####
 
 Akka.NET v1.5.70 is a maintenance release that adds a new "last-N" query offset to Akka.Persistence.Query, resolves two Akka.Streams reliability issues and improves `BroadcastHub` performance under high consumer counts, and fixes a consistent-hashing router bug that could wedge an entire cluster after a 32-bit hash collision.
