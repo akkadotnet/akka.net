@@ -1236,10 +1236,10 @@ public class StressSpec : MultiNodeClusterSpec
 
                     if (activeRoles.Contains(Myself))
                     {
-                        previousAs.OnSuccess(s =>
-                        {
-                            Shutdown(s);
-                        });
+                        // await the teardown instead of blocking on it: the sync Shutdown pins a thread
+                        // pool thread for the whole wait, starving this node's own heartbeat sender.
+                        if (previousAs.HasValue)
+                            await ShutdownAsync(previousAs.Value);
 
                         var sys = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
                         MuteLog(sys);
