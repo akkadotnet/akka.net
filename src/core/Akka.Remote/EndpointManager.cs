@@ -55,7 +55,7 @@ namespace Akka.Remote
             /// </summary>
             /// <param name="endpoint">TBD</param>
             /// <param name="uid">TBD</param>
-            public Pass(IActorRef endpoint, int? uid)
+            public Pass(IActorRef endpoint, long? uid)
                 : base(false)
             {
                 Uid = uid;
@@ -70,7 +70,7 @@ namespace Akka.Remote
             /// <summary>
             /// The endpoint UID, if it's currently known
             /// </summary>
-            public int? Uid { get; }
+            public long? Uid { get; }
         }
 
         /// <summary>
@@ -93,14 +93,14 @@ namespace Akka.Remote
         /// </summary>
         public sealed class Quarantined : EndpointPolicy
         {
-            public Quarantined(int uid, Deadline deadline)
+            public Quarantined(long uid, Deadline deadline)
                 : base(true)
             {
                 Uid = uid;
                 Deadline = deadline;
             }
 
-            public int Uid { get; }
+            public long Uid { get; }
 
             public Deadline Deadline { get; }
         }
@@ -217,7 +217,7 @@ namespace Akka.Remote
             /// </summary>
             /// <param name="remoteAddress">TBD</param>
             /// <param name="uid">TBD</param>
-            public Quarantine(Address remoteAddress, int? uid)
+            public Quarantine(Address remoteAddress, long? uid)
             {
                 Uid = uid;
                 RemoteAddress = remoteAddress;
@@ -231,7 +231,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public int? Uid { get; private set; }
+            public long? Uid { get; private set; }
         }
 
         /// <summary>
@@ -399,7 +399,7 @@ namespace Akka.Remote
             /// </summary>
             /// <param name="uid">TBD</param>
             /// <param name="buffer">TBD</param>
-            public ResendState(int uid, AckedReceiveBuffer<Message> buffer)
+            public ResendState(long uid, AckedReceiveBuffer<Message> buffer)
             {
                 Buffer = buffer;
                 Uid = uid;
@@ -408,7 +408,7 @@ namespace Akka.Remote
             /// <summary>
             /// TBD
             /// </summary>
-            public int Uid { get; private set; }
+            public long Uid { get; private set; }
 
             /// <summary>
             /// TBD
@@ -431,7 +431,7 @@ namespace Akka.Remote
             {
                 unchecked
                 {
-                    return (Uid * 397) ^ Buffer.GetHashCode();
+                    return (Uid.GetHashCode() * 397) ^ Buffer.GetHashCode();
                 }
             }
         }

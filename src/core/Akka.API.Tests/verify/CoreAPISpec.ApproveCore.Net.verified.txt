@@ -26,6 +26,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.TestKit.Xunit2.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Remote.Tests.MultiNode")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Serialization.V2")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Streams")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Streams.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.TestKit")]
@@ -3784,6 +3785,11 @@ namespace Akka.IO
         }
         public static class SO
         {
+            public class PipeBufferSize : Akka.IO.Inet.SocketOption
+            {
+                public PipeBufferSize(int size) { }
+                public int Size { get; }
+            }
             public class ReceiveBufferSize : Akka.IO.Inet.SocketOption
             {
                 public ReceiveBufferSize(int size) { }
@@ -5208,6 +5214,30 @@ namespace Akka.Serialization
         public override bool IncludeManifest { get; }
         public override object FromBinary(byte[] bytes, System.Type type) { }
         public override byte[] ToBinary(object obj) { }
+    }
+    public class PayloadSizeExceededException : Akka.Actor.AkkaException
+    {
+        public PayloadSizeExceededException() { }
+        protected PayloadSizeExceededException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+        public PayloadSizeExceededException(long attemptedSize, int maxCapacity) { }
+        public PayloadSizeExceededException(string message, System.Exception? cause = null) { }
+        public long AttemptedSize { get; }
+        public int MaxCapacity { get; }
+        public override void GetObjectData(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) { }
+    }
+    public sealed class PooledPayloadWriter : System.Buffers.IBufferWriter<byte>, System.IDisposable
+    {
+        public PooledPayloadWriter(int initialCapacityHint = 256, int maxCapacity = 2147483647, System.Buffers.ArrayPool<byte>? pool = null) { }
+        public int WrittenCount { get; }
+        public System.ReadOnlyMemory<byte> WrittenMemory { get; }
+        public System.ReadOnlySpan<byte> WrittenSpan { get; }
+        public void Advance(int count) { }
+        public System.Buffers.IMemoryOwner<byte> Detach() { }
+        public void Dispose() { }
+        public System.Memory<byte> GetMemory(int sizeHint = 0) { }
+        public System.Span<byte> GetPatchSpan(int start, int length) { }
+        public System.Span<byte> GetSpan(int sizeHint = 0) { }
+        public void Reset() { }
     }
     public class Serialization
     {

@@ -1,0 +1,8 @@
+﻿case: closed-generic-wrapper-order-receipt
+message-type: Wrapper<OrderReceipt>
+manifest: wrap-receipt-v1
+serializer-id: 120404
+byte-count: 24
+
+0000  83 01 a6 77 72 61 70 2d  33 02 81 01 a9 72 65 63  |...wrap-3....rec|
+0010  65 69 70 74 2d 31 03 01                           |eipt-1..|

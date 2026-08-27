@@ -198,6 +198,42 @@ namespace Akka.IO
             }
 
             /// <summary>
+            /// Socket option that configures the pause/resume watermarks of the internal
+            /// <see cref="System.IO.Pipelines.Pipe"/> a <c>TcpConnection</c> uses to buffer bytes read
+            /// from the socket, independently of the underlying OS socket's receive buffer.
+            /// </summary>
+            /// <remarks>
+            /// Unlike the other <see cref="SocketOption"/>s in this namespace, this option never
+            /// touches the OS <see cref="Socket"/> -- it carries a value that <c>TcpIncomingConnection</c>
+            /// and <c>TcpOutgoingConnection</c> consult when constructing their input pipe's
+            /// <see cref="System.IO.Pipelines.PipeOptions"/>. When no <see cref="PipeBufferSize"/> is
+            /// present in a connection's options, the resume-writer threshold falls back to
+            /// <c>TcpSettings.ReceiveBufferSize</c> (the pre-existing default), with the pause-writer
+            /// threshold set to twice that value -- this option only lets a caller (e.g. Artery) raise
+            /// both watermarks past the default without changing it for every other Akka.IO TCP user.
+            /// </remarks>
+            public class PipeBufferSize : SocketOption
+            {
+                /// <summary>
+                /// Creates a new <see cref="PipeBufferSize"/> option with the specified resume-writer
+                /// threshold, in bytes. The pause-writer threshold is set to twice this value.
+                /// </summary>
+                /// <param name="size">The resume-writer threshold, in bytes. Must be greater than zero.</param>
+                public PipeBufferSize(int size)
+                {
+                    if (size <= 0)
+                        throw new ArgumentOutOfRangeException(nameof(size), size, "must be greater than zero");
+                    Size = size;
+                }
+
+                /// <summary>
+                /// The resume-writer threshold, in bytes, for the connection's input pipe. The
+                /// pause-writer threshold applied is twice this value.
+                /// </summary>
+                public int Size { get; }
+            }
+
+            /// <summary>
             /// Socket option that sets the IP traffic class (type-of-service) on a socket after connecting.
             /// </summary>
             public class TrafficClass : SocketOption

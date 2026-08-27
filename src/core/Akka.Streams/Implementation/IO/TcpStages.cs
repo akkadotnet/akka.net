@@ -422,13 +422,94 @@ namespace Akka.Streams.Implementation.IO
         /// </summary>
         internal sealed class TcpStreamLogic : GraphStageLogic
         {
+            /// <summary>
+            /// Coalescing cap for <see cref="_writeBufferedBytes"/>, mirroring Pekko's
+            /// <c>pekko.stream.materializer.io.tcp.write-buffer-size</c> default of 16 KiB
+            /// (pekko stream/src/main/resources/reference.conf). While a write is in flight the
+            /// stage keeps pulling and accumulating elements below this cap instead of doing one
+            /// write/ack round-trip per element; at/over the cap it stops pulling, which is the
+            /// natural backpressure signal. Kept as an internal constant rather than a
+            /// configurable Attributes/HOCON knob to keep this change scoped to the coalescing
+            /// behavior itself -- exposing it the way Pekko does would be a reasonable follow-up.
+            /// </summary>
+            private const long WriteBufferCap = 16 * 1024;
+
             private readonly ITcpRole _role;
             private readonly EndPoint _remoteAddress;
             private readonly Inlet<ReadOnlySequence<byte>> _bytesIn;
             private readonly Outlet<ReadOnlySequence<byte>> _bytesOut;
             private IActorRef _connection;
             private readonly OutHandler _readHandler;
-            
+
+            // Write-coalescing state. While a write is outstanding (sent to the connection actor,
+            // awaiting WriteAck), elements pushed from upstream are appended here instead of being
+            // sent immediately; the whole accumulation is flushed as a single Tcp.Write once the
+            // outstanding WriteAck arrives. Ports Pekko's TcpConnectionStage.TcpStreamLogic
+            // writeBuffer/writeInProgress behavior (pekko stream/.../impl/io/TcpStages.scala, the
+            // writeBuffer/writeInProgress fields and the onPush/WriteAck handling around lines
+            // 275-388), minus the optional WriteDelayAck/coalesceWrites round-trip refinement --
+            // see the comments on the WriteAck case in <see cref="Connected"/> for why.
+            private WriteBufferSegment _writeBufferHead;
+            private WriteBufferSegment _writeBufferTail;
+            private long _writeBufferedBytes;
+
+            /// <summary>There is a write outstanding (sent to the connection actor, awaiting <see cref="WriteAck"/>).</summary>
+            private bool _writeInProgress;
+
+            /// <summary>
+            /// Upstream already finished (or downstream cancelled while upstream had already
+            /// finished) but a write was still in flight/buffered at that time; the deferred
+            /// Close/ConfirmedClose is sent once the write buffer fully drains.
+            /// </summary>
+            private bool _connectionClosePending;
+
+            /// <summary>
+            /// A minimal <see cref="ReadOnlySequenceSegment{T}"/> node used to chain buffered write
+            /// payloads together -- a rope-like concatenation mirroring Pekko's <c>ByteString ++</c>
+            /// accumulation of its writeBuffer. Zero-copy: each node wraps the SAME memory a producer
+            /// handed to <see cref="AppendToWriteBuffer"/>, and optionally carries the
+            /// <see cref="IMemoryOwner{T}"/> that memory came from (detached from the producer's own
+            /// segment -- see that method's remarks). The owner is optional HERE, unlike
+            /// <see cref="Akka.IO.OwnedSequenceSegment"/> (which always owns): this buffer is an
+            /// AGGREGATOR that mixes owned frames (e.g. Artery's encoded frames) with borrowed links
+            /// (e.g. the one-time connection preamble, which is never pool-backed) in the same chain.
+            /// </summary>
+            private sealed class WriteBufferSegment : ReadOnlySequenceSegment<byte>, IOwnedSequenceSegment
+            {
+                private IMemoryOwner<byte>? _owner;
+
+                public WriteBufferSegment(ReadOnlyMemory<byte> memory, IMemoryOwner<byte>? owner = null)
+                {
+                    Memory = memory;
+                    _owner = owner;
+                }
+
+                public void Chain(WriteBufferSegment next)
+                {
+                    next.RunningIndex = RunningIndex + Memory.Length;
+                    Next = next;
+                }
+
+                /// <inheritdoc />
+                public bool HasOwner => _owner is not null;
+
+                /// <inheritdoc />
+                public void DisposeOwner()
+                {
+                    var owner = _owner;
+                    _owner = null;
+                    owner?.Dispose();
+                }
+
+                /// <inheritdoc />
+                public IMemoryOwner<byte>? DetachOwner()
+                {
+                    var owner = _owner;
+                    _owner = null;
+                    return owner;
+                }
+            }
+
             public TcpStreamLogic(FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>> shape, ITcpRole role, EndPoint remoteAddress) : base(shape)
             {
                 _role = role;
@@ -447,8 +528,17 @@ namespace Akka.Streams.Implementation.IO
                         {
                             if(Log.IsDebugEnabled)
                                 Log.Debug("Closing connection from {0} because downstream cancelled stream without failure", (IPEndPoint)_remoteAddress);
-                            if(IsClosed(_bytesIn))
-                                _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
+                            if (IsClosed(_bytesIn))
+                            {
+                                // A write that is still outstanding/buffered must be flushed
+                                // (via WriteAck -> CloseConnectionUpstreamFinished) before we
+                                // close -- otherwise bytes coalesced while that write was in
+                                // flight would be silently dropped.
+                                if (_writeInProgress)
+                                    _connectionClosePending = true;
+                                else
+                                    _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
+                            }
                             else
                                 _connection.Tell(Tcp.ResumeReading.Instance, StageActor.Ref);
                         }
@@ -456,6 +546,9 @@ namespace Akka.Streams.Implementation.IO
                         {
                             if(Log.IsDebugEnabled)
                                 Log.Debug(cause, "Aborting connection from {0} because of downstream failure", (IPEndPoint)_remoteAddress);
+                            // Abort tears the connection down immediately; any buffered/in-flight
+                            // write is intentionally dropped here (matches Pekko -- there is no
+                            // flush-on-abort) same as onUpstreamFailure below.
                             _connection.Tell(Tcp.Abort.Instance, StageActor.Ref);
                             FailStage(cause);
                         }
@@ -468,20 +561,32 @@ namespace Akka.Streams.Implementation.IO
                     {
                         var elem = Grab(_bytesIn);
                         ReactiveStreamsCompliance.RequireNonNullElement(elem);
-                        _connection.Tell(Tcp.Write.Create(elem, WriteAck.Instance), StageActor.Ref);
+
+                        // Unconditionally accumulate first -- mirrors Pekko's
+                        // `writeBuffer = writeBuffer ++ elem` (TcpStages.scala ~474-483), which
+                        // appends before branching on whether to send now or keep collecting.
+                        // See AppendToWriteBuffer's remarks for the zero-copy ownership-transfer
+                        // mechanism.
+                        AppendToWriteBuffer(elem);
+
+                        if (!_writeInProgress)
+                        {
+                            // Nothing outstanding: flush (= send this one element) immediately.
+                            // The key change over the previous lock-step behavior is what happens
+                            // next -- we keep demand open below so more elements can accumulate
+                            // while this write's WriteAck round-trip to the connection actor is
+                            // in flight, instead of waiting for the ack before pulling again.
+                            FlushWriteBuffer();
+                        }
+
+                        if (_writeBufferedBytes < WriteBufferCap)
+                            Pull(_bytesIn);
+                        // else: at/over the cap -- stay un-pulled, this is the natural
+                        // backpressure signal (mirrors Pekko's
+                        // `if (writeBuffer.length < writeBufferSize) pull(bytesIn)`,
+                        // TcpStages.scala ~484-485).
                     },
-                    onUpstreamFinish: () =>
-                    {
-                        // Reading has stopped before, either because of cancel, or PeerClosed, so just Close now
-                        // (or half-close is turned off)
-                        if (IsClosed(_bytesOut) || !_role.HalfClose)
-                            _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
-                        // We still read, so we only close the write side
-                        else if (_connection != null)
-                            _connection.Tell(Tcp.ConfirmedClose.Instance, StageActor.Ref);
-                        else
-                            CompleteStage();
-                    },
+                    onUpstreamFinish: CloseConnectionUpstreamFinished,
                     onUpstreamFailure: ex =>
                     {
                         if (_connection != null)
@@ -489,11 +594,171 @@ namespace Akka.Streams.Implementation.IO
                             if (Interpreter.Log.IsDebugEnabled)
                                 Interpreter.Log.Debug(
                                     $"Aborting tcp connection to {_remoteAddress} because of upstream failure: {ex.Message}\n{ex.StackTrace}");
+                            // Abort tears the connection down immediately; any buffered/in-flight
+                            // write is intentionally dropped here, matching Pekko (no
+                            // flush-on-abort).
                             _connection.Tell(Tcp.Abort.Instance, StageActor.Ref);
                         }
                         else
                             FailStage(ex);
                     });
+            }
+
+            /// <summary>
+            /// Appends every segment of <paramref name="data"/> to the write-coalescing buffer --
+            /// zero-copy: no <see cref="ReadOnlyMemory{T}.ToArray"/> or other memcpy anywhere in this
+            /// method. Each appended <see cref="WriteBufferSegment"/> wraps the SAME memory
+            /// <paramref name="data"/> exposed; if that memory is pool-backed, the owner responsible
+            /// for eventually returning it is TRANSFERRED into the new segment rather than copied
+            /// (modernize-akka-io-tcp design.md, Decision 8 / the ownership-transfer mechanism).
+            /// </summary>
+            /// <remarks>
+            /// <b>Two cases, told apart by how <paramref name="data"/> is backed:</b>
+            /// <para>
+            /// <b>Segment-backed</b> (<c>data.Start.GetObject()</c> is a
+            /// <see cref="ReadOnlySequenceSegment{T}"/> -- e.g. every frame
+            /// <c>Akka.Remote.Artery.ArteryEncodeStage</c> pushes, each a single
+            /// <see cref="Akka.IO.OwnedSequenceSegment"/>): this is (a chain of) pool-backed memory
+            /// this stage is now responsible for. Walk <paramref name="data"/>'s OWN segment chain
+            /// from its <c>Start</c> segment to its <c>End</c> segment (inclusive, bounded so the
+            /// walk never runs past the tail this sequence actually references -- a later segment in
+            /// the same chain could belong to a different, still-live write). For each link, take
+            /// <c>(segment as IOwnedSequenceSegment)?.DetachOwner()</c> -- moving responsibility for
+            /// disposal from the producer's segment to this buffer's own <see cref="WriteBufferSegment"/>
+            /// wrapping the identical memory (sliced to <paramref name="data"/>'s own start/end
+            /// offsets on the first/last link) -- and append it. A link's owner is never null-checked
+            /// away here even if its sliced memory happens to be empty: dropping it instead of
+            /// appending would detach the owner from its source without giving it anywhere to be
+            /// disposed later, i.e. a leak.
+            /// </para>
+            /// <para>
+            /// <b>Memory-/array-backed</b> (e.g. the once-per-connection preamble built by
+            /// <c>ArteryRemoting.BuildPreamble</c> as <c>new ReadOnlySequence&lt;byte&gt;(buffer)</c>):
+            /// this data is BORROWED, not owned -- there is no producer-side segment to detach
+            /// anything from. Each non-empty chunk <see langword="foreach"/> yields becomes a
+            /// <see cref="WriteBufferSegment"/> with a <see langword="null"/> owner (still zero-copy:
+            /// the memory itself is still referenced, not copied), so the later buffer-teardown walk
+            /// correctly skips it.
+            /// </para>
+            /// </remarks>
+            private void AppendToWriteBuffer(ReadOnlySequence<byte> data)
+            {
+                if (data.IsEmpty)
+                    return;
+
+                if (data.Start.GetObject() is ReadOnlySequenceSegment<byte> segment)
+                {
+                    var startObject = segment;
+                    var endSegment = data.End.GetObject() as ReadOnlySequenceSegment<byte>;
+                    var startIndex = data.Start.GetInteger();
+                    var endIndex = data.End.GetInteger();
+
+                    while (segment is not null)
+                    {
+                        var memory = segment.Memory;
+                        var isFirst = ReferenceEquals(segment, startObject);
+                        var isLast = ReferenceEquals(segment, endSegment);
+
+                        if (isFirst)
+                            memory = memory.Slice(startIndex);
+                        if (isLast)
+                            memory = memory.Slice(0, isFirst ? endIndex - startIndex : endIndex);
+
+                        var owner = (segment as IOwnedSequenceSegment)?.DetachOwner();
+                        AppendWriteBufferSegment(memory, owner);
+
+                        if (ReferenceEquals(segment, endSegment))
+                            break;
+
+                        segment = segment.Next!;
+                    }
+                }
+                else
+                {
+                    foreach (var memory in data)
+                    {
+                        if (memory.IsEmpty)
+                            continue;
+
+                        AppendWriteBufferSegment(memory, owner: null);
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Appends a single <see cref="WriteBufferSegment"/> wrapping <paramref name="memory"/>
+            /// (and, if non-null, carrying <paramref name="owner"/>) to the tail of the write buffer.
+            /// </summary>
+            private void AppendWriteBufferSegment(ReadOnlyMemory<byte> memory, IMemoryOwner<byte>? owner)
+            {
+                var segment = new WriteBufferSegment(memory, owner);
+                if (_writeBufferHead is null)
+                    _writeBufferHead = segment;
+                else
+                    _writeBufferTail!.Chain(segment);
+
+                _writeBufferTail = segment;
+                _writeBufferedBytes += memory.Length;
+            }
+
+            /// <summary>
+            /// Removes and returns everything currently buffered as a single
+            /// <see cref="ReadOnlySequence{T}"/> view over the chained segments (no copy), and
+            /// resets the buffer to empty.
+            /// </summary>
+            private ReadOnlySequence<byte> DrainWriteBuffer()
+            {
+                if (_writeBufferHead is null)
+                    return ReadOnlySequence<byte>.Empty;
+
+                var sequence = new ReadOnlySequence<byte>(_writeBufferHead, 0, _writeBufferTail!, _writeBufferTail!.Memory.Length);
+                _writeBufferHead = null;
+                _writeBufferTail = null;
+                _writeBufferedBytes = 0;
+                return sequence;
+            }
+
+            /// <summary>
+            /// Sends everything currently buffered as one <see cref="Tcp.Write"/>, marks a write
+            /// as outstanding, and clears the buffer. Mirrors Pekko's <c>sendWriteBuffer()</c>
+            /// (TcpStages.scala ~336-340).
+            /// </summary>
+            private void FlushWriteBuffer()
+            {
+                var buffered = DrainWriteBuffer();
+                _connection.Tell(Tcp.Write.Create(buffered, WriteAck.Instance), StageActor.Ref);
+                _writeInProgress = true;
+            }
+
+            /// <summary>
+            /// Sends the connection's Close/ConfirmedClose (honoring half-close and the read
+            /// side's state) if no write is currently outstanding; otherwise defers via
+            /// <see cref="_connectionClosePending"/> until the buffered write(s) drain. Mirrors
+            /// Pekko's <c>closeConnectionUpstreamFinished()</c> (TcpStages.scala ~403-424) --
+            /// upstream finishing must never truncate a write that is still in flight or
+            /// buffered.
+            /// </summary>
+            private void CloseConnectionUpstreamFinished()
+            {
+                // Reading has stopped before, either because of cancel, or PeerClosed, so just Close now
+                // (or half-close is turned off)
+                if (IsClosed(_bytesOut) || !_role.HalfClose)
+                {
+                    if (_writeInProgress)
+                        _connectionClosePending = true; // continues once WriteAck drains the write buffer
+                    else
+                        _connection.Tell(Tcp.Close.Instance, StageActor.Ref);
+                }
+                // We still read, so we only close the write side
+                else if (_connection != null)
+                {
+                    if (_writeInProgress)
+                        _connectionClosePending = true;
+                    else
+                        _connection.Tell(Tcp.ConfirmedClose.Instance, StageActor.Ref);
+                }
+                else
+                    CompleteStage();
             }
 
             /// <summary>
@@ -529,6 +794,25 @@ namespace Akka.Streams.Implementation.IO
                     // Fail if has not been completed with an address earlier
                     outbound.LocalAddressPromise.TrySetException(new StreamTcpException("Connection failed"));
                 }
+
+                // Catch-all for any owner(s) still sitting in the write buffer at teardown --
+                // abort/fail/cancel all drop the buffer without flushing it (see the
+                // onDownstreamFinish/onUpstreamFailure handlers above and CloseConnectionUpstreamFinished's
+                // "defer until drained" comment), so this is where those owners actually get disposed.
+                // On a graceful path the buffer has already been handed off to Tcp.Write and DRAINED
+                // (DrainWriteBuffer nulls _writeBufferHead/_writeBufferTail on every flush -- see
+                // FlushWriteBuffer), so this walk finds nothing and is a no-op; a flushed write's
+                // owners become TcpConnection's responsibility to dispose at the pipe copy, never
+                // this buffer's.
+                var segment = _writeBufferHead;
+                while (segment is not null)
+                {
+                    segment.DisposeOwner();
+                    segment = (WriteBufferSegment?)segment.Next;
+                }
+
+                _writeBufferHead = null;
+                _writeBufferTail = null;
             }
 
             private StageActorRef.Receive Connecting(Outbound outbound)
@@ -576,7 +860,30 @@ namespace Akka.Streams.Implementation.IO
                         break;
                     case WriteAck:
                     {
-                        if (!IsClosed(_bytesIn)) Pull(_bytesIn);
+                        if (_writeBufferHead is null)
+                        {
+                            // Nothing accumulated while this write was outstanding.
+                            _writeInProgress = false;
+                        }
+                        else
+                        {
+                            // Flush everything accumulated while this write's ack was outstanding
+                            // as a single Tcp.Write -- this is the coalescing payoff: N pushes
+                            // become far fewer write/ack round-trips instead of one round-trip per
+                            // element. Mirrors Pekko's WriteAck branch, minus the optional
+                            // WriteDelayAck/coalesceWrites round-trip refinement (which
+                            // deliberately delays this flush by one more empty-write round-trip to
+                            // probe for a few more upstream elements before sending -- TcpStages.scala
+                            // 362-388); this port always flushes immediately on ack instead.
+                            FlushWriteBuffer();
+                        }
+
+                        if (!_writeInProgress && _connectionClosePending)
+                            CloseConnectionUpstreamFinished();
+
+                        if (!IsClosed(_bytesIn) && !HasBeenPulled(_bytesIn))
+                            Pull(_bytesIn);
+
                         break;
                     }
                     case Terminated:

@@ -906,8 +906,7 @@ namespace Akka.Streams.Dsl
         /// </para>
         /// <para>
         /// The stream can be completed successfully by sending the actor reference a <see cref="Status.Success"/>
-        /// message (whose content will be ignored) in which case already buffered elements will be signaled before signaling completion,
-        /// or by sending <see cref="PoisonPill"/> in which case completion will be signaled immediately.
+        /// message (whose content will be ignored) in which case already buffered elements will be signaled before signaling completion.
         /// </para>
         /// <para>
         /// The stream can be completed with failure by sending a <see cref="Status.Failure"/> to the
@@ -916,10 +915,9 @@ namespace Akka.Streams.Dsl
         /// the failure will be signaled downstream immediately (instead of the completion signal).
         /// </para>
         /// <para>
-        /// Note that terminating the actor without first completing it, either with a success or a
-        /// failure, will prevent the actor triggering downstream completion and the stream will continue
-        /// to run even though the source actor is dead. Therefore you should **not** attempt to
-        /// manually terminate the actor such as with a <see cref="PoisonPill"/>.
+        /// The materialized actor reference is backed by a stream stage actor, which ignores lifecycle messages such
+        /// as <see cref="PoisonPill"/> and <see cref="Kill"/> — sending them has no effect. Complete the stream
+        /// explicitly with <see cref="Status.Success"/> or <see cref="Status.Failure"/> instead.
         /// </para>
         /// <para>
         /// The actor will be stopped when the stream is completed, failed or canceled from downstream,
@@ -942,7 +940,7 @@ namespace Akka.Streams.Dsl
             if (bufferSize < 0) throw new ArgumentException("Buffer size must be greater than or equal 0", nameof(bufferSize));
             if (overflowStrategy == OverflowStrategy.Backpressure) throw new NotSupportedException("Backpressure overflow strategy is not supported");
 
-            return new Source<T, IActorRef>(new ActorRefSource<T>(bufferSize, overflowStrategy, DefaultAttributes.ActorRefSource, Shape<T>("ActorRefSource")));
+            return FromGraph(new ActorRefSourceStage<T>(bufferSize, overflowStrategy));
         }
 
 

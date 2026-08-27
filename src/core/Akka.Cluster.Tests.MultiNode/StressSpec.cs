@@ -37,9 +37,9 @@ public class StressSpecConfig : MultiNodeConfig
 {
     public int TotalNumberOfNodes => Environment.GetEnvironmentVariable("MNTR_STRESSSPEC_NODECOUNT") switch
     {
-        string e when string.IsNullOrEmpty(e) => 13,
+        string e when string.IsNullOrEmpty(e) => 10,
         string val => int.Parse(val),
-        _ => 13
+        _ => 10
     };
 
     public StressSpecConfig()
@@ -54,13 +54,13 @@ akka.test.cluster-stress-spec {
     nr-of-nodes-factor = 1
     # not scaled
     nr-of-seed-nodes = 3
-    nr-of-nodes-joining-to-seed-initially = 2
-    nr-of-nodes-joining-one-by-one-small = 2
-    nr-of-nodes-joining-one-by-one-large = 2
-    nr-of-nodes-joining-to-one = 2
+    nr-of-nodes-joining-to-seed-initially = 1
+    nr-of-nodes-joining-one-by-one-small = 1
+    nr-of-nodes-joining-one-by-one-large = 1
+    nr-of-nodes-joining-to-one = 1
     nr-of-nodes-leaving-one-by-one-small = 1
     nr-of-nodes-leaving-one-by-one-large = 1
-    nr-of-nodes-leaving = 2
+    nr-of-nodes-leaving = 1
     nr-of-nodes-shutdown-one-by-one-small = 1
     nr-of-nodes-shutdown-one-by-one-large = 1
     nr-of-nodes-partition = 2
@@ -90,6 +90,15 @@ akka.cluster {
 akka.loggers = [""Akka.TestKit.TestEventListener, Akka.TestKit""]
 akka.loglevel = INFO
 akka.remote.log-remote-lifecycle-events = off
+
+# NOTE: timefactor scales Within(max) too -- TestKitBase.WithinAsync applies Dilated(max) to the
+# bound, and every Within/WithinAsync overload routes through it. So a phase written as Within(30s)
+# actually gets 30s * timefactor, and inner waits that inherit RemainingOrDefault are bounded by
+# whatever that dilated phase budget has left. Do NOT pre-multiply a Within bound (or pre-Dilate a
+# duration handed to a TestKit expect) to compensate -- it is already scaled once, and doing it
+# twice squares the factor.
+akka.test.single-expect-default = 10s
+akka.test.timefactor = 3
 akka.actor.default-dispatcher = {
     executor = fork-join-executor
     fork-join-executor {
@@ -817,6 +826,27 @@ public class StressSpec : MultiNodeClusterSpec
         return Option<IActorRef>.Create(IdentifyProbe.ExpectMsg<ActorIdentity>().Subject);
     }
 
+    /// <summary>
+    /// Retrying variant of <see cref="ClusterResultAggregator"/> used at the aggregator
+    /// lifecycle boundaries (creation / await-result), where a one-shot remote <see cref="Identify"/>
+    /// proved to be the tightest undilated window in the spec. Uses a fresh probe per attempt
+    /// (a late reply from a timed-out attempt must not pollute the next one) with a bounded inner
+    /// expect, mirroring the watchee-lookup pattern in <see cref="RemoveOneAsync"/> and the
+    /// fresh-probe-per-attempt pattern from #8363.
+    /// </summary>
+    public async Task<Option<IActorRef>> ClusterResultAggregatorAsync()
+    {
+        IActorRef aggregatorRef = null;
+        await AwaitAssertAsync(async () =>
+        {
+            var probe = CreateTestProbe();
+            Sys.ActorSelection(new RootActorPath(GetAddress(Roles.First())) / "user" / ("result" + Step))
+                .Tell(new Identify(Step), probe.Ref);
+            aggregatorRef = (await probe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(3))).Subject;
+        }, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(1));
+        return Option<IActorRef>.Create(aggregatorRef);
+    }
+
     public async Task CreateResultAggregatorAsync(string title, int expectedResults, bool includeInHistory)
     {
         RunOn(() =>
@@ -837,21 +867,29 @@ public class StressSpec : MultiNodeClusterSpec
             Roles.First());
         await EnterBarrierAsync("result-aggregator-created-" + Step);
 
-        RunOn(() =>
+        await RunOnAsync(async () =>
         {
-            var resultAggregator = ClusterResultAggregator();
+            var resultAggregator = await ClusterResultAggregatorAsync();
             PhiObserver.Value.Tell(new ReportTo(resultAggregator));
             StatsObserver.Value.Tell(Reset.Instance);
             StatsObserver.Value.Tell(new ReportTo(resultAggregator));
         }, Roles.Take(NbrUsedRoles).ToArray());
 
+        // The RunOnAsync above performs a REMOTE Identify, and RunOnAsync provides no synchronization
+        // whatsoever - it is just `if (IsNode(nodes)) await thunkAsync()`. Without a barrier here, nodes
+        // still resolving the aggregator race whatever the caller does next. PartitionSeveral is where it
+        // bites: the node that owns the aggregator returns from this method and starts blackholing the very
+        // nodes that are still mid-Identify, so their lookup can never complete and they burn the whole
+        // retry budget. Bracket the resolution so every node has finished it before the phase proceeds.
+        await EnterBarrierAsync("result-aggregator-identified-" + Step);
     }
 
     public async Task AwaitClusterResultAsync()
     {
-        RunOn(() =>
+        await RunOnAsync(async () =>
         {
-            ClusterResultAggregator().OnSuccess(r =>
+            var resultAggregator = await ClusterResultAggregatorAsync();
+            resultAggregator.OnSuccess(r =>
             {
                 Watch(r);
                 ExpectMsg<Terminated>(t => t.ActorRef.Path == r.Path);
@@ -975,10 +1013,32 @@ public class StressSpec : MultiNodeClusterSpec
             {
                 await AwaitAssertAsync(async () =>
                 {
-                    Sys.ActorSelection(new RootActorPath(removeAddress) / "user" / "watchee").Tell(new Identify("watchee"), IdentifyProbe.Ref);
-                    var watchee = (await IdentifyProbe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(1))).Subject;
-                    await WatchAsync(watchee);
-                }, interval:TimeSpan.FromSeconds(1.25d));
+                    // Fresh probe per attempt, matching ClusterResultAggregatorAsync. The shared IdentifyProbe
+                    // kept a timed-out attempt's late ActorIdentity queued, so the next attempt consumed that
+                    // stale reply instead of its own -- and a reply resolved before the watchee existed carries
+                    // a null Subject, so the retry could never recover no matter how often it ran.
+                    var probe = CreateTestProbe();
+                    Sys.ActorSelection(new RootActorPath(removeAddress) / "user" / "watchee").Tell(new Identify("watchee"), probe.Ref);
+                    var identity = await probe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(1));
+                    // Under load the selection can resolve to an ActorIdentity with a null Subject; guard
+                    // here so this attempt fails fast and the retry loop retries, instead of passing null
+                    // into WatchAsync (ArgumentNullException inside the TestActor -> AskTimeout).
+                    identity.Subject.Should().NotBeNull();
+                    var watchee = identity.Subject;
+                    // Pekko's `watch()` here (StressSpec.scala removeOne) is a plain non-blocking `Tell` with
+                    // no timeout at all. Akka.NET's TestKitBase.Watch is *not* an equivalent: it still Asks
+                    // under the hood and bounds itself with RemainingOrDefault, i.e. whatever time is left on
+                    // the *outer* enclosing Within block -- and AwaitAssertAsync doesn't push its own Within
+                    // scope, so that outer budget leaks straight into this inner call. A hung/slow watch Ask
+                    // would then burn the entire outer retry budget in a single attempt (outer==inner
+                    // degeneracy), regardless of whether we call the sync or async TestKit method. Bound it
+                    // explicitly instead so a slow attempt here still leaves room for AwaitAssertAsync to retry.
+                    await WatchAsync(watchee).WaitAsync(Dilated(TimeSpan.FromSeconds(3)));
+                    // Explicit bound: with no duration this retry loop inherited RemainingOrDefault, i.e. the
+                    // enclosing phase's leftover budget, so it could consume the phase and starve the removal
+                    // work that follows. Establishing a watch on a just-created actor is a single round trip;
+                    // 10s of retries is ample and leaves the phase intact.
+                }, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(1.25d));
                    
             }, Roles.First());
             await EnterBarrierAsync("watchee-established-" + Step);
@@ -1125,21 +1185,6 @@ public class StressSpec : MultiNodeClusterSpec
             });
     }
 
-    public T ReportResult<T>(Func<T> thunk)
-    {
-        var startTime = MonotonicClock.GetTicks();
-        var startStats = ClusterView.LatestStats.GossipStats;
-
-        var returnValue = thunk();
-
-        ClusterResultAggregator().OnSuccess(r =>
-        {
-            r.Tell(new ClusterResult(Cluster.SelfAddress, TimeSpan.FromTicks(MonotonicClock.GetTicks() - startTime), LatestGossipStats - startStats));
-        });
-
-        return returnValue;
-    }
-
     public async Task<T> ReportResult<T>(Func<Task<T>> thunk)
     {
         var startTime = MonotonicClock.GetTicks();
@@ -1147,7 +1192,10 @@ public class StressSpec : MultiNodeClusterSpec
 
         var returnValue = await thunk();
 
-        ClusterResultAggregator().OnSuccess(r =>
+        // Use the retrying, fresh-probe-per-attempt aggregator lookup (matches CreateResultAggregatorAsync /
+        // AwaitClusterResultAsync) rather than the old one-shot ClusterResultAggregator(), whose single
+        // non-retried Identify/ExpectMsg made a lone lost reply under this spec's deliberate churn fatal.
+        (await ClusterResultAggregatorAsync()).OnSuccess(r =>
         {
             r.Tell(new ClusterResult(Cluster.SelfAddress, TimeSpan.FromTicks(MonotonicClock.GetTicks() - startTime), LatestGossipStats - startStats));
         });

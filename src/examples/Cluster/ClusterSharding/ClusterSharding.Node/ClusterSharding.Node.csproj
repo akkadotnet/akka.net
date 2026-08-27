@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="app.conf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -19,9 +23,9 @@
 
   <ItemGroup>
     <PackageReference Include="Akka.Bootstrap.Docker" Version="0.5.3" />
-    <PackageReference Include="Akka.Persistence.Sql" Version="1.5.67" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.14" />
-    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.14" />
+    <PackageReference Include="Akka.Persistence.Sql" Version="1.5.70" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.10" />
   </ItemGroup>
 
 </Project>

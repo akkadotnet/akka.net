@@ -25,7 +25,14 @@ namespace Akka.Remote.Tests.MultiNode
             First = Role("first");
             Second = Role("second");
 
+            // Pinned to CLASSIC remoting even under AKKA_MNTR_TRANSPORT=artery: this spec drives
+            // `ManagementCommand(ForceDisassociate)` directly, which artery's blackhole-only
+            // test-mode does not support. Pekko keeps its version of this spec classic-only for
+            // the same reason (remote-tests/.../classic/RemoteNodeShutdownAndComesBackSpec.scala,
+            // "TODO, should artery support this?"). CommonConfig sits above MultiNodeConfig's
+            // artery tier in the fallback chain, so this override always wins.
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(@"
+                  akka.remote.artery.enabled = off
                   akka.loglevel = INFO
                   akka.remote.log-remote-lifecycle-events = INFO
                   ## Keep it tight, otherwise reestablishing a connection takes too much time

@@ -76,9 +76,10 @@ namespace Akka.IO
             // non-blocking for the SAEA connect phase — switch to blocking now.
             Socket.Blocking = true;
 
+            var pipeBufferSize = ResolvePipeBufferSize(Settings, _connect.Options);
             var inputPipeOptions = new PipeOptions(
-                pauseWriterThreshold: Settings.ReceiveBufferSize * 2,
-                resumeWriterThreshold: Settings.ReceiveBufferSize,
+                pauseWriterThreshold: pipeBufferSize * 2,
+                resumeWriterThreshold: pipeBufferSize,
                 useSynchronizationContext: false);
 
             return new TcpTransportConnection(Socket, inputPipeOptions: inputPipeOptions);

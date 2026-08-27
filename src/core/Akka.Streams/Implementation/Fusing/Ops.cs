@@ -3967,6 +3967,7 @@ namespace Akka.Streams.Implementation.Fusing
             private readonly CancellationTokenSource _completionCts;
             
             private IAsyncEnumerator<T> _enumerator;
+            private Task _inFlightMove;
 
             public Logic(SourceShape<T> shape, IAsyncEnumerable<T> enumerable) : base(shape)
             {
@@ -3999,7 +4000,6 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
                     _completionCts.Cancel();
-                    _completionCts.Dispose();
                 }
                 catch(Exception ex)
                 {
@@ -4010,8 +4010,8 @@ namespace Akka.Streams.Implementation.Fusing
                 try
                 {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                    // Intentionally creating a detached dispose task
-                    DisposeEnumeratorAsync();
+                    // Intentionally creating a detached cleanup task
+                    CleanupAsync(_inFlightMove);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                 }
                 catch(Exception ex)
@@ -4021,17 +4021,36 @@ namespace Akka.Streams.Implementation.Fusing
                 base.PostStop();
                 return;
 
-                async Task DisposeEnumeratorAsync()
+                async Task CleanupAsync(Task inFlightMove)
                 {
+                    // Wait for any in-flight MoveNextAsync to finish before disposing: IAsyncEnumerator
+                    // forbids overlapping MoveNextAsync/DisposeAsync calls. No timeout is used here:
+                    // a stuck non-cooperative enumerator can leak this materialization, but a bounded
+                    // wait would reintroduce the concurrent DisposeAsync race from #7381.
                     try
                     {
-                        await _enumerator.DisposeAsync();
+                        if (inFlightMove != null)
+                            await inFlightMove.ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug(ex, "In-flight MoveNextAsync faulted before disposal.");
+                    }
+
+                    try
+                    {
+                        if (_enumerator != null)
+                            await _enumerator.DisposeAsync().ConfigureAwait(false);
                     }
                     catch (Exception ex)
                     {
                         // This is best effort exception logging, this log will never appear if the ActorSystem
                         // was shut down before we reach this code (BusEvent was not emitting new logs anymore)
                         Log.Debug(ex, "Underlying async enumerator threw an exception while being disposed.");
+                    }
+                    finally
+                    {
+                        _completionCts.Dispose();
                     }
                 }
             }
@@ -4077,7 +4096,7 @@ namespace Akka.Streams.Implementation.Fusing
                         }
                     }
 
-                    _ = ProcessTask();
+                    _inFlightMove = ProcessTask();
                 }
             }
 

@@ -322,6 +322,54 @@ namespace Akka.Streams.Tests.Dsl
         }
 
         [Fact]
+        public async Task BroadcastHub_must_deliver_all_elements_to_many_consumers()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                const int consumerCount = 200;
+                const int messageCount = 2000;
+
+                var source = Source.From(Enumerable.Range(0, messageCount))
+                    .RunWith(BroadcastHub.Sink<int>(consumerCount, 1024), Materializer);
+
+                var consumers = Enumerable.Range(0, consumerCount)
+                    .Select(_ => source.RunWith(OrderedCountSink(), Materializer))
+                    .ToArray();
+
+                var results = await Task.WhenAll(consumers).WaitAsync(20.Seconds());
+                results.Should().OnlyContain(result => result.Count == messageCount);
+            }, Materializer);
+        }
+
+        [Fact]
+        public async Task BroadcastHub_must_handle_many_consumers_when_some_cancel_mid_stream()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                const int consumerCount = 64;
+                const int cancellingConsumers = 16;
+                const int messageCount = 512;
+                const int cancelAfter = 64;
+
+                var source = Source.From(Enumerable.Range(0, messageCount))
+                    .RunWith(BroadcastHub.Sink<int>(consumerCount, 128), Materializer);
+
+                var consumers = Enumerable.Range(0, consumerCount)
+                    .Select(i =>
+                    {
+                        var consumerSource = i < cancellingConsumers ? source.Take(cancelAfter) : source;
+                        return consumerSource.RunWith(OrderedCountSink(), Materializer);
+                    })
+                    .ToArray();
+
+                var results = await Task.WhenAll(consumers).WaitAsync(10.Seconds());
+
+                results.Take(cancellingConsumers).Should().OnlyContain(result => result.Count == cancelAfter);
+                results.Skip(cancellingConsumers).Should().OnlyContain(result => result.Count == messageCount);
+            }, Materializer);
+        }
+
+        [Fact]
         public async Task BroadcastHub_must_send_the_same_elements_to_consumers_attaching_around_the_same_time()
         {
             await this.AssertAllStagesStoppedAsync(async () =>
@@ -999,6 +1047,26 @@ namespace Akka.Streams.Tests.Dsl
                     await source.RunWith(Sink.Seq<int>(), Materializer);
                 }).Should().ThrowAsync<TestException>().WithMessage("Fail!").WaitAsync(3.Seconds());
             }, Materializer);
+        }
+
+        private static Sink<int, Task<OrderedCount>> OrderedCountSink()
+            => Sink.Aggregate<int, OrderedCount>(new OrderedCount(), (count, element) =>
+            {
+                count.Observe(element);
+                return count;
+            });
+
+        private sealed class OrderedCount
+        {
+            public int Count { get; private set; }
+
+            public void Observe(int element)
+            {
+                if (element != Count)
+                    throw new InvalidOperationException($"Expected element [{Count}], but received [{element}].");
+
+                Count++;
+            }
         }
     }
 

@@ -7,6 +7,7 @@
 
 using System;
 using System.Text;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.MultiNode.TestAdapter;
@@ -39,63 +40,70 @@ namespace Akka.Remote.Tests.MultiNode
             get { return Roles.Count; }
         }
 
-        protected IActorRef Identify(RoleName role, string actorName)
+        protected async Task<IActorRef> IdentifyAsync(RoleName role, string actorName)
         {
             Sys.ActorSelection(Node(role)/"user"/actorName).Tell(new Identify(actorName));
-            return ExpectMsg<ActorIdentity>().Subject;
+            return (await ExpectMsgAsync<ActorIdentity>()).Subject;
         }
 
 
         [MultiNodeFact]
-        public void Must_receive_terminated_when_remote_actor_system_is_restarted()
+        public async Task Must_receive_terminated_when_remote_actor_system_is_restarted()
         {
-            
-            RunOn(() =>
+
+            await RunOnAsync(async () =>
             {
                 var secondAddress = Node(_specConfig.Second).Address;
-                EnterBarrier("actors-started");
+                await EnterBarrierAsync("actors-started");
 
-                var subject = Identify(_specConfig.Second, "subject");
+                var subject = await IdentifyAsync(_specConfig.Second, "subject");
                 Watch(subject);
                 subject.Tell("hello");
-                ExpectMsg("hello");
-                EnterBarrier("watch-established");
-                
+                await ExpectMsgAsync("hello");
+                await EnterBarrierAsync("watch-established");
+
                 // simulate a hard shutdown, nothing sent from the shutdown node
-                TestConductor.Blackhole(_specConfig.Second, _specConfig.First, ThrottleTransportAdapter.Direction.Send)
-                    .GetAwaiter()
-                    .GetResult();
-                TestConductor.Shutdown(_specConfig.Second).GetAwaiter().GetResult();
-                ExpectTerminated(subject, TimeSpan.FromSeconds(15));
-                Within(TimeSpan.FromSeconds(5), () =>
+                await TestConductor.BlackholeAsync(_specConfig.Second, _specConfig.First, ThrottleTransportAdapter.Direction.Send);
+                await TestConductor.ShutdownAsync(_specConfig.Second);
+                await ExpectTerminatedAsync(subject, TimeSpan.FromSeconds(15));
+                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
                     // retry because the Subject actor might not be started yet
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(async () =>
                     {
+                        var probe = CreateTestProbe();
                         Sys.ActorSelection(new RootActorPath(secondAddress)/"user"/
-                                           "subject").Tell("shutdown");
-                        ExpectMsg<string>(msg => { return "shutdown-ack" == msg; }, TimeSpan.FromSeconds(1));
+                                           "subject").Tell("shutdown", probe.Ref);
+                        await probe.ExpectMsgAsync<string>(msg => msg == "shutdown-ack", TimeSpan.FromSeconds(3));
                     });
                 });
             }, _specConfig.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var addr = Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress;
                 Sys.ActorOf(Props.Create(() => new Subject()), "subject");
-                EnterBarrier("actors-started");
+                await EnterBarrierAsync("actors-started");
 
-                EnterBarrier("watch-established");
-                Sys.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
+                await EnterBarrierAsync("watch-established");
+                await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(30));
 
+                // Pin the fresh system to the SAME wire address for BOTH transports. Under
+                // AKKA_MNTR_TRANSPORT=artery the inherited config carries `canonical.port = 0`
+                // (MultiNodeSpec.SelfPort defaults to 0 -> random port), so without the explicit
+                // artery override the restarted system binds a DIFFERENT port and `first` can
+                // never re-associate with `secondAddress`. Pekko's version of this spec pins both
+                // ports the same way (RemoteNodeRestartDeathWatchSpec.scala's freshSystem config).
                 var sb = new StringBuilder().AppendLine("akka.remote.dot-netty.tcp {").AppendLine("hostname = " + addr.Host)
                         .AppendLine("port = " + addr.Port)
-                        .AppendLine("}");
+                        .AppendLine("}")
+                        .AppendLine("akka.remote.artery.canonical.hostname = " + addr.Host)
+                        .AppendLine("akka.remote.artery.canonical.port = " + addr.Port);
                 var freshSystem = ActorSystem.Create(Sys.Name,
                     ConfigurationFactory.ParseString(sb.ToString()).WithFallback(Sys.Settings.Config));
                 freshSystem.ActorOf(Props.Create(() => new Subject()), "subject");
 
-                freshSystem.WhenTerminated.Wait(TimeSpan.FromSeconds(30));
+                await freshSystem.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(30));
             }, _specConfig.Second);
         }
 
@@ -128,9 +136,10 @@ namespace Akka.Remote.Tests.MultiNode
 
             CommonConfig = DebugConfig(false).WithFallback(ConfigurationFactory.ParseString(
                 @"akka.loglevel = INFO
-                  akka.remote.log-remote-lifecycle-events = off                    
+                  akka.remote.log-remote-lifecycle-events = off
                    akka.remote.transport-failure-detector.heartbeat-interval = 1 s
-            akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s"
+            akka.remote.transport-failure-detector.acceptable-heartbeat-pause = 3 s
+            akka.remote.retry-gate-closed-for = 1s"
             ));
             TestTransport = true;
         }

@@ -13,6 +13,10 @@
     <ProjectReference Include="..\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
     <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" ReferenceOutputAssembly="true" PrivateAssets="all" />
+
+    <!-- Supplies the shared xunit3-compatible AkkaSpec base (transitively brings in Akka.TestKit.Xunit) so
+         serialization specs can run under the standard TestKit instead of raw ActorSystem.Create. -->
+    <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,5 +25,19 @@
     <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
+    <PackageReference Include="Verify.XunitV3" Version="$(VerifyXunitV3Version)" />
+    <PackageReference Include="Verify.DiffPlex" Version="$(VerifyDiffPlexVersion)" />
+  </ItemGroup>
+
+  <!--
+    Committed wire-format snapshot artifacts (see WireSnapshots/README.md). These are plain text
+    that ship with the repository so wire-format changes are reviewable in a PR diff. They are
+    NOT compiled, and (IsPackable is already false above, so nothing from this project is ever
+    packed) are explicitly marked None/not-copied so they never leak into a build or test output
+    directory.
+  -->
+  <ItemGroup>
+    <None Update="WireSnapshots\**\*.verified.txt" CopyToOutputDirectory="Never" />
+    <None Update="WireSnapshots\README.md" CopyToOutputDirectory="Never" />
   </ItemGroup>
 </Project>

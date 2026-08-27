@@ -1,0 +1,7 @@
+﻿case: immutable-hashset-single-element
+message-type: ImmutableHashSetMessage
+manifest: imm-hashset-v1
+serializer-id: 120106
+byte-count: 4
+
+0000  81 01 91 05                                       |....|

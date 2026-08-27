@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="MessagePackSerializer.cs" company="Akka.NET Project">
+// <copyright file="AkkaSerializer.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2026 .NET Foundation <https://github.com/akkadotnet/akka.net>
 // </copyright>
@@ -8,7 +8,7 @@
 #nullable enable
 using System;
 using System.Buffers;
-using System.Text;
+using System.Runtime.Serialization;
 using Akka.Actor;
 using MessagePack;
 
@@ -17,9 +17,37 @@ namespace Akka.Serialization.V2;
 /// <summary>
 /// Base class for source-generated MessagePack serializers scoped to a protocol marker type.
 /// </summary>
-public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serialization.SerializerV2
+public abstract class AkkaSerializer : SerializerV2
 {
-    protected MessagePackSerializer(ExtendedActorSystem system) : base(system)
+    /// <summary>
+    /// Maximum depth of nested <see cref="AkkaEnvelopePayloadAttribute"/> payloads permitted within a
+    /// single serialize / deserialize / size operation. Envelopes legitimately nest a level or two (a
+    /// delivery message wraps a user payload that may itself be an enveloped message), but unbounded
+    /// nesting is only reachable when a message type declares itself (directly or transitively) as its own
+    /// envelope payload — an application bug. Left unchecked that recurses until the thread's stack
+    /// overflows, which in .NET is an uncatchable process kill. Past this depth we throw an ordinary,
+    /// catchable <see cref="SerializationException"/> instead, matching the recursion limit
+    /// <c>Google.Protobuf</c> already enforces. This is a robustness guard against accidental self-nesting,
+    /// not a security control: Akka remoting carries one application's own traffic between its own nodes.
+    /// </summary>
+    private const int MaxEnvelopePayloadDepth = 100;
+
+    [ThreadStatic] private static int _envelopePayloadDepth;
+
+    private static void EnterEnvelopePayload()
+    {
+        if (_envelopePayloadDepth >= MaxEnvelopePayloadDepth)
+            throw new SerializationException(
+                $"Envelope payload nesting exceeded the maximum depth of {MaxEnvelopePayloadDepth}. " +
+                "This almost always means a message type declares itself (directly or transitively) as its " +
+                "own [AkkaEnvelopePayload], causing unbounded recursion. Break the self-reference in the message graph.");
+
+        _envelopePayloadDepth++;
+    }
+
+    private static void ExitEnvelopePayload() => _envelopePayloadDepth--;
+
+    protected AkkaSerializer(ExtendedActorSystem system) : base(system)
     {
     }
 
@@ -31,15 +59,15 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
         return writer.WrittenMemory.ToArray();
     }
 
-    protected global::Akka.Actor.IActorRef? ReadActorRef(ref MessagePackReader reader)
+    protected IActorRef? ReadActorRef(ref MessagePackReader reader)
     {
         var path = reader.ReadString();
         return string.IsNullOrEmpty(path) ? ActorRefs.NoSender : system.Provider.ResolveActorRef(path);
     }
 
-    protected static void WriteActorRef(ref MessagePackWriter writer, global::Akka.Actor.IActorRef? actorRef)
+    protected static void WriteActorRef(ref MessagePackWriter writer, IActorRef? actorRef)
     {
-        writer.Write(global::Akka.Serialization.Serialization.SerializedActorPath(actorRef));
+        writer.Write(Serialization.SerializedActorPath(actorRef));
     }
 
     protected void WriteEnvelopePayload(ref MessagePackWriter writer, object? payload)
@@ -51,14 +79,24 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
         }
 
         var serializer = system.Serialization.FindSerializerFor(payload);
-        var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, payload);
+        var manifest = Serialization.ManifestFor(serializer, payload);
 
-        if (serializer is global::Akka.Serialization.SerializerV2 serializerV2)
+        if (serializer is SerializerV2 serializerV2)
         {
             using var buffer = new AkkaPooledBufferWriter();
-            var bytesWritten = serializerV2.Serialize(payload, buffer);
+            int bytesWritten;
+            EnterEnvelopePayload();
+            try
+            {
+                bytesWritten = serializerV2.Serialize(payload, buffer);
+            }
+            finally
+            {
+                ExitEnvelopePayload();
+            }
+
             if (bytesWritten != buffer.WrittenCount)
-                throw new global::System.Runtime.Serialization.SerializationException(
+                throw new SerializationException(
                     $"Serializer [{serializer.GetType()}] reported [{bytesWritten}] bytes but wrote [{buffer.WrittenCount}] bytes.");
 
             writer.WriteMapHeader(3);
@@ -113,11 +151,19 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
         }
 
         if (serializerId is null)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing envelope payload serializer id.");
+            throw new SerializationException("Missing envelope payload serializer id.");
         if (bytes is null)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing envelope payload bytes.");
+            throw new SerializationException("Missing envelope payload bytes.");
 
-        return system.Serialization.Deserialize(bytes.Value, serializerId.Value, manifest);
+        EnterEnvelopePayload();
+        try
+        {
+            return system.Serialization.Deserialize(bytes.Value, serializerId.Value, manifest);
+        }
+        finally
+        {
+            ExitEnvelopePayload();
+        }
     }
 
     protected int SizeOfEnvelopePayload(object? payload)
@@ -126,14 +172,24 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
             return SizeOfNil();
 
         var serializer = system.Serialization.FindSerializerFor(payload);
-        if (serializer is not global::Akka.Serialization.SerializerV2 serializerV2)
-            return global::Akka.Serialization.SerializerV2.UnknownSize;
+        if (serializer is not SerializerV2 serializerV2)
+            return SerializerV2.UnknownSize;
 
-        var payloadSize = serializerV2.SizeHint(payload);
+        int payloadSize;
+        EnterEnvelopePayload();
+        try
+        {
+            payloadSize = serializerV2.SizeHint(payload);
+        }
+        finally
+        {
+            ExitEnvelopePayload();
+        }
+
         if (payloadSize < 0)
-            return global::Akka.Serialization.SerializerV2.UnknownSize;
+            return SerializerV2.UnknownSize;
 
-        var manifest = global::Akka.Serialization.Serialization.ManifestFor(serializer, payload);
+        var manifest = Serialization.ManifestFor(serializer, payload);
         return checked(
             SizeOfMapHeader(3) +
             SizeOfInt32(1) + SizeOfInt32(serializer.Identifier) +
@@ -141,101 +197,37 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
             SizeOfInt32(3) + SizeOfBinHeader(payloadSize) + payloadSize);
     }
 
-    protected static int SizeOfNil() => 1;
+    protected static int SizeOfNil() => MessagePackSizes.SizeOfNil();
 
-    protected static int SizeOfBoolean(bool _) => 1;
+    protected static int SizeOfBoolean(bool value) => MessagePackSizes.SizeOfBoolean(value);
 
-    protected static int SizeOfDouble(double _) => 9;
+    protected static int SizeOfDouble(double value) => MessagePackSizes.SizeOfDouble(value);
 
-    protected static int SizeOfInt32(int value) => MessagePackWriter.GetEncodedLength((long)value);
+    protected static int SizeOfInt32(int value) => MessagePackSizes.SizeOfInt32(value);
 
-    protected static int SizeOfInt64(long value) => MessagePackWriter.GetEncodedLength(value);
+    protected static int SizeOfInt64(long value) => MessagePackSizes.SizeOfInt64(value);
 
-    protected static int SizeOfEnum(int value) => SizeOfInt32(value);
+    protected static int SizeOfEnum(int value) => MessagePackSizes.SizeOfEnum(value);
 
-    protected static int SizeOfMapHeader(int count)
-    {
-        if (count <= 15)
-            return 1;
-        if (count <= ushort.MaxValue)
-            return 3;
-        return 5;
-    }
+    protected static int SizeOfMapHeader(int count) => MessagePackSizes.SizeOfMapHeader(count);
 
-    protected static int SizeOfArrayHeader(int count)
-    {
-        if (count <= 15)
-            return 1;
-        if (count <= ushort.MaxValue)
-            return 3;
-        return 5;
-    }
+    protected static int SizeOfArrayHeader(int count) => MessagePackSizes.SizeOfArrayHeader(count);
 
-    protected static int SizeOfString(string? value)
-    {
-        if (value is null)
-            return SizeOfNil();
+    protected static int SizeOfString(string? value) => MessagePackSizes.SizeOfString(value);
 
-        var byteCount = Encoding.UTF8.GetByteCount(value);
-        return checked(SizeOfStringHeader(byteCount) + byteCount);
-    }
+    protected static int SizeOfBytes(byte[]? value) => MessagePackSizes.SizeOfBytes(value);
 
-    protected static int SizeOfBytes(byte[]? value)
-    {
-        if (value is null)
-            return SizeOfNil();
+    protected static int SizeOfGuid(Guid value) => MessagePackSizes.SizeOfGuid(value);
 
-        return checked(SizeOfBinHeader(value.Length) + value.Length);
-    }
+    protected static int SizeOfDateTime(DateTime value) => MessagePackSizes.SizeOfDateTime(value);
 
-    protected static int SizeOfGuid(Guid _) => SizeOfBinHeader(16) + 16;
+    protected static int SizeOfDateTimeOffset(DateTimeOffset value) => MessagePackSizes.SizeOfDateTimeOffset(value);
 
-    protected static int SizeOfDateTime(DateTime value)
-    {
-        return checked(SizeOfArrayHeader(2) + SizeOfInt64(value.Ticks) + SizeOfInt32((int)value.Kind));
-    }
+    protected static int SizeOfDecimal(decimal value) => MessagePackSizes.SizeOfDecimal(value);
 
-    protected static int SizeOfDateTimeOffset(DateTimeOffset value)
-    {
-        return checked(SizeOfArrayHeader(2) + SizeOfInt64(value.Ticks) + SizeOfInt32((int)value.Offset.TotalMinutes));
-    }
+    protected static int SizeOfActorRef(IActorRef? actorRef) => MessagePackSizes.SizeOfActorRef(actorRef);
 
-    protected static int SizeOfDecimal(decimal value)
-    {
-        Span<int> bits = stackalloc int[4];
-        decimal.GetBits(value, bits);
-        return checked(
-            SizeOfArrayHeader(4) +
-            SizeOfInt32(bits[0]) +
-            SizeOfInt32(bits[1]) +
-            SizeOfInt32(bits[2]) +
-            SizeOfInt32(bits[3]));
-    }
-
-    protected static int SizeOfActorRef(global::Akka.Actor.IActorRef? actorRef)
-    {
-        return SizeOfString(global::Akka.Serialization.Serialization.SerializedActorPath(actorRef));
-    }
-
-    protected static int SizeOfBinHeader(int byteCount)
-    {
-        if (byteCount <= byte.MaxValue)
-            return 2;
-        if (byteCount <= ushort.MaxValue)
-            return 3;
-        return 5;
-    }
-
-    private static int SizeOfStringHeader(int byteCount)
-    {
-        if (byteCount <= 31)
-            return 1;
-        if (byteCount <= byte.MaxValue)
-            return 2;
-        if (byteCount <= ushort.MaxValue)
-            return 3;
-        return 5;
-    }
+    protected static int SizeOfBinHeader(int byteCount) => MessagePackSizes.SizeOfBinHeader(byteCount);
 
     private sealed class AkkaPooledBufferWriter : IBufferWriter<byte>, IDisposable
     {
@@ -305,7 +297,7 @@ public abstract class MessagePackSerializer<TProtocol> : global::Akka.Serializat
         if (payload is TPayload typed)
             return typed;
 
-        throw new global::System.Runtime.Serialization.SerializationException(
+        throw new SerializationException(
             $"Envelope payload [{payload?.GetType().FullName ?? "<null>"}] is not assignable to [{typeof(TPayload).FullName}].");
     }
 

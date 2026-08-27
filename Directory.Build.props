@@ -25,28 +25,31 @@
     <Xunit3Version>3.2.2</Xunit3Version>
     <Xunit3RunnerVersion>3.1.5</Xunit3RunnerVersion>
     <XunitRunnerVersion>2.8.1</XunitRunnerVersion>
-    <TestSdkVersion>17.9.0</TestSdkVersion>
+    <TestSdkVersion>18.7.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
     <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
-    <ProtobufVersion>3.35.0</ProtobufVersion>
-    <GrpcToolsVersion>2.81.0</GrpcToolsVersion>
+    <ProtobufVersion>3.35.1</ProtobufVersion>
+    <GrpcToolsVersion>2.82.0</GrpcToolsVersion>
     <BenchmarkDotNetVersion>0.15.8</BenchmarkDotNetVersion>
-    <MessagePackVersion>3.1.7</MessagePackVersion>
+    <MessagePackVersion>3.1.8</MessagePackVersion>
     <MicrosoftCodeAnalysisCSharpVersion>4.13.0</MicrosoftCodeAnalysisCSharpVersion>
     <NetTestVersion>net10.0</NetTestVersion>
-    <FsharpVersion>10.1.301</FsharpVersion>
+    <FsharpVersion>10.1.302</FsharpVersion>
     <NetStandardLibVersion>net10.0</NetStandardLibVersion>
     <FluentAssertionsVersion>5.10.3</FluentAssertionsVersion>
     <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
     <FsCheckVersion>3.3.3</FsCheckVersion>
     <FsCheck3Version>3.3.3</FsCheck3Version>
+    <CsCheckVersion>4.8.0</CsCheckVersion>
     <HoconVersion>2.0.3</HoconVersion>
     <ConfigurationManagerVersion>6.0.1</ConfigurationManagerVersion>
     <MicrosoftLibVersion>[6.0.*,)</MicrosoftLibVersion>
     <MsExtVersion>[6.0.*,)</MsExtVersion>
-    <MsExtTestVersion>10.0.5</MsExtTestVersion>
+    <MsExtTestVersion>10.0.10</MsExtTestVersion>
     <AkkaAnalyzerVersion>0.3.3</AkkaAnalyzerVersion>
+    <VerifyXunitV3Version>31.24.2</VerifyXunitV3Version>
+    <VerifyDiffPlexVersion>3.0.0</VerifyDiffPlexVersion>
     <AkkaPackageTags>akka;actors;actor model;Akka;concurrency</AkkaPackageTags>
   </PropertyGroup>
   <PropertyGroup>
@@ -61,7 +64,7 @@
   </ItemGroup>
   <!-- SourceLink support for all Akka.NET projects -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.300" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)\docs\images\akkalogo.png" Pack="true" Visible="false" PackagePath="\" />

@@ -26,6 +26,8 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 
 **Peak: ~680K msgs/sec.** The new Artery TCP transport must exceed this before it can replace DotNetty as the preferred remoting path.
 
+> **Baseline is machine-relative (re-pinned 2026-07-03).** The table above was captured on 8-core hardware. On the current dev box (AMD Ryzen 9 9900X, 12 physical cores, .NET 10.0.8) the same benchmark peaks at **~1.39M msgs/sec** (naked, N=3: 1.375M / 1.388M / 1.479M; single-connection ~290K). The M5 gate means "exceeds the DotNetty baseline **measured on the same hardware, same run**" — never compare against this table across machines. See `openspec/changes/artery-tcp-remoting/task0-results.md`.
+
 ## Milestones
 
 ### Milestone 1: `modernize-akka-io-tcp`
@@ -36,7 +38,7 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 
 **What it did**: Modernized Akka.IO TCP around `ReadOnlySequence<byte>`, `System.IO.Pipelines`, and `ITransportConnection`.
 
-**Relevant outcome**: This work is useful for Artery and for user-facing Akka.Streams TCP, but the Artery MVP should not route its hot path through materialized Akka.Streams TCP.
+**Relevant outcome**: This work underpins the Artery transport substrate. Per design Decision 2 (revised), Artery TCP **does** use `Akka.Streams.IO.Tcp` (`Tcp().Bind` / `Tcp().OutgoingConnection`) as its socket + framing substrate — canonical Artery, verified against Pekko — gated on an early materializer-throughput validation against the 680K baseline. A raw `System.IO.Pipelines` substrate is the documented fallback only if that gate fails. (Note: "not through classic `EndpointWriter`/`AkkaProtocolTransport`" still holds — Artery is its own stack; that is different from *not using Akka.Streams TCP as the socket layer*.)
 
 ---
 
@@ -97,6 +99,26 @@ Captured on `dev` branch (commit 467cbb510), .NET 10.0, Release, ServerGC, Linux
 - `SizeHint`, unknown-size behavior, manifest handling, bytes-written/result semantics, and oversized payload behavior are validated.
 
 **After completion**: Review with human. Archive via `openspec archive messagepack-sourcegen-validation`.
+
+---
+
+### Milestone 3.5: `widen-system-uid-to-64bit`
+
+**OpenSpec change**: `openspec/changes/archive/2026-07-04-widen-system-uid-to-64bit/`
+**Depends on**: none (rolling-upgrade-safe). **Prerequisite for**: Milestone 4 (Artery).
+**Status**: DONE (2026-07-04) — merged via [#8317](https://github.com/akkadotnet/akka.net/pull/8317); all completion criteria met; change archived.
+
+**What it does**: Widens the address/system UID from 32-bit `int` to 64-bit `long` across Akka.Remote + Akka.Cluster (hard API break, v1.6), as a prerequisite for Artery's 64-bit frame UID. On the wire only `ClusterMessages.proto` `UniqueAddress.uid` widens (`uint32 → uint64`, varint-compatible for ≤32-bit values); handshake / RemoteWatcher heartbeat / DistributedData are already 64-bit. The CLR type is widened everywhere but value-generation is gated to int-range for rolling-upgrade safety.
+
+**Completion criteria**:
+
+- Address/system UID is `long` across `AddressUid`, `UniqueAddress`, `QuarantinedEvent`, `RemoteWatcher`, the quarantine API, and the remoting state machine.
+- `ClusterMessages.proto` `UniqueAddress.uid` is `uint64`; narrowing casts removed where the wire is already 64-bit.
+- Default uid generation stays in int-range; full 64-bit generation behind a config switch (documented "all nodes v1.6 first").
+- API-approval files updated (hard break); `dotnet build -warnaserror` clean; Remote + Cluster + DistributedData tests green.
+- Rolling-upgrade test (v1.5 ↔ v1.6 gossip, int-range uids) passes; `BREAKING_CHANGES_V1.6.md` entry added.
+
+**After completion**: Review with human. Archive via `openspec archive widen-system-uid-to-64bit`.
 
 ---
 

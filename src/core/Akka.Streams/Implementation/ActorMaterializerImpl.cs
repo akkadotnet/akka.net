@@ -179,7 +179,7 @@ namespace Akka.Streams.Implementation
             private void MaterializeGraph(GraphModule graph, Attributes effectiveAttributes, IDictionary<IModule, object> materializedValues)
             {
                 var calculatedSettings = _materializer.EffectiveSettings(effectiveAttributes);
-                var t = graph.Assembly.Materialize(effectiveAttributes, graph.MaterializedValueIds, materializedValues, RegisterSource);
+                var t = graph.Assembly.Materialize(effectiveAttributes, graph.MaterializedValueIds, materializedValues, RegisterSource, _materializer);
                 var connections = t.Item1;
                 var logics = t.Item2;
 

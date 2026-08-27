@@ -7,6 +7,7 @@ Akka.NET 1.6 should add an Artery-style TCP remoting stack beside classic remoti
 ## What Changes
 
 - Add `ArteryRemoting : RemoteTransport`, selected by configuration.
+- Use `Akka.Streams.IO.Tcp` (`Tcp().Bind` / `Tcp().OutgoingConnection`) as the Artery TCP transport substrate — canonical Artery (verified against Pekko), gated on an early materializer-throughput validation against the 680K DotNetty baseline (see design Decision 2).
 - Add Artery TCP connection framing: `AKKA` magic + stream id connection header, then 4-byte little-endian frame lengths.
 - Add binary Artery envelope codec using `SerializerV2` payload serialization.
 - Add association registry and UID-scoped association state.
@@ -22,7 +23,7 @@ Akka.NET 1.6 should add an Artery-style TCP remoting stack beside classic remoti
 - Artery does not need to be wire-compatible with classic remoting.
 - QUIC is deferred to Akka.NET 1.7.
 - TLS is deferred until plaintext Artery TCP validates the protocol, association, and performance model.
-- Akka.Streams TCP remains a user-facing API but is not the Artery MVP hot path.
+- Akka.Streams TCP remains a user-facing API. (It is ALSO the Artery TCP substrate — see design Decision 2 — which is a change, tracked under "What Changes.")
 
 ## Capabilities
 

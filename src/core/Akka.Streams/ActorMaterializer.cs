@@ -272,6 +272,34 @@ namespace Akka.Streams
 
             throw new ArgumentException($"Expected {typeof(ActorMaterializer)} but got {materializer.GetType()}");
         }
+
+        /// <summary>
+        /// Resolves the stream supervisor's <see cref="ActorCell"/>, so a caller can host a function ref on it.
+        /// The supervisor is a <see cref="RepointableActorRef"/> that starts asynchronously; a stream materialized
+        /// immediately after the materializer is created can race that startup, leaving the cell as an
+        /// <c>UnstartedCell</c>. In that case the supervisor is forced to start before its cell is returned
+        /// (mirrors how <c>ActorMaterializerImpl.ActorOf</c> handles the same race for actor-backed sources).
+        /// Callers that only run after the interpreter has started (e.g. from <c>PreStart</c>) always take the
+        /// fast path, since the supervisor is started by then.
+        /// </summary>
+        internal static ActorCell GetSupervisorCell(ActorMaterializer materializer)
+        {
+            var supervisor = materializer.Supervisor;
+            switch (supervisor)
+            {
+                case LocalActorRef r:
+                    return r.Cell;
+                case RepointableActorRef { IsStarted: true } r:
+                    return (ActorCell)r.Underlying;
+                case RepointableActorRef r:
+                    var timeout = r.Underlying.System.Settings.CreationTimeout;
+                    r.Ask<ActorIdentity>(new Identify(null), timeout).Wait();
+                    return (ActorCell)r.Underlying;
+                default:
+                    throw new IllegalStateException(
+                        $"Stream supervisor must be a local actor, was [{supervisor.GetType()}]");
+            }
+        }
     }
 
     /// <summary>

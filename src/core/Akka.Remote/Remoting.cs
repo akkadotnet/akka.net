@@ -337,7 +337,7 @@ namespace Akka.Remote
         /// <exception cref="RemoteTransportException">
         /// This exception is thrown when trying to quarantine a system but remoting is not running.
         /// </exception>
-        public override void Quarantine(Address address, int? uid)
+        public override void Quarantine(Address address, long? uid)
         {
             if (_endpointManager == null)
             {

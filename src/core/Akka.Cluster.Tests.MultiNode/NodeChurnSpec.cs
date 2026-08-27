@@ -7,6 +7,7 @@
 
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Configuration;
@@ -82,25 +83,25 @@ namespace Akka.Cluster.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void NodeChurnSpecs()
+        public async Task NodeChurnSpecs()
         {
-            Cluster_with_short_lived_members_must_setup_stable_nodes();
-            Cluster_with_short_lived_members_must_join_and_remove_transient_nodes_without_growing_gossip_payload();
+            await Cluster_with_short_lived_members_must_setup_stable_nodes();
+            await Cluster_with_short_lived_members_must_join_and_remove_transient_nodes_without_growing_gossip_payload();
         }
 
-        public void Cluster_with_short_lived_members_must_setup_stable_nodes()
+        public async Task Cluster_with_short_lived_members_must_setup_stable_nodes()
         {
-            Within(15.Seconds(), () =>
+            await WithinAsync(15.Seconds(), async () =>
             {
                 var logListener = Sys.ActorOf(Props.Create(() => new LogListener(TestActor)), "logListener");
                 Sys.EventStream.Subscribe(logListener, typeof(Info));
                 Cluster.JoinSeedNodes(SeedNodes);
-                AwaitMembersUp(Roles.Count);
-                EnterBarrier("stable");
+                await AwaitMembersUpAsync(Roles.Count);
+                await EnterBarrierAsync("stable");
             });
         }
 
-        public void Cluster_with_short_lived_members_must_join_and_remove_transient_nodes_without_growing_gossip_payload()
+        public async Task Cluster_with_short_lived_members_must_join_and_remove_transient_nodes_without_growing_gossip_payload()
         {
             // This test is configured with log-frame-size-exceeding and the LogListener
             // will send to the testActor if unexpected increase in message payload size.
@@ -109,15 +110,15 @@ namespace Akka.Cluster.Tests.MultiNode
             {
                 Log.Info("round-" + n);
                 var systems = Enumerable.Repeat(0,2).Select(_ => ActorSystem.Create(Sys.Name, Sys.Settings.Config)).ToImmutableList();
-                
+
                 foreach (var s in systems)
                 {
                     MuteDeadLetters(s);
                     Cluster.Get(s).JoinSeedNodes(SeedNodes);
                 }
 
-                AwaitAllMembersUp(systems);
-                EnterBarrier("members-up-" + n);
+                await AwaitAllMembersUpAsync(systems);
+                await EnterBarrierAsync("members-up-" + n);
 
                 foreach (var node in systems)
                 {
@@ -131,26 +132,34 @@ namespace Akka.Cluster.Tests.MultiNode
                     }
                 }
 
-                AwaitRemoved(systems, n);
-                EnterBarrier("members-removed-" + n);
-                foreach (var node in systems)
-                {
-                   Shutdown(node, verifySystemShutdown:true);
-                }
+                await AwaitRemovedAsync(systems, n);
+                await EnterBarrierAsync("members-removed-" + n);
+
+                // Terminate the transient systems asynchronously and concurrently. The old
+                // synchronous Shutdown(node, verifySystemShutdown:true) helper blocked a
+                // thread-pool thread inside Task.Wait() for up to its 5s budget while the
+                // coordinated-shutdown pipeline itself needs the thread pool to make progress —
+                // a sync-over-async self-starvation that produced the intermittent
+                // "Failed to stop [NodeChurnSpec] within [00:00:05]" failures on slower CI agents.
+                // Awaiting Terminate() frees the thread; WaitAsync preserves the verify-shutdown
+                // semantics by throwing TimeoutException if a system fails to stop in time.
+                // (Same idiom as QuickRestartSpec / DistributedPubSubRestartSpec.)
+                await Task.WhenAll(systems.Select(s => s.Terminate())).WaitAsync(30.Seconds());
+
                 Log.Info("end of round-" + n);
                 // log listener will send to testActor if payload size exceed configured log-frame-size-exceeding
-                ExpectNoMsg(2.Seconds());
+                await ExpectNoMsgAsync(2.Seconds());
             }
-            ExpectNoMsg(5.Seconds());
+            await ExpectNoMsgAsync(5.Seconds());
         }
 
-        private void AwaitAllMembersUp(ImmutableList<ActorSystem> additionalSystems)
+        private async Task AwaitAllMembersUpAsync(ImmutableList<ActorSystem> additionalSystems)
         {
             var numberOfMembers = Roles.Count + Roles.Count * additionalSystems.Count;
-            AwaitMembersUp(numberOfMembers);
-            Within(20.Seconds(), () =>
+            await AwaitMembersUpAsync(numberOfMembers);
+            await WithinAsync(20.Seconds(), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     additionalSystems.ForEach(s =>
                     {
@@ -162,13 +171,13 @@ namespace Akka.Cluster.Tests.MultiNode
             });
         }
 
-        private void AwaitRemoved(ImmutableList<ActorSystem> additionalSystems, int round)
+        private async Task AwaitRemovedAsync(ImmutableList<ActorSystem> additionalSystems, int round)
         {
-            AwaitMembersUp(Roles.Count, timeout: 40.Seconds());
-            EnterBarrier("removed-" + round);
-            Within(3.Seconds(), () =>
+            await AwaitMembersUpAsync(Roles.Count, timeout: 40.Seconds());
+            await EnterBarrierAsync("removed-" + round);
+            await WithinAsync(3.Seconds(), async () =>
             {
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     additionalSystems.ForEach(s =>
                     {

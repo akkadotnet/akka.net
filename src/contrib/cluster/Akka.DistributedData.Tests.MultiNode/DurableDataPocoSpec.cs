@@ -336,9 +336,13 @@ namespace Akka.DistributedData.Tests.MultiNode
                     sys1.Terminate().Wait(TimeSpan.FromSeconds(10));
                 }
                 
+                // Pin the fresh system to the SAME wire address for BOTH transports - under
+                // AKKA_MNTR_TRANSPORT=artery the classic dot-netty key is inert and the fresh
+                // system would bind a random artery canonical.port instead.
                 var sys2 = ActorSystem.Create(
-                    "AdditionalSys", 
-                    ConfigurationFactory.ParseString($"akka.remote.dot-netty.tcp.port = {address.Port}")
+                    "AdditionalSys",
+                    ConfigurationFactory.ParseString($"akka.remote.dot-netty.tcp.port = {address.Port}" +
+                        $"\nakka.remote.artery.canonical.port = {address.Port}")
                     .WithFallback(Sys.Settings.Config));
                 try
                 {

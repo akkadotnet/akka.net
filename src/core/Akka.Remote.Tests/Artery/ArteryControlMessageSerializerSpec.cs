@@ -1,0 +1,385 @@
+//-----------------------------------------------------------------------
+// <copyright file="ArteryControlMessageSerializerSpec.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2026 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+#nullable enable
+
+using System;
+using System.Buffers;
+using System.Collections.Immutable;
+using System.Runtime.Serialization;
+using System.Threading.Tasks;
+using Akka.Actor;
+using Akka.Actor.Setup;
+using Akka.Configuration;
+using Akka.Dispatch.SysMsg;
+using Akka.Remote.Artery;
+using Akka.Remote.Configuration;
+using Akka.Serialization;
+using FluentAssertions;
+using MessagePack;
+using Xunit;
+// Akka.Remote.SysAck/Akka.Remote.SysNack (classic AckedDelivery.cs) are enclosing-namespace types of
+// Akka.Remote.Tests.Artery and would otherwise shadow Akka.Remote.Artery.SysAck/SysNack (design.md gate
+// G3) in unqualified lookups -- alias to the Artery ones explicitly.
+using SysAck = Akka.Remote.Artery.Ack;
+using SysNack = Akka.Remote.Artery.Nack;
+
+namespace Akka.Remote.Tests.Artery
+{
+    /// <summary>
+    /// Round-trip tests for <see cref="ArteryControlMessageSerializer"/>, the source-generated V2
+    /// MessagePack serializer for ALL NINE Artery control/handshake/reliable-system-message-delivery
+    /// messages (<see cref="HandshakeReq"/> / <see cref="HandshakeRsp"/> / <see cref="ArteryHeartbeat"/> /
+    /// <see cref="ArteryHeartbeatRsp"/> / <see cref="ArteryQuarantined"/> / <see cref="Ack"/> /
+    /// <see cref="Nack"/> / <see cref="SystemMessageEnvelope"/> / <see cref="ClearSystemMessageDelivery"/>).
+    ///
+    /// <para>
+    /// This class used to be hand-rolled because the <c>Akka.Serialization.V2</c> generator could
+    /// not express a deliberately fieldless message or a nested <c>[AkkaSerializable]</c> value-type
+    /// field. Both gaps were fixed by #8331; this spec now exercises the GENERATED partial class
+    /// (<c>Akka.Remote.csproj</c> attaches <c>Akka.Serialization.V2.Generators</c> as an analyzer).
+    /// The manifest constants, class name, and serializer identifier (23) are unchanged from the
+    /// hand-rolled version, so <c>Remote.conf</c>'s existing registration
+    /// (<c>artery-control</c> alias, <c>"Akka.Remote.Artery.IArteryControlMessage, Akka.Remote" = artery-control</c>
+    /// binding, <c>serialization-identifiers</c> entry) needed NO edits.
+    /// </para>
+    /// </summary>
+    public sealed class ArteryControlMessageSerializerSpec : IAsyncLifetime
+    {
+        private ActorSystem _system = null!;
+        private ArteryControlMessageSerializer _serializer = null!;
+
+        public ValueTask InitializeAsync()
+        {
+            _system = ActorSystem.Create("artery-control-message-serializer-spec");
+            _serializer = new ArteryControlMessageSerializer((ExtendedActorSystem)_system);
+            return ValueTask.CompletedTask;
+        }
+
+        public async ValueTask DisposeAsync() => await _system.Terminate();
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip HandshakeReq")]
+        public void Should_round_trip_HandshakeReq()
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 123456789L);
+            var to = new Address("akka", "sys-b", "host-b", 2552);
+            var req = new HandshakeReq(from, to);
+
+            RoundTrip(req).Should().Be(req);
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip HandshakeRsp")]
+        public void Should_round_trip_HandshakeRsp()
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-b", "host-b", 2552), -987654321L);
+            var rsp = new HandshakeRsp(from);
+
+            RoundTrip(rsp).Should().Be(rsp);
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip an Address with no host/port (e.g. a not-yet-bound local address)")]
+        public void Should_round_trip_hostless_address()
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", null, null), 7L);
+            var to = new Address("akka", "sys-b", null, null);
+            var req = new HandshakeReq(from, to);
+
+            RoundTrip(req).Should().Be(req);
+        }
+
+        [Theory(DisplayName = "ArteryControlMessageSerializer should round-trip negative, zero, and boundary uid values")]
+        [InlineData(0L)]
+        [InlineData(1L)]
+        [InlineData(-1L)]
+        [InlineData(long.MinValue)]
+        [InlineData(long.MaxValue)]
+        public void Should_round_trip_extreme_uid_values(long uid)
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), uid);
+            var rsp = new HandshakeRsp(from);
+
+            RoundTrip(rsp).Should().Be(rsp);
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip ArteryHeartbeat (task group 6, task 6.4)")]
+        public void Should_round_trip_ArteryHeartbeat()
+        {
+            RoundTrip(new ArteryHeartbeat()).Should().Be(new ArteryHeartbeat());
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should write ArteryHeartbeat as a bare empty map header (AllowEmpty)")]
+        public void Should_write_ArteryHeartbeat_as_empty_map()
+        {
+            var bytes = _serializer.ToBinary(new ArteryHeartbeat());
+            var reader = new MessagePackReader(new ReadOnlySequence<byte>(bytes));
+
+            reader.ReadMapHeader().Should().Be(0);
+            reader.Consumed.Should().Be(bytes.Length);
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip ArteryHeartbeatRsp (task group 6, task 6.4)")]
+        public void Should_round_trip_ArteryHeartbeatRsp()
+        {
+            RoundTrip(new ArteryHeartbeatRsp()).Should().Be(new ArteryHeartbeatRsp());
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip ArteryQuarantined (task group 6, task 6.5)")]
+        public void Should_round_trip_ArteryQuarantined()
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 123456789L);
+            var quarantined = new ArteryQuarantined(from, QuarantinedUid: 987654321L);
+
+            RoundTrip(quarantined).Should().Be(quarantined);
+        }
+
+        [Theory(DisplayName = "ArteryControlMessageSerializer should round-trip ArteryQuarantined across negative, zero, and boundary uid values")]
+        [InlineData(0L)]
+        [InlineData(1L)]
+        [InlineData(-1L)]
+        [InlineData(long.MinValue)]
+        [InlineData(long.MaxValue)]
+        public void Should_round_trip_ArteryQuarantined_extreme_uid_values(long quarantinedUid)
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L);
+            var quarantined = new ArteryQuarantined(from, quarantinedUid);
+
+            RoundTrip(quarantined).Should().Be(quarantined);
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip SysAck (design.md gate G3)")]
+        public void Should_round_trip_Ack()
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L);
+            var ack = new SysAck(7L, from);
+
+            RoundTrip(ack).Should().Be(ack);
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip SysNack (design.md gate G3)")]
+        public void Should_round_trip_Nack()
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-b", "host-b", 2552), 99L);
+            var nack = new SysNack(3L, from);
+
+            RoundTrip(nack).Should().Be(nack);
+        }
+
+        [Theory(DisplayName = "ArteryControlMessageSerializer should round-trip SysAck/SysNack across negative, zero, and boundary seq/uid values")]
+        [InlineData(0L, 0L)]
+        [InlineData(1L, 1L)]
+        [InlineData(-1L, -1L)]
+        [InlineData(long.MinValue, long.MinValue)]
+        [InlineData(long.MaxValue, long.MaxValue)]
+        public void Should_round_trip_Ack_and_Nack_extreme_values(long seqNo, long uid)
+        {
+            var from = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), uid);
+
+            RoundTrip(new SysAck(seqNo, from)).Should().Be(new SysAck(seqNo, from));
+            RoundTrip(new SysNack(seqNo, from)).Should().Be(new SysNack(seqNo, from));
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip ClearSystemMessageDelivery (design.md gate G3)")]
+        public void Should_round_trip_ClearSystemMessageDelivery()
+        {
+            var clear = new ClearSystemMessageDelivery(5);
+
+            RoundTrip(clear).Should().Be(clear);
+        }
+
+        private sealed class NopActor : ActorBase
+        {
+            protected override bool Receive(object message) => true;
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip SystemMessageEnvelope wrapping a Watch, nesting the inner system message via [AkkaEnvelopePayload] (design.md gate G3)")]
+        public void Should_round_trip_SystemMessageEnvelope_wrapping_Watch()
+        {
+            var watchee = (IInternalActorRef)_system.ActorOf(Props.Create<NopActor>());
+            var watcher = (IInternalActorRef)_system.ActorOf(Props.Create<NopActor>());
+            var ackReplyTo = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L);
+
+            var envelope = new SystemMessageEnvelope(new Watch(watchee, watcher), 1L, ackReplyTo, "akka://sys-b@host-b:2552/user/target");
+
+            // WriteEnvelopePayload/ReadEnvelopePayload's serialize/deserialize of the inner Watch
+            // (which carries IActorRef fields) requires CurrentTransportInformation to be set --
+            // exactly like the outer envelope encode/decode path in ArteryEnvelopeCodec.
+            var roundTripped = Akka.Serialization.Serialization.WithTransport(
+                (ExtendedActorSystem)_system, () => RoundTrip(envelope));
+
+            roundTripped.SeqNo.Should().Be(1L);
+            roundTripped.AckReplyTo.Should().Be(ackReplyTo);
+            roundTripped.RecipientPath.Should().Be("akka://sys-b@host-b:2552/user/target");
+            roundTripped.Message.Should().BeOfType<Watch>();
+            ((Watch)roundTripped.Message).Watchee.Path.ToStringWithAddress().Should().Be(watchee.Path.ToStringWithAddress());
+            ((Watch)roundTripped.Message).Watcher.Path.ToStringWithAddress().Should().Be(watcher.Path.ToStringWithAddress());
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should report bytes-written matching the buffer")]
+        public void Should_report_bytes_written()
+        {
+            var req = new HandshakeReq(
+                new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L),
+                new Address("akka", "sys-b", "host-b", 2552));
+
+            var buffer = new ArrayBufferWriter<byte>();
+            var written = _serializer.Serialize(req, buffer);
+
+            written.Should().Be(buffer.WrittenCount);
+            written.Should().BeGreaterThan(0);
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should report exact size hints for all message types with a cheaply-known size")]
+        public void Should_report_exact_size_hints()
+        {
+            var req = new HandshakeReq(
+                new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L),
+                new Address("akka", "sys-b", "host-b", 2552));
+            var rsp = new HandshakeRsp(new UniqueAddress(new Address("akka", "sys-b", "host-b", 2552), -5L));
+            var heartbeat = new ArteryHeartbeat();
+            var heartbeatRsp = new ArteryHeartbeatRsp();
+            var quarantined = new ArteryQuarantined(new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L), 99L);
+            var ack = new SysAck(7L, new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L));
+            var nack = new SysNack(3L, new UniqueAddress(new Address("akka", "sys-b", "host-b", 2552), 99L));
+            var clear = new ClearSystemMessageDelivery(5);
+
+            _serializer.SizeHint(req).Should().Be(_serializer.ToBinary(req).Length);
+            _serializer.SizeHint(rsp).Should().Be(_serializer.ToBinary(rsp).Length);
+            _serializer.SizeHint(heartbeat).Should().Be(_serializer.ToBinary(heartbeat).Length);
+            _serializer.SizeHint(heartbeatRsp).Should().Be(_serializer.ToBinary(heartbeatRsp).Length);
+            _serializer.SizeHint(quarantined).Should().Be(_serializer.ToBinary(quarantined).Length);
+            _serializer.SizeHint(ack).Should().Be(_serializer.ToBinary(ack).Length);
+            _serializer.SizeHint(nack).Should().Be(_serializer.ToBinary(nack).Length);
+            _serializer.SizeHint(clear).Should().Be(_serializer.ToBinary(clear).Length);
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should report UnknownSize for SystemMessageEnvelope (its inner payload's size depends on a classic, non-SerializerV2 serializer)")]
+        public void Should_report_unknown_size_for_SystemMessageEnvelope()
+        {
+            var watchee = (IInternalActorRef)_system.ActorOf(Props.Create<NopActor>());
+            var watcher = (IInternalActorRef)_system.ActorOf(Props.Create<NopActor>());
+            var ackReplyTo = new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 42L);
+            var envelope = new SystemMessageEnvelope(new Watch(watchee, watcher), 1L, ackReplyTo, "akka://sys-b@host-b:2552/user/target");
+
+            Akka.Serialization.Serialization.WithTransport((ExtendedActorSystem)_system, () =>
+            {
+                _serializer.SizeHint(envelope).Should().Be(Akka.Serialization.SerializerV2.UnknownSize);
+                return true;
+            });
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should dispatch by manifest and reject an unknown manifest")]
+        public void Should_use_manifest_dispatch()
+        {
+            var req = new HandshakeReq(
+                new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 1L),
+                new Address("akka", "sys-b", "host-b", 2552));
+
+            _serializer.Manifest(req).Should().Be(ArteryControlMessageSerializer.HandshakeReqManifest);
+            _serializer.Manifest(new HandshakeRsp(new UniqueAddress(new Address("akka", "sys-b", "host-b", 2552), 1L)))
+                .Should().Be(ArteryControlMessageSerializer.HandshakeRspManifest);
+            _serializer.Manifest(new ArteryHeartbeat()).Should().Be(ArteryControlMessageSerializer.HeartbeatManifest);
+            _serializer.Manifest(new ArteryHeartbeatRsp()).Should().Be(ArteryControlMessageSerializer.HeartbeatRspManifest);
+            _serializer.Manifest(new ArteryQuarantined(new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 1L), 2L))
+                .Should().Be(ArteryControlMessageSerializer.QuarantinedManifest);
+            _serializer.Manifest(new SysAck(1L, new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 1L)))
+                .Should().Be(ArteryControlMessageSerializer.AckManifest);
+            _serializer.Manifest(new SysNack(1L, new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 1L)))
+                .Should().Be(ArteryControlMessageSerializer.NackManifest);
+            _serializer.Manifest(new ClearSystemMessageDelivery(1)).Should().Be(ArteryControlMessageSerializer.ClearSystemMessageDeliveryManifest);
+
+            var bytes = _serializer.ToBinary(req);
+            Action deserializeUnknown = () => _serializer.FromBinary(bytes, "unknown-manifest");
+            deserializeUnknown.Should().Throw<SerializationException>();
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip through the Serialization extension when registered ad hoc via SerializationSetup")]
+        public async Task Should_round_trip_through_Serialization_extension()
+        {
+            var setup = ActorSystemSetup.Create(SerializationSetup.Create(extendedSystem =>
+                ImmutableHashSet.Create(SerializerDetails.Create(
+                    "artery-control",
+                    new ArteryControlMessageSerializer(extendedSystem),
+                    ImmutableHashSet.Create<Type>(typeof(IArteryControlMessage))))));
+
+            var system = ActorSystem.Create("artery-control-message-serializer-registration-spec", setup);
+            try
+            {
+                var req = new HandshakeReq(
+                    new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 555L),
+                    new Address("akka", "sys-b", "host-b", 2552));
+
+                var serializer = system.Serialization.FindSerializerFor(req);
+                serializer.Should().BeOfType<ArteryControlMessageSerializer>();
+
+                var bytes = system.Serialization.Serialize(req);
+                var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, req);
+                var deserialized = system.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
+
+                deserialized.Should().Be(req);
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+
+        [Fact(DisplayName = "ArteryControlMessageSerializer should round-trip through the Serialization extension using the REAL production Remote.conf registration (all nine message types share one IArteryControlMessage binding)")]
+        public async Task Should_round_trip_through_Serialization_extension_via_production_Remote_conf()
+        {
+            // Unlike the hand-rolled predecessor, this is the ACTUAL Remote.conf shipped with
+            // Akka.Remote (RemoteConfigFactory.Default()) -- no ad hoc HOCON fragment reproduced
+            // here. Remote.conf already binds "Akka.Remote.Artery.IArteryControlMessage, Akka.Remote"
+            // to the "artery-control" serializer alias and pins its identifier to 23, so this class
+            // needed NO Remote.conf edits when it swapped from hand-rolled to source-generated.
+            var config = RemoteConfigFactory.Default().WithFallback(ConfigurationFactory.Default());
+
+            var system = ActorSystem.Create("artery-control-message-serializer-hocon-spec", config);
+            try
+            {
+                var req = new HandshakeReq(
+                    new UniqueAddress(new Address("akka", "sys-a", "host-a", 2551), 555L),
+                    new Address("akka", "sys-b", "host-b", 2552));
+
+                var serializer = system.Serialization.FindSerializerFor(req);
+                serializer.Should().BeOfType<ArteryControlMessageSerializer>();
+                serializer.Identifier.Should().Be(23);
+
+                var bytes = system.Serialization.Serialize(req);
+                var manifest = Akka.Serialization.Serialization.ManifestFor(serializer, req);
+                var deserialized = system.Serialization.Deserialize(bytes, serializer.Identifier, manifest);
+
+                deserialized.Should().Be(req);
+
+                // The fieldless AllowEmpty message and the reliable-system-message-delivery
+                // messages all resolve through the SAME "Akka.Remote.Artery.IArteryControlMessage,
+                // Akka.Remote" -> artery-control interface binding -- prove a second, unrelated
+                // message type in the protocol resolves identically, not just HandshakeReq.
+                var heartbeatSerializer = system.Serialization.FindSerializerFor(new ArteryHeartbeat());
+                heartbeatSerializer.Should().BeOfType<ArteryControlMessageSerializer>();
+                heartbeatSerializer.Identifier.Should().Be(23);
+
+                var clear = new ClearSystemMessageDelivery(9);
+                var clearSerializer = system.Serialization.FindSerializerFor(clear);
+                var clearBytes = system.Serialization.Serialize(clear);
+                var clearManifest = Akka.Serialization.Serialization.ManifestFor(clearSerializer, clear);
+                system.Serialization.Deserialize(clearBytes, clearSerializer.Identifier, clearManifest).Should().Be(clear);
+            }
+            finally
+            {
+                await system.Terminate();
+            }
+        }
+
+        private TMessage RoundTrip<TMessage>(TMessage message)
+            where TMessage : IArteryControlMessage
+        {
+            var bytes = _serializer.ToBinary(message);
+            var manifest = _serializer.Manifest(message);
+            return (TMessage)_serializer.FromBinary(bytes, manifest);
+        }
+    }
+}

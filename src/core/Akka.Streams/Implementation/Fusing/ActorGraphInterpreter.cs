@@ -271,6 +271,10 @@ namespace Akka.Streams.Implementation.Fusing
                     _inputs[onNext.Id].OnNext(onNext.Event, onNext.Context);
                     return RunBatch(eventLimit);
 
+                case ActorGraphInterpreter.OnNextBatch onNextBatch:
+                    _inputs[onNextBatch.Id].OnNextBatch(onNextBatch.Events, onNextBatch.Contexts);
+                    return RunBatch(eventLimit);
+
                 case ActorGraphInterpreter.RequestMore requestMore:
                     if (IsDebug) Console.WriteLine($"{Interpreter.Name}  Request {requestMore.Demand} id={requestMore.Id}");
                     _outputs[requestMore.Id].RequestMore(requestMore.Demand);
@@ -286,6 +290,10 @@ namespace Akka.Streams.Implementation.Fusing
                     Interpreter.RunAsyncInput(asyncInput.Logic, asyncInput.Event, asyncInput.Promise, asyncInput.Handler);
                     if (eventLimit == 1 && _interpreter.IsSuspended)
                     {
+                        // Parking here without a RunBatch — flush any elements the async callback
+                        // pushed to an output boundary so they aren't stranded until the next event
+                        // (issue #8314). The fall-through path flushes inside RunBatch after Execute.
+                        FlushOutputs();
                         SendResume(true);
                         return 0;
                     }
@@ -375,6 +383,11 @@ namespace Akka.Streams.Implementation.Fusing
                 var usingShellLimit = _shellEventLimit < actorEventLimit;
                 var remainingQuota = _interpreter.Execute(Math.Min(actorEventLimit, _shellEventLimit));
 
+                // Flush-on-park (issue #8314): the interpreter run has drained every synchronously
+                // available element into the output boundaries' accumulators; emit each as a single
+                // batched actor message now, before control returns to the mailbox.
+                FlushOutputs();
+
                 if (Interpreter.IsCompleted)
                 {
                     // Cannot stop right away if not completely subscribed
@@ -397,6 +410,16 @@ namespace Akka.Streams.Implementation.Fusing
                 TryAbort(reason);
                 return actorEventLimit - 1;
             }
+        }
+
+        // Emit any elements accumulated by the output boundaries during the interpreter run as one
+        // batched actor message each (issue #8314). Boundaries with nothing pending are a no-op, so
+        // this stays cheap for shells that carry no batching output boundary.
+        private void FlushOutputs()
+        {
+            var outputs = _outputs;
+            for (var i = 0; i < outputs.Length; i++)
+                outputs[i].FlushBatch();
         }
 
         private void SendResume(bool sendResume)
@@ -560,6 +583,36 @@ namespace Akka.Streams.Implementation.Fusing
             /// <summary>
             /// TBD
             /// </summary>
+            public GraphInterpreterShell Shell { get; }
+        }
+
+        /// <summary>
+        /// Internal boundary event carrying a *batch* of elements across the in-process actor hop, so
+        /// the producing island can coalesce many elements into a single actor message instead of one
+        /// message (and one <see cref="OnNext"/> allocation) per element (issue #8314). Only ever sent
+        /// between two Akka in-process boundaries — external Reactive Streams subscribers continue to
+        /// receive one <c>OnNext</c> signal per element, so the RS-public contract is unchanged.
+        /// </summary>
+        internal readonly struct OnNextBatch : IBoundaryEvent
+        {
+            public readonly int Id;
+            /// <summary>The batched elements, in producer order. Length is the batch size.</summary>
+            public readonly object[] Events;
+            /// <summary>
+            /// Parallel to <see cref="Events"/>: the producer trace context for each element carried
+            /// across the boundary (issue #8243). Null when no element in the batch carried a context
+            /// (the common, non-traced path), so the hot path allocates only the element array.
+            /// </summary>
+            public readonly ActivityContext?[] Contexts;
+
+            public OnNextBatch(GraphInterpreterShell shell, int id, object[] events, ActivityContext?[] contexts)
+            {
+                Shell = shell;
+                Id = id;
+                Events = events;
+                Contexts = contexts;
+            }
+
             public GraphInterpreterShell Shell { get; }
         }
 
@@ -919,6 +972,14 @@ namespace Akka.Streams.Implementation.Fusing
                 ReactiveStreamsCompliance.RequireNonNullElement(element);
                 _parent.Tell(new OnNext(_shell, _id, element, context));
             }
+
+            /// <summary>
+            /// Internal boundary-only path that carries a whole batch of elements across the actor hop
+            /// in a single message (issue #8314). Elements were already grabbed from the interpreter
+            /// (never null), so no per-element RS null-check is repeated here.
+            /// </summary>
+            internal void OnNextBatch(object[] elements, ActivityContext?[] contexts)
+                => _parent.Tell(new OnNextBatch(_shell, _id, elements, contexts));
         }
 
         /// <summary>
@@ -1096,6 +1157,18 @@ namespace Akka.Streams.Implementation.Fusing
             }
 
             /// <summary>
+            /// Receives a batch of elements coalesced across the actor hop (issue #8314) and feeds them
+            /// through the normal per-element path in order, preserving the buffer-overrun guard and
+            /// completion/failure semantics. The batch size is bounded by the demand this boundary
+            /// granted, so it can never exceed the free buffer space.
+            /// </summary>
+            internal void OnNextBatch(object[] elements, ActivityContext?[] contexts)
+            {
+                for (var i = 0; i < elements.Length; i++)
+                    OnNext(elements[i], contexts?[i]);
+            }
+
+            /// <summary>
             /// TBD
             /// </summary>
             public void Cancel(Exception cause)
@@ -1188,6 +1261,12 @@ namespace Akka.Streams.Implementation.Fusing
             /// </summary>
             /// <param name="reason">TBD</param>
             void Fail(Exception reason);
+            /// <summary>
+            /// Emit any elements accumulated since the last flush as a single batched actor message
+            /// (issue #8314). No-op when nothing is pending or the subscriber is an external
+            /// Reactive Streams subscriber (which is never batched).
+            /// </summary>
+            void FlushBatch();
         }
 
         /// <summary>
@@ -1243,6 +1322,17 @@ namespace Akka.Streams.Implementation.Fusing
             private Exception _upstreamFailed;
             private bool _upstreamCompleted;
             private readonly Inlet<T> _inlet;
+
+            // Element-batching state (issue #8314). Elements pushed during one interpreter run are
+            // accumulated here (bounded by downstream demand) and emitted as a single OnNextBatch on
+            // flush-on-park, instead of one OnNext actor message per element. Only used when the
+            // subscriber is the in-process BoundarySubscriber; external RS subscribers bypass this.
+            private const int InitialBatchCapacity = 16;
+            private object[] _batchElements;
+            // Parallel to _batchElements; lazily allocated only when an element carries a trace
+            // context (issue #8243), so the non-traced hot path allocates only the element buffer.
+            private ActivityContext?[] _batchContexts;
+            private int _batchCount;
 
             /// <summary>
             /// TBD
@@ -1329,6 +1419,8 @@ namespace Akka.Streams.Implementation.Fusing
             /// </summary>
             public void Cancel(Exception cause)
             {
+                // Downstream no longer wants elements — drop anything pending before we detach.
+                ClearBatch();
                 _downstreamCompletionCause = cause;
                 _subscriber = null;
                 _exposedPublisher.Shutdown(new NormalShutdownException("UpstreamBoundary"));
@@ -1347,10 +1439,25 @@ namespace Akka.Streams.Implementation.Fusing
                     _upstreamCompleted = true;
                     _upstreamFailed = reason;
 
+                    // Elements produced before the failure crossed the boundary in the pre-batching
+                    // design (one Tell per element, delivered ahead of the OnError). Preserve that:
+                    // flush the pending batch before signalling the error rather than dropping it.
+                    // A spec violation suppresses OnError entirely, so there's nothing to order those
+                    // elements against — drop them instead.
+                    if (reason is ISpecViolation)
+                        ClearBatch();
+                    else
+                        FlushBatch();
+
                     if (!ReferenceEquals(_exposedPublisher, null))
                         _exposedPublisher.Shutdown(reason);
                     if (!ReferenceEquals(_subscriber, null) && !(reason is ISpecViolation))
                         ReactiveStreamsCompliance.TryOnError(_subscriber, reason);
+                }
+                else
+                {
+                    // Already terminal (cancelled / completed) — nothing left to deliver.
+                    ClearBatch();
                 }
             }
 
@@ -1359,16 +1466,83 @@ namespace Akka.Streams.Implementation.Fusing
             private void OnNext(T element, ActivityContext? context)
             {
                 _downstreamDemand--;
-                // When the downstream is an in-process Akka boundary, carry the trace context across
-                // the actor hop (issue #8243). External Reactive Streams subscribers go through the
-                // standard interface, which has no context channel. Note: only the direct
-                // BoundarySubscriber<T> case is covered — async boundaries bridged through a
-                // VirtualProcessor or an external IProcessor fall through to TryOnNext and do not yet
-                // carry context (tracked under #8243).
-                if (context.HasValue && _subscriber is BoundarySubscriber<T> boundary)
-                    boundary.OnNext(element, context);
+                // When the downstream is an in-process Akka boundary, accumulate the element (and its
+                // trace context, issue #8243) and emit the whole run as one batched actor message on
+                // flush-on-park (issue #8314). External Reactive Streams subscribers go through the
+                // standard one-signal-per-element interface — no batching, no context channel — so the
+                // RS-public contract is unchanged. Note: async boundaries bridged through a
+                // VirtualProcessor or an external IProcessor are not BoundarySubscriber<T> and fall
+                // through to TryOnNext.
+                if (_subscriber is BoundarySubscriber<T>)
+                    Accumulate(element, context);
                 else
                     ReactiveStreamsCompliance.TryOnNext(_subscriber, element);
+            }
+
+            private void Accumulate(T element, ActivityContext? context)
+            {
+                // Reject nulls at the producer boundary, per element, matching the single-element
+                // path (boundary.OnNext) and the pre-batching behavior — otherwise a null in a
+                // multi-element batch only surfaces as a confusing overrun error on the consumer.
+                ReactiveStreamsCompliance.RequireNonNullElement(element);
+
+                if (_batchElements == null)
+                    _batchElements = new object[InitialBatchCapacity];
+                else if (_batchCount == _batchElements.Length)
+                {
+                    Array.Resize(ref _batchElements, _batchCount * 2);
+                    if (_batchContexts != null)
+                        Array.Resize(ref _batchContexts, _batchElements.Length);
+                }
+
+                _batchElements[_batchCount] = element;
+                if (context.HasValue)
+                    (_batchContexts ??= new ActivityContext?[_batchElements.Length])[_batchCount] = context;
+                _batchCount++;
+            }
+
+            public void FlushBatch()
+            {
+                var count = _batchCount;
+                if (count == 0)
+                    return;
+
+                // Elements are only ever accumulated for the in-process boundary subscriber (OnNext).
+                var boundary = (BoundarySubscriber<T>)_subscriber;
+                if (count == 1)
+                {
+                    // Single element this run — send a plain OnNext (no array allocation), so the
+                    // light-load one-element-per-park path stays exactly as cheap as before batching.
+                    boundary.OnNext((T)_batchElements[0], _batchContexts?[0]);
+                }
+                else
+                {
+                    var events = new object[count];
+                    Array.Copy(_batchElements, events, count);
+                    ActivityContext?[] contexts = null;
+                    if (_batchContexts != null)
+                    {
+                        contexts = new ActivityContext?[count];
+                        Array.Copy(_batchContexts, contexts, count);
+                    }
+                    boundary.OnNextBatch(events, contexts);
+                }
+
+                // Release references to the emitted elements so the reused buffer doesn't pin them.
+                Array.Clear(_batchElements, 0, count);
+                if (_batchContexts != null)
+                    Array.Clear(_batchContexts, 0, count);
+                _batchCount = 0;
+            }
+
+            private void ClearBatch()
+            {
+                if (_batchCount == 0)
+                    return;
+                Array.Clear(_batchElements, 0, _batchCount);
+                if (_batchContexts != null)
+                    Array.Clear(_batchContexts, 0, _batchCount);
+                _batchCount = 0;
             }
 
             private void Complete()
@@ -1377,6 +1551,9 @@ namespace Akka.Streams.Implementation.Fusing
                 if (!(_upstreamCompleted || DownstreamCompleted))
                 {
                     _upstreamCompleted = true;
+                    // Deliver any accumulated elements before the completion signal so completion never
+                    // overtakes pending elements (issue #8314 ordering invariant).
+                    FlushBatch();
                     if (!ReferenceEquals(_exposedPublisher, null))
                         _exposedPublisher.Shutdown(null);
                     if (!ReferenceEquals(_subscriber, null))

@@ -1,0 +1,7 @@
+﻿case: collection-array-empty
+message-type: NullableIntArrayMessage
+manifest: coll-nullable-int-array-v1
+serializer-id: 120105
+byte-count: 3
+
+0000  81 01 90                                          |...|

@@ -1,0 +1,114 @@
+//-----------------------------------------------------------------------
+// <copyright file="ArteryControlMessageSerializer.cs" company="Akka.NET Project">
+//     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
+//     Copyright (C) 2013-2026 .NET Foundation <https://github.com/akkadotnet/akka.net>
+// </copyright>
+//-----------------------------------------------------------------------
+
+#nullable enable
+
+using Akka.Actor;
+using Akka.Serialization.V2;
+
+namespace Akka.Remote.Artery
+{
+    /// <summary>
+    /// INTERNAL API.
+    ///
+    /// Source-generated V2 MessagePack serializer for ALL NINE Artery control/handshake/reliable-
+    /// system-message-delivery messages (<see cref="HandshakeReq"/> / <see cref="HandshakeRsp"/> /
+    /// <see cref="ArteryHeartbeat"/> / <see cref="ArteryHeartbeatRsp"/> / <see cref="ArteryQuarantined"/> /
+    /// <see cref="Ack"/> / <see cref="Nack"/> / <see cref="SystemMessageEnvelope"/> /
+    /// <see cref="ClearSystemMessageDelivery"/>).
+    ///
+    /// <para>
+    /// This class used to be hand-rolled (see git history) because the <c>Akka.Serialization.V2</c>
+    /// generator could not, at the time, express a deliberately fieldless message or a nested
+    /// <c>[AkkaSerializable]</c> value-type field. Both gaps were fixed by #8331
+    /// (<see cref="AkkaSerializableAttribute.AllowEmpty"/> and the struct-nested-field fix), so this
+    /// class is now the <c>[AkkaSerializer]</c> half of a source-generated partial class -- the
+    /// generator (<c>Akka.Serialization.V2.Generators.AkkaSerializerGenerator</c>, attached as an
+    /// analyzer on <c>Akka.Remote.csproj</c>) emits the other half
+    /// (<c>ArteryControlMessageSerializer.AkkaSerialization.g.cs</c>): the constructor, <c>Identifier</c>,
+    /// <c>Manifest</c>/<c>Serialize</c>/<c>Deserialize</c>/<c>SizeHint</c> dispatch, and one
+    /// Write/Read/SizeOf method per reachable message type (including the nested
+    /// <see cref="UniqueAddress"/> value type).
+    /// </para>
+    /// <para>
+    /// The manifest constants below are still hand-written (referenced from each message's
+    /// <see cref="AkkaSerializableAttribute.Manifest"/> as compile-time constants, and from
+    /// <c>SystemMessageAckerStageSpec</c>) -- the generator does not emit public manifest constants.
+    /// </para>
+    /// <para>
+    /// <see cref="Address"/> is a core <c>Akka.Actor</c> type this change may not annotate with
+    /// <c>[AkkaSerializable]</c>; it is instead handled via the built-in <see cref="AddressFormatter"/>
+    /// escape hatch (<c>[AkkaSerializerFormatter&lt;Address, AddressFormatter&gt;]</c>), which
+    /// produces the identical 4-element-array wire format the old hand-rolled
+    /// <c>WriteAddress</c>/<c>ReadAddress</c> used.
+    /// </para>
+    /// <para>
+    /// Class name and serializer identifier (23) are unchanged from the hand-rolled version, so the
+    /// existing <c>Remote.conf</c> registration (<c>artery-control</c> alias, <c>serialization-bindings</c>
+    /// on <see cref="IArteryControlMessage"/>, <c>serialization-identifiers</c> entry) requires no edits.
+    /// </para>
+    /// </summary>
+    [AkkaSerializer<IArteryControlMessage>("artery-control", 23)]
+    [AkkaSerializerFormatter<Address, AddressFormatter>]
+    internal sealed partial class ArteryControlMessageSerializer : AkkaSerializer
+    {
+        /// <summary>
+        /// The manifest for <see cref="HandshakeReq"/>.
+        /// </summary>
+        public const string HandshakeReqManifest = "HSReq";
+
+        /// <summary>
+        /// The manifest for <see cref="HandshakeRsp"/>.
+        /// </summary>
+        public const string HandshakeRspManifest = "HSRsp";
+
+        /// <summary>
+        /// The manifest for <see cref="ArteryHeartbeat"/>.
+        /// </summary>
+        public const string HeartbeatManifest = "HB";
+
+        /// <summary>
+        /// The manifest for <see cref="ArteryHeartbeatRsp"/>.
+        /// </summary>
+        public const string HeartbeatRspManifest = "HBR";
+
+        /// <summary>
+        /// The manifest for <see cref="ArteryQuarantined"/>.
+        /// </summary>
+        public const string QuarantinedManifest = "QRN";
+
+        /// <summary>
+        /// The manifest for <see cref="Ack"/> (design.md gate G3, reliable system-message delivery).
+        /// </summary>
+        public const string AckManifest = "SA";
+
+        /// <summary>
+        /// The manifest for <see cref="Nack"/>.
+        /// </summary>
+        public const string NackManifest = "SN";
+
+        /// <summary>
+        /// The manifest for <see cref="SystemMessageEnvelope"/>.
+        /// </summary>
+        public const string SystemMessageEnvelopeManifest = "SME";
+
+        /// <summary>
+        /// The manifest for <see cref="ClearSystemMessageDelivery"/>.
+        /// </summary>
+        public const string ClearSystemMessageDeliveryManifest = "SCL";
+
+        /// <summary>
+        /// Generated by <c>Akka.Serialization.V2.Generators.AkkaSerializerGenerator</c> -- an
+        /// AOT-safe, explicit alternative to reflection-based (HOCON class-name) construction. Not
+        /// used by <c>Remote.conf</c>'s registration (which still resolves this class by name via
+        /// the classic <c>Serializer</c> reflection contract), but available for
+        /// <see cref="Akka.Serialization.V2.SerializerRegistration.CreateSetup(Akka.Serialization.V2.SerializerRegistration[])"/>-based
+        /// composition.
+        /// </summary>
+        public static partial SerializerRegistration CreateRegistration();
+    }
+}

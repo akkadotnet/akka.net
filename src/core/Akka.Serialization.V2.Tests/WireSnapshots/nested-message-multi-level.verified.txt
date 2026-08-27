@@ -1,0 +1,9 @@
+﻿case: nested-message-multi-level
+message-type: WarehouseMessage
+manifest: warehouse-v1
+serializer-id: 120101
+byte-count: 33
+
+0000  82 01 ab 77 61 72 65 68  6f 75 73 65 2d 31 02 81  |...warehouse-1..|
+0010  01 82 01 a7 53 65 61 74  74 6c 65 02 81 01 a2 55  |....Seattle....U|
+0020  53                                                |S|
