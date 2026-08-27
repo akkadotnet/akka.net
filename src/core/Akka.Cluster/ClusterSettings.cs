@@ -53,6 +53,10 @@ namespace Akka.Cluster
             GossipInterval = clusterConfig.GetTimeSpan("gossip-interval", null);
             GossipTimeToLive = clusterConfig.GetTimeSpan("gossip-time-to-live", null);
             LeaderActionsInterval = clusterConfig.GetTimeSpan("leader-actions-interval", null);
+            PruneGossipTombstonesAfter = clusterConfig.GetTimeSpan("prune-gossip-tombstones-after", null);
+            if (PruneGossipTombstonesAfter <= TimeSpan.Zero)
+                throw new ConfigurationException(
+                    $"[akka.cluster.prune-gossip-tombstones-after] must be a timespan greater than 0s. Received [{PruneGossipTombstonesAfter}]");
             UnreachableNodesReaperInterval = clusterConfig.GetTimeSpan("unreachable-nodes-reaper-interval", null);
             PublishStatsInterval = clusterConfig.GetTimeSpanWithOffSwitch("publish-stats-interval");
 
@@ -202,6 +206,15 @@ namespace Akka.Cluster
         /// TBD
         /// </summary>
         public TimeSpan LeaderActionsInterval { get; }
+
+        /// <summary>
+        /// How long the gossip remembers that it removed a member.
+        ///
+        /// The record stops a peer that has not caught up from putting the removed member back into the
+        /// gossip. A partition that outlasts this window re-opens that hole, so the value should sit well
+        /// above the longest partition the cluster is expected to heal from. Defaults to 24 hours.
+        /// </summary>
+        public TimeSpan PruneGossipTombstonesAfter { get; }
 
         /// <summary>
         /// TBD

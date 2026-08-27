@@ -73,6 +73,27 @@ namespace Akka.Remote.Artery
         /// <c>InboundEnvelope.association.remoteAddress</c> lookup.
         /// </summary>
         Address? TryResolveOriginAddress(long originUid);
+
+        /// <summary>
+        /// Tells the caller if <paramref name="originUid"/> is quarantined.
+        ///
+        /// <para>
+        /// The lookup uses the <see cref="AssociationRegistry"/> reverse index to find the
+        /// association, then reads that association's quarantine flag.
+        /// <see cref="IsKnownOrigin"/> uses the same index.
+        /// </para>
+        ///
+        /// <para>
+        /// The result is <see langword="false"/> for an unknown uid. A uid is unknown if the
+        /// handshake did not complete, or if a later incarnation replaced it.
+        /// </para>
+        ///
+        /// <para>
+        /// <see cref="InboundQuarantineCheckStage"/> calls this method to discard traffic from a
+        /// quarantined peer.
+        /// </para>
+        /// </summary>
+        bool IsQuarantined(long originUid);
     }
 
     /// <summary>
@@ -116,5 +137,8 @@ namespace Akka.Remote.Artery
 
         /// <inheritdoc/>
         public Address? TryResolveOriginAddress(long originUid) => _registry.TryGetByUid(originUid)?.RemoteAddress;
+
+        /// <inheritdoc/>
+        public bool IsQuarantined(long originUid) => _registry.TryGetByUid(originUid)?.IsQuarantined(originUid) ?? false;
     }
 }

@@ -730,12 +730,21 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
 
     protected async Task<ActorSystem> StartNewSystemAsync(CancellationToken cancellationToken = default)
     {
+        // Pin the fresh system to the same wire address on both transports. Only one of
+        // these key sets applies to any given run, and each transport ignores the other's
+        // keys, so emitting both is safe. Without the artery keys, the inherited config's
+        // `canonical.port = 0` fallback would make the fresh system bind a random port
+        // instead of the address other nodes still expect.
         var sb =
             new StringBuilder("akka.remote.dot-netty.tcp{").AppendLine()
                 .AppendFormat("port={0}", _myAddress.Port)
                 .AppendLine()
                 .AppendFormat(@"hostname=""{0}""", _myAddress.Host)
-                .AppendLine("}");
+                .AppendLine("}")
+                .AppendFormat(@"akka.remote.artery.canonical.hostname=""{0}""", _myAddress.Host)
+                .AppendLine()
+                .AppendFormat("akka.remote.artery.canonical.port={0}", _myAddress.Port)
+                .AppendLine();
         var config =
             ConfigurationFactory
                 .ParseString(sb.ToString())

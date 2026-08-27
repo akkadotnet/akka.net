@@ -140,10 +140,20 @@ namespace Akka.Remote.Artery
         /// &gt; 1. Ignored (and may be 0) at the default <paramref name="inboundLanes"/> of 1.
         /// </param>
         /// <param name="inboundContext">
-        /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: an Ordinary-stream connection's
-        /// lane path bypasses <see cref="InboundHandshakeStage"/> for its own ordinary traffic (see
-        /// the type-level remarks on why that stage is a structural no-op for such a connection)
-        /// but still needs its <see cref="IInboundContext.IsKnownOrigin"/> gate, reused as-is here.
+        /// Necessary only when <paramref name="inboundLanes"/> is more than 1.
+        ///
+        /// <para>
+        /// The ordinary traffic of such a connection goes to the lanes. It does not go through
+        /// <see cref="InboundHandshakeStage"/> or <see cref="InboundQuarantineCheckStage"/>. The
+        /// type-level remarks tell why those two stages do nothing for such a connection.
+        /// </para>
+        ///
+        /// <para>
+        /// The lane path must do the checks of those two stages itself. It calls
+        /// <see cref="IInboundContext.IsKnownOrigin"/> and
+        /// <see cref="IInboundContext.IsQuarantined"/> for the checks, and
+        /// <see cref="IInboundContext.SendControl"/> to send the quarantine notice.
+        /// </para>
         /// </param>
         /// <param name="dispatchOrdinary">
         /// Needed ONLY when <paramref name="inboundLanes"/> &gt; 1: invoked by each lane's consumer
@@ -755,6 +765,50 @@ namespace Akka.Remote.Artery
                     Log.Debug(
                         "Dropping inbound lane-routed Artery message from unknown origin uid [{0}] (no completed handshake for this uid yet).",
                         decoded.Header.OriginUid);
+                    return true;
+                }
+
+                // The quarantine check for the lane path. It does what InboundQuarantineCheckStage
+                // does, because lane traffic does not go through the sink that holds that stage.
+                // The checks from InboundHandshakeStage and InboundTestStage are inlined here for
+                // the same reason.
+                //
+                // This code deserializes the message here, which lane mode otherwise leaves to the
+                // lane consumer. Two reasons make this acceptable:
+                //   - Only frames from a quarantined uid get this far, so a healthy connection
+                //     never runs this code.
+                //   - ShouldNotifyOrigin must examine the message to decide about the notice.
+                if (_stage.InboundContext!.IsQuarantined(decoded.Header.OriginUid))
+                {
+                    var quarantinedOrigin = _stage.InboundContext!.TryResolveOriginAddress(decoded.Header.OriginUid);
+                    object quarantinedMessage;
+                    try
+                    {
+                        quarantinedMessage = _stage.Serialization.Deserialize(decoded.Payload, decoded.Header.SerializerId, manifest);
+                    }
+                    catch (Exception ex)
+                    {
+                        // The code discards the frame in all conditions. A deserialization failure
+                        // only prevents the notice for this one frame. The next discarded frame
+                        // sends it.
+                        Log.Debug(
+                            ex,
+                            "Dropping message (serializer id [{0}]) from [{1}#{2}] because the system is quarantined (payload not deserializable).",
+                            decoded.Header.SerializerId, quarantinedOrigin, decoded.Header.OriginUid);
+                        return true;
+                    }
+
+                    Log.Debug(
+                        "Dropping message [{0}] from [{1}#{2}] because the system is quarantined",
+                        quarantinedMessage.GetType(), quarantinedOrigin, decoded.Header.OriginUid);
+
+                    if (InboundQuarantineCheckStage.ShouldNotifyOrigin(quarantinedMessage) && quarantinedOrigin is not null)
+                    {
+                        _stage.InboundContext!.SendControl(
+                            quarantinedOrigin,
+                            new ArteryQuarantined(_stage.InboundContext!.LocalAddress, decoded.Header.OriginUid));
+                    }
+
                     return true;
                 }
 

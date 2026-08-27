@@ -122,9 +122,18 @@ namespace Akka.Remote.Tests.MultiNode
                 await EnterBarrierAsync("actor-identified");
                 await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(30));
 
+                // Set the host and port for both transports, so that the new system starts at the
+                // same address as the old one. Each transport ignores the keys of the other, thus
+                // it is safe to set both.
+                //
+                // The artery keys are necessary. MultiNodeSpec adds a config tier that sets
+                // artery.canonical.port to 0. Without an explicit port here, that tier wins, the
+                // new system binds a random port, and `first` cannot reach it.
                 var freshSystem = ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($@"
                     akka.remote.dot-netty.tcp.hostname = {addr.Host}
                     akka.remote.dot-netty.tcp.port = {addr.Port}
+                    akka.remote.artery.canonical.hostname = {addr.Host}
+                    akka.remote.artery.canonical.port = {addr.Port}
                 ").WithFallback(Sys.Settings.Config));
 
                 freshSystem.ActorOf(Props.Create<RemoteQuarantinePiercingSpecConfig.Subject>(), "subject");

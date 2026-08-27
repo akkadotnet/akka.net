@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Immutable;
+using System.Linq;
 using Akka.Actor;
 using Akka.Cluster.Routing;
 using Akka.Cluster.Serialization;
@@ -17,6 +18,7 @@ using FluentAssertions;
 using Akka.Util;
 using Akka.Util.Internal;
 using Google.Protobuf;
+using Proto = Akka.Cluster.Serialization.Proto;
 
 namespace Akka.Cluster.Tests.Serialization
 {
@@ -94,6 +96,95 @@ akka.cluster.use-legacy-heartbeat-message = {(useLegacyHeartbeat ? "true" : "fal
             message1.Gossip.Overview.Seen.Should().BeEquivalentTo(deserialized.Gossip.Overview.Seen);
             message1.Gossip.Overview.Reachability.Should().Be(deserialized.Gossip.Overview.Reachability);
             message1.Gossip.Version.Versions.Should().Equal(deserialized.Gossip.Version.Versions);
+        }
+
+        [Fact(DisplayName = "A gossip should round-trip its removal tombstones")]
+        public void Can_serialize_Gossip_tombstones()
+        {
+            var address = new Address("akka.tcp", "system", "some.host.org", 4711);
+            var uniqueAddress2 = new UniqueAddress(address, 18);
+
+            // a1 stays a member; the two tombstoned nodes are not members, so their addresses only reach
+            // the wire if the serializer appends them to the address table
+            var removed1 = new UniqueAddress(new Address("akka.tcp", "sys", "gone1", 2552), 4711);
+            var removed2 = new UniqueAddress(new Address("akka.tcp", "sys", "gone2", 2552), 4712);
+
+            var tombstones = ImmutableDictionary<UniqueAddress, long>.Empty
+                .Add(removed1, 1234567890L)
+                .Add(removed2, 987654321L);
+
+            var gossip = new Gossip(ImmutableSortedSet.Create(a1, b1), new GossipOverview(), VectorClock.Create(),
+                tombstones);
+
+            var deserialized = AssertAndReturn(new GossipEnvelope(a1.UniqueAddress, uniqueAddress2, gossip)).Gossip;
+
+            deserialized.Tombstones.Should().Equal(tombstones);
+            deserialized.Members.Should().BeEquivalentTo(gossip.Members);
+        }
+
+        [Fact(DisplayName = "A tombstoned address should survive a round trip with its UID intact")]
+        public void Can_serialize_Gossip_tombstone_address_with_uid()
+        {
+            var address = new Address("akka.tcp", "system", "some.host.org", 4711);
+            var uniqueAddress2 = new UniqueAddress(address, 18);
+
+            // same host and port as member b1, different UID. If the serializer resolved tombstones through
+            // the member address table it would silently hand back b1's UID here.
+            var removed = new UniqueAddress(b1.Address, b1.UniqueAddress.Uid + 1);
+
+            var gossip = new Gossip(ImmutableSortedSet.Create(a1, b1), new GossipOverview(), VectorClock.Create(),
+                ImmutableDictionary<UniqueAddress, long>.Empty.Add(removed, 42L));
+
+            var deserialized = AssertAndReturn(new GossipEnvelope(a1.UniqueAddress, uniqueAddress2, gossip)).Gossip;
+
+            var key = deserialized.Tombstones.Keys.Should().ContainSingle().Subject;
+            key.Should().Be(removed);
+            key.Uid.Should().Be(removed.Uid);
+            deserialized.Members.Select(m => m.UniqueAddress).Should().BeEquivalentTo(
+                new[] { a1.UniqueAddress, b1.UniqueAddress });
+        }
+
+        [Fact(DisplayName = "Gossip written without the tombstone field should deserialize to an empty set")]
+        public void Can_deserialize_Gossip_without_tombstones()
+        {
+            var address = new Address("akka.tcp", "system", "some.host.org", 4711);
+            var uniqueAddress2 = new UniqueAddress(address, 18);
+            var removed = new UniqueAddress(new Address("akka.tcp", "sys", "gone", 2552), 4711);
+
+            var gossip = new Gossip(ImmutableSortedSet.Create(a1, b1, c1), new GossipOverview(),
+                VectorClock.Create().Increment(new VectorClock.Node("node1")),
+                ImmutableDictionary<UniqueAddress, long>.Empty.Add(removed, 99L));
+
+            var envelope = new GossipEnvelope(a1.UniqueAddress, uniqueAddress2, gossip);
+            var serializer = Sys.Serialization.FindSerializerFor(envelope);
+            var manifest = serializer.Manifest(envelope);
+
+            var envelopeProto = Proto.Msg.GossipEnvelope.Parser.ParseFrom(serializer.ToBinary(envelope));
+            var gossipProto = Proto.Msg.Gossip.Parser.ParseFrom(envelopeProto.SerializedGossip);
+            gossipProto.Tombstones.Should().NotBeEmpty();
+
+            // drop field 7 to get what a writer that predates tombstones produces
+            gossipProto.Tombstones.Clear();
+            envelopeProto.SerializedGossip = ByteString.CopyFrom(gossipProto.ToByteArray());
+
+            var deserialized = (GossipEnvelope)serializer.FromBinary(envelopeProto.ToByteArray(), manifest);
+
+            deserialized.Gossip.Tombstones.Should().BeEmpty();
+            deserialized.Gossip.Members.Should().BeEquivalentTo(gossip.Members);
+            deserialized.Gossip.Version.Versions.Should().Equal(gossip.Version.Versions);
+        }
+
+        [Fact(DisplayName = "A Welcome should round-trip its gossip's removal tombstones")]
+        public void Can_serialize_Welcome_with_tombstones()
+        {
+            var removed = new UniqueAddress(new Address("akka.tcp", "sys", "gone", 2552), 4711);
+            var tombstones = ImmutableDictionary<UniqueAddress, long>.Empty.Add(removed, 55L);
+            var gossip = new Gossip(ImmutableSortedSet.Create(a1, b1), new GossipOverview(), VectorClock.Create(),
+                tombstones);
+
+            var deserialized = AssertAndReturn(new InternalClusterAction.Welcome(a1.UniqueAddress, gossip));
+
+            deserialized.Gossip.Tombstones.Should().Equal(tombstones);
         }
 
         [Fact]
