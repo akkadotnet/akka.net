@@ -103,6 +103,9 @@ namespace Akka.Remote.Tests.Artery
             // Association outbound-stream lifecycle: reconnect (design.md group 9).
             settings.OutboundRestartBackoff.Should().Be(1.Seconds());
 
+            // Shutdown flush -- same default as classic remoting's flush-wait-on-shutdown.
+            settings.FlushWaitOnShutdown.Should().Be(2.Seconds());
+
             // TCP input-pipe pause/resume watermarks (mirrors the 1 MiB socket buffers
             // ArteryRemoting.BuildArterySocketOptions pins on every connection).
             settings.TcpPipeBufferSize.Should().Be(1024 * 1024);
@@ -158,6 +161,20 @@ namespace Akka.Remote.Tests.Artery
             // The 1 MiB OS socket buffers are unaffected by this change.
             options.OfType<Akka.IO.Inet.SO.ReceiveBufferSize>().Should().ContainSingle();
             options.OfType<Akka.IO.Inet.SO.SendBufferSize>().Should().ContainSingle();
+        }
+
+        [Fact(DisplayName = "Should_AcceptZeroFlushWait_When_ConfigDisablesTheShutdownFlush")]
+        public void Should_AcceptZeroFlushWait_When_ConfigDisablesTheShutdownFlush()
+        {
+            // Zero is legal here, unlike every other timeout in ArterySettings: it selects the
+            // pre-flush behavior of draining straight to Dropped. ArterySettings also rejects a
+            // negative bound, but HOCON's duration parser refuses a negative literal first, so
+            // that guard cannot be reached from config and is not exercised here.
+            var arteryConfig = ConfigurationFactory.ParseString("akka.remote.artery.advanced.flush-wait-on-shutdown = 0s")
+                .WithFallback(RemoteConfigFactory.Default())
+                .GetConfig("akka.remote.artery");
+
+            new ArterySettings(arteryConfig).FlushWaitOnShutdown.Should().Be(TimeSpan.Zero);
         }
 
         [Fact(DisplayName = "Should_ParseOutboundQueueSizeOverrides_When_ConfigOverridden")]
