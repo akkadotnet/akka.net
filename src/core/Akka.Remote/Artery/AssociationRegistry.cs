@@ -996,14 +996,27 @@ namespace Akka.Remote.Artery
         /// snapshot, so <see cref="AssociationRegistry"/> can tell — without a separate,
         /// racy read — whether (and from what uid) an incarnation change just happened.
         /// </summary>
-        public (AssociationState Previous, AssociationState Updated) CompleteHandshake(UniqueAddress peer)
+        public (AssociationState Previous, AssociationState Updated) CompleteHandshake(UniqueAddress peer) =>
+            Transition(peer, static (state, p) => state.CompleteHandshake(p));
+
+        /// <summary>
+        /// As <see cref="CompleteHandshake"/>, but applying
+        /// <see cref="AssociationState.CompleteOutboundHandshake"/> -- the only path that sets
+        /// <see cref="AssociationState.OutboundHandshakeCompleted"/> (issue #8496).
+        /// </summary>
+        public (AssociationState Previous, AssociationState Updated) CompleteOutboundHandshake(UniqueAddress peer) =>
+            Transition(peer, static (state, p) => state.CompleteOutboundHandshake(p));
+
+        private (AssociationState Previous, AssociationState Updated) Transition(
+            UniqueAddress peer,
+            Func<AssociationState, UniqueAddress, AssociationState> transition)
         {
             Interlocked.Increment(ref _handshakeGeneration);
 
             while (true)
             {
                 var current = _state;
-                var updated = current.CompleteHandshake(peer);
+                var updated = transition(current, peer);
 
                 if (ReferenceEquals(updated, current))
                     return (current, current);
@@ -1137,7 +1150,27 @@ namespace Akka.Remote.Artery
         public AssociationState CompleteHandshake(Address remoteAddress, UniqueAddress peer)
         {
             var association = AssociationFor(remoteAddress);
-            var (previous, updated) = association.CompleteHandshake(peer);
+            return Complete(association, peer, association.CompleteHandshake(peer));
+        }
+
+        /// <summary>
+        /// As <see cref="CompleteHandshake"/>, but records that the peer answered a
+        /// <see cref="HandshakeReq"/> of OURS -- see
+        /// <see cref="AssociationState.OutboundHandshakeCompleted"/>. Called only from
+        /// <see cref="InboundHandshakeStage"/>'s <c>HandleRsp</c>.
+        /// </summary>
+        public AssociationState CompleteOutboundHandshake(Address remoteAddress, UniqueAddress peer)
+        {
+            var association = AssociationFor(remoteAddress);
+            return Complete(association, peer, association.CompleteOutboundHandshake(peer));
+        }
+
+        private AssociationState Complete(
+            Association association,
+            UniqueAddress peer,
+            (AssociationState Previous, AssociationState Updated) transition)
+        {
+            var (previous, updated) = transition;
 
             if (!ReferenceEquals(previous, updated) &&
                 previous.UniqueRemoteAddress is { } previousPeer &&

@@ -8,6 +8,7 @@
 #nullable enable
 
 using System;
+using Akka.Event;
 using Akka.Streams;
 using Akka.Streams.Stage;
 
@@ -62,6 +63,11 @@ namespace Akka.Remote.Artery
     /// time, ~1s has just passed") — the task explicitly sanctions exactly this simplification
     /// ("track last-injection time; if a message flows and it's been &gt; inject-handshake-interval
     /// since the last injection, inject another ahead of it").</para>
+    ///
+    /// <para><b>Completion means "the PEER knows OUR uid" (issue #8496)</b> -- proven only by a
+    /// <see cref="HandshakeRsp"/> answering a <see cref="HandshakeReq"/> of ours, not by
+    /// <see cref="Artery.AssociationState.UniqueRemoteAddress"/> (which the INBOUND direction sets
+    /// too). See <c>Logic.CanSkipOwnHandshake</c>.</para>
     ///
     /// <para><b>Control-channel routing (task group 6, "Control Stream", task 6.3).</b> This
     /// SAME stage class is materialized on EVERY outbound stream (control, ordinary, and later
@@ -154,7 +160,8 @@ namespace Akka.Remote.Artery
         /// is an idempotent no-op (see <see cref="Artery.AssociationState.CompleteHandshake"/>) — it
         /// only costs one extra round trip. The G2 fast path is preserved for a stream's FIRST-ever
         /// materialization (<see langword="false"/>, the default), where "another stream on this
-        /// same association already completed the handshake" is a legitimate, still-current signal.
+        /// same association already completed OUR OWN handshake" is a legitimate, still-current
+        /// signal -- see <c>Logic.CanSkipOwnHandshake</c> for what counts as that, post-#8496.
         /// </para>
         /// </summary>
         public bool ForceReqOnStart { get; }
@@ -195,13 +202,23 @@ namespace Akka.Remote.Artery
 
             public override void PreStart()
             {
-                if (!_stage.ForceReqOnStart &&
-                    _stage.Context.AssociationState.UniqueRemoteAddress is { } already &&
-                    Equals(already.Address, _stage.Context.RemoteAddress))
+                var state = _stage.Context.AssociationState;
+
+                if (!_stage.ForceReqOnStart && CanSkipOwnHandshake(state))
                 {
                     _state = State.Completed;
                     _lastInject = DateTime.UtcNow;
                     return;
+                }
+
+                if (!_stage.ForceReqOnStart && !_stage.IsControlStream && !state.OutboundHandshakeCompleted &&
+                    state.UniqueRemoteAddress is not null)
+                {
+                    // Issue #8496's ordering, named so it is recognizable in the field.
+                    Log.Debug(
+                        "Outbound Artery stream to [{0}]: the peer's uid is known from an INBOUND handshake only, " +
+                        "so this stream sends its own HandshakeReq and holds traffic until the peer answers.",
+                        _stage.Context.RemoteAddress);
                 }
 
                 _handshakeGenerationBaseline = _stage.Context.HandshakeGeneration;
@@ -209,6 +226,36 @@ namespace Akka.Remote.Artery
                 ScheduleRepeatedly(RetryTimerKey, _stage.RetryInterval);
                 ScheduleOnce(TimeoutTimerKey, _stage.HandshakeTimeout);
             }
+
+            /// <summary>
+            /// May this materialization skip straight to <c>Completed</c> because another stream on
+            /// the same association already did the work?
+            ///
+            /// <para>
+            /// For an ORDINARY/LARGE/lane stream, only when the peer has answered a
+            /// <see cref="HandshakeReq"/> of OURS
+            /// (<see cref="Artery.AssociationState.OutboundHandshakeCompleted"/>). A known
+            /// <see cref="Artery.AssociationState.UniqueRemoteAddress"/> does not qualify -- the
+            /// peer's own inbound Req sets that, and it says nothing about whether the peer has
+            /// registered our uid, so trusting it let our first user message race our
+            /// <see cref="HandshakeRsp"/> into the peer's unknown-origin drop (issue #8496).
+            /// </para>
+            ///
+            /// <para>
+            /// The CONTROL stream keeps the older, weaker rule. That is safe -- the receiver's
+            /// unknown-origin gate only ever drops ORDINARY envelopes; every control envelope
+            /// (handshake, heartbeat, quarantine notice, system messages and their Ack/Nack) is
+            /// dispatched whether or not the origin uid is registered. And it is REQUIRED: the
+            /// <see cref="HandshakeRsp"/> we owe a peer is enqueued on that very control queue, so
+            /// if the control stream held its traffic until the peer answered OUR Req, two systems
+            /// that dial each other at the same instant would each sit holding the Rsp the other is
+            /// waiting for, and neither handshake could ever complete.
+            /// </para>
+            /// </summary>
+            private bool CanSkipOwnHandshake(AssociationState state) =>
+                state.UniqueRemoteAddress is { } already &&
+                Equals(already.Address, _stage.Context.RemoteAddress) &&
+                (_stage.IsControlStream || state.OutboundHandshakeCompleted);
 
             public void OnPull()
             {
@@ -332,8 +379,17 @@ namespace Akka.Remote.Artery
                 if (_state == State.Completed)
                     return;
 
-                if (_stage.Context.AssociationState.UniqueRemoteAddress is not { } remote ||
+                var state = _stage.Context.AssociationState;
+
+                if (state.UniqueRemoteAddress is not { } remote ||
                     !Equals(remote.Address, _stage.Context.RemoteAddress))
+                    return;
+
+                // Same control/ordinary split as CanSkipOwnHandshake, and load-bearing here too:
+                // the generation counter below is advanced by the peer's own inbound Req as well,
+                // so without this an ordinary stream would complete on the peer's Req retry that
+                // happens to land while we wait for our Rsp -- issue #8496 through the back door.
+                if (!_stage.IsControlStream && !state.OutboundHandshakeCompleted)
                     return;
 
                 // A materialization that reached ReqInProgress (either its own first-ever

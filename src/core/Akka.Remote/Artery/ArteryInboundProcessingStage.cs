@@ -328,8 +328,17 @@ namespace Akka.Remote.Artery
 
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
         {
+            /// <summary>
+            /// Rate limit for this connection's unknown-origin drop warnings -- the lane path's
+            /// half of the pair <see cref="InboundHandshakeStage"/> owns the other half of; see
+            /// that stage for the rationale.
+            /// </summary>
+            private static readonly TimeSpan UnknownOriginWarnInterval = TimeSpan.FromSeconds(10);
+
             private readonly ArteryInboundProcessingStage _stage;
             private readonly Queue<IInboundEnvelope> _pending = new();
+            private DateTime _lastUnknownOriginWarning = DateTime.MinValue;
+            private long _suppressedUnknownOriginDrops;
 
             private readonly byte[] _preambleBuffer = new byte[ArteryConnectionHeader.Length];
             private int _preambleFilled;
@@ -762,9 +771,22 @@ namespace Akka.Remote.Artery
                 // user-message dispatch per connection" holds for the lane path too.
                 if (!_stage.InboundContext!.IsKnownOrigin(decoded.Header.OriginUid))
                 {
-                    Log.Debug(
-                        "Dropping inbound lane-routed Artery message from unknown origin uid [{0}] (no completed handshake for this uid yet).",
-                        decoded.Header.OriginUid);
+                    var now = DateTime.UtcNow;
+                    if (_lastUnknownOriginWarning == DateTime.MinValue ||
+                        now - _lastUnknownOriginWarning >= UnknownOriginWarnInterval)
+                    {
+                        Log.Warning(
+                            "Dropping inbound lane-routed Artery message from unknown origin uid [{0}]: no completed handshake for this uid yet. " +
+                            "The message is LOST - ordinary messages are not resent. [{1}] further drop(s) suppressed since the last warning.",
+                            decoded.Header.OriginUid, _suppressedUnknownOriginDrops);
+                        _lastUnknownOriginWarning = now;
+                        _suppressedUnknownOriginDrops = 0;
+                    }
+                    else
+                    {
+                        _suppressedUnknownOriginDrops++;
+                    }
+
                     return true;
                 }
 

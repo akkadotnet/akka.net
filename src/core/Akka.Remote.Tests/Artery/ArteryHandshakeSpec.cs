@@ -102,7 +102,7 @@ namespace Akka.Remote.Tests.Artery
 
             // Simulate what InboundHandshakeStage does when the peer's HandshakeRsp arrives on
             // OUR inbound pipeline for the return direction.
-            registry.CompleteHandshake(remoteAddress, new UniqueAddress(remoteAddress, 222L));
+            registry.CompleteOutboundHandshake(remoteAddress, new UniqueAddress(remoteAddress, 222L));
 
             // Nothing re-triggers the stage directly; per the documented notification mechanism,
             // the retry timer (still running) is what notices completion and delivers the held
@@ -152,7 +152,7 @@ namespace Akka.Remote.Tests.Artery
             // slow to arrive.
             await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
 
-            registry.CompleteHandshake(remoteAddress, new UniqueAddress(remoteAddress, 222L));
+            registry.CompleteOutboundHandshake(remoteAddress, new UniqueAddress(remoteAddress, 222L));
 
             // The retry timer (still running) is what notices completion and releases the held
             // element - bounded by one retry interval; a legal idempotent retry HandshakeReq may
@@ -268,7 +268,7 @@ namespace Akka.Remote.Tests.Artery
             await pub.SendNextAsync(new OutboundEnvelope("user-message", null, null));
             await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
-            registry.CompleteHandshake(remoteAddress, new UniqueAddress(remoteAddress, 555L));
+            registry.CompleteOutboundHandshake(remoteAddress, new UniqueAddress(remoteAddress, 555L));
 
             var delivered = await sub.ExpectNextAsync(TimeSpan.FromSeconds(3));
             delivered.Message.Should().Be("user-message");
@@ -285,7 +285,7 @@ namespace Akka.Remote.Tests.Artery
 
             // Already-associated at PreStart (Completed immediately) -- exercises the
             // "ShouldReinjectForLiveness" path directly rather than the initial handshake path.
-            registry.CompleteHandshake(remoteAddress, new UniqueAddress(remoteAddress, 777L));
+            registry.CompleteOutboundHandshake(remoteAddress, new UniqueAddress(remoteAddress, 777L));
 
             var stage = new OutboundHandshakeStage(
                 context,

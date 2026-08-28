@@ -38,11 +38,19 @@ namespace Akka.Remote.Artery
     /// — a lookup against the SHARED <see cref="AssociationRegistry"/> keyed by the envelope's own
     /// <see cref="IInboundEnvelope.OriginUid"/> (always present in the decoded header, regardless
     /// of which connection/stream carried the envelope). This is safe because the SENDING side's
-    /// <see cref="OutboundHandshakeStage"/> holds all ordinary/large traffic behind its own
-    /// handshake-completion gate, which — by construction — cannot complete before the RECEIVING
-    /// side has already processed the peer's <see cref="HandshakeReq"/> (registering the uid) and
-    /// sent its <see cref="HandshakeRsp"/>. So by the time a receiver's ordinary connection ever
-    /// delivers a real user envelope for some uid, that uid is already registered.
+    /// <see cref="OutboundHandshakeStage"/> holds all ordinary/large traffic until a
+    /// <see cref="HandshakeRsp"/> answers a <see cref="HandshakeReq"/> of ITS OWN — and the only
+    /// thing that sends a Rsp is <c>HandleReq</c> below, immediately after it registers the
+    /// requester's uid. So by the time a sender releases its first ordinary envelope, this side has
+    /// already registered that sender's uid.
+    ///
+    /// <para>
+    /// That construction does NOT follow from the sender merely having an association with a known
+    /// <see cref="AssociationState.UniqueRemoteAddress"/> — our own <see cref="HandshakeReq"/> sets
+    /// that field on the sender, and it tells the sender nothing about whether WE know its uid. The
+    /// outbound stage used to shortcut on exactly that (issue #8496); see
+    /// <see cref="AssociationState.OutboundHandshakeCompleted"/>.
+    /// </para>
     /// </para>
     ///
     /// <list type="bullet">
@@ -67,8 +75,9 @@ namespace Akka.Remote.Artery
     /// <see cref="IControlMessageSubscriber"/>s.
     /// </description></item>
     /// <item><description>
-    /// Any ordinary (non-control) envelope: dropped with a debug log while the origin is unknown;
-    /// passed through once known (per the registry-based check above).
+    /// Any ordinary (non-control) envelope: dropped while the origin is unknown — with a
+    /// rate-limited WARNING, since that drop is unrecoverable loss (ordinary messages are never
+    /// resent); passed through once known (per the registry-based check above).
     /// </description></item>
     /// </list>
     /// </summary>
@@ -91,7 +100,17 @@ namespace Akka.Remote.Artery
 
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
         {
+            /// <summary>
+            /// Minimum gap between unknown-origin drop warnings on this connection: the drop is
+            /// unrecoverable loss and must be visible, but a peer that restarted mid-flight can
+            /// produce a burst of them, so the rest are folded into a suppressed count. No
+            /// synchronization -- the stream runs one stage callback at a time.
+            /// </summary>
+            private static readonly TimeSpan UnknownOriginWarnInterval = TimeSpan.FromSeconds(10);
+
             private readonly InboundHandshakeStage _stage;
+            private DateTime _lastUnknownOriginWarning = DateTime.MinValue;
+            private long _suppressedUnknownOriginDrops;
 
             public Logic(InboundHandshakeStage stage) : base(stage.Shape)
             {
@@ -129,9 +148,22 @@ namespace Akka.Remote.Artery
 
                 if (!_stage.Context.IsKnownOrigin(envelope.OriginUid))
                 {
-                    Log.Debug(
-                        "Dropping inbound message [{0}] from unknown origin uid [{1}] (no completed handshake for this uid yet).",
-                        envelope.Message.GetType(), envelope.OriginUid);
+                    var now = DateTime.UtcNow;
+                    if (_lastUnknownOriginWarning == DateTime.MinValue ||
+                        now - _lastUnknownOriginWarning >= UnknownOriginWarnInterval)
+                    {
+                        Log.Warning(
+                            "Dropping inbound message [{0}] from unknown origin uid [{1}]: no completed handshake for this uid yet. " +
+                            "The message is LOST - ordinary messages are not resent. [{2}] further drop(s) suppressed since the last warning.",
+                            envelope.Message.GetType(), envelope.OriginUid, _suppressedUnknownOriginDrops);
+                        _lastUnknownOriginWarning = now;
+                        _suppressedUnknownOriginDrops = 0;
+                    }
+                    else
+                    {
+                        _suppressedUnknownOriginDrops++;
+                    }
+
                     Pull(_stage.In);
                     return;
                 }
@@ -161,7 +193,11 @@ namespace Akka.Remote.Artery
                 _stage.Context.SendControl(req.From.Address, new HandshakeRsp(_stage.Context.LocalAddress));
             }
 
-            private void HandleRsp(HandshakeRsp rsp) => _stage.Context.CompleteHandshake(rsp.From);
+            // CompleteOutboundHandshake, not CompleteHandshake: a Rsp is the only proof that the
+            // peer has registered OUR uid, which is what gates our ordinary outbound streams
+            // (issue #8496). Re-completing with the same uid stays an idempotent no-op, so the
+            // duplicate Rsps our own idempotent Req retries produce cost nothing.
+            private void HandleRsp(HandshakeRsp rsp) => _stage.Context.CompleteOutboundHandshake(rsp.From);
         }
     }
 }
