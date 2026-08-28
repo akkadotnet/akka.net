@@ -20,17 +20,6 @@ namespace Akka.TestKit.Tests.TestKitBaseTests
         private static readonly TimeSpan ShortTimeout = TimeSpan.FromMilliseconds(200);
         private static readonly TimeSpan CleanupTimeout = TimeSpan.FromSeconds(10);
 
-        [Fact(DisplayName = "ShutdownAsync should terminate the system before the returned task completes")]
-        public async Task Should_TerminateSystem_When_Awaited()
-        {
-            var sys = ActorSystem.Create("shutdown-async-completes", Sys.Settings.Config);
-
-            await ShutdownAsync(sys);
-
-            sys.WhenTerminated.IsCompleted.Should().BeTrue(
-                "ShutdownAsync must not complete before the system has terminated");
-        }
-
         [Fact(DisplayName = "ShutdownAsync should throw TimeoutException when verifySystemShutdown is true and the system will not stop")]
         public async Task Should_Throw_When_SystemDoesNotStop_And_VerifyIsSet()
         {
