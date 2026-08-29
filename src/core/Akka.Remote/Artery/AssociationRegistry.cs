@@ -1071,7 +1071,9 @@ namespace Akka.Remote.Artery
                     return (current, current);
                 }
 
-                if (Interlocked.CompareExchange(ref _state, updated, current) == current)
+                // ReferenceEquals, not ==: AssociationState is a record, so == would be
+                // compiler-generated VALUE equality and a lost CAS could masquerade as a won one.
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _state, updated, current), current))
                 {
                     NotifyHandshakeStateChanged();
                     return (current, updated);
@@ -1107,7 +1109,8 @@ namespace Akka.Remote.Artery
                 if (ReferenceEquals(updated, current))
                     return true;
 
-                if (Interlocked.CompareExchange(ref _state, updated, current) == current)
+                // Reference comparison -- see the matching note in Transition.
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _state, updated, current), current))
                     return true;
             }
         }
