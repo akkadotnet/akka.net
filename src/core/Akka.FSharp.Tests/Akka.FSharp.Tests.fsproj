@@ -3,6 +3,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>$(NetTestVersion)</TargetFrameworks>
+    <!-- .NET SDK 10.0.302 implicitly references FSharp.Core 10.1.302 through Akka.FSharp. -->
+    <FsharpVersion>10.1.302</FsharpVersion>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <IsPackable>false</IsPackable>
     <OutputType>Exe</OutputType>
