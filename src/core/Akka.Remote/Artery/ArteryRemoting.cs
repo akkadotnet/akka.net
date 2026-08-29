@@ -420,7 +420,7 @@ namespace Akka.Remote.Artery
         }
 
         /// <inheritdoc/>
-        public override Task Shutdown()
+        public override async Task Shutdown()
         {
             // Set the guard FIRST (mirrors Pekko's hasBeenShutdown.compareAndSet at the top of
             // shutdown()): from here on MaterializeOutboundStream refuses to start new streams, so a
@@ -428,21 +428,49 @@ namespace Akka.Remote.Artery
             _isShutdown = true;
             _log.Info("Shutting down Artery TCP remoting on [{0}]", _defaultAddress);
 
-            // Complete the outbound queues so their consumers finish gracefully and no restart is
-            // scheduled (CompleteOutbound also latches the per-association shutdown flags) -- then
-            // DRAIN whatever each completed channel still holds, publishing a Dropped per element
-            // (mirrors Pekko's SendQueue.postStop dead-lettering its remaining queue). Completing a
-            // channel does NOT discard its buffered elements, and its consuming stream is being torn
-            // down right below -- without the drain those elements would be stranded in the dead
-            // channel forever, SILENTLY. At-most-once loss on shutdown is within contract; UNLOGGED
-            // loss is not. Complete-then-drain is race-free: the closed writer admits nothing new
-            // behind the drain.
-            foreach (var association in _registry.AllAssociations)
+            // Snapshot the associations ONCE: the flush below awaits between the complete pass and
+            // the drain pass, and both passes must cover exactly the same set. A send racing
+            // shutdown can still register a new association, so re-reading the registry per pass
+            // would let one slip through with a completed channel and no drain.
+            var associations = new List<Association>(_registry.AllAssociations);
+
+            // STEP 1 -- stop accepting new sends. Completing a channel does not discard what it
+            // already holds; it tells the consuming stream "no more will arrive", which is what
+            // lets that stream drain the backlog and finish. CompleteOutbound also latches the
+            // per-association shutdown flags, so no restart is ever scheduled from here on.
+            foreach (var association in associations)
             {
                 association.CompleteOutbound();
                 association.CompleteControlOutbound();
                 association.CompleteLargeOutbound();
+            }
 
+            // STEP 2 -- give the already-accepted backlog a chance to reach the wire. Step 1 is
+            // what makes this work: a completed channel drives its stream to read the remainder,
+            // encode it and hand it to the socket, and only then report completion. Without this
+            // wait, everything queued microseconds before shutdown went straight to Dropped and the
+            // last messages a system sends -- acks, graceful notices, handshake replies -- were
+            // exactly the ones lost. Classic remoting has always flushed this way
+            // (akka.remote.flush-wait-on-shutdown); this is Artery's equivalent, same default.
+            // The wait is bounded and never unbounded: see FlushOutboundStreamsAsync.
+            var flushWait = _settings.FlushWaitOnShutdown;
+            if (flushWait > TimeSpan.Zero)
+            {
+                // The token IS the bound -- it fires after flushWait and the flush loses its race,
+                // so shutdown cannot stall past the configured window no matter what the streams
+                // are doing. Disposing it cancels the timer as soon as the flush finishes early.
+                using var flushDeadline = new CancellationTokenSource(flushWait);
+                await FlushOutboundStreamsAsync(associations, flushDeadline.Token);
+            }
+
+            // STEP 3 -- account for everything the flush did not get out, publishing a Dropped per
+            // element. This runs whether the flush completed or timed out: the streams are torn
+            // down right below, so without the drain those elements would be stranded in the dead
+            // channels forever, SILENTLY. At-most-once loss on shutdown is within contract; UNLOGGED loss is
+            // not. Complete-then-drain is race-free: the closed writer admits nothing new behind
+            // the drain.
+            foreach (var association in associations)
+            {
                 var remoteAddress = association.RemoteAddress;
                 association.DrainOutboundToDropped(envelope => System.EventStream.Publish(new Dropped(
                     envelope.Message,
@@ -517,11 +545,90 @@ namespace Akka.Remote.Artery
             // residual race around Run().
             var unbindTask = _binding?.Unbind() ?? Task.CompletedTask;
             var materializer = _materializer;
-            return unbindTask.ContinueWith(_ =>
+            await unbindTask.ContinueWith(_ =>
             {
                 materializer?.Shutdown();
                 _log.Info("Artery TCP remoting shut down");
             }, TaskContinuationOptions.ExecuteSynchronously);
+        }
+
+        /// <summary>
+        /// Waits, up to the bound carried by <paramref name="cancellationToken"/>
+        /// (<c>akka.remote.artery.advanced.flush-wait-on-shutdown</c>), for every association's
+        /// outbound streams to finish writing what they had already accepted. Called by
+        /// <see cref="Shutdown"/> AFTER the outbound channels are completed and BEFORE the
+        /// remaining backlog is drained to <see cref="Dropped"/>.
+        ///
+        /// <para>
+        /// <b>What it waits on, and why that is the right signal.</b> Each association publishes
+        /// its current materialization's WRITE-side termination watch (see
+        /// <see cref="Association.SetOutboundStreamCompletion"/>) -- the same task the reconnect
+        /// machinery treats as "this materialization has settled". That watch resolves only once
+        /// the association-owned channel has reported completion, which a
+        /// <see cref="System.Threading.Channels.ChannelReader{T}"/> does when its writer is closed
+        /// AND its buffer is empty, and every element read out of it has travelled through the
+        /// handshake and encode stages into the TCP connection stage, which forwards each write to
+        /// its connection actor as it arrives. So it means precisely "everything this association
+        /// accepted is on its way to the socket". A stream with nothing left to write resolves at
+        /// once, which is why an idle system pays nothing for this wait.
+        /// </para>
+        ///
+        /// <para>
+        /// <b>Why it is bounded.</b> A backlog that cannot reach its peer -- dead connection,
+        /// blackholed link, a peer that stopped reading -- produces no downstream demand, so its
+        /// watch never resolves. Losing the race against the deadline is the expected outcome
+        /// there, and the caller's drain then accounts every remaining element as
+        /// <see cref="Dropped"/>. Nothing is ever lost silently, and shutdown never runs past the
+        /// bound.
+        /// </para>
+        /// </summary>
+        private async Task FlushOutboundStreamsAsync(List<Association> associations, CancellationToken cancellationToken)
+        {
+            var completions = new List<Task>();
+            foreach (var association in associations)
+                association.CollectOutboundStreamCompletions(completions);
+
+            if (completions.Count == 0)
+                return;
+
+            var settled = new Task[completions.Count];
+            for (var i = 0; i < completions.Count; i++)
+                settled[i] = SettledAsync(completions[i]);
+
+            // The deadline is an infinite delay the caller's token cancels, so the race below can
+            // only end two ways: every stream settled, or the bound expired. Both are handled here
+            // and neither leaves the caller waiting.
+            var deadline = Task.Delay(Timeout.Infinite, cancellationToken);
+            var flushed = (await Task.WhenAny(Task.WhenAll(settled), deadline)) != deadline;
+
+            if (flushed)
+                _log.Debug("Artery outbound streams finished writing before shutdown tore the transport down.");
+            else
+                _log.Info(
+                    "Artery outbound streams did not finish writing within {0} " +
+                    "(akka.remote.artery.advanced.flush-wait-on-shutdown); whatever is still queued is published as Dropped.",
+                    _settings.FlushWaitOnShutdown);
+        }
+
+        /// <summary>
+        /// Awaits <paramref name="completion"/> for its SETTLEMENT rather than its success. An
+        /// outbound stream's termination watch faults on any connection failure, and a faulted
+        /// stream is just as finished as a gracefully completed one as far as flushing goes -- see
+        /// <see cref="FlushOutboundStreamsAsync"/>.
+        /// </summary>
+        private async Task SettledAsync(Task completion)
+        {
+            try
+            {
+                await completion;
+            }
+            catch (Exception ex)
+            {
+                // Debug, not Warning: the stream's own termination continuation already reports the
+                // failure at the right level and cadence. Catching it here also keeps the fault
+                // observed instead of surfacing later as an unobserved task exception.
+                _log.Debug(ex, "Artery outbound stream ended with a failure during the shutdown flush.");
+            }
         }
 
         /// <inheritdoc/>
@@ -1661,8 +1768,13 @@ namespace Akka.Remote.Artery
             // The SINGLE overall termination signal for this assembly: fires ScheduleOutboundRestart
             // exactly once, only after EVERY lane and the merge/socket tail have all themselves
             // settled (a direct consequence of the trip-on-first-settle wiring above cascading the
-            // shutdown/abort through every OTHER piece's kill-switch-woven flow).
-            Task.WhenAll(allPieces).ContinueWith(t =>
+            // shutdown/abort through every OTHER piece's kill-switch-woven flow). It doubles as
+            // this assembly's "finished writing" signal for the shutdown flush -- see Shutdown's
+            // flush remarks and Association.SetOutboundStreamCompletion.
+            var assemblySettled = Task.WhenAll(allPieces);
+            association.SetOutboundStreamCompletion(ArteryStreamId.Ordinary, assemblySettled);
+
+            assemblySettled.ContinueWith(t =>
             {
                 if (t.IsFaulted)
                 {
@@ -2014,6 +2126,11 @@ namespace Akka.Remote.Artery
                 _log.Debug("Artery {0} outbound stream to [{1}] not materialized: actor system is terminating.", streamId, remoteAddress);
                 return;
             }
+
+            // Publish the write-side watch as this stream's "finished writing" signal, so a
+            // graceful Shutdown() can wait on it while flushing -- see Shutdown's flush remarks
+            // and Association.SetOutboundStreamCompletion.
+            association.SetOutboundStreamCompletion(streamId, terminationWatch);
 
             terminationWatch.ContinueWith(t =>
             {

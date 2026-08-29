@@ -195,6 +195,22 @@ namespace Akka.Remote.Artery
         public TimeSpan OutboundRestartBackoff { get; }
 
         /// <summary>
+        /// How long <see cref="ArteryRemoting.Shutdown"/> may wait for each association's
+        /// already-accepted outbound backlog to reach the socket before draining whatever remains
+        /// to <see cref="Akka.Event.Dropped"/> and tearing the transport down. Mirrors classic
+        /// remoting's <c>akka.remote.flush-wait-on-shutdown</c>, default included.
+        ///
+        /// <para>
+        /// <see cref="TimeSpan.Zero"/> disables the flush entirely: shutdown completes the outbound
+        /// channels and drains them immediately, which is what Artery did before this setting
+        /// existed. Negative values are rejected. The wait is an upper bound, not a delay -- an
+        /// association with nothing left to write completes at once, so only a backlog that cannot
+        /// reach its peer (dead or blackholed connection) ever costs the full value.
+        /// </para>
+        /// </summary>
+        public TimeSpan FlushWaitOnShutdown { get; }
+
+        /// <summary>
         /// Resume-writer threshold, in bytes, for the input <see cref="System.IO.Pipelines.Pipe"/>
         /// of every Artery TCP connection (pause-writer threshold is twice this value) -- see
         /// <see cref="Akka.IO.Inet.SO.PipeBufferSize"/>. Defaults to 1 MiB, mirroring the 1 MiB OS
@@ -348,6 +364,17 @@ namespace Akka.Remote.Artery
             GiveUpSystemMessageAfter = GetPositiveTimeSpan(arteryConfig, "advanced.give-up-system-message-after", TimeSpan.FromHours(6));
 
             OutboundRestartBackoff = GetPositiveTimeSpan(arteryConfig, "advanced.outbound-restart-backoff", TimeSpan.FromSeconds(1));
+
+            // Zero is a legal, meaningful value here (unlike every other timeout in this class):
+            // it selects the pre-flush behavior of draining straight to Dropped. Only a negative
+            // bound is nonsense, so this cannot use GetPositiveTimeSpan. HOCON's own duration
+            // parser already refuses a negative literal, so the guard below is a backstop for any
+            // other Config source rather than the first line of defence.
+            FlushWaitOnShutdown = arteryConfig.GetTimeSpan("advanced.flush-wait-on-shutdown", TimeSpan.FromSeconds(2));
+            if (FlushWaitOnShutdown < TimeSpan.Zero)
+                throw new ConfigurationException(
+                    "akka.remote.artery.advanced.flush-wait-on-shutdown must be zero or greater (zero disables the " +
+                    $"shutdown flush), but was [{FlushWaitOnShutdown}].");
 
             var tcpPipeBufferSize = arteryConfig.GetByteSize("advanced.tcp.pipe-buffer-size", 1024 * 1024) ?? 1024 * 1024;
             if (tcpPipeBufferSize <= 0)

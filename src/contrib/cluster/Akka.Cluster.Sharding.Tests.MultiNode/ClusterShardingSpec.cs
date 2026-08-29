@@ -1007,15 +1007,29 @@ public abstract class ClusterShardingSpec : MultiNodeClusterShardingSpec<Cluster
             await ExpectMsgAsync(new ShardStopped("1"), TimeSpan.FromSeconds(10), "ShardStopped not received");
 
             //Get the path to where the shard now resides
+            // HandOffStopper answers ShardStopped as soon as the last entity terminates,
+            // which is strictly before the Shard actor stops and before the ShardRegion
+            // observes Terminated and drops the shard from its routing table. A Get sent
+            // in that window is forwarded to the dying Shard and dead-lettered - sharding
+            // is at-most-once, so the request has to be re-sent, not merely re-awaited.
+            // Each attempt gets a fresh probe (a late reply from a previous attempt must
+            // not be mistaken for this attempt's) and a 1s bound: that covers one region
+            // retry-interval (1s) plus the shard restart, so the 5s budget admits four
+            // sends instead of the single one an unbounded inner expect allowed - the
+            // inner expect inherited akka.test.single-expect-default (5 s), the whole
+            // budget, so the loop never retried.
+            IActorRef entity13 = null;
             await AwaitAssertAsync(async () =>
             {
-                _persistentEntitiesRegion.Value.Tell(new Get(13));
-                await ExpectMsgAsync(0);
+                var probe0 = CreateTestProbe();
+                _persistentEntitiesRegion.Value.Tell(new Get(13), probe0.Ref);
+                await probe0.ExpectMsgAsync(0, TimeSpan.FromSeconds(1));
+                entity13 = probe0.LastSender;
             }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
             //Check that counter 1 is now alive again, even though we have
             // not sent a message to it via the ShardRegion
-            var counter1 = Sys.ActorSelection(LastSender.Path.Parent / "1");
+            var counter1 = Sys.ActorSelection(entity13.Path.Parent / "1");
             await WithinAsync(TimeSpan.FromSeconds(5), async () =>
             {
                 await AwaitAssertAsync(async () =>
@@ -1058,78 +1072,98 @@ public abstract class ClusterShardingSpec : MultiNodeClusterShardingSpec<Cluster
 
     private async Task PersistentClusterSharding_should_permanently_stop_entities_which_passivate()
     {
-        await WithinAsync(TimeSpan.FromSeconds(15), async () =>
+        // No outer Within, for the reason documented on
+        // PersistentClusterSharding_should_recover_entities_upon_restart: barriers derive
+        // their timeout from RemainingOr(barrier-timeout), so a Within here hands the
+        // rendezvous whatever is left of the phase budget instead of the configured 70s
+        // testconductor barrier-timeout. The 15s the removed Within granted this phase is
+        // re-attached below to the two waits it was actually protecting - the first Get
+        // against each region, which has to allocate the shard, recover the
+        // remember-entities store and persist through the shared journal - so no wait ends
+        // up with a smaller budget than it had, and the barriers get the full 70s.
+        RunOn(() =>
         {
-            RunOn(() =>
+            _ = _persistentRegion.Value;
+        }, Config.Third, Config.Fourth, Config.Fifth);
+        await EnterBarrierAsync("cluster-started-12");
+
+        await RunOnAsync(async () =>
+        {
+            //create and increment counter 1
+            _persistentRegion.Value.Tell(new EntityEnvelope(1, Increment.Instance));
+            _persistentRegion.Value.Tell(new Get(1));
+            await ExpectMsgAsync(1, TimeSpan.FromSeconds(15));
+
+            var counter1 = LastSender;
+            var shard = Sys.ActorSelection(counter1.Path.Parent);
+            var region = Sys.ActorSelection(counter1.Path.Parent.Parent);
+
+            //create and increment counter 13
+            _persistentRegion.Value.Tell(new EntityEnvelope(13, Increment.Instance));
+            _persistentRegion.Value.Tell(new Get(13));
+            await ExpectMsgAsync(1, TimeSpan.FromSeconds(15));
+
+            var counter13 = LastSender;
+
+            counter13.Path.Parent.Should().Be(counter1.Path.Parent);
+
+            //Send the shard the passivate message from the counter
+            await WatchAsync(counter1);
+            shard.Tell(new Passivate(Stop.Instance), counter1);
+
+            // watch for the Terminated message
+            await ExpectTerminatedAsync(counter1, TimeSpan.FromSeconds(5));
+
+            await AwaitAssertAsync(async () =>
             {
-                _ = _persistentRegion.Value;
-            }, Config.Third, Config.Fourth, Config.Fifth);
-            await EnterBarrierAsync("cluster-started-12");
-
-            await RunOnAsync(async () =>
-            {
-                //create and increment counter 1
-                _persistentRegion.Value.Tell(new EntityEnvelope(1, Increment.Instance));
-                _persistentRegion.Value.Tell(new Get(1));
-                await ExpectMsgAsync(1);
-
-                var counter1 = LastSender;
-                var shard = Sys.ActorSelection(counter1.Path.Parent);
-                var region = Sys.ActorSelection(counter1.Path.Parent.Parent);
-
-                //create and increment counter 13
-                _persistentRegion.Value.Tell(new EntityEnvelope(13, Increment.Instance));
-                _persistentRegion.Value.Tell(new Get(13));
-                await ExpectMsgAsync(1);
-
-                var counter13 = LastSender;
-
-                counter13.Path.Parent.Should().Be(counter1.Path.Parent);
-
-                //Send the shard the passivate message from the counter
-                await WatchAsync(counter1);
-                shard.Tell(new Passivate(Stop.Instance), counter1);
-
-                // watch for the Terminated message
-                await ExpectTerminatedAsync(counter1, TimeSpan.FromSeconds(5));
-
+                // check counter 1 is dead
                 var probe1 = CreateTestProbe();
-                await AwaitAssertAsync(async () =>
-                {
-                    // check counter 1 is dead
-                    counter1.Tell(new Identify(1), probe1.Ref);
-                    await probe1.ExpectMsgAsync(new ActorIdentity(1, null), TimeSpan.FromSeconds(1), "Entity 1 was still around");
-                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
+                counter1.Tell(new Identify(1), probe1.Ref);
+                await probe1.ExpectMsgAsync(new ActorIdentity(1, null), TimeSpan.FromSeconds(1), "Entity 1 was still around");
+            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
-                // stop shard cleanly
-                region.Tell(new HandOff("1"));
-                await ExpectMsgAsync(new ShardStopped("1"), TimeSpan.FromSeconds(10), "ShardStopped not received");
+            // stop shard cleanly
+            region.Tell(new HandOff("1"));
+            await ExpectMsgAsync(new ShardStopped("1"), TimeSpan.FromSeconds(10), "ShardStopped not received");
 
-            }, Config.Third);
-            await EnterBarrierAsync("shard-shutdonw-12");
+        }, Config.Third);
+        await EnterBarrierAsync("shard-shutdonw-12");
 
-            await RunOnAsync(async () =>
+        await RunOnAsync(async () =>
+        {
+            // force shard backup
+            // ShardStopped - which released the barrier above - is answered by the
+            // HandOffStopper the moment the last entity terminates, before the Shard
+            // actor stops and before its ShardRegion drops it from the routing table.
+            // Shard "1" may be hosted by this node, so this Get can be forwarded to the
+            // dying Shard and dead-lettered. Sharding is at-most-once: re-send until the
+            // shard has been re-allocated. 1s per attempt covers one region
+            // retry-interval (1s) plus the restart, so the 5s budget admits four sends.
+            IActorRef entity25 = null;
+            await AwaitAssertAsync(async () =>
             {
-                // force shard backup
-                _persistentRegion.Value.Tell(new Get(25));
-                await ExpectMsgAsync(0);
+                var probe0 = CreateTestProbe();
+                _persistentRegion.Value.Tell(new Get(25), probe0.Ref);
+                await probe0.ExpectMsgAsync(0, TimeSpan.FromSeconds(1));
+                entity25 = probe0.LastSender;
+            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
 
-                var shard = LastSender.Path.Parent;
+            var shard = entity25.Path.Parent;
 
-                // check counter 1 is still dead
-                Sys.ActorSelection(shard / "1").Tell(new Identify(3));
-                await ExpectMsgAsync(new ActorIdentity(3, null));
+            // check counter 1 is still dead
+            Sys.ActorSelection(shard / "1").Tell(new Identify(3));
+            await ExpectMsgAsync(new ActorIdentity(3, null), TimeSpan.FromSeconds(5));
 
-                // check counter 13 is alive again
+            // check counter 13 is alive again
+            await AwaitAssertAsync(async () =>
+            {
                 var probe3 = CreateTestProbe();
-                await AwaitAssertAsync(async () =>
-                {
-                    Sys.ActorSelection(shard / "13").Tell(new Identify(4), probe3.Ref);
-                    await probe3.ExpectMsgAsync<ActorIdentity>(i => i.MessageId.Equals(4) && i.Subject != null);
-                }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
-            }, Config.Fourth);
-            await EnterBarrierAsync("after-13");
-        });
+                Sys.ActorSelection(shard / "13").Tell(new Identify(4), probe3.Ref);
+                await probe3.ExpectMsgAsync<ActorIdentity>(
+                    i => i.MessageId.Equals(4) && i.Subject != null, TimeSpan.FromSeconds(1));
+            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(500));
+        }, Config.Fourth);
+        await EnterBarrierAsync("after-13");
     }
 
     private async Task PersistentClusterSharding_should_restart_entities_which_stop_without_passivation()

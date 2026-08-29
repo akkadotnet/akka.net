@@ -484,6 +484,8 @@ namespace Akka.TestKit
         public void SetAutoPilot(Akka.TestKit.AutoPilot pilot) { }
         public virtual void Shutdown(System.TimeSpan? duration = default, bool verifySystemShutdown = false) { }
         protected virtual void Shutdown(Akka.Actor.ActorSystem system, System.TimeSpan? duration = default, bool verifySystemShutdown = false) { }
+        public virtual System.Threading.Tasks.Task ShutdownAsync(System.TimeSpan? duration = default, bool verifySystemShutdown = false) { }
+        protected virtual System.Threading.Tasks.Task ShutdownAsync(Akka.Actor.ActorSystem system, System.TimeSpan? duration = default, bool verifySystemShutdown = false) { }
         public bool TryPeekOne(out Akka.TestKit.MessageEnvelope envelope, System.TimeSpan? max, System.Threading.CancellationToken cancellationToken) { }
         [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
                 "success",

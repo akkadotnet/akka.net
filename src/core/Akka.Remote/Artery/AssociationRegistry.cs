@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Channels;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Streams;
 
@@ -268,6 +269,36 @@ namespace Akka.Remote.Artery
         /// used for this association).
         /// </summary>
         private volatile UniqueKillSwitch? _largeOutboundKillSwitch;
+
+        /// <summary>
+        /// The "this materialization has finished writing" task of the CURRENT materialization of
+        /// each outbound stream, or <see langword="null"/> if that stream has never been
+        /// materialized. Published by <see cref="SetOutboundStreamCompletion"/> at the end of every
+        /// materialization; read by <see cref="ArteryRemoting.Shutdown"/> to bound the shutdown
+        /// flush (<c>akka.remote.artery.advanced.flush-wait-on-shutdown</c>).
+        ///
+        /// <para>
+        /// The task stored here is the stream's WRITE-side termination watch -- the same task the
+        /// reconnect machinery already treats as "this materialization has settled". It resolves
+        /// only after the association-owned channel has reported completion (which a
+        /// <see cref="System.Threading.Channels.ChannelReader{T}"/> does once its writer is closed
+        /// AND its buffer is empty) and every element read out of it has been encoded and pushed
+        /// into the TCP connection stage, which hands each write straight to its connection actor.
+        /// So awaiting it is exactly "everything this association had accepted is on its way to the
+        /// socket". It resolves immediately for an association with nothing left to write, and
+        /// never resolves while a backlog is stuck against a dead peer -- which is why the caller
+        /// bounds the wait.
+        /// </para>
+        ///
+        /// <para>
+        /// A stale task from a torn-down materialization is already completed, so it costs the
+        /// flush nothing. <c>volatile</c> for cross-thread visibility: written on the materializing
+        /// thread, read on the thread running <see cref="ArteryRemoting.Shutdown"/>.
+        /// </para>
+        /// </summary>
+        private volatile Task? _outboundStreamCompletion;
+        private volatile Task? _controlStreamCompletion;
+        private volatile Task? _largeStreamCompletion;
 
         /// <summary>
         /// Edge-detector state for <see cref="_outboundKillSwitch"/>'s once-per-death tripping. Set
@@ -558,6 +589,44 @@ namespace Akka.Remote.Artery
         /// each time the ordinary stream is (re-)materialized -- see <see cref="_outboundKillSwitch"/>.
         /// </summary>
         public void SetOutboundKillSwitch(IKillSwitch killSwitch) => _outboundKillSwitch = killSwitch;
+
+        /// <summary>
+        /// Publishes the write-side completion task of <paramref name="streamId"/>'s current
+        /// materialization so <see cref="ArteryRemoting.Shutdown"/> can wait on it while flushing
+        /// -- see <see cref="_outboundStreamCompletion"/>. Called by the transport at the end of
+        /// every (re-)materialization; the previous materialization's task is simply replaced.
+        /// </summary>
+        public void SetOutboundStreamCompletion(ArteryStreamId streamId, Task completion)
+        {
+            switch (streamId)
+            {
+                case ArteryStreamId.Control:
+                    _controlStreamCompletion = completion;
+                    break;
+                case ArteryStreamId.Large:
+                    _largeStreamCompletion = completion;
+                    break;
+                default:
+                    _outboundStreamCompletion = completion;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Adds every currently-published outbound stream completion task (see
+        /// <see cref="SetOutboundStreamCompletion"/>) to <paramref name="destination"/>. A stream
+        /// that has never been materialized contributes nothing -- there is no writer to wait for,
+        /// and whatever sits in its channel is accounted by the shutdown drain.
+        /// </summary>
+        public void CollectOutboundStreamCompletions(List<Task> destination)
+        {
+            if (_outboundStreamCompletion is { } outbound)
+                destination.Add(outbound);
+            if (_controlStreamCompletion is { } control)
+                destination.Add(control);
+            if (_largeStreamCompletion is { } large)
+                destination.Add(large);
+        }
 
         /// <summary>
         /// Drives the ORDINARY outbound stream's current materialization down (if any) via its
