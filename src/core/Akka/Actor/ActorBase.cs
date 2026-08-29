@@ -211,7 +211,17 @@ namespace Akka.Actor
                 }
             }
 
-            var wasHandled = receive(message);
+            bool wasHandled;
+            switch(message)
+            {
+                case IPayload payload when payload.TryGetContent(Context.System, out var content):
+                    wasHandled = receive(content);
+                    break;
+                default:
+                    wasHandled = receive(message);
+                    break;
+            }
+
             if (!wasHandled)
             {
                 Unhandled(message);
