@@ -235,6 +235,115 @@ namespace Akka.Remote.Tests.Artery
             sentControl.Should().BeEmpty("a redundant HandshakeReq on every later stream would cost an extra round trip per materialization");
         }
 
+        [Fact(DisplayName = "OutboundHandshakeStage should release held traffic as soon as the peer answers, without waiting for a retry tick")]
+        public async Task OutboundHandshakeStage_should_release_held_traffic_without_waiting_for_a_retry_tick()
+        {
+            // The retry interval is set FAR longer than the assertion window below, so this test
+            // can only pass if completion is PUSHED to the stage. Polling on the retry tick -- the
+            // stage's only wake-up while it holds an element and has stopped pulling -- would make
+            // the release land ~30s late; on a cluster join that same latency lands on the seed's
+            // Welcome to every peer (measured ~1.07s vs ~0.07s at the 1s production default).
+            var retryInterval = TimeSpan.FromSeconds(30);
+
+            var registry = new AssociationRegistry();
+            var localAddress = NewLocal();
+            var remoteAddress = NewRemote();
+            var peer = new UniqueAddress(remoteAddress, 555L);
+
+            var materializer = ActorMaterializer.Create(Sys);
+
+            var inboundContext = new AssociationRegistryInboundContext(registry, localAddress, (_, _) => { });
+            var (inPub, inSub) = this.SourceProbe<IInboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(new InboundHandshakeStage(inboundContext)), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IInboundEnvelope>(), Keep.Both)
+                .Run(materializer);
+
+            // The peer dialed us first.
+            await inSub.RequestAsync(1);
+            await inPub.SendNextAsync(ControlInbound(new HandshakeReq(peer, localAddress.Address), peer.Uid));
+            await AwaitConditionAsync(
+                () => Task.FromResult(registry.AssociationFor(remoteAddress).CurrentState.UniqueRemoteAddress is not null),
+                3.Seconds());
+
+            var sentControl = new List<object>();
+            var stage = new OutboundHandshakeStage(
+                new AssociationRegistryOutboundContext(registry, localAddress, remoteAddress, sentControl.Add),
+                retryInterval: retryInterval,
+                handshakeTimeout: TimeSpan.FromMinutes(2),
+                injectHandshakeInterval: TimeSpan.FromMinutes(2),
+                isControlStream: false,
+                forceReqOnStart: false);
+
+            var (outPub, outSub) = this.SourceProbe<IOutboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(stage), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IOutboundEnvelope>(), Keep.Both)
+                .Run(materializer);
+
+            await outSub.RequestAsync(1);
+            await outPub.SendNextAsync(new OutboundEnvelope("held-until-answered", null, null));
+            await AwaitConditionAsync(() => Task.FromResult(sentControl.Count > 0), 5.Seconds());
+            await outSub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
+
+            // The peer answers. Nothing else will re-enter the stage: it holds an element, so it
+            // is not pulling, and it has pushed nothing, so downstream demand is still outstanding.
+            await inSub.RequestAsync(1);
+            await inPub.SendNextAsync(ControlInbound(new HandshakeRsp(peer), peer.Uid));
+
+            var delivered = await outSub.ExpectNextAsync(TimeSpan.FromSeconds(3));
+            delivered.Message.Should().Be("held-until-answered");
+        }
+
+        [Fact(DisplayName = "OutboundHandshakeStage should deregister its handshake listener when the stream stops, and a later completion must be harmless")]
+        public async Task OutboundHandshakeStage_should_deregister_its_handshake_listener_on_stop()
+        {
+            var registry = new AssociationRegistry();
+            var localAddress = NewLocal();
+            var remoteAddress = NewRemote();
+            var peer = new UniqueAddress(remoteAddress, 666L);
+
+            var materializer = ActorMaterializer.Create(Sys);
+
+            var inboundContext = new AssociationRegistryInboundContext(registry, localAddress, (_, _) => { });
+            var (inPub, inSub) = this.SourceProbe<IInboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(new InboundHandshakeStage(inboundContext)), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IInboundEnvelope>(), Keep.Both)
+                .Run(materializer);
+
+            await inSub.RequestAsync(1);
+            await inPub.SendNextAsync(ControlInbound(new HandshakeReq(peer, localAddress.Address), peer.Uid));
+            var association = registry.AssociationFor(remoteAddress);
+            await AwaitConditionAsync(
+                () => Task.FromResult(association.CurrentState.UniqueRemoteAddress is not null), 3.Seconds());
+
+            var stage = new OutboundHandshakeStage(
+                new AssociationRegistryOutboundContext(registry, localAddress, remoteAddress, _ => { }),
+                retryInterval: TimeSpan.FromSeconds(30),
+                handshakeTimeout: TimeSpan.FromMinutes(2),
+                injectHandshakeInterval: TimeSpan.FromMinutes(2),
+                isControlStream: false,
+                forceReqOnStart: false);
+
+            var (_, outSub) = this.SourceProbe<IOutboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(stage), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IOutboundEnvelope>(), Keep.Both)
+                .Run(materializer);
+
+            await outSub.RequestAsync(1);
+            await AwaitConditionAsync(() => Task.FromResult(association.HandshakeListenerCount == 1), 5.Seconds(),
+                "a stream waiting on the handshake must be registered for the completion push");
+
+            // Outbound streams are restarted repeatedly against an association that outlives them,
+            // so a stopped stream must leave nothing behind.
+            outSub.Cancel();
+            await AwaitConditionAsync(() => Task.FromResult(association.HandshakeListenerCount == 0), 5.Seconds(),
+                "PostStop must deregister the listener");
+
+            // And a completion arriving after the stage is gone must not throw back into whichever
+            // inbound stream recorded it.
+            registry.CompleteOutboundHandshake(remoteAddress, peer);
+            association.CurrentState.OutboundHandshakeCompleted.Should().BeTrue();
+        }
+
         [Fact(DisplayName = "InboundHandshakeStage should log a WARNING (not a DEBUG) when it drops an ordinary message from an unknown origin uid")]
         public async Task InboundHandshakeStage_should_warn_when_dropping_an_unknown_origin_message()
         {

@@ -35,22 +35,27 @@ namespace Akka.Remote.Artery
     /// retry timer resends the <see cref="HandshakeReq"/> at <c>handshake-retry-interval</c>
     /// while incomplete, and a one-shot timeout timer fails the stage with
     /// <see cref="HandshakeTimeoutException"/> after <c>handshake-timeout</c> if the handshake
-    /// never completes (the association is expected to retry the outbound stream).</para>
+    /// never completes (the association is expected to retry the outbound stream). Neither timer
+    /// DETECTS completion -- see the notification-mechanism note below.</para>
     ///
-    /// <para><b>Handshake-completion notification mechanism (chosen &amp; documented, per the
-    /// task).</b> This stage does NOT use a <c>Task</c>/promise or a cross-stage async callback.
-    /// It polls <see cref="IOutboundContext.AssociationState"/> — a lock-free, CAS-published
-    /// snapshot (see <see cref="Artery.AssociationState"/>) that is safe to read from any thread —
-    /// at every event the stage's logic already processes: <c>OnPull</c>, <c>OnPush</c>, and the
-    /// retry timer tick. This works because the SAME <see cref="AssociationRegistry"/> backs both
-    /// this stage's <see cref="IOutboundContext"/> and the peer-facing
-    /// <see cref="AssociationRegistryInboundContext"/> that actually calls
-    /// <see cref="AssociationRegistry.CompleteHandshake"/> when a <see cref="HandshakeRsp"/>
-    /// arrives on the inbound pipeline for the return direction — the state IS the coordination
-    /// primitive, so no separate wakeup channel is needed for correctness. The retry timer (not
-    /// just event-driven polling) bounds the worst-case detection latency to one
-    /// <c>handshake-retry-interval</c> even if the stream is otherwise idle when completion
-    /// happens.</para>
+    /// <para><b>Handshake-completion notification mechanism.</b> Completion is PUSHED to this
+    /// stage, never polled for. On entering <c>ReqInProgress</c> the logic registers a
+    /// <c>GetAsyncCallback</c> with the association
+    /// (<see cref="IOutboundContext.SubscribeHandshakeStateChanged"/>); the inbound pipeline's
+    /// <see cref="AssociationRegistry.CompleteHandshake"/> /
+    /// <see cref="AssociationRegistry.CompleteOutboundHandshake"/> fires it, and the stage
+    /// re-verifies the association snapshot against its own completion rule before releasing
+    /// traffic. The stage still READS the CAS-published <see cref="Artery.AssociationState"/>
+    /// snapshot (safe from any thread) at <c>OnPull</c>/<c>OnPush</c>/the retry tick, but those are
+    /// opportunistic; none of them is the detection path.</para>
+    ///
+    /// <para><b>Why polling was not enough.</b> While the stage holds a user element it stops
+    /// pulling, and it has already pushed nothing, so NOTHING re-enters the logic: no <c>OnPull</c>
+    /// (downstream demand is still outstanding), no <c>OnPush</c>. The only remaining wake-up was
+    /// the retry tick, which made the first message on a freshly-gated association wait up to a
+    /// full <c>handshake-retry-interval</c> (1s by default) after the peer had already answered.
+    /// On a cluster join that is the seed's Welcome to every peer -- measured at ~1.07s versus
+    /// ~0.07s once the wake-up is push-based.</para>
     ///
     /// <para><b><c>inject-handshake-interval</c> (liveness re-injection — simplified per the
     /// task).</b> After completion, the stage tracks the timestamp it last injected a
@@ -176,6 +181,14 @@ namespace Akka.Remote.Artery
         private sealed class Logic : TimerGraphStageLogic, IInHandler, IOutHandler
         {
             private readonly OutboundHandshakeStage _stage;
+
+            /// <summary>
+            /// Non-null exactly while this logic is registered with the association for
+            /// handshake-state notifications (i.e. from <see cref="PreStart"/>'s
+            /// <c>ReqInProgress</c> branch until completion or <see cref="PostStop"/>).
+            /// </summary>
+            private Action? _handshakeStateChangedCallback;
+
             private State _state = State.Start;
             private IOutboundEnvelope? _pendingMessage;
             private DateTime _lastInject = DateTime.MinValue;
@@ -225,6 +238,60 @@ namespace Akka.Remote.Artery
                 _state = State.ReqInProgress;
                 ScheduleRepeatedly(RetryTimerKey, _stage.RetryInterval);
                 ScheduleOnce(TimeoutTimerKey, _stage.HandshakeTimeout);
+
+                // REGISTER, THEN RE-CHECK -- the ordering is load-bearing. A completion landing
+                // between the snapshot read at the top of this method and this registration would
+                // otherwise be missed entirely, and (once this stage is holding an element and has
+                // stopped pulling) nothing would re-enter the logic until the retry tick. Doing the
+                // re-check after registering means such a completion is either seen by the check or
+                // delivered by the callback -- never neither.
+                _handshakeStateChangedCallback = GetAsyncCallback(OnHandshakeStateChanged);
+                _stage.Context.SubscribeHandshakeStateChanged(this, _handshakeStateChangedCallback);
+                RefreshCompletionFromContext();
+            }
+
+            public override void PostStop()
+            {
+                // Streams here are restarted (RestartFlow/ScheduleOutboundRestart) against an
+                // association that long outlives them, so a leaked registration would accumulate.
+                // Invoking an already-stopped stage's async callback is itself harmless -- the
+                // interpreter drops async input for a completed logic -- so this is hygiene, not a
+                // correctness race.
+                UnsubscribeHandshakeStateChanged();
+            }
+
+            private void UnsubscribeHandshakeStateChanged()
+            {
+                if (_handshakeStateChangedCallback is null)
+                    return;
+
+                _handshakeStateChangedCallback = null;
+                _stage.Context.UnsubscribeHandshakeStateChanged(this);
+            }
+
+            /// <summary>
+            /// The association told us its handshake state advanced. Re-verify against THIS
+            /// stream's own completion rule (an ordinary stream waiting for its Rsp is not
+            /// satisfied by the peer's inbound Req, nor by a completion belonging to a newer
+            /// incarnation) and, if we are now complete, release exactly the way the retry-tick
+            /// path used to.
+            /// </summary>
+            private void OnHandshakeStateChanged()
+            {
+                RefreshCompletionFromContext();
+
+                if (_state != State.Completed)
+                    return;
+
+                if (_pendingMessage is { } held && IsAvailable(_stage.Out))
+                {
+                    _pendingMessage = null;
+                    Push(_stage.Out, held);
+                    return;
+                }
+
+                if (_pendingMessage is null && !IsClosed(_stage.In) && !HasBeenPulled(_stage.In))
+                    Pull(_stage.In);
             }
 
             /// <summary>
@@ -407,6 +474,7 @@ namespace Akka.Remote.Artery
                 _state = State.Completed;
                 CancelTimer(RetryTimerKey);
                 CancelTimer(TimeoutTimerKey);
+                UnsubscribeHandshakeStateChanged();
                 _lastInject = DateTime.UtcNow;
             }
 
