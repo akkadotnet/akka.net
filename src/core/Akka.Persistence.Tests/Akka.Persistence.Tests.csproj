@@ -2,7 +2,7 @@
   <Import Project="..\..\xunitSettings.props" />
 
   <PropertyGroup>
-   <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+   <TargetFramework>$(NetTestVersion)</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
   </PropertyGroup>

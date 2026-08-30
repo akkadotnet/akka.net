@@ -5,7 +5,7 @@
             The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes
             and to the registered subscribers on the system event bus with the help of Cluster Metrics Extension.
         </Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <PackageTags>$(AkkaPackageTags);network;cluster;sharding</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <Nullable>enable</Nullable>
@@ -20,8 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="System.Diagnostics.Process" Version="4.3.0" />
-      <PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
+<PackageReference Include="Grpc.Tools" Version="$(GrpcToolsVersion)">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>

@@ -123,7 +123,7 @@ namespace Akka.Tests.IO
                 // Hint: On Linux the listener port cannot be reused. We are using the udp actor to respond.
                 IActorRef localSender = x.Listener;
                 const string response = "Are you still alive?"; // he is not
-                localSender.Tell(Udp.Send.Create(ByteString.FromBytes(Encoding.UTF8.GetBytes(response)), notExistingEndPoint));
+                localSender.Tell(Udp.Send.Create(Encoding.UTF8.GetBytes(response).AsMemory(), notExistingEndPoint));
 
                 // Now an ICMP error message "port unreachable" (SocketError.ConnectionReset) is sent to our UDP server port
                 await x.Handler.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));

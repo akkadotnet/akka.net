@@ -15,6 +15,6 @@
     <tags>akka actors actor model Akka concurrency</tags>
   </metadata>
   <files>
-    <file src="bin\Release\netstandard2.0\publish\*.*" target="lib\netstandard2.0\" exclude="**\*.exe"/>
+    <file src="bin\Release\net10.0\publish\*.*" target="lib\net10.0\" exclude="**\*.exe"/>
   </files>
 </package>

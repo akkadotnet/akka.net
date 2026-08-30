@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.Dsl;
 using Akka.Streams.Supervision;
@@ -36,7 +35,7 @@ namespace Akka.Streams.Tests.Dsl
             Materializer = ActorMaterializer.Create(Sys, settings);
         }
 
-        private static ByteString GenerateByteString(int length)
+        private static ReadOnlyMemory<byte> GenerateByteString(int length)
         {
             var random = new Random();
             var bytes =
@@ -45,7 +44,7 @@ namespace Akka.Streams.Tests.Dsl
                     .Take(length)
                     .Select(Convert.ToByte)
                     .ToArray();
-            return ByteString.FromBytes(bytes);
+            return bytes.AsMemory();
         }
 
         [Fact(DisplayName = "Throttle with delegate calculateCost must resume when delegate throws")]
@@ -377,8 +376,8 @@ namespace Akka.Streams.Tests.Dsl
                 var list = Enumerable.Range(1, 4).Select(x => x * 2).Select(GenerateByteString).ToList();
 
                 var probe = Source.From(list)
-                    .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x.Count, ThrottleMode.Shaping)
-                    .RunWith(this.SinkProbe<ByteString>(), Materializer);
+                    .Throttle(2, TimeSpan.FromMilliseconds(200), 0, x => x.Length, ThrottleMode.Shaping)
+                    .RunWith(this.SinkProbe<ReadOnlyMemory<byte>>(), Materializer);
                 await probe.AsyncBuilder()
                     .Request(4)
                     .ExpectNext(list[0])

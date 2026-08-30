@@ -239,11 +239,13 @@ namespace Akka.DistributedData
                 else
                 {
                     var rhsDots = (MultiVersionVector)r;
+                    // Intersection of lhs and rhs dot-maps: entries where both
+                    // sides record the same (node, version) pair. Using lhs here
+                    // is the actual fix: the old rhs-vs-rhs self-lookup treated
+                    // every rhs dot as common and skipped the tombstone filter.
                     var commonDots = rhsDots.Versions
-                        .Where(kv =>
-                        {
-                            return rhsDots.Versions.TryGetValue(kv.Key, out var v) && v == kv.Value;
-                        }).ToImmutableDictionary();
+                        .Where(kv => lhsDots.Versions.TryGetValue(kv.Key, out var v) && v == kv.Value)
+                        .ToImmutableDictionary();
                     var commonDotKeys = commonDots.Keys.ToImmutableArray();
                     var lhsUniqueDots = lhsDots.Versions.RemoveRange(commonDotKeys);
                     var rhsUniqueDots = rhsDots.Versions.RemoveRange(commonDotKeys);

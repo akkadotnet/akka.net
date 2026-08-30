@@ -179,19 +179,19 @@ namespace Akka.Docs.Tests.Configuration
 
         #region HostnameValidationExample
         /// <summary>
-        /// Example of enabling traditional hostname validation for client-server architectures.
+        /// Example of enabling traditional outbound hostname validation for client-server architectures.
         /// Use when all nodes share the same certificate with matching CN/SAN.
         /// </summary>
         public static void HostnameValidationSetup()
         {
             var certificate = LoadCertificate("path/to/certificate.pfx", "password");
 
-            // Enable both chain validation and hostname validation
+            // Enable both chain validation and outbound server hostname validation
             var sslSetup = new DotNettySslSetup(
                 certificate: certificate,
                 suppressValidation: false,
                 requireMutualAuthentication: true,
-                validateCertificateHostname: true  // Enable traditional TLS hostname validation
+                validateCertificateHostname: true  // Validate the outbound server certificate against the target hostname
             );
         }
         #endregion

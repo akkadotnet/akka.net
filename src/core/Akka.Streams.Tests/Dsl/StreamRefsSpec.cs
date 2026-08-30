@@ -6,14 +6,13 @@
 //-----------------------------------------------------------------------
 
 using Akka.Actor;
+using System;
 using Akka.Actor.Internal;
 using Akka.Configuration;
-using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
 using FluentAssertions;
-using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -161,9 +160,9 @@ namespace Akka.Streams.Tests
 
     internal sealed class BulkSourceMsg
     {
-        public ISourceRef<ByteString> DataSource { get; }
+        public ISourceRef<ReadOnlyMemory<byte>> DataSource { get; }
 
-        public BulkSourceMsg(ISourceRef<ByteString> dataSource)
+        public BulkSourceMsg(ISourceRef<ReadOnlyMemory<byte>> dataSource)
         {
             DataSource = dataSource;
         }
@@ -181,9 +180,9 @@ namespace Akka.Streams.Tests
 
     internal sealed class BulkSinkMsg
     {
-        public ISinkRef<ByteString> DataSink { get; }
+        public ISinkRef<ReadOnlyMemory<byte>> DataSink { get; }
 
-        public BulkSinkMsg(ISinkRef<ByteString> dataSink)
+        public BulkSinkMsg(ISinkRef<ReadOnlyMemory<byte>> dataSink)
         {
             DataSink = dataSink;
         }

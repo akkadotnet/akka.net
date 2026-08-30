@@ -12,6 +12,7 @@ using Akka.Cluster.Tools.Client.Serialization;
 using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
+using FluentAssertions;
 using Xunit;
 
 namespace Akka.Cluster.Tools.Tests.ClusterClient
@@ -69,7 +70,8 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = (ClusterClientMessageSerializer)Sys.Serialization.FindSerializerFor(message);
+            var serializer = Sys.Serialization.FindSerializerFor(message);
+            serializer.Should().BeOfType<ClusterClientMessageSerializer>();
             var serialized = serializer.ToBinary(message);
             return (T)serializer.FromBinary(serialized, serializer.Manifest(message));
         }
@@ -81,4 +83,3 @@ namespace Akka.Cluster.Tools.Tests.ClusterClient
         }
     }
 }
-

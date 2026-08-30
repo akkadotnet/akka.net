@@ -32,7 +32,7 @@ module Serialization =
         override _.Identifier = 99
         override _.IncludeManifest = true        
         override _.ToBinary(o) = serializeToBinary fsp o        
-        override _.FromBinary(bytes, _) = deserializeFromBinary fsp bytes
+        override _.FromBinary(bytes: byte array, t: Type) : obj = deserializeFromBinary<obj> fsp bytes
         
                         
     let exprSerializationSupport (system: ActorSystem) =
@@ -55,7 +55,7 @@ module Actors =
                 match o with
                 | :? (byte[]) as bytes -> 
                     let serializer = context.System.Serialization.FindSerializerForType typeof<'Message>
-                    serializer.FromBinary(bytes, typeof<'Message>) :?> 'Message
+                    serializer.FromBinary(bytes, (typeof<'Message> : Type)) :?> 'Message
                 | _ -> raise (InvalidCastException("Tried to cast object to " + typeof<'Message>.ToString()))
     
     /// <summary>
@@ -701,4 +701,3 @@ module EventStreaming =
     /// Publishes an event on the provided event stream. Event channel is resolved from event's type.
     /// </summary>
     let publish (event: 'Event) (eventStream: Akka.Event.EventStream) : unit = eventStream.Publish event
-

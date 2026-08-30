@@ -1050,7 +1050,12 @@ namespace Akka.Streams.Implementation.Fusing
             public override void OnUpstreamFailure(Exception e)
             {
                 base.OnUpstreamFailure(e);
-                _completion.TrySetException(e);
+                if (_completion.TrySetException(e))
+                {
+                    // See #8209: WatchTermination may keep a different materialized task and discard IgnoreSink's.
+                    // Observe the fault here so it cannot resurface later as UnobservedTaskException.
+                    _ = _completion.Task.Exception;
+                }
             }
         }
 

@@ -9,6 +9,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -814,7 +815,7 @@ namespace Akka.Streams.Implementation.Fusing
         private void ReportStageError(Exception e)
         {
             if (ActiveStage == null)
-                throw e;
+                ExceptionDispatchInfo.Capture(e).Throw();
 
             var stage = Assembly.Stages[ActiveStage.StageId];
             if (Log.IsErrorEnabled)
@@ -952,7 +953,10 @@ namespace Akka.Streams.Implementation.Fusing
             // Fan-in stages may attach additional ActivityContexts as SlotLinks — those become
             // ActivityLinks on the downstream stage span, preserving trace continuity for every
             // input element that contributed to a single merged output. See SetFanInTraceContext.
-            if (connection.SlotContext.HasValue && StreamsDiagnostics.ActivitySource.HasListeners())
+            //
+            // InOwner is null for boundary connections (actor/async boundary plumbing, not a user
+            // stage), so skip them — otherwise GetStageOperationName(null) throws an NRE (issue #8241).
+            if (connection.InOwner != null && connection.SlotContext.HasValue && StreamsDiagnostics.ActivitySource.HasListeners())
             {
                 var slotContext = connection.SlotContext.Value;
                 var slotLinks = connection.SlotLinks;

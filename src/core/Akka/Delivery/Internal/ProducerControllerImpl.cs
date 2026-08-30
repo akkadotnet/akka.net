@@ -7,13 +7,13 @@
 
 #nullable enable
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Akka.Actor;
 using Akka.Event;
-using Akka.IO;
 using Akka.Pattern;
 using Akka.Util;
 using Akka.Util.Extensions;
@@ -712,11 +712,11 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
         {
             if (chunkedMessages.Count == 1)
                 _log.Debug("No chunking of SeqNo [{0}], size [{1}] bytes", CurrentState.CurrentSeqNr,
-                    chunkedMessages.First().SerializedMessage.Count);
+                    chunkedMessages.First().SerializedMessage.Length);
             else
                 _log.Debug("Chunking SeqNo [{0}] into [{1}] chunks, total size [{2}] bytes",
                     CurrentState.CurrentSeqNr, chunkedMessages.Count,
-                    chunkedMessages.Sum(x => x.SerializedMessage.Count));
+                    chunkedMessages.Sum(x => x.SerializedMessage.Length));
         }
 
         var i = 0;
@@ -742,13 +742,12 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
     internal static IEnumerable<ChunkedMessage> CreateChunks(T msg, int chunkSize,
         Serialization.Serialization serialization)
     {
-        var serializer = serialization.FindSerializerFor(msg);
-        var manifest = Serialization.Serialization.ManifestFor(serializer, msg);
-        var serializerId = serializer.Identifier;
-        var bytes = serialization.Serialize(msg);
+        var writer = new ArrayBufferWriter<byte>();
+        var metadata = serialization.Serialize(msg, writer);
+        var bytes = writer.WrittenMemory;
         if (bytes.Length <= chunkSize)
         {
-            var chunkedMessage = new ChunkedMessage(ByteString.FromBytes(bytes), true, true, serializerId, manifest);
+            var chunkedMessage = new ChunkedMessage(bytes, true, true, metadata.SerializerId, metadata.Manifest);
             yield return chunkedMessage;
         }
         else
@@ -759,8 +758,8 @@ internal sealed class ProducerController<T> : ReceiveActor, IWithTimers
             {
                 var isLast = i == chunkCount - 1;
                 var nextChunk = Math.Min(chunkSize, bytes.Length - i * chunkSize); // needs to be the next chunkSize or remaining bytes, whichever is smaller.
-                var chunkedMessage = new ChunkedMessage(ByteString.FromBytes(bytes, i * chunkSize, nextChunk), first,
-                    isLast, serializerId, manifest);
+                var chunkedMessage = new ChunkedMessage(bytes.Slice(i * chunkSize, nextChunk), first,
+                    isLast, metadata.SerializerId, metadata.Manifest);
 
                 first = false;
                 yield return chunkedMessage;

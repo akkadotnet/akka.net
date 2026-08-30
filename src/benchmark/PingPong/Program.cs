@@ -40,7 +40,7 @@ namespace PingPong
 #endif
         }
 
-        private static void Main(params string[] args)
+        private static async Task Main(string[] args)
         {
             if (args.Length == 0 || !uint.TryParse(args[0], out var timesToRun))
             {
@@ -49,11 +49,15 @@ namespace PingPong
 
             bool testAsync = args.Contains("--async");
 
-            Start(timesToRun, testAsync);
-            Console.ReadKey();
+            await Start(timesToRun, testAsync);
+
+            if (!Console.IsInputRedirected)
+            {
+                Console.ReadKey();
+            }
         }
 
-        private static async void Start(uint timesToRun, bool testAsync)
+        private static async Task Start(uint timesToRun, bool testAsync)
         {
             const int repeatFactor = 500;
             const long repeat = 30000L * repeatFactor;

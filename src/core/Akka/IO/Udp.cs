@@ -34,11 +34,13 @@ namespace Akka.IO
 
         internal abstract class SocketCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
-            public ByteString Data { get; }
+            public ReadOnlyMemory<byte> Data { get; }
 
             protected SocketCompleted(SocketAsyncEventArgs eventArgs)
             {
-                Data = ByteString.CopyFrom(eventArgs.Buffer, eventArgs.Offset, eventArgs.BytesTransferred);
+                var copy = new byte[eventArgs.BytesTransferred];
+                eventArgs.Buffer.AsSpan(eventArgs.Offset, eventArgs.BytesTransferred).CopyTo(copy);
+                Data = copy;
             }
         }
 
@@ -182,7 +184,7 @@ namespace Akka.IO
             /// <param name="payload">Binary payload to be send.</param>
             /// <param name="target">An endpoint of the message receiver.</param>
             /// <param name="ack">Acknowledgement send back to the sender, once <paramref name="payload"/> has been send through a socket.</param>
-            public Send(ByteString payload, EndPoint target, Event ack)
+            public Send(ReadOnlyMemory<byte> payload, EndPoint target, Event ack)
             {
                 Payload = payload;
                 Target = target;
@@ -194,7 +196,7 @@ namespace Akka.IO
             /// <summary>
             /// A binary payload to be send to the <see cref="Target"/>. It must fit into a single UDP datagram.
             /// </summary>
-            public ByteString Payload { get; }
+            public ReadOnlyMemory<byte> Payload { get; }
 
             /// <summary>
             /// An endpoint, to which current <see cref="Payload"/> will be send.
@@ -222,7 +224,7 @@ namespace Akka.IO
             /// <param name="data">Binary payload to be send.</param>
             /// <param name="target">An endpoint of the message receiver.</param>
             /// <returns>A new Send command instance with NoAck as acknowledgment.</returns>
-            public static Send Create(ByteString data, EndPoint target) => new(data, target, NoAck.Instance);
+            public static Send Create(ReadOnlyMemory<byte> data, EndPoint target) => new(data, target, NoAck.Instance);
         }
 
         /// <summary>
@@ -356,7 +358,7 @@ namespace Akka.IO
             /// </summary>
             /// <param name="data">The UDP datagram payload.</param>
             /// <param name="sender">The remote endpoint that sent the datagram.</param>
-            public Received(ByteString data, EndPoint sender)
+            public Received(ReadOnlyMemory<byte> data, EndPoint sender)
             {
                 Data = data;
                 Sender = sender;
@@ -365,14 +367,14 @@ namespace Akka.IO
             /// <summary>
             /// The UDP datagram payload.
             /// </summary>
-            public ByteString Data { get; }
+            public ReadOnlyMemory<byte> Data { get; }
             /// <summary>
             /// The remote endpoint that sent the datagram.
             /// </summary>
             public EndPoint Sender { get; }
 
             public override string ToString() =>
-                $"Received(bytes: {Data.Count}, from: {Sender})";
+                $"Received(bytes: {Data.Length}, from: {Sender})";
         }
 
         /// <summary>

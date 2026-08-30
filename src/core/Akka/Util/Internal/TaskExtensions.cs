@@ -41,6 +41,71 @@ namespace Akka.Util.Internal
                 .ContinueWith(_ => { }, cancellationToken, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
+#if NETSTANDARD2_1
+        /// <summary>
+        /// Polyfill for <c>Task.WaitAsync(TimeSpan)</c> on netstandard2.1.
+        /// Returns a task that completes when the original task completes, or faults with
+        /// <see cref="TimeoutException"/> if the timeout elapses first.
+        /// </summary>
+        public static async Task WaitAsync(this Task task, TimeSpan timeout)
+        {
+            using var cts = new CancellationTokenSource();
+            var delay = Task.Delay(timeout, cts.Token);
+            var completed = await Task.WhenAny(task, delay).ConfigureAwait(false);
+            if (completed == delay)
+                throw new TimeoutException();
+            cts.Cancel();
+            await task.ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Polyfill for <c>Task.WaitAsync(TimeSpan, CancellationToken)</c> on netstandard2.1.
+        /// Returns a task that completes when the original task completes, or faults with
+        /// <see cref="TimeoutException"/> if the timeout elapses first, or is canceled via
+        /// <paramref name="cancellationToken"/>.
+        /// </summary>
+        public static async Task WaitAsync(this Task task, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var delay = Task.Delay(timeout, linked.Token);
+            var completed = await Task.WhenAny(task, delay).ConfigureAwait(false);
+            if (completed == delay)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                throw new TimeoutException();
+            }
+            linked.Cancel();
+            await task.ConfigureAwait(false);
+        }
+
+        /// <inheritdoc cref="WaitAsync(Task, TimeSpan)"/>
+        public static async Task<T> WaitAsync<T>(this Task<T> task, TimeSpan timeout)
+        {
+            using var cts = new CancellationTokenSource();
+            var delay = Task.Delay(timeout, cts.Token);
+            var completed = await Task.WhenAny(task, delay).ConfigureAwait(false);
+            if (completed == delay)
+                throw new TimeoutException();
+            cts.Cancel();
+            return await task.ConfigureAwait(false);
+        }
+
+        /// <inheritdoc cref="WaitAsync(Task, TimeSpan, CancellationToken)"/>
+        public static async Task<T> WaitAsync<T>(this Task<T> task, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var delay = Task.Delay(timeout, linked.Token);
+            var completed = await Task.WhenAny(task, delay).ConfigureAwait(false);
+            if (completed == delay)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                throw new TimeoutException();
+            }
+            linked.Cancel();
+            return await task.ConfigureAwait(false);
+        }
+#endif
+
         /// <summary>
         /// When this Task is completed, either through an exception or a value, invoke the provided function.
         /// If the Task has already been completed, this will either be applied immediately or be scheduled asynchronously.

@@ -177,7 +177,9 @@ partial class TestConductor //Player trait in JVM version
             {
                 var askTimeout = barrierTimeout + Settings.QueryTimeout;
                 // Use async ask with cancellation token
-                var result = await _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout, roleName)), askTimeout, cancellationToken);
+                // A failed barrier now faults this ask (see the Status.Failure note in ClientFSM), so the
+                // exception propagates to the caller instead of the spec silently continuing unsynchronized.
+                await _client.Ask(new ToServer<EnterBarrier>(new EnterBarrier(name, barrierTimeout, roleName)), askTimeout, cancellationToken);
             }
             catch (TaskCanceledException ex)
             {
@@ -421,7 +423,7 @@ internal class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
                     _log.Error("Received {0} instead of Done", @event.FsmEvent);
                     return GoTo(State.Failed);
                 case IServerOp:
-                    return Stay().Replying(new Failure(new IllegalStateException("not connected yet")));
+                    return Stay().Replying(new Status.Failure(new IllegalStateException("not connected yet")));
                 case StateTimeout:
                     _log.Error("connect timeout to TestConductor");
                     return GoTo(State.Failed);
@@ -475,17 +477,22 @@ internal class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
                     else
                     {
                         object response;
+                        // NOTE: these MUST be Status.Failure. The unqualified name `Failure` binds to the
+                        // inherited FSMBase.Failure (an FSM termination reason), which the ask completion
+                        // switch in FutureActorRef does not treat as a fault - it falls through to
+                        // `case T t: TrySetResult(t)`, so the ask completes SUCCESSFULLY and the caller
+                        // walks through a barrier that never synchronized.
                         if (barrierResult.Name != @event.StateData.RunningOp.Value.Item1)
                         {
                             response =
-                                new Failure(
+                                new Status.Failure(
                                     new Exception("wrong barrier " + barrierResult + " received while waiting for " +
                                                   @event.StateData.RunningOp.Value.Item1));
                         }
                         else if (!barrierResult.Success)
                         {
                             response =
-                                new Failure(
+                                new Status.Failure(
                                     new Exception("barrier failed:" + @event.StateData.RunningOp.Value.Item1));
                         }
                         else
@@ -524,9 +531,14 @@ internal class ClientFSM : FSM<ClientFSM.State, ClientFSM.Data>, ILoggingFSM
                     var self = Self;
                     cmdTask.ContinueWith(t =>
                     {
-                        if (t.IsFaulted)
+                        // Fault OR a `false` result both mean the transport did not apply the
+                        // command (e.g. artery without test-mode, or a rate throttle / any command
+                        // artery's blackhole-only test-mode does not support) -- fail loudly
+                        // instead of reporting Done for a command that silently no-oped. Mirrors
+                        // Pekko's Player (`case true => Done; case _ => throw`).
+                        if (t.IsFaulted || !t.Result)
                             throw new ConfigurationException("Throttle was requested from the TestConductor, but no transport " +
-                                "adapters available that support throttling. Specify 'testTransport(on=true)' in your MultiNodeConfig");
+                                "adapters available that support throttling. Specify 'TestTransport = true' in your MultiNodeConfig");
                         self.Tell(new ToServer<Done>(Done.Instance));
                     });
                     return Stay();

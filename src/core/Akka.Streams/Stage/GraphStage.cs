@@ -91,12 +91,24 @@ namespace Akka.Streams.Stage
     }
 
     /// <summary>
+    /// INTERNAL API
+    ///
+    /// Non-generic bridge that lets the materializer hand a stage the <see cref="IMaterializer"/> in use at
+    /// materialization time (before the interpreter exists), so stages that need an eagerly-materialized handle
+    /// can build it. Implemented by <see cref="GraphStageWithMaterializedValue{TShape,TMaterialized}"/>.
+    /// </summary>
+    internal interface IMaterializerAwareStage
+    {
+        ILogicAndMaterializedValue<object> CreateLogicAndMaterializedValue(Attributes attributes, IMaterializer materializer);
+    }
+
+    /// <summary>
     /// TBD
     /// </summary>
     /// <typeparam name="TShape">TBD</typeparam>
     /// <typeparam name="TMaterialized">TBD</typeparam>
     public abstract class
-        GraphStageWithMaterializedValue<TShape, TMaterialized> : IGraphStageWithMaterializedValue<TShape, TMaterialized>
+        GraphStageWithMaterializedValue<TShape, TMaterialized> : IGraphStageWithMaterializedValue<TShape, TMaterialized>, IMaterializerAwareStage
         where TShape : Shape
     {
         #region anonymous graph class
@@ -166,6 +178,24 @@ namespace Akka.Streams.Stage
         /// <returns>TBD</returns>
         public abstract ILogicAndMaterializedValue<TMaterialized> CreateLogicAndMaterializedValue(
             Attributes inheritedAttributes);
+
+        /// <summary>
+        /// INTERNAL API
+        ///
+        /// Variant of <see cref="CreateLogicAndMaterializedValue(Attributes)"/> that also receives the
+        /// <see cref="IMaterializer"/> in use. Stages that need a materialized handle which must exist before
+        /// the interpreter starts (e.g. an eager <see cref="IActorRef"/>) override this. The default ignores
+        /// the materializer and delegates to <see cref="CreateLogicAndMaterializedValue(Attributes)"/>.
+        /// </summary>
+        internal virtual ILogicAndMaterializedValue<TMaterialized> CreateLogicAndMaterializedValue(
+            Attributes inheritedAttributes, IMaterializer materializer)
+            => CreateLogicAndMaterializedValue(inheritedAttributes);
+
+        ILogicAndMaterializedValue<object> IMaterializerAwareStage.CreateLogicAndMaterializedValue(
+            Attributes attributes, IMaterializer materializer)
+            // Materialized values are always reference types in practice (see the IGraphStageWithMaterializedValue
+            // cast in the constructor), so this covariant conversion is safe.
+            => (ILogicAndMaterializedValue<object>)CreateLogicAndMaterializedValue(attributes, materializer);
 
         /// <summary>
         /// TBD
@@ -3026,14 +3056,7 @@ namespace Akka.Streams.Stage
             _callback = getAsyncCallback(InternalReceive);
             _behavior = initialReceive;
 
-            switch (materializer.Supervisor)
-            {
-                case LocalActorRef r: _cell = r.Cell; break;
-                case RepointableActorRef r: _cell = (ActorCell)r.Underlying; break;
-                default:
-                    throw new IllegalStateException(
-                        $"Stream supervisor must be a local actor, was [{materializer.Supervisor.GetType()}]");
-            }
+            _cell = ActorMaterializerHelper.GetSupervisorCell(materializer);
 
             _functionRef = _cell.AddFunctionRef((sender, message) =>
             {

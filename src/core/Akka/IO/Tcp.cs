@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,8 +16,9 @@ using Akka.Annotations;
 using Akka.Configuration;
 using Akka.Dispatch;
 using Akka.Event;
-using Akka.IO.Buffers;
 using Akka.Util;
+
+#nullable enable
 
 namespace Akka.IO
 {
@@ -144,8 +146,8 @@ namespace Akka.IO
             /// <param name="timeout">An optional connect timeout. Will result in a <see cref="Tcp.CommandFailed"/> message being returned if we exceed this value.</param>
             /// <param name="pullMode">Specifies whether we're running in "pull mode" or not.</param>
             public Connect(EndPoint remoteAddress,
-                EndPoint localAddress = null,
-                IEnumerable<Inet.SocketOption> options = null,
+                EndPoint? localAddress = null,
+                IEnumerable<Inet.SocketOption>? options = null,
                 TimeSpan? timeout = null,
                 bool pullMode = false)
             {
@@ -157,11 +159,11 @@ namespace Akka.IO
             }
             
             public EndPoint RemoteAddress { get; }
-            
-            public EndPoint LocalAddress { get; }
-    
+
+            public EndPoint? LocalAddress { get; }
+
             public IEnumerable<Inet.SocketOption> Options { get; }
-            
+
             public TimeSpan? Timeout { get; }
             public bool PullMode { get; }
             
@@ -201,7 +203,7 @@ namespace Akka.IO
             public Bind(IActorRef handler,
                 EndPoint localAddress,
                 int backlog = 1024,
-                IEnumerable<Inet.SocketOption> options = null,
+                IEnumerable<Inet.SocketOption>? options = null,
                 bool pullMode = false)
             {
                 Handler = handler;
@@ -353,8 +355,8 @@ namespace Akka.IO
         public class NoAck : Event
         {
             public static readonly NoAck Instance = new(null);
-            
-            public NoAck(object token)
+
+            public NoAck(object? token)
             {
                 Token = token;
             }
@@ -362,7 +364,7 @@ namespace Akka.IO
             /// <summary>
             /// A correlation id which can be used to identify a specific write operation.
             /// </summary>
-            public object Token { get; }
+            public object? Token { get; }
 
             public override string ToString() =>
                 $"NoAck({Token})";
@@ -459,47 +461,85 @@ namespace Akka.IO
             /// <summary>
             /// Write with no data and <see cref="NoAck"/>
             /// </summary>
-            public static readonly Write Empty = new(ByteString.Empty, NoAck.Instance);
+            public static readonly Write Empty = new(ReadOnlySequence<byte>.Empty, NoAck.Instance);
 
             /// <summary>
             /// The data we are going to write.
             /// </summary>
-            public ByteString Data { get; }
+            public ReadOnlySequence<byte> Data { get; }
 
             /// <summary>
             /// The optional acknowledgment event which will be sent to the sender of this command.
             /// </summary>
             public override Event Ack { get; }
 
-            private Write(ByteString data, Event ack)
+            private Write(ReadOnlySequence<byte> data, Event ack)
             {
                 Ack = ack ?? NoAck.Instance;
                 Data = data;
             }
 
             public override string ToString() =>
-                $"Write(bytes: {Data.Count}, ack: {Ack})";
+                $"Write(bytes: {Data.Length}, ack: {Ack})";
 
             /// <summary>
-            /// Creates a write from a <see cref="ByteString"/>
+            /// Creates a write from a <see cref="ReadOnlySequence{T}"/> of bytes.
             /// </summary>
-            /// <param name="data">The data to return.</param>
-            public static Write Create(ByteString data)
+            /// <param name="data">The data to write.</param>
+            public static Write Create(ReadOnlySequence<byte> data)
             {
                 return data.IsEmpty ? Empty : new Write(data, NoAck.Instance);
             }
 
             /// <summary>
-            /// Creates a write from a <see cref="ByteString"/>
+            /// Creates a write from a <see cref="ReadOnlySequence{T}"/> of bytes.
             /// </summary>
-            /// <param name="data">The data to return.</param>
-            /// <param name="ack">The acknowledgement message we're receive once this write is complete.</param>
-            public static Write Create(ByteString data, Event ack)
+            /// <param name="data">The data to write.</param>
+            /// <param name="ack">The acknowledgement message we'll receive once this write is complete.</param>
+            public static Write Create(ReadOnlySequence<byte> data, Event ack)
             {
                 return new Write(data, ack);
             }
 
-            public override long Bytes => Data.Count;
+            /// <summary>
+            /// Creates a write from a <see cref="ReadOnlyMemory{T}"/> of bytes.
+            /// </summary>
+            /// <param name="data">The data to write.</param>
+            public static Write Create(ReadOnlyMemory<byte> data)
+            {
+                return data.IsEmpty ? Empty : new Write(new ReadOnlySequence<byte>(data), NoAck.Instance);
+            }
+
+            /// <summary>
+            /// Creates a write from a <see cref="ReadOnlyMemory{T}"/> of bytes.
+            /// </summary>
+            /// <param name="data">The data to write.</param>
+            /// <param name="ack">The acknowledgement message we'll receive once this write is complete.</param>
+            public static Write Create(ReadOnlyMemory<byte> data, Event ack)
+            {
+                return new Write(new ReadOnlySequence<byte>(data), ack);
+            }
+
+            /// <summary>
+            /// Creates a write from a byte array.
+            /// </summary>
+            /// <param name="data">The data to write.</param>
+            public static Write Create(byte[] data)
+            {
+                return data.Length == 0 ? Empty : new Write(new ReadOnlySequence<byte>(data), NoAck.Instance);
+            }
+
+            /// <summary>
+            /// Creates a write from a byte array.
+            /// </summary>
+            /// <param name="data">The data to write.</param>
+            /// <param name="ack">The acknowledgement message we'll receive once this write is complete.</param>
+            public static Write Create(byte[] data, Event ack)
+            {
+                return new Write(new ReadOnlySequence<byte>(data), ack);
+            }
+
+            public override long Bytes => Data.Length;
         }
         
         /// <summary>
@@ -530,7 +570,7 @@ namespace Akka.IO
 
             private IEnumerable<SimpleWriteCommand> Enumerable()
             {
-                WriteCommand current = this;
+                WriteCommand? current = this;
                 while (current != null)
                 {
                     if (current is CompoundWrite compound)
@@ -634,17 +674,25 @@ namespace Akka.IO
         /// Whenever data are read from a socket they will be transferred within this
         /// class to the handler actor which was designated in the <see cref="Register" /> message.
         /// </summary>
+        /// <remarks>
+        /// <see cref="Data"/> is a <see cref="ReadOnlySequence{T}"/> to allow potentially
+        /// non-contiguous buffers from the underlying transport. Today the actor copies
+        /// the pipe's pooled segments into a single contiguous array before delivery, so
+        /// the sequence is single-segment in practice; downstream framing stages should
+        /// still treat it as multi-segment to remain compatible with future zero-copy
+        /// optimizations.
+        /// </remarks>
         public sealed class Received : Event
         {
-            public Received(ByteString data)
+            public Received(ReadOnlySequence<byte> data)
             {
                 Data = data;
             }
-            
-            public ByteString Data { get; }
+
+            public ReadOnlySequence<byte> Data { get; }
 
             public override string ToString() =>
-                $"Received(bytes: {Data.Count})";
+                $"Received(bytes: {Data.Length})";
         }
 
         /// <summary>
@@ -1038,7 +1086,7 @@ namespace Akka.IO
         /// </summary>
         /// <param name="token">An optional correlation token used to identify a specific write when receiving a <see cref="Tcp.CommandFailed"/> message.</param>
         /// <returns>A new <see cref="Tcp.NoAck"/> instance.</returns>
-        public static Tcp.NoAck NoAck(object token = null)
+        public static Tcp.NoAck NoAck(object? token = null)
         {
             return new Tcp.NoAck(token);
         }
@@ -1049,9 +1097,20 @@ namespace Akka.IO
         /// <param name="data">The data to write to the TCP connection.</param>
         /// <param name="ack">An optional acknowledgment event to be sent back when the write completes. If <see langword="null"/>, <see cref="Tcp.NoAck"/> is used.</param>
         /// <returns>A <see cref="Tcp.Command"/> representing the write operation.</returns>
-        public static Tcp.Command Write(ByteString data, Tcp.Event ack = null)
+        public static Tcp.Command Write(ReadOnlyMemory<byte> data, Tcp.Event? ack = null)
         {
-            return Tcp.Write.Create(data, ack);
+            return ack is null ? Tcp.Write.Create(data) : Tcp.Write.Create(data, ack);
+        }
+
+        /// <summary>
+        /// Creates a <see cref="Tcp.Write"/> command to send data over a TCP connection.
+        /// </summary>
+        /// <param name="data">The data to write to the TCP connection.</param>
+        /// <param name="ack">An optional acknowledgment event to be sent back when the write completes. If <see langword="null"/>, <see cref="Tcp.NoAck"/> is used.</param>
+        /// <returns>A <see cref="Tcp.Command"/> representing the write operation.</returns>
+        public static Tcp.Command Write(byte[] data, Tcp.Event? ack = null)
+        {
+            return ack is null ? Tcp.Write.Create(data) : Tcp.Write.Create(data, ack);
         }
 
         /// <summary>

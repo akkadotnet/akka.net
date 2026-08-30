@@ -179,7 +179,20 @@ namespace Akka.Remote.TestKit
 
         private void RequireTestConductorTransport()
         {
-            // Verifies that the Throttle and  FailureInjector TransportAdapters are active
+            // Artery: failure injection is implemented by the transport's OWN test stages
+            // (akka.remote.artery.advanced.test-mode), not by the classic trttl/gremlin transport
+            // adapters -- mirrors Pekko's Conductor.requireTestConductorTranport two-branch check.
+            // Only blackhole/passThrough are supported over artery (no rate throttling); an
+            // unsupported command reports false from ManagementCommand and the Player throws.
+            if (Transport is Akka.Remote.Artery.ArteryRemoting artery)
+            {
+                if (!artery.TestModeEnabled)
+                    throw new ConfigurationException("To use this feature you must activate the test mode " +
+                        "by specifying `TestTransport = true` in your MultiNodeConfig.");
+                return;
+            }
+
+            // Classic: verifies that the Throttle and FailureInjector TransportAdapters are active
             if(!Transport.DefaultAddress.Protocol.Contains(".trttl.gremlin."))
                 throw new ConfigurationException("To use this feature you must activate the failure injector adapters " +
                     "(trttl, gremlin) by specifying `TestTransport(on = true)` in your MultiNodeConfig.");
@@ -530,7 +543,10 @@ namespace Akka.Remote.TestKit
 
             OnTermination(_ =>
             {
-                _controller.Tell(new Controller.ClientDisconnected(_roleName));
+                // Name the sender explicitly. The controller compares it against the FSM it has
+                // registered for this role, which is how it tells a disconnect that belongs to
+                // this connection apart from one that a newer connection already replaced.
+                _controller.Tell(new Controller.ClientDisconnected(_roleName), Self);
                 _channel.CloseAsync();
             });
 

@@ -699,4 +699,3 @@ namespace Akka.Actor.Internal
         public Task TerminationTask { get { return _atomicRef.Value ?? _terminationTask; } }
     }
 }
-

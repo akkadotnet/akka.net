@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using Akka.Cluster.Tools.Singleton;
+using Akka.Cluster.Tools.Singleton.Serialization;
 using Akka.Configuration;
 using Akka.Serialization;
 using Akka.TestKit;
@@ -51,7 +52,8 @@ namespace Akka.Cluster.Tools.Tests.Singleton
 
         private T AssertAndReturn<T>(T message)
         {
-            var serializer = (SerializerWithStringManifest)Sys.Serialization.FindSerializerFor(message);
+            var serializer = Sys.Serialization.FindSerializerFor(message);
+            Assert.IsType<ClusterSingletonMessageSerializer>(serializer);
             var serialized = serializer.ToBinary(message);
             return (T)serializer.FromBinary(serialized, serializer.Manifest(message));
         }

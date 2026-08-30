@@ -1,7 +1,7 @@
 ﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("92ab2788-e008-40d0-8b54-0c95b3cf3404")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Persistence.Query
 {
     public sealed class EventEnvelope : System.IEquatable<Akka.Persistence.Query.EventEnvelope>
@@ -19,6 +19,15 @@ namespace Akka.Persistence.Query
         public long Timestamp { get; }
         public bool Equals(Akka.Persistence.Query.EventEnvelope? other) { }
         public override bool Equals(object? obj) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+    }
+    public sealed class FromEnd : Akka.Persistence.Query.Offset
+    {
+        public FromEnd(int count) { }
+        public int Count { get; }
+        public override int CompareTo(Akka.Persistence.Query.Offset other) { }
+        public override bool Equals(object obj) { }
         public override int GetHashCode() { }
         public override string ToString() { }
     }
@@ -70,6 +79,7 @@ namespace Akka.Persistence.Query
         protected Offset() { }
         public abstract int CompareTo(Akka.Persistence.Query.Offset other);
         public abstract override string ToString() { }
+        public static Akka.Persistence.Query.Offset FromEnd(int count) { }
         public static Akka.Persistence.Query.Offset NoOffset() { }
         public static Akka.Persistence.Query.Offset Sequence(long value) { }
         public static Akka.Persistence.Query.Offset TimeBasedUuid(System.Guid value) { }

@@ -159,7 +159,6 @@ namespace Akka.Pattern
         /// <param name="maxFailures">Maximum number of failures before opening the circuit</param>
         /// <param name="callTimeout"><see cref="TimeSpan"/> of time after which to consider a call a failure</param>
         /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
-        /// <returns>TBD</returns>
         public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout)
             : this(scheduler, maxFailures, callTimeout, resetTimeout, TimeSpan.FromDays(36500), 1.0, 0.0)
         {
@@ -187,10 +186,9 @@ namespace Akka.Pattern
         /// <param name="maxFailures">Maximum number of failures before opening the circuit</param>
         /// <param name="callTimeout"><see cref="TimeSpan"/> of time after which to consider a call a failure</param>
         /// <param name="resetTimeout"><see cref="TimeSpan"/> of time after which to attempt to close the circuit</param>
-        /// <param name="maxResetTimeout"></param>
-        /// <param name="exponentialBackoffFactor"></param>
+        /// <param name="maxResetTimeout">The upper bound of the reset timeout when using exponential backoff. Prevents the timeout from growing indefinitely.</param>
+        /// <param name="exponentialBackoffFactor">The factor by which the reset timeout increases on each successive failure (must be &gt;= 1.0).</param>
         /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. randomFactor should be in range `0.0` (inclusive) and `1.0` (inclusive). In order to skip this additional delay pass in `0`.</param>
-        /// <returns>TBD</returns>
         public CircuitBreaker(IScheduler scheduler, int maxFailures, TimeSpan callTimeout, TimeSpan resetTimeout, TimeSpan maxResetTimeout, double exponentialBackoffFactor, double randomFactor)
         {
             if (exponentialBackoffFactor < 1.0) throw new ArgumentException("factor must be >= 1.0", nameof(exponentialBackoffFactor));

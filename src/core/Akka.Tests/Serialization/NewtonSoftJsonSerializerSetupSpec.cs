@@ -51,7 +51,7 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Setup_should_be_used_inside_Json_serializer()
         {
-            var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerForType(typeof(object));
+            var serializer = Sys.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
             var settings = serializer.Settings;
             settings.ReferenceLoopHandling.Should().Be(ReferenceLoopHandling.Error);
             settings.MissingMemberHandling.Should().Be(MissingMemberHandling.Error);
@@ -62,7 +62,7 @@ namespace Akka.Tests.Serialization
         [Fact]
         public void Setup_should_not_change_mandatory_settings()
         {
-            var serializer = (NewtonSoftJsonSerializer) Sys.Serialization.FindSerializerForType(typeof(object));
+            var serializer = Sys.Serialization.FindSerializerForType(typeof(object)).Should().BeOfType<NewtonSoftJsonSerializer>().Subject;
             var settings = serializer.Settings;
             settings.ContractResolver.Should().BeOfType<NewtonSoftJsonSerializer.AkkaContractResolver>();
             settings.ObjectCreationHandling.Should().Be(ObjectCreationHandling.Replace);

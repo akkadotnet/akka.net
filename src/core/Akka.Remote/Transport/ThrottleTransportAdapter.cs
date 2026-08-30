@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch.SysMsg;
+using Akka.Event;
 using Akka.Remote.Serialization;
 using Akka.Util;
 using Akka.Util.Internal;
@@ -345,6 +346,25 @@ namespace Akka.Remote.Transport
         }
 
         /// <summary>
+        /// A <see cref="ThrottledAssociation"/> cannot recover its own state: an inbound throttler
+        /// only ever receives the <see cref="Handle"/> message that moves it out of
+        /// <see cref="ThrottledAssociation.ThrottlerState.WaitExposedHandle"/> once, when it is created.
+        /// Restarting one therefore leaves it parked in that state forever, silently discarding every
+        /// inbound packet on that association.
+        ///
+        /// Stopping the child instead surfaces the failure as a disassociation, which the remoting
+        /// layer above knows how to recover from. This mirrors <c>AkkaProtocolManager</c>, which uses
+        /// the same strategy for the same reason.
+        /// </summary>
+        private readonly SupervisorStrategy _supervisor = new OneForOneStrategy(_ => Directive.Stop);
+
+        /// <inheritdoc/>
+        protected override SupervisorStrategy SupervisorStrategy()
+        {
+            return _supervisor;
+        }
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="message">TBD</param>
@@ -487,6 +507,21 @@ namespace Akka.Remote.Transport
                     SetMode(naked, chkin.ThrottlerHandle);
                     return;
                 }
+
+                case Terminated terminated:
+                {
+                    /*
+                     * A throttler child stopped for a reason other than ForceDisassociate[Explicitly]
+                     * (crash, PoisonPill, Blackhole-induced disassociation, transport shutdown).
+                     *
+                     * Its entry has to come out of the table for the same reason described in the
+                     * ForceDisassociate handler above: messaging a terminated handle from SetThrottle
+                     * fails Tasks all the way back up to the EndpointManager, and the table would
+                     * otherwise grow for the lifetime of the transport.
+                     */
+                    _handleTable.RemoveAll(tuple => tuple.Item2.ThrottlerActor.Equals(terminated.ActorRef));
+                    return;
+                }
             }
         }
 
@@ -559,10 +594,15 @@ namespace Akka.Remote.Transport
             bool inbound)
         {
             var managerRef = Self;
-            return new ThrottlerHandle(originalHandle, Context.ActorOf(
+            var throttlerActor = Context.ActorOf(
                 RARP.For(Context.System).ConfigureDispatcher(
-                Props.Create(() => new ThrottledAssociation(managerRef, listener, originalHandle, inbound)).WithDeploy(Deploy.Local)),
-                "throttler" + NextId()));
+                    Props.Create(() => new ThrottledAssociation(managerRef, listener, originalHandle, inbound))
+                        .WithDeploy(Deploy.Local)),
+                "throttler" + NextId());
+
+            // watch so we can purge the handle table when this association goes away
+            Context.Watch(throttlerActor);
+            return new ThrottlerHandle(originalHandle, throttlerActor);
         }
 
         #endregion
@@ -1055,6 +1095,8 @@ namespace Akka.Remote.Transport
         /// </summary>
         private readonly AkkaPduProtobuffCodec _codec;
 
+        private readonly ILoggingAdapter _log = Context.GetLogger();
+
         /// <summary>
         /// TBD
         /// </summary>
@@ -1085,6 +1127,26 @@ namespace Akka.Remote.Transport
                             .Using(
                                 new ExposedHandle(handle.ThrottlerHandle));
                 }
+
+                if (@event.FsmEvent is InboundPayload)
+                {
+                    /*
+                     * Unreachable during a healthy startup: nothing can deliver an InboundPayload to us
+                     * until we complete OriginalHandle.ReadHandlerSource above, which is the same step
+                     * that leaves this state.
+                     *
+                     * Getting one here means this actor was restarted - the read handler from the previous
+                     * incarnation still points at this ActorRef, but the ThrottlerManager only ever sends
+                     * Handle once, at creation. Staying put would silently discard every inbound packet for
+                     * the life of the association, so tear it down instead and let remoting re-associate.
+                     */
+                    _log.Warning(
+                        "Throttler for [{0}] received an InboundPayload before it was initialized - most likely restarted. Disassociating so the association can be re-established.",
+                        OriginalHandle.RemoteAddress);
+                    OriginalHandle.Disassociate("throttler received inbound data before it was initialized", _log);
+                    return Stop();
+                }
+
                 return null;
             });
 

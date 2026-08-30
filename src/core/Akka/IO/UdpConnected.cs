@@ -45,11 +45,13 @@ namespace Akka.IO
         
         internal abstract class SocketCompleted : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
-            public ByteString Data { get; }
+            public ReadOnlyMemory<byte> Data { get; }
 
             protected SocketCompleted(SocketAsyncEventArgs eventArgs)
             {
-                Data = ByteString.CopyFrom(eventArgs.Buffer, eventArgs.Offset, eventArgs.BytesTransferred);
+                var copy = new byte[eventArgs.BytesTransferred];
+                eventArgs.Buffer.AsSpan(eventArgs.Offset, eventArgs.BytesTransferred).CopyTo(copy);
+                Data = copy;
             }
         }
 
@@ -169,7 +171,7 @@ namespace Akka.IO
             /// </summary>
             /// <param name="payload">Binary payload to be send.</param>
             /// <param name="ack">Acknowledgement send back to the sender, once <paramref name="payload"/> has been send through a socket.</param>
-            public Send(ByteString payload, object ack)
+            public Send(ReadOnlyMemory<byte> payload, object ack)
             {
                 Payload = payload;
                 Ack = ack ?? throw new ArgumentNullException(nameof(ack), "ack must be non-null. Use NoAck if you don't want acks.");
@@ -178,7 +180,7 @@ namespace Akka.IO
             /// <summary>
             /// A binary payload to be send to an endpoint known by connected UDP actor. It must fit into a single UDP datagram.
             /// </summary>
-            public ByteString Payload { get; }
+            public ReadOnlyMemory<byte> Payload { get; }
 
             /// <summary>
             /// Acknowledgement send back to the sender, once <see cref="Payload"/> has been send through a socket.
@@ -197,7 +199,7 @@ namespace Akka.IO
             /// object.
             /// </summary>
             /// <param name="payload">Binary payload to be send.</param>
-            public static Send Create(ByteString payload) => new(payload, NoAck.Instance);
+            public static Send Create(ReadOnlyMemory<byte> payload) => new(payload, NoAck.Instance);
         }
 
         /// <summary>
@@ -215,9 +217,9 @@ namespace Akka.IO
             /// <param name="remoteAddress">The remote address to connect to.</param>
             /// <param name="localAddress">The local address to bind to (optional).</param>
             /// <param name="options">Socket options to apply to the UDP socket (optional).</param>
-            public Connect(IActorRef handler, 
+            public Connect(IActorRef handler,
                            EndPoint remoteAddress,
-                           EndPoint localAddress = null, 
+                           EndPoint localAddress = null,
                            IEnumerable<Inet.SocketOption> options = null)
             {
                 Handler = handler;
@@ -308,7 +310,7 @@ namespace Akka.IO
             /// Creates a new Received event with the specified data.
             /// </summary>
             /// <param name="data">The UDP datagram payload.</param>
-            public Received(ByteString data)
+            public Received(ReadOnlyMemory<byte> data)
             {
                 Data = data;
             }
@@ -316,7 +318,7 @@ namespace Akka.IO
             /// <summary>
             /// The UDP datagram payload.
             /// </summary>
-            public ByteString Data { get; }
+            public ReadOnlyMemory<byte> Data { get; }
         }
 
         /// <summary>

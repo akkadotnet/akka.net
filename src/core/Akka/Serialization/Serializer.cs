@@ -14,6 +14,7 @@ using Akka.Actor;
 using Akka.Annotations;
 using Akka.Util;
 using Akka.Configuration;
+using Akka.Util.Reflection;
 
 namespace Akka.Serialization
 {
@@ -44,6 +45,8 @@ namespace Akka.Serialization
         /// The actor system to associate with this serializer.
         /// </summary>
         protected readonly ExtendedActorSystem system;
+
+        internal ExtendedActorSystem ExtendedSystem => system;
 
         private readonly FastLazy<int> _value;
 
@@ -76,6 +79,14 @@ namespace Akka.Serialization
         public abstract byte[] ToBinary(object obj);
 
         /// <summary>
+        /// Returns the manifest that should be stored with <paramref name="obj"/>.
+        /// </summary>
+        public virtual string Manifest(object obj)
+        {
+            return IncludeManifest ? obj.GetType().TypeQualifiedName() : string.Empty;
+        }
+
+        /// <summary>
         /// Serializes the given object into a byte array and uses the given address to decorate serialized ActorRef's
         /// </summary>
         /// <param name="address">The address to use when serializing local ActorRef´s</param>
@@ -95,6 +106,27 @@ namespace Akka.Serialization
         /// <param name="type">The type of object contained in the array</param>
         /// <returns>The object contained in the array</returns>
         public abstract object FromBinary(byte[] bytes, Type type);
+
+        /// <summary>
+        /// Deserializes a byte array into an object using a string manifest.
+        /// </summary>
+        public virtual object FromBinary(byte[] bytes, string manifest)
+        {
+            if (string.IsNullOrEmpty(manifest))
+                return FromBinary(bytes, (Type)null);
+
+            Type type;
+            try
+            {
+                type = TypeCache.GetType(manifest);
+            }
+            catch (Exception ex)
+            {
+                throw new SerializationException($"Cannot find manifest class [{manifest}] for serializer with id [{Identifier}].", ex);
+            }
+
+            return FromBinary(bytes, type);
+        }
 
         /// <summary>
         /// Deserializes a byte array into an object.
@@ -158,7 +190,7 @@ namespace Akka.Serialization
         /// <param name="bytes">The array containing the serialized object</param>
         /// <param name="manifest">The type hint used to deserialize the object contained in the array.</param>
         /// <returns>The object contained in the array</returns>
-        public abstract object FromBinary(byte[] bytes, string manifest);
+        public abstract override object FromBinary(byte[] bytes, string manifest);
 
         /// <summary>
         /// Returns the manifest (type hint) that will be provided in the <see cref="FromBinary(byte[],System.Type)"/> method.
@@ -169,7 +201,7 @@ namespace Akka.Serialization
         /// </summary>
         /// <param name="o">The object for which the manifest is needed.</param>
         /// <returns>The manifest needed for the deserialization of the specified <paramref name="o"/>.</returns>
-        public abstract string Manifest(object o);
+        public abstract override string Manifest(object o);
     }
 
     /// <summary>
@@ -206,4 +238,3 @@ namespace Akka.Serialization
         }
     }
 }
-

@@ -12,6 +12,7 @@ using Akka.Actor;
 using Akka.Configuration;
 using Akka.Delivery;
 using Akka.Delivery.Internal;
+using Akka.Serialization;
 using Akka.Util;
 using FluentAssertions;
 using Xunit;
@@ -574,6 +575,36 @@ public class ConsumerControllerSpecs : TestKit.Xunit.TestKit
         (await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<Job>>()).Message.Payload.Should().Be("45");
         consumerController.Tell(ConsumerController.Confirmed.Instance);
         await producerControllerProbe.ExpectMsgAsync(new ProducerController.Ack(5));
+    }
+
+    [Fact]
+    public async Task ConsumerController_with_ChunkedMessages_must_collect_and_assemble_native_v2_byte_array_chunks()
+    {
+        NextId();
+        var consumerController = Sys.ActorOf(ConsumerController.Create<byte[]>(Sys, Option<IActorRef>.None),
+            $"consumerController-{_idCount}");
+        var producerControllerProbe = CreateTestProbe();
+
+        var consumerProbe = CreateTestProbe();
+        consumerController.Tell(new ConsumerController.Start<byte[]>(consumerProbe));
+
+        var payload = new byte[] { 1, 2, 3, 4 };
+        var serializer = Sys.Serialization.FindSerializerV2For(payload);
+        var chunks = ProducerController<byte[]>.CreateChunks(payload, chunkSize: 1, Sys.Serialization).ToList();
+
+        chunks.Should().HaveCount(payload.Length);
+        chunks.Should().OnlyContain(c => c.SerializerId == serializer.Identifier);
+        chunks.Should().OnlyContain(c => c.Manifest == string.Empty);
+
+        var seqMessages = chunks.Select((c, i) =>
+            ConsumerController.SequencedMessage<byte[]>.FromChunkedMessage(ProducerId, 1 + i, c, i == 0, false,
+                producerControllerProbe)).ToList();
+
+        foreach (var message in seqMessages)
+            consumerController.Tell(message);
+
+        var delivery = await consumerProbe.ExpectMsgAsync<ConsumerController.Delivery<byte[]>>();
+        delivery.Message.Should().Equal(payload);
     }
 
     [Fact]

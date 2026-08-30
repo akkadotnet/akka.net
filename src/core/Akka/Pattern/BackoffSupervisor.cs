@@ -28,7 +28,7 @@ namespace Akka.Pattern
         public sealed class GetCurrentChild
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance of the <see cref="GetCurrentChild"/> message.
             /// </summary>
             public static readonly GetCurrentChild Instance = new();
             private GetCurrentChild() { }
@@ -41,9 +41,9 @@ namespace Akka.Pattern
         public sealed class CurrentChild
         {
             /// <summary>
-            /// TBD
+            /// Creates a response containing the current child actor reference.
             /// </summary>
-            /// <param name="ref">TBD</param>
+            /// <param name="ref">The <see cref="IActorRef"/> of the current child actor, or <see langword="null"/> if no child is running.</param>
             public CurrentChild(IActorRef @ref)
             {
                 Ref = @ref;
@@ -84,7 +84,7 @@ namespace Akka.Pattern
         public sealed class StartChild : IDeadLetterSuppression
         {
             /// <summary>
-            /// TBD
+            /// Singleton instance of the <see cref="StartChild"/> message.
             /// </summary>
             public static readonly StartChild Instance = new();
             private StartChild() { }
@@ -210,7 +210,7 @@ namespace Akka.Pattern
         /// <param name="maxBackoff">The exponential back-off is capped to this duration</param>
         /// <param name="randomFactor">After calculation of the exponential back-off an additional random delay based on this factor is added, e.g. `0.2` adds up to `20%` delay. In order to skip this additional delay pass in `0`.</param>
         /// <param name="maxNrOfRetries">Maximum number of attempts to restart the child actor. The supervisor will terminate itself after the maxNoOfRetries is reached. In order to restart infinitely pass in `-1`.</param>
-        /// <returns></returns>
+        /// <returns>A <see cref="Akka.Actor.Props"/> instance configured to create a <see cref="BackoffSupervisor"/>.</returns>
         public static Props Props(
             Props childProps,
             string childName,
@@ -230,7 +230,7 @@ namespace Akka.Pattern
         /// Props for creating a <see cref="BackoffSupervisor"/> actor from <see cref="BackoffOptions"/>.
         /// </summary>
         /// <param name="options">The <see cref="BackoffOptions"/> that specify how to construct a backoff-supervisor.</param>
-        /// <returns></returns>
+        /// <returns>A <see cref="Akka.Actor.Props"/> instance configured to create a <see cref="BackoffSupervisor"/>.</returns>
         public static Props Props(BackoffOptions options)
         {
             return options.Props;

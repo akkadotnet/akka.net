@@ -41,7 +41,7 @@ namespace Akka.Serialization
     /// <summary>
     /// Constructor is internal API.
     ///
-    /// Use the <see cref="SerializerDetails.Create"/> factory method instead
+    /// Use one of the Create factory methods instead
     /// </summary>
     public sealed class SerializerDetails
     {
@@ -49,7 +49,13 @@ namespace Akka.Serialization
         {
             Alias = alias;
             Serializer = serializer;
+            SerializerV2 = Serialization.AdaptSerializer(serializer);
             UseFor = useFor;
+        }
+
+        internal SerializerDetails(string @alias, SerializerV2 serializer, ImmutableHashSet<Type> useFor)
+            : this(alias, (Serializer)serializer, useFor)
+        {
         }
 
         /// <summary>
@@ -66,6 +72,8 @@ namespace Akka.Serialization
         /// </summary>
         public Serializer Serializer { get; }
 
+        internal SerializerV2 SerializerV2 { get; }
+
         /// <summary>
         /// The types of messages that this 
         /// </summary>
@@ -79,6 +87,18 @@ namespace Akka.Serialization
         /// <param name="useFor">A set of types (classes, base classes, or interfaces) that will be bound to this serializer.
         /// This is the programmatic equivalent of the `akka.actor.serialization.serialization-bindings` HOCON section.</param>
         public static SerializerDetails Create(string alias, Serializer serializer, ImmutableHashSet<Type> useFor)
+        {
+            return new SerializerDetails(alias, serializer, useFor);
+        }
+
+        /// <summary>
+        /// Factory method for creating programmatic setups for Serializers.
+        /// </summary>
+        /// <param name="alias">Register the serializer under this alias (this allows it to be used by bindings in the config)</param>
+        /// <param name="serializer">The serializer implementation.</param>
+        /// <param name="useFor">A set of types (classes, base classes, or interfaces) that will be bound to this serializer.
+        /// This is the programmatic equivalent of the `akka.actor.serialization.serialization-bindings` HOCON section.</param>
+        public static SerializerDetails Create(string alias, SerializerV2 serializer, ImmutableHashSet<Type> useFor)
         {
             return new SerializerDetails(alias, serializer, useFor);
         }

@@ -457,7 +457,7 @@ namespace Akka.Cluster
         internal class ReapUnreachableTick : ITick
         {
             private ReapUnreachableTick() { }
-            public static ReapUnreachableTick Instance { get; }  = new();
+            public static ReapUnreachableTick Instance { get; } = new();
         }
 
         /// <summary>
@@ -519,11 +519,20 @@ namespace Akka.Cluster
         }
 
         /// <summary>
-        /// Gets a reference to the cluster core daemon.
+        /// INTERNAL API.
+        ///
+        /// Fire-and-forget message sent by the <see cref="Cluster"/> extension constructor to the
+        /// <see cref="ClusterDaemon"/> to kick off non-blocking initialization of the cluster daemon
+        /// tree. Carries the (still-constructing) <see cref="Cluster"/> instance so the daemons can
+        /// create their children and hand the resolved core-daemon ref back to the extension via
+        /// <see cref="Cluster.SetClusterCoreRef"/>.
+        ///
+        /// Local-only (<see cref="INoSerializationVerificationNeeded"/>), like the
+        /// <c>GetClusterCoreRef</c> ask message it replaces.
         /// </summary>
-        internal class GetClusterCoreRef: INoSerializationVerificationNeeded
+        internal sealed class Init : INoSerializationVerificationNeeded
         {
-            public GetClusterCoreRef(Cluster cluster) 
+            public Init(Cluster cluster)
             {
                 Cluster = cluster;
             }
@@ -752,7 +761,7 @@ namespace Akka.Cluster
     /// <summary>
     /// Supervisor managing the different Cluster daemons.
     /// </summary>
-    internal sealed class ClusterDaemon : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    internal sealed class ClusterDaemon : ReceiveActor, IWithUnboundedStash
     {
         private Cluster _cluster;
 
@@ -763,28 +772,47 @@ namespace Akka.Cluster
         private readonly CoordinatedShutdown _coordShutdown = CoordinatedShutdown.Get(Context.System);
         private readonly TaskCompletionSource<Done> _clusterPromise = new();
 
+        public IStash Stash { get; set; }
+
         /// <summary>
         /// Creates a new instance of the ClusterDaemon
         /// </summary>
         /// <param name="settings">The settings that will be used for the <see cref="Cluster"/>.</param>
         public ClusterDaemon(ClusterSettings settings)
         {
-            // Important - don't use Cluster(context.system) in constructor because that would
-            // cause deadlock. The Cluster extension is currently being created and is waiting
-            // for response from GetClusterCoreRef in its constructor.
-            // Child actors are therefore created when GetClusterCoreRef is received
+            // Important - don't use Cluster(context.system) in constructor because the Cluster
+            // extension is still being constructed when this actor is created. Construction is now
+            // non-blocking: the extension sends a fire-and-forget InternalClusterAction.Init as its
+            // first message, and the child actors are created only when that Init is received. Any
+            // cluster traffic that arrives before Init (Subscribe, JoinTo, listener registrations,
+            // ...) is stashed by the Uninitialized behavior and replayed once initialized.
             _coreSupervisor = null;
             _settings = settings;
 
             AddCoordinatedLeave();
 
-            Receive<InternalClusterAction.GetClusterCoreRef>(msg =>
+            Uninitialized();
+        }
+
+        private void Uninitialized()
+        {
+            Receive<InternalClusterAction.Init>(msg =>
             {
-                if (_coreSupervisor == null)
-                    CreateChildren(msg.Cluster);
+                // assign _cluster FIRST so PreRestart can re-init after a failed initialization
+                _cluster = msg.Cluster;
+                CreateChildren(msg.Cluster);
                 _coreSupervisor.Forward(msg);
+                Become(Initialized);
+                Stash.UnstashAll();
             });
 
+            // Buffer everything else (Subscribe / JoinTo / listener registrations, ...) until Init
+            // has been processed and the child tree exists.
+            ReceiveAny(_ => Stash.Stash());
+        }
+
+        private void Initialized()
+        {
             Receive<InternalClusterAction.AddOnMemberUpListener>(msg =>
             {
                 Context.ActorOf(
@@ -806,6 +834,22 @@ namespace Akka.Cluster
                 // forward the Ask request so the shutdown task gets completed
                 actor.Forward(leave);
             });
+
+            // Everything else (Subscribe, JoinTo, cluster state queries, ...) is forwarded to the
+            // core supervisor, which forwards it on to the core daemon. Registration order matters
+            // in a ReceiveActor: this catch-all MUST be registered last.
+            ReceiveAny(msg => _coreSupervisor.Forward(msg));
+        }
+
+        protected override void PreRestart(Exception reason, object message)
+        {
+            // Default restart semantics stop the children, so the fresh instance lands back in the
+            // Uninitialized behavior. The Init message that drove initialization has already been
+            // consumed and will not be re-delivered, so re-send it to Self to re-create the child
+            // tree; the Uninitialized stash catches any traffic that arrives in the meantime.
+            base.PreRestart(reason, message);
+            if (_cluster != null)
+                Self.Tell(new InternalClusterAction.Init(_cluster));
         }
 
         private void AddCoordinatedLeave()
@@ -851,7 +895,7 @@ namespace Akka.Cluster
     /// ClusterCoreDaemon and ClusterDomainEventPublisher can't be restarted because the state
     /// would be obsolete. Shutdown the member if any those actors crashed.
     /// </summary>
-    internal class ClusterCoreSupervisor : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
+    internal class ClusterCoreSupervisor : ReceiveActor, IWithUnboundedStash
     {
         private Cluster _cluster;
 
@@ -860,22 +904,43 @@ namespace Akka.Cluster
 
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
+        public IStash Stash { get; set; }
+
         /// <summary>
         /// Creates a new instance of the ClusterCoreSupervisor
         /// </summary>
         public ClusterCoreSupervisor()
         {
-            // Important - don't use Cluster(Context.System) in constructor because that would
-            // cause deadlock. The Cluster extension is currently being created and is waiting
-            // for response from GetClusterCoreRef in its constructor.
-            // Child actors are therefore created when GetClusterCoreRef is received
+            // Important - don't use Cluster(Context.System) in constructor because the Cluster
+            // extension is still being constructed when this actor is created. Construction is now
+            // non-blocking: the child actors are created when InternalClusterAction.Init is received
+            // (forwarded from the ClusterDaemon), at which point the resolved core-daemon ref is
+            // handed back to the extension via Cluster.SetClusterCoreRef (replacing the old
+            // Sender.Tell reply to the constructor's ask). Any traffic that arrives before Init is
+            // stashed by the Uninitialized behavior and replayed once initialized.
 
-            Receive<InternalClusterAction.GetClusterCoreRef>(cr =>
+            Uninitialized();
+        }
+
+        private void Uninitialized()
+        {
+            Receive<InternalClusterAction.Init>(msg =>
             {
-                if (_coreDaemon == null)
-                    CreateChildren(cr.Cluster);
-                Sender.Tell(_coreDaemon);
+                _cluster = msg.Cluster;
+                CreateChildren(msg.Cluster);
+                msg.Cluster.SetClusterCoreRef(_coreDaemon);
+                Become(Initialized);
+                Stash.UnstashAll();
             });
+
+            // Defensive: the ClusterDaemon forwards Init before unstashing, so Init is normally the
+            // first message here, but buffer anything that races ahead of it just in case.
+            ReceiveAny(_ => Stash.Stash());
+        }
+
+        private void Initialized()
+        {
+            ReceiveAny(msg => _coreDaemon.Forward(msg));
         }
 
         /// <summary>
@@ -1628,7 +1693,7 @@ namespace Akka.Cluster
         public void Leaving(Address address)
         {
             // only try to update if the node is available (in the member ring)
-            foreach(var mem in LatestGossip.Members.Where(m => m.Address.Equals(address)))
+            foreach (var mem in LatestGossip.Members.Where(m => m.Address.Equals(address)))
             {
                 if (mem.Status is MemberStatus.Joining or MemberStatus.WeaklyUp or MemberStatus.Up)
                 {
@@ -1636,7 +1701,7 @@ namespace Akka.Cluster
                     var newMembers = LatestGossip.Members
                         .Remove(mem).Add(mem.Copy(status: MemberStatus.Leaving));
                     var newGossip = LatestGossip.Copy(members: newMembers);
-                    
+
                     UpdateLatestGossip(newGossip);
 
                     _cluster.LogInfo("Marked address [{0}] as [{1}]", address, MemberStatus.Leaving);
@@ -1698,11 +1763,11 @@ namespace Akka.Cluster
                         GossipTo(member.UniqueAddress);
                     }
                 }
-               
+
                 // if the previous statement did not evaluate to true, then this node is already being downed
-                
+
             }
-            
+
             if (!found)
             {
                 _cluster.LogInfo("Ignoring down of unknown node [{0}]", address);
@@ -1735,7 +1800,7 @@ namespace Akka.Cluster
         public void ReceiveGossipStatus(GossipStatus status)
         {
             var from = status.From;
-            if(!LatestGossip.HasMember(from))
+            if (!LatestGossip.HasMember(from))
                 _cluster.LogInfo("Ignoring received gossip status from unknown [{0}]", from);
             else if (!LatestGossip.IsReachable(_selfUniqueAddress, from))
                 _cluster.LogInfo("Ignoring received gossip status from unreachable [{0}]", from);
@@ -1805,9 +1870,9 @@ namespace Akka.Cluster
             {
                 _cluster.LogInfo("Ignoring received gossip intended for someone else, from [{0}] to [{1}]. Our full address is [{2}]",
                     from.Address, envelope.To, _selfUniqueAddress);
-                
+
                 // TODO: if the gossip is received for a version of ourselves with a different UID, do we issue a Down command?
-                
+
                 return ReceiveGossipType.Ignored;
             }
             if (!localGossip.HasMember(from))
@@ -1828,62 +1893,34 @@ namespace Akka.Cluster
 
             var comparison = remoteGossip.Version.CompareTo(localGossip.Version);
 
-            Gossip winningGossip;
             bool talkback;
             ReceiveGossipType gossipType;
 
             switch (comparison)
             {
                 case VectorClock.Ordering.Same:
-                    //same version
                     talkback = !_exitingTasksInProgress && !remoteGossip.SeenByNode(_selfUniqueAddress);
-                    winningGossip = remoteGossip.MergeSeen(localGossip);
                     gossipType = ReceiveGossipType.Same;
                     break;
                 case VectorClock.Ordering.Before:
                     //local is newer
-                    winningGossip = localGossip;
                     talkback = true;
                     gossipType = ReceiveGossipType.Older;
                     break;
                 case VectorClock.Ordering.After:
                     //remote is newer
-                    winningGossip = remoteGossip;
                     talkback = !_exitingTasksInProgress && !remoteGossip.SeenByNode(_selfUniqueAddress);
                     gossipType = ReceiveGossipType.Newer;
                     break;
                 default:
-                    // conflicting versions, merge
-                    // We can see that a removal was done when it is not in one of the gossips has status
-                    // Down or Exiting in the other gossip.
-                    // Perform the same pruning (clear of VectorClock) as the leader did when removing a member.
-                    // Removal of member itself is handled in merge (pickHighestPriority)
-                    var prunedLocalGossip = localGossip.Members.Aggregate(localGossip, (g, m) =>
-                    {
-                        if (RemoveUnreachableWithMemberStatus.Contains(m.Status) && !remoteGossip.Members.Contains(m))
-                        {
-                            _log.Debug("Cluster Node [{0}] - Pruned conflicting local gossip: {1}", _cluster.SelfAddress, m);
-                            return g.Prune(VectorClock.Node.Create(VclockName(m.UniqueAddress)));
-                        }
-                        return g;
-                    });
-
-                    var prunedRemoteGossip = remoteGossip.Members.Aggregate(remoteGossip, (g, m) =>
-                    {
-                        if (RemoveUnreachableWithMemberStatus.Contains(m.Status) && !localGossip.Members.Contains(m))
-                        {
-                            _log.Debug("Cluster Node [{0}] - Pruned conflicting remote gossip: {1}", _cluster.SelfAddress, m);
-                            return g.Prune(VectorClock.Node.Create(VclockName(m.UniqueAddress)));
-                        }
-                        return g;
-                    });
-
-                    //conflicting versions, merge
-                    winningGossip = prunedRemoteGossip.Merge(prunedLocalGossip);
                     talkback = true;
                     gossipType = ReceiveGossipType.Merge;
                     break;
             }
+
+            var winningGossip = SelectWinningGossip(localGossip, remoteGossip, comparison,
+                m => _log.Debug("Cluster Node [{0}] - Pruned conflicting local gossip: {1}", _cluster.SelfAddress, m),
+                m => _log.Debug("Cluster Node [{0}] - Pruned conflicting remote gossip: {1}", _cluster.SelfAddress, m));
 
             // Don't mark gossip state as seen while exiting is in progress, e.g.
             // shutting down singleton actors. This delays removal of the member until
@@ -1969,6 +2006,79 @@ namespace Akka.Cluster
         }
 
         /// <summary>
+        /// Picks the gossip that wins an exchange, given how the incoming clock compares to the local one.
+        ///
+        /// Split out of <see cref="ReceiveGossip"/> so the branch selection can be driven directly by
+        /// tests instead of re-implemented by them: a copy of this logic in a test would keep passing
+        /// after this one changed.
+        /// </summary>
+        /// <param name="localGossip">The receiver's current gossip.</param>
+        /// <param name="remoteGossip">The gossip that just arrived.</param>
+        /// <param name="comparison">How <paramref name="remoteGossip"/>'s clock compares to the local one.</param>
+        /// <param name="onPrunedLocal">Called for every local member whose clock entry the concurrent branch prunes.</param>
+        /// <param name="onPrunedRemote">Called for every remote member whose clock entry the concurrent branch prunes.</param>
+        internal static Gossip SelectWinningGossip(
+            Gossip localGossip,
+            Gossip remoteGossip,
+            VectorClock.Ordering comparison,
+            Action<Member> onPrunedLocal = null,
+            Action<Member> onPrunedRemote = null)
+        {
+            switch (comparison)
+            {
+                // Tombstones are unioned only on the two branches where neither gossip descends from the
+                // other: Same, where MergeTombstones does it, and the concurrent branch, where Gossip.Merge
+                // does. The two branches that pick a strictly newer gossip keep the winner's tombstones and
+                // nothing else.
+                //
+                // The winner is not behind on removals: a removal bumps the removing node's own clock
+                // entry, so a gossip that dominates the loser's clock descends from every removal the loser
+                // knows about. The tombstones the winner does not carry are the ones its own leader
+                // deliberately pruned, and honouring those prunes is the point - unioning them back in
+                // would undo every prune, and the leader would prune the same tombstones again on every
+                // tick forever.
+                case VectorClock.Ordering.Same:
+                    return remoteGossip.MergeSeen(localGossip).MergeTombstones(localGossip);
+
+                case VectorClock.Ordering.Before:
+                    // local is newer
+                    return localGossip;
+
+                case VectorClock.Ordering.After:
+                    // remote is newer
+                    return remoteGossip;
+
+                default:
+                    // conflicting versions, merge
+                    // We can see that a removal was done when it is not in one of the gossips has status
+                    // Down or Exiting in the other gossip.
+                    // Perform the same pruning (clear of VectorClock) as the leader did when removing a member.
+                    // Removal of member itself is handled in merge (pickHighestPriority)
+                    var prunedLocalGossip = localGossip.Members.Aggregate(localGossip, (g, m) =>
+                    {
+                        if (RemoveUnreachableWithMemberStatus.Contains(m.Status) && !remoteGossip.Members.Contains(m))
+                        {
+                            onPrunedLocal?.Invoke(m);
+                            return g.Prune(VectorClock.Node.Create(VclockName(m.UniqueAddress)));
+                        }
+                        return g;
+                    });
+
+                    var prunedRemoteGossip = remoteGossip.Members.Aggregate(remoteGossip, (g, m) =>
+                    {
+                        if (RemoveUnreachableWithMemberStatus.Contains(m.Status) && !localGossip.Members.Contains(m))
+                        {
+                            onPrunedRemote?.Invoke(m);
+                            return g.Prune(VectorClock.Node.Create(VclockName(m.UniqueAddress)));
+                        }
+                        return g;
+                    });
+
+                    return prunedRemoteGossip.Merge(prunedLocalGossip);
+            }
+        }
+
+        /// <summary>
         /// Sends gossip and schedules two future intervals for more gossip
         /// </summary>
         public void GossipTick()
@@ -1984,12 +2094,12 @@ namespace Akka.Cluster
 #pragma warning restore AK1004
             }
         }
-        
+
         public void GossipSpeedupTick()
         {
             if (IsGossipSpeedupNeeded()) SendGossip();
         }
-        
+
         public bool IsGossipSpeedupNeeded()
         {
             return LatestGossip.Members.Any(m => m.Status == MemberStatus.Down) ||
@@ -2229,7 +2339,6 @@ namespace Akka.Cluster
             var localGossip = LatestGossip;
             var localMembers = localGossip.Members;
             var localOverview = localGossip.Overview;
-            var localSeen = localOverview.Seen;
 
             var enoughMembers = IsMinNrOfMembersFulfilled();
 
@@ -2273,49 +2382,55 @@ namespace Akka.Cluster
                 return null;
             }).Where(m => m != null).ToImmutableSortedSet();
 
-            if (!removedUnreachable.IsEmpty || !removedExitingConfirmed.IsEmpty || !changedMembers.IsEmpty)
+            var hasChanges = !removedUnreachable.IsEmpty || !removedExitingConfirmed.IsEmpty || !changedMembers.IsEmpty;
+            var updatedGossip = localGossip;
+
+            if (hasChanges)
             {
                 // handle changes
 
                 // replace changed members
-                var newMembers = Member.PickNextTransition(changedMembers, localMembers)
-                    .Except(removedUnreachable)
-                    .Where(x => !removedExitingConfirmed.Contains(x.UniqueAddress))
-                    .ToImmutableSortedSet();
+                var updatedMembers = Member.PickNextTransition(changedMembers, localMembers).ToImmutableSortedSet();
 
-                // removing REMOVED nodes from the `seen` table
                 var removed = removedUnreachable.Select(u => u.UniqueAddress)
                     .ToImmutableHashSet()
                     .Union(removedExitingConfirmed);
-                var newSeen = localSeen.Except(removed);
-                // removing REMOVED nodes from the `reachability` table
-                var newReachability = localOverview.Reachability.Remove(removed);
-                var newOverview = localOverview.Copy(seen: newSeen, reachability: newReachability);
 
-                // Clear the VectorClock when member is removed. The change made by the leader is stamped
-                // and will propagate as is if there are no other changes on other nodes.
-                // If other concurrent changes on other nodes (e.g. join) the pruning is also
-                // taken care of when receiving gossips.
-                var newVersion = removed.Aggregate(localGossip.Version, (v, node) =>
-                {
-                    return v.Prune(VectorClock.Node.Create(VclockName(node)));
-                });
-                var newGossip = localGossip.Copy(members: newMembers, overview: newOverview, version: newVersion);
+                // RemoveAll strips each removed node from the members, the `seen` table, the `reachability`
+                // table and the vector clock, and records a tombstone for it, all in one step. The tombstone
+                // is what stops a peer that still holds the member from putting it back on the next merge.
+                updatedGossip = localGossip.Copy(members: updatedMembers)
+                    .RemoveAll(removed, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            }
 
-                if (!_exitingTasksInProgress && newGossip.GetMember(_selfUniqueAddress).Status == MemberStatus.Exiting)
-                {
-                    // Leader is moving itself from Leaving to Exiting.
-                    // ExitingCompleted will be received via CoordinatedShutdown to continue
-                    // the leaving process. Meanwhile the gossip state is not marked as seen.
+            // Expired tombstones are dropped here, on the leader, on a tick that has already established
+            // convergence. A quiet tick drops nothing, PruneTombstones hands back the same instance, and the
+            // reference check below skips the update - otherwise every converged tick would bump the vector
+            // clock and reset the `seen` table, and the cluster would never settle.
+            var removeTombstonesEarlierThan = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                                              - (long)_cluster.Settings.PruneGossipTombstonesAfter.TotalMilliseconds;
+            var newGossip = updatedGossip.PruneTombstones(removeTombstonesEarlierThan);
 
-                    _exitingTasksInProgress = true;
-                    if (_coordShutdown.ShutdownReason == null)
-                        _cluster.LogInfo("Exiting (leader), starting coordinated shutdown.");
-                    _selfExiting.TrySetResult(Done.Instance);
-                    _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
-                }
+            if (ReferenceEquals(newGossip, localGossip))
+                return;
 
-                UpdateLatestGossip(newGossip);
+            if (hasChanges && !_exitingTasksInProgress && newGossip.GetMember(_selfUniqueAddress).Status == MemberStatus.Exiting)
+            {
+                // Leader is moving itself from Leaving to Exiting.
+                // ExitingCompleted will be received via CoordinatedShutdown to continue
+                // the leaving process. Meanwhile the gossip state is not marked as seen.
+
+                _exitingTasksInProgress = true;
+                if (_coordShutdown.ShutdownReason == null)
+                    _cluster.LogInfo("Exiting (leader), starting coordinated shutdown.");
+                _selfExiting.TrySetResult(Done.Instance);
+                _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
+            }
+
+            UpdateLatestGossip(newGossip);
+
+            if (hasChanges)
+            {
                 _exitingConfirmed = _exitingConfirmed.Except(removedExitingConfirmed);
 
                 // log status changes
@@ -2333,10 +2448,12 @@ namespace Akka.Cluster
                 {
                     _cluster.LogInfo("Leader is removing confirmed Exiting node [{0}]", m.Address);
                 }
-
-                PublishMembershipState();
-                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting).ToArray());
             }
+
+            PublishMembershipState();
+
+            if (hasChanges)
+                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting).ToArray());
 
             return;
 
@@ -2536,6 +2653,14 @@ namespace Akka.Cluster
         /// <summary>
         /// Updates the local gossip with the latest received from over the network.
         /// </summary>
+        /// <remarks>
+        /// Every change this node makes to the gossip goes through here, and every call increments this
+        /// node's vector clock entry. Tombstone writes and tombstone pruning must keep using this path.
+        /// A tombstone written or pruned without a clock bump would be invisible to the causal comparison
+        /// in <see cref="ReceiveGossip"/>, so peers could not tell which side holds the newer removal set.
+        /// Only the equal-clock and concurrent branches union tombstones now, so an unstamped write has
+        /// nothing to fall back on: a peer that is causally ahead wins outright and the write is gone.
+        /// </remarks>
         /// <param name="gossip">The new gossip to merge with our own.</param>
         public void UpdateLatestGossip(Gossip gossip)
         {
@@ -2674,16 +2799,16 @@ namespace Akka.Cluster
             switch (message)
             {
                 case InternalClusterAction.JoinSeenNode _:
-                {
-                    //send InitJoin to all seed nodes (except myself)
-                    foreach (var path in _otherSeeds
-                        .Select(y => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(y))))
                     {
-                        path.Tell(new InternalClusterAction.InitJoin());
+                        //send InitJoin to all seed nodes (except myself)
+                        foreach (var path in _otherSeeds
+                            .Select(y => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(y))))
+                        {
+                            path.Tell(new InternalClusterAction.InitJoin());
+                        }
+                        _attempts++;
+                        break;
                     }
-                    _attempts++;
-                    break;
-                }
                 case InternalClusterAction.InitJoinAck initJoinAck:
                     //first InitJoinAck reply
                     Context.Parent.Tell(new ClusterUserAction.JoinTo(initJoinAck.Address));
@@ -2692,15 +2817,15 @@ namespace Akka.Cluster
                 case InternalClusterAction.InitJoinNack _:
                     break; //that seed was uninitialized
                 case ReceiveTimeout _:
-                {
-                    if (_attempts >= 2)
-                        _log.Warning(
-                            "Couldn't join seed nodes after [{0}] attempts, will try again. seed-nodes=[{1}]",
-                            _attempts, string.Join(",", _seeds.Where(x => !x.Equals(_selfAddress))));
-                    //no InitJoinAck received - try again
-                    Self.Tell(new InternalClusterAction.JoinSeenNode());
-                    break;
-                }
+                    {
+                        if (_attempts >= 2)
+                            _log.Warning(
+                                "Couldn't join seed nodes after [{0}] attempts, will try again. seed-nodes=[{1}]",
+                                _attempts, string.Join(",", _seeds.Where(x => !x.Equals(_selfAddress))));
+                        //no InitJoinAck received - try again
+                        Self.Tell(new InternalClusterAction.JoinSeenNode());
+                        break;
+                    }
                 default:
                     Unhandled(message);
                     break;
@@ -2778,24 +2903,24 @@ namespace Akka.Cluster
             switch (message)
             {
                 case InternalClusterAction.JoinSeenNode _ when _timeout.HasTimeLeft:
-                {
-                    // send InitJoin to remaining seed nodes (except myself)
-                    foreach (var seed in _remainingSeeds.Select(
-                        x => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(x))))
-                        seed.Tell(new InternalClusterAction.InitJoin());
-                    break;
-                }
-                case InternalClusterAction.JoinSeenNode _:
-                {
-                    if (_log.IsDebugEnabled)
                     {
-                        _log.Debug("Couldn't join other seed nodes, will join myself. seed-nodes=[{0}]", string.Join(",", _seeds));
+                        // send InitJoin to remaining seed nodes (except myself)
+                        foreach (var seed in _remainingSeeds.Select(
+                            x => Context.ActorSelection(Context.Parent.Path.ToStringWithAddress(x))))
+                            seed.Tell(new InternalClusterAction.InitJoin());
+                        break;
                     }
-                    // no InitJoinAck received, initialize new cluster by joining myself
-                    Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
-                    Context.Stop(Self);
-                    break;
-                }
+                case InternalClusterAction.JoinSeenNode _:
+                    {
+                        if (_log.IsDebugEnabled)
+                        {
+                            _log.Debug("Couldn't join other seed nodes, will join myself. seed-nodes=[{0}]", string.Join(",", _seeds));
+                        }
+                        // no InitJoinAck received, initialize new cluster by joining myself
+                        Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
+                        Context.Stop(Self);
+                        break;
+                    }
                 case InternalClusterAction.InitJoinAck initJoinAck:
                     _log.Info("Received InitJoinAck message from [{0}] to [{1}]", initJoinAck.Address, _selfAddress);
                     // first InitJoinAck reply, join existing cluster
@@ -2803,18 +2928,18 @@ namespace Akka.Cluster
                     Context.Stop(Self);
                     break;
                 case InternalClusterAction.InitJoinNack initJoinNack:
-                {
-                    _log.Info("Received InitJoinNack message from [{0}] to [{1}]", initJoinNack.Address, _selfAddress);
-                    _remainingSeeds = _remainingSeeds.Remove(initJoinNack.Address);
-                    if (_remainingSeeds.IsEmpty)
                     {
-                        // initialize new cluster by joining myself when nacks from all other seed nodes
-                        Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
-                        Context.Stop(Self);
-                    }
+                        _log.Info("Received InitJoinNack message from [{0}] to [{1}]", initJoinNack.Address, _selfAddress);
+                        _remainingSeeds = _remainingSeeds.Remove(initJoinNack.Address);
+                        if (_remainingSeeds.IsEmpty)
+                        {
+                            // initialize new cluster by joining myself when nacks from all other seed nodes
+                            Context.Parent.Tell(new ClusterUserAction.JoinTo(_selfAddress));
+                            Context.Stop(Self);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
                 default:
                     Unhandled(message);
                     break;

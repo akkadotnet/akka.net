@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Immutable;
 using System.Net;
 using System.Runtime.Serialization;
@@ -15,6 +16,7 @@ using Akka.Annotations;
 using Akka.IO;
 using Akka.Streams.Implementation.Fusing;
 using Akka.Streams.Implementation.IO;
+
 
 namespace Akka.Streams.Dsl
 {
@@ -71,7 +73,7 @@ namespace Akka.Streams.Dsl
             /// <param name="localAddress">TBD</param>
             /// <param name="remoteAddress">TBD</param>
             /// <param name="flow">TBD</param>
-            public IncomingConnection(EndPoint localAddress, EndPoint remoteAddress, Flow<ByteString, ByteString, NotUsed> flow)
+            public IncomingConnection(EndPoint localAddress, EndPoint remoteAddress, Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> flow)
             {
                 LocalAddress = localAddress;
                 RemoteAddress = remoteAddress;
@@ -91,7 +93,7 @@ namespace Akka.Streams.Dsl
             /// <summary>
             /// TBD
             /// </summary>
-            public readonly Flow<ByteString, ByteString, NotUsed> Flow;
+            public readonly Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> Flow;
 
             /// <summary>
             /// Handles the connection using the given flow, which is materialized exactly once and the respective
@@ -103,7 +105,7 @@ namespace Akka.Streams.Dsl
             /// <param name="handler">TBD</param>
             /// <param name="materializer">TBD</param>
             /// <returns>TBD</returns>
-            public TMat HandleWith<TMat>(Flow<ByteString, ByteString, TMat> handler, IMaterializer materializer)
+            public TMat HandleWith<TMat>(Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, TMat> handler, IMaterializer materializer)
                 => Flow.JoinMaterialized(handler, Keep.Right).Run(materializer);
         }
 
@@ -217,7 +219,7 @@ namespace Akka.Streams.Dsl
         /// </param>
         /// <param name="idleTimeout">TBD</param>
         /// <returns>TBD</returns>
-        public Task<Tcp.ServerBinding> BindAndHandle(Flow<ByteString, ByteString, NotUsed> handler, IMaterializer materializer, string host, int port, int backlog = 100,
+        public Task<Tcp.ServerBinding> BindAndHandle(Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> handler, IMaterializer materializer, string host, int port, int backlog = 100,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = false, TimeSpan? idleTimeout = null)
         {
             return Bind(host, port, backlog, options, halfClose, idleTimeout)
@@ -228,7 +230,7 @@ namespace Akka.Streams.Dsl
         /// <summary>
         /// Creates a <see cref="Tcp.OutgoingConnection"/> instance representing a prospective TCP client connection to the given endpoint.
         /// <para>
-        /// Note that the <see cref="ByteString"/> chunk boundaries are not retained across the network,
+        /// Note that the <c>ReadOnlySequence&lt;byte&gt;</c> chunk boundaries are not retained across the network,
         /// to achieve application level chunks you have to introduce explicit framing in your streams,
         /// for example using the <see cref="Framing"/> stages.
         /// </para>
@@ -246,17 +248,17 @@ namespace Akka.Streams.Dsl
         /// <param name="connectionTimeout">TBD</param>
         /// <param name="idleTimeout">TBD</param>
         /// <returns>TBD</returns>
-        public Flow<ByteString, ByteString, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress = null,
+        public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(EndPoint remoteAddress, EndPoint localAddress = null,
             IImmutableList<Inet.SocketOption> options = null, bool halfClose = true, TimeSpan? connectionTimeout = null, TimeSpan? idleTimeout = null)
         {
             //connectionTimeout = connectionTimeout ?? TimeSpan.FromMinutes(60);
 
             var tcpFlow =
                 Flow.FromGraph(new OutgoingConnectionStage(_system.Tcp(), remoteAddress, localAddress, options,
-                    halfClose, connectionTimeout)).Via(new Detacher<ByteString>());
+                    halfClose, connectionTimeout)).Via(new Detacher<ReadOnlySequence<byte>>());
 
             if (idleTimeout.HasValue)
-                return tcpFlow.Join(BidiFlow.BidirectionalIdleTimeout<ByteString, ByteString>(idleTimeout.Value));
+                return tcpFlow.Join(BidiFlow.BidirectionalIdleTimeout<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(idleTimeout.Value));
 
             return tcpFlow;
         }
@@ -265,7 +267,7 @@ namespace Akka.Streams.Dsl
         /// Creates an <see cref="Tcp.OutgoingConnection"/> without specifying options.
         /// It represents a prospective TCP client connection to the given endpoint.
         /// <para>
-        /// Note that the <see cref="ByteString"/> chunk boundaries are not retained across the network,
+        /// Note that the <c>ReadOnlySequence&lt;byte&gt;</c> chunk boundaries are not retained across the network,
         /// to achieve application level chunks you have to introduce explicit framing in your streams,
         /// for example using the <see cref="Framing"/> stages.
         /// </para>
@@ -273,7 +275,7 @@ namespace Akka.Streams.Dsl
         /// <param name="host">TBD</param>
         /// <param name="port">TBD</param>
         /// <returns>TBD</returns>
-        public Flow<ByteString, ByteString, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port)
+        public Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, Task<Tcp.OutgoingConnection>> OutgoingConnection(string host, int port)
             => OutgoingConnection(CreateEndpoint(host, port));
 
         internal static EndPoint CreateEndpoint(string host, int port)

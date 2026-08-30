@@ -86,7 +86,7 @@ namespace Akka.Tests.Performance.IO
                     connection = Sender;
                     Context.Watch(connection);
                     connection.Tell(new Tcp.Register(Self));
-                    connection.Tell(Tcp.Write.Create(ByteString.FromBytes(payload)));
+                    connection.Tell(Tcp.Write.Create(payload.AsMemory()));
                 });
                 Receive<Tcp.CommandFailed>(_ =>
                 {

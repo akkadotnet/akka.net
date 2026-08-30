@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <Description>TestKit for Testing Distributed Akka.NET Applications</Description>
-    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <PackageTags>$(AkkaPackageTags);network;testkit</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
@@ -26,8 +26,4 @@
 
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-    <PackageReference Include="System.Collections.Specialized" Version="4.3.0" />
-  </ItemGroup>
-  
 </Project>

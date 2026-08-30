@@ -1,15 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\xunitSettings.props" />
 
-  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+  <PropertyGroup>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
-  </PropertyGroup>
-
-  <!-- disable .NET Framework on Linux-->
-  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
-    <TargetFramework>$(NetTestVersion)</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +12,11 @@
     <ProjectReference Include="..\..\contrib\testkits\Akka.TestKit.Xunit\Akka.TestKit.Xunit.csproj" />
     <ProjectReference Include="..\Akka.Remote\Akka.Remote.csproj" />
     <ProjectReference Include="..\Akka.Tests.Shared.Internals.Xunit3\Akka.Tests.Shared.Internals.Xunit3.csproj" />
+    <!-- Needed to exercise the G2 handshake GraphStages (Akka.Remote.Artery.OutboundHandshakeStage /
+         InboundHandshakeStage) with TestSource/TestSink - see ArteryHandshakeSpec. First-party
+         project references only, no new NuGet packages; Akka.Remote already references
+         Akka.Streams (see Akka.Remote.csproj). -->
+    <ProjectReference Include="..\Akka.Streams.TestKit\Akka.Streams.TestKit.csproj" />
 
     <None Include="Resources\akka-validcert.pfx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -52,8 +52,5 @@
     <PackageReference Include="FsCheck.Xunit.v3" Version="$(FsCheck3Version)" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == '$(NetFrameworkTestVersion)' ">
-    <DefineConstants>$(DefineConstants);HELIOS</DefineConstants>
-  </PropertyGroup>
 
 </Project>

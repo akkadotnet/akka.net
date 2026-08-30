@@ -32,6 +32,11 @@ namespace Akka.Tests.Serialization
             _output = output;
         }
 
+        private static T Inner<T>(Serializer serializer) where T: Serializer
+        {
+            return serializer.Should().BeOfType<T>().Subject;
+        }
+
         /// <summary>
         /// Here we basically verify that a serializer decides where its Serializer Identifier is coming
         /// from. When using the default Serializer base class, it read from hocon config. But this should not be 
@@ -53,7 +58,7 @@ namespace Akka.Tests.Serialization
             //The above config explictly does not configures the serialization-identifiers section
             using (var system = ActorSystem.Create(nameof(CustomSerializerSpec), config))
             {
-                var serializer = (CustomSerializer)system.Serialization.FindSerializerForType(typeof(object));
+                var serializer = Inner<CustomSerializer>(system.Serialization.FindSerializerForType(typeof(object)));
                 Assert.Equal(666, serializer.Identifier);
             }
         }
@@ -79,7 +84,7 @@ namespace Akka.Tests.Serialization
             {
                 var firstMessage = new FirstMessage("First message");
                 var serialization = system.Serialization;
-                var serializer = (CustomManifestSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializer = Inner<CustomManifestSerializer>(serialization.FindSerializerFor(firstMessage));
 
                 var serialized = serializer.ToBinary(firstMessage);
                 var manifest = serializer.Manifest(firstMessage);
@@ -156,7 +161,7 @@ namespace Akka.Tests.Serialization
             {
                 var firstMessage = new FirstMessage("First message");
                 var serialization = system.Serialization;
-                var serializer = (CustomSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializer = Inner<CustomSerializer>(serialization.FindSerializerFor(firstMessage));
                 var serializerById = serialization.GetSerializerById(1);
 
                 serializer.Identifier.Should().Be(666); // This is because identifier is hardwired, so it could not be
@@ -257,7 +262,7 @@ namespace Akka.Tests.Serialization
             {
                 var firstMessage = new FirstMessage("First message");
                 var serialization = system.Serialization;
-                var serializer = (CustomManifestSerializer)serialization.FindSerializerFor(firstMessage);
+                var serializer = Inner<CustomManifestSerializer>(serialization.FindSerializerFor(firstMessage));
 
                 var serialized = serializer.ToBinary(firstMessage);
                 var manifest = serializer.Manifest(firstMessage);

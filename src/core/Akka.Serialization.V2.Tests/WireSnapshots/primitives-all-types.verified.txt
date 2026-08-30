@@ -1,0 +1,12 @@
+﻿case: primitives-all-types
+message-type: PrimitiveMessage
+manifest: primitive-v1
+serializer-id: 120101
+byte-count: 95
+
+0000  8b 01 a7 6f 72 64 65 72  2d 31 02 2a 03 cf 00 00  |...order-1.*....|
+0010  00 02 18 71 1a 00 04 c3  05 cb 40 29 00 00 00 00  |...q......@)....|
+0020  00 00 06 94 ce 00 01 e2  40 00 00 ce 00 03 00 00  |........@.......|
+0030  07 c4 10 c8 35 7d 8f 31  29 48 4a 9b 84 2c 00 8a  |....5}.1)HJ..,..|
+0040  b7 f2 e4 08 92 cf 08 de  c1 2a de 90 ae 00 01 09  |.........*......|
+0050  92 cf 08 de c1 2a de 90  ae 00 78 0a 01 0b a0     |.....*....x....|

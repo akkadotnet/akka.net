@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+// Real-payload benchmark message, Protobuf arm. Logically identical to the V2/MessagePack arm's
+// RemotePingPong.RealPayload.V2.RealBenchmarkMessage - see RealPayloadFactory.cs, which builds one
+// canonical instance of that record and derives this message from it, so the two arms always carry
+// identical logical content (several primitives, a string, a nested complex type, and a repeated
+// collection of a nested type).
+//
+// Compiled via Grpc.Tools' MSBuild <Protobuf> item (see RemotePingPong.csproj), the same protoc-based
+// code generation Akka.Remote itself uses for its checked-in .proto files (src/protobuf/*.proto) -
+// there is no separate protogen script in this repo; adding the PackageReference + <Protobuf> item is
+// the whole story, and the generated C# is produced at build time (obj/.../RealBenchmarkMessage.cs),
+// not checked in, matching Akka.Remote's WireFormats.proto/ContainerFormats.proto convention.
+option csharp_namespace = "RemotePingPong.RealPayload.Protobuf";
+
+package remotepingpong;
+
+message RealBenchmarkMessage {
+  int32 sequence_number = 1;
+  int64 timestamp_ticks = 2;
+  double value = 3;
+  bool flag = 4;
+  string correlation_id = 5;
+  DeviceInfo device = 6;
+  repeated Reading readings = 7;
+}
+
+message DeviceInfo {
+  string device_id = 1;
+  string firmware_version = 2;
+  int32 region = 3;
+}
+
+message Reading {
+  string sensor_id = 1;
+  double value = 2;
+  int64 timestamp_ticks = 3;
+}

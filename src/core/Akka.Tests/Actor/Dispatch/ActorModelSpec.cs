@@ -480,10 +480,24 @@ namespace Akka.Tests.Actor.Dispatch
             AssertCountdown(start, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds, "Should process first message within 3 seconds");
             AssertRefDefaultZero(a, registers: 1, msgsReceived: 1, msgsProcessed: 1, dispatcher: dispatcher);
 
-            a.Tell(new Wait(1000));
+            // Deterministically hold the actor busy with a latch the test controls,
+            // instead of racing a wall-clock Thread.Sleep(1000) against a fixed deadline.
+            // 'busyStarted' is signaled once the actor is inside the blocking handler;
+            // 'release' keeps it busy until the test explicitly lets it go.
+            var busyStarted = new CountdownEvent(1);
+            var release = new CountdownEvent(1);
+            a.Tell(new Meet(busyStarted, release));
+            AssertCountdown(busyStarted, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds, "Should start processing the blocking message within 3 seconds");
+
+            // While the actor is deterministically held busy, the second message must NOT be
+            // processed. This positively proves the "one message at a time" property rather than
+            // inferring it from a restart that never happens.
             a.Tell(new CountDown(oneAtTime));
-            // in case of serialization violation, restart would happen instead of countdown
-            AssertCountdown(oneAtTime, (int)Dilated(TimeSpan.FromSeconds(1.5)).TotalMilliseconds, "Should process message when allowed");
+            AssertNoCountdown(oneAtTime, (int)Dilated(TimeSpan.FromMilliseconds(500)).TotalMilliseconds, "Should not process the next message while the actor is busy");
+
+            // Release the gate; the queued message must now be processed once the actor is free.
+            release.Signal();
+            AssertCountdown(oneAtTime, (int)Dilated(TimeSpan.FromSeconds(3.0)).TotalMilliseconds, "Should process message when allowed");
             AssertRefDefaultZero(a, registers: 1, msgsReceived: 3, msgsProcessed: 3, dispatcher: dispatcher);
 
             Sys.Stop(a);

@@ -2,17 +2,13 @@
     <PropertyGroup>
         <Description>Streaming support for Akka.NET. Introduces a LINQ-like interface for writing asynchronous,
             back-pressure-aware streams built on top of Akka.NET actors.</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <PackageTags>$(AkkaPackageTags);reactive;stream</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
     <ItemGroup>
         <EmbeddedResource Include="reference.conf" />
         <ProjectReference Include="..\Akka\Akka.csproj" />
-    </ItemGroup>
-    <ItemGroup Condition=" '$(TargetFramework)' == '$(NetStandardLibVersion)' ">
-        <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
-        <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MicrosoftLibVersion)" />
     </ItemGroup>
     <ItemGroup>
         <None Update="CodeGen\Dsl\GraphApply.tt">

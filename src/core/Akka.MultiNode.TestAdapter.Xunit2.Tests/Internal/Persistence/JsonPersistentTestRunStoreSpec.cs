@@ -5,7 +5,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Linq;
 using Akka.Actor;
 using Akka.MultiNode.TestAdapter.Internal.Persistence;
@@ -19,7 +21,7 @@ namespace Akka.MultiNode.TestAdapter.Xunit2.Tests.Internal.Persistence
     public class JsonPersistentTestRunStoreSpec : TestKit.Xunit2.TestKit
     {
         [Fact]
-        public void Should_save_TestRunTree_as_JSON()
+        public async Task Should_save_TestRunTree_as_JSON()
         {
             var testRunStore = new JsonPersistentTestRunStore();
             var testRunCoordinator = Sys.ActorOf(Props.Create<TestRunCoordinator>());
@@ -41,7 +43,7 @@ namespace Akka.MultiNode.TestAdapter.Xunit2.Tests.Internal.Persistence
 
             //end the spec
             testRunCoordinator.Tell(new EndTestRun(), TestActor);
-            var testRunData = ExpectMsg<TestRunTree>();
+            var testRunData = await ExpectMsgAsync<TestRunTree>(TimeSpan.FromSeconds(15));
 
             //save the test run
             var file = Path.GetTempFileName();
@@ -49,7 +51,7 @@ namespace Akka.MultiNode.TestAdapter.Xunit2.Tests.Internal.Persistence
         }
 
         [Fact]
-        public void Should_load_saved_JSON_TestRunTree()
+        public async Task Should_load_saved_JSON_TestRunTree()
         {
             var testRunStore = new JsonPersistentTestRunStore();
             var testRunCoordinator = Sys.ActorOf(Props.Create<TestRunCoordinator>());
@@ -75,7 +77,7 @@ namespace Akka.MultiNode.TestAdapter.Xunit2.Tests.Internal.Persistence
 
             //end the spec
             testRunCoordinator.Tell(new EndTestRun(), TestActor);
-            var testRunData = ExpectMsg<TestRunTree>();
+            var testRunData = await ExpectMsgAsync<TestRunTree>(TimeSpan.FromSeconds(15));
 
             //save the test run
             var file = Path.GetTempFileName();

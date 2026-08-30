@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
     <IsPackable>false</IsPackable>
     <Description>Local only test project to test that Akka.Remote.TestKit.Xunit2 package works. Not to be run in CI/CD.</Description>
   </PropertyGroup>

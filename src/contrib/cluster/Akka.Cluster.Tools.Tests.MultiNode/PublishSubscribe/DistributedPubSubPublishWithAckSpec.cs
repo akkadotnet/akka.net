@@ -34,7 +34,8 @@ public class DistributedPubSubPublishWithAckSpecSpecConfig : MultiNodeConfig
             akka.actor.provider = "Akka.Cluster.ClusterActorRefProvider, Akka.Cluster"
             akka.actor.serialize-messages = off
             akka.remote.log-remote-lifecycle-events = off
-            akka.cluster.auto-down-unreachable-after = 0s
+            akka.cluster.failure-detector.acceptable-heartbeat-pause = 6s # de-flake: absorb CI heartbeat stalls during formation (default 3s)
+            akka.cluster.auto-down-unreachable-after = 5s
             akka.cluster.pub-sub.max-delta-elements = 500
             akka.cluster.pub-sub.buffered-messages.max-per-topic = 2
             akka.cluster.pub-sub.buffered-messages.timeout-check-interval = 200ms

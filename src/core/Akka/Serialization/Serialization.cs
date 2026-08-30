@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -76,6 +77,26 @@ namespace Akka.Serialization
     }
 
     /// <summary>
+    /// INTERNAL API.
+    /// </summary>
+    [InternalApi]
+    internal readonly struct SerializedPayloadMetadata
+    {
+        public SerializedPayloadMetadata(int serializerId, string manifest, int bytesWritten)
+        {
+            SerializerId = serializerId;
+            Manifest = manifest;
+            BytesWritten = bytesWritten;
+        }
+
+        public int SerializerId { get; }
+
+        public string Manifest { get; }
+
+        public int BytesWritten { get; }
+    }
+
+    /// <summary>
     /// The serialization system used by Akka.NET to serialize and deserialize objects
     /// per the <see cref="ActorSystem"/>'s serialization configuration.
     /// </summary>
@@ -90,22 +111,43 @@ namespace Akka.Serialization
         /// <remarks>
         /// WARNING: if you change this method it's likely that the DaemonMsgCreateSerializer and other calls will need changes too.
         /// </remarks>
+        public static string ManifestFor(SerializerV2 s, object msg)
+        {
+            var manifest = s.Manifest(msg);
+            if (s is not SerializerV1Adapter and not ByteArraySerializer && string.IsNullOrEmpty(manifest))
+                throw new SerializationException($"Native SerializerV2 [{s.GetType()}] must return a non-empty manifest for message type [{msg?.GetType()}] unless preserving a legacy serializer ID manifest contract.");
+            return manifest;
+        }
+
+        /// <summary>
+        /// Used to determine the manifest for a legacy serializer, if applicable.
+        /// </summary>
+        /// <param name="s">The serializer we want to use on the message.</param>
+        /// <param name="msg">The message payload.</param>
+        /// <returns>A populated string is applicable; <see cref="string.Empty"/> otherwise.</returns>
         public static string ManifestFor(Serializer s, object msg)
         {
-            switch (s)
-            {
-                case SerializerWithStringManifest s2:
-                    return s2.Manifest(msg);
-                case Serializer { IncludeManifest: true }:
-                    return msg.GetType().TypeQualifiedName();
-                default:
-                    return string.Empty;
-            }
+            if (s is SerializerV2 v2)
+                return ManifestFor(v2, msg);
+
+            return s.Manifest(msg);
         }
 
         /// <summary>
         /// Needs to be INTERNAL so it can be accessed from tests. Should never be set directly.
         /// </summary>
+        /// <remarks>
+        /// LOAD-BEARING INVARIANT: this is <c>[ThreadStatic]</c>, so it is only visible on the OS
+        /// thread that set it. Every serialize/deserialize call must run start-to-finish on a single
+        /// OS thread, with the <see cref="WithTransport{T}(ExtendedActorSystem,System.Func{T})"/>
+        /// set/restore bracketing the call directly - there must be no <c>await</c> or
+        /// <c>Task.Run</c> (or any other thread hand-off) between the point where this is set and the
+        /// point where a serializer reads it (e.g. via <see cref="SerializedActorPath"/>). If work is
+        /// scheduled onto a different thread in between, that thread will see a stale or empty value
+        /// and actor references will serialize with the wrong (or no) transport address. See
+        /// <c>Akka.Serialization.V2.ActorPathFormatter</c> for how this same invariant is documented
+        /// and upheld for the Artery/MessagePack serialization path.
+        /// </remarks>
         [ThreadStatic]
         internal static Information CurrentTransportInformation;
 
@@ -125,13 +167,15 @@ namespace Akka.Serialization
         }
 
         /// <summary>
-        /// TBD
+        /// Executes <paramref name="action"/> while temporarily setting the
+        /// <see cref="CurrentTransportInformation"/> so that <see cref="IActorRef"/> instances
+        /// are serialized with the correct remote address.
         /// </summary>
-        /// <typeparam name="T">TBD</typeparam>
-        /// <param name="system">TBD</param>
-        /// <param name="address">TBD</param>
-        /// <param name="action">TBD</param>
-        /// <returns>TBD</returns>
+        /// <typeparam name="T">The return type of the <paramref name="action"/> delegate.</typeparam>
+        /// <param name="system">The actor system used for serialization context.</param>
+        /// <param name="address">The remote address to embed in serialized actor references.</param>
+        /// <param name="action">The delegate to execute within the transport context.</param>
+        /// <returns>The value produced by <paramref name="action"/>.</returns>
         [Obsolete("Obsolete. Use the SerializeWithTransport<T>(ExtendedActorSystem) method instead.")]
         public static T WithTransport<T>(ActorSystem system, Address address, Func<T> action)
         {
@@ -141,11 +185,14 @@ namespace Akka.Serialization
             return res;
         }
 
-        private readonly Serializer _nullSerializer;
+        private readonly SerializerV2 _nullSerializer;
 
-        private readonly ConcurrentDictionary<Type, Serializer> _serializerMap = new();
-        private readonly Dictionary<int, Serializer> _serializersById = new();
-        private readonly Dictionary<string, Serializer> _serializersByName = new();
+        private readonly ConcurrentDictionary<Type, SerializerV2> _serializerMap = new();
+        // NOTE: populated ONLY during construction (every AddSerializer call site is in the ctor);
+        // read-only thereafter, so plain Dictionary is safe for the concurrent reads on the
+        // Deserialize/GetSerializerById hot path. Registration after startup is not supported.
+        private readonly Dictionary<int, SerializerV2> _serializersById = new();
+        private readonly Dictionary<string, SerializerV2> _serializersByName = new();
 
         private readonly ImmutableHashSet<SerializerDetails> _serializerDetails;
         private readonly MinimalLogger _initializationLogger;
@@ -165,7 +212,7 @@ namespace Akka.Serialization
             _initializationLogger = system.Settings.StdoutLogger;
             
             System = system;
-            _nullSerializer = new NullSerializer(system);
+            _nullSerializer = AdaptSerializer(new NullSerializer(system));
             AddSerializer("null", _nullSerializer);
 
 
@@ -192,17 +239,17 @@ namespace Akka.Serialization
                 var serializerConfig = serializerSettingsConfig.GetConfig(kvp.Key);
 
                 var serializer = !serializerConfig.IsNullOrEmpty()
-                    ? (Serializer)Activator.CreateInstance(serializerType, system, serializerConfig)
-                    : (Serializer)Activator.CreateInstance(serializerType, system);
+                    ? Activator.CreateInstance(serializerType, system, serializerConfig)
+                    : Activator.CreateInstance(serializerType, system);
 
-                AddSerializer(kvp.Key, serializer);
+                AddSerializer(kvp.Key, AdaptSerializer(serializer));
             }
 
             // Add any serializers that are registered via the SerializationSetup
             // This has to be done here because SerializationSetup ALWAYS win.
             foreach (var details in _serializerDetails)
             {
-                AddSerializer(details.Alias, details.Serializer);
+                AddSerializer(details.Alias, details.SerializerV2);
             }
 
             foreach (var kvp in serializerBindingConfig)
@@ -233,7 +280,7 @@ namespace Akka.Serialization
                 // populate the serialization map
                 foreach (var t in details.UseFor)
                 {
-                    AddSerializationMap(t, details.Serializer);
+                    AddSerializationMap(t, details.SerializerV2);
                 }
             }
         }
@@ -317,12 +364,12 @@ namespace Akka.Serialization
             }
         }
 
-        private Serializer GetSerializerByName(string name)
+        private SerializerV2 GetSerializerByName(string name)
         {
             if (name == null)
                 return null;
 
-            _serializersByName.TryGetValue(name, out Serializer serializer);
+            _serializersByName.TryGetValue(name, out SerializerV2 serializer);
             return serializer;
         }
 
@@ -331,6 +378,22 @@ namespace Akka.Serialization
         /// </summary>
         public ExtendedActorSystem System { get; }
 
+        internal static SerializerV2 AdaptSerializer(object serializer)
+        {
+            return serializer switch
+            {
+                SerializerV2 v2 => v2,
+                Serializer v1 => new SerializerV1Adapter(v1.ExtendedSystem, v1),
+                null => throw new ArgumentNullException(nameof(serializer)),
+                _ => throw new ArgumentException($"Serializer [{serializer.GetType()}] must inherit from [{typeof(Serializer)}] or [{typeof(SerializerV2)}].", nameof(serializer))
+            };
+        }
+
+        private static Serializer AsPublicSerializer(SerializerV2 serializer)
+        {
+            return serializer is SerializerV1Adapter adapter ? adapter.Inner : serializer;
+        }
+
         /// <summary>
         /// Adds the serializer to the internal state of the serialization subsystem
         /// </summary>
@@ -338,6 +401,17 @@ namespace Akka.Serialization
         [Obsolete("No longer supported. Use the AddSerializer(name, serializer) overload instead.", true)]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddSerializer(Serializer serializer)
+        {
+            AddSerializer(AdaptSerializer(serializer));
+        }
+
+        /// <summary>
+        /// Adds the serializer to the internal state of the serialization subsystem
+        /// </summary>
+        /// <param name="serializer">Serializer instance</param>
+        [Obsolete("No longer supported. Use the AddSerializer(name, serializer) overload instead.", true)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddSerializer(SerializerV2 serializer)
         {
             var id = serializer.Identifier;
             if(_logSerializerOverrideOnStart && _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
@@ -357,6 +431,22 @@ namespace Akka.Serialization
         /// <param name="name">Configuration name of the serializer</param>
         /// <param name="serializer">Serializer instance</param>
         public void AddSerializer(string name, Serializer serializer)
+        {
+            AddSerializer(name, AdaptSerializer(serializer));
+        }
+
+        /// <summary>
+        /// Adds the serializer to the internal state of the serialization subsystem
+        /// </summary>
+        /// <remarks>
+        /// Must only be called during <see cref="ActorSystem"/> initialization (all framework call
+        /// sites are in this class's constructor). The serializer registries are read without
+        /// synchronization on the deserialization hot path and are treated as immutable once the
+        /// system has started — registering a serializer after startup is not supported.
+        /// </remarks>
+        /// <param name="name">Configuration name of the serializer</param>
+        /// <param name="serializer">Serializer instance</param>
+        public void AddSerializer(string name, SerializerV2 serializer)
         {
             var id = serializer.Identifier;
             if(_logSerializerOverrideOnStart && _serializersById.ContainsKey(id) && _serializersById[id].GetType() != serializer.GetType())
@@ -378,13 +468,26 @@ namespace Akka.Serialization
         }
 
         /// <summary>
+        /// Registers a mapping from <paramref name="type"/> to <paramref name="serializer"/>
+        /// so that instances of that type (and its subtypes) will be handled by the given serializer.
+        /// Logs a warning if an existing mapping for the same type is being overridden.
+        /// </summary>
+        /// <param name="type">The <see cref="Type"/> to associate with the serializer.</param>
+        /// <param name="serializer">The <see cref="Akka.Serialization.Serializer"/> that will handle the type.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddSerializationMap(Type type, Serializer serializer)
+        {
+            AddSerializationMap(type, AdaptSerializer(serializer));
+        }
+
+        /// <summary>
         /// TBD
         /// </summary>
         /// <param name="type">TBD</param>
         /// <param name="serializer">TBD</param>
         /// <returns>TBD</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AddSerializationMap(Type type, Serializer serializer)
+        public void AddSerializationMap(Type type, SerializerV2 serializer)
         {
             if(_logSerializerOverrideOnStart && _serializerMap.ContainsKey(type) && _serializerMap[type].GetType() != serializer.GetType())
                 LogWarning(
@@ -444,11 +547,28 @@ namespace Akka.Serialization
         }
 
         /// <summary>
+        /// Serializes the given message into <paramref name="writer"/> using the V2 serializer contract.
+        /// </summary>
+        internal SerializedPayloadMetadata Serialize(object o, IBufferWriter<byte> writer)
+        {
+            if (writer == null)
+                throw new ArgumentNullException(nameof(writer));
+
+            return WithTransport(() =>
+            {
+                var serializer = FindSerializerV2For(o);
+                var manifest = ManifestFor(serializer, o);
+                var bytesWritten = serializer.Serialize(o, writer);
+                return new SerializedPayloadMetadata(serializer.Identifier, manifest, bytesWritten);
+            });
+        }
+
+        /// <summary>
         /// Deserializes the given array of bytes using the specified serializer id, using the optional type hint to the Serializer.
         /// </summary>
-        /// <param name="bytes">TBD</param>
-        /// <param name="serializerId">TBD</param>
-        /// <param name="type">TBD</param>
+        /// <param name="bytes">The serialized byte array to deserialize.</param>
+        /// <param name="serializerId">The identifier of the serializer that produced <paramref name="bytes"/>.</param>
+        /// <param name="type">An optional type hint passed to the serializer to aid deserialization.</param>
         /// <exception cref="SerializationException">
         /// This exception is thrown if the system cannot find the serializer with the given <paramref name="serializerId"/>.
         /// </exception>
@@ -470,9 +590,9 @@ namespace Akka.Serialization
         /// <summary>
         /// Deserializes the given array of bytes using the specified serializer id, using the optional type hint to the Serializer.
         /// </summary>
-        /// <param name="bytes">TBD</param>
-        /// <param name="serializerId">TBD</param>
-        /// <param name="manifest">TBD</param>
+        /// <param name="bytes">The serialized byte array to deserialize.</param>
+        /// <param name="serializerId">The identifier of the serializer that produced <paramref name="bytes"/>.</param>
+        /// <param name="manifest">A string manifest identifying the type, used by <see cref="SerializerWithStringManifest"/> implementations.</param>
         /// <exception cref="SerializationException">
         /// This exception is thrown if the system cannot find the serializer with the given <paramref name="serializerId"/>
         /// or it couldn't find the given <paramref name="manifest"/> with the given <paramref name="serializerId"/>.
@@ -494,22 +614,34 @@ namespace Akka.Serialization
                 if (oldInfo == null)
                     Serialization.CurrentTransportInformation = SerializationInfo;
 
-                if (serializer is SerializerWithStringManifest stringManifest)
-                    return stringManifest.FromBinary(bytes, manifest);
                 if (string.IsNullOrEmpty(manifest))
-                    return serializer.FromBinary(bytes, null);
-                Type type;
-                try
-                {
-                    type = TypeCache.GetType(manifest);
-                }
-                catch (Exception ex)
-                {
-                    throw new SerializationException(
-                        $"Cannot find manifest class [{manifest}] for serializer with id [{serializerId}].", ex);
-                }
+                    return serializer.FromBinary(bytes, string.Empty);
+                return serializer.FromBinary(bytes, manifest);
+            }
+            finally
+            {
+                Serialization.CurrentTransportInformation = oldInfo;
+            }
+        }
 
-                return serializer.FromBinary(bytes, type);
+        /// <summary>
+        /// Deserializes the given bytes using the V2 serializer contract.
+        /// </summary>
+        public object Deserialize(ReadOnlySequence<byte> bytes, int serializerId, string manifest)
+        {
+            if (!_serializersById.TryGetValue(serializerId, out var serializer))
+                throw new SerializationException(
+                    $"Cannot find serializer with id [{serializerId}] (manifest [{manifest}]). The most probable reason" +
+                    " is that the configuration entry 'akka.actor.serializers' is not in sync between the two systems." +
+                    $" {Serializer.GetErrorForSerializerId(serializerId)}");
+
+            var oldInfo = Serialization.CurrentTransportInformation;
+            try
+            {
+                if (oldInfo == null)
+                    Serialization.CurrentTransportInformation = SerializationInfo;
+
+                return serializer.Deserialize(bytes, manifest ?? string.Empty);
             }
             finally
             {
@@ -525,7 +657,12 @@ namespace Akka.Serialization
         /// <returns>The serializer configured for the given object type</returns>
         public Serializer FindSerializerFor(object obj, string defaultSerializerName = null)
         {
-            return obj == null ? _nullSerializer : FindSerializerForType(obj.GetType(), defaultSerializerName);
+            return AsPublicSerializer(FindSerializerV2For(obj, defaultSerializerName));
+        }
+
+        internal SerializerV2 FindSerializerV2For(object obj, string defaultSerializerName = null)
+        {
+            return obj == null ? _nullSerializer : FindSerializerV2ForType(obj.GetType(), defaultSerializerName);
         }
 
         //cache to eliminate lots of typeof operator calls
@@ -538,7 +675,7 @@ namespace Akka.Serialization
         /// ambiguity it is primarily using the most specific configured class,
         /// and secondly the entry configured first.
         /// </summary>
-        /// <param name="objectType">TBD</param>
+        /// <param name="objectType">The <see cref="Type"/> whose serializer should be resolved.</param>
         /// <param name="defaultSerializerName">The config name of the serializer to use when no specific binding config is present</param>
         /// <exception cref="SerializationException">
         /// This exception is thrown if the serializer of the given <paramref name="objectType"/> could not be found.
@@ -546,10 +683,15 @@ namespace Akka.Serialization
         /// <returns>The serializer configured for the given object type</returns>
         public Serializer FindSerializerForType(Type objectType, string defaultSerializerName = null)
         {
+            return AsPublicSerializer(FindSerializerV2ForType(objectType, defaultSerializerName));
+        }
+
+        internal SerializerV2 FindSerializerV2ForType(Type objectType, string defaultSerializerName = null)
+        {
             if (_serializerMap.TryGetValue(objectType, out var fullMatchSerializer))
                 return fullMatchSerializer;
 
-            Serializer serializer = null;
+            SerializerV2 serializer = null;
             Type type = objectType;
 
             // TODO: see if we can do a better job with proper type sorting here - most specific to least specific (object serializer goes last)
@@ -657,7 +799,7 @@ namespace Akka.Serialization
 
         internal Serializer GetSerializerById(int serializerId)
         {
-            return _serializersById[serializerId];
+            return AsPublicSerializer(_serializersById[serializerId]);
         }
     }
 }

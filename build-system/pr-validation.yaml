@@ -74,15 +74,6 @@ jobs:
 
   - template: azure-pipeline.template.yaml
     parameters:
-      name: "netfx_tests_windows"
-      displayName: ".NET Framework Unit Tests (Windows)"
-      vmImage: "windows-latest"
-      command: "dotnet incrementalist run --config .incrementalist/testsOnlyNetFx.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net48 --logger:trx --results-directory TestResults"
-      outputDirectory: "TestResults"
-      artifactName: "netfx_tests_windows-$(Build.BuildId)"
-
-  - template: azure-pipeline.template.yaml
-    parameters:
       name: "docfx_test"
       displayName: "DocFX warning check"
       vmImage: "windows-latest"
@@ -121,6 +112,78 @@ jobs:
       artifactName: "net_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
       mntrFailuresArtifactName: "net_7_mntr_FAILED_windows-$(Build.BuildId)"
+
+  # First-ever Linux MNTR lane: same suite, same incrementalist scoping and
+  # command as "net_mntr_windows" above, on ubuntu-latest (matching the Linux
+  # unit-test job). NON-BLOCKING initially (continueOnError: true at the job
+  # level) because this lane has never run before -- same
+  # promote-to-blocking-after-sustained-green path as the Artery job below.
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: "net_mntr_linux"
+      displayName: ".NET Multi-Node Tests (Linux)"
+      vmImage: "ubuntu-latest"
+      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults/multinode"
+      outputDirectory: "TestResults"
+      artifactName: "net_mntr_linux-$(Build.BuildId)"
+      mntrFailuresDir: 'TestResults/multinode'
+      mntrFailuresArtifactName: "net_mntr_FAILED_linux-$(Build.BuildId)"
+      continueOnError: true
+
+  # Independent, parallel, NON-BLOCKING Artery MNTR stage. Runs the exact same
+  # incrementally-scoped multi-node suite as "net_mntr_windows" above, but
+  # re-points the transport at Artery via AKKA_MNTR_TRANSPORT=artery, which
+  # MultiNodeConfig.Config layers in as a low-priority fallback config tier
+  # (see src/core/Akka.Remote.TestKit/MultiNodeSpec.cs). Purpose: track
+  # Artery's own MNTR green-rate as a ship-confidence metric, independent of
+  # classic DotNetty, without gating PR validation on it.
+  #
+  # Non-blocking: continueOnError: true is set at the job level (in
+  # azure-pipeline.mntr-template.yaml), not just on the test step. The job
+  # still runs and reports its own pass/fail per PR (visible in the Checks
+  # list), but it can never fail PR validation as a whole.
+  #
+  # Failure injection runs for real in this lane: AKKA_MNTR_TRANSPORT=artery
+  # also enables akka.remote.artery.advanced.test-mode (see
+  # src/core/Akka.Remote.TestKit/MultiNodeSpec.cs), which supports
+  # TestConductor Blackhole/PassThrough. Rate throttles are not supported by
+  # test-mode, so throttle-using specs (e.g. TestConductorSpec) stay pinned to
+  # classic remoting and fail fast on the RequireTestConductorTransport()
+  # check in src/core/Akka.Remote.TestKit/Conductor.cs. Treat everything else
+  # failing in this lane as a real Artery finding. If this lane ever needs a
+  # different test-project set than the classic job, the clean lever is a
+  # dedicated incrementalist config file (.incrementalist/mutliNodeOnly.json
+  # is the sanctioned mechanism for dictating which test projects run in CI).
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: "net_mntr_windows_artery"
+      displayName: ".NET Multi-Node Tests (Windows, Artery)"
+      vmImage: "windows-latest"
+      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults/multinode"
+      outputDirectory: "TestResults"
+      artifactName: "net_mntr_windows_artery-$(Build.BuildId)"
+      mntrFailuresDir: 'TestResults\\multinode'
+      mntrFailuresArtifactName: "net_mntr_artery_FAILED_windows-$(Build.BuildId)"
+      continueOnError: true
+      env:
+        AKKA_MNTR_TRANSPORT: artery
+
+  # Fourth lane, completing the classic/Artery x Windows/Linux MNTR matrix
+  # (only classic Windows is blocking). Same rationale and known/accepted
+  # noise as the Windows Artery lane above.
+  - template: azure-pipeline.mntr-template.yaml
+    parameters:
+      name: "net_mntr_linux_artery"
+      displayName: ".NET Multi-Node Tests (Linux, Artery)"
+      vmImage: "ubuntu-latest"
+      command: "dotnet incrementalist run --config .incrementalist/mutliNodeOnly.json --branch $(IncrementalistBaseBranch) -- test -c Release --no-build --framework net10.0 --logger:trx --results-directory TestResults/multinode"
+      outputDirectory: "TestResults"
+      artifactName: "net_mntr_linux_artery-$(Build.BuildId)"
+      mntrFailuresDir: 'TestResults/multinode'
+      mntrFailuresArtifactName: "net_mntr_artery_FAILED_linux-$(Build.BuildId)"
+      continueOnError: true
+      env:
+        AKKA_MNTR_TRANSPORT: artery
 
   - template: azure-pipeline.template.yaml
     parameters:

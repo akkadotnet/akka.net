@@ -5,13 +5,14 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+#nullable enable
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Akka.Actor;
 using Akka.Util;
-using Akka.Util.Internal;
 
 namespace Akka.Routing
 {
@@ -27,40 +28,37 @@ namespace Akka.Routing
     /// <typeparam name="T">The type of objects to store in the hash.</typeparam>
     public class ConsistentHash<T>
     {
-        private readonly SortedDictionary<int, T> _nodes;
+        // Ring state: parallel arrays sorted by ring slot, materialized once at construction.
+        // The SortedDictionary the ring is built in is deliberately NOT retained: after
+        // construction it was only ever read by IsEmpty and operator + / operator - (both served
+        // by the arrays), while its red-black-tree nodes (~56 bytes per ring point) dominated the
+        // ring's steady-state footprint - ~1.1 MB of dead weight at 20k ring points (#8293).
+        private readonly int[] _nodeHashRing;
+        private readonly T[] _nodeRing;
         private readonly int _virtualNodesFactor;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsistentHash{T}"/> class.
         /// </summary>
-        /// <param name="nodes">TBD</param>
-        /// <param name="virtualNodesFactor">TBD</param>
+        /// <param name="nodes">The ring content as a slot-to-node mapping sorted by slot. Used only to
+        /// materialize the internal lookup arrays; the dictionary itself is not retained, so mutating
+        /// it after construction does not affect this instance.</param>
+        /// <param name="virtualNodesFactor">The number of virtual nodes each node is expanded into on the ring.</param>
+        /// <exception cref="ArgumentNullException">
+        /// This exception is thrown if the given <paramref name="nodes"/> is <c>null</c>. The dictionary
+        /// is read once here, so a null reference would otherwise surface as a less obvious failure.
+        /// </exception>
         /// <exception cref="ArgumentException">
         /// This exception is thrown if the given <paramref name="virtualNodesFactor"/> is less than one.
         /// </exception>
         public ConsistentHash(SortedDictionary<int, T> nodes, int virtualNodesFactor)
         {
-            _nodes = nodes;
-
+            if (nodes is null) throw new ArgumentNullException(nameof(nodes));
             if (virtualNodesFactor < 1) throw new ArgumentException("virtualNodesFactor must be >= 1", nameof(virtualNodesFactor));
 
+            _nodeHashRing = nodes.Keys.ToArray();
+            _nodeRing = nodes.Values.ToArray();
             _virtualNodesFactor = virtualNodesFactor;
-        }
-
-        private (int[], T[])? _ring = null;
-        private (int[], T[])? RingTuple
-        {
-            get { return _ring ??= (_nodes.Keys.ToArray(), _nodes.Values.ToArray()); }
-            }
-
-        private int[] NodeHashRing
-        {
-            get { return RingTuple.Value.Item1; }
-        }
-
-        private T[] NodeRing
-        {
-            get { return RingTuple.Value.Item2; }
         }
 
         /// <summary>
@@ -95,7 +93,7 @@ namespace Akka.Routing
             else
             {
                 var j = Math.Abs(i + 1);
-                if (j >= NodeHashRing.Length) return 0; //after last, use first
+                if (j >= _nodeHashRing.Length) return 0; //after last, use first
                 else return j; //next node clockwise
             }
         }
@@ -112,7 +110,7 @@ namespace Akka.Routing
         {
             if (IsEmpty) throw new InvalidOperationException($"Can't get node for [{key}] from an empty node ring");
 
-            return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
+            return _nodeRing[Idx(Array.BinarySearch(_nodeHashRing, ConsistentHash.HashFor(key)))];
         }
 
         /// <summary>
@@ -127,7 +125,7 @@ namespace Akka.Routing
         {
             if (IsEmpty) throw new InvalidOperationException($"Can't get node for [{key}] from an empty node ring");
 
-            return NodeRing[Idx(Array.BinarySearch(NodeHashRing, ConsistentHash.HashFor(key)))];
+            return _nodeRing[Idx(Array.BinarySearch(_nodeHashRing, ConsistentHash.HashFor(key)))];
         }
 
         /// <summary>
@@ -135,7 +133,7 @@ namespace Akka.Routing
         /// </summary>
         public bool IsEmpty
         {
-            get { return !_nodes.Any(); }
+            get { return _nodeHashRing.Length == 0; }
         }
 
         /// <summary>
@@ -157,7 +155,7 @@ namespace Akka.Routing
             /// <summary>
             /// The actor paths used by this router during routee selection.
             /// </summary>
-            public string[] Paths { get; set; }
+            public string[] Paths { get; set; } = null!;
         }
 
         #region Operator overloads
@@ -173,9 +171,15 @@ namespace Akka.Routing
         /// <returns>A new instance of this hash ring with the given node added.</returns>
         public static ConsistentHash<T> operator +(ConsistentHash<T> hash, T node)
         {
-            var nodeHash = ConsistentHash.HashFor(node.ToString());
-            return new ConsistentHash<T>(hash._nodes.CopyAndAdd(Enumerable.Range(1, hash._virtualNodesFactor).Select(r => new KeyValuePair<int, T>(ConsistentHash.ConcatenateNodeHash(nodeHash, r), node))),
-                hash._virtualNodesFactor);
+            // Rebuild via Create from the existing nodes plus the new one. Create de-duplicates by
+            // ToString() (the ring's node identity), so this is byte-identical to
+            // ConsistentHash.Create(all nodes): collisions resolve in canonical order, and adding a
+            // node already present (by ToString) is a no-op rather than a duplicated vnode set (#8031).
+            // The ring values array repeats each node virtualNodesFactor times; Distinct()
+            // (EqualityComparer<T>.Default, which is reference equality for the ring's node types -
+            // they don't override Equals) collapses that back to N so Create sorts N nodes, not
+            // N*V - Create's ToString de-dup remains the correctness guarantee.
+            return ConsistentHash.Create(hash._nodeRing.Distinct().Append(node), hash._virtualNodesFactor);
         }
 
         /// <summary>
@@ -189,8 +193,18 @@ namespace Akka.Routing
         /// <returns>A new instance of this hash ring with the given node removed.</returns>
         public static ConsistentHash<T> operator -(ConsistentHash<T> hash, T node)
         {
-            var nodeHash = ConsistentHash.HashFor(node.ToString());
-            return new ConsistentHash<T>(hash._nodes.CopyAndRemove(Enumerable.Range(1, hash._virtualNodesFactor).Select(r => new KeyValuePair<int, T>(ConsistentHash.ConcatenateNodeHash(nodeHash, r), node))),
+            // Rebuild via Create from the existing nodes minus every entry whose ToString() matches
+            // the removed node. Rebuilding is required because Create may have relocated a colliding
+            // virtual node to a probed slot that a key-based delete would miss. Matching by ToString()
+            // (the ring's node identity) - rather than T.Equals - avoids dropping a different node
+            // that merely compares Equals-equal to the target (#8031).
+            var nodeKey = node!.ToString();
+            // Distinct() first (EqualityComparer<T>.Default, which is reference equality for the ring's
+            // node types - they don't override Equals - collapses the virtualNodesFactor repeats in the
+            // ring values array to N distinct nodes) so the ToString filter and Create's sort run
+            // over N, not N*V.
+            return ConsistentHash.Create(
+                hash._nodeRing.Distinct().Where(n => !string.Equals(n!.ToString(), nodeKey, StringComparison.Ordinal)),
                 hash._virtualNodesFactor);
         }
 
@@ -212,13 +226,46 @@ namespace Akka.Routing
         public static ConsistentHash<T> Create<T>(IEnumerable<T> nodes, int virtualNodesFactor)
         {
             var sortedDict = new SortedDictionary<int, T>();
-            foreach (var node in nodes)
+            // Build the ring in a canonical (node string) order so that every node in the
+            // cluster produces an identical ring. This matters because the collision handling
+            // below is order-sensitive: without a stable order two nodes could resolve the same
+            // 32-bit hash collision differently and disagree on routing. See #8031.
+            //
+            // Nodes are identified by ToString() - the same value their ring keys are derived from
+            // (the class requires ToString to be distinct per node). De-duplicating by it means a
+            // node supplied more than once contributes a single set of virtual nodes instead of
+            // having its duplicates probed into extra slots, which would skew routing toward it.
+            var seenNodes = new HashSet<string>(StringComparer.Ordinal);
+            // ToString() is the node's ring identity and is required to be non-null and distinct per
+            // node (see the type doc); the null-forgiving operators assert that contract rather than
+            // change behavior - a null ToString() already threw here (HashFor/HashSet.Add) before.
+            foreach (var entry in nodes.Select(n => (Node: n, Key: n!.ToString()!))
+                         .OrderBy(x => x.Key, StringComparer.Ordinal))
             {
-                var nodeHash = HashFor(node.ToString());
-                var vnodes = Enumerable.Range(1, virtualNodesFactor)
-                    .Select(x => ConcatenateNodeHash(nodeHash, x)).ToList();
-                foreach(var vnode in vnodes)
-                    sortedDict.Add(vnode, node);
+                if (!seenNodes.Add(entry.Key))
+                    continue;
+                var nodeHash = HashFor(entry.Key);
+                for (var vnode = 1; vnode <= virtualNodesFactor; vnode++)
+                {
+                    var key = ConcatenateNodeHash(nodeHash, vnode);
+                    // The ring key space is only 32 bits wide, so two virtual nodes can hash to the
+                    // same slot. Rather than throwing (which used to wedge the entire router until a
+                    // restart - #8031), relocate the loser. We re-hash it to a well-distributed slot
+                    // rather than taking the adjacent key+1: an adjacent slot would leave the relocated
+                    // virtual node a near-zero-width ring segment and starve that node of ~1/factor of
+                    // its traffic, whereas a re-hashed slot lands in a sparse region and keeps a
+                    // full-width segment, preserving the node's share of the ring. A short linear probe
+                    // from there guarantees termination in the (astronomically rare) event the
+                    // re-hashed slot is itself taken. The whole sequence is a pure function of the node
+                    // hash, so every cluster node builds an identical ring.
+                    if (sortedDict.ContainsKey(key))
+                    {
+                        key = ConcatenateNodeHash(nodeHash, unchecked(vnode + virtualNodesFactor));
+                        while (sortedDict.ContainsKey(key))
+                            key = unchecked(key + 1);
+                    }
+                    sortedDict.Add(key, entry.Node);
+                }
             }
 
             return new ConsistentHash<T>(sortedDict, virtualNodesFactor);
@@ -270,15 +317,15 @@ namespace Akka.Routing
             /// <summary>
             /// The resizer to use when dynamically allocating routees to the pool.
             /// </summary>
-             public Resizer Resizer { get; set; }
+             public Resizer Resizer { get; set; } = null!;
             /// <summary>
             /// The strategy to use when supervising the pool.
             /// </summary>
-             public SupervisorStrategy SupervisorStrategy { get; set; }
+             public SupervisorStrategy SupervisorStrategy { get; set; } = null!;
             /// <summary>
             /// The dispatcher to use when passing messages to the routees.
             /// </summary>
-             public string RouterDispatcher { get; set; }
+             public string RouterDispatcher { get; set; } = null!;
         }
 
         /// <summary>
@@ -287,7 +334,7 @@ namespace Akka.Routing
         /// </summary>
         /// <param name="obj">An arbitrary .NET object</param>
         /// <returns>The object encoded into bytes - in the case of custom classes, the hashcode may be used.</returns>
-        internal static object ToBytesOrObject(object obj)
+        internal static object ToBytesOrObject(object? obj)
         {
             switch (obj)
             {

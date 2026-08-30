@@ -5,10 +5,17 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Akka.IO;
-
 namespace Akka.Util
 {
+    /// <summary>
+    /// Byte ordering for multi-byte integer encoding.
+    /// </summary>
+    public enum ByteOrder
+    {
+        BigEndian,
+        LittleEndian
+    }
+
     public static class ByteHelpers
     {
         public static byte[] PutInt(this byte[] target, int x, int offset = 0, ByteOrder order = ByteOrder.BigEndian)

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TestJournalSpec.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -120,6 +120,34 @@ namespace Akka.Persistence.TestKit.Tests
 
             await _probe.ExpectMsgAsync("rejected");
         }
+
+        [Fact]
+        public async Task when_reject_on_type_is_set_matching_type_will_be_rejected()
+        {
+            var actor = ActorOf(() => new PersistActor(_probe));
+            Watch(actor);
+            await _probe.ExpectMsgAsync<RecoveryCompleted>();
+
+            await Journal.OnWrite.RejectOnType<SpecificMessage>();
+            actor.Tell(new PersistActor.WriteMessage(new SpecificMessage()), TestActor);
+
+            await _probe.ExpectMsgAsync("rejected");
+        }
+
+        [Fact]
+        public async Task when_reject_on_type_is_set_non_matching_type_will_succeed()
+        {
+            var actor = ActorOf(() => new PersistActor(_probe));
+            Watch(actor);
+            await _probe.ExpectMsgAsync<RecoveryCompleted>();
+
+            await Journal.OnWrite.RejectOnType<SpecificMessage>();
+            actor.Tell(new PersistActor.WriteMessage("write"), TestActor);
+
+            await _probe.ExpectMsgAsync("ack");
+        }
+
+        private class SpecificMessage { }
 
         [Fact]
         public async Task journal_must_reset_state_to_pass()

@@ -6,6 +6,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using Akka.Actor;
@@ -311,7 +312,7 @@ namespace Akka.Tests.Actor
         public void Validate_that_url_encoded_values_are_valid_element_parts(string element)
         {
             var urlEncode = System.Net.WebUtility.UrlEncode(element);
-            global::System.Diagnostics.Debug.WriteLine("Encoded \"{0}\" to \"{1}\"", element, urlEncode);
+            Debug.WriteLine("Encoded \"{0}\" to \"{1}\"", element, urlEncode);
             ActorPath.IsValidPathElement(urlEncode).ShouldBeTrue();
         }
     }

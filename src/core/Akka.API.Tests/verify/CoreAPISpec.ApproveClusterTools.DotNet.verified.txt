@@ -3,7 +3,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Tools.Tests.MultiNode")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("5cf8a8be-b634-473f-bb01-eba878746bd4")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Cluster.Tools.Client
 {
     public sealed class ClusterClient : Akka.Actor.ActorBase

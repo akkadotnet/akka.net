@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>$(NetFrameworkTestVersion);$(NetTestVersion)</TargetFrameworks>
+    <TargetFramework>$(NetTestVersion)</TargetFramework>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <IsPackable>false</IsPackable>
   </PropertyGroup>

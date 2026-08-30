@@ -1,0 +1,9 @@
+﻿case: collection-list-of-nested-objects
+message-type: ReadingListMessage
+manifest: coll-reading-list-v1
+serializer-id: 120105
+byte-count: 35
+
+0000  81 01 92 82 01 a3 73 2d  31 02 cb 3f f8 00 00 00  |......s-1..?....|
+0010  00 00 00 82 01 a3 73 2d  32 02 cb 40 04 00 00 00  |......s-2..@....|
+0020  00 00 00                                          |...|

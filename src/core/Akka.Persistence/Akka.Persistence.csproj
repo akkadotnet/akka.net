@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
     <Description>Persistence for Akka.NET actors. Allows actors to persist and recover their state in a database-agnostic fashion.</Description>
     <PackageTags>$(AkkaPackageTags);persistence;eventsource</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

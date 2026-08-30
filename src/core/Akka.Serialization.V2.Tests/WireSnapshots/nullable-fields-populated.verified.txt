@@ -1,0 +1,11 @@
+﻿case: nullable-fields-populated
+message-type: OptionalMessage
+manifest: optional-v1
+serializer-id: 120101
+byte-count: 77
+
+0000  87 01 aa 6f 70 74 69 6f  6e 61 6c 2d 31 02 2a 03  |...optional-1.*.|
+0010  c4 10 71 5b 05 78 7a 1e  20 4a 8e 52 71 2d b4 fd  |..q[.xz. J.Rq-..|
+0020  a4 57 04 92 cf 08 de c3  c7 53 80 14 00 01 05 01  |.W.......S......|
+0030  06 a5 6e 6f 74 65 73 07  82 01 a9 31 20 4d 61 69  |..notes....1 Mai|
+0040  6e 20 53 74 02 a7 53 65  61 74 74 6c 65           |n St..Seattle|

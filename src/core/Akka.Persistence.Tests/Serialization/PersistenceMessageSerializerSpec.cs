@@ -7,13 +7,18 @@
 
 using System;
 using System.Runtime.Serialization;
+using System.Text;
 using Akka.Actor;
 using Akka.Configuration;
 using Akka.Persistence.Fsm;
 using Akka.Persistence.Serialization;
 using Akka.TestKit;
+using Akka.Util;
 using FluentAssertions;
+using Google.Protobuf;
 using Xunit;
+using PersistentMessageProto = Akka.Persistence.Serialization.Proto.Msg.PersistentMessage;
+using PersistentPayloadProto = Akka.Persistence.Serialization.Proto.Msg.PersistentPayload;
 
 namespace Akka.Persistence.Tests.Serialization
 {
@@ -23,9 +28,11 @@ namespace Akka.Persistence.Tests.Serialization
             akka.actor {
               serializers {
                 my-payload = ""Akka.Persistence.Tests.Serialization.MyPayloadSerializer, Akka.Persistence.Tests""
+                my-v2-payload = ""Akka.Persistence.Tests.Serialization.MyV2PayloadSerializer, Akka.Persistence.Tests""
               }
               serialization-bindings {
                 ""Akka.Persistence.Tests.Serialization.MyPayload, Akka.Persistence.Tests"" = my-payload
+                ""Akka.Persistence.Tests.Serialization.MyV2Payload, Akka.Persistence.Tests"" = my-v2-payload
               }
             }";
 
@@ -51,7 +58,13 @@ namespace Akka.Persistence.Tests.Serialization
         {
             var p1 = new Persistent(new MyPayload("a"), sender: TestActor);
             var bytes = _serializer.ToBinary(p1);
-            var back = _serializer.FromBinary(bytes, null);
+            var serialized = PersistentMessageProto.Parser.ParseFrom(bytes);
+
+            serialized.Payload.SerializerId.Should().Be(77123);
+            serialized.Payload.PayloadManifest.ToStringUtf8().Should().Be(typeof(MyPayload).TypeQualifiedName());
+            serialized.Payload.Payload.ToByteArray().Should().Equal(Encoding.UTF8.GetBytes(".a"));
+
+            var back = _serializer.FromBinary(bytes, (Type)null!);
 
             back.Should().BeOfType<Persistent>();
             var persisted = (Persistent)back;
@@ -61,6 +74,40 @@ namespace Akka.Persistence.Tests.Serialization
 
             // Yes, the data isn't "a" but ".a.", the custom serializer added these dots.
             payload.Data.ShouldBe(".a."); 
+        }
+
+        [Fact]
+        public void MessageSerializer_should_serialize_native_v2_events()
+        {
+            var p1 = new Persistent(new MyV2Payload("a"), sender: TestActor);
+            var bytes = _serializer.ToBinary(p1);
+            var serialized = PersistentMessageProto.Parser.ParseFrom(bytes);
+
+            serialized.Payload.SerializerId.Should().Be(77124);
+            serialized.Payload.PayloadManifest.ToStringUtf8().Should().Be(MyV2PayloadSerializer.PayloadManifest);
+            serialized.Payload.Payload.ToByteArray().Should().Equal(Encoding.UTF8.GetBytes("a"));
+
+            var back = _serializer.FromBinary<Persistent>(bytes);
+
+            back.Payload.Should().Be(new MyV2Payload("a"));
+            back.Sender.Should().BeEquivalentTo(TestActor);
+        }
+
+        [Fact]
+        public void SnapshotSerializer_should_serialize_native_v2_snapshots()
+        {
+            var serializer = new PersistenceSnapshotSerializer(Sys.As<ExtendedActorSystem>());
+            var snapshot = new Akka.Persistence.Serialization.Snapshot(new MyV2Payload("snap"));
+            var bytes = serializer.ToBinary(snapshot);
+            var serialized = PersistentPayloadProto.Parser.ParseFrom(bytes);
+
+            serialized.SerializerId.Should().Be(77124);
+            serialized.PayloadManifest.ToStringUtf8().Should().Be(MyV2PayloadSerializer.PayloadManifest);
+            serialized.Payload.ToByteArray().Should().Equal(Encoding.UTF8.GetBytes("snap"));
+
+            var back = serializer.FromBinary<Akka.Persistence.Serialization.Snapshot>(bytes);
+
+            back.Data.Should().Be(new MyV2Payload("snap"));
         }
 
         [Fact]

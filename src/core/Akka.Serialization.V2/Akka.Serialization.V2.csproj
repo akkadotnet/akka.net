@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
+    <Description>MessagePack-backed source-generated serializers for Akka.NET SerializerV2.</Description>
+    <PackageTags>$(AkkaPackageTags);serialization;messagepack;source-generator</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Akka\Akka.csproj" />
+    <!--
+      Akka.Serialization.V2.Generators is a Roslyn incremental source generator (netstandard2.0,
+      IsPackable=false, so it never ships as its own NuGet package). Referencing it here with
+      ReferenceOutputAssembly="false" keeps it out of both the compile-time closure and the
+      packed dependency list; OutputItemType="Analyzer" flows its build output into the
+      @(Analyzer) item group so the target below can embed it into THIS package's
+      analyzers/dotnet/cs folder (see _AkkaSerializationV2PackGeneratorAnalyzer).
+    -->
+    <ProjectReference Include="..\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj"
+                       OutputItemType="Analyzer"
+                       ReferenceOutputAssembly="false"
+                       PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MessagePack" Version="$(MessagePackVersion)" />
+  </ItemGroup>
+
+  <!--
+    Ship the runtime lib and the source generator as ONE user-facing package. The generator dll
+    is packed under the well-known analyzers/dotnet/cs path, which NuGet/MSBuild auto-wires as a
+    C# analyzer/source generator for any project that references this package: no separate
+    generator package, and no manual wiring required on the consumer's side.
+  -->
+  <Target Name="_AkkaSerializationV2PackGeneratorAnalyzer" BeforeTargets="_GetPackageFiles">
+    <ItemGroup>
+      <None Include="@(Analyzer)"
+            Condition="'%(Filename)' == 'Akka.Serialization.V2.Generators'"
+            Pack="true"
+            PackagePath="analyzers/dotnet/cs"
+            Visible="false" />
+    </ItemGroup>
+  </Target>
+
+</Project>

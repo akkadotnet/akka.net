@@ -348,7 +348,7 @@ namespace Akka.Persistence.TCK.Journal
 
             // Test that JSON actually fail
             var serializer = Sys.Serialization.FindSerializerForType(typeof(NotSerializableEvent));
-            if (!(serializer is NewtonSoftJsonSerializer))
+            if (serializer is not NewtonSoftJsonSerializer)
             {
                 Output.WriteLine("[SKIP] This test only works with NewtonSoftJsonSerializer.");
                 return;

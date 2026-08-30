@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="StreamTcpDocTests.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -6,8 +6,10 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using Akka;
 using Akka.Streams;
@@ -15,7 +17,6 @@ using Akka.Streams.Dsl;
 using Akka.TestKit.Xunit;
 using Xunit;
 using Akka.Actor;
-using Akka.IO;
 using Akka.Util;
 using Tcp = Akka.Streams.Dsl.Tcp;
 using Akka.Configuration;
@@ -37,7 +38,7 @@ namespace DocsExamples.Streams
         {
             #region echo-server-simple-bind
             // define an incoming request processing logic
-            Flow<ByteString, ByteString, NotUsed> echo = Flow.Create<ByteString>();
+            Flow<ReadOnlySequence<byte>, ReadOnlySequence<byte>, NotUsed> echo = Flow.Create<ReadOnlySequence<byte>>();
 
             Tcp.ServerBinding binding = await Sys.TcpStream()
                 .BindAndHandle(echo, Materializer, "localhost", 9000);
@@ -60,14 +61,14 @@ namespace DocsExamples.Streams
             {
                 Console.WriteLine($"New connection from: {connection.RemoteAddress}");
 
-                var echo = Flow.Create<ByteString>()
+                var echo = Flow.Create<ReadOnlySequence<byte>>()
                     .Via(Framing.Delimiter(
-                        ByteString.FromString("\n"),
+                        Encoding.ASCII.GetBytes("\n").AsMemory(),
                         maximumFrameLength: 256,
                         allowTruncation: true))
-                    .Select(c => c.ToString())
+                    .Select(c => Encoding.ASCII.GetString(c.ToArray()))
                     .Select(c => c + "!!!\n")
-                    .Select(ByteString.FromString);
+                    .Select(s => new ReadOnlySequence<byte>(Encoding.ASCII.GetBytes(s).AsMemory()));
 
                 connection.HandleWith(echo, Materializer);
             }, Materializer);
@@ -83,7 +84,7 @@ namespace DocsExamples.Streams
             connections.RunForeach(connection =>
             {
                 #region close-incoming-connection
-                var closed = Flow.FromSinkAndSource(Sink.Cancelled<ByteString>(), Source.Empty<ByteString>());
+                var closed = Flow.FromSinkAndSource(Sink.Cancelled<ReadOnlySequence<byte>>(), Source.Empty<ReadOnlySequence<byte>>());
                 connection.HandleWith(closed, Materializer);
                 #endregion
             }, Materializer);
@@ -105,12 +106,12 @@ namespace DocsExamples.Streams
                     var welcomeMessage = $"Welcome to: {connection.LocalAddress}, you are: {connection.RemoteAddress}!";
                     var welcome = Source.Single(welcomeMessage);
 
-                    var serverLogic = Flow.Create<ByteString>()
+                    var serverLogic = Flow.Create<ReadOnlySequence<byte>>()
                         .Via(Framing.Delimiter(
-                            ByteString.FromString("\n"),
+                            Encoding.ASCII.GetBytes("\n").AsMemory(),
                             maximumFrameLength: 256,
                             allowTruncation: true))
-                        .Select(c => c.ToString())
+                        .Select(c => Encoding.ASCII.GetString(c.ToArray()))
                         .Select(command =>
                         {
                             serverProbe.Tell(command);
@@ -119,7 +120,7 @@ namespace DocsExamples.Streams
                         .Via(commandParser)
                         .Merge(welcome)
                         .Select(c => c + "\n")
-                        .Select(ByteString.FromString);
+                        .Select(s => new ReadOnlySequence<byte>(Encoding.ASCII.GetBytes(s).AsMemory()));
 
                     connection.HandleWith(serverLogic, Materializer);
                 }), Keep.Both)
@@ -141,14 +142,14 @@ namespace DocsExamples.Streams
 
                 var replParser = Flow.Create<string>().TakeWhile(c => c != "q")
                     .Concat(Source.Single("BYE"))
-                    .Select(elem => ByteString.FromString($"{elem}\n"));
+                    .Select(elem => new ReadOnlySequence<byte>(Encoding.ASCII.GetBytes($"{elem}\n").AsMemory()));
 
-                var repl = Flow.Create<ByteString>()
+                var repl = Flow.Create<ReadOnlySequence<byte>>()
                     .Via(Framing.Delimiter(
-                        ByteString.FromString("\n"),
+                        Encoding.ASCII.GetBytes("\n").AsMemory(),
                         maximumFrameLength: 256,
                         allowTruncation: true))
-                    .Select(c => c.ToString())
+                    .Select(c => Encoding.ASCII.GetString(c.ToArray()))
                     .Select(text =>
                     {
                         Output.WriteLine($"Server: {text}");

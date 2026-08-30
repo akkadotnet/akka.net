@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Configuration;
@@ -65,46 +64,46 @@ namespace Akka.Remote.Tests.MultiNode
         }
 
         [MultiNodeFact]
-        public void PiercingShouldKeepQuarantineSpecs()
+        public async Task PiercingShouldKeepQuarantineSpecs()
         {
-            While_probing_through_the_quarantine_remoting_must_not_lose_existing_quarantine_marker();
+            await While_probing_through_the_quarantine_remoting_must_not_lose_existing_quarantine_marker();
         }
 
-        public void While_probing_through_the_quarantine_remoting_must_not_lose_existing_quarantine_marker()
+        public async Task While_probing_through_the_quarantine_remoting_must_not_lose_existing_quarantine_marker()
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                EnterBarrier("actors-started");
+                await EnterBarrierAsync("actors-started");
 
                 // Communicate with second system
                 Sys.ActorSelection(Node(_config.Second) / "user" / "subject").Tell("getuid");
-                var uid = ExpectMsg<int>(TimeSpan.FromSeconds(10));
-                EnterBarrier("actor-identified");
+                var uid = await ExpectMsgAsync<long>(TimeSpan.FromSeconds(10));
+                await EnterBarrierAsync("actor-identified");
 
                 // Manually Quarantine the other system
                 RARP.For(Sys).Provider.Transport.Quarantine(Node(_config.Second).Address, uid);
 
                 // Quarantining is not immediate
-                Thread.Sleep(1000);
+                await Task.Delay(1000);
 
                 // Quarantine is up - Should not be able to communicate with remote system any more
                 for (var i = 1; i <= 4; i++)
                 {
                     Sys.ActorSelection(Node(_config.Second) / "user" / "subject").Tell("getuid");
 
-                    ExpectNoMsg(TimeSpan.FromSeconds(2));
+                    await ExpectNoMsgAsync(TimeSpan.FromSeconds(2));
                 }
 
-                EnterBarrier("quarantine-intact");
+                await EnterBarrierAsync("quarantine-intact");
 
             }, _config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 Sys.ActorOf<Subject>("subject");
-                EnterBarrier("actors-started");
-                EnterBarrier("actor-identified");
-                EnterBarrier("quarantine-intact");
+                await EnterBarrierAsync("actors-started");
+                await EnterBarrierAsync("actor-identified");
+                await EnterBarrierAsync("quarantine-intact");
             }, _config.Second);
         }
     }

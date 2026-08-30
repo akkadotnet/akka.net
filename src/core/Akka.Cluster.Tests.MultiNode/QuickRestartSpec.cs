@@ -35,6 +35,15 @@ namespace Akka.Cluster.Tests.MultiNode
             CommonConfig = DebugConfig(false)
                 .WithFallback(ConfigurationFactory.ParseString(@"
                     akka.cluster.auto-down-unreachable-after = off
+                    # Dilate every Within/AwaitAssert window in this spec uniformly. The
+                    # same-address rejoin each round is a multi-step convergence dance (leader
+                    # downs the old incarnation, removes it, the new incarnation's seed join
+                    # RETRIES on a 5-10s cadence, then Up + gossip to every observer), so the
+                    # role-replacement checks routinely need 5-15s on a healthy box and can
+                    # exhaust a hard 20s window on a loaded Windows CI agent. A prior de-flake
+                    # (#8183) widened a sibling window and the flake relocated here; scaling the
+                    # whole spec keeps every window proportionate instead of hand-tuning one.
+                    akka.test.timefactor = 2.0
                 "))
                 .WithFallback(MultiNodeClusterSpec.ClusterConfig());
         }
@@ -94,7 +103,11 @@ namespace Akka.Cluster.Tests.MultiNode
                             .WithFallback(Sys.Settings.Config))
                         : ActorSystem.Create(Sys.Name, ConfigurationFactory.ParseString($"akka.cluster.roles=[round-{round}]")
                             .WithFallback(
-                                $"akka.remote.dot-netty.tcp.port={Cluster.Get(restartingSystem).SelfAddress.Port}")
+                                // Pin the restarted system to the SAME wire address for BOTH transports - under
+                                // AKKA_MNTR_TRANSPORT=artery the classic dot-netty key is inert and the fresh
+                                // system would bind a random artery canonical.port instead.
+                                $"akka.remote.dot-netty.tcp.port={Cluster.Get(restartingSystem).SelfAddress.Port}\n" +
+                                $"akka.remote.artery.canonical.port={Cluster.Get(restartingSystem).SelfAddress.Port}")
                             .WithFallback(Sys.Settings.Config));
                     Log.Info("Restarting node has address {0}", Cluster.Get(restartingSystem).SelfUniqueAddress);
                     Cluster.Get(restartingSystem).JoinSeedNodes(_seedNodes.Value);

@@ -6,11 +6,11 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Event;
-using Akka.IO;
 using Akka.Streams.Actors;
 using Akka.Streams.IO;
 
@@ -19,7 +19,7 @@ namespace Akka.Streams.Implementation.IO
     /// <summary>
     /// INTERNAL API
     /// </summary>
-    internal sealed class InputStreamPublisher : Actors.ActorPublisher<ByteString>
+    internal sealed class InputStreamPublisher : Actors.ActorPublisher<ReadOnlySequence<byte>>
     {
         /// <summary>
         /// TBD
@@ -134,7 +134,9 @@ namespace Akka.Streams.Implementation.IO
                 {
                     _readBytesTotal += readBytes;
                     // emit immediately, as this is the only chance to do it before we might block again
-                    OnNext(ByteString.CopyFrom(_bytes, 0, readBytes));
+                    var copy = new byte[readBytes];
+                    Array.Copy(_bytes, 0, copy, 0, readBytes);
+                    OnNext(new ReadOnlySequence<byte>(copy));
                 }
             }
             catch (Exception ex)

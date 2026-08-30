@@ -198,7 +198,7 @@ namespace Akka.MultiNode.TestAdapter.NodeRunner
 
             return message =>
             {
-                var bytes = ByteString.FromString(message.ToString());
+                var bytes = System.Text.Encoding.UTF8.GetBytes(message.ToString()!);
                 connection.Tell(Tcp.Write.Create(bytes));
 
                 return true;

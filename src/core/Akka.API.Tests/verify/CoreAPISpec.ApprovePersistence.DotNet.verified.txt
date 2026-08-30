@@ -5,7 +5,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Persistence.Tests")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("e3bcba88-003c-4cda-8a60-f0c2553fe3c8")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Persistence
 {
     public abstract class AtLeastOnceDeliveryActor : Akka.Persistence.PersistentActor
@@ -1085,6 +1085,18 @@ namespace Akka.Persistence.Journal
             public readonly int HighestOrderingNumber;
             public CurrentPersistenceIds(System.Collections.Generic.IEnumerable<string> allPersistenceIds, int highestOrderingNumber) { }
         }
+        [System.Serializable]
+        public sealed class EventCount : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+        {
+            public EventCount(int count) { }
+            public int Count { get; }
+        }
+        [System.Serializable]
+        public sealed class EventCountFailure : Akka.Actor.INoSerializationVerificationNeeded, Akka.Event.IDeadLetterSuppression
+        {
+            public EventCountFailure(System.Exception cause) { }
+            public System.Exception Cause { get; }
+        }
         public sealed class EventReplayFailure
         {
             public EventReplayFailure(System.Exception cause) { }
@@ -1155,6 +1167,13 @@ namespace Akka.Persistence.Journal
             public SelectCurrentPersistenceIds(int offset, Akka.Actor.IActorRef replyTo) { }
             public int Offset { get; }
             public Akka.Actor.IActorRef ReplyTo { get; }
+        }
+        [System.Serializable]
+        public sealed class SelectEventCount : Akka.Actor.INoSerializationVerificationNeeded, Akka.Persistence.IJournalMessage, Akka.Persistence.IJournalRequest, Akka.Persistence.IPersistenceMessage
+        {
+            public SelectEventCount(string tag, Akka.Actor.IActorRef replyTo) { }
+            public Akka.Actor.IActorRef ReplyTo { get; }
+            public string Tag { get; }
         }
     }
     public class PersistencePluginProxy : Akka.Actor.ActorBase, Akka.Actor.IActorStash, Akka.Actor.IWithTimers, Akka.Actor.IWithUnboundedStash, Akka.Actor.IWithUnrestrictedStash, Akka.Dispatch.IRequiresMessageQueue<Akka.Dispatch.IUnboundedDequeBasedMessageQueueSemantics>

@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Description>Service Discovery for Akka.NET</Description>
-        <TargetFrameworks>$(NetStandardLibVersion);$(NetLibVersion)</TargetFrameworks>
+        <TargetFramework>$(NetStandardLibVersion)</TargetFramework>
         <PackageTags>$(AkkaPackageTags)</PackageTags>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>

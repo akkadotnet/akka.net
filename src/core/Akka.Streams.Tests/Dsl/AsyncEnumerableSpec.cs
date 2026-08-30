@@ -349,7 +349,74 @@ namespace Akka.Streams.Tests.Dsl
             // (Not guaranteed if process was already killed)
             await AwaitConditionAsync(() => enumerable.Disposed);
         }
-        
+
+        /// <summary>
+        /// Reproduction for https://github.com/akkadotnet/akka.net/issues/7381
+        /// </summary>
+        [Fact(DisplayName = "AsyncEnumerable Source should not dispose underlying async enumerator while MoveNextAsync is in flight")]
+        public async Task AsyncEnumerableSource_Does_Not_Dispose_Enumerator_While_MoveNextAsync_Is_In_Flight()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var enumerable = new BlockingMoveAsyncEnumerable();
+                var subscriber = this.CreateManualSubscriberProbe<int>();
+
+                Source.From(() => enumerable)
+                    .RunWith(Sink.FromSubscriber(subscriber), Materializer);
+
+                var subscription = await subscriber.ExpectSubscriptionAsync();
+                subscription.Request(1);
+                await enumerable.MoveStarted.WaitAsync(3.Seconds());
+
+                subscription.Cancel();
+
+                try
+                {
+                    var earlyViolation = await Task.WhenAny(
+                        enumerable.DisposeWhileMoveInFlight,
+                        Task.Delay(300.Milliseconds()));
+
+                    ReferenceEquals(earlyViolation, enumerable.DisposeWhileMoveInFlight).Should().BeFalse(
+                        "DisposeAsync must not be invoked until the in-flight MoveNextAsync has completed");
+                }
+                finally
+                {
+                    enumerable.CompleteMove();
+                }
+
+                await enumerable.Disposed.WaitAsync(3.Seconds());
+                enumerable.DisposeWhileMoveInFlight.IsCompleted.Should().BeFalse(
+                    "DisposeAsync must only run after MoveNextAsync has completed");
+            }, Materializer);
+        }
+
+        [Fact(DisplayName = "AsyncEnumerable Source should not dispose cancellation token source while MoveNextAsync is in flight")]
+        public async Task AsyncEnumerableSource_Does_Not_Dispose_CancellationTokenSource_While_MoveNextAsync_Is_In_Flight()
+        {
+            await this.AssertAllStagesStoppedAsync(async () =>
+            {
+                var enumerable = new RegisterAfterCancelAsyncEnumerable();
+                var subscriber = this.CreateManualSubscriberProbe<int>();
+
+                Source.From(() => enumerable)
+                    .RunWith(Sink.FromSubscriber(subscriber), Materializer);
+
+                var subscription = await subscriber.ExpectSubscriptionAsync();
+                subscription.Request(1);
+                await enumerable.MoveStarted.WaitAsync(3.Seconds());
+
+                subscription.Cancel();
+                await enumerable.CancellationObserved.WaitAsync(3.Seconds());
+
+                enumerable.CompleteMove();
+
+                await enumerable.MoveCompleted.WaitAsync(3.Seconds());
+                await enumerable.Disposed.WaitAsync(3.Seconds());
+                enumerable.RegisterAfterCancelFailed.IsCompleted.Should().BeFalse(
+                    "the stage-owned CancellationTokenSource must stay alive until MoveNextAsync has completed");
+            }, Materializer);
+        }
+
         private class TestAsyncEnumerable: IAsyncEnumerable<int>
         {
             private readonly AsyncEnumerator _enumerator;
@@ -403,6 +470,140 @@ namespace Akka.Streams.Tests.Dsl
                         return _current;
                     }
                 }
+            }
+        }
+
+        private sealed class BlockingMoveAsyncEnumerable : IAsyncEnumerable<int>
+        {
+            private readonly BlockingMoveAsyncEnumerator _enumerator = new();
+
+            public Task<NotUsed> MoveStarted => _enumerator.MoveStarted.Task;
+            public Task<NotUsed> DisposeWhileMoveInFlight => _enumerator.DisposeWhileMoveInFlight.Task;
+            public Task<NotUsed> Disposed => _enumerator.Disposed.Task;
+
+            public void CompleteMove()
+                => _enumerator.AllowMoveToComplete.TrySetResult(NotUsed.Instance);
+
+            public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken token = default)
+                => _enumerator;
+
+            private sealed class BlockingMoveAsyncEnumerator : IAsyncEnumerator<int>
+            {
+                private int _moveInFlight;
+
+                public readonly TaskCompletionSource<NotUsed> AllowMoveToComplete =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public readonly TaskCompletionSource<NotUsed> MoveStarted =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public readonly TaskCompletionSource<NotUsed> DisposeWhileMoveInFlight =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public readonly TaskCompletionSource<NotUsed> Disposed =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public async ValueTask<bool> MoveNextAsync()
+                {
+                    Interlocked.Exchange(ref _moveInFlight, 1);
+                    MoveStarted.TrySetResult(NotUsed.Instance);
+
+                    try
+                    {
+                        await AllowMoveToComplete.Task.ConfigureAwait(false);
+                        Current = 1;
+                        return true;
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _moveInFlight, 0);
+                    }
+                }
+
+                public ValueTask DisposeAsync()
+                {
+                    if (Volatile.Read(ref _moveInFlight) == 1)
+                        DisposeWhileMoveInFlight.TrySetResult(NotUsed.Instance);
+
+                    Disposed.TrySetResult(NotUsed.Instance);
+                    return new ValueTask();
+                }
+
+                public int Current { get; private set; }
+            }
+        }
+
+        private sealed class RegisterAfterCancelAsyncEnumerable : IAsyncEnumerable<int>
+        {
+            private readonly RegisterAfterCancelAsyncEnumerator _enumerator = new();
+
+            public Task<NotUsed> MoveStarted => _enumerator.MoveStarted.Task;
+            public Task<NotUsed> CancellationObserved => _enumerator.CancellationObserved.Task;
+            public Task<NotUsed> MoveCompleted => _enumerator.MoveCompleted.Task;
+            public Task<NotUsed> RegisterAfterCancelFailed => _enumerator.RegisterAfterCancelFailed.Task;
+            public Task<NotUsed> Disposed => _enumerator.Disposed.Task;
+
+            public void CompleteMove()
+                => _enumerator.AllowMoveToComplete.TrySetResult(NotUsed.Instance);
+
+            public IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken token = default)
+            {
+                _enumerator.Token = token;
+                return _enumerator;
+            }
+
+            private sealed class RegisterAfterCancelAsyncEnumerator : IAsyncEnumerator<int>
+            {
+                public CancellationToken Token { private get; set; }
+
+                public readonly TaskCompletionSource<NotUsed> AllowMoveToComplete =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public readonly TaskCompletionSource<NotUsed> MoveStarted =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public readonly TaskCompletionSource<NotUsed> CancellationObserved =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public readonly TaskCompletionSource<NotUsed> MoveCompleted =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public readonly TaskCompletionSource<NotUsed> RegisterAfterCancelFailed =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public readonly TaskCompletionSource<NotUsed> Disposed =
+                    new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+                public async ValueTask<bool> MoveNextAsync()
+                {
+                    using var cancellationRegistration = Token.Register(
+                        () => CancellationObserved.TrySetResult(NotUsed.Instance));
+
+                    MoveStarted.TrySetResult(NotUsed.Instance);
+
+                    await AllowMoveToComplete.Task.ConfigureAwait(false);
+
+                    try
+                    {
+                        _ = Token.WaitHandle;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        RegisterAfterCancelFailed.TrySetResult(NotUsed.Instance);
+                    }
+
+                    Current = 1;
+                    MoveCompleted.TrySetResult(NotUsed.Instance);
+                    return true;
+                }
+
+                public ValueTask DisposeAsync()
+                {
+                    Disposed.TrySetResult(NotUsed.Instance);
+                    return new ValueTask();
+                }
+
+                public int Current { get; private set; }
             }
         }
 

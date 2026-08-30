@@ -60,7 +60,7 @@ namespace Akka.Remote.Tests.MultiNode
     public class RemoteRestartedQuarantinedSpec : MultiNodeSpec
     {
         private readonly RemoteRestartedQuarantinedMultiNetSpec _config;
-        private readonly Func<RoleName, string, (int, IActorRef)> _identifyWithUid;
+        private readonly Func<RoleName, string, Task<(long, IActorRef)>> _identifyWithUid;
 
         public RemoteRestartedQuarantinedSpec()
             : this(new RemoteRestartedQuarantinedMultiNetSpec())
@@ -72,10 +72,10 @@ namespace Akka.Remote.Tests.MultiNode
         {
             _config = config;
 
-            _identifyWithUid = (role, actorName) =>
+            _identifyWithUid = async (role, actorName) =>
             {
                 Sys.ActorSelection(Node(role) / "user" / actorName).Tell("identify");
-                return ExpectMsg<(int, IActorRef)>();
+                return await ExpectMsgAsync<(long, IActorRef)>();
             };
         }
 
@@ -90,7 +90,15 @@ namespace Akka.Remote.Tests.MultiNode
             await RunOnAsync(async () =>
             {
                 var secondAddress = Node(_config.Second).Address;
-                var uid = _identifyWithUid(_config.Second, "subject").Item1;
+                var uid = (await _identifyWithUid(_config.Second, "subject")).Item1;
+
+                // This barrier separates the identify exchanges from the Quarantine() call.
+                //
+                // Without it, the identify that `second` sends can still be in flight when the
+                // quarantine starts. Inbound quarantine enforcement then makes `first` discard
+                // that identify, and `second` receives ThisActorSystemQuarantinedEvent in place of
+                // the uid and ref that it expects.
+                await EnterBarrierAsync("before-quarantined");
 
                 RARP.For(Sys).Provider.Transport.Quarantine(Node(_config.Second).Address, uid);
 
@@ -118,32 +126,63 @@ namespace Akka.Remote.Tests.MultiNode
                 var firstAddress = Node(_config.First).Address;
                 Sys.EventStream.Subscribe(TestActor, typeof (ThisActorSystemQuarantinedEvent));
 
-                var actorRef = _identifyWithUid(_config.First, "subject").Item2;
+                var actorRef = (await _identifyWithUid(_config.First, "subject")).Item2;
+
+                // See the matching barrier comment in `first`'s block.
+                await EnterBarrierAsync("before-quarantined");
 
                 await EnterBarrierAsync("quarantined");
 
-                // Check that quarantine is intact
-                await WithinAsync(TimeSpan.FromSeconds(30), async () =>
+                // Test that the quarantine is still in effect. The two transports tell the
+                // quarantined system about the quarantine in different ways, thus this test needs
+                // two procedures.
+                //
+                // Classic: the endpoint learns about the quarantine only when it tries to write.
+                // It then logs the warning "The remote system has quarantined this system". The
+                // test must therefore send a message to cause the write, and then look for that
+                // warning.
+                //
+                // Artery: the quarantining system sends an ArteryQuarantined control message to the
+                // peer. The peer publishes ThisActorSystemQuarantinedEvent when the message
+                // arrives. No send from the test is necessary, and there is no equivalent warning
+                // to look for.
+                if (Sys.Settings.Config.GetBoolean("akka.remote.artery.enabled", false))
                 {
-                    await AwaitAssertAsync(() =>
+                    await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
+                }
+                else
+                {
+                    await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                     {
-                        EventFilter.Warning(null, null, "The remote system has quarantined this system")
-                            .ExpectOne(TimeSpan.FromSeconds(10), () => actorRef.Tell("boo!"));
+                        await AwaitAssertAsync(() =>
+                        {
+                            EventFilter.Warning(null, null, "The remote system has quarantined this system")
+                                .ExpectOne(TimeSpan.FromSeconds(10), () => actorRef.Tell("boo!"));
+                        });
                     });
-                });
 
-                await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
+                    await ExpectMsgAsync<ThisActorSystemQuarantinedEvent>(TimeSpan.FromSeconds(10));
+                }
 
                 await EnterBarrierAsync("still-quarantined");
 
                 await Sys.WhenTerminated.WaitAsync(TimeSpan.FromSeconds(10));
 
+                // Set the host and port for both transports, so that the new system starts at the
+                // same address as the old one. Each transport ignores the keys of the other, thus
+                // it is safe to set both.
+                //
+                // The artery keys are necessary. MultiNodeSpec adds a config tier that sets
+                // artery.canonical.port to 0. Without an explicit port here, that tier wins, the
+                // new system binds a random port, and `first` cannot reach it.
                 var sb = new StringBuilder()
                     .AppendLine("akka.remote.retry-gate-closed-for = 0.5 s")
                     .AppendLine("akka.remote.dot-netty.tcp {")
                     .AppendLine("hostname = " + addr.Host)
                     .AppendLine("port = " + addr.Port)
-                    .AppendLine("}");
+                    .AppendLine("}")
+                    .AppendLine("akka.remote.artery.canonical.hostname = " + addr.Host)
+                    .AppendLine("akka.remote.artery.canonical.port = " + addr.Port);
                 var freshSystem = ActorSystem.Create(Sys.Name,
                     ConfigurationFactory.ParseString(sb.ToString()).WithFallback(Sys.Settings.Config));
 

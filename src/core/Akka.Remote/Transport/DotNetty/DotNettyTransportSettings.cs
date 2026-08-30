@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Akka.Actor;
 using Akka.Configuration;
@@ -18,6 +19,7 @@ using Akka.Dispatch;
 using Akka.Event;
 using Akka.Util;
 using DotNetty.Buffers;
+using ByteOrder = DotNetty.Buffers.ByteOrder;
 
 #nullable enable
 namespace Akka.Remote.Transport.DotNetty
@@ -113,10 +115,10 @@ namespace Akka.Remote.Transport.DotNetty
     ///     Used for performance-tuning the DotNetty channels to maximize I/O performance.
     /// </param>
     internal sealed record DotNettyTransportSettings(
-        TransportMode TransportMode, 
+        TransportMode TransportMode,
         bool EnableSsl,
         TimeSpan ConnectTimeout,
-        string Hostname, 
+        string Hostname,
         string PublicHostname,
         int Port,
         int? PublicPort,
@@ -131,7 +133,7 @@ namespace Akka.Remote.Transport.DotNetty
         int Backlog,
         bool EnforceIpFamily,
         int? ReceiveBufferSize,
-        int? SendBufferSize, 
+        int? SendBufferSize,
         int? WriteBufferHighWaterMark,
         int? WriteBufferLowWaterMark,
         bool BackwardsCompatibilityModeEnabled,
@@ -192,7 +194,7 @@ namespace Akka.Remote.Transport.DotNetty
 
             var transportMode = config.GetString("transport-protocol", "tcp").ToLower();
             var host = config.GetString("hostname");
-            if (string.IsNullOrWhiteSpace(host)) 
+            if (string.IsNullOrWhiteSpace(host))
                 host = IPAddress.Any.ToString();
 
             var publicHost = config.GetString("public-hostname");
@@ -256,7 +258,7 @@ namespace Akka.Remote.Transport.DotNetty
 
         internal DotNettyTransportSettings Validate()
         {
-            if (MaxFrameSize < 32000) 
+            if (MaxFrameSize < 32000)
                 throw new ArgumentException("maximum-frame-size must be at least 32000 bytes", nameof(MaxFrameSize));
 
             return this;
@@ -366,7 +368,8 @@ namespace Akka.Remote.Transport.DotNetty
         public readonly bool RequireMutualAuthentication;
 
         /// <summary>
-        /// When true, enables traditional TLS hostname validation (certificate CN/SAN must match target hostname).
+        /// When true, enables traditional outbound TLS hostname validation
+        /// (the server certificate CN/SAN must match the connection target hostname).
         /// When false, only validates certificate chain against CA, ignores hostname mismatches.
         /// Default is false for backward compatibility and to support mutual TLS scenarios with per-node certificates,
         /// IP-based connections, or dynamic service discovery.
@@ -564,10 +567,13 @@ namespace Akka.Remote.Transport.DotNetty
         }
 
         /// <summary>
-        /// Validate certificate hostname (CN/SAN) matches expected hostname.
-        /// Use for: Per-node certificates, FQDN-based identity.
-        /// Applies bidirectionally on both client and server.
+        /// Without an explicit hostname, validates the outbound server certificate using the hostname result
+        /// supplied by <see cref="SslStream"/>. When <paramref name="expectedHostname"/> is supplied, compares
+        /// that name directly against the certificate CN/SAN.
+        /// This helper does not infer a hostname for inbound client certificates.
         /// </summary>
+        /// <param name="expectedHostname">Optional hostname to compare directly against the certificate.</param>
+        /// <param name="log">Optional logger for validation failures.</param>
         public static CertificateValidationCallback ValidateHostname(
             string? expectedHostname = null,
             ILoggingAdapter? log = null)
@@ -582,15 +588,37 @@ namespace Akka.Remote.Transport.DotNetty
                     return false;
                 }
 
-                var hostname = expectedHostname ?? peer;
+                if (expectedHostname == null)
+                {
+                    if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) == 0)
+                        return true;
 
-                if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) == 0) return true;
-                var cn = cert.GetNameInfo(X509NameType.DnsName, false);
+                    var certificateName = cert.GetNameInfo(X509NameType.DnsName, false);
+                    (log ?? nonClosureLog).Error(
+                        "Hostname validation failed for {0}: certificate name is '{1}'",
+                        peer, certificateName);
+                    return false;
+                }
+
+                try
+                {
+                    if (cert.MatchesHostname(expectedHostname))
+                        return true;
+                }
+                catch (Exception ex) when (ex is ArgumentException or CryptographicException)
+                {
+                    (log ?? nonClosureLog).Error(
+                        ex,
+                        "Hostname validation failed for {0}: unable to validate expected hostname '{1}'",
+                        peer, expectedHostname);
+                    return false;
+                }
+
+                var name = cert.GetNameInfo(X509NameType.DnsName, false);
                 (log ?? nonClosureLog).Error(
-                    "Hostname validation failed for {0}: expected '{1}', certificate CN is '{2}'",
-                    peer, hostname, cn);
+                    "Hostname validation failed for {0}: expected '{1}', certificate name is '{2}'",
+                    peer, expectedHostname, name);
                 return false;
-
             };
         }
 

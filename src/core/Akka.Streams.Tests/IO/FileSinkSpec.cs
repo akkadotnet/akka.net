@@ -6,13 +6,14 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
-using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Implementation;
 using Akka.Streams.Implementation.IO;
@@ -31,7 +32,7 @@ namespace Akka.Streams.Tests.IO
     {
         private readonly ActorMaterializer _materializer;
         private readonly List<string> _testLines = new();
-        private readonly List<ByteString> _testByteStrings;
+        private readonly List<ReadOnlySequence<byte>> _testByteStrings;
         private readonly TimeSpan _expectTimeout = TimeSpan.FromSeconds(10);
 
         public FileSinkSpec(ITestOutputHelper helper) : base(Utils.UnboundedMailboxConfig, helper)
@@ -51,7 +52,7 @@ namespace Akka.Streams.Tests.IO
                 _testLines.Add(line);
             }
 
-            _testByteStrings = _testLines.Select(ByteString.FromString).ToList();
+            _testByteStrings = _testLines.Select(s => new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(s))).ToList();
         }
 
         [Fact]
@@ -101,7 +102,7 @@ namespace Akka.Streams.Tests.IO
                 await TargetFileAsync(async f =>
                 {
                     Task<IOResult> Write(IEnumerable<string> lines) => Source.From(lines)
-                        .Select(ByteString.FromString)
+                        .Select(s => new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(s)))
                         .RunWith(FileIO.ToFile(f, FileMode.OpenOrCreate), _materializer);
 
                     var completion1 = Write(_testLines);
@@ -134,7 +135,7 @@ namespace Akka.Streams.Tests.IO
                 await TargetFileAsync(async f =>
                 {
                     Task<IOResult> Write(List<string> lines) =>
-                        Source.From(lines).Select(ByteString.FromString)
+                        Source.From(lines).Select(s => new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(s)))
                             .RunWith(FileIO.ToFile(f), _materializer);
 
                     var task1 = Write(_testLines);
@@ -161,7 +162,7 @@ namespace Akka.Streams.Tests.IO
                 await TargetFileAsync(async f =>
                 {
                     Task<IOResult> Write(List<string> lines) => Source.From(lines)
-                        .Select(ByteString.FromString)
+                        .Select(s => new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(s)))
                         .RunWith(FileIO.ToFile(f, fileMode: FileMode.Append), _materializer);
 
                     var completion1 = Write(_testLines);
@@ -205,8 +206,8 @@ namespace Akka.Streams.Tests.IO
                         new string('d', 1000) + "\n",
                     };
 
-                    var commonByteString = ByteString.FromString(testLinesCommon.Join("")).Compact();
-                    var startPosition = commonByteString.Count;
+                    var commonBytes = Encoding.UTF8.GetBytes(testLinesCommon.Join(""));
+                    var startPosition = commonBytes.Length;
 
                     var testLinesPart2 = new List<string>()
                     {
@@ -215,7 +216,7 @@ namespace Akka.Streams.Tests.IO
                     };
 
                     Task<IOResult> Write(List<string> lines, long pos) => Source.From(lines)
-                        .Select(ByteString.FromString)
+                        .Select(s => new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(s)))
                         .RunWith(
                             FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: pos),
                             _materializer);
@@ -337,7 +338,7 @@ namespace Akka.Streams.Tests.IO
                 var completion = Source.From(_testByteStrings)
                     .Select(bytes =>
                     {
-                        if (bytes.Contains(Convert.ToByte('b'))) throw new TestException("bees!");
+                        if (Array.IndexOf(bytes.ToArray(), Convert.ToByte('b')) >= 0) throw new TestException("bees!");
                         return bytes;
                     })
                     .RunWith(FileIO.ToFile(f), _materializer);
@@ -354,7 +355,7 @@ namespace Akka.Streams.Tests.IO
         {
             await TargetFileAsync(async _ =>
             {
-                var completion = Source.Single(ByteString.FromString("42"))
+                var completion = Source.Single(new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes("42")))
                     .RunWith(FileIO.ToFile(new FileInfo("I-hope-this-file-doesnt-exist.txt"), FileMode.Open), _materializer);
 
                 await AssertThrowsAsync<FileNotFoundException>(() => completion).WaitAsync(RemainingOrDefault);
@@ -369,7 +370,7 @@ namespace Akka.Streams.Tests.IO
                 await TargetFileAsync(async f => 
                 {
                     var (actor, task) = Source.ActorRef<string>(64, OverflowStrategy.DropNew)
-                        .Select(ByteString.FromString)
+                        .Select(s => new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(s)))
                         .ToMaterialized(
                             FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: 0, autoFlush:true), 
                             Keep.Both)
@@ -410,7 +411,7 @@ namespace Akka.Streams.Tests.IO
                 {
                     var flusher = new FlushSignaler();
                     var (actor, task) = Source.ActorRef<string>(64, OverflowStrategy.DropNew)
-                        .Select(ByteString.FromString)
+                        .Select(s => new ReadOnlySequence<byte>(Encoding.UTF8.GetBytes(s)))
                         .ToMaterialized(
                             FileIO.ToFile(f, fileMode: FileMode.OpenOrCreate, startPosition: 0, flushSignaler:flusher), 
                             (a, t) => (a, t))

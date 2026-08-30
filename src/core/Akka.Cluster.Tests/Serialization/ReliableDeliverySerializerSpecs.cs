@@ -8,13 +8,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Text;
 using Akka.Actor;
 using Akka.Cluster.Configuration;
 using Akka.Cluster.Serialization;
 using Akka.Delivery;
 using Akka.Delivery.Internal;
 using Akka.Event;
-using Akka.IO;
 using Akka.TestKit;
 using Akka.TestKit.TestActors;
 using FluentAssertions;
@@ -39,52 +39,52 @@ public class ReliableDeliverySerializerSpecs : AkkaSpec
 
     public static IEnumerable<object[]> ReliableDeliveryMsgs()
     {
-        yield return new object[]
-        {
+        yield return
+        [
             "SequencedMessage-1",
             new ConsumerController.SequencedMessage<string>("prod-1", 17L, "msg17", false, false)
-        };
-        yield return new object[]
-        {
+        ];
+        yield return
+        [
             "SequencedMessage-2", new ConsumerController.SequencedMessage<string>("prod-1", 1L, "msg01", true, true)
-        };
-        yield return new object[] { "Ack", new ProducerController.Ack(5L) };
-        yield return new object[] { "Request", new ProducerController.Request(5L, 25L, true, true) };
-        yield return new object[] { "Resend", new ProducerController.Resend(5L) };
-        yield return new object[]
-        {
+        ];
+        yield return ["Ack", new ProducerController.Ack(5L)];
+        yield return ["Request", new ProducerController.Request(5L, 25L, true, true)];
+        yield return ["Resend", new ProducerController.Resend(5L)];
+        yield return
+        [
             "RegisterConsumer", new ProducerController.RegisterConsumer<(int, double)>(ActorRefs
                 .Nobody) // using a nested tuple type to test the serializer's reflection capabilities
-        };
-        yield return new object[]
-        {
+        ];
+        yield return
+        [
             "DurableProducerQueue.MessageSent-1",
             new DurableProducerQueue.MessageSent<string>(3L, "msg03", false, "", Timestamp)
-        };
-        yield return new object[]
-        {
+        ];
+        yield return
+        [
             "DurableProducerQueue.MessageSent-2",
             new DurableProducerQueue.MessageSent<string>(3L, "msg03", true, "q1", Timestamp)
-        };
-        yield return new object[]
-        {
+        ];
+        yield return
+        [
             "DurableProducerQueue.Confirmed", new DurableProducerQueue.Confirmed(3L, "q2", Timestamp)
-        };
-        yield return new object[]
-        {
+        ];
+        yield return
+        [
             "DurableProducerQueue.State-1", new DurableProducerQueue.State<string>(3L, 2L,
                 ImmutableDictionary<string, (long, long)>.Empty,
                 ImmutableList<DurableProducerQueue.MessageSent<string>>.Empty)
-        };
-        yield return new object[]
-        {
+        ];
+        yield return
+        [
             "DurableProducerQueue.State-2", new DurableProducerQueue.State<string>(3L, 2L,
                 ImmutableDictionary<string, (long, long)>.Empty.Add("", (2L, Timestamp)),
                 ImmutableList<DurableProducerQueue.MessageSent<string>>.Empty.Add(
                     new DurableProducerQueue.MessageSent<string>(3L, "msg03", false, "", Timestamp)))
-        };
-        yield return new object[]
-        {
+        ];
+        yield return
+        [
             "DurableProducerQueue.State-3", new DurableProducerQueue.State<string>(17L, 12L,
                 ImmutableDictionary<string, (long, long)>.Empty.Add("q1", (5L, Timestamp)).Add("q2", (7L, Timestamp))
                     .Add("q3", (12L, Timestamp))
@@ -93,27 +93,27 @@ public class ReliableDeliverySerializerSpecs : AkkaSpec
                     new DurableProducerQueue.MessageSent<string>(15L, "msg15", true, "q4", Timestamp))
                     .Add(
                         new DurableProducerQueue.MessageSent<string>(16L, "msg16", true, "q4", Timestamp)))
-        };
-        yield return new object[]
-        {
+        ];
+        yield return
+        [
             "DurableProducerQueue.Cleanup",
             new DurableProducerQueue.Cleanup(new[] { "q1", "q2", "q3" }.ToImmutableHashSet())
-        };
-        yield return new object[]
-        {
+        ];
+        yield return
+        [
             "SequencedMessage-chunked-1",
-            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L, new ChunkedMessage(ByteString.FromString("abc"), true, true, 20, ""), true, true, ActorRefs.Nobody)
-        };
-        yield return new object[]
-        {
+            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L, new ChunkedMessage("abc"u8.ToArray().AsMemory(), true, true, 20, ""), true, true, ActorRefs.Nobody)
+        ];
+        yield return
+        [
             "SequencedMessage-chunked-2",
-            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L, new ChunkedMessage(ByteString.FromBytes(new byte[]{ 1,2,3 }), true, false, 123456, "A"), false, false, ActorRefs.Nobody)
-        };
-        yield return new object[]
-        {
+            ConsumerController.SequencedMessage<string>.FromChunkedMessage("prod-1", 1L, new ChunkedMessage(new byte[]{ 1,2,3 }.AsMemory(), true, false, 123456, "A"), false, false, ActorRefs.Nobody)
+        ];
+        yield return
+        [
             "DurableProducerQueue.MessageSent-chunked",
-            DurableProducerQueue.MessageSent<string>.FromChunked(3L, new ChunkedMessage(ByteString.FromString("abc"), true, true, 20, ""), false, "", Timestamp)
-        };
+            DurableProducerQueue.MessageSent<string>.FromChunked(3L, new ChunkedMessage("abc"u8.ToArray().AsMemory(), true, true, 20, ""), false, "", Timestamp)
+        ];
     }
 
     [Theory]

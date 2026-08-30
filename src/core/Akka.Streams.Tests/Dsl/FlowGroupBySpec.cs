@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
-using Akka.IO;
 using Akka.Streams.Dsl;
 using Akka.Streams.Dsl.Internal;
 using Akka.Streams.Implementation;
@@ -445,15 +444,15 @@ namespace Akka.Streams.Tests.Dsl
         {
             await this.AssertAllStagesStoppedAsync(async () =>
             {
-                var publisherProbe = this.CreateManualPublisherProbe<ByteString>();
+                var publisherProbe = this.CreateManualPublisherProbe<ReadOnlyMemory<byte>>();
                 var subscriber = this.CreateManualSubscriberProbe<IEnumerable<byte>>();
 
                 var firstGroup = (Source<IEnumerable<byte>, NotUsed>)Source.FromPublisher(publisherProbe)
-                    .GroupBy(256, element => element[0])
-                    .Select(b => b.Reverse())
+                    .GroupBy(256, element => element.Span[0])
+                    .Select(b => (IEnumerable<byte>)b.ToArray().Reverse().ToArray())
                     .MergeSubstreams();
                 var secondGroup = (Source<IEnumerable<byte>, NotUsed>)firstGroup.GroupBy(256, bytes => bytes.First())
-                    .Select(b => b.Reverse())
+                    .Select(b => (IEnumerable<byte>)b.Reverse().ToArray())
                     .MergeSubstreams();
                 var publisher = secondGroup.RunWith(Sink.AsPublisher<IEnumerable<byte>>(false), Materializer);
                 publisher.Subscribe(subscriber);
@@ -467,7 +466,7 @@ namespace Akka.Streams.Tests.Dsl
                     var byteString = RandomByteString(10);
                     await upstreamSubscription.ExpectRequestAsync();
                     upstreamSubscription.SendNext(byteString);
-                    (await subscriber.ExpectNextAsync()).Should().BeEquivalentTo(byteString);
+                    (await subscriber.ExpectNextAsync()).Should().BeEquivalentTo(byteString.ToArray());
                 }
 
                 upstreamSubscription.SendComplete();
@@ -682,16 +681,16 @@ namespace Akka.Streams.Tests.Dsl
                 };
                 Enumerable.Range(0, 100)
                     .ToList()
-                    .ForEach(_ => props.Probes.Add(new TaskCompletionSource<TestSubscriber.Probe<ByteString>>()));
+                    .ForEach(_ => props.Probes.Add(new TaskCompletionSource<TestSubscriber.Probe<ReadOnlyMemory<byte>>>()));
 
                 var map = new Dictionary<int, SubFlowState>();
 
-                var publisherProbe = this.CreateManualPublisherProbe<ByteString>();
-                var probeShape = new SinkShape<ByteString>(new Inlet<ByteString>("ProbeSink.in"));
+                var publisherProbe = this.CreateManualPublisherProbe<ReadOnlyMemory<byte>>();
+                var probeShape = new SinkShape<ReadOnlyMemory<byte>>(new Inlet<ReadOnlyMemory<byte>>("ProbeSink.in"));
                 var probeSink = new ProbeSink(probeShape, props, Attributes.None);
                 Source.FromPublisher(publisherProbe)
-                    .GroupBy(100, element => Math.Abs(element[0] % 100))
-                    .To(new Sink<ByteString, TestSubscriber.Probe<ByteString>>(probeSink))
+                    .GroupBy(100, element => Math.Abs(element.Span[0] % 100))
+                    .To(new Sink<ReadOnlyMemory<byte>, TestSubscriber.Probe<ReadOnlyMemory<byte>>>(probeSink))
                     .Run(materializer);
 
                 var upstreamSubscription = await publisherProbe.ExpectSubscriptionAsync();
@@ -699,7 +698,7 @@ namespace Akka.Streams.Tests.Dsl
                 foreach (var _ in Enumerable.Range(1, 400))
                 {
                     var byteString = RandomByteString(10);
-                    var index = Math.Abs(byteString[0] % 100);
+                    var index = Math.Abs(byteString.Span[0] % 100);
 
                     await upstreamSubscription.ExpectRequestAsync();
                     upstreamSubscription.SendNext(byteString);
@@ -716,7 +715,7 @@ namespace Akka.Streams.Tests.Dsl
                         {
                             if (props.BlockingNextElement == null)
                             {
-                                (await state.Probe.ExpectNextAsync()).Should().BeEquivalentTo(byteString);
+                                (await state.Probe.ExpectNextAsync()).Span.SequenceEqual(byteString.Span).Should().BeTrue();
                                 map[index] = new SubFlowState(state.Probe, false, null);
                                 await RandomDemandAsync(map, props);
                             }
@@ -777,34 +776,34 @@ namespace Akka.Streams.Tests.Dsl
                 });
         }
 
-        private static ByteString RandomByteString(int size)
+        private static ReadOnlyMemory<byte> RandomByteString(int size)
         {
             var a = new byte[size];
             ThreadLocalRandom.Current.NextBytes(a);
-            return ByteString.FromBytes(a);
+            return a.AsMemory();
         }
 
         private sealed class SubFlowState
         {
-            public SubFlowState(TestSubscriber.Probe<ByteString> probe, bool hasDemand, ByteString firstElement)
+            public SubFlowState(TestSubscriber.Probe<ReadOnlyMemory<byte>> probe, bool hasDemand, ReadOnlyMemory<byte>? firstElement)
             {
                 Probe = probe;
                 HasDemand = hasDemand;
                 FirstElement = firstElement;
             }
 
-            public TestSubscriber.Probe<ByteString> Probe { get; }
+            public TestSubscriber.Probe<ReadOnlyMemory<byte>> Probe { get; }
 
             public bool HasDemand { get; }
 
-            public ByteString FirstElement { get; }
+            public ReadOnlyMemory<byte>? FirstElement { get; }
         }
 
-        private sealed class ProbeSink : SinkModule<ByteString, TestSubscriber.Probe<ByteString>>
+        private sealed class ProbeSink : SinkModule<ReadOnlyMemory<byte>, TestSubscriber.Probe<ReadOnlyMemory<byte>>>
         {
             private readonly RandomDemandProperties _properties;
 
-            public ProbeSink(SinkShape<ByteString> shape, RandomDemandProperties properties, Attributes attributes) : base(shape)
+            public ProbeSink(SinkShape<ReadOnlyMemory<byte>> shape, RandomDemandProperties properties, Attributes attributes) : base(shape)
             {
                 _properties = properties;
                 Attributes = attributes;
@@ -817,15 +816,15 @@ namespace Akka.Streams.Tests.Dsl
                 return new ProbeSink(AmendShape(attributes), _properties, attributes);
             }
 
-            protected override SinkModule<ByteString, TestSubscriber.Probe<ByteString>> NewInstance(SinkShape<ByteString> shape)
+            protected override SinkModule<ReadOnlyMemory<byte>, TestSubscriber.Probe<ReadOnlyMemory<byte>>> NewInstance(SinkShape<ReadOnlyMemory<byte>> shape)
             {
                 return new ProbeSink(shape, _properties, Attributes);
             }
 
-            public override object Create(MaterializationContext context, out TestSubscriber.Probe<ByteString> materializer)
+            public override object Create(MaterializationContext context, out TestSubscriber.Probe<ReadOnlyMemory<byte>> materializer)
             {
                 var promise = _properties.Probes[_properties.ProbesWriterTop];
-                var probe = TestSubscriber.CreateSubscriberProbe<ByteString>(_properties.Kit);
+                var probe = TestSubscriber.CreateSubscriberProbe<ReadOnlyMemory<byte>>(_properties.Kit);
                 promise.SetResult(probe);
                 _properties.ProbesWriterTop++;
                 materializer = probe;
@@ -841,9 +840,9 @@ namespace Akka.Streams.Tests.Dsl
 
             public int ProbesReaderTop { get; set; }
 
-            public List<TaskCompletionSource<TestSubscriber.Probe<ByteString>>> Probes { get; } = new(100);
+            public List<TaskCompletionSource<TestSubscriber.Probe<ReadOnlyMemory<byte>>>> Probes { get; } = new(100);
 
-            public ByteString BlockingNextElement { get; set; }
+            public ReadOnlyMemory<byte>? BlockingNextElement { get; set; }
         }
 
         private async Task RandomDemandAsync(Dictionary<int, SubFlowState> map, RandomDemandProperties props)
@@ -863,12 +862,12 @@ namespace Akka.Streams.Tests.Dsl
                     // pushing next element from upstream 
                     if (state.FirstElement != null)
                     {
-                        (await state.Probe.ExpectNextAsync()).Should().BeEquivalentTo(state.FirstElement);
+                        (await state.Probe.ExpectNextAsync()).Span.SequenceEqual(state.FirstElement.Value.Span).Should().BeTrue();
                         map[key] = new SubFlowState(state.Probe, false, null);
                     }
-                    else if (props.BlockingNextElement != null && Math.Abs(props.BlockingNextElement[0] % 100) == key)
+                    else if (props.BlockingNextElement != null && Math.Abs(props.BlockingNextElement.Value.Span[0] % 100) == key)
                     {
-                        (await state.Probe.ExpectNextAsync()).Should().BeEquivalentTo(props.BlockingNextElement);
+                        (await state.Probe.ExpectNextAsync()).Span.SequenceEqual(props.BlockingNextElement.Value.Span).Should().BeTrue();
                         props.BlockingNextElement = null;
                         map[key] = new SubFlowState(state.Probe, false, null);
                     }

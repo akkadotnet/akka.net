@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TcpConnection.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -10,8 +10,11 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.IO.Pipelines;
 using System.Linq;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Dispatch;
 using Akka.Event;
@@ -23,106 +26,170 @@ namespace Akka.IO
 {
     using static Akka.IO.Tcp;
 
-    // A **green‑field** rewrite of the connection actor, distilled to
-    //   • 4 stable phases (Connecting ▸ AwaitRegistration ▸ Open ▸ HalfOpen)
-    //   • 8 booleans that fully describe the transient aspects of the socket.
-    //   • single immutable record `ConnState` passed by value.
-    //   • all close logic in one method (TryStop).
-    //
-    //  ┌───────────────────────── ASCII *phase* diagram ─────────────────────────┐
+    //  ┌──────────────────────── ASCII *phase* diagram ─────────────────────────┐
     //  │                                                                         │
-    //  │                (socket.ConnectAsync)                                    │
     //  │     +-----------+   Connected   +---------------+                       │
-    //  │     |Connecting |──────────────►|AwaitReg       |──Register────────────+│
-    //  │     +-----------+               +-------┬-------+                       │
-    //  │                                             │                           │
-    //  │                       writes/reads          ▼                           │
-    //  │                                        +-----------+  Close  +------+   │
-    //  │                                        |   Open    |────────►|Closed|   │
-    //  │                                        +----┬------+         +------+   │
-    //  │                                             │ ConfirmedClose            │
-    //  │                                             ▼                           │
-    //  │                                        +-----------+  FIN↑  +------+   │
-    //  │                                        | HalfOpen  |────────►|Closed|   │
-    //  │                                        +-----------+         +------+   │
+    //  │     |Connecting |──────────────►|AwaitReg       |──Register──────────┐  │
+    //  │     +-----------+               +---------------+                    │  │
+    //  │                                                                      ▼  │
+    //  │                          +------------------+   PeerClosed   +-----+    │
+    //  │                          |       Open       |───keepOpen────►| EOF |    │
+    //  │                          +-------┬----------+                +--┬--+    │
+    //  │                                  │ Close / ConfirmedClose       │       │
+    //  │                                  ▼                              ▼       │
+    //  │                          +------------------+   StreamEof   +-------+   │
+    //  │                          |     Closing      |───────────────►|Closed |  │
+    //  │                          +------------------+                +-------+  │
     //  │                                                                         │
     //  └─────────────────────────────────────────────────────────────────────────┘
-
+    //
+    // Phases map onto Become(...) calls: AwaitRegBehaviour, OpenBehaviour,
+    // PeerSentEofBehaviour, ClosingBehaviour. State that survives a Become
+    // lives in the connection-state flag region below; everything else is
+    // local to the behaviour.
 
     /// <summary>
     /// INTERNAL API: Base class for TcpIncomingConnection and TcpOutgoingConnection.
-    /// 
-    /// TcpConnection is an actor abstraction over single connection between TCP server and client. 
-    /// Since actors are processing messages in synchronous fashion, they are way to provide thread 
-    /// safety over sockets and <see cref="SocketAsyncEventArgs"/>.
-    /// 
-    /// Every TcpConnection gets assigned a single socket fields and pair of <see cref="SocketAsyncEventArgs"/>,
-    /// allocated once per lifetime of the connection actor:
-    /// 
-    /// - <see cref="_receiveArgs"/> used only for receiving data. It has assigned buffer, rent from 
-    ///   <see cref="TcpExt"/> once and recycled back upon actor termination. Once data has been received, it's 
-    ///   copied to a separate <see cref="ByteString"/> object (so it's NOT a zero-copy operation).
-    /// - <see cref="_sendArgs"/> used only for sending data. Unlike receive args, it doesn't have any buffer 
-    ///   assigned. Instead it uses treats incoming data as a buffer (it's safe due to immutable nature of
-    ///   <see cref="ByteString"/> object). Therefore writes don't allocate any byte buffers.
-    /// 
-    /// Similar approach can be found on other networking libraries (i.e. System.IO.Pipelines and EventStore).
-    /// Both buffers and <see cref="SocketAsyncEventArgs"/> are pooled to reduce GC pressure.
+    ///
+    /// TcpConnection is an actor abstraction over a single TCP connection.
+    /// It delegates all I/O machinery (pipes, pump loops, buffer management) to an
+    /// <see cref="ITransportConnection"/> implementation.
+    ///
+    /// Two actor-driven coordination paths:
+    /// - ReadFromPipe: reads from <see cref="ITransportConnection.Input"/>, copies to pooled buffers,
+    ///   emits <see cref="Tcp.Received"/>
+    /// - Write: writes directly to the transport via <see cref="ITransportConnection.WriteAsync(ReadOnlySequence{byte}, CancellationToken)"/>
+    ///
+    /// All shutdown and error handling flows through the actor mailbox for thread safety.
     /// </summary>
     internal abstract class TcpConnection : ReceiveActor, IRequiresMessageQueue<IUnboundedMessageQueueSemantics>
     {
+        #region Internal messages
+
         /// <summary>
-        /// Immutable flags – reference to the live Queue + byte counter **and any deferred half‑close**.
-        /// Moving every transient flag in here lets us reason over shutdown with a single value.
+        /// Self-tell: a background task failed with an exception.
         /// </summary>
-        private readonly record struct ConnState(
-            bool IsReceiving,
-            bool IsSending,
-            bool PeerClosed,
-            bool OutputShutdown,
-            bool ReadingSuspended,
-            bool WritingSuspended,
-            bool KeepOpenOnPeerClosed,
-            Queue<(Write Cmd, IActorRef Snd)> Queue,
-            int QueuedBytes)
+        private sealed class IoTaskFailed : INoSerializationVerificationNeeded
         {
-            public bool HasPending => IsSending || Queue.Count != 0;
-            public bool CanSend => !OutputShutdown && !WritingSuspended;
-            public bool CanReceive => !PeerClosed && !ReadingSuspended;
-
-            public static ConnState Initial(Queue<(Write Cmd, IActorRef Snd)> q) =>
-                new(false, false, false, false, true, true, false, q, 0);
+            public Exception Cause { get; }
+            public IoTaskFailed(Exception cause) { Cause = cause; }
         }
 
-        #region Ack‑aware SAEA
-
-        private sealed class AckSocketAsyncEventArgs : SocketAsyncEventArgs, INoSerializationVerificationNeeded,
-            IDeadLetterSuppression
+        /// <summary>
+        /// Self-tell: the read-from-stream task observed EOF (0 bytes).
+        /// </summary>
+        private sealed class StreamEof : INoSerializationVerificationNeeded
         {
-            public readonly List<(IActorRef Commander, object Ack)> PendingAcks = new(8);
-            public void ClearAcks() => PendingAcks.Clear();
+            public static readonly StreamEof Instance = new();
+            private StreamEof() { }
         }
 
-        private sealed class ReadSocketAsyncEventArgs : SocketAsyncEventArgs, INoSerializationVerificationNeeded,
-            IDeadLetterSuppression;
+        /// <summary>
+        /// Self-tell: PipeReader.ReadAsync completed with data.
+        /// </summary>
+        private sealed class PipeReadCompleted : INoSerializationVerificationNeeded
+        {
+            public ReadOnlySequence<byte> Data { get; }
+            public bool IsCompleted { get; }
+            public bool IsCanceled { get; }
 
-        private class CommanderDied : IDeadLetterSuppression
+            public PipeReadCompleted(ReadOnlySequence<byte> data, bool isCompleted, bool isCanceled)
+            {
+                Data = data;
+                IsCompleted = isCompleted;
+                IsCanceled = isCanceled;
+            }
+        }
+
+        private sealed class PipeReadCanceled : INoSerializationVerificationNeeded
+        {
+            public static readonly PipeReadCanceled Instance = new();
+            private PipeReadCanceled() { }
+        }
+
+        /// <summary>
+        /// Self-tell: the transport's read pump has completed (check IsFaulted for errors).
+        /// </summary>
+        private sealed class ReadPumpCompleted : INoSerializationVerificationNeeded
+        {
+            public static readonly ReadPumpCompleted Instance = new();
+            private ReadPumpCompleted() { }
+        }
+
+        /// <summary>
+        /// Self-tell: the transport's read pump failed with an I/O error.
+        /// </summary>
+        private sealed class ReadPumpFailed : INoSerializationVerificationNeeded
+        {
+            public Exception Cause { get; }
+            public ReadPumpFailed(Exception cause) { Cause = cause; }
+        }
+
+        /// <summary>
+        /// Self-tell: the transport's WRITE pump (<see cref="ITransportConnection.WriteCompleted"/>)
+        /// failed with an I/O error (e.g. a broken pipe/connection reset discovered while flushing
+        /// a previously-buffered write to the socket, well after <see cref="EnqueueWrite"/> already
+        /// returned).
+        ///
+        /// <para>
+        /// <b>Why this exists.</b> Unlike the read side, nothing previously observed
+        /// <see cref="ITransportConnection.WriteCompleted"/> proactively -- a write-pump failure on
+        /// a connection with no FURTHER write attempts (e.g. an otherwise-idle one-way outbound
+        /// connection) would never surface at all: <see cref="EnqueueWrite"/> only discovers a
+        /// stale failure reactively, via a synchronous re-throw from the pipe on the NEXT write
+        /// attempt, which may never come. This mirrors <see cref="ReadPumpFailed"/>'s monitoring
+        /// (see <see cref="StartTransport"/>) so a write-side failure is detected promptly even
+        /// when nothing is actively writing.
+        /// </para>
+        /// </summary>
+        private sealed class WritePumpFailed : INoSerializationVerificationNeeded
+        {
+            public Exception Cause { get; }
+            public WritePumpFailed(Exception cause) { Cause = cause; }
+        }
+
+        /// <summary>
+        /// Self-tell: transport shutdown/close operation completed successfully.
+        /// </summary>
+        private sealed class TransportOperationCompleted : INoSerializationVerificationNeeded
+        {
+            public static readonly TransportOperationCompleted Instance = new();
+            private TransportOperationCompleted() { }
+        }
+
+        /// <summary>
+        /// Self-tell: transport shutdown/close operation failed.
+        /// </summary>
+        private sealed class TransportOperationFailed : INoSerializationVerificationNeeded
+        {
+            public Exception Cause { get; }
+            public TransportOperationFailed(Exception cause) { Cause = cause; }
+        }
+
+        private sealed class CommanderDied : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public static readonly CommanderDied Instance = new();
-
-            private CommanderDied()
-            {
-            }
+            private CommanderDied() { }
         }
 
-        private class HandlerDied : IDeadLetterSuppression
+        private sealed class HandlerDied : INoSerializationVerificationNeeded, IDeadLetterSuppression
         {
             public static readonly HandlerDied Instance = new();
-
-            private HandlerDied()
-            {
-            }
+            private HandlerDied() { }
         }
+
+        #endregion
+
+        #region Write command wrapper
+
+        private readonly record struct WriteCommand(Write Cmd, IActorRef Sender);
+
+        #endregion
+
+        #region Shutdown state
+
+        private const int ShutdownNone = 0;
+        private const int ShutdownInitiated = 1;
 
         #endregion
 
@@ -130,25 +197,64 @@ namespace Akka.IO
         protected readonly Socket Socket;
         protected ILoggingAdapter Log { get; } = Context.GetLogger();
 
-        private readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
-
-        private readonly Queue<(Write Cmd, IActorRef Sender)> _pendingWrites;
-        private readonly byte[] _receiveBuffer;
-        private readonly ReadSocketAsyncEventArgs _receiveArgs;
-        private readonly AckSocketAsyncEventArgs _sendArgs;
-        
+        private readonly bool _traceLogging;
+        private readonly bool _pullMode;
         private readonly int _maxQueuedBytes;
 
-        private ConnState _state;
+        // Transport connection — owns pipes, pump loops, stream
+        private ITransportConnection? _transport;
 
-        private readonly bool _traceLogging;
+        // CTS for pipe read cancellation
+        private CancellationTokenSource? _cts;
 
-        // used by Akka.Streams
-        private readonly bool _pullMode;
+        // Shutdown guard - ensures only one shutdown path executes
+        private int _shutdownState = ShutdownNone;
 
+        // Reading flow control — all state managed in actor thread, no synchronization needed
+        private bool _readingAllowed;
+        private bool _readPending; // true when a PipeReader.ReadAsync is in flight
+
+        // Actor references
         private IActorRef? _commander;
         private IActorRef? _handler;
         private CloseInformation? _closeInformation;
+
+        private int _pendingRegistrationBytes;
+
+        private readonly Queue<WriteCommand> _pendingRegistrationWrites = new();
+
+        #region Connection state flags
+        // Transient flags that survive a Become(...) and together describe where this
+        // connection sits in the Open → PeerSentEof / Closing → Closed flow.
+        // Set/cleared only on the actor thread; no synchronization required.
+
+        // Peer sent FIN — incoming side is half-closed. Set by HandleStreamEof or
+        // by the Closing-phase StreamEof handler; once true, no further reads will arrive.
+        private bool _peerClosed;
+
+        // We've sent FIN (or fully closed). Set when Tcp.Close / Tcp.ConfirmedClose
+        // completes the transport shutdown; latches off for the rest of the close.
+        private bool _outputShutdown;
+
+        // From Tcp.Register: when true, peer-FIN does not stop the connection — we
+        // just transition to PeerSentEofBehaviour and keep the write side open.
+        private bool _keepOpenOnPeerClosed;
+
+        // We've initiated a graceful close (HandleClose has run). Used to fast-fail
+        // any further Tcp.Write commands with DroppingWriteBecauseClosingException.
+        private bool _closingGracefully;
+
+        // The pipe-reader pump task observed completion (EOF or error). Read path
+        // gates on this together with _outputShutdown to know when TryFinishClose
+        // can stop the actor.
+        private bool _readPumpCompleted;
+
+        // Read pump failed with an I/O error rather than EOF. Set together with
+        // _readPumpError; the next HandlePipeRead with IsCompleted=true will surface
+        // this as Tcp.ErrorClosed instead of treating it as a clean EOF.
+        private bool _readPumpHasError;
+        private Exception? _readPumpError;
+        #endregion
 
         private static readonly IOException DroppingWriteBecauseClosingException =
             new("Dropping write because the connection is closing");
@@ -159,86 +265,71 @@ namespace Akka.IO
         private static readonly IOException DroppingWriteBecauseQueueIsFullException =
             new("Dropping write because queue is full");
 
-        private int? _partialWriteOffset = null;
-
         protected TcpConnection(TcpSettings settings, Socket socket, bool pullMode)
         {
             Settings = settings;
-            _maxQueuedBytes = settings.WriteCommandsQueueMaxSize; // –1 ⇒ unlimited;
-            _pendingWrites = new Queue<(Write Cmd, IActorRef Sender)>(16);
+            _maxQueuedBytes = settings.WriteCommandsQueueMaxSize;
             _pullMode = pullMode;
-
             _traceLogging = Settings.TraceLogging;
-            _state = ConnState.Initial(_pendingWrites);
             Socket = socket ?? throw new ArgumentNullException(nameof(socket));
-            _receiveBuffer = _bufferPool.Rent(settings.MaxFrameSizeBytes);
-            _receiveArgs = new ReadSocketAsyncEventArgs();
-            _sendArgs = new AckSocketAsyncEventArgs();
-            InitSocketEventArgs();
-
-            if (_pullMode)
-            {
-                // have to wait for the first pull request to start reading
-                _state = _state with { ReadingSuspended = true };
-            }
-        }
-
-        private void InitSocketEventArgs()
-        {
-            _receiveArgs.SetBuffer(_receiveBuffer, 0, _receiveBuffer.Length);
-            _receiveArgs.UserToken = Self;
-            _receiveArgs.Completed += OnCompleted;
-
-
-            _sendArgs.UserToken = Self;
-            _sendArgs.Completed += OnCompleted;
-        }
-
-        private static void OnCompleted(object? sender, SocketAsyncEventArgs e)
-        {
-            if (e.UserToken is not IActorRef self) return;
-            self.Tell(e);
         }
 
         /* ================================================================= */
-        /*  Base‑class public API                                            */
+        /*  Base-class public API                                            */
         /* ================================================================= */
 
         protected override void PostStop()
         {
-            if (Socket.Connected) AbortSocket();
-            else CloseSocket();
+            // Best-effort cleanup - cancel everything and close.
+            // Do NOT synchronously wait for DisposeAsync — the pump tasks may be
+            // blocked on stream I/O that can only be unblocked by closing the socket,
+            // which would deadlock if we Wait() first.
+            TryCancelCts();
 
-            _receiveArgs.Dispose();
-            _sendArgs.Dispose();
-            _bufferPool.Return(_receiveBuffer);
-
-            // fail everything still queued
-            while (_pendingWrites.Count > 0)
+            if (_transport != null)
             {
-                var (cmd, snd) = _pendingWrites.Dequeue();
-                snd.Tell(cmd.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
+                // Abort cancels the CTS, sets linger=0, closes the socket.
+                // This unblocks any pending stream.ReadAsync/WriteAsync in the pump tasks.
+                // The pump tasks will exit with OperationCanceledException or IOException.
+                try { _transport.Abort(); }
+                catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
+            }
+            else
+            {
+                // Transport was never created (e.g. PoisonPill before Register).
+                // Close the socket directly since no transport owns it.
+                try { Socket.Close(); }
+                catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 socket may already be disposed
+            }
+
+            while (_pendingRegistrationWrites.Count > 0)
+            {
+                var write = _pendingRegistrationWrites.Dequeue();
+                // Disposal path: PostStop/drain. The connection is tearing down and this queued
+                // pre-registration write will never reach the pipe — dispose any owner it carries
+                // before notifying the sender of failure, same as every other rejection path.
+                write.Cmd.Data.DisposeOwnedSegments();
+                write.Sender.Tell(write.Cmd.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
             }
 
             if (_closeInformation != null)
             {
                 if (Settings.TraceLogging)
-                    Log.Debug("[TcpConnection] sending close event [{0}] to {1}", _closeInformation.ClosedEvent,
+                    Log.Debug("sending close event [{0}] to {1}", _closeInformation.ClosedEvent,
                         string.Join(",", _closeInformation.NotificationsTo));
 
                 foreach (var sub in _closeInformation.NotificationsTo)
                     sub.Tell(_closeInformation.ClosedEvent);
             }
         }
-        
+
         protected override void PostRestart(Exception reason)
         {
-            // have to assert that we are not restarting
             throw new IllegalStateException("Restarting not supported for connection actors.");
         }
 
         /// <summary>
-        /// Used in subclasses to start the common machinery above once a channel is connected
+        /// Used in subclasses to start the common machinery above once a channel is connected.
         /// </summary>
         protected void CompleteConnect(IActorRef commander, IEnumerable<Inet.SocketOption> options)
         {
@@ -259,27 +350,107 @@ namespace Akka.IO
 
             _commander = commander;
             Context.WatchWith(_commander, CommanderDied.Instance);
-            commander.Tell(new Connected(Socket.RemoteEndPoint, Socket.LocalEndPoint));
+            commander.Tell(new Connected(Socket.RemoteEndPoint!, Socket.LocalEndPoint!));
 
             Context.SetReceiveTimeout(Settings.RegisterTimeout);
-            _commander = commander;
             Become(AwaitRegBehaviour);
         }
 
+        /// <summary>
+        /// Starts the transport connection and monitors its read pump.
+        /// Called after registration is complete.
+        /// </summary>
+        protected void StartTransport(ITransportConnection transport)
+        {
+            _transport = transport;
+            _cts = new CancellationTokenSource();
+
+            // Monitor the read pump for completion/errors
+            var self = Self;
+            _ = MonitorReadPumpAsync();
+            _ = MonitorWritePumpAsync();
+
+            async Task MonitorReadPumpAsync()
+            {
+                try
+                {
+                    await transport.ReadCompleted.ConfigureAwait(false);
+                    self.Tell(ReadPumpCompleted.Instance);
+                }
+                catch (Exception ex)
+                {
+                    self.Tell(new ReadPumpFailed(ex));
+                }
+            }
+
+            // Proactively observe the write pump too (see WritePumpFailed's remarks) -- a
+            // GRACEFUL write-side completion (this system deliberately calling ShutdownAsync/
+            // CloseAsync/DisposeAsync) is already tracked by those callers' own explicit awaits
+            // (e.g. HandleConfirmedClose's ContinueWith), so only a FAULT here is actionable;
+            // a normal (non-faulted) completion is a no-op from this monitor's perspective.
+            async Task MonitorWritePumpAsync()
+            {
+                try
+                {
+                    await transport.WriteCompleted.ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    self.Tell(new WritePumpFailed(ex));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Creates the transport connection. Subclasses must supply this.
+        /// For incoming connections, wraps the accepted socket.
+        /// For outgoing connections, wraps the connected socket (possibly with TLS).
+        /// </summary>
+        protected abstract ITransportConnection CreateTransport();
+
+        /// <summary>
+        /// Resolves the resume-writer threshold (in bytes) for this connection's input pipe, i.e.
+        /// the <see cref="System.IO.Pipelines.Pipe"/> that buffers bytes read from the socket before
+        /// the actor drains them. The pause-writer threshold applied by callers is twice this value.
+        /// </summary>
+        /// <remarks>
+        /// If <paramref name="options"/> contains an <see cref="Inet.SO.PipeBufferSize"/>, its
+        /// <see cref="Inet.SO.PipeBufferSize.Size"/> wins (the LAST one, if more than one is present --
+        /// mirroring how later options generally override earlier ones for the same knob). Otherwise
+        /// this falls back to <paramref name="settings"/>'s <see cref="TcpSettings.ReceiveBufferSize"/>,
+        /// preserving the pre-existing default for every Akka.IO TCP connection that doesn't opt in.
+        /// </remarks>
+        internal static int ResolvePipeBufferSize(TcpSettings settings, IEnumerable<Inet.SocketOption> options)
+        {
+            var size = settings.ReceiveBufferSize;
+            foreach (var option in options)
+            {
+                if (option is Inet.SO.PipeBufferSize pipeBufferSize)
+                    size = pipeBufferSize.Size;
+            }
+
+            return size;
+        }
+
         /* ================================================================= */
-        /*  Close‑notification tracking                                  */
-        /* ---------------------------------------------------------------- */
+        /*  Close-notification tracking                                      */
+        /* ================================================================= */
+
         protected void StopWith(CloseInformation closeInformation)
         {
-            if(_handler != null)
+            if (_handler != null)
             {
                 closeInformation = closeInformation with { NotificationsTo = closeInformation.NotificationsTo.Add(_handler!) };
             }
-            
+
             _closeInformation = closeInformation;
             Context.Stop(Self);
         }
-        
+
+        /* ================================================================= */
+        /*  Actor Behaviours                                                 */
+        /* ================================================================= */
+
         private void AwaitRegBehaviour()
         {
             Receive<Register>(reg =>
@@ -288,36 +459,31 @@ namespace Akka.IO
                 if (_traceLogging) Log.Debug("[{0}] registered as connection handler", reg.Handler);
                 Context.WatchWith(_handler, HandlerDied.Instance);
                 Context.Unwatch(_commander);
-                _state = _state with { KeepOpenOnPeerClosed = reg.KeepOpenOnPeerClosed, ReadingSuspended = _pullMode, WritingSuspended = false };
-                // set a default close event - if someone hard-kills us we log an aborted
+                _keepOpenOnPeerClosed = reg.KeepOpenOnPeerClosed;
                 _closeInformation = CloseInformation.Single(_handler, Aborted.Instance);
                 Context.SetReceiveTimeout(null);
-                Become(OpenBehaviour);
-                IssueReceive();
-                TrySend();
-            });
-            Receive<WriteCommand>(w =>
-            {
-                var queueSizeBefore = _pendingWrites.Count;
-                Enqueue(w);
-                if(_pendingWrites.Count > queueSizeBefore)
+
+                // Create and start the transport now that we have a handler
+                var transport = CreateTransport();
+                StartTransport(transport);
+
+                // Allow reading unless pull mode
+                if (!_pullMode)
                 {
-                    // need to log a warning here about writing before registration
-                    Log.Warning("Received Write command before Register command. " +
-                                "It will be buffered until Register will be received (buffered write size is {0} bytes)", w.Bytes);
+                    AllowReading();
                 }
+
+                FlushPendingRegistrationWrites();
+
+                Become(OpenBehaviour);
             });
+            Receive<Tcp.WriteCommand>(w => BufferWriteBeforeRegister(w, Sender));
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
-            Receive<SuspendReading>(_ => { _state = _state with { ReadingSuspended = true }; });
-            Receive<ResumeReading>(_ =>
-            {
-                _state = _state with { ReadingSuspended = false };
-            });
+            Receive<SuspendReading>(_ => { /* no-op before registration */ });
+            Receive<ResumeReading>(_ => { /* no-op before registration */ });
             Receive<CommanderDied>(_ => Context.Stop(Self));
             Receive<ReceiveTimeout>(_ =>
             {
-                // after sending `Register` user should watch this actor to make sure
-                // it didn't die because of the timeout
                 Log.Debug("Configured registration timeout of [{0}] expired, stopping", Settings.RegisterTimeout);
                 Context.Stop(Self);
             });
@@ -325,374 +491,744 @@ namespace Akka.IO
 
         private void OpenBehaviour()
         {
-            Receive<ReadSocketAsyncEventArgs>(s => HandleReceiveCompleted(s, null));
-            Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
-            Receive<WriteCommand>(Enqueue);
+            Receive<Tcp.WriteCommand>(HandleWrite);
             Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
+            Receive<ReadPumpFailed>(msg => HandleReadPumpFailed(msg));
+            Receive<ReadPumpCompleted>(_ => HandleReadPumpCompleted());
+            Receive<PipeReadCompleted>(HandlePipeRead);
+            Receive<PipeReadCanceled>(_ => HandlePipeReadCanceled());
             SuspendResumeHandlers();
+            Receive<StreamEof>(_ => HandleStreamEof());
+            Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
+            Receive<WritePumpFailed>(msg => HandleIoError(msg.Cause));
             Receive<HandlerDied>(_ =>
             {
                 Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
                 Context.Stop(Self);
             });
-            //Receive<SuspendWriting>(_=> { _st = _st with { WritingSuspended=true  };               });
+        }
+
+        private void PeerSentEofBehaviour()
+        {
+            // Peer closed their write side, but we can still write
+            Receive<Tcp.WriteCommand>(HandleWrite);
+            Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
+            Receive<ReadPumpFailed>(msg => HandleReadPumpFailed(msg));
+            Receive<ReadPumpCompleted>(_ => HandleReadPumpCompleted());
+            Receive<PipeReadCompleted>(HandlePipeRead);
+            Receive<PipeReadCanceled>(_ => HandlePipeReadCanceled());
+            Receive<StreamEof>(_ =>
+            {
+                // Already in PeerSentEof state — this is a duplicate notification, ignore
+                if (_traceLogging) Log.Debug("StreamEof in PeerSentEofBehaviour (no-op)");
+            });
+            SuspendResumeHandlers();
+            Receive<IoTaskFailed>(msg => HandleIoError(msg.Cause));
+            Receive<WritePumpFailed>(msg => HandleIoError(msg.Cause));
+            Receive<HandlerDied>(_ =>
+            {
+                Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
+                Context.Stop(Self);
+            });
+        }
+
+        private void ClosingBehaviour(IActorRef closeSender, ConnectionClosed closeEvent)
+        {
+            // We're shutting down - reject new writes, wait for transport operations
+            Receive<Tcp.WriteCommand>(w =>
+            {
+                // Disposal path: rejected while closing. The write never reaches the pipe, so
+                // dispose any owner(s) it carries before signaling failure.
+                DisposeOwnedSegments(w);
+                Sender.Tell(w.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
+            });
+            Receive<Abort>(c => HandleClose(Sender, c.Event));
+            Receive<ReadPumpFailed>(msg =>
+            {
+                HandleReadPumpFailed(msg);
+                TryFinishClose(closeSender, closeEvent);
+            });
+            Receive<ReadPumpCompleted>(_ =>
+            {
+                HandleReadPumpCompleted();
+                TryFinishClose(closeSender, closeEvent);
+            });
+            Receive<StreamEof>(_ =>
+            {
+                _peerClosed = true;
+
+                if (closeEvent is ConfirmedClosed)
+                {
+                    if (_traceLogging)
+                        Log.Debug("Peer FIN received during ConfirmedClose - connection fully closed");
+                    DoCloseConnection(closeSender, ConfirmedClosed.Instance);
+                    return;
+                }
+
+                if (_traceLogging)
+                    Log.Debug("EOF received during close - waiting for transport to finish");
+
+                TryFinishClose(closeSender, closeEvent);
+            });
+            Receive<PipeReadCompleted>(HandlePipeRead);
+            Receive<PipeReadCanceled>(_ => HandlePipeReadCanceled());
+            Receive<TransportOperationCompleted>(_ =>
+            {
+                if (_traceLogging)
+                    Log.Debug("Transport operation completed during close");
+
+                if (closeEvent is ConfirmedClosed)
+                {
+                    // For ConfirmedClose (half-close), transport has flushed writes and sent FIN.
+                    // Now keep reading until peer sends their FIN (StreamEof).
+                    _outputShutdown = true;
+
+                    if (_traceLogging)
+                        Log.Debug("ConfirmedClose: FIN sent, waiting for peer FIN");
+                }
+                else
+                {
+                    // For regular Close, transport is fully closed
+                    _outputShutdown = true;
+                    TryFinishClose(closeSender, closeEvent);
+                }
+            });
+            Receive<TransportOperationFailed>(msg =>
+            {
+                if (_traceLogging)
+                    Log.Debug("Transport operation failed during close: {0}", msg.Cause.Message);
+                DoCloseConnection(closeSender, closeEvent);
+            });
+            Receive<IoTaskFailed>(msg =>
+            {
+                if (_traceLogging)
+                    Log.Debug("I/O task failed during close: {0}", msg.Cause.Message);
+                DoCloseConnection(closeSender, closeEvent);
+            });
+            Receive<WritePumpFailed>(msg =>
+            {
+                if (_traceLogging)
+                    Log.Debug("Write pump failed during close: {0}", msg.Cause.Message);
+                DoCloseConnection(closeSender, closeEvent);
+            });
+            SuspendResumeHandlers();
+            Receive<HandlerDied>(_ =>
+            {
+                Log.Debug("Handler [{0}] died during close, stopping connection actor", _handler);
+                Context.Stop(Self);
+            });
+
+            // If read pump already completed before we entered ClosingBehaviour, try to close now
+            TryFinishClose(closeSender, closeEvent);
+        }
+
+        /// <summary>
+        /// Checks whether all conditions are met to finalize the connection close.
+        /// For ConfirmedClose, the StreamEof handler manages closing directly (waiting for peer FIN).
+        /// For regular Close, we close once the read pump has completed and transport is done.
+        /// </summary>
+        private void TryFinishClose(IActorRef closeSender, ConnectionClosed closeEvent)
+        {
+            if (closeEvent is ConfirmedClosed)
+            {
+                // For ConfirmedClose, we need to wait for peer FIN (StreamEof).
+                // The StreamEof handler calls DoCloseConnection directly.
+                return;
+            }
+
+            // For regular Close: once read pump has completed and output is shutdown
+            if (_outputShutdown && _readPumpCompleted)
+                DoCloseConnection(closeSender, closeEvent);
         }
 
         private void SuspendResumeHandlers()
         {
             Receive<ResumeReading>(_ =>
             {
-                _state = _state with { ReadingSuspended = false };
-                IssueReceive();
+                AllowReading();
             });
-            Receive<SuspendReading>(_ => { _state = _state with { ReadingSuspended = true }; });
+            Receive<SuspendReading>(_ =>
+            {
+                SuspendReadingInternal();
+            });
             Receive<ResumeWriting>(_ =>
             {
-                _state = _state with { WritingSuspended = false };
-                TrySend();
+                // No special action needed — transport handles write buffering
+                if (_traceLogging) Log.Debug("ResumeWriting received");
             });
         }
 
-        private void PeerSentEOF()
+        /* ================================================================= */
+        /*  Read pump monitoring                                             */
+        /* ================================================================= */
+
+        /// <summary>
+        /// Called when the transport's read pump encounters an I/O error.
+        /// Records the error so that subsequent HandlePipeRead with IsCompleted
+        /// can propagate it as an ErrorClosed instead of treating it as normal EOF.
+        /// </summary>
+        private void HandleReadPumpFailed(ReadPumpFailed msg)
         {
-            Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
-            Receive<WriteCommand>(Enqueue);
-            Receive<CloseCommand>(c => HandleClose(Sender, c.Event));
-            SuspendResumeHandlers();
-            Receive<HandlerDied>(_ =>
-            {
-                Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
-                Context.Stop(Self);
-            });
+            _readPumpCompleted = true;
+            _readPumpHasError = true;
+            _readPumpError = msg.Cause;
+            if (_traceLogging)
+                Log.Debug("Read pump failed: {0}", msg.Cause.Message);
         }
 
-        private void ClosingWithPendingWrite(IActorRef closeSender, ConnectionClosed e)
+        private void HandleReadPumpCompleted()
         {
-            Receive<ReadSocketAsyncEventArgs>(s => HandleReceiveCompleted(s, closeSender));
-            Receive<AckSocketAsyncEventArgs>(s =>
-            {
-                HandleSendCompleted(s);
-                if (!_state.HasPending)
-                {
-                    // we are finished sending
-                    HandleClose(closeSender, e);
-                }
-            });
-            Receive<WriteCommand>(Enqueue);
-            Receive<Abort>(c => HandleClose(Sender, c.Event));
-            SuspendResumeHandlers();
+            _readPumpCompleted = true;
+
+            if (_traceLogging)
+                Log.Debug("Read pump completed");
+        }
+
+        /* ================================================================= */
+        /*  Read flow control — actor-driven pipe reads, no synchronization  */
+        /* ================================================================= */
+
+        private void AllowReading()
+        {
+            _readingAllowed = true;
+            RequestPipeRead();
+        }
+
+        private void SuspendReadingInternal()
+        {
+            _readingAllowed = false;
+            // Current in-flight read (if any) will still complete and deliver,
+            // but no further reads will be requested until ResumeReading.
         }
 
         /// <summary>
-        /// Connection is closed on our side, and we're waiting from confirmation from the other side.
+        /// Kicks off a PipeReader.ReadAsync and pipes the result back to Self.
+        /// No-op if a read is already in flight or the transport isn't initialized.
         /// </summary>
-        private void Closing(IActorRef closeSender)
+        private void RequestPipeRead()
         {
-            Receive<ReadSocketAsyncEventArgs>(s => HandleReceiveCompleted(s, closeSender));
-            Receive<AckSocketAsyncEventArgs>(HandleSendCompleted);
-            Receive<WriteCommand>(w =>
-            {
-                // fail all writes
-                Sender.Tell(w.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
-            });
-            Receive<Abort>(c => HandleClose(Sender, c.Event));
-            SuspendResumeHandlers();
-            Receive<HandlerDied>(h =>
-            {
-                Log.Debug("Handler [{0}] died, stopping connection actor", _handler);
-                Context.Stop(Self);
-            });
-        }
+            if (_readPending || _transport == null || _cts == null) return;
+            _readPending = true;
 
-        /* ----------------------------------------------------------------- */
-        /*  Socket‑event handlers                                            */
-        /* ----------------------------------------------------------------- */
+            if (_traceLogging) Log.Debug("RequestPipeRead: kicking off pipe read");
 
-        private long _totalSentBytes;
-        private long _totalReceivedBytes;
+            var self = Self;
+            var reader = _transport.Input;
+            var ct = _cts.Token;
 
-        private void HandleReceiveCompleted(SocketAsyncEventArgs ea, IActorRef? closeCommander)
-        {
-            _state = _state with { IsReceiving = false };
-            if (ea is { SocketError: SocketError.Success, BytesTransferred: > 0 })
+            _ = AwaitPipeReadAsync();
+
+            async Task AwaitPipeReadAsync()
             {
-                if (Settings.TraceLogging)
+                try
                 {
-                    _totalReceivedBytes += ea.BytesTransferred;
-                    Log.Debug("[TcpConnection] received {0} bytes [{1} total]", ea.BytesTransferred,
-                        _totalReceivedBytes);
+                    var result = await ReadPipeChunkAsync(reader, ct).ConfigureAwait(false);
+                    self.Tell(result);
                 }
-
-                _handler!.Tell(new Received(ByteString.CopyFrom(_receiveBuffer, 0, ea.BytesTransferred)));
-
-                if (_pullMode)
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
-                    // in pull mode we need to wait for the next pull request
-                    _state = _state with { ReadingSuspended = true };
+                    self.Tell(PipeReadCanceled.Instance);
                 }
-                else
+                catch (Exception ex)
                 {
-                    IssueReceive();
-                }
-
-                return;
-            }
-            
-            // check for an error code
-            if (ea.SocketError != SocketError.Success)
-            {
-                if(_traceLogging)
-                    Log.Debug("[TcpConnection] read failed with error [{0}]", ea.SocketError);
-                HandleError(new SocketException((int)ea.SocketError));
-                return;
-            }
-            
-            // check for EOF
-            if (ea.BytesTransferred == 0)
-            {
-                if (_state.OutputShutdown)
-                {
-                    if(_traceLogging) 
-                        Log.Debug("[TcpConnection] EOF received; our side is already closed. Closing connection.");
-                    DoCloseConnection(closeCommander ?? _handler!, ConfirmedClosed.Instance);
-                }
-                else
-                {
-                    if (_traceLogging)
-                        Log.Debug("[TcpConnection] EOF received");
-                    _state = _state with { PeerClosed = true };
-                    HandleClose(closeCommander ?? _handler!, PeerClosed.Instance);
+                    self.Tell(new IoTaskFailed(ex));
                 }
             }
         }
 
-        private void HandleSendCompleted(AckSocketAsyncEventArgs ea)
+        /// <summary>
+        /// Actor handles a completed pipe read: copy data, deliver to handler,
+        /// advance the reader, and optionally request the next read.
+        /// </summary>
+        private void HandlePipeRead(PipeReadCompleted msg)
         {
-            _state = _state with { IsSending = false };
+            _readPending = false;
+            var data = msg.Data;
 
-            if (_traceLogging)
-                Log.Debug($"[TcpConnection] HandleSendCompleted: BytesTransferred={ea.BytesTransferred}, PendingAcks={ea.PendingAcks.Count}, PartialWriteOffset={_partialWriteOffset}");
-
-            if (ea.SocketError != SocketError.Success)
+            if (data.Length > 0)
             {
-                if(_traceLogging)
-                    Log.Debug("[TcpConnection] write failed with error [{0}]", ea.SocketError);
-                HandleError(new SocketException((int)ea.SocketError));
-                return;
-            }
-
-            if (Settings.TraceLogging)
-            {
-                _totalSentBytes += ea.BytesTransferred;
-                Log.Debug("[TcpConnection] completed write of {0}/{1} bytes (queued={2}/{3}) [{4} total sent]",
-                    ea.BytesTransferred, ea.BufferList?.Sum(c => c.Count) ?? 0, _state.QueuedBytes, _maxQueuedBytes,
-                    _totalSentBytes);
-            }
-
-            foreach (var (c, ack) in ea.PendingAcks)
-                c.Tell(ack);
-
-            ea.ClearAcks();
-            ea.BufferList = null; // release refs
-            TrySend();
-        }
-
-        /* ----------------------------------------------------------------- */
-        /*  Read / Write helpers                                             */
-        /* ----------------------------------------------------------------- */
-
-        private void IssueReceive()
-        {
-            if (!_state.CanReceive || _state.IsReceiving) return;
-            _receiveArgs.SetBuffer(_receiveBuffer, 0, _receiveBuffer.Length);
-            _state = _state with { IsReceiving = true };
-            if (!Socket.ReceiveAsync(_receiveArgs)) Self.Tell(_receiveArgs, Self);
-        }
-
-        private void Enqueue(WriteCommand cmd)
-        {
-            var b = (int)cmd.Bytes;
-            if (_maxQueuedBytes >= 0 && _state.QueuedBytes + b > _maxQueuedBytes)
-            {
-                Sender.Tell(cmd.FailureMessage.WithCause(DroppingWriteBecauseQueueIsFullException));
-                return;
-            }
-            
-            EnqueueInner();
-
-            _state = _state with { QueuedBytes = _state.QueuedBytes + b };
-            TrySend();
-            return;
-
-            void EnqueueInner()
-            {
-                switch (cmd)
-                {
-                    case Write realWrite:
-                        _pendingWrites.Enqueue((realWrite, Sender));
-                        break;
-                    case CompoundWrite compounds: //TODO: poorly designed API we should remove
-                        foreach (var c in compounds)
-                        {
-                            if(c is Write w)
-                            {
-                                _pendingWrites.Enqueue((w, Sender));
-                            }
-                            else
-                            {
-                                Sender.Tell(c.FailureMessage.WithCause(new InvalidOperationException($"Cannot enqueue {c} - only valid classes are Write and CompoundWrite")));
-                            }
-                        }
-                        break;
-                    default:
-                        Sender.Tell(cmd.FailureMessage.WithCause(new InvalidOperationException($"Cannot enqueue {cmd} - only valid classes are Write and CompoundWrite")));
-                        break;
-                }
-            }
-        }
-
-        private void TrySend()
-        {
-            if (_traceLogging)
-                Log.Debug($"[TcpConnection] TrySend called. IsSending={_state.IsSending}, PendingWrites={_pendingWrites.Count}, CanSend={_state.CanSend}, PartialWriteOffset={_partialWriteOffset}");
-            if (!_state.CanSend) return;
-            if (_state.IsSending || _pendingWrites.Count == 0) return;
-
-            var segs = new List<ByteBuffer>(8);
-            var batchBytes = 0;
-
-            while (_pendingWrites.Count > 0 && batchBytes < Settings.MaxFrameSizeBytes)
-            {
-                var (w, snd) = _pendingWrites.Peek();
-
-                var data = w.Data;
-                var offset = _partialWriteOffset ?? 0;
-                var remaining = data.Count - offset;
-
-                // Handle empty writes immediately
-                if (remaining == 0)
-                {
-                    _pendingWrites.Dequeue();
-                    _state = _state with { QueuedBytes = _state.QueuedBytes - w.Data.Count };
-                    _partialWriteOffset = null;
-                    if (w.WantsAck) snd.Tell(w.Ack); // message was already sent - ACK right away
-                    if (_traceLogging)
-                        Log.Debug($"[TcpConnection] TrySend: encountered empty write, dequeued. Remaining queue: {_pendingWrites.Count}");
-                    continue;
-                }
-
-                var toSend = Math.Min(remaining, Settings.MaxFrameSizeBytes - batchBytes);
+                _handler!.Tell(new Received(data));
 
                 if (_traceLogging)
-                    Log.Debug($"[TcpConnection] TrySend batching: offset={offset}, remaining={remaining}, toSend={toSend}, batchBytes={batchBytes}");
+                    Log.Debug("Delivered {0} bytes to handler", data.Length);
+            }
 
-                // non-copying operation - just creates a new ArraySegment without copying any bytes
-                var chunk = data.Slice(offset, toSend);
-                segs.AddRange(chunk.Buffers);
-                batchBytes += toSend;
-
-                if (toSend == remaining)
+            if (msg.IsCompleted || msg.IsCanceled)
+            {
+                // When the completed/canceled read also carried data, do one more
+                // non-demand-driven drain read before signaling EOF.  The pipe
+                // writer's CompleteAsync flushes any Advance'd-but-not-Flush'd
+                // bytes, but PipeReader.ReadAsync may return the previous flush's
+                // segment with IsCompleted while a final segment from the flush
+                // inside CompleteAsync is not yet visible.  The extra read is
+                // guaranteed to be very cheap (synchronous, empty buffer) in the
+                // common case and ensures no bytes are silently dropped.
+                if (data.Length > 0)
                 {
-                    // Full write completed
-                    _pendingWrites.Dequeue();
-                    _state = _state with { QueuedBytes = _state.QueuedBytes - w.Data.Count };
-                    _partialWriteOffset = null;
-                    if (w.WantsAck) _sendArgs.PendingAcks.Add((snd, w.Ack));
                     if (_traceLogging)
-                        Log.Debug($"[TcpConnection] TrySend: completed full write, dequeued. Remaining queue: {_pendingWrites.Count}");
+                        Log.Debug("Pipe completed with data — requesting drain read");
+                    RequestPipeRead();
+                    return;
+                }
+
+                // Check for read pump error. Two paths can set this:
+                // 1. _readPumpHasError — set by the actor thread when ReadPumpFailed is processed
+                // 2. _transport.HasReadError — set by the read pump thread BEFORE completing
+                //    the pipe writer, ensuring it's visible here even if the ReadPumpFailed
+                //    message hasn't been processed yet
+                if (_readPumpHasError || _transport!.HasReadError)
+                {
+                    // The read pump failed with an I/O error (connection reset, etc.).
+                    // Propagate as an I/O error, not as normal EOF.
+                    var error = _readPumpError ?? _transport!.ReadError ?? new IOException("Connection reset by peer");
+                    if (_traceLogging)
+                        Log.Debug("Pipe completed with error — signaling I/O error: {0}",
+                            error.Message);
+                    HandleIoError(error);
+                    return;
+                }
+
+                // Normal EOF — peer closed their write side cleanly.
+                if (_traceLogging)
+                    Log.Debug("Pipe completed — signaling EOF");
+                Self.Tell(StreamEof.Instance);
+                return;
+            }
+
+            // In pull mode: wait for next ResumeReading before reading again.
+            // In non-pull mode: keep reading as long as not suspended.
+            if (!_pullMode && _readingAllowed)
+            {
+                RequestPipeRead();
+            }
+        }
+
+        private void HandlePipeReadCanceled()
+        {
+            _readPending = false;
+
+            if (_traceLogging)
+                Log.Debug("Pipe read cancelled");
+        }
+
+        private static async ValueTask<PipeReadCompleted> ReadPipeChunkAsync(PipeReader reader, CancellationToken ct)
+        {
+            while (true)
+            {
+                var result = await reader.ReadAsync(ct).ConfigureAwait(false);
+                var buffer = result.Buffer;
+
+                // We must copy out of the pipe's pooled segments before AdvanceTo because
+                // Tell is non-blocking — the handler may not have consumed the data by the
+                // time the segments are returned to the pool. Zero-copy reads require an
+                // explicit ack protocol with the handler that's out of scope here.
+                // The result is wrapped in ReadOnlySequence<byte> (single-segment in practice)
+                // so downstream Streams stages can chain sequences without further copies.
+                ReadOnlySequence<byte> data;
+                if (buffer.Length > 0)
+                {
+                    var array = new byte[checked((int)buffer.Length)];
+                    buffer.CopyTo(array);
+                    data = new ReadOnlySequence<byte>(array);
                 }
                 else
                 {
-                    // Partial write, update offset and break
-                    _partialWriteOffset = offset + toSend;
-                    if (_traceLogging)
-                        Log.Debug($"[TcpConnection] TrySend: partial write, will resume at offset {_partialWriteOffset}");
+                    data = ReadOnlySequence<byte>.Empty;
+                }
+
+                reader.AdvanceTo(buffer.End);
+
+                if (data.Length > 0 || result.IsCompleted || result.IsCanceled)
+                    return new PipeReadCompleted(data, result.IsCompleted, result.IsCanceled);
+            }
+        }
+
+        /* ================================================================= */
+        /*  Write handling                                                   */
+        /* ================================================================= */
+
+        /// <summary>
+        /// Disposes every owner-carrying segment reachable from <paramref name="cmd"/>'s data —
+        /// <see cref="Write.Data"/> directly for a single write, or every constituent
+        /// <see cref="Write"/>'s <see cref="Write.Data"/> for a <see cref="CompoundWrite"/>. Used on
+        /// rejection paths where the whole command (which may bundle several writes) is being
+        /// dropped without ever reaching the transport.
+        /// </summary>
+        private static void DisposeOwnedSegments(Tcp.WriteCommand cmd)
+        {
+            switch (cmd)
+            {
+                case Write w:
+                    w.Data.DisposeOwnedSegments();
                     break;
-                }
+                case CompoundWrite compound:
+                    foreach (var part in compound)
+                    {
+                        if (part is Write w2)
+                            w2.Data.DisposeOwnedSegments();
+                    }
+                    break;
             }
+        }
 
-            if (segs.Count == 0)
+        private void HandleWrite(Tcp.WriteCommand cmd)
+        {
+            if (_closingGracefully)
             {
-                if (_traceLogging)
-                    Log.Debug("[TcpConnection] TrySend: no segments to send (only empty writes encountered)");
+                // Disposal path: rejected because a graceful close is already underway. The write
+                // never reaches the pipe, so dispose any owner(s) it carries before signaling failure.
+                DisposeOwnedSegments(cmd);
+                Sender.Tell(cmd.FailureMessage.WithCause(DroppingWriteBecauseClosingException));
                 return;
             }
 
-            _sendArgs.BufferList = segs;
-            _state = _state with { IsSending = true };
-            if (_traceLogging)
-                Log.Debug($"[TcpConnection] TrySend: sending {segs.Count} segments, total bytes={batchBytes}");
-            if (!Socket.SendAsync(_sendArgs)) Self.Tell(_sendArgs, Self);
+            switch (cmd)
+            {
+                case Write w:
+                    EnqueueWrite(w, Sender);
+                    break;
+                case CompoundWrite compounds:
+                    foreach (var c in compounds)
+                    {
+                        if (c is Write w2)
+                        {
+                            EnqueueWrite(w2, Sender);
+                        }
+                        else
+                        {
+                            Sender.Tell(c.FailureMessage.WithCause(
+                                new InvalidOperationException($"Cannot enqueue {c} - only valid classes are Write and CompoundWrite")));
+                        }
+                    }
+                    break;
+                default:
+                    Sender.Tell(cmd.FailureMessage.WithCause(
+                        new InvalidOperationException($"Cannot enqueue {cmd} - only valid classes are Write and CompoundWrite")));
+                    break;
+            }
         }
-        
-        /* ====================================================================*/
-        /*  Shutdown decision                                                  */
-        /* ====================================================================*/
+
+        private void BufferWriteBeforeRegister(Tcp.WriteCommand cmd, IActorRef sender)
+        {
+            switch (cmd)
+            {
+                case Write w:
+                    BufferSingleWriteBeforeRegister(w, sender);
+                    break;
+                case CompoundWrite compoundWrite:
+                    foreach (var part in compoundWrite)
+                    {
+                        if (part is Write write)
+                            BufferSingleWriteBeforeRegister(write, sender);
+                        else
+                            sender.Tell(part.FailureMessage.WithCause(new InvalidOperationException(
+                                $"Cannot buffer {part} before registration - only valid classes are Write and CompoundWrite")));
+                    }
+
+                    break;
+                default:
+                    sender.Tell(cmd.FailureMessage.WithCause(new InvalidOperationException(
+                        $"Cannot buffer {cmd} before registration - only valid classes are Write and CompoundWrite")));
+                    break;
+            }
+        }
+
+        private void BufferSingleWriteBeforeRegister(Write write, IActorRef sender)
+        {
+            var byteCount = (int)write.Bytes;
+
+            if (_maxQueuedBytes >= 0 && _pendingRegistrationBytes + byteCount > _maxQueuedBytes)
+            {
+                // Disposal path: queue-full rejection (pre-registration). The write never reaches
+                // the pipe, so dispose any owner(s) it carries before signaling failure.
+                write.Data.DisposeOwnedSegments();
+                sender.Tell(write.FailureMessage.WithCause(DroppingWriteBecauseQueueIsFullException));
+                return;
+            }
+
+            if (byteCount == 0)
+            {
+                // Disposal path: empty write, nothing to buffer. In practice an owner-carrying
+                // segment always has non-zero length, but dispose defensively here too so a
+                // degenerate zero-length owned write can never leak.
+                write.Data.DisposeOwnedSegments();
+                if (write.WantsAck) sender.Tell(write.Ack);
+                return;
+            }
+
+            Log.Warning("Received Write command before Register command. It will be buffered until Register will be received (buffered write size is {0} bytes)",
+                write.Bytes);
+
+            // INVARIANT: TcpConnection never retains caller-owned memory past the message-handler
+            // turn; pre-registration writes are copied at enqueue (cold path) — see the WriteAck
+            // contract in EnqueueWrite. On the Open-phase path (HandleWrite -> EnqueueWrite), the
+            // caller's ReadOnlySequence<byte> is copied into the transport's pipe synchronously,
+            // in the same turn the Write message is handled, before WriteAck is sent. A
+            // pre-registration write has no such bound: it can sit in _pendingRegistrationWrites
+            // for an arbitrary amount of time (until Register arrives, up to
+            // Settings.RegisterTimeout) before FlushPendingRegistrationWrites ever touches it. If
+            // we queued the caller's sequence as-is, a caller using a pooled/reusable buffer (the
+            // whole point of the ReadOnlySequence<byte> Write surface) could safely reuse or
+            // mutate it well before that flush, silently corrupting the bytes eventually written
+            // to the socket. Copying here — a one-time, cold-path allocation — makes the buffered
+            // write's lifetime fully independent of the caller's buffer. This #8323 fallback is
+            // unchanged for BORROWED (owner-less) writes.
+            //
+            // Disposal path: pre-registration deferral. An OWNED write is different: the caller
+            // already transferred ownership under contract ("MUST NOT touch the buffer again once
+            // sent"), so there is no reuse hazard to defend against, and copying here would just be
+            // a redundant allocation. Queue it AS-IS (no copy) — the owner stays alive until
+            // whichever comes first: (a) FlushPendingRegistrationWrites -> EnqueueWrite performs
+            // the real pipe copy and disposes it there (the existing open-path disposal, unchanged
+            // — see EnqueueWrite), or (b) PostStop/drain disposes it if Register never arrives.
+            // NOTE: if a single write mixes borrowed and owned segments, the borrowed portion does
+            // NOT get the #8323 defensive copy while sitting in this queue — accepted trade-off,
+            // see design notes in OwnedSequenceSegment.cs; no caller mixes the two within one
+            // Tcp.Write today (PR2's coalescing concats a one-time preamble as a separate element,
+            // never mixed into the same Write.Data as owned frames).
+            var bufferedWrite = write.Data.HasOwnedSegments()
+                ? write
+                : Write.Create(new ReadOnlySequence<byte>(write.Data.ToArray()), write.Ack);
+
+            _pendingRegistrationWrites.Enqueue(new WriteCommand(bufferedWrite, sender));
+            _pendingRegistrationBytes += byteCount;
+        }
+
+        private void FlushPendingRegistrationWrites()
+        {
+            while (_pendingRegistrationWrites.Count > 0)
+            {
+                var write = _pendingRegistrationWrites.Dequeue();
+                _pendingRegistrationBytes -= (int)write.Cmd.Bytes;
+                EnqueueWrite(write.Cmd, write.Sender);
+            }
+        }
+
+        private void EnqueueWrite(Write write, IActorRef sender)
+        {
+            var byteCount = (int)write.Bytes;
+
+            // Check message size limit — reject writes that exceed the configured maximum.
+            // With pipe-based transport, the pipe's pauseWriterThreshold handles flow control.
+            // This check prevents a single oversized write from overwhelming the pipe buffer.
+            if (_maxQueuedBytes >= 0 && byteCount > _maxQueuedBytes)
+            {
+                // Disposal path: queue-full rejection (open/registered path). The write never
+                // reaches the pipe, so dispose any owner(s) it carries before signaling failure.
+                write.Data.DisposeOwnedSegments();
+                sender.Tell(write.FailureMessage.WithCause(DroppingWriteBecauseQueueIsFullException));
+                return;
+            }
+
+            // Handle empty writes immediately
+            if (byteCount == 0)
+            {
+                // Disposal path: empty write, never reaches WriteAsync. Defensive - see the
+                // matching byteCount == 0 branch in BufferSingleWriteBeforeRegister.
+                write.Data.DisposeOwnedSegments();
+                if (write.WantsAck) sender.Tell(write.Ack);
+                return;
+            }
+
+            // Write directly to transport — pipe handles buffering and batching.
+            // The pipe absorbs writes into its internal buffer (memcpy, not syscall).
+            // The write pump flushes the buffer to the socket asynchronously.
+            //
+            // WriteAck contract: WriteAsync (see TcpTransportConnection) synchronously copies
+            // every segment of write.Data into the pipe's internal buffer before returning —
+            // the ValueTask<FlushResult> it hands back only tracks the async flush to the
+            // socket, not the memcpy. So by the time we send WriteAck below, the caller's
+            // memory has already been copied out of and may be safely reused or mutated. This
+            // call happens synchronously within the same actor-message-handler turn that
+            // received the Write, which is the invariant BufferSingleWriteBeforeRegister's
+            // pre-registration copy exists to preserve for writes that can't reach this method
+            // in the same turn.
+            //
+            // A SYNCHRONOUS throw here (not merely a faulted, unobserved ValueTask) means the
+            // transport's write pump (TcpTransportConnection.RunWritePumpAsync) has ALREADY hit a
+            // fatal socket error (e.g. a broken pipe/connection reset after the peer vanished)
+            // and completed the pipe's reader WITH that exception -- PipeWriter.Write/FlushAsync
+            // re-throws it synchronously on the very next call. Left uncaught, this exception
+            // used to escape into the actor's normal message-processing turn as an UNHANDLED
+            // exception: the default supervisor strategy would try to Restart this actor, and
+            // PostRestart (above) deliberately forbids that ("Restarting not supported for
+            // connection actors"), turning an ordinary peer-disconnect into a PostRestartException
+            // that escalates to this actor's supervisor instead of a graceful connection close.
+            // Route it through the SAME graceful teardown every other I/O failure on this actor
+            // uses (HandleIoError: notify the handler/commander with ErrorClosed, stop self) --
+            // see design.md group 9's reconnect correctness suite ("kill the peer mid-traffic"),
+            // which is what first exercised this path.
+            try
+            {
+                _transport!.WriteAsync(write.Data, _cts!.Token);
+            }
+            catch (Exception ex)
+            {
+                // Disposal path: open/registered path, WriteAsync threw synchronously. Per the
+                // contract documented above, a synchronous throw here means the pipe's writer was
+                // already completed (with an exception) BEFORE this call — i.e. no bytes of this
+                // write reached the pipe. Safe (and required) to dispose the same as the success
+                // path: either a given segment's bytes were copied before the throw (copy done,
+                // safe to free the source) or they never were (never reached the pipe, so nothing
+                // downstream can be reading them).
+                write.Data.DisposeOwnedSegments();
+                sender.Tell(write.FailureMessage.WithCause(ex));
+                HandleIoError(ex);
+                return;
+            }
+
+            // Disposal path: open/registered path, happy case. WriteAsync (see
+            // TcpTransportConnection) has synchronously copied every segment of write.Data into
+            // the pipe's internal buffer by the time it returns (see the WriteAck contract comment
+            // above) — this is THE pipe-copy point, so it's safe to dispose any owner(s) write.Data
+            // carries right here, before the ack (order relative to the ack below doesn't matter,
+            // only that it's after the copy).
+            write.Data.DisposeOwnedSegments();
+
+            if (write.WantsAck) sender.Tell(write.Ack);
+        }
+
+        /* ================================================================= */
+        /*  Shutdown handling                                                */
+        /* ================================================================= */
+
         private void HandleClose(IActorRef closeSender, ConnectionClosed closeEvent)
         {
             switch (closeEvent)
             {
                 case Aborted:
-                    if(_traceLogging)
+                    if (_traceLogging)
                         Log.Debug("Got Abort command. RESETing connection.");
+                    HandleAbort(closeSender);
+                    break;
+
+                case ErrorClosed:
                     DoCloseConnection(closeSender, closeEvent);
                     break;
-                // this shouldn't happen really - ErrorClosed is mostly just a message we send to handler.
-                // but in case we get it, we should close the connection immediately. 
-                case ErrorClosed: 
-                    DoCloseConnection(closeSender, closeEvent);
+
+                case PeerClosed when _keepOpenOnPeerClosed:
+                    _handler?.Tell(PeerClosed.Instance);
+                    _peerClosed = true;
+                    Become(PeerSentEofBehaviour);
                     break;
-                case PeerClosed when _state.KeepOpenOnPeerClosed:
-                    _handler.Tell(PeerClosed.Instance);
-                    _state = _state with { PeerClosed = true };
-                    Become(PeerSentEOF);
-                    break;
-                case not null when _state.HasPending:
-                    Context.Unwatch(_handler); // stop watching the handler
-                    if(_traceLogging)
-                        Log.Debug("Got Close command but write is still pending.");
-                    Become(() => ClosingWithPendingWrite(closeSender, closeEvent));
-                    break;
-                case ConfirmedClosed: //shutdown output and wait for confirmation
-                    if(_traceLogging)
+
+                case ConfirmedClosed:
+                    if (_traceLogging)
                         Log.Debug("Got ConfirmedClose command, sending FIN.");
-                    /*
-                     * If peer closed first, the socket is now fully closed.
-                     * Also, if ShutdownOutput threw an exception we expect this to be an indication
-                     * that the peer closed first or concurrently with this code running.
-                     */
-                    if(_state.PeerClosed || !ShutdownOutput())
-                    {
-                        DoCloseConnection(closeSender, closeEvent);
-                    }
-                    else
-                    {
-                        if(_traceLogging)
-                            Log.Debug("Got ConfirmedClose command, but write is still pending.");
-                        Become(() => Closing(closeSender));
-                    }
+                    HandleConfirmedClose(closeSender);
                     break;
-                default: // no pending writes, not required to stay open when peer is closed
-                    if(_traceLogging)
+
+                default:
+                    if (_traceLogging)
                         Log.Debug("Got Close command, closing connection.");
-                    try
-                    {
-                        Socket.Shutdown(SocketShutdown.Both);
-                    }
-                    catch (SocketException e)
-                    {
-                        Log.Error(e, "Graceful socket shutdown failed");
-                    }
-                    DoCloseConnection(closeSender, closeEvent!);
+                    HandleGracefulClose(closeSender, closeEvent!);
                     break;
             }
         }
 
-        private void HandleError(SocketException e)
+        /// <summary>
+        /// Tcp.Close: flush pending writes, then close everything.
+        /// </summary>
+        private void HandleGracefulClose(IActorRef closeSender, ConnectionClosed closeEvent)
         {
-            Log.Debug(e, "Closing connection due to I/O error: {0}", e.SocketErrorCode);
-            var errorClosed = new ErrorClosed(e.Message);
-            if(_closeInformation != null)
+            _closingGracefully = true;
+
+            // Ask the transport to close (flushes writes, closes connection)
+            if (_transport != null)
+            {
+                _transport.CloseAsync().ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        return (object)new TransportOperationFailed(t.Exception!.InnerException ?? t.Exception);
+                    return TransportOperationCompleted.Instance;
+                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(Self);
+            }
+
+            // Transition to closing behaviour
+            Become(() => ClosingBehaviour(closeSender, closeEvent));
+        }
+
+        /// <summary>
+        /// Tcp.Abort: cancel everything immediately.
+        /// </summary>
+        private void HandleAbort(IActorRef closeSender)
+        {
+            _closingGracefully = true;
+
+            // Cancel CTS immediately
+            TryCancelCts();
+
+            // Abort the transport (sends RST)
+            try { _transport?.Abort(); }
+            catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
+
+            StopWith(new CloseInformation(ImmutableHashSet<IActorRef>.Empty.Add(closeSender), Aborted.Instance));
+        }
+
+        /// <summary>
+        /// Tcp.ConfirmedClose: half-close (send FIN), wait for peer FIN.
+        /// The sequence is: flush writes -> shutdown output (FIN) -> wait for peer FIN (StreamEof).
+        /// </summary>
+        private void HandleConfirmedClose(IActorRef closeSender)
+        {
+            _closingGracefully = true;
+
+            // Ask the transport to shutdown (flush writes, send FIN, keep reading)
+            if (_transport != null)
+            {
+                _transport.ShutdownAsync().ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        return (object)new TransportOperationFailed(t.Exception!.InnerException ?? t.Exception);
+                    return TransportOperationCompleted.Instance;
+                }, TaskContinuationOptions.ExecuteSynchronously).PipeTo(Self);
+            }
+
+            // Enter ClosingBehaviour to wait for transport shutdown, then peer FIN
+            Become(() => ClosingBehaviour(closeSender, ConfirmedClosed.Instance));
+        }
+
+        /// <summary>
+        /// Handle EOF from the pipe read (transport's input pipe completed normally).
+        /// </summary>
+        private void HandleStreamEof()
+        {
+            if (_peerClosed)
+            {
+                // Duplicate EOF — already handled, ignore
+                if (_traceLogging)
+                    Log.Debug("HandleStreamEof: duplicate EOF, ignoring");
+                return;
+            }
+
+            _peerClosed = true;
+
+            if (_traceLogging)
+                Log.Debug("HandleStreamEof: peer closed");
+
+            if (_outputShutdown)
+            {
+                // Both sides closed - connection is fully closed
+                DoCloseConnection(_handler ?? _commander!, ConfirmedClosed.Instance);
+            }
+            else
+            {
+                HandleClose(_handler ?? _commander!, PeerClosed.Instance);
+            }
+        }
+
+        /// <summary>
+        /// Handle I/O errors from background tasks.
+        /// </summary>
+        private void HandleIoError(Exception cause)
+        {
+            Log.Debug(cause, "Closing connection due to I/O error");
+            var errorClosed = new ErrorClosed(cause.Message);
+
+            // Cancel everything
+            TryCancelCts();
+
+            if (_closeInformation != null)
             {
                 _closeInformation = _closeInformation with { ClosedEvent = errorClosed };
             }
@@ -700,73 +1236,45 @@ namespace Akka.IO
             {
                 _closeInformation = CloseInformation.Single(_handler ?? _commander!, errorClosed);
             }
+
             Context.Stop(Self);
         }
 
-        private bool ShutdownOutput()
+        private void TryCancelCts()
         {
-            try
+            if (Interlocked.CompareExchange(ref _shutdownState, ShutdownInitiated, ShutdownNone) == ShutdownNone)
             {
-                Socket.Shutdown(SocketShutdown.Send);
-                _state = _state with { OutputShutdown = true };
-                return true;
-            }
-            catch (SocketException)
-            {
-                return false;
+                var cts = _cts;
+                if (cts is null)
+                    return;
+
+                try
+                {
+                    cts.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
             }
         }
-        
+
         private void DoCloseConnection(IActorRef closeSender, ConnectionClosed closedEvent)
         {
+            TryCancelCts();
+
             switch (closedEvent)
             {
                 case Aborted:
-                    AbortSocket();
+                    try { _transport?.Abort(); }
+                    catch (ObjectDisposedException) { } // slopwatch-ignore: SW003 transport may already be disposed
                     break;
                 default:
-                    CloseSocket();
+                    // Transport handles socket shutdown via CloseAsync/ShutdownAsync
                     break;
             }
 
             StopWith(new CloseInformation(ImmutableHashSet<IActorRef>.Empty.Add(closeSender), closedEvent));
-        }
-
-        private void CloseSocket()
-        {
-            try
-            {
-                Socket.Close();
-            }
-            catch
-            {
-                /* ignore */
-            }
-
-            try
-            {
-                Socket.Dispose();
-            }
-            catch
-            {
-                /* ignore */
-            }
-
-            _state = _state with { OutputShutdown = true, ReadingSuspended = true };
-        }
-
-        private void AbortSocket()
-        {
-            try
-            {
-                Socket.LingerState = new LingerOption(true, 0); // causes the following close() to send TCP RST
-            }
-            catch (Exception e)
-            {
-                if (_traceLogging) Log.Debug("setSoLinger(true, 0) failed with [{0}]", e);
-            }
-
-            CloseSocket();
         }
 
         protected sealed record CloseInformation(ImmutableHashSet<IActorRef> NotificationsTo, Tcp.Event ClosedEvent)

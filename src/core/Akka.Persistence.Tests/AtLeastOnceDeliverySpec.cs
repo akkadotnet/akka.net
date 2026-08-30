@@ -355,27 +355,28 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void AtLeastOnceDelivery_must_deliver_messages_in_order_when_nothing_is_lost()
+        public async Task AtLeastOnceDelivery_must_deliver_messages_in_order_when_nothing_is_lost()
         {
             var probe = CreateTestProbe();
             var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Destination(probe.Ref))).Path } };
             var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 1 && a.Payload == "a");
-            probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 1 && a.Payload == "a");
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
-        public void PersistentReceive_must_not_allow_using_ActorSelection_with_wildcards()
+        public async Task PersistentReceive_must_not_allow_using_ActorSelection_with_wildcards()
         {
             Sys.ActorOf(Props.Create(() => new DeliverToStarSelection(Name))).Tell("anything, really.");
-            ExpectMsg<string>().Contains("not supported").ShouldBeTrue();
+            var msg = await ExpectMsgAsync<string>();
+            msg.Contains("not supported").ShouldBeTrue();
         }
 
         [Fact]
-        public void AtLeastOnceDelivery_must_allow_using_ActorSelection_without_wildcards()
+        public async Task AtLeastOnceDelivery_must_allow_using_ActorSelection_without_wildcards()
         {
             var probe = CreateTestProbe();
             var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Destination(probe.Ref))).Path } };
@@ -383,72 +384,78 @@ namespace Akka.Persistence.Tests
 
             var mess = new ReqSelection("a-1");
             sender.Tell(mess);
-            probe.ExpectMsg<Action>(a => a.Id == 1 && a.Payload == "a-1");
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 1 && a.Payload == "a-1");
         }
 
         [Fact]
-        public void AtLeastOnceDelivery_must_redeliver_lost_messages()
+        public async Task AtLeastOnceDelivery_must_redeliver_lost_messages()
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
             var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(3, dest))).Path } };
-            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
+            // Use a longer redeliver interval to prevent premature redelivery from shifting the
+            // Unreliable proxy's counter. RedeliveryTick bypasses the PersistingEvents stash, so with
+            // a short interval the timer can redeliver a-3 before a-4's journal write completes.
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(2000), 5, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a-1"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 1 && a.Payload == "a-1");
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 1 && a.Payload == "a-1");
 
             sender.Tell(new Req("a-2"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 2 && a.Payload == "a-2");
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 2 && a.Payload == "a-2");
 
             sender.Tell(new Req("a-3"));
             sender.Tell(new Req("a-4"));
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
             // a-3 was lost ...
-            probe.ExpectMsg<Action>(a => a.Id == 4 && a.Payload == "a-4");
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 4 && a.Payload == "a-4");
             // ... and then redelivered
-            probe.ExpectMsg<Action>(a => a.Id == 3 && a.Payload == "a-3");
-            probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 3 && a.Payload == "a-3", timeout: TimeSpan.FromSeconds(10));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
-        public void AtLeastOnceDelivery_must_redeliver_lost_messages_after_restart()
+        public async Task AtLeastOnceDelivery_must_redeliver_lost_messages_after_restart()
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
             var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(3, dest))).Path } };
-            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
+            // Use a longer redeliver interval to prevent premature redelivery from shifting the
+            // Unreliable proxy's counter. RedeliveryTick bypasses the PersistingEvents stash, so with
+            // a short interval the timer can redeliver a-3 before a-4's journal write completes.
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(2000), 5, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a-1"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 1 && a.Payload == "a-1");
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 1 && a.Payload == "a-1");
 
             sender.Tell(new Req("a-2"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 2 && a.Payload == "a-2");
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 2 && a.Payload == "a-2");
 
             sender.Tell(new Req("a-3"));
             sender.Tell(new Req("a-4"));
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
             // a-3 was lost ...
-            probe.ExpectMsg<Action>(a => a.Id == 4 && a.Payload == "a-4");
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 4 && a.Payload == "a-4");
             // ... trigger restart ...
             sender.Tell(Boom.Instance);
             // ... and then redeliver
-            probe.ExpectMsg<Action>(a => a.Id == 3 && a.Payload == "a-3");
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 3 && a.Payload == "a-3", timeout: TimeSpan.FromSeconds(10));
 
             sender.Tell(new Req("a-5"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 5 && a.Payload == "a-5");
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 5 && a.Payload == "a-5");
 
-            probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void AtLeastOnceDelivery_must_resend_replayed_deliveries_with_an_initially_in_order_strategy_before_delivering_fresh_messages()
+        public async Task AtLeastOnceDelivery_must_resend_replayed_deliveries_with_an_initially_in_order_strategy_before_delivering_fresh_messages()
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
@@ -456,73 +463,76 @@ namespace Akka.Persistence.Tests
             var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a-1"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 1 && a.Payload == "a-1");
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 1 && a.Payload == "a-1");
 
             sender.Tell(new Req("a-2"));
-            ExpectMsg(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
             // a-2 was lost
 
             sender.Tell(new Req("a-3"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 3 && a.Payload == "a-3");
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 3 && a.Payload == "a-3");
 
             sender.Tell(new Req("a-4"));
-            ExpectMsg(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
             // a-4 was lost
 
             // trigger restart
             sender.Tell(Boom.Instance);
             sender.Tell(new Req("a-5"));
-            ExpectMsg(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
 
             // and redeliver
-            probe.ExpectMsg<Action>(a => a.Id == 2 && a.Payload == "a-2");      // redelivered
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 2 && a.Payload == "a-2");      // redelivered
             // a-4 was redelivered but lost again
-            probe.ExpectMsg<Action>(a => a.Id == 5 && a.Payload == "a-5");      // redelivered
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 5 && a.Payload == "a-5");      // redelivered
             //FIXME: expression below works, just for some reason won't fit in 10 sec. interval
-            probe.ExpectMsg<Action>(a => a.Id == 4 && a.Payload == "a-4", timeout: TimeSpan.FromSeconds(20));      // redelivered, 3th time
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 4 && a.Payload == "a-4", timeout: TimeSpan.FromSeconds(20));      // redelivered, 3th time
 
-            probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
-        public void AtLeastOnceDelivery_must_restore_state_from_snapshot()
+        public async Task AtLeastOnceDelivery_must_restore_state_from_snapshot()
         {
             var probe = CreateTestProbe();
             var dest = Sys.ActorOf(Props.Create(() => new Destination(probe.Ref)));
             var destinations = new Dictionary<string, ActorPath> { { "A", Sys.ActorOf(Props.Create(() => new Unreliable(3, dest))).Path } };
-            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(500), 5, 1000, false, destinations)), Name);
+            // Use a longer redeliver interval to prevent premature redelivery from shifting the
+            // Unreliable proxy's counter. RedeliveryTick bypasses the PersistingEvents stash, so with
+            // a short interval the timer can redeliver a-3 before a-4's journal write completes.
+            var sender = Sys.ActorOf(Props.Create(() => new Sender(TestActor, Name, TimeSpan.FromMilliseconds(2000), 5, 1000, false, destinations)), Name);
 
             sender.Tell(new Req("a-1"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 1 && a.Payload == "a-1");
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 1 && a.Payload == "a-1");
 
             sender.Tell(new Req("a-2"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 2 && a.Payload == "a-2");
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 2 && a.Payload == "a-2");
 
             sender.Tell(new Req("a-3"));
             sender.Tell(new Req("a-4"));
             sender.Tell(SaveSnap.Instance);
-            ExpectMsg(ReqAck.Instance);
-            ExpectMsg(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
+            await ExpectMsgAsync(ReqAck.Instance);
             // a-3 was lost
 
-            probe.ExpectMsg<Action>(a => a.Id == 4 && a.Payload == "a-4");
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 4 && a.Payload == "a-4");
 
             // after snapshot succeed
-            ExpectMsg<SaveSnapshotSuccess>();
+            await ExpectMsgAsync<SaveSnapshotSuccess>();
             // trigger restart
             sender.Tell(Boom.Instance);
-            // and then redelivered
-            probe.ExpectMsg<Action>(a => a.Id == 3 && a.Payload == "a-3");
+            // and then redelivered (longer timeout to account for the higher redeliver interval)
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 3 && a.Payload == "a-3", timeout: TimeSpan.FromSeconds(10));
 
             sender.Tell(new Req("a-5"));
-            ExpectMsg(ReqAck.Instance);
-            probe.ExpectMsg<Action>(a => a.Id == 5 && a.Payload == "a-5");
+            await ExpectMsgAsync(ReqAck.Instance);
+            await probe.ExpectMsgAsync<Action>(a => a.Id == 5 && a.Payload == "a-5");
 
-            probe.ExpectNoMsg(TimeSpan.FromSeconds(1));
+            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
         }
 
         [Fact]
@@ -572,7 +582,7 @@ namespace Akka.Persistence.Tests
         }
 
         [Fact]
-        public void AtLeastOnceDelivery_must_redeliver_many_lost_messages()
+        public async Task AtLeastOnceDelivery_must_redeliver_many_lost_messages()
         {
             var probeA = CreateTestProbe();
             var probeB = CreateTestProbe();
@@ -612,9 +622,9 @@ namespace Akka.Persistence.Tests
             }
             var deliverWithin = TimeSpan.FromSeconds(20);
 
-            var resAarr = probeA.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArray();
-            var resBarr = probeB.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArray();
-            var resCarr = probeC.ReceiveN(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArray();
+            var resAarr = await probeA.ReceiveNAsync(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArrayAsync();
+            var resBarr = await probeB.ReceiveNAsync(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArrayAsync();
+            var resCarr = await probeC.ReceiveNAsync(n, deliverWithin).Cast<Action>().Select(x => x.Payload).ToArrayAsync();
 
             resAarr.Except(a).Any().ShouldBeFalse();
             resBarr.Except(b).Any().ShouldBeFalse();
@@ -622,7 +632,7 @@ namespace Akka.Persistence.Tests
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
-        public void AtLeastOnceDelivery_must_limit_the_number_of_messages_redelivered_at_once()
+        public async Task AtLeastOnceDelivery_must_limit_the_number_of_messages_redelivered_at_once()
         {
             var probe = CreateTestProbe();
             var probeA = CreateTestProbe();
@@ -649,17 +659,18 @@ namespace Akka.Persistence.Tests
             // initially all odd messages should go through
             for (int i = 1; i <= N; i = i+2)
             {
-                probeA.ExpectMsg<Action>(a => a.Id == i && a.Payload == "a-" + i);
+                await probeA.ExpectMsgAsync<Action>(a => a.Id == i && a.Payload == "a-" + i);
             }
-            probeA.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+            await probeA.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
             // at each redelivery round, 2 (even) messages are sent, the first goes through
             // without throttling, at each round half of the messages would go through
             var toDeliver = Enumerable.Range(1, N).Where(i => i%2 == 0).Select(i => (long)i).ToList();
             for (int i = 2; i <= N; i = i+2)
             {
-                toDeliver.Remove(probeA.ExpectMsg<Action>().Id);
-                probeA.ExpectNoMsg(TimeSpan.FromMilliseconds(100));
+                var action = await probeA.ExpectMsgAsync<Action>();
+                toDeliver.Remove(action.Id);
+                await probeA.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
             }
 
             toDeliver.Count.ShouldBe(0);

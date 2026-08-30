@@ -1,6 +1,6 @@
 ﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster.Metrics.Tests")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Cluster.Metrics
 {
     public sealed class AdaptiveLoadBalancingGroup : Akka.Routing.Group

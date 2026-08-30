@@ -17,7 +17,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Management.Cluster.Http")]
 [assembly: System.Runtime.InteropServices.ComVisible(false)]
 [assembly: System.Runtime.InteropServices.Guid("0e3e691b-0c31-4718-9b1a-d749b93208c9")]
-[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v6.0", FrameworkDisplayName=".NET 6.0")]
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0", FrameworkDisplayName=".NET 10.0")]
 namespace Akka.Cluster
 {
     [Akka.Annotations.InternalApi]
@@ -213,6 +213,7 @@ namespace Akka.Cluster
         public System.Collections.Immutable.ImmutableDictionary<string, int> MinNrOfMembersOfRole { get; }
         public int MonitoredByNrOfMembers { get; }
         public System.TimeSpan PeriodicTasksInitialDelay { get; }
+        public System.TimeSpan PruneGossipTombstonesAfter { get; }
         public System.TimeSpan? PublishStatsInterval { get; }
         public int ReduceGossipDifferentViewProbability { get; }
         public System.TimeSpan? RetryUnsuccessfulJoinAfter { get; }
@@ -257,6 +258,7 @@ namespace Akka.Cluster
         public override string ToString() { }
         public static Akka.Cluster.Member HighestPriorityOf(Akka.Cluster.Member m1, Akka.Cluster.Member m2) { }
         public static System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> PickHighestPriority(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
+        public static System.Collections.Immutable.ImmutableHashSet<Akka.Cluster.Member> PickHighestPriority(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b, System.Collections.Immutable.IImmutableSet<Akka.Cluster.UniqueAddress> tombstones) { }
         public static Akka.Cluster.Member PickNextTransition(Akka.Cluster.Member a, Akka.Cluster.Member b) { }
         public static System.Collections.Immutable.ImmutableSortedSet<Akka.Cluster.Member> PickNextTransition(System.Collections.Generic.IEnumerable<Akka.Cluster.Member> a, System.Collections.Generic.IEnumerable<Akka.Cluster.Member> b) { }
     }
@@ -285,9 +287,9 @@ namespace Akka.Cluster
     }
     public class UniqueAddress : System.IComparable, System.IComparable<Akka.Cluster.UniqueAddress>, System.IEquatable<Akka.Cluster.UniqueAddress>
     {
-        public UniqueAddress(Akka.Actor.Address address, int uid) { }
+        public UniqueAddress(Akka.Actor.Address address, long uid) { }
         public Akka.Actor.Address Address { get; }
-        public int Uid { get; }
+        public long Uid { get; }
         public int CompareTo(Akka.Cluster.UniqueAddress uniqueAddress) { }
         public bool Equals(Akka.Cluster.UniqueAddress other) { }
         public override bool Equals(object obj) { }
