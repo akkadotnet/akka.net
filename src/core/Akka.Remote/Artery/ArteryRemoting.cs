@@ -827,10 +827,11 @@ namespace Akka.Remote.Artery
             // every Control/Large connection, still flows through them completely unchanged.
             var processingStage = _settings.InboundLanes > 1
                 ? new ArteryInboundProcessingStage(
-                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization,
+                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler,
                     _settings.InboundLanes, _settings.InboundLaneBufferSize, _inboundContext!, DispatchOrdinaryMessage,
                     _onInboundLanesInitialized, _testState)
-                : new ArteryInboundProcessingStage(_settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization);
+                : new ArteryInboundProcessingStage(
+                    _settings.MaximumFrameSize, _settings.MaximumLargeFrameSize, System.Serialization, System.Scheduler);
 
             var decoded = Flow.Create<ReadOnlySequence<byte>>()
                 .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
@@ -864,7 +865,7 @@ namespace Akka.Remote.Artery
             // Ordinary, control and large connections all use this one sink, so one instance is
             // sufficient.
             var inboundSink = decoded
-                .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!)))
+                .Via(Flow.FromGraph(new InboundHandshakeStage(_inboundContext!, System.Scheduler)))
                 .Via(Flow.FromGraph(new InboundQuarantineCheckStage(_inboundContext!)))
                 .Via(Flow.FromGraph(new SystemMessageAckerStage(_inboundContext!)))
                 .To(Sink.ForEach<IInboundEnvelope>(DispatchInbound));

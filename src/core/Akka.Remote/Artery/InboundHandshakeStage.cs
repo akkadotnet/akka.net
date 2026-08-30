@@ -83,13 +83,28 @@ namespace Akka.Remote.Artery
     /// </summary>
     internal sealed class InboundHandshakeStage : GraphStage<FlowShape<IInboundEnvelope, IInboundEnvelope>>
     {
-        public InboundHandshakeStage(IInboundContext context)
+        /// <param name="context">See <see cref="Context"/>.</param>
+        /// <param name="timeProvider">
+        /// Clock for the unknown-origin drop-warning rate limit -- see <see cref="TimeProvider"/>.
+        /// <see langword="null"/> (the default) resolves to the materializing
+        /// <see cref="Akka.Actor.ActorSystem"/>'s scheduler when the stream starts.
+        /// </param>
+        public InboundHandshakeStage(IInboundContext context, ITimeProvider? timeProvider = null)
         {
             Context = context;
+            TimeProvider = timeProvider;
             Shape = new FlowShape<IInboundEnvelope, IInboundEnvelope>(In, Out);
         }
 
         public IInboundContext Context { get; }
+
+        /// <summary>
+        /// Explicit clock for the drop-warning throttle, or <see langword="null"/> to use the
+        /// materializing system's scheduler. Typed as the BASE <see cref="ITimeProvider"/> rather
+        /// than <see cref="IScheduler"/> so a virtual clock (<c>TestScheduler</c>) satisfies it and
+        /// a spec can drive the throttle window with <c>Advance</c> instead of waiting it out.
+        /// </summary>
+        public ITimeProvider? TimeProvider { get; }
 
         public Inlet<IInboundEnvelope> In { get; } = new("InboundHandshake.in");
         public Outlet<IInboundEnvelope> Out { get; } = new("InboundHandshake.out");
@@ -109,8 +124,17 @@ namespace Akka.Remote.Artery
             private static readonly TimeSpan UnknownOriginWarnInterval = TimeSpan.FromSeconds(10);
 
             private readonly InboundHandshakeStage _stage;
-            private DateTime _lastUnknownOriginWarning = DateTime.MinValue;
+            /// <summary>
+            /// Clock reading at the last warning; <see langword="null"/> until the first one.
+            /// Read via <see cref="ITimeProvider.Now"/> -- the only reading <c>TestScheduler</c>
+            /// virtualizes, so this is what makes the window testable without real waiting.
+            /// </summary>
+            private DateTimeOffset? _lastUnknownOriginWarning;
+
             private long _suppressedUnknownOriginDrops;
+
+            /// <summary>Resolved once at <see cref="PreStart"/>; see <see cref="InboundHandshakeStage.TimeProvider"/>.</summary>
+            private ITimeProvider _timeProvider = null!;
 
             public Logic(InboundHandshakeStage stage) : base(stage.Shape)
             {
@@ -118,6 +142,13 @@ namespace Akka.Remote.Artery
                 SetHandler(stage.In, this);
                 SetHandler(stage.Out, this);
             }
+
+            public override void PreStart() =>
+                _timeProvider = _stage.TimeProvider
+                                ?? (Materializer as ActorMaterializer)?.System.Scheduler
+                                ?? throw new InvalidOperationException(
+                                    "No ITimeProvider available: this stream was not materialized " +
+                                    "by an ActorMaterializer, so pass one to the stage explicitly.");
 
             public void OnPush()
             {
@@ -148,9 +179,9 @@ namespace Akka.Remote.Artery
 
                 if (!_stage.Context.IsKnownOrigin(envelope.OriginUid))
                 {
-                    var now = DateTime.UtcNow;
-                    if (_lastUnknownOriginWarning == DateTime.MinValue ||
-                        now - _lastUnknownOriginWarning >= UnknownOriginWarnInterval)
+                    var now = _timeProvider.Now;
+                    if (_lastUnknownOriginWarning is not { } lastWarning ||
+                        now - lastWarning >= UnknownOriginWarnInterval)
                     {
                         Log.Warning(
                             "Dropping inbound message [{0}] from unknown origin uid [{1}]: no completed handshake for this uid yet. " +
