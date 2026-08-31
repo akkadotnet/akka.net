@@ -52,6 +52,8 @@ namespace Akka.Cluster
     /// </summary>
     public class Cluster : IExtension
     {
+        private const string RemovedAutoDownConfigPath = "akka.cluster.auto-down-unreachable-after";
+
         /// <summary>
         /// Retrieves the extension from the specified actor system.
         /// </summary>
@@ -119,15 +121,10 @@ namespace Akka.Cluster
 
             _log = Logging.GetLogger(system, "Cluster");
 
-            // log a warning if the user has set auto-down-unreachable-after to any value other than "off"
-            // obsolete setting, so suppress obsolete warning
-#pragma warning disable CS0618
-            if (Settings.AutoDownUnreachableAfter != null)
-#pragma warning restore CS0618
+            var removedAutoDownWarning = GetRemovedAutoDownWarning(system.Settings.Config);
+            if (removedAutoDownWarning is not null)
             {
-                _log.Warning(
-                    "The `auto-down-unreachable-after` feature has been deprecated as of Akka.NET v1.5.2 and will be removed in a future version of Akka.NET. " +
-                    "The `keep-majority` split brain resolver will be used instead. See https://getakka.net/articles/cluster/split-brain-resolver.html for more details.");
+                _log.Warning(removedAutoDownWarning);
             }
 
 
@@ -156,6 +153,24 @@ namespace Akka.Cluster
             _readView = new ClusterReadView(this);
 
             system.RegisterOnTermination(Shutdown);
+        }
+
+        internal static string GetRemovedAutoDownWarning(Config config)
+        {
+            if (!config.HasPath(RemovedAutoDownConfigPath))
+                return null;
+
+            var value = config.GetString(RemovedAutoDownConfigPath, string.Empty);
+            if (string.Equals(value, "off", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "false", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(value, "no", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return "`akka.cluster.auto-down-unreachable-after` was removed in Akka.NET v1.6 and is ignored. " +
+                   "Configure an IDowningProvider or Split Brain Resolver strategy. " +
+                   "See https://getakka.net/articles/clustering/split-brain-resolver.html for more details.";
         }
 
         /// <summary>
@@ -789,4 +804,3 @@ namespace Akka.Cluster
         }
     }
 }
-

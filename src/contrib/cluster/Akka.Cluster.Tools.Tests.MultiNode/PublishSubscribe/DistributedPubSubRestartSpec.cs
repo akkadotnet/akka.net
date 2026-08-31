@@ -37,7 +37,6 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.cluster.pub-sub.gossip-interval = 500ms
                 akka.remote.log-remote-lifecycle-events = off
-                akka.cluster.auto-down-unreachable-after = off
 
                 # THE fix for this spec's flake. Bound the transport failure detector so a peer that
                 # dies without a clean Disassociate PDU gets reaped fast. Under the test transport

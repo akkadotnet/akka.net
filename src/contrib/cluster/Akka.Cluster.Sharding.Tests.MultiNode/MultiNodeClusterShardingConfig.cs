@@ -40,12 +40,14 @@ namespace Akka.Cluster.Sharding.Tests
         /// <param name="rememberEntities">rememberEntities defaults to off</param>
         /// <param name="additionalConfig">additionalConfig additional _config</param>
         /// <param name="loglevel">loglevel defaults to INFO</param>
+        /// <param name="configurationOverride">optional configuration with higher precedence than the shared configuration</param>
         protected MultiNodeClusterShardingConfig(
             StateStoreMode mode = StateStoreMode.DData,
             bool rememberEntities = false,
             RememberEntitiesStore rememberEntitiesStore = RememberEntitiesStore.DData,
             string additionalConfig = "",
-            string loglevel = "INFO")
+            string loglevel = "INFO",
+            Config configurationOverride = null)
         {
             Mode = mode;
             RememberEntities = rememberEntities;
@@ -58,7 +60,6 @@ namespace Akka.Cluster.Sharding.Tests
             Common =
                 ConfigurationFactory.ParseString($@"
                     akka.actor.provider = ""cluster""
-                    akka.cluster.auto-down-unreachable-after = 0s
                     akka.cluster.sharding.state-store-mode = ""{mode}""
                     akka.cluster.sharding.remember-entities = {rememberEntities.ToString().ToLowerInvariant()}
                     akka.cluster.sharding.remember-entities-store = ""{rememberEntitiesStore}""
@@ -84,7 +85,10 @@ namespace Akka.Cluster.Sharding.Tests
                     .WithFallback(Tools.Singleton.ClusterSingleton.DefaultConfig())
                     .WithFallback(MultiNodeClusterSpec.ClusterConfig());
 
-            CommonConfig = (ConfigurationFactory.ParseString(additionalConfig).WithFallback(persistenceConfig).WithFallback(Common));
+            CommonConfig = (configurationOverride ?? ConfigurationFactory.Empty)
+                .WithFallback(ConfigurationFactory.ParseString(additionalConfig))
+                .WithFallback(persistenceConfig)
+                .WithFallback(Common);
         }
 
         public StateStoreMode Mode { get; }

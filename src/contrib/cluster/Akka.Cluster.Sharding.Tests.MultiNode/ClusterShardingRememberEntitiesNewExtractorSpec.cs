@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Cluster.TestKit;
 using Akka.Configuration;
 using Akka.Event;
 using Akka.MultiNode.TestAdapter;
@@ -25,7 +26,7 @@ public class ClusterShardingRememberEntitiesNewExtractorSpecConfig : MultiNodeCl
     public RoleName Third { get; }
 
     public ClusterShardingRememberEntitiesNewExtractorSpecConfig(StateStoreMode mode)
-        : base(mode: mode, loglevel: "DEBUG")
+        : base(mode: mode, loglevel: "DEBUG", configurationOverride: AutoDowning.GetConfig(TimeSpan.Zero))
     {
         First = Role("first");
         Second = Role("second");

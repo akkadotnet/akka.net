@@ -13,6 +13,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\Akka.Cluster.TestKit\AutoDown.cs">
+      <Link>AutoDown.cs</Link>
+    </Compile>
     <Compile Include="..\Akka.Cluster.TestKit\FailureDetectorPuppet.cs">
       <Link>FailureDetectorPuppet.cs</Link>
     </Compile>

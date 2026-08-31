@@ -46,9 +46,6 @@ namespace Akka.Cluster.Tests
             settings.AllowWeaklyUpMembers.Should().BeTrue();
             settings.WeaklyUpAfter.Should().Be(7.Seconds());
             settings.PublishStatsInterval.Should().NotHaveValue();
-#pragma warning disable CS0618
-            settings.AutoDownUnreachableAfter.Should().NotHaveValue();
-#pragma warning restore CS0618
             settings.DownRemovalMargin.Should().Be(TimeSpan.Zero);
             settings.MinNrOfMembers.Should().Be(1);
             settings.MinNrOfMembersOfRole.Should().Equal(ImmutableDictionary<string, int>.Empty);
@@ -105,6 +102,38 @@ namespace Akka.Cluster.Tests
             Config config = "akka.cluster.downing-provider-class = \"\"";
             var settings = new ClusterSettings(config.WithFallback(Sys.Settings.Config), Sys.Name);
             settings.DowningProviderType.Should().Be<NoDowning>();
+        }
+
+        [Theory(DisplayName = "Removed auto-down setting must not affect provider selection")]
+        [InlineData("0s")]
+        [InlineData("18s")]
+        [InlineData("off")]
+        [InlineData("false")]
+        [InlineData("no")]
+        public void Cluster_should_ignore_removed_auto_down_setting(string configuredValue)
+        {
+            var config = ConfigurationFactory.ParseString($@"
+                akka.cluster.downing-provider-class = """"
+                akka.cluster.auto-down-unreachable-after = {configuredValue}");
+
+            var settings = new ClusterSettings(config.WithFallback(Sys.Settings.Config), Sys.Name);
+
+            settings.DowningProviderType.Should().Be<NoDowning>();
+        }
+
+        [Theory(DisplayName = "Removed AutoDowning provider must produce migration guidance")]
+        [InlineData("Akka.Cluster.AutoDowning")]
+        [InlineData("Akka.Cluster.AutoDowning, Akka.Cluster")]
+        public void Cluster_should_reject_removed_auto_down_provider(string providerTypeName)
+        {
+            var config = ConfigurationFactory.ParseString(
+                $@"akka.cluster.downing-provider-class = ""{providerTypeName}""");
+
+            var createSettings = () => new ClusterSettings(config.WithFallback(Sys.Settings.Config), Sys.Name);
+
+            createSettings.Should()
+                .Throw<ConfigurationException>()
+                .WithMessage("*Akka.Cluster.AutoDowning*removed in Akka.NET v1.6*SplitBrainResolverProvider*Akka.Cluster.TestKit.AutoDowning*");
         }
     }
 }
