@@ -126,6 +126,11 @@ namespace Akka.Remote.Artery
         /// (task 10.2) -- matches Pekko's <c>maximum-large-frame-size</c>.
         /// </param>
         /// <param name="serialization">The receiving actor system's <see cref="Akka.Serialization.Serialization"/> extension.</param>
+        /// <param name="timeProvider">
+        /// Clock for the lane path's unknown-origin drop-warning rate limit -- see
+        /// <see cref="TimeProvider"/>. <see langword="null"/> resolves to the materializing
+        /// system's scheduler.
+        /// </param>
         /// <param name="inboundLanes">
         /// Number of inbound lanes ordinary-stream messages are fanned out across (see the
         /// type-level "Inbound lanes" remarks). <see langword="1"/> (the default -- and the
@@ -178,6 +183,7 @@ namespace Akka.Remote.Artery
             int maxFrameLength,
             int maxLargeFrameLength,
             Akka.Serialization.Serialization serialization,
+            ITimeProvider? timeProvider = null,
             int inboundLanes = 1,
             int inboundLaneBufferSize = 0,
             IInboundContext? inboundContext = null,
@@ -194,6 +200,7 @@ namespace Akka.Remote.Artery
             MaxFrameLength = maxFrameLength;
             MaxLargeFrameLength = maxLargeFrameLength;
             Serialization = serialization;
+            TimeProvider = timeProvider;
             InboundLanes = inboundLanes;
             InboundLaneBufferSize = inboundLaneBufferSize;
             InboundContext = inboundContext;
@@ -240,6 +247,14 @@ namespace Akka.Remote.Artery
         public int MaxLargeFrameLength { get; }
 
         public Akka.Serialization.Serialization Serialization { get; }
+
+        /// <summary>
+        /// Clock for the lane path's unknown-origin drop-warning rate limit, or
+        /// <see langword="null"/> to use the materializing system's scheduler. See
+        /// <see cref="InboundHandshakeStage.TimeProvider"/>, which owns the non-lane half of the
+        /// same warning.
+        /// </summary>
+        public ITimeProvider? TimeProvider { get; }
 
         /// <summary>See the constructor parameter of the same name.</summary>
         public int InboundLanes { get; }
@@ -328,8 +343,25 @@ namespace Akka.Remote.Artery
 
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
         {
+            /// <summary>
+            /// Rate limit for this connection's unknown-origin drop warnings -- the lane path's
+            /// half of the pair <see cref="InboundHandshakeStage"/> owns the other half of; see
+            /// that stage for the rationale.
+            /// </summary>
+            private static readonly TimeSpan UnknownOriginWarnInterval = TimeSpan.FromSeconds(10);
+
             private readonly ArteryInboundProcessingStage _stage;
             private readonly Queue<IInboundEnvelope> _pending = new();
+            /// <summary>
+            /// Clock reading at the last warning; <see langword="null"/> until the first one. Uses
+            /// <see cref="ITimeProvider.Now"/> -- the reading <c>TestScheduler</c> virtualizes.
+            /// </summary>
+            private DateTimeOffset? _lastUnknownOriginWarning;
+
+            private long _suppressedUnknownOriginDrops;
+
+            /// <summary>Resolved once at <see cref="PreStart"/>; see <see cref="ArteryInboundProcessingStage.TimeProvider"/>.</summary>
+            private ITimeProvider _timeProvider = null!;
 
             private readonly byte[] _preambleBuffer = new byte[ArteryConnectionHeader.Length];
             private int _preambleFilled;
@@ -395,6 +427,13 @@ namespace Akka.Remote.Artery
                     };
                 }
             }
+
+            public override void PreStart() =>
+                _timeProvider = _stage.TimeProvider
+                                ?? (Materializer as ActorMaterializer)?.System.Scheduler
+                                ?? throw new InvalidOperationException(
+                                    "No ITimeProvider available: this stream was not materialized " +
+                                    "by an ActorMaterializer, so pass one to the stage explicitly.");
 
             public void OnPush()
             {
@@ -762,9 +801,22 @@ namespace Akka.Remote.Artery
                 // user-message dispatch per connection" holds for the lane path too.
                 if (!_stage.InboundContext!.IsKnownOrigin(decoded.Header.OriginUid))
                 {
-                    Log.Debug(
-                        "Dropping inbound lane-routed Artery message from unknown origin uid [{0}] (no completed handshake for this uid yet).",
-                        decoded.Header.OriginUid);
+                    var now = _timeProvider.Now;
+                    if (_lastUnknownOriginWarning is not { } lastWarning ||
+                        now - lastWarning >= UnknownOriginWarnInterval)
+                    {
+                        Log.Warning(
+                            "Dropping inbound lane-routed Artery message from unknown origin uid [{0}]: no completed handshake for this uid yet. " +
+                            "The message is LOST - ordinary messages are not resent. [{1}] further drop(s) suppressed since the last warning.",
+                            decoded.Header.OriginUid, _suppressedUnknownOriginDrops);
+                        _lastUnknownOriginWarning = now;
+                        _suppressedUnknownOriginDrops = 0;
+                    }
+                    else
+                    {
+                        _suppressedUnknownOriginDrops++;
+                    }
+
                     return true;
                 }
 

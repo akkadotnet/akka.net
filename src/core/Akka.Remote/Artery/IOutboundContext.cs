@@ -61,6 +61,17 @@ namespace Akka.Remote.Artery
         AssociationState CompleteHandshake(UniqueAddress peer);
 
         /// <summary>
+        /// Registers <paramref name="listener"/> to be nudged whenever this association's handshake
+        /// state advances -- see <see cref="Artery.Association.SubscribeHandshakeStateChanged"/>.
+        /// This is how <see cref="OutboundHandshakeStage"/> learns about completion; the retry timer
+        /// only retransmits the <see cref="HandshakeReq"/>, it is not the detection path.
+        /// </summary>
+        void SubscribeHandshakeStateChanged(object subscriber, Action listener);
+
+        /// <summary>Reverses <see cref="SubscribeHandshakeStateChanged"/>.</summary>
+        void UnsubscribeHandshakeStateChanged(object subscriber);
+
+        /// <summary>
         /// Sends <paramref name="message"/> over the control channel to the remote peer this
         /// context is bound to.
         /// </summary>
@@ -152,6 +163,14 @@ namespace Akka.Remote.Artery
 
         /// <inheritdoc/>
         public AssociationState CompleteHandshake(UniqueAddress peer) => _registry.CompleteHandshake(RemoteAddress, peer);
+
+        /// <inheritdoc/>
+        public void SubscribeHandshakeStateChanged(object subscriber, Action listener) =>
+            _registry.AssociationFor(RemoteAddress).SubscribeHandshakeStateChanged(subscriber, listener);
+
+        /// <inheritdoc/>
+        public void UnsubscribeHandshakeStateChanged(object subscriber) =>
+            _registry.AssociationFor(RemoteAddress).UnsubscribeHandshakeStateChanged(subscriber);
 
         /// <inheritdoc/>
         public void SendControl(object message) => _sendControl(message);
