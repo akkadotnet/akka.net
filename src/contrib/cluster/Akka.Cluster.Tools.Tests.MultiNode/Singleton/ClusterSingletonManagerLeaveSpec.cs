@@ -36,6 +36,25 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
                 akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
                 akka.remote.log-remote-lifecycle-events = off
                 akka.cluster.auto-down-unreachable-after = off
+
+                # The harness already runs gossip and leader actions at 200ms
+                # (MultiNodeClusterSpec.ClusterConfig). Left at the 1s default, the
+                # singleton hand-over ladder needs up to 12 retries to give up, about
+                # 12s. That exceeds this spec's own 10s expects and coordinated
+                # shutdown's 10s cluster-exiting phase, which turns the asserted
+                # stop-before-MemberRemoved order into a race. Match the harness tempo
+                # instead of raising any timeout.
+                akka.cluster.singleton.hand-over-retry-interval = 200ms
+                akka.cluster.singleton-proxy.singleton-identification-interval = 200ms
+
+                # The retry count is derived from min-number-of-hand-over-retries, so the
+                # 200ms interval above also shrinks the manager's give-up patience. The
+                # default count gave only 2.4s, and the artery lane caught the manager
+                # giving up (ClusterSingletonManagerIsStuckException) before the new
+                # oldest took over. 28 hand-over retries give 25 take-over retries: 5s
+                # of patience in 200ms ticks, above the observed take-over latency and
+                # below this spec's own 10s expects.
+                akka.cluster.singleton.min-number-of-hand-over-retries = 28
             ")
             .WithFallback(ClusterSingleton.DefaultConfig())
             .WithFallback(ClusterSingletonProxy.DefaultConfig())

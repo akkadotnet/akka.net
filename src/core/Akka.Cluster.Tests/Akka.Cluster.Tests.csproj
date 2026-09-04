@@ -17,6 +17,7 @@
     <PackageReference Include="xunit.v3" Version="$(Xunit3Version)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(Xunit3RunnerVersion)" />
     <PackageReference Include="FsCheck.Xunit.v3" Version="$(FsCheck3Version)" />
+    <PackageReference Include="CsCheck" Version="$(CsCheckVersion)" />
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
     <PackageReference Include="Fsharp.Core" Version="$(FsharpVersion)" />
   </ItemGroup>

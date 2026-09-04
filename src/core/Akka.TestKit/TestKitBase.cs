@@ -513,7 +513,7 @@ namespace Akka.TestKit
         /// <param name="duration">The maximum.</param>
         /// <returns>A finite <see cref="TimeSpan"/> properly dilated</returns>
         /// <exception cref="ArgumentException">Thrown if <paramref name="duration"/> is infinite</exception>
-        public TimeSpan RemainingOrDilated(TimeSpan? duration)
+        public TimeSpan RemainingOrDilated([AutoDilate] TimeSpan? duration)
         {
             if(!duration.HasValue) return RemainingOrDefault;
             if(duration < TimeSpan.Zero) throw new ArgumentException("Must be positive TimeSpan", nameof(duration));
@@ -527,7 +527,7 @@ namespace Akka.TestKit
         /// </summary>
         /// <param name="duration">TBD</param>
         /// <returns>TBD</returns>
-        public TimeSpan Dilated(TimeSpan duration)
+        public TimeSpan Dilated([AutoDilate] TimeSpan duration)
         {
             if (duration < TimeSpan.Zero)
                 throw new ArgumentException("Must not be negative", nameof(duration));
@@ -575,19 +575,82 @@ namespace Akka.TestKit
         {
             system ??= _testState.System;
 
-            var durationValue = duration.GetValueOrDefault(Dilated(TimeSpan.FromSeconds(5)).Min(TimeSpan.FromSeconds(10)));
+            var durationValue = ShutdownDurationOrDefault(duration);
 
             var wasShutdownDuringWait = system.Terminate().Wait(durationValue);
-            if(!wasShutdownDuringWait)
-            {
-                // Forcefully close the ActorSystem to make sure we exit the test cleanly
-                ((ExtendedActorSystem) system).Guardian.Stop();
-                
-                const string msg = "Failed to stop [{0}] within [{1}]. ActorSystem is being forcefully shut down.\n{2}";
-                if(verifySystemShutdown)
-                    throw new TimeoutException(string.Format(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree()));
-                system.Log.Warning(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree());
-            }
+            ForceShutdownIfNeeded(system, wasShutdownDuringWait, durationValue, verifySystemShutdown);
+        }
+
+        /// <summary>
+        /// Shuts down this system without blocking the calling thread.
+        /// On failure debug output will be logged about the remaining actors in the system.
+        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
+        /// </summary>
+        /// <remarks>
+        /// Prefer this over <see cref="Shutdown(TimeSpan?,bool)"/>. The synchronous form pins a thread pool
+        /// thread for up to the full duration. On a loaded machine that pinned thread can starve the very
+        /// system work the shutdown is waiting on - cluster heartbeats, coordinated shutdown phases - so the
+        /// wait itself makes the timeout more likely.
+        /// </remarks>
+        /// <param name="duration">Optional. The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor".</param>
+        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <exception cref="TimeoutException">Thrown when the system did not stop in time and <paramref name="verifySystemShutdown"/> is <c>true</c>.</exception>
+        public virtual Task ShutdownAsync(
+            TimeSpan? duration = null,
+            bool verifySystemShutdown = false)
+            => ShutdownAsync(_testState.System, duration, verifySystemShutdown);
+
+        /// <summary>
+        /// Shuts down the specified system without blocking the calling thread.
+        /// On failure debug output will be logged about the remaining actors in the system.
+        /// If verifySystemShutdown is true, then an exception will be thrown on failure.
+        /// </summary>
+        /// <remarks>
+        /// Prefer this over <see cref="Shutdown(ActorSystem,TimeSpan?,bool)"/>. The synchronous form pins a
+        /// thread pool thread for up to the full duration. On a loaded machine that pinned thread can starve
+        /// the very system work the shutdown is waiting on - cluster heartbeats, coordinated shutdown phases -
+        /// so the wait itself makes the timeout more likely.
+        /// </remarks>
+        /// <param name="system">The system to shutdown.</param>
+        /// <param name="duration">The duration to wait for shutdown. Default is 5 seconds multiplied with the config value "akka.test.timefactor"</param>
+        /// <param name="verifySystemShutdown">if set to <c>true</c> an exception will be thrown on failure.</param>
+        /// <exception cref="TimeoutException">Thrown when the system did not stop in time and <paramref name="verifySystemShutdown"/> is <c>true</c>.</exception>
+        protected virtual async Task ShutdownAsync(
+            ActorSystem system,
+            TimeSpan? duration = null,
+            bool verifySystemShutdown = false)
+        {
+            system ??= _testState.System;
+
+            var durationValue = ShutdownDurationOrDefault(duration);
+
+            // race Terminate() against a timer rather than blocking a thread on it
+            var wasShutdownDuringWait = await system.Terminate().AwaitWithTimeout(durationValue);
+            ForceShutdownIfNeeded(system, wasShutdownDuringWait, durationValue, verifySystemShutdown);
+        }
+
+        private TimeSpan ShutdownDurationOrDefault(TimeSpan? duration)
+            => duration.GetValueOrDefault(Dilated(TimeSpan.FromSeconds(5)).Min(TimeSpan.FromSeconds(10)));
+
+        /// <summary>
+        /// Force-stops a system that failed to terminate on its own inside the timeout.
+        /// </summary>
+        private static void ForceShutdownIfNeeded(
+            ActorSystem system,
+            bool wasShutdownDuringWait,
+            TimeSpan durationValue,
+            bool verifySystemShutdown)
+        {
+            if(wasShutdownDuringWait)
+                return;
+
+            // Forcefully close the ActorSystem to make sure we exit the test cleanly
+            ((ExtendedActorSystem) system).Guardian.Stop();
+
+            const string msg = "Failed to stop [{0}] within [{1}]. ActorSystem is being forcefully shut down.\n{2}";
+            if(verifySystemShutdown)
+                throw new TimeoutException(string.Format(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree()));
+            system.Log.Warning(msg, system.Name, durationValue, ((ExtendedActorSystem) system).PrintTree());
         }
 
         /// <summary>

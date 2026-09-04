@@ -1893,62 +1893,34 @@ namespace Akka.Cluster
 
             var comparison = remoteGossip.Version.CompareTo(localGossip.Version);
 
-            Gossip winningGossip;
             bool talkback;
             ReceiveGossipType gossipType;
 
             switch (comparison)
             {
                 case VectorClock.Ordering.Same:
-                    //same version
                     talkback = !_exitingTasksInProgress && !remoteGossip.SeenByNode(_selfUniqueAddress);
-                    winningGossip = remoteGossip.MergeSeen(localGossip);
                     gossipType = ReceiveGossipType.Same;
                     break;
                 case VectorClock.Ordering.Before:
                     //local is newer
-                    winningGossip = localGossip;
                     talkback = true;
                     gossipType = ReceiveGossipType.Older;
                     break;
                 case VectorClock.Ordering.After:
                     //remote is newer
-                    winningGossip = remoteGossip;
                     talkback = !_exitingTasksInProgress && !remoteGossip.SeenByNode(_selfUniqueAddress);
                     gossipType = ReceiveGossipType.Newer;
                     break;
                 default:
-                    // conflicting versions, merge
-                    // We can see that a removal was done when it is not in one of the gossips has status
-                    // Down or Exiting in the other gossip.
-                    // Perform the same pruning (clear of VectorClock) as the leader did when removing a member.
-                    // Removal of member itself is handled in merge (pickHighestPriority)
-                    var prunedLocalGossip = localGossip.Members.Aggregate(localGossip, (g, m) =>
-                    {
-                        if (RemoveUnreachableWithMemberStatus.Contains(m.Status) && !remoteGossip.Members.Contains(m))
-                        {
-                            _log.Debug("Cluster Node [{0}] - Pruned conflicting local gossip: {1}", _cluster.SelfAddress, m);
-                            return g.Prune(VectorClock.Node.Create(VclockName(m.UniqueAddress)));
-                        }
-                        return g;
-                    });
-
-                    var prunedRemoteGossip = remoteGossip.Members.Aggregate(remoteGossip, (g, m) =>
-                    {
-                        if (RemoveUnreachableWithMemberStatus.Contains(m.Status) && !localGossip.Members.Contains(m))
-                        {
-                            _log.Debug("Cluster Node [{0}] - Pruned conflicting remote gossip: {1}", _cluster.SelfAddress, m);
-                            return g.Prune(VectorClock.Node.Create(VclockName(m.UniqueAddress)));
-                        }
-                        return g;
-                    });
-
-                    //conflicting versions, merge
-                    winningGossip = prunedRemoteGossip.Merge(prunedLocalGossip);
                     talkback = true;
                     gossipType = ReceiveGossipType.Merge;
                     break;
             }
+
+            var winningGossip = SelectWinningGossip(localGossip, remoteGossip, comparison,
+                m => _log.Debug("Cluster Node [{0}] - Pruned conflicting local gossip: {1}", _cluster.SelfAddress, m),
+                m => _log.Debug("Cluster Node [{0}] - Pruned conflicting remote gossip: {1}", _cluster.SelfAddress, m));
 
             // Don't mark gossip state as seen while exiting is in progress, e.g.
             // shutting down singleton actors. This delays removal of the member until
@@ -2031,6 +2003,79 @@ namespace Akka.Cluster
             }
 
             return gossipType;
+        }
+
+        /// <summary>
+        /// Picks the gossip that wins an exchange, given how the incoming clock compares to the local one.
+        ///
+        /// Split out of <see cref="ReceiveGossip"/> so the branch selection can be driven directly by
+        /// tests instead of re-implemented by them: a copy of this logic in a test would keep passing
+        /// after this one changed.
+        /// </summary>
+        /// <param name="localGossip">The receiver's current gossip.</param>
+        /// <param name="remoteGossip">The gossip that just arrived.</param>
+        /// <param name="comparison">How <paramref name="remoteGossip"/>'s clock compares to the local one.</param>
+        /// <param name="onPrunedLocal">Called for every local member whose clock entry the concurrent branch prunes.</param>
+        /// <param name="onPrunedRemote">Called for every remote member whose clock entry the concurrent branch prunes.</param>
+        internal static Gossip SelectWinningGossip(
+            Gossip localGossip,
+            Gossip remoteGossip,
+            VectorClock.Ordering comparison,
+            Action<Member> onPrunedLocal = null,
+            Action<Member> onPrunedRemote = null)
+        {
+            switch (comparison)
+            {
+                // Tombstones are unioned only on the two branches where neither gossip descends from the
+                // other: Same, where MergeTombstones does it, and the concurrent branch, where Gossip.Merge
+                // does. The two branches that pick a strictly newer gossip keep the winner's tombstones and
+                // nothing else.
+                //
+                // The winner is not behind on removals: a removal bumps the removing node's own clock
+                // entry, so a gossip that dominates the loser's clock descends from every removal the loser
+                // knows about. The tombstones the winner does not carry are the ones its own leader
+                // deliberately pruned, and honouring those prunes is the point - unioning them back in
+                // would undo every prune, and the leader would prune the same tombstones again on every
+                // tick forever.
+                case VectorClock.Ordering.Same:
+                    return remoteGossip.MergeSeen(localGossip).MergeTombstones(localGossip);
+
+                case VectorClock.Ordering.Before:
+                    // local is newer
+                    return localGossip;
+
+                case VectorClock.Ordering.After:
+                    // remote is newer
+                    return remoteGossip;
+
+                default:
+                    // conflicting versions, merge
+                    // We can see that a removal was done when it is not in one of the gossips has status
+                    // Down or Exiting in the other gossip.
+                    // Perform the same pruning (clear of VectorClock) as the leader did when removing a member.
+                    // Removal of member itself is handled in merge (pickHighestPriority)
+                    var prunedLocalGossip = localGossip.Members.Aggregate(localGossip, (g, m) =>
+                    {
+                        if (RemoveUnreachableWithMemberStatus.Contains(m.Status) && !remoteGossip.Members.Contains(m))
+                        {
+                            onPrunedLocal?.Invoke(m);
+                            return g.Prune(VectorClock.Node.Create(VclockName(m.UniqueAddress)));
+                        }
+                        return g;
+                    });
+
+                    var prunedRemoteGossip = remoteGossip.Members.Aggregate(remoteGossip, (g, m) =>
+                    {
+                        if (RemoveUnreachableWithMemberStatus.Contains(m.Status) && !localGossip.Members.Contains(m))
+                        {
+                            onPrunedRemote?.Invoke(m);
+                            return g.Prune(VectorClock.Node.Create(VclockName(m.UniqueAddress)));
+                        }
+                        return g;
+                    });
+
+                    return prunedRemoteGossip.Merge(prunedLocalGossip);
+            }
         }
 
         /// <summary>
@@ -2294,7 +2339,6 @@ namespace Akka.Cluster
             var localGossip = LatestGossip;
             var localMembers = localGossip.Members;
             var localOverview = localGossip.Overview;
-            var localSeen = localOverview.Seen;
 
             var enoughMembers = IsMinNrOfMembersFulfilled();
 
@@ -2338,49 +2382,55 @@ namespace Akka.Cluster
                 return null;
             }).Where(m => m != null).ToImmutableSortedSet();
 
-            if (!removedUnreachable.IsEmpty || !removedExitingConfirmed.IsEmpty || !changedMembers.IsEmpty)
+            var hasChanges = !removedUnreachable.IsEmpty || !removedExitingConfirmed.IsEmpty || !changedMembers.IsEmpty;
+            var updatedGossip = localGossip;
+
+            if (hasChanges)
             {
                 // handle changes
 
                 // replace changed members
-                var newMembers = Member.PickNextTransition(changedMembers, localMembers)
-                    .Except(removedUnreachable)
-                    .Where(x => !removedExitingConfirmed.Contains(x.UniqueAddress))
-                    .ToImmutableSortedSet();
+                var updatedMembers = Member.PickNextTransition(changedMembers, localMembers).ToImmutableSortedSet();
 
-                // removing REMOVED nodes from the `seen` table
                 var removed = removedUnreachable.Select(u => u.UniqueAddress)
                     .ToImmutableHashSet()
                     .Union(removedExitingConfirmed);
-                var newSeen = localSeen.Except(removed);
-                // removing REMOVED nodes from the `reachability` table
-                var newReachability = localOverview.Reachability.Remove(removed);
-                var newOverview = localOverview.Copy(seen: newSeen, reachability: newReachability);
 
-                // Clear the VectorClock when member is removed. The change made by the leader is stamped
-                // and will propagate as is if there are no other changes on other nodes.
-                // If other concurrent changes on other nodes (e.g. join) the pruning is also
-                // taken care of when receiving gossips.
-                var newVersion = removed.Aggregate(localGossip.Version, (v, node) =>
-                {
-                    return v.Prune(VectorClock.Node.Create(VclockName(node)));
-                });
-                var newGossip = localGossip.Copy(members: newMembers, overview: newOverview, version: newVersion);
+                // RemoveAll strips each removed node from the members, the `seen` table, the `reachability`
+                // table and the vector clock, and records a tombstone for it, all in one step. The tombstone
+                // is what stops a peer that still holds the member from putting it back on the next merge.
+                updatedGossip = localGossip.Copy(members: updatedMembers)
+                    .RemoveAll(removed, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            }
 
-                if (!_exitingTasksInProgress && newGossip.GetMember(_selfUniqueAddress).Status == MemberStatus.Exiting)
-                {
-                    // Leader is moving itself from Leaving to Exiting.
-                    // ExitingCompleted will be received via CoordinatedShutdown to continue
-                    // the leaving process. Meanwhile the gossip state is not marked as seen.
+            // Expired tombstones are dropped here, on the leader, on a tick that has already established
+            // convergence. A quiet tick drops nothing, PruneTombstones hands back the same instance, and the
+            // reference check below skips the update - otherwise every converged tick would bump the vector
+            // clock and reset the `seen` table, and the cluster would never settle.
+            var removeTombstonesEarlierThan = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                                              - (long)_cluster.Settings.PruneGossipTombstonesAfter.TotalMilliseconds;
+            var newGossip = updatedGossip.PruneTombstones(removeTombstonesEarlierThan);
 
-                    _exitingTasksInProgress = true;
-                    if (_coordShutdown.ShutdownReason == null)
-                        _cluster.LogInfo("Exiting (leader), starting coordinated shutdown.");
-                    _selfExiting.TrySetResult(Done.Instance);
-                    _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
-                }
+            if (ReferenceEquals(newGossip, localGossip))
+                return;
 
-                UpdateLatestGossip(newGossip);
+            if (hasChanges && !_exitingTasksInProgress && newGossip.GetMember(_selfUniqueAddress).Status == MemberStatus.Exiting)
+            {
+                // Leader is moving itself from Leaving to Exiting.
+                // ExitingCompleted will be received via CoordinatedShutdown to continue
+                // the leaving process. Meanwhile the gossip state is not marked as seen.
+
+                _exitingTasksInProgress = true;
+                if (_coordShutdown.ShutdownReason == null)
+                    _cluster.LogInfo("Exiting (leader), starting coordinated shutdown.");
+                _selfExiting.TrySetResult(Done.Instance);
+                _coordShutdown.Run(CoordinatedShutdown.ClusterLeavingReason.Instance);
+            }
+
+            UpdateLatestGossip(newGossip);
+
+            if (hasChanges)
+            {
                 _exitingConfirmed = _exitingConfirmed.Except(removedExitingConfirmed);
 
                 // log status changes
@@ -2398,10 +2448,12 @@ namespace Akka.Cluster
                 {
                     _cluster.LogInfo("Leader is removing confirmed Exiting node [{0}]", m.Address);
                 }
-
-                PublishMembershipState();
-                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting).ToArray());
             }
+
+            PublishMembershipState();
+
+            if (hasChanges)
+                GossipExitingMembersToOldest(changedMembers.Where(i => i.Status == MemberStatus.Exiting).ToArray());
 
             return;
 
@@ -2601,6 +2653,14 @@ namespace Akka.Cluster
         /// <summary>
         /// Updates the local gossip with the latest received from over the network.
         /// </summary>
+        /// <remarks>
+        /// Every change this node makes to the gossip goes through here, and every call increments this
+        /// node's vector clock entry. Tombstone writes and tombstone pruning must keep using this path.
+        /// A tombstone written or pruned without a clock bump would be invisible to the causal comparison
+        /// in <see cref="ReceiveGossip"/>, so peers could not tell which side holds the newer removal set.
+        /// Only the equal-clock and concurrent branches union tombstones now, so an unstamped write has
+        /// nothing to fall back on: a peer that is causally ahead wins outright and the write is gone.
+        /// </remarks>
         /// <param name="gossip">The new gossip to merge with our own.</param>
         public void UpdateLatestGossip(Gossip gossip)
         {

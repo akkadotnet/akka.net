@@ -543,7 +543,10 @@ namespace Akka.Remote.TestKit
 
             OnTermination(_ =>
             {
-                _controller.Tell(new Controller.ClientDisconnected(_roleName));
+                // Name the sender explicitly. The controller compares it against the FSM it has
+                // registered for this role, which is how it tells a disconnect that belongs to
+                // this connection apart from one that a newer connection already replaced.
+                _controller.Tell(new Controller.ClientDisconnected(_roleName), Self);
                 _channel.CloseAsync();
             });
 
