@@ -30,6 +30,12 @@ namespace Akka.Cluster.Sharding.Tests
             : base(mode: mode, loglevel: "DEBUG", additionalConfig: @"
             akka.cluster.sharding.verbose-debug-logging = on
             akka.cluster.sharding.rebalance-interval = 1s # make rebalancing more likely to happen to test for https://github.com/akka/akka/issues/29093
+            # This spec asserts that entities on surviving nodes keep the same actor incarnation
+            # across a graceful leave. Only the legacy threshold strategy has that property. The
+            # bounded default may move survivor shards during the leave window, which restarts
+            # their entities under new refs. Pin the legacy strategy so the assertion tests the
+            # algorithm that guarantees it. See issue 8481.
+            akka.cluster.sharding.least-shard-allocation-strategy.rebalance-absolute-limit = 0
             akka.cluster.sharding.distributed-data.majority-min-cap = 1
             akka.cluster.sharding.coordinator-state.write-majority-plus = 1
             akka.cluster.sharding.coordinator-state.read-majority-plus = 1
