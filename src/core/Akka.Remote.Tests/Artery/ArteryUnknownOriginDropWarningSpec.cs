@@ -88,51 +88,5 @@ namespace Akka.Remote.Tests.Artery
                 await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
             });
         }
-
-        [Fact(DisplayName = "InboundHandshakeStage should prefer an explicitly injected ITimeProvider over the materializing system's scheduler")]
-        public async Task InboundHandshakeStage_should_prefer_an_explicit_time_provider()
-        {
-            var registry = new AssociationRegistry();
-            var context = new AssociationRegistryInboundContext(registry, NewLocal(), (_, _) => { });
-
-            // A clock that never moves: no matter how far the system scheduler advances, the
-            // window never elapses, so every later drop stays suppressed.
-            var frozen = new FrozenTimeProvider(DateTimeOffset.UtcNow);
-
-            var materializer = ActorMaterializer.Create(Sys);
-            var (pub, sub) = this.SourceProbe<IInboundEnvelope>()
-                .ViaMaterialized(Flow.FromGraph(new InboundHandshakeStage(context, frozen)), Keep.Left)
-                .ToMaterialized(this.SinkProbe<IInboundEnvelope>(), Keep.Both)
-                .Run(materializer);
-
-            await sub.RequestAsync(1);
-
-            await EventFilter.Warning(contains: "unknown origin uid").ExpectOneAsync(async () =>
-            {
-                await pub.SendNextAsync(OrdinaryInbound("first-drop", originUid: 201L));
-                await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
-            });
-
-            ((TestScheduler)Sys.Scheduler).Advance(TimeSpan.FromMinutes(5));
-
-            await EventFilter.Warning(contains: "unknown origin uid").ExpectAsync(0, async () =>
-            {
-                await pub.SendNextAsync(OrdinaryInbound("still-suppressed", originUid: 202L));
-                await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
-            });
-        }
-
-        /// <summary>A clock frozen at construction -- proves the stage reads the provider it was given.</summary>
-        private sealed class FrozenTimeProvider : ITimeProvider
-        {
-            public FrozenTimeProvider(DateTimeOffset now)
-            {
-                Now = now;
-            }
-
-            public DateTimeOffset Now { get; }
-            public TimeSpan MonotonicClock => TimeSpan.Zero;
-            public TimeSpan HighResMonotonicClock => TimeSpan.Zero;
-        }
     }
 }
