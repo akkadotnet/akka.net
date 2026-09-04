@@ -1,4 +1,4 @@
-﻿[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
+[assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/akkadotnet/akka.net")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.API.Tests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Benchmarks")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("Akka.Cluster")]
@@ -3460,6 +3460,26 @@ namespace Akka.Event
     public class LoggerMailbox : Akka.Dispatch.Mailbox, Akka.Dispatch.ISemantics, Akka.Dispatch.IUnboundedMessageQueueSemantics, Akka.Dispatch.MessageQueues.IMessageQueue, Akka.Event.ILoggerMessageQueueSemantics
     {
         public LoggerMailbox(Akka.Actor.IActorRef owner, Akka.Actor.ActorSystem system) { }
+    }
+    public sealed class LoggerRegistration
+    {
+        public LoggerRegistration(System.Func<Akka.Actor.Internal.ActorSystemImpl, Akka.Actor.Props> propsFactory) { }
+        public LoggerRegistration(System.Type loggerType) { }
+        public System.Type? LoggerType { get; }
+        public System.Func<Akka.Actor.Internal.ActorSystemImpl, Akka.Actor.Props>? PropsFactory { get; }
+    }
+    public sealed class LoggerSetup : Akka.Actor.Setup.Setup
+    {
+        public System.Collections.Generic.IReadOnlyList<Akka.Event.LoggerRegistration> Loggers { get; }
+    }
+    public sealed class LoggerSetupBuilder
+    {
+        public LoggerSetupBuilder() { }
+        public Akka.Event.LoggerSetupBuilder AddLogger(System.Func<Akka.Actor.Internal.ActorSystemImpl, Akka.Actor.Props> propsFactory) { }
+        public Akka.Event.LoggerSetupBuilder AddLogger(System.Type loggerType) { }
+        public Akka.Event.LoggerSetupBuilder AddLogger<T>()
+            where T : Akka.Actor.ActorBase { }
+        public Akka.Event.LoggerSetup Build() { }
     }
     public static class Logging
     {
