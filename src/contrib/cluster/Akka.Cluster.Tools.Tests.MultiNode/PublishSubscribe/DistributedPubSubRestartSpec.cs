@@ -139,12 +139,10 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
         await ExpectMsgAsync("msg1", 10.Seconds());
         await EnterBarrierAsync("got-msg1");
 
-        // All nodes capture the baseline DeltaCount before node-specific logic. Read it on a
-        // probe with an explicit bound: TestActor is subscribed to topic1, and every later
-        // DeltaCount read already moved off TestActor for that reason.
-        var baselineProbe = CreateTestProbe();
-        Mediator.Tell(DeltaCount.Instance, baselineProbe.Ref);
-        var oldDeltaCount = await baselineProbe.ExpectMsgAsync<long>(5.Seconds());
+        // All nodes capture the baseline DeltaCount before node-specific logic. The baseline must
+        // be read AFTER pub-sub gossip goes quiet, not merely after CountAsync - see the comment on
+        // ReadStableDeltaCountAsync for why those are not the same moment.
+        var oldDeltaCount = await ReadStableDeltaCountAsync();
         await EnterBarrierAsync("old-delta-count");
 
         await RunOnAsync(async () =>
@@ -331,6 +329,56 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
             return Task.CompletedTask;
         }, from);
         await EnterBarrierAsync(from.Name + "-joined");
+    }
+
+    /// <summary>
+    /// Reads the mediator's DeltaCount, but only once the pub-sub gossip that feeds it has
+    /// stopped moving. Returns the settled value.
+    /// </summary>
+    private async Task<long> ReadStableDeltaCountAsync()
+    {
+        // DeltaCount counts Delta MESSAGES received. It does not count registry changes, and the
+        // two diverge badly while a node is still learning the cluster.
+        //
+        // A mediator merges a bucket only if it already knows the bucket's owner as a cluster
+        // member. DistributedPubSubMediator's Delta handler increments _deltaCount first and only
+        // then tests _nodes.Contains(bucket.Owner). So while this node still waits for third's
+        // MemberUp, first pushes third's bucket on every 500ms gossip tick and this node discards
+        // every push - each discarded push still counted. Convergence therefore arrives as a BURST
+        // of Deltas, and redundant ones trail it: a peer keeps re-sending until our next outbound
+        // gossip tells it we caught up.
+        //
+        // CountAsync below unblocks on the FIRST push this node actually merges, so it returns
+        // while that burst is still draining. Reading the baseline right there captures a mid-burst
+        // value and lets the trailing Deltas land after it - which is exactly the reported failure
+        // ("Expected value to be 3L, but found 4L" on second). Measured over 20 local runs the last
+        // Delta arrived only 104-1010ms before the old unguarded read, against a 500ms gossip tick:
+        // one delayed tick flips it.
+        //
+        // So gate the baseline on quiescence instead of reading mid-burst. Two samples 2s apart
+        // must agree. 2s = 4 ticks of this spec's 500ms gossip-interval, which covers our own
+        // outbound tick plus the peer's reaction to it, with slack. The 30s ceiling is
+        // convergence-scale headroom, not a budget to lean on - the gate settles on the second
+        // sample in practice. Fresh probe per sample, matching CountAsync, so a late reply cannot
+        // be mistaken for the next sample.
+        var previous = long.MinValue;
+        var settledValue = 0L;
+        await AwaitAssertAsync(async () =>
+        {
+            var probe = CreateTestProbe();
+            Mediator.Tell(DeltaCount.Instance, probe.Ref);
+            var current = await probe.ExpectMsgAsync<long>(1.Seconds());
+
+            var lastSeen = previous;
+            previous = current;
+            settledValue = current;
+
+            (current == lastSeen).Should().BeTrue(
+                "pub-sub gossip must go quiet before DeltaCount can serve as a baseline " +
+                $"(previous sample {lastSeen}, current sample {current})");
+        }, 30.Seconds(), 2.Seconds());
+
+        return settledValue;
     }
 
     private async Task CountAsync(int expected)
