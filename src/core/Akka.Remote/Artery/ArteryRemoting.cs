@@ -1679,7 +1679,8 @@ namespace Akka.Remote.Artery
                 {
                     var handshakeStage = new OutboundHandshakeStage(
                         outboundContext, _settings.HandshakeRetryInterval, _settings.HandshakeTimeout,
-                        _settings.InjectHandshakeInterval, isControlStream: false, forceReqOnStart: isRestart);
+                        _settings.InjectHandshakeInterval, isControlStream: false, forceReqOnStart: isRestart,
+                        timeProvider: System.Scheduler);
 
                     var encodeStage = new ArteryEncodeStage(
                         System.Serialization, _localUniqueAddress.Uid, _laneEncodeBufferPools![i]);
@@ -1900,7 +1901,8 @@ namespace Akka.Remote.Artery
 
             var handshakeStage = new OutboundHandshakeStage(
                 outboundContext, _settings.HandshakeRetryInterval, _settings.HandshakeTimeout,
-                _settings.InjectHandshakeInterval, isControlStream: isControlStream, forceReqOnStart: isRestart);
+                _settings.InjectHandshakeInterval, isControlStream: isControlStream, forceReqOnStart: isRestart,
+                timeProvider: System.Scheduler);
 
             var host = remoteAddress.Host
                 ?? throw new RemoteTransportException($"Cannot open an Artery {streamId} outbound connection to [{remoteAddress}]: missing host.");

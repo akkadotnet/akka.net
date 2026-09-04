@@ -8,6 +8,7 @@
 #nullable enable
 
 using System;
+using Akka.Actor;
 using Akka.Event;
 using Akka.Streams;
 using Akka.Streams.Stage;
@@ -36,26 +37,24 @@ namespace Akka.Remote.Artery
     /// while incomplete, and a one-shot timeout timer fails the stage with
     /// <see cref="HandshakeTimeoutException"/> after <c>handshake-timeout</c> if the handshake
     /// never completes (the association is expected to retry the outbound stream). Neither timer
-    /// DETECTS completion -- see the notification-mechanism note below.</para>
+    /// detects completion. See the next note.</para>
     ///
-    /// <para><b>Handshake-completion notification mechanism.</b> Completion is PUSHED to this
-    /// stage, never polled for. On entering <c>ReqInProgress</c> the logic registers a
-    /// <c>GetAsyncCallback</c> with the association
-    /// (<see cref="IOutboundContext.SubscribeHandshakeStateChanged"/>); the inbound pipeline's
-    /// <see cref="AssociationRegistry.CompleteHandshake"/> /
-    /// <see cref="AssociationRegistry.CompleteOutboundHandshake"/> fires it, and the stage
-    /// re-verifies the association snapshot against its own completion rule before releasing
-    /// traffic. The stage still READS the CAS-published <see cref="Artery.AssociationState"/>
-    /// snapshot (safe from any thread) at <c>OnPull</c>/<c>OnPush</c>/the retry tick, but those are
-    /// opportunistic; none of them is the detection path.</para>
+    /// <para><b>How the stage learns that the handshake completed.</b> The association pushes
+    /// the news. On entering <c>ReqInProgress</c> the logic registers a <c>GetAsyncCallback</c>
+    /// with the association (<see cref="IOutboundContext.SubscribeHandshakeStateChanged"/>). The
+    /// inbound pipeline calls <see cref="AssociationRegistry.CompleteHandshake"/> or
+    /// <see cref="AssociationRegistry.CompleteOutboundHandshake"/>, which fires that callback. The
+    /// stage then re-checks the association snapshot against its own completion rule before it
+    /// releases traffic. The stage also reads that snapshot at <c>OnPull</c>, <c>OnPush</c> and the
+    /// retry tick. Those reads are opportunistic. None of them is the detection path.</para>
     ///
-    /// <para><b>Why polling was not enough.</b> While the stage holds a user element it stops
-    /// pulling, and it has already pushed nothing, so NOTHING re-enters the logic: no <c>OnPull</c>
-    /// (downstream demand is still outstanding), no <c>OnPush</c>. The only remaining wake-up was
-    /// the retry tick, which made the first message on a freshly-gated association wait up to a
-    /// full <c>handshake-retry-interval</c> (1s by default) after the peer had already answered.
-    /// On a cluster join that is the seed's Welcome to every peer -- measured at ~1.07s versus
-    /// ~0.07s once the wake-up is push-based.</para>
+    /// <para><b>Why polling is not enough.</b> A gating stage holds one user element and stops
+    /// pulling. It has pushed nothing, so downstream demand is still outstanding. No <c>OnPull</c>
+    /// arrives and no <c>OnPush</c> arrives. That left the retry tick as the only wake-up, so the
+    /// first message on a gated association waited up to one <c>handshake-retry-interval</c>
+    /// (1s by default) after the peer had already answered. On a cluster join that message is the
+    /// seed's Welcome to every peer. Measured join-to-Welcome latency was ~1.07s with polling and
+    /// ~0.07s with the push wake-up.</para>
     ///
     /// <para><b><c>inject-handshake-interval</c> (liveness re-injection — simplified per the
     /// task).</b> After completion, the stage tracks the timestamp it last injected a
@@ -69,10 +68,10 @@ namespace Akka.Remote.Artery
     /// ("track last-injection time; if a message flows and it's been &gt; inject-handshake-interval
     /// since the last injection, inject another ahead of it").</para>
     ///
-    /// <para><b>Completion means "the PEER knows OUR uid" (issue #8496)</b> -- proven only by a
-    /// <see cref="HandshakeRsp"/> answering a <see cref="HandshakeReq"/> of ours, not by
-    /// <see cref="Artery.AssociationState.UniqueRemoteAddress"/> (which the INBOUND direction sets
-    /// too). See <c>Logic.CanSkipOwnHandshake</c>.</para>
+    /// <para><b>What completion means (issue #8496).</b> Completion means the peer knows OUR
+    /// uid. Only a <see cref="HandshakeRsp"/> answering a <see cref="HandshakeReq"/> of ours proves
+    /// that. <see cref="Artery.AssociationState.UniqueRemoteAddress"/> does not: the inbound
+    /// direction sets that field too. See <c>Logic.CanSkipOwnHandshake</c>.</para>
     ///
     /// <para><b>Control-channel routing (task group 6, "Control Stream", task 6.3).</b> This
     /// SAME stage class is materialized on EVERY outbound stream (control, ordinary, and later
@@ -110,7 +109,8 @@ namespace Akka.Remote.Artery
             TimeSpan handshakeTimeout,
             TimeSpan injectHandshakeInterval,
             bool isControlStream = true,
-            bool forceReqOnStart = false)
+            bool forceReqOnStart = false,
+            ITimeProvider? timeProvider = null)
         {
             if (retryInterval <= TimeSpan.Zero)
                 throw new ArgumentOutOfRangeException(nameof(retryInterval), retryInterval, "must be positive.");
@@ -125,10 +125,20 @@ namespace Akka.Remote.Artery
             InjectHandshakeInterval = injectHandshakeInterval;
             IsControlStream = isControlStream;
             ForceReqOnStart = forceReqOnStart;
+            TimeProvider = timeProvider;
             Shape = new FlowShape<IOutboundEnvelope, IOutboundEnvelope>(In, Out);
         }
 
         public IOutboundContext Context { get; }
+
+        /// <summary>
+        /// Clock for the Req-injection schedule (<c>handshake-retry-interval</c> and
+        /// <c>inject-handshake-interval</c>). <see langword="null"/> resolves to the materializing
+        /// system's scheduler when the stream starts. Typed as the base
+        /// <see cref="ITimeProvider"/> so a virtual clock can drive these intervals in a test.
+        /// </summary>
+        public ITimeProvider? TimeProvider { get; }
+
         public TimeSpan RetryInterval { get; }
         public TimeSpan HandshakeTimeout { get; }
         public TimeSpan InjectHandshakeInterval { get; }
@@ -183,15 +193,27 @@ namespace Akka.Remote.Artery
             private readonly OutboundHandshakeStage _stage;
 
             /// <summary>
-            /// Non-null exactly while this logic is registered with the association for
-            /// handshake-state notifications (i.e. from <see cref="PreStart"/>'s
-            /// <c>ReqInProgress</c> branch until completion or <see cref="PostStop"/>).
+            /// Non-null while this logic is registered with the association for handshake
+            /// notifications: from <see cref="PreStart"/>'s <c>ReqInProgress</c> branch until
+            /// completion or <see cref="PostStop"/>.
             /// </summary>
             private Action? _handshakeStateChangedCallback;
 
             private State _state = State.Start;
             private IOutboundEnvelope? _pendingMessage;
-            private DateTime _lastInject = DateTime.MinValue;
+
+            /// <summary>
+            /// When this logic last injected a <see cref="HandshakeReq"/>; <see langword="null"/>
+            /// until the first one. Every read and write goes through <see cref="_timeProvider"/>,
+            /// so the whole schedule moves together when the clock is virtual.
+            /// </summary>
+            private DateTimeOffset? _lastInject;
+
+            /// <summary>
+            /// Resolved once at <see cref="PreStart"/>: the stage's explicit clock, else the
+            /// materializing system's scheduler.
+            /// </summary>
+            private ITimeProvider _timeProvider = null!;
 
             /// <summary>
             /// Only meaningful when <see cref="OutboundHandshakeStage.ForceReqOnStart"/> -- the
@@ -215,19 +237,29 @@ namespace Akka.Remote.Artery
 
             public override void PreStart()
             {
+                // Resolve the clock before anything stamps _lastInject.
+                _timeProvider = _stage.TimeProvider
+                                ?? (Materializer as ActorMaterializer)?.System.Scheduler
+                                ?? throw new InvalidOperationException(
+                                    "No ITimeProvider available: this stream was not materialized " +
+                                    "by an ActorMaterializer, so pass one to the stage explicitly.");
+
                 var state = _stage.Context.AssociationState;
 
                 if (!_stage.ForceReqOnStart && CanSkipOwnHandshake(state))
                 {
                     _state = State.Completed;
-                    _lastInject = DateTime.UtcNow;
+                    _lastInject = _timeProvider.Now;
                     return;
                 }
 
                 if (!_stage.ForceReqOnStart && !_stage.IsControlStream && !state.OutboundHandshakeCompleted &&
                     state.UniqueRemoteAddress is not null)
                 {
-                    // Issue #8496's ordering, named so it is recognizable in the field.
+                    // This is the issue #8496 ordering. The peer dialed us first, so we know its
+                    // uid from its HandshakeReq. The peer does not know our uid. We send our own
+                    // Req and hold traffic until it answers. Log it, so the ordering is visible in
+                    // production logs.
                     Log.Debug(
                         "Outbound Artery stream to [{0}]: the peer's uid is known from an INBOUND handshake only, " +
                         "so this stream sends its own HandshakeReq and holds traffic until the peer answers.",
@@ -239,12 +271,11 @@ namespace Akka.Remote.Artery
                 ScheduleRepeatedly(RetryTimerKey, _stage.RetryInterval);
                 ScheduleOnce(TimeoutTimerKey, _stage.HandshakeTimeout);
 
-                // REGISTER, THEN RE-CHECK -- the ordering is load-bearing. A completion landing
-                // between the snapshot read at the top of this method and this registration would
-                // otherwise be missed entirely, and (once this stage is holding an element and has
-                // stopped pulling) nothing would re-enter the logic until the retry tick. Doing the
-                // re-check after registering means such a completion is either seen by the check or
-                // delivered by the callback -- never neither.
+                // Register first, then re-check. A completion can land between the snapshot read
+                // at the top of this method and this registration. Registering first means either
+                // the re-check below sees it or the callback delivers it. It cannot fall between
+                // the two. That matters because a gating stage stops pulling, so nothing else
+                // re-enters this logic until the retry tick.
                 _handshakeStateChangedCallback = GetAsyncCallback(OnHandshakeStateChanged);
                 _stage.Context.SubscribeHandshakeStateChanged(this, _handshakeStateChangedCallback);
                 RefreshCompletionFromContext();
@@ -252,11 +283,10 @@ namespace Akka.Remote.Artery
 
             public override void PostStop()
             {
-                // Streams here are restarted (RestartFlow/ScheduleOutboundRestart) against an
-                // association that long outlives them, so a leaked registration would accumulate.
-                // Invoking an already-stopped stage's async callback is itself harmless -- the
-                // interpreter drops async input for a completed logic -- so this is hygiene, not a
-                // correctness race.
+                // Streams restart against an association that outlives them, so a leaked
+                // registration would accumulate. Invoking a stopped stage's async callback is
+                // harmless on its own: the interpreter drops async input for a completed logic.
+                // This is hygiene, not a race fix.
                 UnsubscribeHandshakeStateChanged();
             }
 
@@ -270,11 +300,9 @@ namespace Akka.Remote.Artery
             }
 
             /// <summary>
-            /// The association told us its handshake state advanced. Re-verify against THIS
-            /// stream's own completion rule (an ordinary stream waiting for its Rsp is not
-            /// satisfied by the peer's inbound Req, nor by a completion belonging to a newer
-            /// incarnation) and, if we are now complete, release exactly the way the retry-tick
-            /// path used to.
+            /// The association reports that its handshake state advanced. Re-check that state
+            /// against this stream's own rule. An ordinary stream waiting for its Rsp is not
+            /// satisfied by the peer's inbound Req, nor by a completion for a newer incarnation.
             /// </summary>
             private void OnHandshakeStateChanged()
             {
@@ -283,6 +311,9 @@ namespace Akka.Remote.Artery
                 if (_state != State.Completed)
                     return;
 
+                // If we have a pending user message that has not been sent yet, flush it now
+                // that the handshake is done. This runs from the async callback. This is what
+                // prevents the message loss.
                 if (_pendingMessage is { } held && IsAvailable(_stage.Out))
                 {
                     _pendingMessage = null;
@@ -295,28 +326,33 @@ namespace Akka.Remote.Artery
             }
 
             /// <summary>
-            /// May this materialization skip straight to <c>Completed</c> because another stream on
-            /// the same association already did the work?
+            /// Can this materialization skip the handshake and start out <c>Completed</c>?
             ///
             /// <para>
-            /// For an ORDINARY/LARGE/lane stream, only when the peer has answered a
-            /// <see cref="HandshakeReq"/> of OURS
-            /// (<see cref="Artery.AssociationState.OutboundHandshakeCompleted"/>). A known
-            /// <see cref="Artery.AssociationState.UniqueRemoteAddress"/> does not qualify -- the
-            /// peer's own inbound Req sets that, and it says nothing about whether the peer has
-            /// registered our uid, so trusting it let our first user message race our
-            /// <see cref="HandshakeRsp"/> into the peer's unknown-origin drop (issue #8496).
+            /// If another outbound stream on this association has already handled the handshake, we
+            /// can and must skip it. That covers a sibling lane when <c>outbound-lanes &gt; 1</c>.
+            /// It also covers the control, ordinary and large streams of one association at the
+            /// default single lane, and any later re-materialization of them.
             /// </para>
             ///
             /// <para>
-            /// The CONTROL stream keeps the older, weaker rule. That is safe -- the receiver's
-            /// unknown-origin gate only ever drops ORDINARY envelopes; every control envelope
-            /// (handshake, heartbeat, quarantine notice, system messages and their Ack/Nack) is
-            /// dispatched whether or not the origin uid is registered. And it is REQUIRED: the
-            /// <see cref="HandshakeRsp"/> we owe a peer is enqueued on that very control queue, so
-            /// if the control stream held its traffic until the peer answered OUR Req, two systems
-            /// that dial each other at the same instant would each sit holding the Rsp the other is
-            /// waiting for, and neither handshake could ever complete.
+            /// For an ordinary, large or lane stream, "already handled" means the peer answered a
+            /// <see cref="HandshakeReq"/> of ours
+            /// (<see cref="Artery.AssociationState.OutboundHandshakeCompleted"/>). A known
+            /// <see cref="Artery.AssociationState.UniqueRemoteAddress"/> is not enough. The peer's
+            /// own inbound Req sets that field, and it says nothing about whether the peer
+            /// registered our uid. Trusting it sent our first user message into the peer's
+            /// unknown-origin drop (issue #8496).
+            /// </para>
+            ///
+            /// <para>
+            /// If we are the control stream, we are sending and handling the handshake. Waiting on
+            /// it would deadlock us: the <see cref="HandshakeRsp"/> we owe the peer sits in the
+            /// same control queue we would be gating, so two systems that dial each other at the
+            /// same instant would each hold the Rsp the other waits for. So we skip it. Skipping is
+            /// also safe. The receiver drops unknown-origin ORDINARY envelopes only. It always
+            /// dispatches control envelopes: handshake, heartbeat, quarantine notice, and system
+            /// messages with their Ack/Nack.
             /// </para>
             /// </summary>
             private bool CanSkipOwnHandshake(AssociationState state) =>
@@ -375,7 +411,7 @@ namespace Akka.Remote.Artery
 
                         if (IsAvailable(_stage.Out))
                         {
-                            _lastInject = DateTime.UtcNow;
+                            _lastInject = _timeProvider.Now;
                             Push(_stage.Out, BuildReqEnvelope());
                         }
 
@@ -385,7 +421,7 @@ namespace Akka.Remote.Artery
                     // Non-control stream: the Req travels via the control side channel and never
                     // occupies this stream's Out slot, so the user element can flow through
                     // immediately below -- no need to hold it.
-                    _lastInject = DateTime.UtcNow;
+                    _lastInject = _timeProvider.Now;
                     _stage.Context.SendControl(BuildReqMessage());
                 }
 
@@ -452,10 +488,10 @@ namespace Akka.Remote.Artery
                     !Equals(remote.Address, _stage.Context.RemoteAddress))
                     return;
 
-                // Same control/ordinary split as CanSkipOwnHandshake, and load-bearing here too:
-                // the generation counter below is advanced by the peer's own inbound Req as well,
-                // so without this an ordinary stream would complete on the peer's Req retry that
-                // happens to land while we wait for our Rsp -- issue #8496 through the back door.
+                // If we are not the control stream, we cannot continue until the handshake is
+                // done. The generation counter below also advances on the peer's own inbound Req,
+                // so without this check an ordinary stream would complete on a Req retry that
+                // lands while we wait for our Rsp. That is issue #8496 again.
                 if (!_stage.IsControlStream && !state.OutboundHandshakeCompleted)
                     return;
 
@@ -475,7 +511,7 @@ namespace Akka.Remote.Artery
                 CancelTimer(RetryTimerKey);
                 CancelTimer(TimeoutTimerKey);
                 UnsubscribeHandshakeStateChanged();
-                _lastInject = DateTime.UtcNow;
+                _lastInject = _timeProvider.Now;
             }
 
             private void TryInjectReq()
@@ -483,8 +519,8 @@ namespace Akka.Remote.Artery
                 if (_state == State.Completed)
                     return;
 
-                var now = DateTime.UtcNow;
-                var due = _lastInject == DateTime.MinValue || now - _lastInject >= _stage.RetryInterval;
+                var now = _timeProvider.Now;
+                var due = _lastInject is not { } lastInject || now - lastInject >= _stage.RetryInterval;
                 if (!due)
                     return;
 
@@ -506,8 +542,8 @@ namespace Akka.Remote.Artery
 
             private bool ShouldReinjectForLiveness()
             {
-                var now = DateTime.UtcNow;
-                return _lastInject == DateTime.MinValue || now - _lastInject >= _stage.InjectHandshakeInterval;
+                var now = _timeProvider.Now;
+                return _lastInject is not { } lastInject || now - lastInject >= _stage.InjectHandshakeInterval;
             }
 
             private HandshakeReq BuildReqMessage() => new(_stage.Context.LocalAddress, _stage.Context.RemoteAddress);
