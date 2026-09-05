@@ -22,17 +22,15 @@ using Xunit;
 namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
-/// CHARACTERIZATION tests (issue #8384, PR 1): pin what <see cref="AkkaSerializerGenerator"/>
-/// ACTUALLY does today when a serializable type lives in a REFERENCED assembly rather than the
-/// compilation that hosts the [AkkaSerializer] module. These assert observed behavior, not
-/// intended behavior -- see the design.md Decision 13 note this spec verifies (the "scoped to the
-/// current compilation" claim).
+/// These tests pin what <see cref="AkkaSerializerGenerator"/> does today when a serializable type
+/// lives in a referenced assembly, not in the compilation that hosts the serializer. They check
+/// real behavior, not ideal behavior. See design.md Decision 13.
 /// </summary>
 /// <remarks>
-/// The harness compiles a small "assembly A" from source into an in-memory <see cref="MetadataReference"/>
-/// (no generator run against it -- A never hosts a serializer), then compiles "assembly B"
-/// referencing A plus the same base references <see cref="AkkaSerializerGeneratorDiagnosticsSpec"/>
-/// uses, and runs the generator against B exactly as that spec does.
+/// The harness builds a small "assembly A" from source into an in-memory
+/// <see cref="MetadataReference"/>. Assembly A never runs the generator. It only supplies types.
+/// The harness then builds "assembly B", which references A and runs the generator, using the
+/// same base references as <see cref="AkkaSerializerGeneratorDiagnosticsSpec"/>.
 /// </remarks>
 public sealed class CrossAssemblyBaselineSpec
 {
@@ -71,16 +69,27 @@ public sealed class CrossAssemblyBaselineSpec
         var (generatorDiagnostics, compileDiagnostics, _) = RunGeneratorAgainstB(sourceB, assemblyA, "CrossAssemblyBaseline.Case1.B");
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
-        // CONTRACT: [AkkaSerializable] detection reads attributes off the type SYMBOL, which is
-        // visible cross-assembly, so Money maps to FieldKind.Object; but the "known message"
-        // registry (messagesByType) is built from the syntax provider, which only sees declarations
-        // local to B, so the Object mapping still resolves to no known message. That case is now
-        // told apart from a genuine unregistered closed generic by the message-dictionary key
-        // shape (Money's key carries no '<'), so it reports AKKASG007 -- naming the offending type
-        // and its declaring assembly, and pointing at the two fixes that actually work today --
-        // never AKKASG023. Money already carries [AkkaSerializable] and [AkkaField] in assembly A,
-        // so the message must NOT claim the type lacks them (annotating it there fixes nothing
-        // until this generator can read schemas across assemblies).
+        // Why this case reports AKKASG007 and not AKKASG023.
+        //
+        //   Assembly A (referenced)             Assembly B (this compilation)
+        //   +-------------------------+         +-------------------------------+
+        //   | [AkkaSerializable]      |         | [AkkaSerializable] Pay        |
+        //   | record Money(...)       | <------ |   [AkkaField(1)] Money Amount |
+        //   +-------------------------+ property+-------------------------------+
+        //            ^ type symbol                        ^ syntax tree
+        //            |                                    |
+        //   Attribute check reads the SYMBOL.      messagesByType is built from SYNTAX.
+        //   It sees [AkkaSerializable] on Money.   It sees only types declared in B.
+        //   Money maps to FieldKind.Object.        Money is not in the table.
+        //
+        // Result: an Object mapping with no known message. An unregistered closed generic
+        // produces the same state. That is why the generator once reported AKKASG023 here.
+        // The mapping now records whether the type is a generic construction. Money is not.
+        // So the generator reports AKKASG007. The message names Money and assembly A. It
+        // offers the two fixes that work today: register a formatter on ShopSerializer, or
+        // declare the type in B. Money already carries the attributes in A, so the message
+        // must not tell the user to add them. Adding them there fixes nothing until the
+        // generator can read a schema from a referenced assembly.
         all.Should().NotContain(d => d.Id == "AKKASG023");
         all.Should().Contain(d =>
             d.Id == "AKKASG007" &&
@@ -134,14 +143,12 @@ public sealed class CrossAssemblyBaselineSpec
         var (generatorDiagnostics, compileDiagnostics, _) = RunGeneratorAgainstB(sourceB, assemblyA, "CrossAssemblyBaseline.Case2.B");
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
-        // CONTRACT: the type-level [AkkaUnion(...)] on IOrderEvent IS found (symbol-based attribute
-        // discovery works cross-assembly), so the field maps to FieldKind.Union and AKKASG003 never
-        // fires. But union member validation resolves each member against the same syntax-provider
-        // `messagesByType`, which knows nothing about Placed/Cancelled -- so both members fail as
-        // "not serializable" (AKKASG015), each now carrying the cross-assembly hint naming the
-        // member type, its declaring assembly, and the two fixes that actually work today. Placed
-        // and Cancelled already carry [AkkaSerializable] and a manifest in assembly A, so the
-        // message must NOT claim otherwise.
+        // Why this case reports AKKASG015 for each member.
+        // The generator reads [AkkaUnion] off the IOrderEvent symbol. This works across assemblies.
+        // So the field maps to FieldKind.Union, not Unsupported. AKKASG003 never fires.
+        // Each member is checked against messagesByType, which only holds types declared here.
+        // Placed and Cancelled live in A, so both fail as AKKASG015, even though both already
+        // carry [AkkaSerializable] and a manifest there.
         all.Should().NotContain(d => d.Id == "AKKASG003");
         all.Should().Contain(d =>
             d.Id == "AKKASG015" &&
@@ -199,17 +206,16 @@ public sealed class CrossAssemblyBaselineSpec
             RunGeneratorAgainstB(sourceBRegistered, assemblyA, "CrossAssemblyBaseline.Case3.Registered");
         var registeredAll = registeredGeneratorDiagnostics.AddRange(registeredCompileDiagnostics);
 
-        // OBSERVED: closed-generic registration extraction reads the generic DEFINITION's
-        // [AkkaSerializable]/[AkkaField] data straight off the type symbol (not syntax), and the
-        // registered construction Wrapper<int> is injected into messagesByType directly by that
-        // extraction step rather than the syntax provider -- sidestepping the gap cases 1/2 hit.
-        // No errors; the helper methods are emitted.
+        // Why registering the closed construction works.
+        // [AkkaSerializable<Wrapper<int>>] reads the Wrapper<T> definition off the type symbol,
+        // not off syntax. The registration step adds Wrapper<int> to messagesByType itself.
+        // This avoids the gap that cases 1 and 2 hit. No errors. The generator emits the write
+        // and read helpers.
         registeredAll.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
         generatedSource.Should().Contain("WriteWrapperInt");
         generatedSource.Should().Contain("ReadWrapperInt");
 
-        // Second variant: same referenced-assembly definition and field usage, but with NO
-        // [AkkaSerializable<Wrapper<int>>] registration on the serializer.
+        // Same setup as above, but with no [AkkaSerializable<Wrapper<int>>] registration.
         const string sourceBUnregistered = """
             #nullable enable
             using Akka.Actor;
@@ -232,6 +238,8 @@ public sealed class CrossAssemblyBaselineSpec
             RunGeneratorAgainstB(sourceBUnregistered, assemblyA, "CrossAssemblyBaseline.Case3.Unregistered");
         var unregisteredAll = unregisteredGeneratorDiagnostics.AddRange(unregisteredCompileDiagnostics);
 
+        // Without the registration, Wrapper<int> is missing from messagesByType, and it is a
+        // generic construction. So this reports AKKASG023, not AKKASG007.
         unregisteredAll.Should().Contain(d =>
             d.Id == "AKKASG023" &&
             d.Severity == DiagnosticSeverity.Error &&
@@ -276,18 +284,19 @@ public sealed class CrossAssemblyBaselineSpec
         var (generatorDiagnostics, compileDiagnostics, generatedSource) = RunGeneratorAgainstB(sourceB, assemblyA, "CrossAssemblyBaseline.Case4.B");
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
-        // Envelope<AcceptCassette> implements nothing and is not a field of any message reachable
-        // from a top-level message -- the registration has no effect either way, regardless of
-        // where the generic definition lives.
+        // Why this case reports AKKASG034.
+        // Envelope<AcceptCassette> does not implement IComms. It is not a field of any reachable
+        // message. The registration has no effect, no matter where the generic definition lives.
         all.Should().Contain(d =>
             d.Id == "AKKASG034" &&
             d.Severity == DiagnosticSeverity.Error &&
             d.GetMessage(null).Contains("Envelope", StringComparison.Ordinal) &&
             d.GetMessage(null).Contains("IComms", StringComparison.Ordinal));
 
-        // OBSERVED (not what the task brief assumed): AKKASG034 fails ValidateClosedGenericProtocolCoverage,
-        // which makes the pipeline `continue` past AddSource for THIS SERIALIZER ENTIRELY -- there is
-        // no partial CommsSerializer file at all, so there's no "binds only IComms" list to inspect.
+        // Why generatedSource is empty.
+        // AKKASG034 fails the coverage check for the whole serializer. The generator then skips
+        // AddSource for CommsSerializer. No partial file is written, so there is no registration
+        // list to inspect here.
         generatedSource.Should().BeEmpty("AKKASG034 fails the whole serializer's coverage check, so the pipeline skips AddSource for CommsSerializer entirely");
     }
 
@@ -332,11 +341,11 @@ public sealed class CrossAssemblyBaselineSpec
         var (generatorDiagnostics, compileDiagnostics, generatedSource) = RunGeneratorAgainstB(sourceB, assemblyA, "CrossAssemblyBaseline.Case5.B");
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
-        // OBSERVED: Roslyn's substituted-member symbol (Envelope<IComms>.Message) returns the
-        // ORIGINAL DEFINITION's attributes, including [AkkaEnvelopePayload], regardless of which
-        // assembly declared the generic definition -- so the generator treats the field as an
-        // envelope payload boundary instead of failing AKKASG003 (T substituted to an interface
-        // would otherwise be unsupported).
+        // Why this field is an envelope payload, not AKKASG003.
+        // Envelope<IComms>.Message is a substituted member. Roslyn returns the original
+        // definition's attributes for it, including [AkkaEnvelopePayload]. This holds no matter
+        // which assembly declared the generic definition. So the generator treats the field as
+        // an envelope payload. Without this, T substituted to an interface would be unsupported.
         all.Should().NotContain(d => d.Id == "AKKASG003");
         all.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
         generatedSource.Should().Contain("WriteEnvelopePayload");
@@ -374,9 +383,10 @@ public sealed class CrossAssemblyBaselineSpec
         var (generatorDiagnostics, compileDiagnostics, generatedSource) = RunGeneratorAgainstB(sourceB, assemblyA, "CrossAssemblyBaseline.Case6.B");
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
-        // AKKASG029's protocol-coverage walk only enumerates named types DECLARED IN THIS
-        // COMPILATION, so OrderPlaced (declared only in A) is never visited or flagged, even
-        // though it implements IOrders. The generated switch has no knowledge OrderPlaced exists.
+        // Why AKKASG029 does not fire here.
+        // The protocol-coverage check only looks at types declared in this compilation.
+        // OrderPlaced is declared only in A, so the check never sees it, even though OrderPlaced
+        // implements IOrders. The generated Manifest switch has no case for OrderPlaced.
         all.Should().NotContain(d => d.Id == "AKKASG029");
         generatedSource.Should().NotContain("OrderPlaced");
         all.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
@@ -427,8 +437,8 @@ public sealed class CrossAssemblyBaselineSpec
         return (generatorDiagnostics, updatedCompilation.GetDiagnostics(), generatedSource);
     }
 
-    // Reused verbatim from AkkaSerializerGeneratorDiagnosticsSpec: the same base reference set, so
-    // the [AkkaSerializer]/[AkkaSerializable] attributes and runtime types resolve identically.
+    // Same base reference set as AkkaSerializerGeneratorDiagnosticsSpec. The [AkkaSerializer] and
+    // [AkkaSerializable] attributes and runtime types resolve the same way here.
     private static IEnumerable<MetadataReference> CreateMetadataReferences()
     {
         var trustedAssemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))?
