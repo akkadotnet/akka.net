@@ -353,6 +353,27 @@ The API is unreleased. So this needs no entry in the breaking-changes ledger. It
 
 This ships as its own small PR, independent of the others.
 
+### 21. Unions Without A Member List
+
+`[AkkaUnion]` with no arguments, on an interface or an abstract class, gets a new meaning. The closed set becomes every `[AkkaSerializable]` implementor the generator can see. The explicit list, `[AkkaUnion(typeof(A), typeof(B))]`, still works. As a field-level override, it works anywhere in the serializer's compilation. As a type-level form, it works only where every listed member is visible from the type's own assembly.
+
+Three reasons back this decision.
+
+- Assembly direction causes the first problem. In a layered codebase, the interface lives upstream of its implementations. An assembly cannot name a type from an assembly that references it. So a type-level member list is uncompilable there, not merely tedious.
+- Intent stays explicit under this rule. The marker declares the interface a wire contract. Without a marker, the generator would have to walk implementors of any interface a field mentions. It could not tell a wire contract from an incidental interface with in-memory-only implementations.
+- The third reason is cost. This decision reuses Decision 19's mechanism and cost model. It only points that mechanism at a marked interface, instead of the protocol interface. The protocol interface needs no marker. Decision 18 already covers it, because `[AkkaSerializer<TProtocol>]` declares the protocol.
+
+This decision changes six things:
+
+- the attribute regains a parameterless constructor, with a documented meaning: all visible serializable implementors, not an empty set. Decision 15 removed the empty form. This is a different meaning
+- an implementor of a marked interface without `[AkkaSerializable]` is a build error. This is the same rule as AKKASG029 for the protocol. It reports at the serializer class when the implementor lives in a referenced assembly
+- the empty-set half of AKKASG019 does not apply to the marker form
+- the set is scoped as in Decision 19: this compilation, plus referenced assemblies that reference V2
+- both costs of Decision 19 apply, with the same mitigations: the construction-count diagnostic, and the startup one-owner check
+- the wire format does not change. A union frame carries each member's own manifest, whether the set was listed or found
+
+This ships with the referenced-assembly walk from Decision 19. It is the same walk.
+
 ## Risks / Trade-offs
 
 **Generator complexity**: keep diagnostics focused and add incrementally.
