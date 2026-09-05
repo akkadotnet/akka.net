@@ -88,15 +88,57 @@ namespace Akka.Remote.TestKit
         /// <param name="controllerPort"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<IPEndPoint> StartControllerAsync(int participants, RoleName name, IPEndPoint controllerPort, CancellationToken cancellationToken = default)
+        public Task<IPEndPoint> StartControllerAsync(int participants, RoleName name, IPEndPoint controllerPort, CancellationToken cancellationToken = default)
+        {
+            return StartControllerAsync(participants, name, controllerPort, null, cancellationToken);
+        }
+
+        /// <summary>
+        /// INTERNAL API. Same as
+        /// <see cref="StartControllerAsync(int,RoleName,IPEndPoint,CancellationToken)"/>, but calls
+        /// <paramref name="onBound"/> with the endpoint the controller actually bound to before
+        /// waiting for the other participants to attach.
+        ///
+        /// The callback has to run at that point. The wait for participants only ends once every
+        /// node has connected, and the nodes cannot connect until they know the port.
+        /// </summary>
+        internal async Task<IPEndPoint> StartControllerAsync(
+            int participants,
+            RoleName name,
+            IPEndPoint controllerPort,
+            Action<IPEndPoint> onBound,
+            CancellationToken cancellationToken = default)
         {
             if(_controller != null) throw new IllegalStateException("TestConductorServer was already started");
-            _controller = _system.ActorOf(Props.Create(() => new Controller(participants, controllerPort)),
+
+            // The Controller reports its bind result here rather than through an ask. A bind that
+            // fails must surface now, loudly, instead of as a query timeout.
+            var bindResult = new TaskCompletionSource<IPEndPoint>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _controller = _system.ActorOf(Props.Create(() => new Controller(participants, controllerPort, bindResult)),
                 "controller");
 
-            var node = await _controller.Ask<IPEndPoint>(TestKit.Controller.GetSockAddr.Instance, Settings.QueryTimeout, cancellationToken);
+            var node = await AwaitBindAsync(bindResult.Task, cancellationToken);
+            onBound?.Invoke(node);
             await StartClient(name, node);
             return node;
+        }
+
+        /// <summary>
+        /// Waits for the <see cref="Controller"/> to report the endpoint it bound.
+        /// </summary>
+        private async Task<IPEndPoint> AwaitBindAsync(Task<IPEndPoint> bindResult, CancellationToken cancellationToken)
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var timeout = Task.Delay(Settings.QueryTimeout, timeoutCts.Token);
+            var completed = await Task.WhenAny(bindResult, timeout);
+            timeoutCts.Cancel();
+
+            if (completed != bindResult)
+                throw new TimeoutException(
+                    $"TestConductor controller did not report a bound address within {Settings.QueryTimeout}.");
+
+            // Rethrows the bind failure with its own message and stack trace.
+            return await bindResult;
         }
 
         /// <summary>

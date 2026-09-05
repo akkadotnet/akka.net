@@ -17,6 +17,7 @@ using Akka.Actor;
 using Akka.MultiNode.TestAdapter.Configuration;
 using Akka.MultiNode.TestAdapter.Internal.Sinks;
 using Akka.MultiNode.TestAdapter.NodeRunner;
+using Akka.Remote.TestKit;
 using Xunit.Sdk;
 using Xunit.v3;
 
@@ -33,7 +34,8 @@ namespace Akka.MultiNode.TestAdapter.Internal
             IActorRef sinkCoordinator,
             IActorRef timelineCollector,
             MultiNodeTestRunnerOptions options,
-            CancellationTokenSource cancellationTokenSource)
+            CancellationTokenSource cancellationTokenSource,
+            TaskCompletionSource<int> conductorPortSource = null)
         {
             _test = test;
             _messageBus = messageBus;
@@ -45,6 +47,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
             _cancellationTokenSource = cancellationTokenSource;
             _skipReason = skipReason;
             _ids = TestMessageIds.From(test.TestCase);
+            _conductorPortSource = conductorPortSource;
         }
 
         private readonly MultiNodeTestRunnerOptions _options;
@@ -56,6 +59,19 @@ namespace Akka.MultiNode.TestAdapter.Internal
         private readonly string[] _remoteArguments;
         private readonly IMessageBus _messageBus;
         private readonly NodeTest _test;
+
+        /// <summary>
+        /// Set only for the conductor node. Completed with the port the node's TestConductor bound
+        /// to, as soon as that node prints its sentinel line.
+        /// </summary>
+        private readonly TaskCompletionSource<int> _conductorPortSource;
+
+        /// <summary>
+        /// Ceiling on how long a single node process may run before it is treated as hung and killed, when
+        /// the spec does not specify its own <c>[MultiNodeFact(Timeout = ...)]</c>. Deliberately generous -
+        /// this is a hang backstop, not a performance budget.
+        /// </summary>
+        private static readonly TimeSpan DefaultNodeExitTimeout = TimeSpan.FromMinutes(20);
         private readonly TestMessageIds _ids;
 
         private MultiNodeTestCase TestCase => _test.TestCase;
@@ -257,6 +273,19 @@ namespace Akka.MultiNode.TestAdapter.Internal
             }
         }
 
+        /// <summary>
+        /// Picks the conductor's bound port out of the node's output. Only the conductor node
+        /// carries a port source; every other node ignores the line.
+        /// </summary>
+        private void ExtractConductorPort(string data)
+        {
+            if (_conductorPortSource is null)
+                return;
+
+            if (ConductorPortSentinel.TryParse(data, out var port))
+                _conductorPortSource.TrySetResult(port);
+        }
+
         private async Task<int> RunNode()
         {
             var nodeInfo = new TimelineLogCollectorActor.NodeInfo(_test.Node, _test.Role, _options.Platform, TestCase.TestCaseDisplayName);
@@ -283,6 +312,7 @@ namespace Akka.MultiNode.TestAdapter.Internal
                     _timelineCollector.Tell(new TimelineLogCollectorActor.LogMessage(nodeInfo, data));
 
                     ExtractExceptionData(data);
+                    ExtractConductorPort(data);
                 }
             }
 
@@ -306,6 +336,41 @@ namespace Akka.MultiNode.TestAdapter.Internal
             }, _cancellationTokenSource.Token);
 
             _sinkCoordinator.Tell(new SinkCoordinator.RunnerMessage($"Started node {_test.Node} : {_test.Role} on pid {process.Id}"));
+
+            // Backstop against a node process that never exits. This used to be a bare `await task`, whose
+            // only cancellation was the run-wide token that nothing here trips - so a node that failed
+            // without exiting cleanly hung the runner indefinitely (observed: a single spec failure at ~70s
+            // followed by tens of minutes of silence). Honour [MultiNodeFact(Timeout = ...)] when it is set,
+            // otherwise fall back to a deliberately generous ceiling: the longest legitimate specs in this
+            // suite budget ~10 minutes of node runtime, so this only fires on a genuine hang.
+            var timeout = TestCase.Timeout > 0
+                ? TimeSpan.FromMilliseconds(TestCase.Timeout)
+                : DefaultNodeExitTimeout;
+
+            var completed = await Task.WhenAny(task, Task.Delay(timeout, _cancellationTokenSource.Token));
+            if (completed != task)
+            {
+                _sinkCoordinator.Tell(new SinkCoordinator.RunnerMessage(
+                    $"Node {_test.Node} : {_test.Role} did not exit within {timeout}; killing pid {process.Id}."));
+
+                try
+                {
+                    if (!process.HasExited)
+                        process.Kill(entireProcessTree: true);
+                }
+                catch (Exception ex)
+                {
+                    // the process may have exited between the check and the kill, or be unkillable - either
+                    // way we still want to report the node as failed rather than wait on it forever
+                    _sinkCoordinator.Tell(new SinkCoordinator.RunnerMessage(
+                        $"Failed to kill node {_test.Node} : {_test.Role} (pid {process.Id}): {ex.Message}"));
+                }
+
+                _sinkCoordinator.Tell(new NodeCompletedSpecWithFail(
+                    _test.Node, _test.Role, $"{_test.DisplayName} timed out after {timeout} without exiting."));
+
+                return exitCode == 0 ? -1 : exitCode;
+            }
 
             await task;
             return exitCode;
