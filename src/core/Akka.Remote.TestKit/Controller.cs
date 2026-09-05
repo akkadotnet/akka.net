@@ -211,13 +211,39 @@ namespace Akka.Remote.TestKit
         private readonly ILoggingAdapter _log = Context.GetLogger();
 
         public Controller(int initialParticipants, IPEndPoint controllerPort)
+            : this(initialParticipants, controllerPort, null)
+        {
+        }
+
+        /// <param name="initialParticipants">Number of clients that must attach before the run starts.</param>
+        /// <param name="controllerPort">Endpoint to bind. Port 0 asks the OS for a free port.</param>
+        /// <param name="bindResult">
+        /// Optional. Receives the endpoint that was actually bound, or the bind failure. The caller
+        /// needs both without an ask: an ask turns a failed bind into a query timeout, and every
+        /// client node then burns its own attach timeout before the run gives up.
+        /// </param>
+        public Controller(int initialParticipants, IPEndPoint controllerPort, TaskCompletionSource<IPEndPoint> bindResult)
         {
             _log.Debug("Opening connection");
-            _connection = RemoteConnection.CreateConnection(Role.Server, controllerPort, _settings.ServerSocketWorkerPoolSize,
-                new ConductorHandler(Self, Logging.GetLogger(Context.System, typeof (ConductorHandler)))).Result;
+            try
+            {
+                _connection = RemoteConnection.CreateConnection(Role.Server, controllerPort, _settings.ServerSocketWorkerPoolSize,
+                    new ConductorHandler(Self, Logging.GetLogger(Context.System, typeof (ConductorHandler)))).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                var failure = ConductorBindException.ForEndpoint(controllerPort, ex);
+                bindResult?.TrySetException(failure);
+                throw failure;
+            }
+
             _log.Debug("Connection bound");
             _barrier = Context.ActorOf(Props.Create<BarrierCoordinator>(), "barriers");
             _initialParticipants = initialParticipants;
+
+            // Report last. The actor handles no message until this constructor returns, so the
+            // caller cannot observe a half built Controller.
+            bindResult?.TrySetResult((IPEndPoint)_connection.LocalAddress);
         }
 
         /// <summary>
