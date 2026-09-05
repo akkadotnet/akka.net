@@ -43,9 +43,9 @@ third-party type you cannot annotate, and it has no [hand-written formatter](#ha
 The payloads are genuinely open-ended, with no closed set of shapes. Or you are prototyping and do
 not want to declare a schema up front.
 
-## Getting started
+## Getting Started
 
-### Package reference
+### Package Reference
 
 The generator ships inside the `Akka.Serialization.V2` runtime package itself. It packs under
 `analyzers/dotnet/cs`. NuGet and MSBuild auto-wire that path as a C# source generator for any
@@ -59,7 +59,7 @@ There is no separate generator package. There is no manual analyzer wiring. One 
 the runtime types, `AkkaSerializer`, the attributes, and `IAkkaMessagePackFormatter<T>`, plus the
 generator that reacts to them.
 
-### The protocol interface
+### The Protocol Interface
 
 Every generated serializer is scoped to one **protocol**. A protocol is a marker interface. It
 groups the message types the serializer dispatches at the top level.
@@ -70,7 +70,7 @@ public interface IOrderBenchmarkProtocol
 }
 ```
 
-### A message
+### A Message
 
 Mark a message type with `[AkkaSerializable]`. Give it a `Manifest`: a stable, serializer-owned
 string that identifies the type on the wire. Index every field with `[AkkaField(n)]`:
@@ -88,7 +88,7 @@ public sealed record SubmitOrder(
 (`SubmitOrder` and `IOrderBenchmarkProtocol` are trimmed fixtures from
 `src/benchmark/Akka.Benchmarks/Serialization/GeneratedMessagePackSerializerBenchmarks.cs`.)
 
-### The serializer class
+### The Serializer Class
 
 Declare a `sealed partial class` that derives from `AkkaSerializer`. Annotate it with
 `[AkkaSerializer<TProtocol>("name", id)]`. Declare a `static partial` `CreateRegistration()`
@@ -113,7 +113,7 @@ The generator emits the rest of the partial class in a `<ClassName>.AkkaSerializ
 That file holds the constructor, `Identifier`, and the `Manifest`/`Serialize`/`Deserialize`/`SizeHint`
 dispatch.
 
-### Registering the serializer
+### Registering the Serializer
 
 `CreateRegistration()` returns a
 [`SerializerRegistration`](xref:Akka.Serialization.V2.SerializerRegistration). It is an AOT-safe
@@ -139,7 +139,7 @@ Merge that `SerializationSetup` into `ActorSystemSetup` the same way as for a ha
 serializer. See
 [Configuring Serialization Bindings Programmatically](xref:serialization#configuring-serialization-bindings-programmatically).
 
-### HOCON registration
+### HOCON Registration
 
 A generated serializer derives from `AkkaSerializer`, then `SerializerV2`, then `Serializer`. So it
 satisfies Akka's classic reflection contract: a public constructor that takes
@@ -173,9 +173,9 @@ There is no `Akka.Hosting` integration for `Akka.Serialization.V2` yet. No exten
 generated registrations into an `AkkaConfigurationBuilder`. Compose registrations through
 `SerializationSetup` and `ActorSystemSetup` as shown above, or through HOCON, until one ships.
 
-## Messages and fields
+## Messages and Fields
 
-### Field indexes are the wire contract
+### Field Indexes Are the Wire Contract
 
 `[AkkaField(index)]` is the only thing that identifies a field on the wire. Declaration order does
 not matter. Property name does not matter. Once a message ships with an index in use, two rules
@@ -192,7 +192,7 @@ public sealed record SparseFieldMessage(
 
 Renaming the C# property is always safe. The wire only ever sees the index.
 
-### Nullable fields
+### Nullable Fields
 
 A nullable value type, such as `int?`, `Guid?`, `DateTime?`, or a nullable enum, writes a
 MessagePack nil when it is absent. A nullable reference type, such as `string?`, a nullable
@@ -200,7 +200,7 @@ collection, or a nullable nested message, does the same. Each writes its own enc
 with no extra wrapper. The generator owns this nil encoding. A
 [hand-written formatter](#hand-written-formatters) never sees the absent case.
 
-### Records and init-only properties
+### Records and Init-only Properties
 
 The generator matches constructor parameters to `[AkkaField]` properties by name. It does not match
 by declared position or field index. The match is case-insensitive. This is why the common C#
@@ -264,7 +264,7 @@ public readonly record struct GapUniqueAddress(
     [property: AkkaField(2)] long Uid);
 ```
 
-### Fieldless messages and `AllowEmpty`
+### Fieldless Messages and `AllowEmpty`
 
 By default, an `[AkkaSerializable]` type with no `[AkkaField]` properties is rejected at compile
 time (**AKKASG004**). This is almost always a forgotten `[AkkaField]`. Some protocol messages are
@@ -280,7 +280,7 @@ This generates an empty-map write, a single `0x80` byte. It also generates a ski
 still tolerates unknown fields. A future sender can add fields to what this reader still treats as
 fieldless.
 
-### Nested `[AkkaSerializable]` value objects
+### Nested `[AkkaSerializable]` Value Objects
 
 A field can be typed as another `[AkkaSerializable]` type, with unlimited nesting depth. A
 nested-only type never serves as a top-level protocol message. It needs no `Manifest`. Manifests
@@ -298,7 +298,7 @@ public sealed record ShippingAddress(
     [property: AkkaField(2)] string City);
 ```
 
-## Supported field types
+## Supported Field Types
 
 | Kind | Types | Notes |
 |---|---|---|
@@ -373,7 +373,7 @@ public sealed record OptionalUnionMessage(
     IOrderEvent? MaybeEvent) : IUnionTestProtocol;
 ```
 
-### Member requirements
+### Member Requirements
 
 Every member type must meet four requirements. It must be **serializable**: an `[AkkaSerializable]`
 class or struct handled by the same serializer (**AKKASG015**). It must be **manifested**, since
@@ -388,7 +388,7 @@ serialize time.
 info, fires when a field carries both `[AkkaEnvelopePayload]` and `[AkkaUnion]`. The envelope
 marker wins. The union declaration is ignored.
 
-### Exact-runtime-type dispatch
+### Exact-Runtime-Type Dispatch
 
 Write dispatch matches the *exact* runtime type. It ignores the declared static type and any base
 type. A value whose exact type is not a declared member fails with a `SerializationException`.
@@ -397,7 +397,7 @@ value to the base type and loses state. On read, an unrecognized manifest inside
 throws a `SerializationException` naming it. The caller decides what to do with either failure.
 The generator never guesses.
 
-## Closed generic registrations
+## Closed Generic Registrations
 
 A Roslyn source generator cannot reify an open generic type. It can only emit concrete code for
 closed constructions it can see. So a generic `[AkkaSerializable]` type is never itself serialized.
@@ -448,7 +448,7 @@ catching an invalid or a duplicate one. **AKKASG037**, info, fires when a `Manif
 *open* definition, where the generator ignores it. **AKKASG034** fires when a registered
 construction implements no protocol and is unreachable from any field.
 
-## Envelope payloads
+## Envelope Payloads
 
 `[AkkaEnvelopePayload]` marks a field as an **Akka serializer boundary**, not a structurally
 encoded value. The generator does not generate inline MessagePack code for the field's static
@@ -497,7 +497,7 @@ it exceeded the maximum depth. This happens on write, size, and read alike. It m
 recursion limit `Google.Protobuf` already enforces. See `EnvelopeDepthGuardSpec` for the full
 behavior. That spec also proves the depth counter always unwinds after a failure.
 
-## Hand-written formatters
+## Hand-Written Formatters
 
 Some types cannot be annotated with `[AkkaSerializable]`. A core Akka type like
 `Akka.Actor.Address` is the most common case. It lives in an assembly that cannot reference
@@ -583,7 +583,7 @@ public sealed partial class ControlMirrorSerializer : AkkaSerializer
 }
 ```
 
-### The two built-in formatters
+### The Two Built-in Formatters
 
 `Akka.Serialization.V2` ships two formatters. They let `Address` and `ActorPath` fields work out
 of the box. `AddressFormatter` writes `Address` as a 4-element array:
@@ -595,7 +595,7 @@ single transport-aware string. It follows the same convention the generator appl
 the owning system's default address, when constructed with an `ExtendedActorSystem`. Otherwise it
 uses the path's own address.
 
-## Wire format
+## Wire Format
 
 Every generated message writes a MessagePack **map**. Its keys are the field indexes from
 `[AkkaField]`, not an array in declaration order. A reader iterates the map's entries and switches
@@ -656,7 +656,7 @@ private MiniMessage ReadMiniMessage(ref MessagePackReader reader)
 }
 ```
 
-## Versioning and rolling upgrades
+## Versioning and Rolling Upgrades
 
 Two separate rules cover the two ways a message shape can change during a rolling upgrade.
 
@@ -677,7 +677,7 @@ Manifests are part of that wire contract in both cases. A generated serializer's
 stable, serializer-owned token. It stays stable across calls and across fresh instances. It is
 never the CLR type's name. Changing it is exactly as breaking as changing a field index.
 
-## Diagnostics reference
+## Diagnostics Reference
 
 Every id below is a `DiagnosticDescriptor` in `AkkaSerializerGenerator.cs`. **AKKASG030** does not
 exist. The C# compiler itself already rejects duplicate `[AkkaSerializer<T>]` attributes on one
@@ -723,7 +723,7 @@ that case.
 | AKKASG036 | Warning | Union member type is abstract | An abstract union member can never be the exact runtime type, so its dispatch branch is dead code. |
 | AKKASG037 | Info | Manifest on a generic [AkkaSerializable] definition is ignored | A `Manifest` set on the *open* generic definition is ignored; only closed constructions carry one. |
 
-## Limitations today and planned changes
+## Limitations Today and Planned Changes
 
 The generator is syntax-driven. It discovers `[AkkaSerializable]`, `[AkkaSerializer<T>]`, and
 protocol-implementing types by walking the current compilation's own syntax trees. Three concrete
