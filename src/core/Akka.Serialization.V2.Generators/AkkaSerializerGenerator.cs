@@ -60,6 +60,22 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    /// <summary>
+    /// Same id/title/severity as <see cref="UnsupportedFieldType"/>, used instead of it ONLY when
+    /// the unsupported field type is an interface, an abstract class, or a type parameter -- the
+    /// shapes a forgotten <c>[AkkaEnvelopePayload]</c> or <c>[AkkaUnion]</c> declaration usually
+    /// produces, as opposed to a genuinely unrepresentable type. A second descriptor variant (not a
+    /// format-string branch) keeps <see cref="UnsupportedFieldType"/>'s message byte-identical for
+    /// every other unsupported kind.
+    /// </summary>
+    private static readonly DiagnosticDescriptor UnsupportedFieldTypePolymorphic = new(
+        "AKKASG003",
+        "Unsupported field type",
+        "Property '{0}' on type '{1}' has unsupported generated serializer field type '{2}'. Mark the property [AkkaEnvelopePayload], or declare a closed member set with [AkkaUnion].",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     private static readonly DiagnosticDescriptor MissingFields = new(
         "AKKASG004",
         "No serializable fields",
@@ -88,6 +104,27 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         "AKKASG007",
         "Nested value object serialization definition is required",
         "Property '{0}' on type '{1}' uses nested value object type '{2}', which must be annotated with [AkkaSerializable] and explicit [AkkaField] fields",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Same id/title/severity as <see cref="MissingNestedSerializableDefinition"/>, used instead of
+    /// it ONLY when the offending nested type's <c>ContainingAssembly</c> is not the compilation
+    /// being generated for: this generator only ever reads <c>[AkkaSerializable]</c>/<c>[AkkaField]</c>
+    /// schemas out of syntax declared in the current compilation, so the type may already carry both
+    /// attributes in its own assembly and STILL be unreadable from here -- annotating it there fixes
+    /// nothing today. The message must therefore name only the two fixes that actually work
+    /// (register a formatter, or move/redeclare the type in this assembly) and must not claim the
+    /// type lacks the attributes. A second descriptor variant (not a format-string branch) keeps
+    /// <see cref="MissingNestedSerializableDefinition"/>'s message byte-identical for same-assembly types.
+    /// </summary>
+    private static readonly DiagnosticDescriptor MissingNestedSerializableDefinitionCrossAssembly = new(
+        "AKKASG007",
+        "Nested value object serialization definition is required",
+        "Property '{0}' on type '{1}' uses nested value object type '{2}', which is declared in assembly '{3}'. " +
+        "This generator cannot read a schema from a referenced assembly yet. " +
+        "Register [AkkaSerializerFormatter<{2}, TFormatter>] on '{4}', or declare the type in this assembly.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -159,6 +196,24 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         "AKKASG015",
         "Union member type is not serializable",
         "Union member '{0}' on property '{1}' of type '{2}' must be an [AkkaSerializable] class or struct handled by this serializer",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Same id/title/severity as <see cref="UnionMemberNotSerializable"/>, used instead of it ONLY
+    /// when the declared union member type's <c>ContainingAssembly</c> is not the compilation being
+    /// generated for -- see <see cref="MissingNestedSerializableDefinitionCrossAssembly"/> for why
+    /// this generator can never resolve such a member from here even when it genuinely carries
+    /// <c>[AkkaSerializable]</c> and a manifest in its own assembly, and for why the message must
+    /// name only the fixes that work today rather than claim the member lacks the attribute.
+    /// </summary>
+    private static readonly DiagnosticDescriptor UnionMemberNotSerializableCrossAssembly = new(
+        "AKKASG015",
+        "Union member type is not serializable",
+        "Union member '{0}' on property '{1}' of type '{2}' is declared in assembly '{3}'. " +
+        "This generator cannot read a schema from a referenced assembly yet. " +
+        "Register [AkkaSerializerFormatter<{0}, TFormatter>] on '{4}', or declare the member in this assembly.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -1448,7 +1503,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 compilation.HasImplicitConversion(memberType, member.Type),
                 isSupported: true,
                 isSealed: memberType.IsSealed || memberType.IsValueType,
-                isAbstract: memberType.IsAbstract));
+                isAbstract: memberType.IsAbstract,
+                foreignAssemblyName: GetForeignAssemblyName(memberType, knownTypes)));
         }
 
         return builder.ToImmutable();
@@ -1561,6 +1617,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             CollectObjectTypeNames(argument, into);
     }
 
+    /// <summary>
+    /// Same traversal as <see cref="CollectObjectTypeNames"/>, but keyed by the full mapping rather
+    /// than just its type name, so <see cref="ValidateMessages"/>'s "Object mapping resolves to no
+    /// known message" check can still read <see cref="TypeMapping.ForeignAssemblyName"/> off the
+    /// mapping it found -- information the plain <see cref="HashSet{T}"/> of names would discard.
+    /// </summary>
+    private static void CollectObjectMappings(TypeMapping mapping, Dictionary<string, TypeMapping> into)
+    {
+        if (mapping.Kind == FieldKind.Object && !into.ContainsKey(mapping.TypeFullName))
+            into[mapping.TypeFullName] = mapping;
+
+        foreach (var argument in mapping.TypeArguments)
+            CollectObjectMappings(argument, into);
+    }
+
     private static bool ValidateMessages(SourceProductionContext context, SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages, ImmutableDictionary<string, MessageInfo> messagesByType)
     {
         var isValid = true;
@@ -1630,13 +1701,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Unsupported))
             {
-                context.ReportDiagnostic(Diagnostic.Create(UnsupportedFieldType, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
+                context.ReportDiagnostic(field.Mapping.SuggestsEnvelopeOrUnion
+                    ? Diagnostic.Create(UnsupportedFieldTypePolymorphic, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName))
+                    : Diagnostic.Create(UnsupportedFieldType, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
                 isValid = false;
             }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.MissingSerializableDefinition))
             {
-                context.ReportDiagnostic(Diagnostic.Create(MissingNestedSerializableDefinition, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
+                context.ReportDiagnostic(field.Mapping.ForeignAssemblyName.Length > 0
+                    ? Diagnostic.Create(MissingNestedSerializableDefinitionCrossAssembly, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName), field.Mapping.ForeignAssemblyName, serializer.ClassName)
+                    : Diagnostic.Create(MissingNestedSerializableDefinition, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
                 isValid = false;
             }
 
@@ -1648,22 +1723,38 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Union))
             {
-                if (!ValidateUnionField(context, message, field, messagesByType))
+                if (!ValidateUnionField(context, message, field, messagesByType, serializer.ClassName))
                     isValid = false;
             }
 
             // An Object mapping that resolves to no known message would generate a call to a
-            // nonexistent Write/Read/SizeOf method. The only way to hit this from within one
-            // compilation is a closed generic [AkkaSerializable] field type whose construction was
-            // never registered with [AkkaSerializable<T>] (non-generic [AkkaSerializable]
-            // types are always extracted). AKKASG023 names the fix.
+            // nonexistent Write/Read/SizeOf method. That happens two ways: a genuine closed generic
+            // [AkkaSerializable] field type whose construction was never registered with
+            // [AkkaSerializable<T>] (its message-dictionary key is arity-aware, so it contains '<' --
+            // see GetMessageDictionaryKey -- and AKKASG023 names the fix), or a non-generic
+            // [AkkaSerializable] type that simply has no syntax in THIS compilation (for example, one
+            // declared -- and correctly annotated -- only in a referenced assembly): that key never
+            // contains '<', and it is AKKASG007 that names the fix, with a cross-assembly hint when
+            // the type's declaring assembly says so.
             foreach (var field in message.Fields)
             {
-                var objectTypeNames = new HashSet<string>(StringComparer.Ordinal);
-                CollectObjectTypeNames(field.Mapping, objectTypeNames);
-                foreach (var objectTypeName in objectTypeNames.Where(typeName => !messagesByType.ContainsKey(typeName)))
+                var objectMappings = new Dictionary<string, TypeMapping>(StringComparer.Ordinal);
+                CollectObjectMappings(field.Mapping, objectMappings);
+                foreach (var pair in objectMappings.Where(entry => !messagesByType.ContainsKey(entry.Key)))
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(UnregisteredClosedGenericField, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(objectTypeName), serializer.ClassName));
+                    var objectTypeName = pair.Key;
+                    if (objectTypeName.Contains('<'))
+                    {
+                        context.ReportDiagnostic(Diagnostic.Create(UnregisteredClosedGenericField, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(objectTypeName), serializer.ClassName));
+                    }
+                    else
+                    {
+                        var foreignAssemblyName = pair.Value.ForeignAssemblyName;
+                        context.ReportDiagnostic(foreignAssemblyName.Length > 0
+                            ? Diagnostic.Create(MissingNestedSerializableDefinitionCrossAssembly, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(objectTypeName), foreignAssemblyName, serializer.ClassName)
+                            : Diagnostic.Create(MissingNestedSerializableDefinition, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(objectTypeName)));
+                    }
+
                     isValid = false;
                 }
             }
@@ -1724,7 +1815,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         SourceProductionContext context,
         MessageInfo message,
         FieldInfo field,
-        ImmutableDictionary<string, MessageInfo> messagesByType)
+        ImmutableDictionary<string, MessageInfo> messagesByType,
+        string serializerClassName)
     {
         var isValid = true;
 
@@ -1745,7 +1837,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             if (!member.IsSupported || !messagesByType.TryGetValue(member.TypeFullName, out var memberMessage))
             {
-                context.ReportDiagnostic(Diagnostic.Create(UnionMemberNotSerializable, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
+                context.ReportDiagnostic(member.ForeignAssemblyName.Length > 0
+                    ? Diagnostic.Create(UnionMemberNotSerializableCrossAssembly, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName), member.ForeignAssemblyName, serializerClassName)
+                    : Diagnostic.Create(UnionMemberNotSerializable, Location.None, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
                 isValid = false;
                 continue;
             }
@@ -3385,7 +3479,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         // construction resolves to its registered [AkkaSerializable<T>] message -- or, if
         // unregistered, fails AKKASG023 instead of silently dropping its type arguments.
         if (type is INamedTypeSymbol namedType && namedType.OriginalDefinition.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
-            return new TypeMapping(FieldKind.Object, GetMessageDictionaryKey(namedType), namedType.IsValueType);
+            return new TypeMapping(FieldKind.Object, GetMessageDictionaryKey(namedType), namedType.IsValueType, foreignAssemblyName: GetForeignAssemblyName(namedType, knownTypes));
 
         var mapping = type.SpecialType switch
         {
@@ -3409,9 +3503,23 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             return collectionMapping;
 
         if (type is INamedTypeSymbol { IsGenericType: false, TypeKind: TypeKind.Class or TypeKind.Struct } missingNestedType)
-            return new TypeMapping(FieldKind.MissingSerializableDefinition, GetFullyQualifiedTypeName(missingNestedType));
+            return new TypeMapping(FieldKind.MissingSerializableDefinition, GetFullyQualifiedTypeName(missingNestedType), foreignAssemblyName: GetForeignAssemblyName(missingNestedType, knownTypes));
 
-        return mapping;
+        // AKKASG003 on an interface, an abstract class, or a type parameter is usually a forgotten
+        // [AkkaEnvelopePayload]/[AkkaUnion] declaration rather than a genuinely unrepresentable
+        // type -- flag it so ValidateMessages can point authors at both fixes instead of leaving
+        // them to guess.
+        var suggestsEnvelopeOrUnion = type.TypeKind == TypeKind.TypeParameter
+            || (type is INamedTypeSymbol { IsAbstract: true } && type.TypeKind is TypeKind.Interface or TypeKind.Class);
+        return suggestsEnvelopeOrUnion ? new TypeMapping(FieldKind.Unsupported, suggestsEnvelopeOrUnion: true) : mapping;
+    }
+
+    private static string GetForeignAssemblyName(ISymbol symbol, KnownTypes knownTypes)
+    {
+        var assembly = symbol.ContainingAssembly;
+        return assembly != null && !SymbolEqualityComparer.Default.Equals(assembly, knownTypes.CompilationAssembly)
+            ? assembly.Name
+            : string.Empty;
     }
 
     /// <summary>
@@ -4056,6 +4164,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     {
         private KnownTypes(Compilation compilation)
         {
+            CompilationAssembly = compilation.Assembly;
             FieldAttribute = compilation.GetTypeByMetadataName(FieldAttributeFullName);
             EnvelopePayloadAttribute = compilation.GetTypeByMetadataName(EnvelopePayloadAttributeFullName);
             UnionAttribute = compilation.GetTypeByMetadataName(UnionAttributeFullName);
@@ -4073,6 +4182,14 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             ImmutableHashSetOfT = compilation.GetTypeByMetadataName("System.Collections.Immutable.ImmutableHashSet`1");
             ImmutableDictionaryOfKeyValue = compilation.GetTypeByMetadataName("System.Collections.Immutable.ImmutableDictionary`2");
         }
+
+        /// <summary>
+        /// The assembly of the compilation this generator run is producing output for. Used only to
+        /// tell apart a type declared locally from one declared in a referenced assembly (the
+        /// AKKASG007/AKKASG015 cross-assembly hint) -- never carried into any extracted model, so it
+        /// does not affect incremental caching.
+        /// </summary>
+        public IAssemblySymbol CompilationAssembly { get; }
 
         public INamedTypeSymbol? FieldAttribute { get; }
         public INamedTypeSymbol? EnvelopePayloadAttribute { get; }
@@ -4471,7 +4588,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             string declaredTypeName = "",
             bool isNullable = false,
             ImmutableArray<TypeMapping> typeArguments = default,
-            string enumUnderlyingTypeName = "")
+            string enumUnderlyingTypeName = "",
+            string foreignAssemblyName = "",
+            bool suggestsEnvelopeOrUnion = false)
         {
             Kind = kind;
             TypeFullName = typeFullName;
@@ -4480,6 +4599,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             IsNullable = isNullable;
             TypeArguments = typeArguments.IsDefault ? ImmutableArray<TypeMapping>.Empty : typeArguments;
             EnumUnderlyingTypeName = enumUnderlyingTypeName;
+            ForeignAssemblyName = foreignAssemblyName;
+            SuggestsEnvelopeOrUnion = suggestsEnvelopeOrUnion;
         }
 
         public FieldKind Kind { get; }
@@ -4527,11 +4648,27 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         /// </summary>
         public string EnumUnderlyingTypeName { get; }
 
+        /// <summary>
+        /// For <see cref="FieldKind.Object"/> and <see cref="FieldKind.MissingSerializableDefinition"/>:
+        /// the name of the type's declaring assembly, but ONLY when that assembly is not the one this
+        /// generator is producing output for -- empty for a same-assembly type. Drives the AKKASG007
+        /// cross-assembly hint variant; unused for every other kind.
+        /// </summary>
+        public string ForeignAssemblyName { get; }
+
+        /// <summary>
+        /// For <see cref="FieldKind.Unsupported"/>: whether the field's static type is an interface, an
+        /// abstract class, or a type parameter -- the shapes a forgotten <c>[AkkaEnvelopePayload]</c> or
+        /// <c>[AkkaUnion]</c> declaration usually produces. Drives the AKKASG003 hint variant; unused
+        /// for every other kind.
+        /// </summary>
+        public bool SuggestsEnvelopeOrUnion { get; }
+
         public TypeMapping WithTypeFullName(string typeFullName)
-            => new(Kind, typeFullName, IsValueType, DeclaredTypeName, IsNullable, TypeArguments, EnumUnderlyingTypeName);
+            => new(Kind, typeFullName, IsValueType, DeclaredTypeName, IsNullable, TypeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion);
 
         public TypeMapping AsCollectionElement(string declaredTypeName, bool isNullable)
-            => new(Kind, TypeFullName, IsValueType, declaredTypeName, isNullable, TypeArguments, EnumUnderlyingTypeName);
+            => new(Kind, TypeFullName, IsValueType, declaredTypeName, isNullable, TypeArguments, EnumUnderlyingTypeName, ForeignAssemblyName, SuggestsEnvelopeOrUnion);
 
         // Explicit IEquatable implementation: the compiler-provided struct equality would compare
         // the TypeArguments ImmutableArray by underlying-array REFERENCE, breaking value equality
@@ -4544,6 +4681,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 && string.Equals(DeclaredTypeName, other.DeclaredTypeName, StringComparison.Ordinal)
                 && IsNullable == other.IsNullable
                 && string.Equals(EnumUnderlyingTypeName, other.EnumUnderlyingTypeName, StringComparison.Ordinal)
+                && string.Equals(ForeignAssemblyName, other.ForeignAssemblyName, StringComparison.Ordinal)
+                && SuggestsEnvelopeOrUnion == other.SuggestsEnvelopeOrUnion
                 && ValueEquality.SequenceEquals(TypeArguments, other.TypeArguments);
         }
 
@@ -4558,6 +4697,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             hash = ValueEquality.Combine(hash, DeclaredTypeName);
             hash = ValueEquality.Combine(hash, IsNullable);
             hash = ValueEquality.Combine(hash, EnumUnderlyingTypeName);
+            hash = ValueEquality.Combine(hash, ForeignAssemblyName);
+            hash = ValueEquality.Combine(hash, SuggestsEnvelopeOrUnion);
             hash = ValueEquality.Combine(hash, TypeArguments);
             return hash;
         }
@@ -4674,7 +4815,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     /// </summary>
     private sealed class UnionMemberInfo : IEquatable<UnionMemberInfo>
     {
-        public UnionMemberInfo(string typeFullName, bool isValueType, bool isAssignable, bool isSupported, bool isSealed, bool isAbstract)
+        public UnionMemberInfo(string typeFullName, bool isValueType, bool isAssignable, bool isSupported, bool isSealed, bool isAbstract, string foreignAssemblyName = "")
         {
             TypeFullName = typeFullName;
             IsValueType = isValueType;
@@ -4682,6 +4823,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             IsSupported = isSupported;
             IsSealed = isSealed;
             IsAbstract = isAbstract;
+            ForeignAssemblyName = foreignAssemblyName;
         }
 
         /// <summary>Message-dictionary key for the member type (arity-aware for generics).</summary>
@@ -4705,6 +4847,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         /// </summary>
         public bool IsAbstract { get; }
 
+        /// <summary>
+        /// The member type's declaring assembly name, but ONLY when it is not the compilation this
+        /// generator is producing output for -- empty for a same-assembly member. Drives the
+        /// AKKASG015 cross-assembly hint variant.
+        /// </summary>
+        public string ForeignAssemblyName { get; }
+
         public bool Equals(UnionMemberInfo? other)
         {
             if (ReferenceEquals(this, other))
@@ -4718,7 +4867,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 && IsAssignable == other.IsAssignable
                 && IsSupported == other.IsSupported
                 && IsSealed == other.IsSealed
-                && IsAbstract == other.IsAbstract;
+                && IsAbstract == other.IsAbstract
+                && string.Equals(ForeignAssemblyName, other.ForeignAssemblyName, StringComparison.Ordinal);
         }
 
         public override bool Equals(object? obj) => Equals(obj as UnionMemberInfo);
@@ -4732,6 +4882,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             hash = ValueEquality.Combine(hash, IsSupported);
             hash = ValueEquality.Combine(hash, IsSealed);
             hash = ValueEquality.Combine(hash, IsAbstract);
+            hash = ValueEquality.Combine(hash, ForeignAssemblyName);
             return hash;
         }
     }
