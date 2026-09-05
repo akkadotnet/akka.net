@@ -23,7 +23,7 @@ namespace Akka.Remote.TestKit
     /// 
     /// INTERNAL API.
     /// </summary>
-    internal class Controller : UntypedActor, ILogReceive
+    internal class Controller : UntypedActor, ILogReceive, IWithUnboundedStash
     {
         public sealed class ClientDisconnected : IDeadLetterSuppression
         {
@@ -194,14 +194,41 @@ namespace Akka.Remote.TestKit
             public IChannel Channel { get; private set; }
         }
 
+        /// <summary>
+        /// Carries a successful bind from <see cref="PreStart"/> back into the mailbox.
+        /// </summary>
+        private sealed class Bound : INoSerializationVerificationNeeded
+        {
+            public Bound(IChannel channel)
+            {
+                Channel = channel;
+            }
+
+            public IChannel Channel { get; }
+        }
+
+        /// <summary>
+        /// Carries a failed bind from <see cref="PreStart"/> back into the mailbox.
+        /// </summary>
+        private sealed class BindFailed : INoSerializationVerificationNeeded
+        {
+            public BindFailed(ConductorBindException cause)
+            {
+                Cause = cause;
+            }
+
+            public ConductorBindException Cause { get; }
+        }
+
         int _initialParticipants;
         readonly TestConductorSettings _settings = TestConductor.Get(Context.System).Settings;
 
         /// <summary>
-        /// Lazily load the result later
+        /// Set once the bind started in <see cref="PreStart"/> reports back. Non-null for the whole
+        /// of the <see cref="Ready"/> behavior.
         /// </summary>
         private IChannel _connection;
-        readonly IActorRef _barrier;
+        IActorRef _barrier;
         ImmutableDictionary<RoleName, NodeInfo> _nodes =
             ImmutableDictionary.Create<RoleName, NodeInfo>();
         // map keeping unanswered queries for node addresses (enqueued upon GetAddress, serviced upon NodeInfo)
@@ -209,6 +236,12 @@ namespace Akka.Remote.TestKit
             ImmutableDictionary.Create<RoleName, ImmutableHashSet<IActorRef>>();
         int _generation = 1;
         private readonly ILoggingAdapter _log = Context.GetLogger();
+        private readonly IPEndPoint _controllerPort;
+
+        /// <summary>
+        /// Null unless the caller asked to be told the bind outcome. See the constructor.
+        /// </summary>
+        private readonly TaskCompletionSource<IPEndPoint> _bindResult;
 
         public Controller(int initialParticipants, IPEndPoint controllerPort)
             : this(initialParticipants, controllerPort, null)
@@ -224,26 +257,81 @@ namespace Akka.Remote.TestKit
         /// </param>
         public Controller(int initialParticipants, IPEndPoint controllerPort, TaskCompletionSource<IPEndPoint> bindResult)
         {
-            _log.Debug("Opening connection");
-            try
-            {
-                _connection = RemoteConnection.CreateConnection(Role.Server, controllerPort, _settings.ServerSocketWorkerPoolSize,
-                    new ConductorHandler(Self, Logging.GetLogger(Context.System, typeof (ConductorHandler)))).GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                var failure = ConductorBindException.ForEndpoint(controllerPort, ex);
-                bindResult?.TrySetException(failure);
-                throw failure;
-            }
-
-            _log.Debug("Connection bound");
-            _barrier = Context.ActorOf(Props.Create<BarrierCoordinator>(), "barriers");
             _initialParticipants = initialParticipants;
+            _controllerPort = controllerPort;
+            _bindResult = bindResult;
+        }
 
-            // Report last. The actor handles no message until this constructor returns, so the
-            // caller cannot observe a half built Controller.
-            bindResult?.TrySetResult((IPEndPoint)_connection.LocalAddress);
+        public IStash Stash { get; set; }
+
+        /// <summary>
+        /// Starts the bind. The result comes back as a <see cref="Bound"/> or
+        /// <see cref="BindFailed"/> message, so the bind never blocks a dispatcher thread and
+        /// its outcome is serialized with the rest of the mailbox.
+        /// </summary>
+        protected override void PreStart()
+        {
+            _log.Debug("Opening connection");
+            RemoteConnection
+                .CreateConnection(Role.Server, _controllerPort, _settings.ServerSocketWorkerPoolSize,
+                    new ConductorHandler(Self, Logging.GetLogger(Context.System, typeof (ConductorHandler))))
+                .PipeTo(Self,
+                    success: channel => new Bound(channel),
+                    // Name the failure here, so the message already carries the error the caller reports.
+                    failure: ex => new BindFailed(ConductorBindException.ForEndpoint(_controllerPort, Unwrap(ex))));
+        }
+
+        /// <summary>
+        /// Strips the single-exception AggregateException a piped task failure arrives in, so the
+        /// reported cause is the socket error itself.
+        /// </summary>
+        private static Exception Unwrap(Exception cause)
+        {
+            if (cause is not AggregateException aggregate)
+                return cause;
+
+            var flattened = aggregate.Flatten();
+            return flattened.InnerExceptions.Count == 1 ? flattened.InnerExceptions[0] : flattened;
+        }
+
+        /// <summary>
+        /// Initial behavior: waiting for the bind started in <see cref="PreStart"/> to report back.
+        /// </summary>
+        protected override void OnReceive(object message)
+        {
+            switch (message)
+            {
+                case Bound bound:
+                    _connection = bound.Channel;
+                    _log.Debug("Connection bound");
+
+                    // Barrier first, report second. The caller must not see a bound conductor
+                    // before this actor can serve barrier traffic.
+                    _barrier = Context.ActorOf(Props.Create<BarrierCoordinator>(), "barriers");
+                    _bindResult?.TrySetResult((IPEndPoint)_connection.LocalAddress);
+
+                    Become(Ready);
+                    Stash.UnstashAll();
+                    return;
+
+                case BindFailed failed:
+                    _log.Error(failed.Cause, "Could not bind TestConductor controller");
+                    _bindResult?.TrySetException(failed.Cause);
+
+                    // Stop, never throw. A throw from a message handler runs the default
+                    // supervision directive, Restart, which re-runs PreStart and binds the same
+                    // dead port again - forever.
+                    Context.Stop(Self);
+                    return;
+
+                default:
+                    // The bound socket is the only source of real controller traffic, but it starts
+                    // accepting the moment the bind completes - which is before this actor gets the
+                    // Bound message. A client that connects in that window makes ConductorHandler
+                    // send CreateServerFSM ahead of Bound. Hold anything that races in.
+                    Stash.Stash();
+                    return;
+            }
         }
 
         /// <summary>
@@ -284,7 +372,11 @@ namespace Akka.Remote.TestKit
             return Directive.Restart;
         }
 
-        protected override void OnReceive(object message)
+        /// <summary>
+        /// Behavior after a successful bind. <see cref="_connection"/> and <see cref="_barrier"/>
+        /// are non-null here by construction of the state machine.
+        /// </summary>
+        private void Ready(object message)
         {
             var createServerFSM = message as CreateServerFSM;
             if (createServerFSM != null)
@@ -423,8 +515,16 @@ namespace Akka.Remote.TestKit
         {
             try
             {
-                RemoteConnection.Shutdown(_connection);
-                RemoteConnection.ReleaseAll().Wait(_settings.ConnectTimeout);
+                // Null when the bind failed: this actor stops without ever holding a connection.
+                if (_connection is not null)
+                    RemoteConnection.Shutdown(_connection);
+
+                // PostStop cannot await, and blocking the dispatcher on a drain is what this class
+                // is being cleaned of. ReleaseAll detaches the pools before it returns, so any
+                // later CreateConnection builds fresh ones; only the graceful drain runs on.
+                RemoteConnection.ReleaseAll().ContinueWith(
+                    t => _log.Error(t.Exception, "Error while terminating RemoteConnection."),
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
             }
             catch (Exception ex)
             {
