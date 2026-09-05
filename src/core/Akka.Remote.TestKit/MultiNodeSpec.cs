@@ -335,6 +335,10 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
     /// Port number of the node that's running the server system. Defaults to 4711.
     ///
     /// <code>-Dmultinode.server-port=4711</code>
+    ///
+    /// A value of 0 means automatic allocation: the conductor node binds a free port and prints
+    /// it as a <see cref="ConductorPortSentinel"/> line, and the runner passes that port to the
+    /// other nodes. Only the conductor node (<c>multinode.index=0</c>) may be given 0.
     /// </summary>
     public static int ServerPort
     {
@@ -346,7 +350,7 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
                 _serverPort = string.IsNullOrEmpty(serverPortStr) ? ServerPortDefault : Int32.Parse(serverPortStr);
             }
 
-            if (!(_serverPort > 0 && _serverPort < 65535)) throw new InvalidOperationException("multinode.server-port is out of bounds: " + _serverPort);
+            if (!(_serverPort >= 0 && _serverPort < 65535)) throw new InvalidOperationException("multinode.server-port is out of bounds: " + _serverPort);
             return _serverPort;
         }
     }
@@ -461,6 +465,13 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
         _log = Logging.GetLogger(Sys, this);
         Roles = roles;
         _deployments = deployments;
+
+        // Port 0 means "bind a free port and publish it". Only the conductor node can do that;
+        // a client node given 0 has no address to connect to.
+        if (ServerPort == 0 && SelfIndex != 0)
+            throw new InvalidOperationException(
+                "multinode.server-port=0 is only valid on the conductor node (multinode.index=0). " +
+                "Client nodes must be given the port the conductor published.");
 
         var node = new IPEndPoint(Dns.GetHostAddresses(ServerName)[0], ServerPort);
         _controllerAddr = node;
@@ -655,7 +666,7 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
         try
         {
             if (SelfIndex == 0)
-                await tc.StartControllerAsync(InitialParticipants, Myself, _controllerAddr, cts.Token);
+                await tc.StartControllerAsync(InitialParticipants, Myself, _controllerAddr, PublishConductorPort, cts.Token);
             else
                 await tc.StartClientAsync(Myself, _controllerAddr, cts.Token);
         }
@@ -664,6 +675,17 @@ public abstract class MultiNodeSpec : TestKitBase, IMultiNodeSpecCallbacks, IDis
             throw new Exception("failure while attaching new conductor", e);
         }
         TestConductor = tc;
+    }
+
+    /// <summary>
+    /// Writes the conductor's bound port to stdout for the multi-node test runner to read.
+    /// Emitted for explicitly configured ports too, so the runner sees one contract no matter
+    /// how the port was chosen.
+    /// </summary>
+    private static void PublishConductorPort(IPEndPoint boundAddress)
+    {
+        Console.Out.WriteLine(ConductorPortSentinel.Format(boundAddress.Port));
+        Console.Out.Flush();
     }
 
     // now add deployments, if so desired
