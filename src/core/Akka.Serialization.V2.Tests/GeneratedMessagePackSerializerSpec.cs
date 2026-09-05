@@ -396,12 +396,12 @@ public sealed class GeneratedMessagePackSerializerSpec : IAsyncLifetime
 
             var customRecovered = RoundTripThroughSerialization<AttributeOuterEnvelope>(system, customEnvelope);
             customRecovered.Should().Be(customEnvelope);
-            customRecovered.Inner.Payload.Should().BeOfType<CustomProtobufPayload>();
+            ((AttributeInnerEnvelope)customRecovered.Inner).Payload.Should().BeOfType<CustomProtobufPayload>();
             envelopeSerializer.SizeHint(customEnvelope).Should().Be(SerializerV2.UnknownSize);
 
             var generatedRecovered = RoundTripThroughSerialization<AttributeOuterEnvelope>(system, generatedEnvelope);
             generatedRecovered.Should().Be(generatedEnvelope);
-            generatedRecovered.Inner.Payload.Should().BeOfType<RequiredMessage>();
+            ((AttributeInnerEnvelope)generatedRecovered.Inner).Payload.Should().BeOfType<RequiredMessage>();
             envelopeSerializer.SizeHint(generatedEnvelope).Should().Be(system.Serialization.Serialize(generatedEnvelope).Length);
         }
         finally
@@ -755,12 +755,12 @@ public sealed record OpaqueSerializedPayload(
 [AkkaSerializable(Manifest = "attribute-outer-envelope-v1")]
 public sealed record AttributeOuterEnvelope(
     [property: AkkaField(1)] string EnvelopeId,
-    [property: AkkaField(2), AkkaEnvelopePayload] AttributeInnerEnvelope Inner) : IGeneratedTestProtocol;
+    [property: AkkaField(2)] object Inner) : IGeneratedTestProtocol;
 
 [AkkaSerializable(Manifest = "attribute-inner-envelope-v1")]
 public sealed record AttributeInnerEnvelope(
     [property: AkkaField(1)] string EnvelopeId,
-    [property: AkkaField(2), AkkaEnvelopePayload] object Payload) : IGeneratedTestProtocol;
+    [property: AkkaField(2)] object Payload) : IGeneratedTestProtocol;
 
 public sealed record CustomProtobufPayload(string PayloadId, int Value);
 
