@@ -2455,6 +2455,83 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostics.Should().Contain(diagnostic => diagnostic.Id == "AKKASG003" && diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
+    [Fact(DisplayName = "Generator should append the [AkkaEnvelopePayload]/[AkkaUnion] hint to AKKASG003 when the unsupported field type is an interface")]
+    public void Generator_should_append_polymorphism_hint_to_AKKASG003_for_interface_field()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            public interface IUnannotated
+            {
+            }
+
+            [AkkaSerializer<IProtocol>("sample", 199001)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] IUnannotated Value) : IProtocol;
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        // Same id/title/severity as every other AKKASG003 -- this is a second descriptor variant,
+        // not a format-string branch, so a genuinely unrepresentable type's message (asserted
+        // elsewhere in this file) stays byte-identical to before this hint existed.
+        diagnostics.Should().Contain(diagnostic =>
+            diagnostic.Id == "AKKASG003" &&
+            diagnostic.Severity == DiagnosticSeverity.Error &&
+            diagnostic.GetMessage(null).Contains("Mark the property [AkkaEnvelopePayload], or declare a closed member set with [AkkaUnion].", StringComparison.Ordinal));
+    }
+
+    [Fact(DisplayName = "Generator should not append the cross-assembly hint to AKKASG007 when the nested type is declared in this same compilation")]
+    public void Generator_should_not_append_cross_assembly_hint_to_AKKASG007_for_same_assembly_type()
+    {
+        const string source = """
+            #nullable enable
+            using Akka.Actor;
+            using Akka.Serialization.V2;
+
+            namespace DiagnosticSample;
+
+            public interface IProtocol
+            {
+            }
+
+            [AkkaSerializer<IProtocol>("sample", 199002)]
+            public sealed partial class SampleSerializer : AkkaSerializer
+            {
+                public static partial SerializerRegistration CreateRegistration();
+            }
+
+            [AkkaSerializable(Manifest = "outer-v1")]
+            public sealed record Outer([property: AkkaField(1)] Inner Inner) : IProtocol;
+
+            public sealed record Inner([property: AkkaField(1)] string Value);
+            """;
+
+        var diagnostics = RunGenerator(source);
+
+        var diagnostic = diagnostics.FirstOrDefault(d => d.Id == "AKKASG007" && d.Severity == DiagnosticSeverity.Error);
+        diagnostic.Should().NotBeNull();
+
+        // The cross-assembly descriptor variant only fires when the nested type's ContainingAssembly
+        // differs from the compilation being generated for; Inner is declared right here, so the
+        // message must stay exactly the pre-hint text -- no assembly name, no formatter suggestion.
+        diagnostic!.GetMessage(null).Contains("is declared in assembly", StringComparison.Ordinal).Should().BeFalse();
+        diagnostic.GetMessage(null).Contains("AkkaSerializerFormatter<", StringComparison.Ordinal).Should().BeFalse();
+    }
+
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
         var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
