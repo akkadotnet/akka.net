@@ -33,7 +33,7 @@ public interface IClusterClientProtocolMessage
 /// points retrieved from previous establishment, or periodically refreshed
 /// contacts, i.e. not necessarily the initial contact points.
 /// </summary>
-public sealed class ClusterClient : ActorBase
+public sealed class ClusterClient : ActorBase, IWithTimers
 {
     #region Messages
 
@@ -287,9 +287,21 @@ public sealed class ClusterClient : ActorBase
     private ActorSelection[] _contacts;
     private ImmutableHashSet<ActorPath> _contactPathsPublished;
     private ImmutableList<IActorRef> _subscribers;
-    private readonly ICancelable _heartbeatTask;
-    private ICancelable _refreshContactsCancelable;
     private readonly Queue<(object, IActorRef)> _buffer;
+
+    // All three timers below are keyed. A key means StartSingleTimer/StartPeriodicTimer REPLACES
+    // any live timer under that key, so at most one of each can exist no matter where it is armed.
+    // The scheduler also cancels every timer when the actor stops or restarts, so there is no
+    // PostStop cleanup to forget.
+    private const string ReconnectTimerKey = "reconnect-timeout";
+    private const string HeartbeatTimerKey = "heartbeat";
+    private const string RefreshContactsTimerKey = "refresh-contacts";
+
+    /// <summary>
+    /// Injected by the actor cell after construction. Timers are armed in <see cref="PreStart"/>,
+    /// not in the constructor, because this is still null while the constructor runs.
+    /// </summary>
+    public ITimerScheduler Timers { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ClusterClient" /> class.
@@ -323,49 +335,59 @@ public sealed class ClusterClient : ActorBase
         _contactPathsPublished = _contactPaths;
         _subscribers = ImmutableList<IActorRef>.Empty;
 
-        _heartbeatTask = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-            settings.HeartbeatInterval,
-            settings.HeartbeatInterval,
-            Self,
-            HeartbeatTick.Instance,
-            Self);
-
-        _refreshContactsCancelable = null;
-        ScheduleRefreshContactsTick(settings.EstablishingGetContactsInterval);
-        Self.Tell(RefreshContactsTick.Instance);
-
         _buffer = new Queue<(object, IActorRef)>();
+    }
+
+    /// <summary>
+    /// Arms the timers and enters the initial establishing phase. This runs after the constructor,
+    /// which is the earliest point where <see cref="Timers"/> is available.
+    /// </summary>
+    protected override void PreStart()
+    {
+        base.PreStart();
+
+        Timers.StartPeriodicTimer(
+            HeartbeatTimerKey,
+            HeartbeatTick.Instance,
+            _settings.HeartbeatInterval,
+            _settings.HeartbeatInterval);
+
+        // Construction is the entry into the first establishing phase, so the reconnect deadline
+        // starts here.
+        ScheduleReconnectTimeout();
+        ScheduleRefreshContactsTick(_settings.EstablishingGetContactsInterval);
+        Self.Tell(RefreshContactsTick.Instance);
+    }
+
+    /// <summary>
+    /// Starts the deadline that stops this client if it cannot reach a receptionist in time.
+    /// </summary>
+    private void ScheduleReconnectTimeout()
+    {
+        // The deadline measures time spent in the CURRENT establishing phase, so it must be armed
+        // once per entry into that phase - never per message. Arming it per message was the bug in
+        // issue #8508: each message left another one-shot timer behind, only the last was ever
+        // cancelled, and a leftover firing after the client had gone back to establishing stopped a
+        // healthy client mid-reconnect.
+        //
+        // Two properties of a keyed timer make this safe. Starting the timer replaces any live one
+        // under the same key, so re-entering establishing cannot accumulate deadlines. And the
+        // scheduler discards messages from a cancelled or replaced timer even when they are already
+        // sitting in the mailbox - which a plain ICancelable cannot do, because Cancel() cannot
+        // recall a message that has already been queued.
+        //
+        // reconnect-timeout defaults to off, in which case no timer is armed at all.
+        if (_settings.ReconnectTimeout.HasValue)
+        {
+            Timers.StartSingleTimer(ReconnectTimerKey, ReconnectTimeout.Instance, _settings.ReconnectTimeout.Value);
+        }
     }
 
     private void ScheduleRefreshContactsTick(TimeSpan interval)
     {
-        if (_refreshContactsCancelable != null)
-        {
-            _refreshContactsCancelable.Cancel();
-            _refreshContactsCancelable = null;
-        }
-
-        _refreshContactsCancelable = Context.System.Scheduler.ScheduleTellRepeatedlyCancelable(
-            interval,
-            interval,
-            Self,
-            RefreshContactsTick.Instance,
-            Self);
-    }
-
-    /// <summary>
-    /// TBD
-    /// </summary>
-    protected override void PostStop()
-    {
-        base.PostStop();
-        _heartbeatTask.Cancel();
-
-        if (_refreshContactsCancelable != null)
-        {
-            _refreshContactsCancelable.Cancel();
-            _refreshContactsCancelable = null;
-        }
+        // Keyed, so this replaces the timer running at the previous interval. A tick left over from
+        // the old cadence is discarded rather than delivered against the new one.
+        Timers.StartPeriodicTimer(RefreshContactsTimerKey, RefreshContactsTick.Instance, interval, interval);
     }
 
     /// <summary>
@@ -380,16 +402,9 @@ public sealed class ClusterClient : ActorBase
 
     private bool Establishing(object message)
     {
-        ICancelable connectTimerCancelable = null;
-        if (_settings.ReconnectTimeout.HasValue)
-        {
-            connectTimerCancelable = Context.System.Scheduler.ScheduleTellOnceCancelable(
-                _settings.ReconnectTimeout.Value,
-                Self,
-                ReconnectTimeout.Instance,
-                Self);
-        }
-
+        // No timer work here. The reconnect deadline belongs to the phase, not to each message -
+        // see ScheduleReconnectTimeout. It is armed on entry (PreStart and Reestablish) and
+        // cancelled on the transition to Active.
         switch (message)
         {
             case ClusterReceptionist.Contacts contacts:
@@ -415,7 +430,8 @@ public sealed class ClusterClient : ActorBase
                     ScheduleRefreshContactsTick(_settings.RefreshContactsInterval);
                     SendBuffered(receptionist);
                     Context.Become(Active(receptionist));
-                    connectTimerCancelable?.Cancel();
+                    // Leaving the establishing phase, so the deadline no longer applies.
+                    Timers.Cancel(ReconnectTimerKey);
                     _failureDetector.HeartBeat();
                     Self.Tell(HeartbeatTick.Instance); // will register us as active client of the selected receptionist
                 }
@@ -534,6 +550,8 @@ public sealed class ClusterClient : ActorBase
         SendGetContacts();
         ScheduleRefreshContactsTick(_settings.EstablishingGetContactsInterval);
         Context.Become(Establishing);
+        // Entering a new establishing phase, so the deadline restarts from now.
+        ScheduleReconnectTimeout();
         _failureDetector.HeartBeat();
     }
 
