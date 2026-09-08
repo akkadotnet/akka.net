@@ -51,7 +51,11 @@ public sealed class GeneratorGoldenOutputSpec
     /// emission path, plus a second, internal serializer covering the 'internal' accessibility
     /// keyword path.
     /// </summary>
-    private const string GoldenSource = """
+    /// <remarks>
+    /// Internal (not private) so <c>GeneratorMessageModelSnapshotSpec</c> can parse the exact same
+    /// corpus through the extraction layer instead of maintaining a parallel copy that could drift.
+    /// </remarks>
+    internal const string GoldenSource = """
         #nullable enable
         using System;
         using System.Collections.Generic;
@@ -306,7 +310,8 @@ public sealed class GeneratorGoldenOutputSpec
     /// Second syntax tree, GLOBAL namespace: covers the namespace-less emission branch (no
     /// <c>namespace ...;</c> line in the generated file).
     /// </summary>
-    private const string GlobalNamespaceSource = """
+    /// <remarks>See <see cref="GoldenSource"/>'s remarks on why this is internal, not private.</remarks>
+    internal const string GlobalNamespaceSource = """
         #nullable enable
         using Akka.Serialization.V2;
 
