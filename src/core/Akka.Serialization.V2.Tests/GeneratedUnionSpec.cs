@@ -20,7 +20,7 @@ namespace Akka.Serialization.V2.Tests;
 /// <summary>
 /// Specs for <c>[AkkaUnion]</c> fields: closed, explicitly-enumerated member sets encoded
 /// structurally inline and discriminated by each member's serializer-owned manifest -- the typed
-/// alternative to <c>[AkkaEnvelopePayload]</c> for payload sets known at compile time.
+/// alternative to an <c>object</c>-typed envelope field for payload sets known at compile time.
 /// </summary>
 public sealed class GeneratedUnionSpec : IAsyncLifetime
 {
@@ -87,7 +87,7 @@ public sealed class GeneratedUnionSpec : IAsyncLifetime
         reader.ReadInt32().Should().Be(2);
 
         // The union frame: { 1: manifest, 2: inline member field map }. No serializer id, no
-        // length-prefixed opaque byte blob -- contrast with the [AkkaEnvelopePayload] frame.
+        // length-prefixed opaque byte blob -- contrast with an object-typed envelope field's frame.
         reader.ReadMapHeader().Should().Be(2);
         reader.ReadInt32().Should().Be(1);
         reader.ReadString().Should().Be(OrderPlaced.ManifestName);

@@ -57,6 +57,7 @@
 - [x] 5.13 Support `[AkkaEnvelopePayload]` fields through runtime Akka serializer lookup
 - [x] 5.14 Support foreign-type formatters via [AkkaSerializerFormatter] escape hatch (AddressFormatter/ActorPathFormatter built-ins, byte-compatible with Artery control-message wire format)
 - [x] 5.15 Honor declared accessibility of serializer partial classes (internal serializers)
+- [x] 5.16 Remove `[AkkaEnvelopePayload]`; an `object`-typed field is the serializer boundary on its own, AKKASG035 retired, AKKASG038 added (design.md Decision 20) — PR #8518
 
 ## 6. Integration Validation
 

@@ -17,7 +17,7 @@
 ## 3. Subsystem 2 — DistributedData (ids 12->52, 11->51) [headline hot-path]
 
 - [ ] 3.1 DTO mirrors for the `ReplicatorMessage` set; hand-written `IAkkaMessagePackFormatter<T>` for `UniqueAddress`/`VersionVector` (design.md Decision 10)
-- [ ] 3.2 Preserve/re-evaluate gzip on `Gossip`/`ORSet`/`ORMap`; `OtherMessage` -> `[AkkaEnvelopePayload]`
+- [ ] 3.2 Preserve/re-evaluate gzip on `Gossip`/`ORSet`/`ORMap`; `OtherMessage` -> an `object`-typed field (the serializer boundary)
 - [ ] 3.3 `ReplicatedData` CRDT mirrors + delta-op serializers
 - [ ] 3.4 **Prerequisite PR — make `LmdbDurableStore` self-describing**: prepend a per-record `(serializerId, manifest)` header; recover headerless records as legacy protobuf `DurableDataEnvelope`; disambiguate with a leading `0x00` sentinel (invalid as a protobuf record start). Lands BEFORE the DData flip (design.md Decision 11)
 - [ ] 3.5 Register v2 ids additively; golden + cross-read tests; durable-read-back proof: write a pre-header (protobuf, headerless) LMDB database, flip the binding, restart, recover successfully; plus mixed old/new records recover by their stored header

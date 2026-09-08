@@ -217,7 +217,7 @@ public class GeneratedMessagePackSerializerBenchmarks
             _generatedNestedEnvelopeBytes,
             _envelopeSerializer.Identifier,
             _nestedEnvelopeManifest);
-        return envelope.Inner.Payload;
+        return ((BenchmarkInnerEnvelope)envelope.Inner).Payload;
     }
 
     [Benchmark]
@@ -233,7 +233,7 @@ public class GeneratedMessagePackSerializerBenchmarks
             _customNestedEnvelopeBytes,
             _envelopeSerializer.Identifier,
             _nestedEnvelopeManifest);
-        return envelope.Inner.Payload;
+        return ((BenchmarkInnerEnvelope)envelope.Inner).Payload;
     }
 
     [Benchmark]
@@ -249,7 +249,7 @@ public class GeneratedMessagePackSerializerBenchmarks
             _customSameShapeNestedEnvelopeBytes,
             _envelopeSerializer.Identifier,
             _nestedEnvelopeManifest);
-        return envelope.Inner.Payload;
+        return ((BenchmarkInnerEnvelope)envelope.Inner).Payload;
     }
 
     [Benchmark(Baseline = true)]
@@ -348,12 +348,12 @@ public sealed record BenchmarkSerializedPayload(
 [AkkaSerializable(Manifest = "benchmark-outer-envelope-v1")]
 public sealed record BenchmarkOuterEnvelope(
     [property: AkkaField(0)] string EnvelopeId,
-    [property: AkkaField(1), AkkaEnvelopePayload] BenchmarkInnerEnvelope Inner) : IEnvelopeBenchmarkProtocol;
+    [property: AkkaField(1)] object Inner) : IEnvelopeBenchmarkProtocol;
 
 [AkkaSerializable(Manifest = "benchmark-inner-envelope-v1")]
 public sealed record BenchmarkInnerEnvelope(
     [property: AkkaField(0)] string EnvelopeId,
-    [property: AkkaField(1), AkkaEnvelopePayload] object Payload) : IEnvelopeBenchmarkProtocol;
+    [property: AkkaField(1)] object Payload) : IEnvelopeBenchmarkProtocol;
 
 public sealed record CustomBenchmarkPayload(string PayloadId, int Value);
 

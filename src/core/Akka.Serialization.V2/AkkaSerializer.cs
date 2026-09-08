@@ -20,8 +20,9 @@ namespace Akka.Serialization.V2;
 public abstract class AkkaSerializer : SerializerV2
 {
     /// <summary>
-    /// Maximum depth of nested <see cref="AkkaEnvelopePayloadAttribute"/> payloads permitted within a
-    /// single serialize / deserialize / size operation. Envelopes legitimately nest a level or two (a
+    /// Maximum depth of nested envelope payloads (properties whose static type is <c>object</c> or
+    /// <c>object?</c>) permitted within a single serialize / deserialize / size operation. Envelopes
+    /// legitimately nest a level or two (a
     /// delivery message wraps a user payload that may itself be an enveloped message), but unbounded
     /// nesting is only reachable when a message type declares itself (directly or transitively) as its own
     /// envelope payload — an application bug. Left unchecked that recurses until the thread's stack
@@ -39,8 +40,8 @@ public abstract class AkkaSerializer : SerializerV2
         if (_envelopePayloadDepth >= MaxEnvelopePayloadDepth)
             throw new SerializationException(
                 $"Envelope payload nesting exceeded the maximum depth of {MaxEnvelopePayloadDepth}. " +
-                "This almost always means a message type declares itself (directly or transitively) as its " +
-                "own [AkkaEnvelopePayload], causing unbounded recursion. Break the self-reference in the message graph.");
+                "This almost always means a message type declares an object-typed envelope field that (directly " +
+                "or transitively) holds itself, causing unbounded recursion. Break the self-reference in the message graph.");
 
         _envelopePayloadDepth++;
     }

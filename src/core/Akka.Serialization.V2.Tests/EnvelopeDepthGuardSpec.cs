@@ -18,13 +18,13 @@ using Xunit;
 namespace Akka.Serialization.V2.Tests;
 
 /// <summary>
-/// Guards the <see cref="AkkaEnvelopePayloadAttribute"/> depth limit. Envelope payloads legitimately
+/// Guards the object-typed envelope field's nesting-depth limit. Envelope payloads legitimately
 /// nest a level or two, but a message type that declares itself (directly or transitively) as its own
 /// envelope payload recurses without bound. Before the guard that recursion overflowed the thread stack
 /// and killed the process (an uncatchable .NET failure); the guard turns it into an ordinary catchable
 /// <see cref="SerializationException"/> on the write, size, and read paths alike. Reuses the
 /// <see cref="AttributeInnerEnvelope"/> test type from the sibling generated-serializer spec, whose
-/// <c>[AkkaEnvelopePayload] object Payload</c> field can hold another envelope.
+/// <c>object Payload</c> field can hold another envelope.
 /// </summary>
 public sealed class EnvelopeDepthGuardSpec : AkkaSpec
 {
