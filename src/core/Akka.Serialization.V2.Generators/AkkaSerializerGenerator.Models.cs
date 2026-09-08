@@ -64,7 +64,7 @@ public sealed partial class AkkaSerializerGenerator
         }
     }
 
-    private sealed class SerializerInfo : IEquatable<SerializerInfo>
+    internal sealed class SerializerInfo : IEquatable<SerializerInfo>
     {
         public SerializerInfo(
             string ns,
@@ -170,7 +170,7 @@ public sealed partial class AkkaSerializerGenerator
         }
     }
 
-    private sealed class MessageInfo : IEquatable<MessageInfo>
+    internal sealed class MessageInfo : IEquatable<MessageInfo>
     {
         public MessageInfo(
             string simpleName,
@@ -291,7 +291,7 @@ public sealed partial class AkkaSerializerGenerator
     /// A single <c>[AkkaField]</c> property found unusable during extraction: static, or its getter
     /// is not accessible to the generated code. See AKKASG028.
     /// </summary>
-    private sealed class InvalidFieldInfo : IEquatable<InvalidFieldInfo>
+    internal sealed class InvalidFieldInfo : IEquatable<InvalidFieldInfo>
     {
         public InvalidFieldInfo(string propertyName, string reason)
         {
@@ -335,7 +335,7 @@ public sealed partial class AkkaSerializerGenerator
     /// (AKKASG026). <see cref="UncoveredDefaultedParameters"/> is advisory (AKKASG027) and can be
     /// non-empty even when <see cref="IsValid"/> is true.
     /// </summary>
-    private sealed class ConstructionPlan : IEquatable<ConstructionPlan>
+    internal sealed class ConstructionPlan : IEquatable<ConstructionPlan>
     {
         public static readonly ConstructionPlan Empty = new(
             ImmutableArray<ConstructorArgumentPlan>.Empty,
@@ -390,7 +390,7 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>A single NAMED constructor argument: <see cref="ParameterName"/> supplied from the field named <see cref="FieldName"/>.</summary>
-    private readonly struct ConstructorArgumentPlan : IEquatable<ConstructorArgumentPlan>
+    internal readonly struct ConstructorArgumentPlan : IEquatable<ConstructorArgumentPlan>
     {
         public ConstructorArgumentPlan(string parameterName, string fieldName)
         {
@@ -423,7 +423,7 @@ public sealed partial class AkkaSerializerGenerator
     /// when the target was invalid (not a type, non-generic, unbound, or its definition lacks
     /// <c>[AkkaSerializable]</c>) so AKKASG020 fires instead of the registration silently vanishing.
     /// </summary>
-    private sealed class ClosedGenericRegistrationInfo : IEquatable<ClosedGenericRegistrationInfo>
+    internal sealed class ClosedGenericRegistrationInfo : IEquatable<ClosedGenericRegistrationInfo>
     {
         public ClosedGenericRegistrationInfo(string targetDisplayName, MessageInfo? message)
         {
@@ -457,7 +457,7 @@ public sealed partial class AkkaSerializerGenerator
         }
     }
 
-    private sealed class FieldInfo : IEquatable<FieldInfo>
+    internal sealed class FieldInfo : IEquatable<FieldInfo>
     {
         public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default, bool unionDeclaredOnObjectField = false)
         {
@@ -529,7 +529,7 @@ public sealed partial class AkkaSerializerGenerator
         }
     }
 
-    private readonly struct TypeMapping : IEquatable<TypeMapping>
+    internal readonly struct TypeMapping : IEquatable<TypeMapping>
     {
         public TypeMapping(
             FieldKind kind,
@@ -666,7 +666,7 @@ public sealed partial class AkkaSerializerGenerator
     /// strings/bools/enums (no <see cref="ISymbol"/> references) so it stays cheap to hold across
     /// incremental generator passes.
     /// </summary>
-    private sealed class FormatterInfo : IEquatable<FormatterInfo>
+    internal sealed class FormatterInfo : IEquatable<FormatterInfo>
     {
         public FormatterInfo(string targetTypeFullName, bool isTargetValueType, string formatterTypeFullName, bool isAbstract, FormatterCtorKind ctorKind, bool isTargetSupported)
         {
@@ -722,14 +722,14 @@ public sealed partial class AkkaSerializerGenerator
         }
     }
 
-    private enum FormatterCtorKind
+    internal enum FormatterCtorKind
     {
         None,
         Parameterless,
         System
     }
 
-    private enum FieldKind
+    internal enum FieldKind
     {
         Unsupported,
         String,
@@ -769,7 +769,7 @@ public sealed partial class AkkaSerializerGenerator
     /// extraction time; facts requiring the whole-compilation message set (serializability,
     /// manifests) are resolved later against the serializer's message dictionary.
     /// </summary>
-    private sealed class UnionMemberInfo : IEquatable<UnionMemberInfo>
+    internal sealed class UnionMemberInfo : IEquatable<UnionMemberInfo>
     {
         public UnionMemberInfo(string typeFullName, bool isValueType, bool isAssignable, bool isSupported, bool isSealed, bool isAbstract, string foreignAssemblyName = "")
         {

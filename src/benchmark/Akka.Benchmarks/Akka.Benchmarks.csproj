@@ -12,6 +12,18 @@
     <PackageReference Include="FluentAssertions" Version="$(FluentAssertionsVersion)" />
   </ItemGroup>
 
+  <!--
+    Serialization/SourceGeneratorBenchmarks.cs drives AkkaSerializerGenerator directly (building
+    synthetic Compilations and GeneratorDriver runs), which needs Microsoft.CodeAnalysis.CSharp
+    types at compile time. BenchmarkDotNet $(BenchmarkDotNetVersion) already depends on
+    Microsoft.CodeAnalysis.CSharp >= 4.14.0 (newer than this repo's pinned
+    $(MicrosoftCodeAnalysisCSharpVersion), 4.13.0), and that transitive reference already flows
+    through for compilation in an SDK-style project: adding an explicit PackageReference pinned to
+    $(MicrosoftCodeAnalysisCSharpVersion) here would only create a NU1605 downgrade error against
+    BenchmarkDotNet's own floor. So this project deliberately does NOT add one; it relies on the
+    version BenchmarkDotNet already pulls in.
+  -->
+
   <ItemGroup>
     <ProjectReference Include="..\..\contrib\cluster\Akka.DistributedData\Akka.DistributedData.csproj" />
     <ProjectReference Include="..\..\contrib\serializers\Akka.Serialization.Hyperion\Akka.Serialization.Hyperion.csproj" />
@@ -20,6 +32,10 @@
     <ProjectReference Include="..\..\core\Akka.Remote\Akka.Remote.csproj" />
     <ProjectReference Include="..\..\core\Akka.Serialization.V2\Akka.Serialization.V2.csproj" />
     <ProjectReference Include="..\..\core\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    <!-- Second reference to the SAME project, this time as an ordinary assembly reference (not an
+         analyzer), so SourceGeneratorBenchmarks.cs can call AkkaSerializerGenerator's public API
+         directly. Same pattern Akka.Serialization.V2.Tests.csproj uses. -->
+    <ProjectReference Include="..\..\core\Akka.Serialization.V2.Generators\Akka.Serialization.V2.Generators.csproj" ReferenceOutputAssembly="true" PrivateAssets="all" />
     <ProjectReference Include="..\..\core\Akka.Streams\Akka.Streams.csproj" />
     <ProjectReference Include="..\..\core\Akka\Akka.csproj" />
   </ItemGroup>
