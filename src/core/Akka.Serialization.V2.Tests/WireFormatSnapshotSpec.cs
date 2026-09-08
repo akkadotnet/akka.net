@@ -90,7 +90,7 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
         // Keyword-named property/constructor-parameter escaping.
         "keyword-named-property",
 
-        // [AkkaEnvelopePayload]-shaped opaque payload: fixed inner serializer id + manifest + bytes.
+        // Object-typed envelope payload: fixed inner serializer id + manifest + bytes.
         "envelope-payload-fixed-inner-serializer",
 
         // AllowEmpty fieldless message: the smallest possible wire shape (a bare 1-byte map header).

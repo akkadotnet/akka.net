@@ -210,8 +210,8 @@ public sealed class GeneratorGoldenOutputSpec
         [AkkaSerializable(Manifest = "envelope-v1")]
         public sealed record EnvelopeMessage(
             [property: AkkaField(1)] string CorrelationId,
-            [property: AkkaField(2), AkkaEnvelopePayload] object Payload,
-            [property: AkkaField(3), AkkaEnvelopePayload] object? MaybePayload) : IProtocol;
+            [property: AkkaField(2)] object Payload,
+            [property: AkkaField(3)] object? MaybePayload) : IProtocol;
 
         // ---- hybrid reconstruction: case-insensitive ctor matching, a keyword-named ctor
         // parameter, and leftover properties assigned via object initializer ----

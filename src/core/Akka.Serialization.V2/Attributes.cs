@@ -92,14 +92,6 @@ public sealed class AkkaFieldAttribute : Attribute
 }
 
 /// <summary>
-/// Marks an <see cref="AkkaFieldAttribute"/> property as an Akka serializer boundary.
-/// </summary>
-[AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
-public sealed class AkkaEnvelopePayloadAttribute : Attribute
-{
-}
-
-/// <summary>
 /// Declares a closed, explicitly-enumerated union of concrete
 /// <see cref="AkkaSerializableAttribute"/> member types for an interface or abstract base -- or,
 /// applied to an <see cref="AkkaFieldAttribute"/> property, overrides the member set for that one
@@ -114,14 +106,14 @@ public sealed class AkkaEnvelopePayloadAttribute : Attribute
 /// set for that field only (for example, to narrow the members a particular schema accepts).
 /// </para>
 /// <para>
-/// Unlike <see cref="AkkaEnvelopePayloadAttribute"/> (a runtime serializer boundary for payloads
-/// whose concrete type may live in an assembly unknown at compile time), a union field is encoded
-/// structurally inline: the generator emits compile-time dispatch over the declared member set,
-/// discriminated by each member's <see cref="AkkaSerializableAttribute.Manifest"/>. Every member
-/// must be <c>[AkkaSerializable]</c>, declare a manifest unique within the union, and be assignable
-/// to the field's static type. A runtime value whose exact type is not a declared member fails
-/// serialization. When both this attribute and <see cref="AkkaEnvelopePayloadAttribute"/> are
-/// present on a field, the envelope payload marker wins (consistent with its precedence over
+/// Unlike a field typed <c>object</c> (a runtime serializer boundary for payloads whose concrete
+/// type may live in an assembly unknown at compile time), a union field is encoded structurally
+/// inline: the generator emits compile-time dispatch over the declared member set, discriminated
+/// by each member's <see cref="AkkaSerializableAttribute.Manifest"/>. Every member must be
+/// <c>[AkkaSerializable]</c>, declare a manifest unique within the union, and be assignable to the
+/// field's static type. A runtime value whose exact type is not a declared member fails
+/// serialization. This attribute has no effect on a field whose static type is <c>object</c>: the
+/// static type alone already selects the envelope boundary (consistent with its precedence over
 /// formatter registrations).
 /// </para>
 /// </remarks>
@@ -189,8 +181,8 @@ public sealed class AkkaSerializableAttribute<TMessage> : Attribute
 /// serializer-scoped: the same foreign type may be handled by different formatters (or not at all)
 /// in different serializers. A formatter registration overrides every field-kind resolution the
 /// generator would otherwise infer for <typeparamref name="TTarget"/> (including
-/// <c>Nullable&lt;T&gt;</c> of a value type), except an
-/// <see cref="AkkaEnvelopePayloadAttribute"/>-marked field, which always wins.
+/// <c>Nullable&lt;T&gt;</c> of a value type), except a field whose static type is <c>object</c>
+/// (or <c>object?</c>), which is always the envelope boundary and always wins.
 /// The <c>where TFormatter : IAkkaMessagePackFormatter&lt;TTarget&gt;</c> constraint is enforced by
 /// the compiler at the attribute usage site: <typeparamref name="TFormatter"/> can never be
 /// something that does not implement the formatter interface for <typeparamref name="TTarget"/>.

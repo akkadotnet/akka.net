@@ -24,7 +24,6 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     private const string SerializerAttributeFullName = "Akka.Serialization.V2.AkkaSerializerAttribute`1";
     private const string SerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializableAttribute";
     private const string FieldAttributeFullName = "Akka.Serialization.V2.AkkaFieldAttribute";
-    private const string EnvelopePayloadAttributeFullName = "Akka.Serialization.V2.AkkaEnvelopePayloadAttribute";
     private const string UnionAttributeFullName = "Akka.Serialization.V2.AkkaUnionAttribute";
     private const string GenericSerializableAttributeFullName = "Akka.Serialization.V2.AkkaSerializableAttribute`1";
     private const string FormatterAttributeFullName = "Akka.Serialization.V2.AkkaSerializerFormatterAttribute`2";
@@ -61,11 +60,12 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         isEnabledByDefault: true);
 
     // Same id/title/severity as UnsupportedFieldType. Used only for an interface, abstract class,
-    // or type parameter field, which is usually a forgotten [AkkaEnvelopePayload]/[AkkaUnion].
+    // or type parameter field, which is usually a forgotten [AkkaUnion], or a field that should
+    // simply be typed object.
     private static readonly DiagnosticDescriptor UnsupportedFieldTypePolymorphic = new(
         "AKKASG003",
         "Unsupported field type",
-        "Property '{0}' on type '{1}' has unsupported generated serializer field type '{2}'. Mark the property [AkkaEnvelopePayload], or declare a closed member set with [AkkaUnion].",
+        "Property '{0}' on type '{1}' has unsupported generated serializer field type '{2}'. Declare a closed member set with [AkkaUnion], or type the property as object.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -345,14 +345,6 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor UnionDeclarationIgnoredOnEnvelopePayload = new(
-        "AKKASG035",
-        "Union declaration is ignored on an envelope payload field",
-        "Property '{0}' on type '{1}' has both [AkkaEnvelopePayload] and [AkkaUnion]; the union declaration is ignored -- envelope payload takes precedence",
-        "Akka.Serialization.V2",
-        DiagnosticSeverity.Info,
-        isEnabledByDefault: true);
-
     private static readonly DiagnosticDescriptor UnionMemberAbstract = new(
         "AKKASG036",
         "Union member type is abstract",
@@ -367,6 +359,21 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         "Generic [AkkaSerializable] type '{0}' specifies Manifest '{1}', which is ignored: a generic definition is never serialized directly, and each closed construction registered with [AkkaSerializable<T>] supplies its own Manifest",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// An object-typed property is ALWAYS the envelope-payload boundary (Decision 20): the static
+    /// type alone carries that meaning, with no attribute involved. A field-level <c>[AkkaUnion]</c>
+    /// on such a property is therefore contradictory author intent -- not a harmless no-op -- so
+    /// this is an ERROR, unlike the retired AKKASG035 advisory it replaces (deliberately a
+    /// different id; AKKASG035 stays a permanent gap).
+    /// </summary>
+    private static readonly DiagnosticDescriptor UnionDeclaredOnObjectField = new(
+        "AKKASG038",
+        "Union declaration on an object-typed property",
+        "Property '{0}' on type '{1}' is typed object, which is always an envelope payload boundary, but carries a field-level [AkkaUnion]. Type the property as the union's base type, or remove the attribute.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
     /// <summary>
@@ -1232,16 +1239,17 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
             var index = (int)fieldAttribute.ConstructorArguments[0].Value!;
             var isNullable = member.NullableAnnotation == NullableAnnotation.Annotated || IsNullableValueType(member.Type);
-            var isEnvelopePayload = member.GetAttributes()
-                .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.EnvelopePayloadAttribute));
+            // A property whose static type is `object` (nullable or not), after generic
+            // substitution, is always the envelope-payload boundary: the type alone carries that
+            // meaning, with no attribute involved.
+            var isEnvelopePayload = member.Type.SpecialType == SpecialType.System_Object;
             var unionMembers = ExtractUnionMembers(member, knownTypes, compilation, out var hasUnionAttribute, out var unionDeclaredOnField);
 
-            // Precedence: [AkkaEnvelopePayload] always wins (matching its documented precedence over
-            // formatter registrations), then [AkkaUnion], then ordinary inference. When the envelope
-            // suppresses a FIELD-LEVEL [AkkaUnion] the conflict is remembered for the AKKASG035
-            // advisory: both attributes on one property are conflicting author intent. A TYPE-LEVEL
-            // [AkkaUnion] on the field's static type is deliberately exempt -- it serves that
-            // interface's other, non-envelope fields, so its presence here is incidental.
+            // Precedence: an `object`-typed field always wins (matching its documented precedence
+            // over formatter registrations), then [AkkaUnion], then ordinary inference. A field
+            // typed `object` that ALSO carries a field-level [AkkaUnion] is contradictory author
+            // intent, not a harmless no-op -- AKKASG038 (error) fires on it below. A TYPE-LEVEL
+            // [AkkaUnion] is irrelevant here: `object`'s own type never carries one.
             var mapping = isEnvelopePayload ? new TypeMapping(FieldKind.EnvelopePayload)
                 : hasUnionAttribute ? new TypeMapping(FieldKind.Union)
                 : MapType(member.Type, knownTypes);
@@ -1252,7 +1260,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 mapping,
                 isNullable,
                 unionMembers: isEnvelopePayload ? default : unionMembers,
-                unionSuppressedByEnvelope: isEnvelopePayload && unionDeclaredOnField));
+                unionDeclaredOnObjectField: isEnvelopePayload && unionDeclaredOnField));
             fieldSymbols.Add(member);
         }
 
@@ -1443,7 +1451,10 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         // Field-level override wins; otherwise inherit the type-level declaration from the field's
         // static type. OriginalDefinition covers a generic union base, where the attribute lives on
         // the definition. Whether the declaration sits on the FIELD itself is reported separately
-        // (unionDeclaredOnField) for the AKKASG035 envelope-conflict advisory.
+        // (unionDeclaredOnField) -- needed ONLY to tell an object-typed field's own [AkkaUnion]
+        // (AKKASG038, contradictory author intent) apart from a type-level [AkkaUnion] it merely
+        // inherited (irrelevant for `object`, since `object`'s own type never carries one, but kept
+        // symmetric with the general lookup below).
         var unionAttribute = member.GetAttributes()
             .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
         unionDeclaredOnField = unionAttribute != null;
@@ -1661,12 +1672,13 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 context.ReportDiagnostic(Diagnostic.Create(ConstructorParameterNotCovered, Location.None, parameterName, ToDisplayName(message.FullyQualifiedName)));
             }
 
-            // Advisory only (AKKASG035): both [AkkaEnvelopePayload] and a field-level [AkkaUnion]
-            // were declared on this property; extraction dropped the union member set because
-            // envelope payload takes precedence (see ExtractMessageCore).
-            foreach (var field in message.Fields.Where(field => field.UnionSuppressedByEnvelope))
+            // Error (AKKASG038): an object-typed property is always the envelope-payload boundary
+            // (the static type alone carries that meaning); a field-level [AkkaUnion] on it can
+            // never take effect, so this is contradictory author intent, not a harmless no-op.
+            foreach (var field in message.Fields.Where(field => field.UnionDeclaredOnObjectField))
             {
-                context.ReportDiagnostic(Diagnostic.Create(UnionDeclarationIgnoredOnEnvelopePayload, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName)));
+                context.ReportDiagnostic(Diagnostic.Create(UnionDeclaredOnObjectField, Location.None, field.Name, ToDisplayName(message.FullyQualifiedName)));
+                isValid = false;
             }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Unsupported))
@@ -2435,8 +2447,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
     // member's ordinary inline field map> }. The manifest is the discriminator -- the same
     // serializer-owned manifest the member would carry as a top-level message -- so a value reads
     // identically whether it arrived through union dispatch or ordinary manifest dispatch. Contrast
-    // with [AkkaEnvelopePayload]'s { 1: serializerId, 2: manifest, 3: opaque bytes }: the union
-    // omits the serializer id (every member is owned by this serializer) and inlines the member's
+    // with an object-typed envelope field's { 1: serializerId, 2: manifest, 3: opaque bytes }: the
+    // union omits the serializer id (every member is owned by this serializer) and inlines the member's
     // fields directly instead of double-buffering them into a length-prefixed blob.
     //
     // Write dispatch matches the runtime type EXACTLY (value.GetType() == typeof(Member)) rather
@@ -3495,9 +3507,9 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             return new TypeMapping(FieldKind.MissingSerializableDefinition, GetFullyQualifiedTypeName(missingNestedType), foreignAssemblyName: GetForeignAssemblyName(missingNestedType, knownTypes));
 
         // AKKASG003 on an interface, an abstract class, or a type parameter is usually a forgotten
-        // [AkkaEnvelopePayload]/[AkkaUnion] declaration rather than a genuinely unrepresentable
-        // type -- flag it so ValidateMessages can point authors at both fixes instead of leaving
-        // them to guess.
+        // [AkkaUnion] declaration, or a field that should simply be typed `object`, rather than a
+        // genuinely unrepresentable type -- flag it so ValidateMessages can point authors at both
+        // fixes instead of leaving them to guess.
         var suggestsEnvelopeOrUnion = type.TypeKind == TypeKind.TypeParameter
             || (type is INamedTypeSymbol { IsAbstract: true } && type.TypeKind is TypeKind.Interface or TypeKind.Class);
         return suggestsEnvelopeOrUnion ? new TypeMapping(FieldKind.Unsupported, suggestsEnvelopeOrUnion: true) : mapping;
@@ -4155,7 +4167,6 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         {
             CompilationAssembly = compilation.Assembly;
             FieldAttribute = compilation.GetTypeByMetadataName(FieldAttributeFullName);
-            EnvelopePayloadAttribute = compilation.GetTypeByMetadataName(EnvelopePayloadAttributeFullName);
             UnionAttribute = compilation.GetTypeByMetadataName(UnionAttributeFullName);
             SerializableAttribute = compilation.GetTypeByMetadataName(SerializableAttributeFullName);
             Guid = compilation.GetTypeByMetadataName("System.Guid");
@@ -4181,7 +4192,6 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public IAssemblySymbol CompilationAssembly { get; }
 
         public INamedTypeSymbol? FieldAttribute { get; }
-        public INamedTypeSymbol? EnvelopePayloadAttribute { get; }
         public INamedTypeSymbol? UnionAttribute { get; }
         public INamedTypeSymbol? SerializableAttribute { get; }
         public INamedTypeSymbol? Guid { get; }
@@ -4499,7 +4509,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
 
     private sealed class FieldInfo : IEquatable<FieldInfo>
     {
-        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default, bool unionSuppressedByEnvelope = false)
+        public FieldInfo(int index, string name, string typeFullName, TypeMapping mapping, bool isNullable, FormatterInfo? formatter = null, ImmutableArray<UnionMemberInfo> unionMembers = default, bool unionDeclaredOnObjectField = false)
         {
             Index = index;
             Name = name;
@@ -4508,7 +4518,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             IsNullable = isNullable;
             Formatter = formatter;
             UnionMembers = unionMembers.IsDefault ? ImmutableArray<UnionMemberInfo>.Empty : unionMembers;
-            UnionSuppressedByEnvelope = unionSuppressedByEnvelope;
+            UnionDeclaredOnObjectField = unionDeclaredOnObjectField;
         }
 
         public int Index { get; }
@@ -4522,15 +4532,16 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public ImmutableArray<UnionMemberInfo> UnionMembers { get; }
 
         /// <summary>
-        /// True when the property carried BOTH [AkkaEnvelopePayload] and a field-level [AkkaUnion]:
-        /// extraction dropped the union member set because envelope payload takes precedence.
-        /// Advisory AKKASG035 fires on it.
+        /// True when this is an object-typed (envelope-payload) field that ALSO carries a
+        /// field-level [AkkaUnion]: contradictory author intent -- an object property is always the
+        /// envelope boundary, so a union declaration on it can never take effect. Drives the
+        /// AKKASG038 error.
         /// </summary>
-        public bool UnionSuppressedByEnvelope { get; }
+        public bool UnionDeclaredOnObjectField { get; }
 
         public FieldInfo WithFormatter(TypeMapping mapping, FormatterInfo formatter)
         {
-            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers, UnionSuppressedByEnvelope);
+            return new FieldInfo(Index, Name, TypeFullName, mapping, IsNullable, formatter, UnionMembers, UnionDeclaredOnObjectField);
         }
 
         public bool Equals(FieldInfo? other)
@@ -4546,7 +4557,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
                 && string.Equals(TypeFullName, other.TypeFullName, StringComparison.Ordinal)
                 && Mapping.Equals(other.Mapping)
                 && IsNullable == other.IsNullable
-                && UnionSuppressedByEnvelope == other.UnionSuppressedByEnvelope
+                && UnionDeclaredOnObjectField == other.UnionDeclaredOnObjectField
                 && Equals(Formatter, other.Formatter)
                 && ValueEquality.SequenceEquals(UnionMembers, other.UnionMembers);
         }
@@ -4561,7 +4572,7 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
             hash = ValueEquality.Combine(hash, TypeFullName);
             hash = ValueEquality.Combine(hash, Mapping.GetHashCode());
             hash = ValueEquality.Combine(hash, IsNullable);
-            hash = ValueEquality.Combine(hash, UnionSuppressedByEnvelope);
+            hash = ValueEquality.Combine(hash, UnionDeclaredOnObjectField);
             hash = ValueEquality.Combine(hash, Formatter?.GetHashCode() ?? 0);
             hash = ValueEquality.Combine(hash, UnionMembers);
             return hash;
@@ -4645,8 +4656,8 @@ public sealed class AkkaSerializerGenerator : IIncrementalGenerator
         public string ForeignAssemblyName { get; }
 
         // For Unsupported: whether the field's static type is an interface, abstract class, or type
-        // parameter, the shapes a forgotten [AkkaEnvelopePayload]/[AkkaUnion] usually produces.
-        // Drives the AKKASG003 hint.
+        // parameter, the shapes a forgotten [AkkaUnion], or a field that should be typed object,
+        // usually produce. Drives the AKKASG003 hint.
         public bool SuggestsEnvelopeOrUnion { get; }
 
         /// <summary>

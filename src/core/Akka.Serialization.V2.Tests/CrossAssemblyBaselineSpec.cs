@@ -300,7 +300,7 @@ public sealed class CrossAssemblyBaselineSpec
         generatedSource.Should().BeEmpty("AKKASG034 fails the whole serializer's coverage check, so the pipeline skips AddSource for CommsSerializer entirely");
     }
 
-    [Fact(DisplayName = "Cross-assembly baseline: [AkkaEnvelopePayload] on a generic property, substituted through a referenced-assembly definition and made reachable, is still recognized as an envelope payload")]
+    [Fact(DisplayName = "Cross-assembly baseline: a generic property substituted to object, through a referenced-assembly definition and made reachable, is still recognized as an envelope payload")]
     public void Envelope_payload_on_generic_property_from_referenced_assembly()
     {
         const string sourceA = """
@@ -311,7 +311,7 @@ public sealed class CrossAssemblyBaselineSpec
 
             [AkkaSerializable]
             public sealed record Envelope<T>(
-                [property: AkkaField(1), AkkaEnvelopePayload] T Message,
+                [property: AkkaField(1)] T Message,
                 [property: AkkaField(2)] string TraceId);
             """;
 
@@ -329,10 +329,10 @@ public sealed class CrossAssemblyBaselineSpec
             public sealed record AcceptCassette([property: AkkaField(1)] int Layer) : IComms;
 
             [AkkaSerializable(Manifest = "holder-v1")]
-            public sealed record Holder([property: AkkaField(1)] Envelope<IComms> Inner) : IComms;
+            public sealed record Holder([property: AkkaField(1)] Envelope<object> Inner) : IComms;
 
             [AkkaSerializer<IComms>("comms", 130006)]
-            [AkkaSerializable<Envelope<IComms>>(Manifest = "env-any")]
+            [AkkaSerializable<Envelope<object>>(Manifest = "env-any")]
             public sealed partial class CommsSerializer : AkkaSerializer
             { public static partial SerializerRegistration CreateRegistration(); }
             """;
@@ -342,10 +342,11 @@ public sealed class CrossAssemblyBaselineSpec
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
         // Why this field is an envelope payload, not AKKASG003.
-        // Envelope<IComms>.Message is a substituted member. Roslyn returns the original
-        // definition's attributes for it, including [AkkaEnvelopePayload]. This holds no matter
-        // which assembly declared the generic definition. So the generator treats the field as
-        // an envelope payload. Without this, T substituted to an interface would be unsupported.
+        // Envelope<object>.Message is a substituted member. After substitution its static type
+        // is System.Object, no matter which assembly declared the generic definition. No
+        // attribute is declared anywhere. So the generator treats the field as an envelope
+        // payload from the type alone. Without this, T substituted to an interface would be
+        // unsupported.
         all.Should().NotContain(d => d.Id == "AKKASG003");
         all.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
         generatedSource.Should().Contain("WriteEnvelopePayload");
