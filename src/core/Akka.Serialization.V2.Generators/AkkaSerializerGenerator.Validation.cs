@@ -12,7 +12,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -53,16 +52,15 @@ public sealed partial class AkkaSerializerGenerator
     /// the gate has already been decided once, per serializer, by <see cref="ResolveSerializer"/>.
     /// <see cref="ResolvedSerializer.GateDiagnostics"/> are NOT reported here (they are reported
     /// once, by <see cref="EmitResolvedSerializer"/>); reporting them again here would duplicate
-    /// every pre-coverage diagnostic. This output still combines the live <see cref="Compilation"/>
-    /// (AKKASG029's whole-compilation scan genuinely needs it), so it re-runs on every edit exactly
-    /// as before -- only the GATE check underneath it got cheaper.
+    /// every pre-coverage diagnostic. As of S5 this combines the cached <see cref="CompilationFacts"/>
+    /// instead of the live <see cref="Compilation"/> -- see <see cref="ValidateProtocolCoverage"/>.
     /// </summary>
-    private static void ReportProtocolCoverage(SourceProductionContext context, ResolvedSerializer resolved, Compilation compilation)
+    private static void ReportProtocolCoverage(SourceProductionContext context, ResolvedSerializer resolved, CompilationFacts facts)
     {
         if (!resolved.IsEmittable)
             return;
 
-        var protocolCoverageDiagnostics = ValidateProtocolCoverage(resolved.Serializer, compilation, context.CancellationToken);
+        var protocolCoverageDiagnostics = ValidateProtocolCoverage(resolved.Serializer, facts);
         foreach (var diagnostic in protocolCoverageDiagnostics)
             context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic));
     }
@@ -268,51 +266,28 @@ public sealed partial class AkkaSerializerGenerator
     /// constructions could ever be registered with [AkkaSerializable&lt;T&gt;] in the first place.
     /// A type this flags is invisible to the generated Manifest/Serialize/Deserialize switches
     /// today and only fails at runtime, the first time it is sent.
-    /// The protocol interface is matched by fully-qualified name against each candidate's
-    /// <see cref="ITypeSymbol.AllInterfaces"/>: the cached <see cref="SerializerInfo"/> is
-    /// deliberately symbol-free, and within one compilation a fully-qualified name identifies
-    /// exactly one type, so the string comparison is equivalent to the former
-    /// <see cref="SymbolEqualityComparer.Default"/> lookup.
-    /// This is the one validation step that genuinely needs a <see cref="Compilation"/> (the
-    /// whole-compilation type scan below), so unlike its neighbors it is not "model-only" -- but it
-    /// still returns <see cref="DiagnosticSpec"/> values rather than reporting through a
-    /// <see cref="SourceProductionContext"/> directly, so it can be driven by a plain
-    /// <see cref="CancellationToken"/> and asserted against directly in tests.
+    /// As of S5, the whole-compilation scan that used to run HERE, per serializer, now runs exactly
+    /// once per compilation change for every serializer's protocol at once, inside
+    /// <see cref="ComputeCompilationFacts"/> (see <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/>).
+    /// This method is now a pure, symbol-free, Compilation-free function of the resolved serializer
+    /// plus that precomputed <see cref="CompilationFacts"/> -- it only formats the diagnostic for
+    /// each already-identified implementor. Diagnostic id, text, and trigger conditions are
+    /// unchanged from before the split.
     /// </summary>
-    internal static ImmutableArray<DiagnosticSpec> ValidateProtocolCoverage(SerializerInfo serializer, Compilation compilation, CancellationToken cancellationToken)
+    internal static ImmutableArray<DiagnosticSpec> ValidateProtocolCoverage(SerializerInfo serializer, CompilationFacts facts)
     {
         var diagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
 
         if (serializer.ProtocolTypeFullName.Length == 0)
             return diagnostics.ToImmutable();
 
-        var knownTypes = KnownTypes.From(compilation);
-        if (knownTypes.SerializableAttribute == null)
+        if (!facts.LocalUnmarkedImplementorsByProtocol.TryGetValue(serializer.ProtocolTypeKey, out var implementors))
             return diagnostics.ToImmutable();
 
-        var protocolKey = serializer.ProtocolTypeKey;
-        foreach (var candidate in GetSourceDeclaredTypes(compilation))
+        foreach (var implementor in implementors)
         {
-            // This whole-compilation walk re-runs on every edit (its output combines the
-            // CompilationProvider by necessity); honor IDE cancellation between candidates.
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct))
-                continue;
-
-            if (candidate.IsAbstract)
-                continue;
-
-            if (!ImplementsProtocol(candidate, protocolKey))
-                continue;
-
-            var isMarked = candidate.GetAttributes()
-                .Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
-            if (isMarked)
-                continue;
-
             diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ProtocolMessageNotSerializable,
-                ToDisplayName(GetFullyQualifiedTypeName(candidate)), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
+                ToDisplayName(implementor.DisplayName ?? string.Empty), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
         }
 
         return diagnostics.ToImmutable();
@@ -329,9 +304,12 @@ public sealed partial class AkkaSerializerGenerator
     /// -- for example a record's compiler-synthesized <c>IEquatable&lt;T&gt;</c>, or any OTHER
     /// serializer's protocol -- with a single, allocation-free string compare, before paying for a
     /// full <see cref="TypeKey.FromSymbol"/> (which recurses into type arguments for a generic
-    /// interface). This scan runs once per candidate type per serializer and is never cached (it
-    /// combines with the live <see cref="Compilation"/>), so skipping the expensive path for the
-    /// overwhelming majority of interfaces that were never going to match is the whole saving.
+    /// interface). As of S5 this runs once per candidate type per PROTOCOL KEY, inside
+    /// <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/> -- once for the whole compilation,
+    /// not once per serializer as before -- and its result is never itself cached across candidates
+    /// (only the caller's aggregated <see cref="CompilationFacts"/> output is), so skipping the
+    /// expensive path for the overwhelming majority of interfaces that were never going to match is
+    /// still the whole saving.
     /// </summary>
     private static bool ImplementsProtocol(INamedTypeSymbol candidate, TypeKey protocolKey)
     {
@@ -373,8 +351,9 @@ public sealed partial class AkkaSerializerGenerator
     /// <summary>
     /// Every named type declared in <paramref name="compilation"/>'s OWN source (never a referenced
     /// assembly: <see cref="Compilation.Assembly"/> is the assembly being compiled), recursively
-    /// including nested types. Used only by <see cref="ValidateProtocolCoverage"/>, transiently,
-    /// inside the diagnostics-only coverage callback -- never stored in a cached provider.
+    /// including nested types. Used by <see cref="ComputeLocalUnmarkedImplementorsByProtocol"/>,
+    /// transiently, inside the S5 compilation-facts stage -- never stored in a cached provider
+    /// itself (its CALLER's output is what gets cached; see <see cref="CompilationFacts"/>).
     /// </summary>
     private static IEnumerable<INamedTypeSymbol> GetSourceDeclaredTypes(Compilation compilation)
     {

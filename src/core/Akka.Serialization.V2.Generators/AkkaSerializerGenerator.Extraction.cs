@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using Microsoft.CodeAnalysis;
@@ -185,7 +186,7 @@ public sealed partial class AkkaSerializerGenerator
         if (attributes.IsEmpty)
             return (ImmutableArray<ClosedGenericRegistrationInfo>.Empty, ImmutableArray<MessageInfo>.Empty);
 
-        var knownTypes = KnownTypes.From(compilation);
+        var knownTypes = GetKnownTypes(compilation);
         var registrationsBuilder = ImmutableArray.CreateBuilder<ClosedGenericRegistrationInfo>(attributes.Length);
         var schemasBuilder = ImmutableArray.CreateBuilder<MessageInfo>();
         foreach (var attribute in attributes)
@@ -356,7 +357,7 @@ public sealed partial class AkkaSerializerGenerator
         var symbol = (INamedTypeSymbol)context.TargetSymbol;
         var attribute = context.Attributes[0];
         var compilation = context.SemanticModel.Compilation;
-        var knownTypes = KnownTypes.From(compilation);
+        var knownTypes = GetKnownTypes(compilation);
         var manifest = string.Empty;
         var allowEmpty = false;
         foreach (var argument in attribute.NamedArguments)
@@ -430,7 +431,7 @@ public sealed partial class AkkaSerializerGenerator
         if (attribute == null)
             return null;
 
-        var knownTypes = KnownTypes.From(compilation);
+        var knownTypes = GetKnownTypes(compilation);
         var manifest = string.Empty;
         var allowEmpty = false;
         foreach (var argument in attribute.NamedArguments)
@@ -1164,6 +1165,26 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         return string.Join(".", parts);
+    }
+
+    /// <summary>
+    /// Caches one <see cref="KnownTypes"/> per <see cref="Compilation"/> instance. Before S5, both
+    /// attribute transforms (<see cref="ExtractClosedGenericRegistrations"/>, called from
+    /// <see cref="ExtractSerializerCore"/>, and <see cref="ExtractMessage"/>) called
+    /// <see cref="KnownTypes.From"/> independently -- once per ATTRIBUTED TYPE per compilation
+    /// change, each paying for about fifteen <see cref="Compilation.GetTypeByMetadataName(string)"/>
+    /// lookups -- even though every call within one compilation change produces an identical
+    /// result. A <see cref="ConditionalWeakTable{TKey,TValue}"/> ties each cached
+    /// <see cref="KnownTypes"/> to the exact <see cref="Compilation"/> instance that produced it,
+    /// with no broader lifetime and no cross-compilation leakage: once a <see cref="Compilation"/>
+    /// is collected, its entry goes with it, and a brand-new <see cref="Compilation"/> (the next
+    /// edit) always misses and recomputes exactly once, on first use.
+    /// </summary>
+    private static readonly ConditionalWeakTable<Compilation, KnownTypes> KnownTypesCache = new();
+
+    private static KnownTypes GetKnownTypes(Compilation compilation)
+    {
+        return KnownTypesCache.GetValue(compilation, static c => KnownTypes.From(c));
     }
 
     private sealed class KnownTypes

@@ -26,8 +26,12 @@ namespace Akka.Serialization.V2.Generators;
 //   AkkaSerializerGenerator.Diagnostics.cs - every DiagnosticDescriptor, in id order.
 //   AkkaSerializerGenerator.Extraction.cs  - symbol-to-model extraction: ExtractSerializer*,
 //                                             ExtractMessageCore, ExtractClosedGenericRegistrations,
-//                                             ExtractUnionMembers, field-type mapping, KnownTypes,
-//                                             constructor matching.
+//                                             ExtractUnionMembers, field-type mapping, KnownTypes
+//                                             (and its per-Compilation cache), constructor matching.
+//   AkkaSerializerGenerator.Facts.cs       - the S5 whole-compilation facts stage: ComputeCompilationFacts
+//                                             and its helpers (the local-implementor walk, the
+//                                             referenced-assembly-references-V2 filter, and the
+//                                             Decision 19 referenced-assembly implementor skeleton).
 //   AkkaSerializerGenerator.Validation.cs  - validation over the collected models and diagnostic
 //                                             reporting: ValidateMessages, ValidateUnionField,
 //                                             ValidateClosedGenericProtocolCoverage,
@@ -36,7 +40,7 @@ namespace Akka.Serialization.V2.Generators;
 //                                             and source emission: EmitResolvedSerializer, Generate*,
 //                                             union helper planning, naming/folding, collision handling.
 //   AkkaSerializerGenerator.Models.cs      - the model records (SerializerInfo, MessageInfo,
-//                                             FieldInfo, TypeMapping, UnionMemberInfo, ...).
+//                                             FieldInfo, TypeMapping, UnionMemberInfo, CompilationFacts, ...).
 [Generator]
 public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
 {
@@ -64,8 +68,22 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         /// </summary>
         public const string ResolvedSerializers = nameof(ResolvedSerializers);
 
+        /// <summary>
+        /// The S5 whole-compilation facts stage: <c>context.CompilationProvider.Combine(CollectedSerializers).Select(...)</c>,
+        /// producing one cached <see cref="CompilationFacts"/> value per compilation change (see
+        /// <see cref="ComputeCompilationFacts"/>). Feeds the AKKASG029 coverage output in place of
+        /// the raw <see cref="Compilation"/> that output used to combine with directly -- see
+        /// <see cref="ReportProtocolCoverage"/>. Deliberately NOT combined into
+        /// <see cref="ResolvedSerializers"/>'s own inputs yet: nothing this stage computes today
+        /// (Decision 19's referenced-assembly implementor map is always empty in this change) is
+        /// something <see cref="ResolveSerializer"/> needs to consume, so wiring it in now would add
+        /// an equality-risk surface for no behavioral change. That wiring is expected once Decision
+        /// 19's referenced-assembly implementor walk is real.
+        /// </summary>
+        public const string CompilationFacts = nameof(CompilationFacts);
+
         public static ImmutableArray<string> All { get; } = ImmutableArray.Create(
-            ExtractedSerializers, CollectedSerializers, ExtractedMessages, CollectedMessages, ResolvedSerializers);
+            ExtractedSerializers, CollectedSerializers, ExtractedMessages, CollectedMessages, ResolvedSerializers, CompilationFacts);
     }
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -124,6 +142,22 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
             })
             .WithTrackingName(TrackingNames.ResolvedSerializers);
 
+        // The S5 whole-compilation facts stage: everything the pipeline needs to know about the
+        // WHOLE compilation, computed ONCE per compilation change and shared by every serializer --
+        // see ComputeCompilationFacts and CompilationFacts's own doc comment. Combines the live
+        // Compilation (this stage genuinely needs it, exactly like the coverage scan it replaces)
+        // with the collected serializers (only for their protocol keys: which protocol interfaces
+        // anyone actually asked about, so the local-implementor walk below doesn't have to consider
+        // every interface of every source-declared type). The OUTPUT is symbol-free and
+        // value-equatable, so -- unlike the raw Compilation this used to be combined with directly
+        // -- a downstream consumer wired to THIS stage can report Unchanged/Cached whenever nothing
+        // these facts care about changed, even though the stage itself reruns on every edit (the
+        // CompilationProvider input never itself compares equal across edits).
+        var compilationFacts = context.CompilationProvider
+            .Combine(serializers)
+            .Select(static (pair, cancellationToken) => ComputeCompilationFacts(pair.Left, pair.Right, cancellationToken))
+            .WithTrackingName(TrackingNames.CompilationFacts);
+
         // Code emission consumes ONLY the cached, value-equatable, symbol-free ResolvedSerializer
         // model -- never the Compilation, and never another serializer's data. Registered on the
         // VALUES provider (one independent output per serializer) rather than a Collect()'d array,
@@ -141,13 +175,19 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
             serializers.Combine(messages),
             static (ctx, pair) => ReportCrossSerializerDiagnostics(ctx, pair.Left, pair.Right));
 
-        // AKKASG029's whole-compilation protocol-coverage scan (ValidateProtocolCoverage) is the
-        // one check that genuinely needs the Compilation ("does any source-declared type implement
-        // this protocol interface without [AkkaSerializable]?"), so it lives in this SEPARATE,
-        // diagnostics-only output: the Compilation input changes on every edit, but only this cheap
-        // re-scan pays for that -- code emission above stays cached. It combines the cached
-        // ResolvedSerializer (for its gate) with the live Compilation (for the scan itself), so a
-        // serializer's own gate is decided once, by ResolveSerializer, and never recomputed here.
+        // AKKASG029's whole-compilation protocol-coverage check ("does any source-declared type
+        // implement this protocol interface without [AkkaSerializable]?") no longer touches the
+        // live Compilation from inside this per-serializer output. As of S5, the walk itself runs
+        // exactly once per compilation change, in the CompilationFacts stage above -- for every
+        // serializer's protocol at once, not once per serializer -- so this diagnostics-only output
+        // now combines the cached ResolvedSerializer (for its gate) with the cached CompilationFacts
+        // (for the precomputed implementor list): ValidateProtocolCoverage is a pure function of the
+        // two, with no Compilation parameter at all. Diagnostic id, text, and trigger conditions are
+        // unchanged -- only where the whole-compilation walk lives, and how many times per edit it
+        // runs, has moved. CompilationFacts still recomputes on every edit (it combines
+        // context.CompilationProvider directly), but its OUTPUT compares equal whenever nothing it
+        // tracks changed, which is what lets this output -- like code emission above -- report
+        // Cached instead of Modified for an edit these facts do not care about.
         //
         // Design decision: coverage errors no longer gate emission (the old terminal stage skipped
         // AddSource for a serializer whose coverage check failed). This is the standard split for
@@ -157,7 +197,7 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // while the user fixes the gap) and lets the emission stage surface OTHER diagnostics that
         // the old early-return used to hide until the coverage error was fixed.
         context.RegisterSourceOutput(
-            resolvedSerializers.Combine(context.CompilationProvider),
+            resolvedSerializers.Combine(compilationFacts),
             static (ctx, pair) => ReportProtocolCoverage(ctx, pair.Left, pair.Right));
     }
 }

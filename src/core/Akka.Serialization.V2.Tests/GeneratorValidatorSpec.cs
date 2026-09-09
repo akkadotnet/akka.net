@@ -304,7 +304,9 @@ public sealed class GeneratorValidatorSpec
         var compilation = Compile(source);
         var serializer = BuildSerializerInfo(ProtocolFullName(compilation));
 
-        var diagnostics = AkkaSerializerGenerator.ValidateProtocolCoverage(serializer, compilation, CancellationToken.None);
+        var facts = AkkaSerializerGenerator.ComputeCompilationFacts(
+            compilation, ImmutableArray.Create<AkkaSerializerGenerator.SerializerInfo?>(serializer), CancellationToken.None);
+        var diagnostics = AkkaSerializerGenerator.ValidateProtocolCoverage(serializer, facts);
 
         diagnostics.Should().Contain(diagnostic =>
             diagnostic.Key == AkkaSerializerGenerator.DiagnosticKey.ProtocolMessageNotSerializable &&
