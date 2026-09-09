@@ -7,16 +7,11 @@
 
 #nullable enable
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
-using System.Reflection;
-using Akka.Actor;
-using Akka.Serialization.V2.Generators;
+using Akka.Serialization.V2.Tests.Harness;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
 namespace Akka.Serialization.V2.Tests;
@@ -2497,42 +2492,11 @@ public sealed class AkkaSerializerGeneratorDiagnosticsSpec
         diagnostic.GetMessage(null).Contains("AkkaSerializerFormatter<", StringComparison.Ordinal).Should().BeFalse();
     }
 
+    // Delegates to the shared harness (Harness/GeneratorTestHarness.cs), which builds the base
+    // metadata reference set once per process instead of once per test. Return shape/semantics are
+    // unchanged: generator diagnostics followed by post-generation compile diagnostics.
     private static ImmutableArray<Diagnostic> RunGenerator(string source)
     {
-        var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
-        var syntaxTree = CSharpSyntaxTree.ParseText(source, parseOptions);
-        var compilation = CSharpCompilation.Create(
-            "AkkaSerializationGeneratorDiagnostics",
-            new[] { syntaxTree },
-            CreateMetadataReferences(),
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
-
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(
-            new[] { new AkkaSerializerGenerator().AsSourceGenerator() },
-            parseOptions: parseOptions);
-        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var updatedCompilation, out var generatorDiagnostics);
-
-        return generatorDiagnostics.AddRange(updatedCompilation.GetDiagnostics());
-    }
-
-    private static IEnumerable<MetadataReference> CreateMetadataReferences()
-    {
-        var trustedAssemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))?
-            .Split(Path.PathSeparator)
-            .Where(File.Exists)
-            .Select(path => MetadataReference.CreateFromFile(path)) ?? Enumerable.Empty<MetadataReference>();
-
-        var explicitAssemblies = new[]
-        {
-            typeof(ActorSystem).Assembly,
-            typeof(AkkaSerializerAttribute<>).Assembly,
-            typeof(SerializerV2).Assembly,
-            typeof(ImmutableHashSet<>).Assembly,
-            Assembly.GetExecutingAssembly()
-        };
-
-        return trustedAssemblies.Concat(explicitAssemblies.Select(assembly => MetadataReference.CreateFromFile(assembly.Location)))
-            .GroupBy(reference => reference.Display)
-            .Select(group => group.First());
+        return GeneratorTestHarness.Run(source).AllDiagnostics;
     }
 }
