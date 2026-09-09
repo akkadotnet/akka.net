@@ -24,7 +24,14 @@ namespace Akka.Cluster.Sharding.Tests
         public RoleName Third { get; }
 
         public ClusterShardingRegistrationCoordinatedShutdownSpecConfig()
-            : base(loglevel: "DEBUG")
+            : base(
+                loglevel: "DEBUG",
+                // The `test` task below waits, on the spec's own thread/budget, for the shard home
+                // to arrive - which can take several seconds while the coordinator singleton hands
+                // off from `second` to `first`. Without this, an incomplete task would arm the
+                // default 5s `before-cluster-shutdown` phase timeout and CoordinatedShutdown would
+                // stop the region out from under the still-waiting task.
+                additionalConfig: "akka.coordinated-shutdown.phases.before-cluster-shutdown.timeout = 30s")
         {
             First = Role("first");
             Second = Role("second");
@@ -71,15 +78,25 @@ namespace Akka.Cluster.Sharding.Tests
                     Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3);
                 });
 
-                var probe = CreateTestProbe();
                 var csTaskDone = CreateTestProbe();
                 RunOn(() =>
                 {
                     CoordinatedShutdown.Get(Sys).AddTask(CoordinatedShutdown.PhaseBeforeClusterShutdown, "test", () =>
                     {
                         Thread.Sleep(200);
-                        _region.Value.Tell(1, probe.Ref);
-                        probe.ExpectMsg(1);
+                        // Wait on the spec's own Within(30s) budget rather than a TestProbe's flat
+                        // akka.test.single-expect-default (5s): the shard home for [1] can't arrive
+                        // until the coordinator singleton hands off from `second` to `first`, which
+                        // can take longer than 5s. A TestProbe is its own TestKitBase with its own
+                        // deadline state, so it would never see this spec's Within budget - calling
+                        // ExpectMsg on the spec itself does. This mirrors the JVM spec, which sends
+                        // from its own test actor.
+                        //
+                        // This task body runs on a thread pool thread, not the test thread, so the
+                        // implicit sender isn't set there - pass TestActor explicitly or this would
+                        // dead-letter.
+                        _region.Value.Tell(1, TestActor);
+                        ExpectMsg(1);
                         csTaskDone.Ref.Tell(Done.Instance);
                         return Task.FromResult(Done.Instance);
                     });
