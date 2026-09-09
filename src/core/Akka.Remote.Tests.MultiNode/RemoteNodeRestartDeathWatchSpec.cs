@@ -17,6 +17,7 @@ using Akka.TestKit;
 using Akka.TestKit.Xunit;
 using Akka.Util;
 using Akka.Util.Internal;
+using FluentAssertions;
 
 namespace Akka.Remote.Tests.MultiNode
 {
@@ -66,16 +67,48 @@ namespace Akka.Remote.Tests.MultiNode
                 await TestConductor.BlackholeAsync(_specConfig.Second, _specConfig.First, ThrottleTransportAdapter.Direction.Send);
                 await TestConductor.ShutdownAsync(_specConfig.Second);
                 await ExpectTerminatedAsync(subject, TimeSpan.FromSeconds(15));
+
+                var restartedSubject = Sys.ActorSelection(new RootActorPath(secondAddress) / "user" / "subject");
+
+                // PHASE 1 -- reachability, probed with something that costs the target nothing.
+                // Identify is safe to repeat; "shutdown" is not, so it must never be the probe used
+                // to detect that the restarted system is up.
+                //
+                // This phase also WARMS second's ordinary outbound lane, which is the real reason
+                // the split works. second's association to first was created by an INBOUND
+                // handshake, so AssociationState.OutboundHandshakeCompleted is false and the FIRST
+                // ordinary send from second would otherwise be held in
+                // OutboundHandshakeStage._pendingMessage until first answers a HandshakeRsp. The
+                // ActorIdentity reply pays that round trip while second is still alive, so the later
+                // shutdown-ack does not have to.
+                //
+                // 30 s is today's value, not a widening. Measured need here is about 1.5 s; the
+                // larger bound covers the same restart-and-rebind pattern that has taken up to
+                // 12.9 s on Windows in comparable specs.
                 await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
-                    // retry because the Subject actor might not be started yet
                     await AwaitAssertAsync(async () =>
                     {
                         var probe = CreateTestProbe();
-                        Sys.ActorSelection(new RootActorPath(secondAddress)/"user"/
-                                           "subject").Tell("shutdown", probe.Ref);
-                        await probe.ExpectMsgAsync<string>(msg => msg == "shutdown-ack", TimeSpan.FromSeconds(3));
-                    });
+                        restartedSubject.Tell(new Identify("restarted"), probe.Ref);
+                        var identity = await probe.ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(1));
+                        identity.Subject.Should().NotBeNull(
+                            "the fresh system on [{0}] must answer for /user/subject", secondAddress);
+                    }, interval: TimeSpan.FromMilliseconds(500));
+                });
+
+                // PHASE 2 -- stop it. Retrying is safe now: Subject re-arms its terminate timer on
+                // every "shutdown", so a lost ack no longer removes the target for the next attempt.
+                // 10 s: on the now-warm lane the ack takes under 1 ms; the only real cost is one
+                // stream restart, which is under 2 s worst case.
+                await WithinAsync(TimeSpan.FromSeconds(10), async () =>
+                {
+                    await AwaitAssertAsync(async () =>
+                    {
+                        var probe = CreateTestProbe();
+                        restartedSubject.Tell("shutdown", probe.Ref);
+                        await probe.ExpectMsgAsync<string>(msg => msg == "shutdown-ack", TimeSpan.FromSeconds(1));
+                    }, interval: TimeSpan.FromMilliseconds(500));
                 });
             }, _specConfig.First);
 
@@ -107,14 +140,30 @@ namespace Akka.Remote.Tests.MultiNode
             }, _specConfig.Second);
         }
 
-        private class Subject : ActorBase
+        private sealed class Subject : ActorBase
         {
+            private ICancelable? _terminate;
+
             protected override bool Receive(object message)
             {
                 if ("shutdown".Equals(message))
                 {
                     Sender.Tell("shutdown-ack");
-                    Context.System.Terminate();
+
+                    // Do NOT terminate inline. ActorSystem.Terminate() stops the /user guardian, and
+                    // Artery's stream materializer supervisor is a /user actor, so every outbound
+                    // stream -- with shutdown-ack still inside it -- can abort before the ack ever
+                    // reaches the socket. Sliding the terminate behind a timer gives the ack a live
+                    // system, and the surrounding warmed-up lane, to leave from.
+                    //
+                    // Sliding, not one-shot: `first` retries "shutdown" until it sees the ack, so the
+                    // target must survive a retry. 5 s, not 3 s: the worst retry cycle is a 1 s
+                    // expect + a 500 ms interval + a 2 s stream restart = 3.5 s, and a shorter slide
+                    // can terminate the system mid-retry and reintroduce the same failure.
+                    _terminate?.Cancel();
+                    var system = Context.System;
+                    _terminate = system.Scheduler.Advanced.ScheduleOnceCancelable(
+                        TimeSpan.FromSeconds(5), () => system.Terminate());
                 }
                 else
                 {
