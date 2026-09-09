@@ -18,6 +18,35 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Akka.Serialization.V2.Generators;
+
+/// <summary>
+/// The per-serializer view of the message table computed by <see cref="AkkaSerializerGenerator.ResolveSerializerMessages"/>:
+/// every message with hand-written formatters swapped in (<see cref="ResolvedMessagesByType"/>),
+/// which of those are top-level (dispatched directly by this serializer's Manifest/Serialize/
+/// Deserialize switches), and which are reachable from a top-level message (and therefore need
+/// generated Write/Read/SizeOf methods at all). Computed once per gate-passing serializer and shared
+/// between validation (<see cref="AkkaSerializerGenerator.Validate"/>) and emission
+/// (<see cref="AkkaSerializerGenerator.EmitSerializers"/>) so the two never see a different message
+/// table for the same input. Not a cached pipeline model -- like <see cref="SerializerGate"/>, it
+/// lives at namespace scope instead of nested under <see cref="AkkaSerializerGenerator"/>.
+/// </summary>
+internal readonly struct ResolvedSerializerMessages
+{
+    public ResolvedSerializerMessages(
+        ImmutableArray<AkkaSerializerGenerator.MessageInfo> topLevelMessages,
+        ImmutableArray<AkkaSerializerGenerator.MessageInfo> reachableMessages,
+        ImmutableDictionary<string, AkkaSerializerGenerator.MessageInfo> resolvedMessagesByType)
+    {
+        TopLevelMessages = topLevelMessages;
+        ReachableMessages = reachableMessages;
+        ResolvedMessagesByType = resolvedMessagesByType;
+    }
+
+    public ImmutableArray<AkkaSerializerGenerator.MessageInfo> TopLevelMessages { get; }
+    public ImmutableArray<AkkaSerializerGenerator.MessageInfo> ReachableMessages { get; }
+    public ImmutableDictionary<string, AkkaSerializerGenerator.MessageInfo> ResolvedMessagesByType { get; }
+}
+
 public sealed partial class AkkaSerializerGenerator
 {
     private static void EmitSerializers(
@@ -68,61 +97,58 @@ public sealed partial class AkkaSerializerGenerator
             if (serializer == null)
                 continue;
 
-            if (string.IsNullOrWhiteSpace(serializer.Name))
-            {
-                context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerName, Location.None, serializer.ClassName));
-                continue;
-            }
+            // One gate ladder, shared with ReportProtocolCoverage below: is this serializer's own
+            // declaration usable as a codegen target at all? See EvaluateGate's doc comment in
+            // AkkaSerializerGenerator.Validation.cs.
+            var gate = EvaluateGate(serializer, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions);
+            foreach (var gateDiagnostic in gate.Diagnostics)
+                context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(gateDiagnostic));
 
-            if (serializer.SerializerId <= 0)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(InvalidSerializerId, Location.None, serializer.ClassName, serializer.SerializerId));
-                continue;
-            }
-
-            if (duplicateSerializerIds.ContainsKey(serializer.SerializerId))
+            if (!gate.IsEmittable)
                 continue;
 
-            if (duplicateProtocolBindings.ContainsKey(serializer.ProtocolTypeFullName))
+            var resolved = ResolveSerializerMessages(serializer, declaredMessages);
+            var validationDiagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
+            ValidateResolved(serializer, resolved, validationDiagnostics);
+
+            var reportable = validationDiagnostics.ToImmutable();
+            foreach (var diagnostic in reportable)
+                context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic));
+
+            // Emission is suppressed by an ERROR-severity diagnostic only -- a Warning (e.g.
+            // AKKASG027) or Info (e.g. AKKASG025) still lets the serializer generate normally, exactly
+            // as the old isValid-returning Validate* chain already behaved (see ValidateResolved).
+            if (reportable.Any(diagnostic => DiagnosticRegistry.Resolve(diagnostic.Key).DefaultSeverity == DiagnosticSeverity.Error))
                 continue;
 
-            if (!ValidateSerializerShape(serializer, context.ReportDiagnostic))
-                continue;
-
-            if (!ValidateProtocolType(serializer, context.ReportDiagnostic))
-                continue;
-
-            if (!ValidateFormatters(serializer, context.ReportDiagnostic))
-                continue;
-
-            if (!ValidateClosedGenericRegistrations(serializer, context.ReportDiagnostic))
-                continue;
-
-            if (!ValidateGenericDefinitions(serializer, genericDefinitions, context.ReportDiagnostic))
-                continue;
-
-            var allMessages = declaredMessages
-                .Where(message => !message.IsGenericDefinition)
-                .Concat(serializer.ClosedGenericRegistrations
-                    .Where(registration => registration.Message != null)
-                    .Select(registration => registration.Message!))
-                .ToImmutableArray();
-            var allMessagesByType = allMessages.ToImmutableDictionary(message => message.FullyQualifiedName);
-            var resolvedMessagesByType = ResolveMessages(allMessagesByType, serializer.Formatters);
-            var topLevelMessages = allMessages
-                .Where(message => serializer.ProtocolTypeFullName.Length > 0 && message.Protocols.Contains(serializer.ProtocolTypeFullName))
-                .Select(message => resolvedMessagesByType[message.FullyQualifiedName])
-                .ToImmutableArray();
-            var reachableMessages = CollectReachableMessages(topLevelMessages, resolvedMessagesByType);
-
-            if (!ValidateMessages(context, serializer, topLevelMessages, reachableMessages, resolvedMessagesByType))
-                continue;
-
-            if (!ValidateClosedGenericProtocolCoverage(context, serializer, reachableMessages))
-                continue;
-
-            context.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, topLevelMessages, reachableMessages, resolvedMessagesByType));
+            context.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, resolved.TopLevelMessages, resolved.ReachableMessages, resolved.ResolvedMessagesByType));
         }
+    }
+
+    /// <summary>
+    /// Resolves one serializer's message table -- formatter substitution, top-level selection,
+    /// reachability -- into the shape both validation (<see cref="ValidateResolved"/>/<see cref="Validate"/>)
+    /// and code generation (<see cref="Generate"/>) need. Extracted so the two never risk seeing a
+    /// different table for the same input: <see cref="EmitSerializers"/> computes it once per
+    /// gate-passing serializer and passes the SAME <see cref="ResolvedSerializerMessages"/> to both.
+    /// </summary>
+    private static ResolvedSerializerMessages ResolveSerializerMessages(SerializerInfo serializer, ImmutableArray<MessageInfo> declaredMessages)
+    {
+        var allMessages = declaredMessages
+            .Where(message => !message.IsGenericDefinition)
+            .Concat(serializer.ClosedGenericRegistrations
+                .Where(registration => registration.Message != null)
+                .Select(registration => registration.Message!))
+            .ToImmutableArray();
+        var allMessagesByType = allMessages.ToImmutableDictionary(message => message.FullyQualifiedName);
+        var resolvedMessagesByType = ResolveMessages(allMessagesByType, serializer.Formatters);
+        var topLevelMessages = allMessages
+            .Where(message => serializer.ProtocolTypeFullName.Length > 0 && message.Protocols.Contains(serializer.ProtocolTypeFullName))
+            .Select(message => resolvedMessagesByType[message.FullyQualifiedName])
+            .ToImmutableArray();
+        var reachableMessages = CollectReachableMessages(topLevelMessages, resolvedMessagesByType);
+
+        return new ResolvedSerializerMessages(topLevelMessages, reachableMessages, resolvedMessagesByType);
     }
 
     private static ImmutableDictionary<string, MessageInfo> ResolveMessages(
