@@ -132,18 +132,18 @@ namespace Akka.Tests.Actor
 
         public class NoTimeoutActor : ActorBase
         {
-            private TestLatch _timeoutLatch;
+            private readonly IActorRef _probe;
 
-            public NoTimeoutActor(TestLatch timeoutLatch)
+            public NoTimeoutActor(IActorRef probe)
             {
-                _timeoutLatch = timeoutLatch;
+                _probe = probe;
             }
 
             protected override bool Receive(object message)
             {
                 if (message is ReceiveTimeout)
                 {
-                    _timeoutLatch.Open();
+                    _probe.Tell("timeout");
                     return true;
                 }
 
@@ -197,12 +197,15 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_actor_with_receive_timeout_must_not_receive_timeout_message_when_not_specified()
+        public async Task An_actor_with_receive_timeout_must_not_receive_timeout_message_when_not_specified()
         {
-            var timeoutLatch = new TestLatch();
-            var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(timeoutLatch)));
+            var probe = CreateTestProbe();
+            var timeoutActor = Sys.ActorOf(Props.Create(() => new NoTimeoutActor(probe.Ref)));
 
-            Assert.Throws<TimeoutException>(() => timeoutLatch.Ready(TestKitSettings.DefaultTimeout));
+            // No receive-timeout was ever set, so no "timeout" should arrive. This also stops
+            // parking a pool worker for the duration of the wait: ExpectNoMsgAsync awaits instead
+            // of blocking a thread for TestKitSettings.DefaultTimeout.
+            await probe.ExpectNoMsgAsync(TestKitSettings.DefaultTimeout);
             Sys.Stop(timeoutActor);
         }
 
@@ -247,24 +250,46 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void An_actor_with_receive_timeout_must_get_timeout_while_receiving_only_NotInfluenceReceiveTimeout_messages()
+        public async Task An_actor_with_receive_timeout_must_get_timeout_while_receiving_only_NotInfluenceReceiveTimeout_messages()
         {
-            var timeoutLatch = new TestLatch(2);
+            var probe = CreateTestProbe();
+            var receiveTimeout = TimeSpan.FromSeconds(1);
+
+            // Slack for scheduler lateness and mailbox dispatch. ExpectMsgAsync runs every budget
+            // through Dilated(), so this scales with akka.test.timefactor. TestLatch built with
+            // "new TestLatch(...)" does not dilate, which is why the latch had to go.
+            var slack = TimeSpan.FromSeconds(4);
 
             Action<IActorDsl> actor = d =>
             {
-                d.OnPreStart = c => c.SetReceiveTimeout(TimeSpan.FromSeconds(1));
+                d.OnPreStart = c => c.SetReceiveTimeout(receiveTimeout);
                 d.Receive<ReceiveTimeout>((_, c) =>
                 {
                     c.Self.Tell(new TransparentTick());
-                    timeoutLatch.CountDown();
+                    probe.Ref.Tell("timeout");
                 });
-                d.Receive<TransparentTick>((_, _) => { });
+                d.Receive<TransparentTick>((_, _) => probe.Ref.Tell("tick"));
             };
             var timeoutActor = Sys.ActorOf(Props.Create(() => new Act(actor)));
 
-            timeoutLatch.Ready(TestKitSettings.DefaultTimeout);
-            Sys.Stop(timeoutActor);
+            try
+            {
+                // Phase 1: actor start plus one full receive-timeout period.
+                await probe.ExpectMsgAsync("timeout", receiveTimeout + slack);
+
+                // The INotInfluenceReceiveTimeout message must really reach the actor. This is the
+                // message whose handling has to leave the pending timer alone.
+                await probe.ExpectMsgAsync("tick", slack);
+
+                // Phase 2, budgeted from phase 1 rather than from the start of the test. This is the
+                // assertion the test is named for: the TransparentTick neither cancelled nor
+                // re-armed the receive-timeout timer.
+                await probe.ExpectMsgAsync("timeout", receiveTimeout + slack);
+            }
+            finally
+            {
+                Sys.Stop(timeoutActor);
+            }
         }
 
         [Fact]
