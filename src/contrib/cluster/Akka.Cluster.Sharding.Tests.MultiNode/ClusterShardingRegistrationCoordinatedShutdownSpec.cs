@@ -7,7 +7,6 @@
 
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Remote.TestKit;
@@ -59,47 +58,56 @@ namespace Akka.Cluster.Sharding.Tests
         #endregion
 
         [MultiNodeFact]
-        public void ClusterShardingRegistrationCoordinatedShutdownSpecs()
+        public async Task ClusterShardingRegistrationCoordinatedShutdownSpecs()
         {
-            Region_registration_during_CoordinatedShutdown_must_try_next_oldest();
+            await Region_registration_during_CoordinatedShutdown_must_try_next_oldest();
         }
 
-        private void Region_registration_during_CoordinatedShutdown_must_try_next_oldest()
+        private async Task Region_registration_during_CoordinatedShutdown_must_try_next_oldest()
         {
-            Within(TimeSpan.FromSeconds(30), () =>
+            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
             {
                 // second should be oldest
-                Join(Config.Second, Config.Second);
-                Join(Config.First, Config.Second);
-                Join(Config.Third, Config.Second);
+                await JoinAsync(Config.Second, Config.Second);
+                await JoinAsync(Config.First, Config.Second);
+                await JoinAsync(Config.Third, Config.Second);
 
-                AwaitAssert(() =>
+                await AwaitAssertAsync(() =>
                 {
                     Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3);
                 });
 
                 var csTaskDone = CreateTestProbe();
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
-                    CoordinatedShutdown.Get(Sys).AddTask(CoordinatedShutdown.PhaseBeforeClusterShutdown, "test", () =>
+                    CoordinatedShutdown.Get(Sys).AddTask(CoordinatedShutdown.PhaseBeforeClusterShutdown, "test", async () =>
                     {
-                        Thread.Sleep(200);
-                        // Wait on the spec's own Within(30s) budget rather than a TestProbe's flat
+                        await Task.Delay(200);
+                        // Wait on the spec's own 30s Within budget rather than a TestProbe's flat
                         // akka.test.single-expect-default (5s): the shard home for [1] can't arrive
                         // until the coordinator singleton hands off from `second` to `first`, which
                         // can take longer than 5s. A TestProbe is its own TestKitBase with its own
                         // deadline state, so it would never see this spec's Within budget - calling
-                        // ExpectMsg on the spec itself does. This mirrors the JVM spec, which sends
-                        // from its own test actor.
+                        // ExpectMsgAsync on the spec itself does. This mirrors the JVM spec, which
+                        // sends from its own test actor.
                         //
                         // This task body runs on a thread pool thread, not the test thread, so the
                         // implicit sender isn't set there - pass TestActor explicitly or this would
                         // dead-letter.
+                        //
+                        // Making this body async means AddTask's delegate now returns an incomplete
+                        // Task the moment it hits its first await, instead of the old synchronous
+                        // body's already-completed Task.FromResult - so CoordinatedShutdown actually
+                        // waits on it, up to the phase's own timeout. That is safe only because the
+                        // config above raises before-cluster-shutdown's timeout to 30s; at the
+                        // default 5s, CoordinatedShutdown would time the phase out and tear the
+                        // region down while this task is still waiting on the shard-home handoff.
                         _region.Value.Tell(1, TestActor);
-                        ExpectMsg(1);
+                        await ExpectMsgAsync(1);
                         csTaskDone.Ref.Tell(Done.Instance);
-                        return Task.FromResult(Done.Instance);
+                        return Done.Instance;
                     });
+                    return Task.CompletedTask;
                 }, Config.Third);
 
                 StartSharding(
@@ -107,31 +115,43 @@ namespace Akka.Cluster.Sharding.Tests
                     typeName: "Entity",
                     entityProps: Props.Create(() => new ShardedEntity()));
 
-                EnterBarrier("before-shutdown");
+                await EnterBarrierAsync("before-shutdown");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    CoordinatedShutdown.Get(Sys).Run(CoordinatedShutdown.UnknownReason.Instance);
-                    AwaitCondition(() => Cluster.IsTerminated);
+                    // Fire-and-forget, same as before the migration: the assertions below poll
+                    // Cluster.IsTerminated rather than awaiting this task directly.
+                    _ = CoordinatedShutdown.Get(Sys).Run(CoordinatedShutdown.UnknownReason.Instance);
+                    await AwaitConditionAsync(() => Cluster.IsTerminated);
                 }, Config.Second);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
-                    CoordinatedShutdown.Get(Sys).Run(CoordinatedShutdown.UnknownReason.Instance);
-                    AwaitCondition(() => Cluster.IsTerminated);
-                    csTaskDone.ExpectMsg<Done>();
+                    // Fire-and-forget, same as before the migration: the assertions below poll
+                    // Cluster.IsTerminated rather than awaiting this task directly.
+                    _ = CoordinatedShutdown.Get(Sys).Run(CoordinatedShutdown.UnknownReason.Instance);
+                    await AwaitConditionAsync(() => Cluster.IsTerminated);
+
+                    // csTaskDone is its own TestProbe / TestKitBase and never inherits this
+                    // spec's 30s Within budget, so its wait needs an explicit dilated bound. A
+                    // clean local run measured the full handoff this depends on - the
+                    // coordinator singleton migrating to `first`, the shard home for [1]
+                    // arriving, and the "test" task's ExpectMsgAsync/Tell above completing -
+                    // at 5.6s; 20s leaves roughly 3.5x margin for slower/loaded CI machines
+                    // while still finishing well inside the phase's own 30s timeout.
+                    await csTaskDone.ExpectMsgAsync<Done>(Dilated(TimeSpan.FromSeconds(20)));
                 }, Config.Third);
 
-                EnterBarrier("after-shutdown");
+                await EnterBarrierAsync("after-shutdown");
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     _region.Value.Tell(2);
-                    ExpectMsg(2);
+                    await ExpectMsgAsync(2);
                     LastSender.Path.Address.HasLocalScope.Should().BeTrue();
                 }, Config.First);
 
-                EnterBarrier("after-1");
+                await EnterBarrierAsync("after-1");
             });
         }
     }
