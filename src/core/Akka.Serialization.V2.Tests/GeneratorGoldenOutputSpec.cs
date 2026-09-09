@@ -217,6 +217,13 @@ public sealed class GeneratorGoldenOutputSpec
             [property: AkkaField(2)] object Payload,
             [property: AkkaField(3)] object? MaybePayload) : IProtocol;
 
+        // ---- object element inside a collection: each element is its own envelope-payload
+        // boundary, the same frame a property typed `object` already gets above ----
+
+        [AkkaSerializable(Manifest = "envelope-list-v1")]
+        public sealed record EnvelopeListMessage(
+            [property: AkkaField(1)] List<object> Items) : IProtocol;
+
         // ---- hybrid reconstruction: case-insensitive ctor matching, a keyword-named ctor
         // parameter, and leftover properties assigned via object initializer ----
 

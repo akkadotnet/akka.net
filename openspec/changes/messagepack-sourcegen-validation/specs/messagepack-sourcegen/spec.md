@@ -93,6 +93,10 @@ Generated serializers SHALL treat a field whose static type, after generic subst
 - **WHEN** a generic `[AkkaSerializable]` definition has a `[AkkaField]` property typed by its type parameter, and a registered closed construction substitutes `object` for that parameter
 - **THEN** the generator SHALL treat that field as a serializer boundary in the closed construction
 
+#### Scenario: Object elements inside a collection are boundaries
+- **WHEN** a supported collection's element type is `object` (an array, a list, a read-only or immutable collection, or a dictionary value -- a dictionary KEY typed `object` is rejected with AKKASG003 instead)
+- **THEN** the generator SHALL treat each element as its own serializer boundary, writing and reading it as an envelope payload the same way an `object`-typed field is
+
 #### Scenario: Union declaration on an object-typed field rejected
 - **WHEN** an `[AkkaField]` property typed `object` carries a field-level `[AkkaUnion]`
 - **THEN** the generator SHALL fail compilation with a diagnostic (AKKASG038), because an `object`-typed field is always a serializer boundary

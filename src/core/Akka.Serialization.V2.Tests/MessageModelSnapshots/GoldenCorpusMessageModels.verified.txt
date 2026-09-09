@@ -51,6 +51,19 @@ ConstructionPlan: valid=True
     Palette <- Palette
 
 ================================================================================
+Type: global::GoldenSample.EnvelopeListMessage
+SimpleName: EnvelopeListMessage
+Manifest: envelope-list-v1
+AllowEmpty: False
+IsGenericDefinition: False
+Protocols: global::GoldenSample.IProtocol, global::System.IEquatable<global::GoldenSample.EnvelopeListMessage>
+Fields:
+  [1] Items: kind=List, type=global::System.Collections.Generic.List<object> (nullable: False)
+ConstructionPlan: valid=True
+  Arguments:
+    Items <- Items
+
+================================================================================
 Type: global::GoldenSample.EnvelopeMessage
 SimpleName: EnvelopeMessage
 Manifest: envelope-v1

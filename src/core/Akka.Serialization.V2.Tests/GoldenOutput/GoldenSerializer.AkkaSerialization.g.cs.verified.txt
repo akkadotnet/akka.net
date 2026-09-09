@@ -34,6 +34,7 @@ public sealed partial class GoldenSerializer
             global::GoldenSample.CollectionMessage => "collections-v1",
             global::GoldenSample.UnionMessage => "union-v1",
             global::GoldenSample.EnvelopeMessage => "envelope-v1",
+            global::GoldenSample.EnvelopeListMessage => "envelope-list-v1",
             global::GoldenSample.HybridMessage => "hybrid-v1",
             global::GoldenSample.NestedMessage => "nested-v1",
             global::GoldenSample.Ping => "ping-v1",
@@ -70,6 +71,9 @@ public sealed partial class GoldenSerializer
                 break;
             case global::GoldenSample.EnvelopeMessage message:
                 WriteEnvelopeMessage(ref writer, message);
+                break;
+            case global::GoldenSample.EnvelopeListMessage message:
+                WriteEnvelopeListMessage(ref writer, message);
                 break;
             case global::GoldenSample.HybridMessage message:
                 WriteHybridMessage(ref writer, message);
@@ -109,6 +113,7 @@ public sealed partial class GoldenSerializer
             "collections-v1" => ReadCollectionMessage(ref reader),
             "union-v1" => ReadUnionMessage(ref reader),
             "envelope-v1" => ReadEnvelopeMessage(ref reader),
+            "envelope-list-v1" => ReadEnvelopeListMessage(ref reader),
             "hybrid-v1" => ReadHybridMessage(ref reader),
             "nested-v1" => ReadNestedMessage(ref reader),
             "ping-v1" => ReadPing(ref reader),
@@ -129,6 +134,7 @@ public sealed partial class GoldenSerializer
             global::GoldenSample.CollectionMessage message => SizeOfCollectionMessage(message),
             global::GoldenSample.UnionMessage message => SizeOfUnionMessage(message),
             global::GoldenSample.EnvelopeMessage message => SizeOfEnvelopeMessage(message),
+            global::GoldenSample.EnvelopeListMessage message => SizeOfEnvelopeListMessage(message),
             global::GoldenSample.HybridMessage message => SizeOfHybridMessage(message),
             global::GoldenSample.NestedMessage message => SizeOfNestedMessage(message),
             global::GoldenSample.Ping message => SizeOfPing(message),
@@ -1875,6 +1881,91 @@ public sealed partial class GoldenSerializer
         if (!__hasPayload || payload is null)
             throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Payload] with index [2] while deserializing [global::GoldenSample.EnvelopeMessage].");
         return new global::GoldenSample.EnvelopeMessage(CorrelationId: correlationId!, Payload: payload!, MaybePayload: maybePayload);
+    }
+
+    private int SizeOfEnvelopeListMessage(global::GoldenSample.EnvelopeListMessage message)
+    {
+        checked
+        {
+            var size = SizeOfMapHeader(1);
+            size += SizeOfInt32(1);
+            int __size0;
+            if (message.Items is null)
+            {
+                __size0 = SizeOfNil();
+            }
+            else
+            {
+                __size0 = SizeOfArrayHeader(message.Items.Count);
+                foreach (var __item1 in message.Items)
+                {
+                    var __size2 = SizeOfEnvelopePayload(__item1);
+                    if (__size2 < 0)
+                        return global::Akka.Serialization.SerializerV2.UnknownSize;
+                    __size0 += __size2;
+                }
+            }
+            size += __size0;
+            return size;
+        }
+    }
+
+    private void WriteEnvelopeListMessage(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.EnvelopeListMessage message)
+    {
+        writer.WriteMapHeader(1);
+        writer.Write(1);
+        if (message.Items is null)
+        {
+            writer.WriteNil();
+        }
+        else
+        {
+            writer.WriteArrayHeader(message.Items.Count);
+            foreach (var __item0 in message.Items)
+            {
+                WriteEnvelopePayload(ref writer, __item0);
+            }
+        }
+    }
+
+    private global::GoldenSample.EnvelopeListMessage ReadEnvelopeListMessage(ref global::MessagePack.MessagePackReader reader)
+    {
+        var __fieldCount = reader.ReadMapHeader();
+        global::System.Collections.Generic.List<object>? items = default;
+        var __hasItems = false;
+        for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
+        {
+            var __fieldId = reader.ReadInt32();
+            switch (__fieldId)
+            {
+                case 1:
+                    if (reader.TryReadNil())
+                    {
+                        items = null;
+                    }
+                    else
+                    {
+                        var __len0 = reader.ReadArrayHeader();
+                        var __col1 = new global::System.Collections.Generic.List<object>(__len0);
+                        for (var __i2 = 0; __i2 < __len0; __i2++)
+                        {
+                            object? __item3;
+                            __item3 = ReadEnvelopePayload<object>(ref reader);
+                            __col1.Add(__item3!);
+                        }
+                        items = __col1;
+                    }
+                    __hasItems = true;
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        if (!__hasItems || items is null)
+            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Items] with index [1] while deserializing [global::GoldenSample.EnvelopeListMessage].");
+        return new global::GoldenSample.EnvelopeListMessage(Items: items!);
     }
 
     private int SizeOfHybridMessage(global::GoldenSample.HybridMessage message)
