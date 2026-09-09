@@ -91,17 +91,17 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         // The protocol type symbol is consumed HERE and only here: everything the pipeline needs
-        // downstream is its fully-qualified name (dispatch/grouping keys) and whether it is an
-        // interface (AKKASG033). Retaining the INamedTypeSymbol in the cached model would defeat
-        // incremental caching outright -- symbols never compare equal across compilations.
+        // downstream is its key (dispatch/grouping) and whether it is an interface (AKKASG033).
+        // Retaining the INamedTypeSymbol in the cached model would defeat incremental caching
+        // outright -- symbols never compare equal across compilations.
         var protocolType = attribute.AttributeClass?.TypeArguments.FirstOrDefault() as INamedTypeSymbol;
-        var protocolTypeFullName = protocolType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) ?? string.Empty;
+        var protocolTypeKey = protocolType != null ? TypeKey.FromSymbol(protocolType) : default;
         var protocolTypeIsInterface = protocolType?.TypeKind == TypeKind.Interface;
 
         var formatterAttributeType = compilation.GetTypeByMetadataName(FormatterAttributeFullName);
         var extendedActorSystemType = compilation.GetTypeByMetadataName(ExtendedActorSystemFullName);
         var formatters = ExtractFormatters(symbol, formatterAttributeType, extendedActorSystemType);
-        var closedGenericRegistrations = ExtractClosedGenericRegistrations(symbol, compilation);
+        var (closedGenericRegistrations, closedGenericSchemas) = ExtractClosedGenericRegistrations(symbol, compilation);
 
         return new SerializerInfo(
             GetNamespace(symbol),
@@ -109,11 +109,12 @@ public sealed partial class AkkaSerializerGenerator
             GetFullyQualifiedTypeName(symbol),
             name ?? string.Empty,
             serializerId,
-            protocolTypeFullName,
+            protocolTypeKey,
             protocolTypeIsInterface,
             symbol.DeclaredAccessibility,
             formatters,
             closedGenericRegistrations,
+            closedGenericSchemas,
             IsPartial(symbol),
             symbol.IsGenericType,
             DerivesFromAkkaSerializerBase(symbol, compilation));
@@ -162,26 +163,31 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// Extracts <c>[AkkaSerializable&lt;T&gt;]</c> registrations from the serializer class. A
-    /// valid target is a CLOSED generic construction (no unbound generics, no type parameters
-    /// anywhere in its arguments) whose definition is annotated <c>[AkkaSerializable]</c>; its
-    /// <see cref="MessageInfo"/> is built from the constructed symbol, so all field types arrive
-    /// already substituted. Invalid targets are recorded with a null message so AKKASG020 fires.
+    /// Extracts <c>[AkkaSerializable&lt;T&gt;]</c> registrations from the serializer class, as light
+    /// specs (see <see cref="ClosedGenericRegistrationInfo"/>) plus the full schema for every VALID
+    /// target (see <see cref="SerializerInfo.ClosedGenericSchemas"/>). A valid target is a CLOSED
+    /// generic construction (no unbound generics, no type parameters anywhere in its arguments) whose
+    /// definition is annotated <c>[AkkaSerializable]</c>; its schema is built from the constructed
+    /// symbol through the SAME <see cref="ExtractMessageCore"/> routine every other schema goes
+    /// through, so all field types arrive already substituted. An invalid target gets a registration
+    /// with no matching schema entry, so AKKASG020 fires instead of the registration silently
+    /// vanishing.
     /// </summary>
-    private static ImmutableArray<ClosedGenericRegistrationInfo> ExtractClosedGenericRegistrations(INamedTypeSymbol symbol, Compilation compilation)
+    private static (ImmutableArray<ClosedGenericRegistrationInfo> Registrations, ImmutableArray<MessageInfo> Schemas) ExtractClosedGenericRegistrations(INamedTypeSymbol symbol, Compilation compilation)
     {
         var genericSerializableAttribute = compilation.GetTypeByMetadataName(GenericSerializableAttributeFullName);
         if (genericSerializableAttribute == null)
-            return ImmutableArray<ClosedGenericRegistrationInfo>.Empty;
+            return (ImmutableArray<ClosedGenericRegistrationInfo>.Empty, ImmutableArray<MessageInfo>.Empty);
 
         var attributes = symbol.GetAttributes()
             .Where(attr => attr.AttributeClass is { IsGenericType: true } ac && SymbolEqualityComparer.Default.Equals(ac.OriginalDefinition, genericSerializableAttribute))
             .ToImmutableArray();
         if (attributes.IsEmpty)
-            return ImmutableArray<ClosedGenericRegistrationInfo>.Empty;
+            return (ImmutableArray<ClosedGenericRegistrationInfo>.Empty, ImmutableArray<MessageInfo>.Empty);
 
         var knownTypes = KnownTypes.From(compilation);
-        var builder = ImmutableArray.CreateBuilder<ClosedGenericRegistrationInfo>(attributes.Length);
+        var registrationsBuilder = ImmutableArray.CreateBuilder<ClosedGenericRegistrationInfo>(attributes.Length);
+        var schemasBuilder = ImmutableArray.CreateBuilder<MessageInfo>();
         foreach (var attribute in attributes)
         {
             var manifest = string.Empty;
@@ -200,8 +206,8 @@ public sealed partial class AkkaSerializerGenerator
 
             if (!isValidTarget)
             {
-                var displayName = attribute.AttributeClass!.TypeArguments[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                builder.Add(new ClosedGenericRegistrationInfo(displayName, message: null));
+                var targetKey = TypeKey.FromSymbol(attribute.AttributeClass!.TypeArguments[0]);
+                registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetKey, manifest: string.Empty, allowEmpty: false));
                 continue;
             }
 
@@ -210,18 +216,20 @@ public sealed partial class AkkaSerializerGenerator
             // registration attribute.
             var allowEmpty = serializableAttribute!.NamedArguments
                 .Any(argument => argument.Key == "AllowEmpty" && argument.Value.Value is true);
+            var targetTypeKey = TypeKey.FromSymbol(target!);
             var message = ExtractMessageCore(
                 target!,
-                GetMessageDictionaryKey(target!),
+                targetTypeKey,
                 manifest,
                 allowEmpty,
                 knownTypes,
                 compilation,
                 definitionFullName: GetFullyQualifiedTypeName(target!.OriginalDefinition));
-            builder.Add(new ClosedGenericRegistrationInfo(message.FullyQualifiedName, message));
+            registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetTypeKey, manifest, allowEmpty));
+            schemasBuilder.Add(message);
         }
 
-        return builder.ToImmutable();
+        return (registrationsBuilder.ToImmutable(), schemasBuilder.ToImmutable());
     }
 
     /// <summary>
@@ -284,9 +292,7 @@ public sealed partial class AkkaSerializerGenerator
             // Both remain recorded with IsTargetSupported = false so AKKASG011 fires.
             var targetNamedType = targetTypeSymbol as INamedTypeSymbol;
             var isTargetSupported = targetNamedType is { IsGenericType: false };
-            var targetTypeFullName = isTargetSupported
-                ? GetFullyQualifiedTypeName(targetNamedType!)
-                : targetTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var targetTypeKey = TypeKey.FromSymbol(targetTypeSymbol);
 
             var formatterNamedType = formatterTypeSymbol as INamedTypeSymbol;
             var formatterTypeFullName = formatterNamedType != null
@@ -307,7 +313,7 @@ public sealed partial class AkkaSerializerGenerator
                 : FormatterCtorKind.None;
 
             builder.Add(new FormatterInfo(
-                targetTypeFullName,
+                targetTypeKey,
                 targetTypeSymbol.IsValueType,
                 formatterTypeFullName,
                 isAbstract,
@@ -370,7 +376,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             return new MessageInfo(
                 symbol.Name,
-                GetFullyQualifiedTypeName(symbol),
+                BuildGenericDefinitionKey(symbol),
                 manifest,
                 ImmutableArray<FieldInfo>.Empty,
                 GetProtocolNames(symbol),
@@ -381,7 +387,28 @@ public sealed partial class AkkaSerializerGenerator
                 constructionPlan: ConstructionPlan.Empty);
         }
 
-        return ExtractMessageCore(symbol, GetFullyQualifiedTypeName(symbol), manifest, allowEmpty, knownTypes, compilation, definitionFullName: string.Empty);
+        return ExtractMessageCore(symbol, TypeKey.FromSymbol(symbol), manifest, allowEmpty, knownTypes, compilation, definitionFullName: string.Empty);
+    }
+
+    /// <summary>
+    /// The key for a generic <c>[AkkaSerializable]</c> DEFINITION placeholder (e.g. <c>Wrapper&lt;T&gt;</c>
+    /// itself, as opposed to one of its registered closed constructions). This placeholder is never
+    /// stored in any message dictionary (<see cref="ResolveSerializerMessages"/> excludes every
+    /// <see cref="MessageInfo.IsGenericDefinition"/> entry), so its <see cref="TypeKey.MetadataName"/>/
+    /// <see cref="TypeKey.TypeArguments"/> are never actually looked up against -- what DOES matter is
+    /// that its <see cref="TypeKey.DisplayName"/> keeps rendering the same ARITY-LESS text
+    /// <see cref="GetFullyQualifiedTypeName"/> has always produced for it (e.g. "Wrapper", never
+    /// "Wrapper&lt;T&gt;"), since <see cref="MessageInfo.FullyQualifiedName"/> is compared against
+    /// <see cref="MessageInfo.DefinitionFullName"/> (AKKASG022's registration-coverage check) and
+    /// rendered directly into AKKASG037's message text -- both of which predate this key entirely.
+    /// A plain <see cref="TypeKey.FromSymbol"/> would instead render the type-parameter list (e.g.
+    /// "Wrapper&lt;T&gt;"), since <c>ToDisplayString</c> shows a generic type DEFINITION's own type
+    /// parameters.
+    /// </summary>
+    private static TypeKey BuildGenericDefinitionKey(INamedTypeSymbol symbol)
+    {
+        var key = TypeKey.FromSymbol(symbol);
+        return new TypeKey(key.MetadataName, key.TypeArguments, GetFullyQualifiedTypeName(symbol));
     }
 
     /// <summary>
@@ -418,7 +445,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             return new MessageInfo(
                 type.Name,
-                GetFullyQualifiedTypeName(type),
+                BuildGenericDefinitionKey(type),
                 manifest,
                 ImmutableArray<FieldInfo>.Empty,
                 GetProtocolNames(type),
@@ -429,7 +456,7 @@ public sealed partial class AkkaSerializerGenerator
                 constructionPlan: ConstructionPlan.Empty);
         }
 
-        return ExtractMessageCore(type, GetFullyQualifiedTypeName(type), manifest, allowEmpty, knownTypes, compilation, definitionFullName: string.Empty);
+        return ExtractMessageCore(type, TypeKey.FromSymbol(type), manifest, allowEmpty, knownTypes, compilation, definitionFullName: string.Empty);
     }
 
     /// <summary>
@@ -442,7 +469,7 @@ public sealed partial class AkkaSerializerGenerator
     /// </summary>
     private static MessageInfo ExtractMessageCore(
         INamedTypeSymbol symbol,
-        string fullyQualifiedName,
+        TypeKey key,
         string manifest,
         bool allowEmpty,
         KnownTypes knownTypes,
@@ -506,7 +533,7 @@ public sealed partial class AkkaSerializerGenerator
 
         return new MessageInfo(
             symbol.Name,
-            fullyQualifiedName,
+            key,
             manifest,
             fields.OrderBy(f => f.Index).ToImmutableArray(),
             GetProtocolNames(symbol),
@@ -725,12 +752,13 @@ public sealed partial class AkkaSerializerGenerator
                 var displayName = argument.Value is ITypeSymbol typeSymbol
                     ? typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
                     : "<null>";
-                builder.Add(new UnionMemberInfo(displayName, isValueType: false, isAssignable: false, isSupported: false, isSealed: false, isAbstract: false));
+                var fallbackKey = new TypeKey(displayName, ImmutableArray<TypeKey>.Empty, displayName);
+                builder.Add(new UnionMemberInfo(fallbackKey, isValueType: false, isAssignable: false, isSupported: false, isSealed: false, isAbstract: false));
                 continue;
             }
 
             builder.Add(new UnionMemberInfo(
-                GetMessageDictionaryKey(memberType),
+                TypeKey.FromSymbol(memberType),
                 memberType.IsValueType,
                 compilation.HasImplicitConversion(memberType, member.Type),
                 isSupported: true,
@@ -742,33 +770,20 @@ public sealed partial class AkkaSerializerGenerator
         return builder.ToImmutable();
     }
 
-    /// <summary>
-    /// The key a type is looked up under in the serializer's message dictionary. Non-generic types
-    /// use the arity-less <see cref="GetFullyQualifiedTypeName"/> (the existing key for every
-    /// <c>[AkkaSerializable]</c> message); closed generic constructions use the full,
-    /// fully-qualified display string (e.g. <c>Ns.Wrapper&lt;Ns.Foo&gt;</c>) so distinct
-    /// constructions stay distinct.
-    /// </summary>
-    private static string GetMessageDictionaryKey(INamedTypeSymbol type)
-    {
-        return type.IsGenericType
-            ? type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-            : GetFullyQualifiedTypeName(type);
-    }
-
     private static TypeMapping MapType(ITypeSymbol type, KnownTypes knownTypes)
     {
         if (TryGetNullableValueType(type, out var underlyingType))
             return MapType(underlyingType, knownTypes);
 
-        // Only attach the fallback underlying-type name for NON-GENERIC named types:
-        // GetFullyQualifiedTypeName is arity-less, so stamping it onto a generic field type
-        // (e.g. Result<int>) would let it match a formatter registered for a same-named
-        // non-generic type (Result) and emit ill-typed code. Generic field types keep an empty
-        // mapping name, can never match a formatter, and still fail with AKKASG003.
+        // Only attach the fallback underlying-type key for NON-GENERIC named types: stamping a key
+        // onto a generic field type (e.g. Result<int>) would let it match a formatter registered for
+        // a same-named non-generic type (Result) and emit ill-typed code -- TypeKey's metadata name
+        // carries the arity suffix, so this guard still matters even though the key is no longer a
+        // bare arity-less string. Generic field types keep a default (empty) key, can never match a
+        // formatter, and still fail with AKKASG003.
         var mapping = MapTypeCore(type, knownTypes);
         if (mapping.TypeFullName.Length == 0 && type is INamedTypeSymbol { IsGenericType: false } namedType)
-            return mapping.WithTypeFullName(GetFullyQualifiedTypeName(namedType));
+            return mapping.WithKey(TypeKey.FromSymbol(namedType));
 
         return mapping;
     }
@@ -785,11 +800,11 @@ public sealed partial class AkkaSerializerGenerator
             {
                 return new TypeMapping(
                     FieldKind.UnsupportedEnumUnderlyingType,
-                    GetFullyQualifiedTypeName(enumType),
+                    TypeKey.FromSymbol(enumType),
                     enumUnderlyingTypeName: underlyingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
             }
 
-            return new TypeMapping(FieldKind.Enum, GetFullyQualifiedTypeName(enumType));
+            return new TypeMapping(FieldKind.Enum, TypeKey.FromSymbol(enumType));
         }
 
         if (type is IArrayTypeSymbol { ElementType.SpecialType: SpecialType.System_Byte })
@@ -797,13 +812,14 @@ public sealed partial class AkkaSerializerGenerator
 
         // OriginalDefinition covers both shapes: for a non-generic type it is the type itself; for a
         // closed generic construction (Wrapper<Foo>) the [AkkaSerializable] attribute lives on the
-        // definition. The mapping name is arity-aware (GetMessageDictionaryKey) so a closed
-        // construction resolves to its registered [AkkaSerializable<T>] message -- or, if
-        // unregistered, fails AKKASG023 instead of silently dropping its type arguments.
+        // definition. The mapping key is TypeKey.FromSymbol, whose metadata name plus type arguments
+        // are arity-aware and construction-aware, so a closed construction resolves to its registered
+        // [AkkaSerializable<T>] message -- or, if unregistered, fails AKKASG023 instead of silently
+        // dropping its type arguments.
         if (type is INamedTypeSymbol namedType && namedType.OriginalDefinition.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute)))
             return new TypeMapping(
                 FieldKind.Object,
-                GetMessageDictionaryKey(namedType),
+                TypeKey.FromSymbol(namedType),
                 namedType.IsValueType,
                 foreignAssemblyName: GetForeignAssemblyName(namedType, knownTypes),
                 isGenericConstruction: namedType.IsGenericType);
@@ -830,7 +846,7 @@ public sealed partial class AkkaSerializerGenerator
             return collectionMapping;
 
         if (type is INamedTypeSymbol { IsGenericType: false, TypeKind: TypeKind.Class or TypeKind.Struct } missingNestedType)
-            return new TypeMapping(FieldKind.MissingSerializableDefinition, GetFullyQualifiedTypeName(missingNestedType), foreignAssemblyName: GetForeignAssemblyName(missingNestedType, knownTypes));
+            return new TypeMapping(FieldKind.MissingSerializableDefinition, TypeKey.FromSymbol(missingNestedType), foreignAssemblyName: GetForeignAssemblyName(missingNestedType, knownTypes));
 
         // AKKASG003 on an interface, an abstract class, or a type parameter is usually a forgotten
         // [AkkaUnion] declaration, or a field that should simply be typed `object`, rather than a
@@ -1003,7 +1019,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             collapsed = new TypeMapping(
                 FieldKind.UnsupportedEnumUnderlyingType,
-                element.TypeFullName,
+                element.Key,
                 enumUnderlyingTypeName: element.EnumUnderlyingTypeName);
             return true;
         }
@@ -1109,6 +1125,15 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetFullyQualifiedTypeName(INamedTypeSymbol symbol)
     {
+        // Fast path: a non-nested type -- by far the common case -- needs no containing-type walk
+        // (or Stack allocation) at all; the general path below produces the identical string for
+        // this shape too, just at needless extra cost.
+        if (symbol.ContainingType == null)
+        {
+            var ns0 = GetNamespace(symbol);
+            return ns0.Length == 0 ? "global::" + symbol.Name : "global::" + ns0 + "." + symbol.Name;
+        }
+
         var parts = new Stack<string>();
         ISymbol? current = symbol;
         while (current is INamedTypeSymbol named)
@@ -1123,8 +1148,15 @@ public sealed partial class AkkaSerializerGenerator
 
     private static string GetNamespace(INamedTypeSymbol symbol)
     {
-        var parts = new Stack<string>();
         var ns = symbol.ContainingNamespace;
+        if (ns == null || ns.IsGlobalNamespace)
+            return string.Empty;
+
+        // Fast path: a single-segment namespace -- by far the common case -- needs no Stack/Join.
+        if (ns.ContainingNamespace == null || ns.ContainingNamespace.IsGlobalNamespace)
+            return ns.Name;
+
+        var parts = new Stack<string>();
         while (ns != null && !ns.IsGlobalNamespace)
         {
             parts.Push(ns.Name);

@@ -132,14 +132,17 @@ public sealed class GeneratorResolvedSerializerSnapshotSpec
             sb.AppendLine($"  {message.FullyQualifiedName}");
 
         sb.AppendLine("ResolvedMessagesByType keys (sorted):");
-        foreach (var key in resolved.ResolvedMessagesByType.Keys.OrderBy(k => k, StringComparer.Ordinal))
-            sb.AppendLine($"  {key}");
+        foreach (var key in resolved.ResolvedMessagesByType.Keys.OrderBy(k => k.DisplayName, StringComparer.Ordinal))
+            sb.AppendLine($"  {key.DisplayName}");
 
-        if (!resolved.ResolvedClosedGenericRegistrations.IsDefaultOrEmpty)
+        if (!resolved.Serializer.ClosedGenericRegistrations.IsDefaultOrEmpty)
         {
             sb.AppendLine("ResolvedClosedGenericRegistrations:");
-            foreach (var registration in resolved.ResolvedClosedGenericRegistrations)
-                sb.AppendLine($"  {registration.TargetDisplayName} -> {(registration.Message == null ? "(invalid)" : registration.Message.FullyQualifiedName)}");
+            foreach (var registration in resolved.Serializer.ClosedGenericRegistrations)
+            {
+                var resolvedMessage = resolved.ClosedGenericSchemas.TryGetValue(registration.Target, out var schema) ? schema.FullyQualifiedName : "(invalid)";
+                sb.AppendLine($"  {registration.TargetDisplayName} -> {resolvedMessage}");
+            }
         }
 
         if (!resolved.UsedFormatters.IsDefaultOrEmpty)

@@ -290,6 +290,7 @@ public sealed partial class AkkaSerializerGenerator
         if (knownTypes.SerializableAttribute == null)
             return diagnostics.ToImmutable();
 
+        var protocolKey = serializer.ProtocolTypeKey;
         foreach (var candidate in GetSourceDeclaredTypes(compilation))
         {
             // This whole-compilation walk re-runs on every edit (its output combines the
@@ -302,7 +303,7 @@ public sealed partial class AkkaSerializerGenerator
             if (candidate.IsAbstract)
                 continue;
 
-            if (!ImplementsProtocol(candidate, serializer.ProtocolTypeFullName))
+            if (!ImplementsProtocol(candidate, protocolKey))
                 continue;
 
             var isMarked = candidate.GetAttributes()
@@ -317,15 +318,56 @@ public sealed partial class AkkaSerializerGenerator
         return diagnostics.ToImmutable();
     }
 
-    private static bool ImplementsProtocol(INamedTypeSymbol candidate, string protocolTypeFullName)
+    /// <summary>
+    /// Whether <paramref name="candidate"/> implements the protocol identified by <paramref name="protocolKey"/>.
+    /// Builds a comparison-only <see cref="TypeKey"/> (<c>includeDisplayName: false</c>) per
+    /// candidate interface and compares it against <paramref name="protocolKey"/> by METADATA identity
+    /// -- replacing the former per-interface <c>ToDisplayString</c> call and ordinal string compare.
+    /// Equality never reads either side's <see cref="TypeKey.DisplayName"/>, so this scan never
+    /// formats a display string for an interface it does not need one for.
+    /// <see cref="CouldMatchByMetadataName"/> filters out every interface that cannot possibly match
+    /// -- for example a record's compiler-synthesized <c>IEquatable&lt;T&gt;</c>, or any OTHER
+    /// serializer's protocol -- with a single, allocation-free string compare, before paying for a
+    /// full <see cref="TypeKey.FromSymbol"/> (which recurses into type arguments for a generic
+    /// interface). This scan runs once per candidate type per serializer and is never cached (it
+    /// combines with the live <see cref="Compilation"/>), so skipping the expensive path for the
+    /// overwhelming majority of interfaces that were never going to match is the whole saving.
+    /// </summary>
+    private static bool ImplementsProtocol(INamedTypeSymbol candidate, TypeKey protocolKey)
     {
         foreach (var implemented in candidate.AllInterfaces)
         {
-            if (string.Equals(implemented.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), protocolTypeFullName, StringComparison.Ordinal))
+            if (!CouldMatchByMetadataName(protocolKey.MetadataName, implemented.MetadataName))
+                continue;
+
+            if (TypeKey.FromSymbol(implemented, includeDisplayName: false).Equals(protocolKey))
                 return true;
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Cheap, allocation-free pre-filter for <see cref="ImplementsProtocol"/>: whether
+    /// <paramref name="candidateMetadataName"/> (an interface's own simple metadata name, arity
+    /// suffix included) could possibly be the FINAL segment of <paramref name="protocolMetadataName"/>
+    /// (the protocol's full metadata name, as <see cref="TypeKey.MetadataName"/> always builds it --
+    /// a namespace/containing-type prefix, then the type's own simple metadata name last). A
+    /// necessary, not sufficient, condition: a "yes" still falls through to the authoritative full
+    /// <see cref="TypeKey"/> comparison (two different namespaces can share a simple type name), but
+    /// a "no" can never be a false negative, since a genuine match's OWN simple metadata name is
+    /// always exactly this trailing segment.
+    /// </summary>
+    private static bool CouldMatchByMetadataName(string protocolMetadataName, string candidateMetadataName)
+    {
+        if (protocolMetadataName.Length < candidateMetadataName.Length)
+            return false;
+
+        if (!protocolMetadataName.EndsWith(candidateMetadataName, StringComparison.Ordinal))
+            return false;
+
+        var boundaryIndex = protocolMetadataName.Length - candidateMetadataName.Length - 1;
+        return boundaryIndex < 0 || protocolMetadataName[boundaryIndex] is '.' or '+';
     }
 
     /// <summary>
@@ -405,24 +447,36 @@ public sealed partial class AkkaSerializerGenerator
         return isValid;
     }
 
+    /// <summary>
+    /// Fires AKKASG020 when a registration's target has no matching entry in
+    /// <see cref="SerializerInfo.ClosedGenericSchemas"/> -- the light spec (see
+    /// <see cref="ClosedGenericRegistrationInfo"/>) carries only the target's own key, so a target
+    /// this serializer never managed to extract a schema for (not a type, non-generic, unbound, or
+    /// its definition lacks <c>[AkkaSerializable]</c>) is exactly the registration with no matching
+    /// key in <see cref="SerializerInfo.ClosedGenericSchemas"/>.
+    /// </summary>
     private static bool ValidateClosedGenericRegistrations(SerializerInfo serializer, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
         if (serializer.ClosedGenericRegistrations.IsDefaultOrEmpty)
             return true;
 
+        var schemaKeys = new HashSet<TypeKey>();
+        foreach (var schema in serializer.ClosedGenericSchemas)
+            schemaKeys.Add(schema.Key);
+
         var isValid = true;
-        foreach (var registration in serializer.ClosedGenericRegistrations.Where(registration => registration.Message == null))
+        foreach (var registration in serializer.ClosedGenericRegistrations.Where(registration => !schemaKeys.Contains(registration.Target)))
         {
             diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidClosedGenericRegistration, ToDisplayName(registration.TargetDisplayName), serializer.ClassName));
             isValid = false;
         }
 
         foreach (var duplicate in serializer.ClosedGenericRegistrations
-                     .Where(registration => registration.Message != null)
-                     .GroupBy(registration => registration.TargetDisplayName, StringComparer.Ordinal)
+                     .Where(registration => schemaKeys.Contains(registration.Target))
+                     .GroupBy(registration => registration.Target)
                      .Where(group => group.Count() > 1))
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateClosedGenericRegistration, serializer.ClassName, ToDisplayName(duplicate.Key)));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateClosedGenericRegistration, serializer.ClassName, ToDisplayName(duplicate.Key.DisplayName ?? string.Empty)));
             isValid = false;
         }
 
@@ -446,9 +500,8 @@ public sealed partial class AkkaSerializerGenerator
             if (!definition.Protocols.Contains(serializer.ProtocolTypeFullName))
                 continue;
 
-            var hasRegistration = serializer.ClosedGenericRegistrations.Any(registration =>
-                registration.Message != null &&
-                string.Equals(registration.Message.DefinitionFullName, definition.FullyQualifiedName, StringComparison.Ordinal));
+            var hasRegistration = serializer.ClosedGenericSchemas.Any(schema =>
+                string.Equals(schema.DefinitionFullName, definition.FullyQualifiedName, StringComparison.Ordinal));
             if (hasRegistration)
                 continue;
 
@@ -461,37 +514,37 @@ public sealed partial class AkkaSerializerGenerator
 
     private static ImmutableArray<MessageInfo> CollectReachableMessages(
         ImmutableArray<MessageInfo> topLevelMessages,
-        ImmutableDictionary<string, MessageInfo> allMessagesByType)
+        ImmutableDictionary<TypeKey, MessageInfo> allMessagesByType)
     {
         var messages = ImmutableArray.CreateBuilder<MessageInfo>();
-        var visited = new HashSet<string>();
+        var visited = new HashSet<TypeKey>();
         var pending = new Queue<MessageInfo>(topLevelMessages);
 
         while (pending.Count > 0)
         {
             var message = pending.Dequeue();
-            if (!visited.Add(message.FullyQualifiedName))
+            if (!visited.Add(message.Key))
                 continue;
 
             messages.Add(message);
-            var referencedObjectTypes = new HashSet<string>(StringComparer.Ordinal);
+            var referencedObjectTypes = new HashSet<TypeKey>();
             foreach (var field in message.Fields)
             {
                 foreach (var objectMapping in EnumerateObjectMappings(field.Mapping))
-                    referencedObjectTypes.Add(objectMapping.TypeFullName);
+                    referencedObjectTypes.Add(objectMapping.Key);
 
                 // Union members are reachable exactly like nested Object fields: each member needs
                 // its Write/Read/SizeOf methods generated for the union dispatch to call into.
                 foreach (var unionMember in field.UnionMembers)
                 {
                     if (unionMember.IsSupported)
-                        referencedObjectTypes.Add(unionMember.TypeFullName);
+                        referencedObjectTypes.Add(unionMember.Key);
                 }
             }
 
-            foreach (var typeName in referencedObjectTypes)
+            foreach (var typeKey in referencedObjectTypes)
             {
-                if (allMessagesByType.TryGetValue(typeName, out var nestedMessage))
+                if (allMessagesByType.TryGetValue(typeKey, out var nestedMessage))
                     pending.Enqueue(nestedMessage);
             }
         }
@@ -519,7 +572,7 @@ public sealed partial class AkkaSerializerGenerator
         SerializerInfo serializer,
         ImmutableArray<MessageInfo> topLevelMessages,
         ImmutableArray<MessageInfo> reachableMessages,
-        ImmutableDictionary<string, MessageInfo> messagesByType,
+        ImmutableDictionary<TypeKey, MessageInfo> messagesByType,
         ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
         var isValid = true;
@@ -621,10 +674,10 @@ public sealed partial class AkkaSerializerGenerator
             // wording when the type's declaring assembly says so).
             foreach (var field in message.Fields)
             {
-                var seenTypeNames = new HashSet<string>(StringComparer.Ordinal);
+                var seenTypeKeys = new HashSet<TypeKey>();
                 foreach (var objectMapping in EnumerateObjectMappings(field.Mapping))
                 {
-                    if (!seenTypeNames.Add(objectMapping.TypeFullName) || messagesByType.ContainsKey(objectMapping.TypeFullName))
+                    if (!seenTypeKeys.Add(objectMapping.Key) || messagesByType.ContainsKey(objectMapping.Key))
                         continue;
 
                     ReportMissingNestedSchema(message, field.Name, objectMapping.TypeFullName, objectMapping, serializer.ClassName, diagnostics);
@@ -686,17 +739,18 @@ public sealed partial class AkkaSerializerGenerator
         if (serializer.ClosedGenericRegistrations.IsDefaultOrEmpty || serializer.ProtocolTypeFullName.Length == 0)
             return true;
 
-        var reachableNames = new HashSet<string>(reachableMessages.Select(message => message.FullyQualifiedName), StringComparer.Ordinal);
+        var schemasByKey = serializer.ClosedGenericSchemas.ToDictionary(schema => schema.Key);
+        var reachableKeys = new HashSet<TypeKey>(reachableMessages.Select(message => message.Key));
         var isValid = true;
         foreach (var registration in serializer.ClosedGenericRegistrations)
         {
-            if (registration.Message == null)
+            if (!schemasByKey.TryGetValue(registration.Target, out var schema))
                 continue;
 
-            if (registration.Message.Protocols.Contains(serializer.ProtocolTypeFullName))
+            if (schema.Protocols.Contains(serializer.ProtocolTypeFullName))
                 continue;
 
-            if (reachableNames.Contains(registration.Message.FullyQualifiedName))
+            if (reachableKeys.Contains(schema.Key))
                 continue;
 
             diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ClosedGenericRegistrationNotInProtocol,
@@ -719,7 +773,7 @@ public sealed partial class AkkaSerializerGenerator
     private static bool ValidateUnionField(
         MessageInfo message,
         FieldInfo field,
-        ImmutableDictionary<string, MessageInfo> messagesByType,
+        ImmutableDictionary<TypeKey, MessageInfo> messagesByType,
         string serializerClassName,
         ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
@@ -728,19 +782,21 @@ public sealed partial class AkkaSerializerGenerator
         // AkkaUnionAttribute(Type first, params Type[] rest) makes an empty member set
         // unrepresentable: `first` is a mandatory constructor argument, so [AkkaUnion()] does not
         // compile and field.UnionMembers can never be empty here. The "at least one member type is
-        // required" half of AKKASG019 that used to guard this is gone along with it.
+        // required" half of AKKASG019 that used to guard this is gone along with it. Grouped by
+        // TypeKey (not display text) so two distinct types that happen to render the same display
+        // string are never mistaken for a duplicate declaration of one type.
         foreach (var duplicate in field.UnionMembers
-                     .GroupBy(member => member.TypeFullName, StringComparer.Ordinal)
+                     .GroupBy(member => member.Key)
                      .Where(group => group.Count() > 1))
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidUnionMemberSet, field.Name, ToDisplayName(message.FullyQualifiedName), $"member type '{ToDisplayName(duplicate.Key)}' is declared more than once"));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidUnionMemberSet, field.Name, ToDisplayName(message.FullyQualifiedName), $"member type '{ToDisplayName(duplicate.Key.DisplayName ?? string.Empty)}' is declared more than once"));
             isValid = false;
         }
 
         var manifests = new Dictionary<string, List<string>>(StringComparer.Ordinal);
         foreach (var member in field.UnionMembers)
         {
-            if (!member.IsSupported || !messagesByType.TryGetValue(member.TypeFullName, out var memberMessage))
+            if (!member.IsSupported || !messagesByType.TryGetValue(member.Key, out var memberMessage))
             {
                 ReportUnionMemberNotSerializable(message, field.Name, member, serializerClassName, diagnostics);
                 isValid = false;

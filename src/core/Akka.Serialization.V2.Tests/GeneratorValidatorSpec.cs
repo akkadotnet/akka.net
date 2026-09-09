@@ -250,9 +250,14 @@ public sealed class GeneratorValidatorSpec
         // closed-construction model like this one -- exactly the shape ExtractClosedGenericRegistrations
         // builds via the (non-test-exposed) ExtractMessageCore in the real pipeline. Building it by
         // hand is simpler and more direct than constructing the Wrapper<int> symbol through Roslyn.
+        var wrapperIntKey = new AkkaSerializerGenerator.TypeKey(
+            "ValidatorSample.Wrapper`1",
+            ImmutableArray.Create(new AkkaSerializerGenerator.TypeKey("System.Int32", ImmutableArray<AkkaSerializerGenerator.TypeKey>.Empty, "int")),
+            "global::ValidatorSample.Wrapper<int>");
+
         var wrapperInt = new AkkaSerializerGenerator.MessageInfo(
             simpleName: "Wrapper",
-            fullyQualifiedName: "global::ValidatorSample.Wrapper<int>",
+            key: wrapperIntKey,
             manifest: "wrapper-int-v1",
             fields: ImmutableArray.Create(
                 new AkkaSerializerGenerator.FieldInfo(1, "Id", "string", new AkkaSerializerGenerator.TypeMapping(AkkaSerializerGenerator.FieldKind.String), isNullable: false),
@@ -264,8 +269,11 @@ public sealed class GeneratorValidatorSpec
             isGenericDefinition: false,
             definitionFullName: "global::ValidatorSample.Wrapper<T>");
 
-        var registration = new AkkaSerializerGenerator.ClosedGenericRegistrationInfo("global::ValidatorSample.Wrapper<int>", wrapperInt);
-        var serializer = BuildSerializerInfo(ProtocolFullName(compilation), closedGenericRegistrations: ImmutableArray.Create(registration));
+        var registration = new AkkaSerializerGenerator.ClosedGenericRegistrationInfo(wrapperInt.Key, manifest: "wrapper-int-v1", allowEmpty: false);
+        var serializer = BuildSerializerInfo(
+            ProtocolFullName(compilation),
+            closedGenericRegistrations: ImmutableArray.Create(registration),
+            closedGenericSchemas: ImmutableArray.Create(wrapperInt));
 
         // Outer neither references Wrapper<int> nor is related to it -- the registration is
         // reachable from nothing, which is exactly the "orphaned" condition AKKASG034 flags.
@@ -308,7 +316,7 @@ public sealed class GeneratorValidatorSpec
     [Fact(DisplayName = "EvaluateGate should report AKKASG032 and gate out a non-partial serializer before any message validation runs")]
     public void EvaluateGate_should_report_AKKASG032_for_non_partial_serializer()
     {
-        var serializer = BuildSerializerInfo(protocolTypeFullName: string.Empty, isPartial: false);
+        var serializer = BuildSerializerInfo(protocolTypeKey: default, isPartial: false);
 
         var gate = AkkaSerializerGenerator.EvaluateGate(
             serializer,
@@ -327,11 +335,11 @@ public sealed class GeneratorValidatorSpec
         return GeneratorTestHarness.Run(source).OutputCompilation;
     }
 
-    private static string ProtocolFullName(Compilation compilation)
+    private static AkkaSerializerGenerator.TypeKey ProtocolFullName(Compilation compilation)
     {
         var symbol = compilation.GetTypeByMetadataName(ProtocolMetadataName)
             ?? throw new InvalidOperationException($"Could not resolve '{ProtocolMetadataName}' in the harness compilation.");
-        return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        return AkkaSerializerGenerator.TypeKey.FromSymbol(symbol);
     }
 
     private static AkkaSerializerGenerator.MessageInfo ParseMessage(Compilation compilation, string metadataName)
@@ -343,9 +351,10 @@ public sealed class GeneratorValidatorSpec
     }
 
     private static AkkaSerializerGenerator.SerializerInfo BuildSerializerInfo(
-        string protocolTypeFullName,
+        AkkaSerializerGenerator.TypeKey protocolTypeKey,
         bool protocolTypeIsInterface = true,
         ImmutableArray<AkkaSerializerGenerator.ClosedGenericRegistrationInfo> closedGenericRegistrations = default,
+        ImmutableArray<AkkaSerializerGenerator.MessageInfo> closedGenericSchemas = default,
         ImmutableArray<AkkaSerializerGenerator.FormatterInfo> formatters = default,
         bool isPartial = true,
         bool isGeneric = false,
@@ -357,11 +366,12 @@ public sealed class GeneratorValidatorSpec
             fullyQualifiedName: "global::ValidatorSample.TestSerializer",
             name: "test-serializer",
             serializerId: 1,
-            protocolTypeFullName: protocolTypeFullName,
+            protocolTypeKey: protocolTypeKey,
             protocolTypeIsInterface: protocolTypeIsInterface,
             declaredAccessibility: Accessibility.Public,
             formatters: formatters.IsDefault ? ImmutableArray<AkkaSerializerGenerator.FormatterInfo>.Empty : formatters,
             closedGenericRegistrations: closedGenericRegistrations.IsDefault ? ImmutableArray<AkkaSerializerGenerator.ClosedGenericRegistrationInfo>.Empty : closedGenericRegistrations,
+            closedGenericSchemas: closedGenericSchemas.IsDefault ? ImmutableArray<AkkaSerializerGenerator.MessageInfo>.Empty : closedGenericSchemas,
             isPartial: isPartial,
             isGeneric: isGeneric,
             derivesFromAkkaSerializerBase: derivesFromAkkaSerializerBase);
