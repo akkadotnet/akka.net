@@ -96,6 +96,22 @@ namespace Akka.Remote.Artery
         /// no known peer uid yet (still <c>Associating</c> -- nothing to quarantine).
         /// </summary>
         void Quarantine();
+
+        /// <summary>
+        /// Returns <paramref name="envelope"/> to the association-owned channel this materialization
+        /// reads from. <see cref="OutboundHandshakeStage"/> dequeues one element from that channel and
+        /// holds it (<c>_pendingMessage</c>) while it waits out the handshake; if this materialization
+        /// stops before ever delivering it (a failed reconnect, a killed stream), the element is
+        /// already out of the channel and would otherwise vanish with no <see cref="Akka.Event.Dropped"/>
+        /// event and no log -- <see cref="SystemMessageDeliveryStage"/> traffic is covered by its own
+        /// association-owned resend buffer, but plain control traffic (<see cref="HandshakeReq"/>,
+        /// <see cref="ArteryHeartbeat"/>, <see cref="ArteryQuarantined"/>,
+        /// <see cref="ClearSystemMessageDelivery"/>, and an unwrapped <c>DaemonMsgCreate</c>) is not.
+        /// The implementation re-offers <paramref name="envelope"/> to that same channel when there is
+        /// room, and publishes a <see cref="Akka.Event.Dropped"/> event instead of discarding it
+        /// silently when there is not.
+        /// </summary>
+        void ReturnUndelivered(IOutboundEnvelope envelope);
     }
 
     /// <summary>
@@ -113,6 +129,7 @@ namespace Akka.Remote.Artery
         private readonly Action<IControlMessageSubscriber> _subscribeControl;
         private readonly Action<IControlMessageSubscriber> _unsubscribeControl;
         private readonly Action<Address, long> _quarantine;
+        private readonly Action<IOutboundEnvelope> _returnUndelivered;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AssociationRegistryOutboundContext"/> class.
@@ -131,6 +148,13 @@ namespace Akka.Remote.Artery
         /// Quarantines <paramref name="remoteAddress"/> for a given uid (design.md gate G3's
         /// give-up-&gt;quarantine invariant). Defaults to a no-op.
         /// </param>
+        /// <param name="returnUndelivered">
+        /// Returns an element a gating <see cref="OutboundHandshakeStage"/> was holding back to the
+        /// association-owned channel this materialization reads from -- see
+        /// <see cref="IOutboundContext.ReturnUndelivered"/>. Defaults to a no-op so pre-existing
+        /// callers (tests that never exercise a mid-handshake stage failure) do not need to supply
+        /// it.
+        /// </param>
         public AssociationRegistryOutboundContext(
             AssociationRegistry registry,
             UniqueAddress localAddress,
@@ -138,7 +162,8 @@ namespace Akka.Remote.Artery
             Action<object> sendControl,
             Action<IControlMessageSubscriber>? subscribeControl = null,
             Action<IControlMessageSubscriber>? unsubscribeControl = null,
-            Action<Address, long>? quarantine = null)
+            Action<Address, long>? quarantine = null,
+            Action<IOutboundEnvelope>? returnUndelivered = null)
         {
             _registry = registry;
             LocalAddress = localAddress;
@@ -147,6 +172,7 @@ namespace Akka.Remote.Artery
             _subscribeControl = subscribeControl ?? (static _ => { });
             _unsubscribeControl = unsubscribeControl ?? (static _ => { });
             _quarantine = quarantine ?? (static (_, _) => { });
+            _returnUndelivered = returnUndelivered ?? (static _ => { });
         }
 
         /// <inheritdoc/>
@@ -187,5 +213,8 @@ namespace Akka.Remote.Artery
             if (AssociationState.UniqueRemoteAddress is { } peer)
                 _quarantine(RemoteAddress, peer.Uid);
         }
+
+        /// <inheritdoc/>
+        public void ReturnUndelivered(IOutboundEnvelope envelope) => _returnUndelivered(envelope);
     }
 }

@@ -260,6 +260,13 @@ namespace Akka.Remote.Artery
         private Action<int>? _onInboundLanesInitialized;
 
         /// <summary>
+        /// Test-observability hook (P5 regression guard) -- see <see cref="ArteryTransportSetup.OnBoundPortKnown"/>.
+        /// Read once from <see cref="ArteryTransportSetup"/> in <see cref="Start"/>; <see langword="null"/>
+        /// (production default) disables it entirely.
+        /// </summary>
+        private Action<bool>? _onBoundPortKnown;
+
+        /// <summary>
         /// Applied to EVERY Artery socket: the accepting <c>Tcp.Bind</c> and both outbound
         /// <c>Tcp.OutgoingConnection</c> call sites in <see cref="MaterializeOutboundStream"/>.
         /// Explicitly-pinned large socket buffers prevent the kernel shrinking the receiver's
@@ -359,6 +366,7 @@ namespace Akka.Remote.Artery
             _encodeBufferPool = encodePoolOverride ?? ArrayPool<byte>.Create();
             _dropOutboundControlMessage = arteryTransportSetup.Select(s => s.DropOutboundControlMessage).GetOrElse(null);
             _onInboundLanesInitialized = arteryTransportSetup.Select(s => s.OnInboundLanesInitialized).GetOrElse(null);
+            _onBoundPortKnown = arteryTransportSetup.Select(s => s.OnBoundPortKnown).GetOrElse(null);
 
             // Outbound lanes: one DEDICATED ArrayPool<byte>.Create() per lane (never Shared, never
             // reused across lanes) -- see _laneEncodeBufferPools' remarks. A test-injected
@@ -404,13 +412,28 @@ namespace Akka.Remote.Artery
 
             _binding = bindingTask.GetAwaiter().GetResult();
             var boundPort = ((IPEndPoint)_binding.Value.LocalAddress).Port;
-
             var address = new Address("akka", System.Name, _settings.CanonicalHostname, boundPort);
-            _defaultAddress = address;
-            _addresses = new HashSet<Address> { address };
 
+            // Publish these two BEFORE anything else that runs once the bound port is known (P5):
+            // HandleIncomingConnection wires _inboundContext! into every inbound stage
+            // (InboundHandshakeStage, InboundQuarantineCheckStage, SystemMessageAckerStage) the
+            // moment an accepted connection is dispatched to it, and the underlying
+            // ConnectionSourceStage already asked the TCP manager to ResumeAccepting as part of the
+            // SAME "Bound" message turn that completed bindingTask above -- so a peer that is
+            // already dialing this (possibly pinned) port can have a connection accepted and
+            // dispatched on a DIFFERENT thread concurrently with this one resuming past the blocking
+            // wait. Nothing can fully close that window without changing the underlying TCP stage,
+            // but assigning these two fields as the very first thing this thread does once it knows
+            // the port -- ahead of _defaultAddress/_addresses, SubscribeControl and the startup log
+            // line below -- shrinks it to the smallest span reachable from here. Uid comes from
+            // AddressUidExtension (this system's own uid, unrelated to the bind); the port comes
+            // from bindingTask, the promise the bind itself completes.
             _localUniqueAddress = new UniqueAddress(address, AddressUidExtension.Uid(System));
             _inboundContext = new AssociationRegistryInboundContext(_registry, _localUniqueAddress, SendControlToAddress);
+            _onBoundPortKnown?.Invoke(_inboundContext is not null);
+
+            _defaultAddress = address;
+            _addresses = new HashSet<Address> { address };
 
             // Self-subscribe to handle ArteryHeartbeat (reply) and ArteryQuarantined (publish
             // ThisActorSystemQuarantinedEvent) -- see IControlMessageSubscriber.ControlMessageReceived.
@@ -1498,6 +1521,41 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
+        /// <see cref="IOutboundContext.ReturnUndelivered"/>'s actual implementation for every
+        /// <see cref="AssociationRegistryOutboundContext"/> this transport constructs: re-offers
+        /// <paramref name="envelope"/> -- an element a gating <see cref="OutboundHandshakeStage"/>
+        /// had already dequeued and was holding when its materialization stopped -- to the SAME
+        /// association-owned channel <paramref name="streamId"/> (and, for the ordinary stream at
+        /// <c>outbound-lanes &gt; 1</c>, <paramref name="lane"/>) reads from. Publishes a
+        /// <see cref="Dropped"/> event, exactly like every other full-queue path in this class,
+        /// when that channel has no room (or is already closed) -- never a silent discard.
+        /// </summary>
+        private void ReturnUndeliveredOutboundElement(
+            Address remoteAddress, Association association, ArteryStreamId streamId, IOutboundEnvelope envelope, int lane = 0)
+        {
+            var requeued = streamId switch
+            {
+                ArteryStreamId.Control => association.TryEnqueueControl(envelope),
+                ArteryStreamId.Large => association.TryEnqueueLarge(envelope),
+                _ => association.TryEnqueueOutbound(envelope, lane)
+            };
+
+            if (requeued)
+                return;
+
+            _log.Debug(
+                "Outbound Artery {0} queue to [{1}] had no room to return an undelivered {2} held by a stopped " +
+                "handshake-stage materialization; dropping it.",
+                streamId, remoteAddress, envelope.Message.GetType());
+
+            System.EventStream.Publish(new Dropped(
+                envelope.Message,
+                $"Outbound Artery {streamId} queue to [{remoteAddress}] had no room to return an element held by a stopped handshake stage",
+                ActorRefs.NoSender,
+                System.DeadLetters));
+        }
+
+        /// <summary>
         /// Materializes this association's ORDINARY outbound stream. GATE B: at
         /// <c>association.OutboundLanes &lt;= 1</c> (the shipping default) this is EXACTLY today's
         /// call -- <see cref="MaterializeOutboundStream"/>, unchanged, no merge/fan-in machinery
@@ -1677,8 +1735,28 @@ namespace Akka.Remote.Artery
 
                 for (var i = 0; i < lanes; i++)
                 {
+                    // Captured (not the loop's own `i`) so each lane's ReturnUndelivered closure
+                    // returns to THAT lane's own channel, not whatever lane the loop variable has
+                    // reached by the time a materialization actually stops.
+                    var lane = i;
+
+                    // A lane-specific context (not the shared outboundContext used for
+                    // OutboundTestStage above/below) purely so ReturnUndelivered targets this
+                    // lane's own channel (association.LaneReader(lane)) -- every other member reads
+                    // through the same registry/remoteAddress either way.
+                    var laneHandshakeContext = new AssociationRegistryOutboundContext(
+                        _registry,
+                        _localUniqueAddress,
+                        remoteAddress,
+                        sendControl: message => EnqueueControl(remoteAddress, message),
+                        subscribeControl: SubscribeControl,
+                        unsubscribeControl: UnsubscribeControl,
+                        quarantine: (address, uid) => Quarantine(address, uid),
+                        returnUndelivered: envelope =>
+                            ReturnUndeliveredOutboundElement(remoteAddress, association, ArteryStreamId.Ordinary, envelope, lane));
+
                     var handshakeStage = new OutboundHandshakeStage(
-                        outboundContext, _settings.HandshakeRetryInterval, _settings.HandshakeTimeout,
+                        laneHandshakeContext, _settings.HandshakeRetryInterval, _settings.HandshakeTimeout,
                         _settings.InjectHandshakeInterval, isControlStream: false, forceReqOnStart: isRestart,
                         timeProvider: System.Scheduler);
 
@@ -1897,7 +1975,8 @@ namespace Akka.Remote.Artery
                 sendControl: message => EnqueueControl(remoteAddress, message),
                 subscribeControl: SubscribeControl,
                 unsubscribeControl: UnsubscribeControl,
-                quarantine: (address, uid) => Quarantine(address, uid));
+                quarantine: (address, uid) => Quarantine(address, uid),
+                returnUndelivered: envelope => ReturnUndeliveredOutboundElement(remoteAddress, association, streamId, envelope));
 
             var handshakeStage = new OutboundHandshakeStage(
                 outboundContext, _settings.HandshakeRetryInterval, _settings.HandshakeTimeout,
@@ -2221,12 +2300,18 @@ namespace Akka.Remote.Artery
                 if (!association.ShouldRestartControl())
                     return;
 
-                association.ResetControlGate();
                 System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
                 {
                     if (!association.ShouldRestartControl())
                         return;
 
+                    // Open the gate HERE, not before the backoff. EnqueueControl materializes on
+                    // demand through this same gate (IsControlOutboundMaterialized), so resetting
+                    // it early let any control enqueue that landed during the backoff window
+                    // re-materialize immediately and bypass outbound-restart-backoff entirely.
+                    // Measured effect of the early reset: 5.15 control reconnects/second against a
+                    // configured 1/second (build 131174, attempts 10 -> 230 in 42.7s).
+                    association.ResetControlGate();
                     association.EnsureControlOutboundMaterialized(a => MaterializeControlOutbound(remoteAddress, a, isRestart: a.HasControlEverRestarted));
                 });
 
@@ -2243,12 +2328,15 @@ namespace Akka.Remote.Artery
                     return;
                 }
 
-                association.ResetLargeGate();
                 System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
                 {
                     if (!association.ShouldRestartLargeOutbound())
                         return;
 
+                    // Same move as the control branch above: open the gate only once the backoff
+                    // has actually elapsed, so an on-demand large-message enqueue during the
+                    // backoff window cannot re-materialize early and bypass outbound-restart-backoff.
+                    association.ResetLargeGate();
                     association.EnsureLargeOutboundMaterialized(a => MaterializeLargeOutbound(remoteAddress, a, isRestart: a.HasLargeEverRestarted));
                 });
 
@@ -2280,12 +2368,15 @@ namespace Akka.Remote.Artery
                 return;
             }
 
-            association.ResetOutboundGate();
             System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
             {
                 if (!association.ShouldRestartOutbound())
                     return;
 
+                // Same move as the control branch above: open the gate only once the backoff has
+                // actually elapsed, so an on-demand ordinary-message enqueue during the backoff
+                // window cannot re-materialize early and bypass outbound-restart-backoff.
+                association.ResetOutboundGate();
                 association.EnsureOutboundMaterialized(a => MaterializeOutbound(remoteAddress, a, isRestart: a.HasOutboundEverRestarted));
             });
         }

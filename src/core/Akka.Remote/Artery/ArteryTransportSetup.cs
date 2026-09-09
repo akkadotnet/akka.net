@@ -70,14 +70,19 @@ namespace Akka.Remote.Artery
         /// <param name="onInboundLanesInitialized">
         /// Test-observability hook -- see <see cref="OnInboundLanesInitialized"/>.
         /// </param>
+        /// <param name="onBoundPortKnown">
+        /// Test-observability hook -- see <see cref="OnBoundPortKnown"/>.
+        /// </param>
         public ArteryTransportSetup(
             ArrayPool<byte>? encodeBufferPool = null,
             Func<object, bool>? dropOutboundControlMessage = null,
-            Action<int>? onInboundLanesInitialized = null)
+            Action<int>? onInboundLanesInitialized = null,
+            Action<bool>? onBoundPortKnown = null)
         {
             EncodeBufferPool = encodeBufferPool;
             DropOutboundControlMessage = dropOutboundControlMessage;
             OnInboundLanesInitialized = onInboundLanesInitialized;
+            OnBoundPortKnown = onBoundPortKnown;
         }
 
         /// <summary>
@@ -106,5 +111,18 @@ namespace Akka.Remote.Artery
         /// <c>InboundLanes</c>=1 default in any case, since lane machinery is never materialized then.
         /// </summary>
         public Action<int>? OnInboundLanesInitialized { get; }
+
+        /// <summary>
+        /// Test-observability hook (P5 regression guard, design.md group 9's inbound-context-before-
+        /// accept ordering): invoked exactly once during <see cref="ArteryRemoting.Start"/>, right
+        /// after the bound port becomes known -- passed <see langword="true"/> if
+        /// <c>ArteryRemoting</c>'s inbound context (the object every accepted connection's
+        /// <c>InboundHandshakeStage</c>/<c>InboundQuarantineCheckStage</c>/<c>SystemMessageAckerStage</c>
+        /// dereferences) was ALREADY published at that point, <see langword="false"/> otherwise. Lets
+        /// a test observe the ordering directly and deterministically instead of racing a real socket
+        /// accept against it. <see langword="null"/> (the default, and the only production value)
+        /// disables this entirely.
+        /// </summary>
+        public Action<bool>? OnBoundPortKnown { get; }
     }
 }
