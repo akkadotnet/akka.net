@@ -78,7 +78,17 @@ akka.test.cluster-stress-spec {
 akka.actor.provider = cluster
     
 akka.cluster {
-    failure-detector.acceptable-heartbeat-pause = 3s
+    # akka.test.timefactor does NOT reach cluster settings. TestKitBase.Dilated scales TestKit
+    # waits only; ClusterSettings reads this value raw. So a lane that declares ""this box is 3x
+    # slow"" still judges liveness on an unscaled budget.
+    # PhiAccrualFailureDetector crosses threshold 8.0 at about
+    #   heartbeat-interval + acceptable-heartbeat-pause + 3 * min-std-deviation
+    # so 3s means a peer is called unreachable ~4.3s after the last heartbeat, which the logs
+    # confirm. Build 131165 measured a 14.8s heartbeat gap on node-2 while it tore down a second
+    # ActorSystem, so 10s would still not have covered it. 20s gives ~21.3s of detection and
+    # leaves PartitionSeveral (195s dilated) far more room than it needs for detection plus
+    # stable-after.
+    failure-detector.acceptable-heartbeat-pause = 20s
     downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
     split-brain-resolver {
         active-strategy = keep-majority #TODO: remove this once it's been made default
@@ -744,6 +754,42 @@ public class StressSpec : MultiNodeClusterSpec
         MuteDeadLetters(sys, typeof(AggregatedClusterResult), typeof(StatsResult), typeof(PhiResult), typeof(RetryTick));
     }
 
+
+    /// <summary>
+    /// Removes a churn system from the ring the way the cluster is designed to do it: an
+    /// explicit, awaited Leave (Leaving -> Exiting -> Removed by gossip), and only then a
+    /// terminate of the process-local system.
+    ///
+    /// MultiNodeSpec.BaseConfig sets akka.coordinated-shutdown.run-by-actor-system-terminate =
+    /// off, so a bare ActorSystem.Terminate() takes ActorSystemImpl.FinalTerminate() and performs
+    /// NO cluster leave. The member just vanishes and removal falls to the failure detector plus
+    /// the SplitBrainResolver. That arms a ~13s window (acceptable-heartbeat-pause plus
+    /// stable-after) at the exact moment this node is terminating a second ActorSystem, so the
+    /// host lands in the same unreachable set as the member it just killed and KeepMajority downs
+    /// both. Build 131156: KeepMajority downed [49169, 49380, 49381] in one decision, and 49169
+    /// was node-2's own main system.
+    /// </summary>
+    private async Task LeaveAndShutdownAsync(ActorSystem sys)
+    {
+        var cluster = Cluster.Get(sys);
+        using var cts = new CancellationTokenSource(Dilated(TimeSpan.FromSeconds(20)));
+        try
+        {
+            // completes when this member reaches Removed in the cluster's own view
+            await cluster.LeaveAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // A graceful leave still needs gossip and leader actions, and both ride the same
+            // scheduler that starvation stops. Fall back rather than fail the phase here.
+            Sys.Log.Warning(
+                "Churn system [{0}] did not confirm Removed in time; falling back to Terminate",
+                cluster.SelfAddress);
+        }
+
+        await ShutdownAsync(sys);
+    }
+
     public StressSpec() : this(new StressSpecConfig()){ }
 
     protected StressSpec(StressSpecConfig config) : base(config, typeof(StressSpec))
@@ -1239,7 +1285,7 @@ public class StressSpec : MultiNodeClusterSpec
                         // await the teardown instead of blocking on it: the sync Shutdown pins a thread
                         // pool thread for the whole wait, starving this node's own heartbeat sender.
                         if (previousAs.HasValue)
-                            await ShutdownAsync(previousAs.Value);
+                            await LeaveAndShutdownAsync(previousAs.Value);
 
                         var sys = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
                         MuteLog(sys);
@@ -1283,8 +1329,13 @@ public class StressSpec : MultiNodeClusterSpec
         // whole wait, which on a busy agent starves this node's own heartbeat sender and gets it downed.
         var lastAs = await Loop(1, Option<ActorSystem>.None, ImmutableHashSet<Address>.Empty);
         if (lastAs.HasValue)
-            await ShutdownAsync(lastAs.Value);
+            await LeaveAndShutdownAsync(lastAs.Value);
 
+        // AwaitMembersUpAsync(NbrUsedRoles) stays as-is and is the right thing to await. LeaveAsync
+        // resolves on the LEAVING node's own view, which proves nothing about the ten observers that
+        // are about to enter the barrier. "10 members, all Up" on the observers is the post-removal
+        // state, and after an explicit Leave it converges in a gossip round or two instead of waiting
+        // out acceptable-heartbeat-pause plus stable-after.
         await WithinAsync(loopDuration, async () =>
         {
             await RunOnAsync(async () =>
