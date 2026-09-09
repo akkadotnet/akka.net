@@ -51,7 +51,11 @@ namespace Akka.DistributedData.Tests
 
         public ReplicatorKnownNodeSpec(ITestOutputHelper output) : base(SpecConfig, output)
         {
-            _remoteSys = ActorSystem.Create(Sys.Name, Sys.Settings.Config);
+            // A distinct name is safe here, not just cosmetic for log readability: _remoteSys
+            // self-joins its own single-node cluster and Sys is never told to join it (see the
+            // class doc above), so nothing in this spec depends on the two systems sharing a
+            // name the way a real cluster join would.
+            _remoteSys = ActorSystem.Create(Sys.Name + "-peer", Sys.Settings.Config);
         }
 
         private async Task<Member> SelfJoinAndGetUpMemberAsync(ActorSystem system)
@@ -65,68 +69,89 @@ namespace Akka.DistributedData.Tests
         [Fact(DisplayName = "Replicator should accept a Write from a member it first saw as Leaving")]
         public async Task Should_accept_write_from_member_first_seen_as_Leaving()
         {
-            await SelfJoinAndGetUpMemberAsync(Sys);
-            var remoteUp = await SelfJoinAndGetUpMemberAsync(_remoteSys);
-            var leavingMember = remoteUp.Copy(MemberStatus.Leaving);
+            // Each fact owns its peer system and shuts it down here, asynchronously, on
+            // success or failure. The TestKit's sync AfterAll would pin a thread pool
+            // thread for the whole wait, and a DisposeAsync on this class would collide
+            // with the async dispose chain the TestKit is gaining in #8545.
+            try
+            {
+                await SelfJoinAndGetUpMemberAsync(Sys);
+                var remoteUp = await SelfJoinAndGetUpMemberAsync(_remoteSys);
+                var leavingMember = remoteUp.Copy(MemberStatus.Leaving);
 
-            var replicator = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)));
+                var replicator = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)));
 
-            // Simulates what a replicator subscribing after the member already left would get on
-            // InitialStateAsEvents replay: MemberLeft, never MemberUp.
-            replicator.Tell(new ClusterEvent.MemberLeft(leavingMember));
+                // Simulates what a replicator subscribing after the member already left would get on
+                // InitialStateAsEvents replay: MemberLeft, never MemberUp.
+                replicator.Tell(new ClusterEvent.MemberLeft(leavingMember));
 
-            var probe = CreateTestProbe();
-            var envelope = new DataEnvelope(GCounter.Empty.Increment(leavingMember.UniqueAddress));
-            replicator.Tell(new Write("known-node-leaving", envelope, leavingMember.UniqueAddress), probe.Ref);
+                var probe = CreateTestProbe();
+                var envelope = new DataEnvelope(GCounter.Empty.Increment(leavingMember.UniqueAddress));
+                replicator.Tell(new Write("known-node-leaving", envelope, leavingMember.UniqueAddress), probe.Ref);
 
-            // Before the fix this write is dropped as coming from an "unknown node" and no reply
-            // is ever sent, so this would time out.
-            await probe.ExpectMsgAsync<WriteAck>(TimeSpan.FromSeconds(3));
+                // Before the fix this write is dropped as coming from an "unknown node" and no reply
+                // is ever sent, so this would time out.
+                await probe.ExpectMsgAsync<WriteAck>(TimeSpan.FromSeconds(3));
+            }
+            finally
+            {
+                await ShutdownAsync(_remoteSys);
+            }
         }
 
         [Fact(DisplayName = "Replicator should accept a Write from a member it first saw as Exiting")]
         public async Task Should_accept_write_from_member_first_seen_as_Exiting()
         {
-            await SelfJoinAndGetUpMemberAsync(Sys);
-            var remoteUp = await SelfJoinAndGetUpMemberAsync(_remoteSys);
-            var exitingMember = remoteUp.Copy(MemberStatus.Leaving).Copy(MemberStatus.Exiting);
+            // The peer system is shut down per fact; see the first fact for why.
+            try
+            {
+                await SelfJoinAndGetUpMemberAsync(Sys);
+                var remoteUp = await SelfJoinAndGetUpMemberAsync(_remoteSys);
+                var exitingMember = remoteUp.Copy(MemberStatus.Leaving).Copy(MemberStatus.Exiting);
 
-            var replicator = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)));
+                var replicator = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)));
 
-            // MemberExited routes to ReceiveMemberExiting, a different handler than the generic
-            // member-event path MemberLeft/MemberDowned use above, so this exercises that path
-            // separately.
-            replicator.Tell(new ClusterEvent.MemberExited(exitingMember));
+                // MemberExited routes to ReceiveMemberExiting, a different handler than the generic
+                // member-event path MemberLeft/MemberDowned use above, so this exercises that path
+                // separately.
+                replicator.Tell(new ClusterEvent.MemberExited(exitingMember));
 
-            var probe = CreateTestProbe();
-            var envelope = new DataEnvelope(GCounter.Empty.Increment(exitingMember.UniqueAddress));
-            replicator.Tell(new Write("known-node-exiting", envelope, exitingMember.UniqueAddress), probe.Ref);
+                var probe = CreateTestProbe();
+                var envelope = new DataEnvelope(GCounter.Empty.Increment(exitingMember.UniqueAddress));
+                replicator.Tell(new Write("known-node-exiting", envelope, exitingMember.UniqueAddress), probe.Ref);
 
-            await probe.ExpectMsgAsync<WriteAck>(TimeSpan.FromSeconds(3));
+                await probe.ExpectMsgAsync<WriteAck>(TimeSpan.FromSeconds(3));
+            }
+            finally
+            {
+                await ShutdownAsync(_remoteSys);
+            }
         }
 
         [Fact(DisplayName = "Replicator should still ignore a Write from a node it has never seen in any member event")]
         public async Task Should_ignore_write_from_node_never_seen()
         {
-            await SelfJoinAndGetUpMemberAsync(Sys);
-            var strangerUp = await SelfJoinAndGetUpMemberAsync(_remoteSys);
+            // The peer system is shut down per fact; see the first fact for why.
+            try
+            {
+                await SelfJoinAndGetUpMemberAsync(Sys);
+                var strangerUp = await SelfJoinAndGetUpMemberAsync(_remoteSys);
 
-            var replicator = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)));
+                var replicator = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)));
 
-            // No member event at all is sent about `strangerUp` this time. This proves the fix
-            // does not turn IsKnownNode into an open gate -- a node this replicator has never
-            // observed in any status is still rejected.
-            var probe = CreateTestProbe();
-            var envelope = new DataEnvelope(GCounter.Empty.Increment(strangerUp.UniqueAddress));
-            replicator.Tell(new Write("known-node-stranger", envelope, strangerUp.UniqueAddress), probe.Ref);
+                // No member event at all is sent about `strangerUp` this time. This proves the fix
+                // does not turn IsKnownNode into an open gate -- a node this replicator has never
+                // observed in any status is still rejected.
+                var probe = CreateTestProbe();
+                var envelope = new DataEnvelope(GCounter.Empty.Increment(strangerUp.UniqueAddress));
+                replicator.Tell(new Write("known-node-stranger", envelope, strangerUp.UniqueAddress), probe.Ref);
 
-            await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
-        }
-
-        protected override void AfterAll()
-        {
-            base.AfterAll();
-            Shutdown(_remoteSys);
+                await probe.ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
+            }
+            finally
+            {
+                await ShutdownAsync(_remoteSys);
+            }
         }
     }
 }
