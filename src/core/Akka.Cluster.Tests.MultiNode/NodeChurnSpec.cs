@@ -46,21 +46,33 @@ namespace Akka.Cluster.Tests.MultiNode
                   # unreachable or terminated (ClusterDaemon.cs:2345-2348 with
                   # MembershipState.RemoveUnreachableWithMemberStatus), which needs only the failure
                   # detector.
+                  #
+                  # Pekko's NodeChurnSpec keeps auto-down-unreachable-after = 1s; this port turns it
+                  # off on purpose, not by omission. Legacy auto-down is a second, uncoordinated
+                  # downing path with no quorum logic of its own, so leaving it on here would race the
+                  # explicit Leave/Down calls above with an independent auto-down decision. With it
+                  # off, the widened acceptable-heartbeat-pause below is the only guard against the
+                  # measured 5.628s heartbeat stall - there is no second downing path left to catch
+                  # what it misses.
                   akka.cluster.auto-down-unreachable-after = off
 
-                  # Second guard on the same event. MultiNodeClusterSpec.ClusterConfig() sets
-                  # heartbeat-interval = 500ms but leaves acceptable-heartbeat-pause at the 3s default
-                  # (Cluster.conf:219), and akka.test.timefactor does not dilate failure-detector
-                  # settings. Measured: a transient-system teardown produced a 5.628s heartbeat gap,
-                  # and detection fired 3.971s after the last heartbeat. 10s moves detection to about
-                  # 10.97s, a margin of 5.34s over the worst gap observed. This is a stopgap for a
-                  # product-side blocking wait in the scheduler shutdown path; it can come back down
-                  # once issue #8549 is addressed.
+                  # Only guard against that stall now that auto-down above is off.
+                  # MultiNodeClusterSpec.ClusterConfig() sets heartbeat-interval = 500ms but leaves
+                  # acceptable-heartbeat-pause at the 3s default (Cluster.conf:219), and
+                  # akka.test.timefactor does not dilate failure-detector settings. Measured: a
+                  # transient-system teardown produced a 5.628s heartbeat gap, and detection fired
+                  # 3.971s after the last heartbeat. 10s moves detection to about 10.97s, a margin of
+                  # 5.34s over the worst gap observed. This is a stopgap for a product-side blocking
+                  # wait in the scheduler shutdown path; it can come back down once issue #8549 is
+                  # addressed.
                   akka.cluster.failure-detector.acceptable-heartbeat-pause = 10s
 
-                  # Without this, tombstones never prune inside a 5-round run (Cluster.conf:151
-                  # defaults to 24h) and the payload growth this spec looks for cannot appear. Matches
-                  # Pekko.
+                  # This spec asserts the ABSENCE of gossip-payload growth (ExpectNoMsgAsync after
+                  # each round, driven by the LogListener below). Without this setting, tombstones for
+                  # removed members never prune inside a 5-round run (Cluster.conf:151 defaults to
+                  # 24h), so their vector-clock entries keep accumulating and a working payload
+                  # listener would eventually fire and fail the test. Pruning at 1s is what lets the
+                  # no-growth assertion hold across all five rounds. Matches Pekko.
                   akka.cluster.prune-gossip-tombstones-after = 1s
                   akka.remote.log-frame-size-exceeding = 2000b
                   akka.remote.dot-netty.tcp.batching.enabled = false # disable batching
@@ -86,11 +98,23 @@ namespace Akka.Cluster.Tests.MultiNode
                 // [.../cluster/core/daemon] to [/user/logListener]" - and the ExpectNoMsg assertions
                 // this spec exists for could never fail.
                 // RemoteMetricsSpec.cs:118 already uses the correct form.
+                //
+                // The prefix must be built from the .NET type, not carried over from the JVM class
+                // name. RemoteMetricsExtension.cs:109 logs type.FullName, and GossipEnvelope
+                // (Akka.Cluster, internal - Akka.Cluster has InternalsVisibleTo this assembly) is
+                // "Akka.Cluster.GossipEnvelope", not "akka.cluster.GossipEnvelope". String.StartsWith
+                // is case-sensitive, so a literal JVM-cased prefix never matches and this listener
+                // could never forward anything, leaving the payload assertions below unable to fail
+                // either.
+                //
+                // Under Artery there is no RemoteMetricsExtension at all (issue #8555), so this
+                // listener - and the payload-growth assertions it feeds - cannot fire on the Artery
+                // lane regardless of this fix. Only the classic (DotNetty) transport exercises them.
+                var payloadSizePrefix = "New maximum payload size for [" + typeof(GossipEnvelope).FullName + "]";
                 Receive<Info>(info =>
                 {
                     var text = info.Message?.ToString();
-                    if (text is not null &&
-                        text.StartsWith("New maximum payload size for [akka.cluster.GossipEnvelope]"))
+                    if (text is not null && text.StartsWith(payloadSizePrefix))
                     {
                         _testActor.Tell(text);
                     }
@@ -186,7 +210,14 @@ namespace Akka.Cluster.Tests.MultiNode
                 // AFTER the awaited task completes and nobody waits for it. Awaiting one system at a
                 // time therefore leaves that system's blocking scheduler shutdown overlapping the next
                 // one anyway. Sequential teardown moves none of it.
-                await Task.WhenAll(systems.Select(s => s.Terminate())).WaitAsync(30.Seconds());
+                // 20s, not 30s: the barrier immediately below has its own 30s timeout
+                // (Akka.Remote.TestKit/Internals/Reference.conf:13, barrier-timeout), and that clock
+                // arms at the first node's arrival, not at the last (BarrierCoordinator.cs:570-578). A
+                // 30s teardown budget equal to the barrier's own 30s timeout would leave zero skew
+                // margin between a node that finishes teardown quickly and a peer that uses its full
+                // budget - the slow peer would hit the barrier timeout at the same instant it arrives.
+                // 20s keeps 10s of margin before the barrier's own deadline.
+                await Task.WhenAll(systems.Select(s => s.Terminate())).WaitAsync(20.Seconds());
 
                 // Pekko has enterBarrier("end-round-" + n) here; the .NET port never did (checked back
                 // to the original port, 1c1ced42a). Without it, a node that finishes teardown early
