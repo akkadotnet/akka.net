@@ -35,16 +35,16 @@ namespace Akka.DependencyInjection.Tests
         }
 
         [Fact(DisplayName = "DI should log an error if DI provider does not contain required parameter")]
-        public void ShouldLogAnErrorIfParameterInjectionFailed()
+        public async Task ShouldLogAnErrorIfParameterInjectionFailed()
         {
             var system = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
             var probe = CreateTestProbe(system);
             system.EventStream.Subscribe(probe, typeof(Error));
-            
+
             var props = DependencyResolver.For(system).Props<TestDiActor>();
             var actor = system.ActorOf(props.WithDeploy(Deploy.Local), "testDIActor");
 
-            probe.ExpectMsg<Error>().Cause.Should().BeOfType<ActorInitializationException>();
+            (await probe.ExpectMsgAsync<Error>()).Cause.Should().BeOfType<ActorInitializationException>();
         }
 
         internal class TestDiActor : ReceiveActor

@@ -29,7 +29,7 @@ public class Bugfix8144Spec: Xunit.TestKit
     }
 
     [Fact]
-    public void Should_use_implicit_TestActor_sender_after_async_initialization()
+    public async Task Should_use_implicit_TestActor_sender_after_async_initialization()
     {
         // SimpleEchoActor echoes back to Sender - tests that implicit sender works
         var actor = Sys.ActorOf(SimpleEchoActor.Props());
@@ -39,6 +39,6 @@ public class Bugfix8144Spec: Xunit.TestKit
         actor.Tell("hello");
 
         // Should receive the echo back at TestActor
-        ExpectMsg("hello");
+        await ExpectMsgAsync("hello");
     }
 }
