@@ -174,6 +174,7 @@ public sealed class GeneratorCompilationFactsSpec
         return new AkkaSerializerGenerator.SerializerInfo(
             ns: "FactsSample",
             className: "TestSerializer",
+            key: new AkkaSerializerGenerator.TypeKey("FactsSample.TestSerializer", ImmutableArray<AkkaSerializerGenerator.TypeKey>.Empty, "global::FactsSample.TestSerializer"),
             fullyQualifiedName: "global::FactsSample.TestSerializer",
             name: "test-serializer",
             serializerId: 1,

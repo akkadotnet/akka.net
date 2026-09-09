@@ -87,18 +87,26 @@ public sealed partial class AkkaSerializerGenerator
     /// ONCE regardless of how many serializers are declared -- the per-serializer output would
     /// otherwise need to single out one serializer as the "owner" to avoid reporting a duplicate-id
     /// pair once per serializer in the group. This mirrors the diagnostics-only shape
-    /// <see cref="ReportProtocolCoverage"/> already used for AKKASG029.
+    /// <see cref="ReportProtocolCoverage"/> already used for AKKASG029. As of S6 this also combines
+    /// the merged <see cref="LocationBag"/>: AKKASG013/AKKASG031 report at the FIRST serializer in
+    /// their duplicate group (declaration order, i.e. array order) since no single serializer owns a
+    /// group spanning several of them; AKKASG037 reports at the generic definition's OWN message
+    /// location, since it is not serializer-scoped at all.
     /// </summary>
     private static void ReportCrossSerializerDiagnostics(
         SourceProductionContext context,
         ImmutableArray<SerializerInfo?> serializers,
-        ImmutableArray<MessageInfo?> messages)
+        ImmutableArray<MessageInfo?> messages,
+        LocationBag locations)
     {
         var duplicateSerializerIds = ComputeDuplicateSerializerIds(serializers);
 
         foreach (var duplicate in duplicateSerializerIds)
         {
-            context.ReportDiagnostic(Diagnostic.Create(DuplicateSerializerId, Location.None, duplicate.Key, duplicate.Value));
+            SerializerInfo owner = serializers.First(s => s != null && s.SerializerId == duplicate.Key)!;
+            var spec = new DiagnosticSpec(DiagnosticKey.DuplicateSerializerId, new LocationKey(owner.Key, string.Empty),
+                duplicate.Key.ToString(), duplicate.Value);
+            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(spec, locations));
         }
 
         // Same computation as duplicateSerializerIds above, grouped on the protocol interface
@@ -108,7 +116,10 @@ public sealed partial class AkkaSerializerGenerator
 
         foreach (var duplicate in duplicateProtocolBindings)
         {
-            context.ReportDiagnostic(Diagnostic.Create(DuplicateProtocolBinding, Location.None, ToDisplayName(duplicate.Key), duplicate.Value));
+            SerializerInfo owner = serializers.First(s => s != null && string.Equals(s.ProtocolTypeFullName, duplicate.Key, StringComparison.Ordinal))!;
+            var spec = new DiagnosticSpec(DiagnosticKey.DuplicateProtocolBinding, new LocationKey(owner.Key, string.Empty),
+                ToDisplayName(duplicate.Key), duplicate.Value);
+            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(spec, locations));
         }
 
         var declaredMessages = ComputeDeclaredMessages(messages);
@@ -116,10 +127,13 @@ public sealed partial class AkkaSerializerGenerator
         // Advisory only (AKKASG037): a Manifest on a generic [AkkaSerializable] DEFINITION is
         // silently ignored -- the definition is never serialized directly (see ExtractMessage),
         // and every registered closed construction carries its own per-construction Manifest from
-        // [AkkaSerializable<T>]. Reported once per definition, independent of any serializer.
+        // [AkkaSerializable<T>]. Reported once per definition, independent of any serializer, at the
+        // definition's own message-level location.
         foreach (var definition in declaredMessages.Where(message => message.IsGenericDefinition && !string.IsNullOrWhiteSpace(message.Manifest)))
         {
-            context.ReportDiagnostic(Diagnostic.Create(ManifestIgnoredOnGenericDefinition, Location.None, ToDisplayName(definition.FullyQualifiedName), definition.Manifest));
+            var spec = new DiagnosticSpec(DiagnosticKey.ManifestIgnoredOnGenericDefinition, new LocationKey(definition.Key, string.Empty),
+                ToDisplayName(definition.FullyQualifiedName), definition.Manifest);
+            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(spec, locations));
         }
     }
 
@@ -225,25 +239,24 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// Reports a resolved serializer's own diagnostics (gate, then validation -- the same order
-    /// <see cref="ResolveSerializer"/>'s predecessor, the single-output <c>EmitSerializers</c>, used
-    /// to report them in) and emits its generated source, PURELY over the resolved model -- no
-    /// <see cref="Compilation"/>, no other serializer's data. Registered directly on the
+    /// Emits a resolved serializer's generated source, PURELY over the resolved model -- no
+    /// <see cref="Compilation"/>, no location, no other serializer's data. Registered directly on the
     /// <see cref="TrackingNames.ResolvedSerializers"/> values provider in <see cref="Initialize"/>,
     /// so the driver's own per-element caching (not any code here) is what makes an unrelated
     /// serializer's <c>AddSource</c> call Cached instead of re-running: this callback simply never
-    /// executes for an element whose resolved model still compares equal to last time.
+    /// executes for an element whose resolved model still compares equal to last time. As of S6 this
+    /// callback no longer reports any diagnostic -- see <see cref="ReportResolvedSerializerDiagnostics"/>,
+    /// a separate diagnostics-only output that also has the merged location bag -- so this stage's
+    /// own caching is never affected by a location-only edit (it never combines the location bag at
+    /// all). It still reads <see cref="ResolvedSerializer.GateDiagnostics"/>/
+    /// <see cref="ResolvedSerializer.ValidationDiagnostics"/> to decide EMITTABILITY, exactly as
+    /// before: a serializer whose own declaration failed the gate, or whose message table has an
+    /// Error-severity validation diagnostic, still gets no generated file.
     /// </summary>
     private static void EmitResolvedSerializer(SourceProductionContext context, ResolvedSerializer resolved)
     {
-        foreach (var gateDiagnostic in resolved.GateDiagnostics)
-            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(gateDiagnostic));
-
         if (!resolved.IsEmittable)
             return;
-
-        foreach (var diagnostic in resolved.ValidationDiagnostics)
-            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic));
 
         // Emission is suppressed by an ERROR-severity diagnostic only -- a Warning (e.g. AKKASG027)
         // or Info (e.g. AKKASG025) still lets the serializer generate normally, exactly as the old
@@ -252,6 +265,29 @@ public sealed partial class AkkaSerializerGenerator
             return;
 
         context.AddSource(resolved.Serializer.ClassName + ".AkkaSerialization.g.cs", Generate(resolved));
+    }
+
+    /// <summary>
+    /// Reports a resolved serializer's own diagnostics (gate, then validation -- the same order the
+    /// pre-S6 <see cref="EmitResolvedSerializer"/> used to report them in): a diagnostics-only output
+    /// registered on <see cref="TrackingNames.ResolvedSerializers"/> combined with the merged
+    /// <see cref="LocationBag"/>, so it can resolve each <see cref="DiagnosticSpec.At"/> into a real
+    /// <see cref="Location"/> without making code emission itself depend on the (whitespace-sensitive)
+    /// location bag. <see cref="ResolvedSerializer.GateDiagnostics"/> are reported unconditionally
+    /// (they fire whether or not the gate itself passes -- mirrors <see cref="EvaluateGate"/>'s own
+    /// contract); <see cref="ResolvedSerializer.ValidationDiagnostics"/> only when the serializer
+    /// cleared the gate (a serializer with no message table has nothing to validate).
+    /// </summary>
+    private static void ReportResolvedSerializerDiagnostics(SourceProductionContext context, ResolvedSerializer resolved, LocationBag locations)
+    {
+        foreach (var gateDiagnostic in resolved.GateDiagnostics)
+            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(gateDiagnostic, locations));
+
+        if (!resolved.IsEmittable)
+            return;
+
+        foreach (var diagnostic in resolved.ValidationDiagnostics)
+            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, locations));
     }
 
     /// <summary>

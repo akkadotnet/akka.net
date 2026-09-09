@@ -51,18 +51,22 @@ public sealed partial class AkkaSerializerGenerator
     /// instead of re-evaluating <see cref="EvaluateGate"/> from the raw collected arrays, now that
     /// the gate has already been decided once, per serializer, by <see cref="ResolveSerializer"/>.
     /// <see cref="ResolvedSerializer.GateDiagnostics"/> are NOT reported here (they are reported
-    /// once, by <see cref="EmitResolvedSerializer"/>); reporting them again here would duplicate
-    /// every pre-coverage diagnostic. As of S5 this combines the cached <see cref="CompilationFacts"/>
-    /// instead of the live <see cref="Compilation"/> -- see <see cref="ValidateProtocolCoverage"/>.
+    /// once, by <see cref="ReportResolvedSerializerDiagnostics"/>); reporting them again here would
+    /// duplicate every pre-coverage diagnostic. As of S5 this combines the cached
+    /// <see cref="CompilationFacts"/> instead of the live <see cref="Compilation"/> -- see
+    /// <see cref="ValidateProtocolCoverage"/>. As of S6 this also combines the merged
+    /// <see cref="LocationBag"/>, so each AKKASG029 diagnostic resolves to a real
+    /// <see cref="Location"/> -- see <see cref="ValidateProtocolCoverage"/>'s own doc comment for
+    /// why it reports at the serializer's own attribute rather than the unmarked implementor.
     /// </summary>
-    private static void ReportProtocolCoverage(SourceProductionContext context, ResolvedSerializer resolved, CompilationFacts facts)
+    private static void ReportProtocolCoverage(SourceProductionContext context, ResolvedSerializer resolved, CompilationFacts facts, LocationBag locations)
     {
         if (!resolved.IsEmittable)
             return;
 
         var protocolCoverageDiagnostics = ValidateProtocolCoverage(resolved.Serializer, facts);
         foreach (var diagnostic in protocolCoverageDiagnostics)
-            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic));
+            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic, locations));
     }
 
     private static ImmutableDictionary<int, string> ComputeDuplicateSerializerIds(ImmutableArray<SerializerInfo?> serializers)
@@ -112,15 +116,19 @@ public sealed partial class AkkaSerializerGenerator
     {
         var diagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
 
+        // Every diagnostic in this method is serializer-level: reported at the serializer's own
+        // [AkkaSerializer<TProtocol>] attribute, per the location rule in AkkaSerializerGenerator.Locations.cs.
+        var serializerAt = new LocationKey(serializer.Key, string.Empty);
+
         if (string.IsNullOrWhiteSpace(serializer.Name))
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidSerializerName, serializer.ClassName));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidSerializerName, serializerAt, serializer.ClassName));
             return new SerializerGate(false, diagnostics.ToImmutable());
         }
 
         if (serializer.SerializerId <= 0)
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidSerializerId, serializer.ClassName, serializer.SerializerId.ToString()));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidSerializerId, serializerAt, serializer.ClassName, serializer.SerializerId.ToString()));
             return new SerializerGate(false, diagnostics.ToImmutable());
         }
 
@@ -212,24 +220,25 @@ public sealed partial class AkkaSerializerGenerator
     private static bool ValidateSerializerShape(SerializerInfo serializer, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
         var isValid = true;
+        var at = new LocationKey(serializer.Key, string.Empty);
 
         if (!serializer.IsPartial)
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidSerializerShape, serializer.ClassName,
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidSerializerShape, at, serializer.ClassName,
                 "must be declared 'partial': the generator emits a second declaration of this class"));
             isValid = false;
         }
 
         if (!serializer.DerivesFromAkkaSerializerBase)
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidSerializerShape, serializer.ClassName,
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidSerializerShape, at, serializer.ClassName,
                 "must derive from Akka.Serialization.V2.AkkaSerializer: the generated members (Identifier, Manifest, Serialize, Deserialize, SizeHint) are declared as overrides of that base"));
             isValid = false;
         }
 
         if (serializer.IsGeneric)
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidSerializerShape, serializer.ClassName,
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidSerializerShape, at, serializer.ClassName,
                 "cannot be a generic type: the generator emits one concrete, closed partial class per [AkkaSerializer] declaration"));
             isValid = false;
         }
@@ -252,7 +261,8 @@ public sealed partial class AkkaSerializerGenerator
         if (serializer.ProtocolTypeFullName.Length == 0 || serializer.ProtocolTypeIsInterface)
             return true;
 
-        diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ProtocolTypeMustBeInterface, serializer.ClassName, ToDisplayName(serializer.ProtocolTypeFullName)));
+        diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ProtocolTypeMustBeInterface, new LocationKey(serializer.Key, string.Empty),
+            serializer.ClassName, ToDisplayName(serializer.ProtocolTypeFullName)));
         return false;
     }
 
@@ -272,7 +282,12 @@ public sealed partial class AkkaSerializerGenerator
     /// This method is now a pure, symbol-free, Compilation-free function of the resolved serializer
     /// plus that precomputed <see cref="CompilationFacts"/> -- it only formats the diagnostic for
     /// each already-identified implementor. Diagnostic id, text, and trigger conditions are
-    /// unchanged from before the split.
+    /// unchanged from before the split. Reports at the SERIALIZER's own attribute
+    /// (<c>LocationKey(serializer.Key, "")</c>), never at the unmarked implementor: that implementor
+    /// is, by definition, not an attributed type this generator's model knows anything about, and
+    /// <see cref="CompilationFacts"/> deliberately carries no location of its own (it must stay
+    /// whitespace-insensitive to every candidate type's own declaration -- see that type's doc
+    /// comment) so there is no local site on the implementor to point at in the first place.
     /// </summary>
     internal static ImmutableArray<DiagnosticSpec> ValidateProtocolCoverage(SerializerInfo serializer, CompilationFacts facts)
     {
@@ -284,9 +299,10 @@ public sealed partial class AkkaSerializerGenerator
         if (!facts.LocalUnmarkedImplementorsByProtocol.TryGetValue(serializer.ProtocolTypeKey, out var implementors))
             return diagnostics.ToImmutable();
 
+        var at = new LocationKey(serializer.Key, string.Empty);
         foreach (var implementor in implementors)
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ProtocolMessageNotSerializable,
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ProtocolMessageNotSerializable, at,
                 ToDisplayName(implementor.DisplayName ?? string.Empty), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
         }
 
@@ -393,23 +409,28 @@ public sealed partial class AkkaSerializerGenerator
         var isValid = true;
         foreach (var formatter in serializer.Formatters)
         {
+            // Every formatter diagnostic reports at ITS OWN [AkkaSerializerFormatter<TTarget,
+            // TFormatter>] attribute application, not the serializer's main attribute -- see
+            // FormatterLocationMember in AkkaSerializerGenerator.Locations.cs.
+            var at = new LocationKey(serializer.Key, FormatterLocationMember(formatter.TargetTypeFullName));
+
             if (!formatter.IsTargetSupported)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FormatterTargetNotSupported, ToDisplayName(formatter.TargetTypeFullName), serializer.ClassName));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FormatterTargetNotSupported, at, ToDisplayName(formatter.TargetTypeFullName), serializer.ClassName));
                 isValid = false;
                 continue;
             }
 
             if (formatter.IsAbstract)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidFormatterType, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName, ToDisplayName(formatter.TargetTypeFullName)));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidFormatterType, at, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName, ToDisplayName(formatter.TargetTypeFullName)));
                 isValid = false;
                 continue;
             }
 
             if (formatter.CtorKind == FormatterCtorKind.None)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FormatterConstructorNotUsable, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FormatterConstructorNotUsable, at, ToDisplayName(formatter.FormatterTypeFullName), serializer.ClassName));
                 isValid = false;
             }
         }
@@ -419,7 +440,8 @@ public sealed partial class AkkaSerializerGenerator
                      .GroupBy(formatter => formatter.TargetTypeFullName, StringComparer.Ordinal)
                      .Where(group => group.Count() > 1))
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateFormatterRegistration, serializer.ClassName, ToDisplayName(duplicate.Key)));
+            var at = new LocationKey(serializer.Key, FormatterLocationMember(duplicate.Key));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateFormatterRegistration, at, serializer.ClassName, ToDisplayName(duplicate.Key)));
             isValid = false;
         }
 
@@ -446,7 +468,10 @@ public sealed partial class AkkaSerializerGenerator
         var isValid = true;
         foreach (var registration in serializer.ClosedGenericRegistrations.Where(registration => !schemaKeys.Contains(registration.Target)))
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidClosedGenericRegistration, ToDisplayName(registration.TargetDisplayName), serializer.ClassName));
+            // Reports at THIS registration's own [AkkaSerializable<T>] attribute application --
+            // Decision 16: "the registration attribute for a closed generic".
+            var at = new LocationKey(serializer.Key, ClosedGenericLocationMember(registration.TargetDisplayName));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidClosedGenericRegistration, at, ToDisplayName(registration.TargetDisplayName), serializer.ClassName));
             isValid = false;
         }
 
@@ -455,7 +480,9 @@ public sealed partial class AkkaSerializerGenerator
                      .GroupBy(registration => registration.Target)
                      .Where(group => group.Count() > 1))
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateClosedGenericRegistration, serializer.ClassName, ToDisplayName(duplicate.Key.DisplayName ?? string.Empty)));
+            var targetDisplayName = duplicate.Key.DisplayName ?? string.Empty;
+            var at = new LocationKey(serializer.Key, ClosedGenericLocationMember(targetDisplayName));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateClosedGenericRegistration, at, serializer.ClassName, ToDisplayName(targetDisplayName)));
             isValid = false;
         }
 
@@ -484,7 +511,11 @@ public sealed partial class AkkaSerializerGenerator
             if (hasRegistration)
                 continue;
 
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.GenericSerializableRequiresRegistration, ToDisplayName(definition.FullyQualifiedName), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
+            // Reports at the SERIALIZER's own attribute: the fix ("register each closed construction
+            // with [AkkaSerializable<T>] ... on the serializer class") is an edit to the serializer,
+            // not to the generic definition itself.
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.GenericSerializableRequiresRegistration, new LocationKey(serializer.Key, string.Empty),
+                ToDisplayName(definition.FullyQualifiedName), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
             isValid = false;
         }
 
@@ -557,7 +588,10 @@ public sealed partial class AkkaSerializerGenerator
         var isValid = true;
         foreach (var message in topLevelMessages.Where(message => string.IsNullOrWhiteSpace(message.Manifest)))
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.MissingManifest, ToDisplayName(message.FullyQualifiedName)));
+            // A closed-generic SCHEMA can be top-level too (its construction implements the
+            // protocol directly) -- MessageTypeLocationKey redirects to its own registration
+            // attribute in that case, since the construction itself has no separate syntax.
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.MissingManifest, MessageTypeLocationKey(serializer, message), ToDisplayName(message.FullyQualifiedName)));
             isValid = false;
         }
 
@@ -567,21 +601,30 @@ public sealed partial class AkkaSerializerGenerator
                      .Where(group => group.Count() > 1))
         {
             var typeNames = string.Join(", ", duplicate.Select(m => ToDisplayName(m.FullyQualifiedName)));
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateManifest, serializer.ClassName, duplicate.Key, typeNames));
+
+            // Spans multiple messages -- no single message owns this diagnostic, so it reports at the
+            // serializer's own attribute instead.
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateManifest, new LocationKey(serializer.Key, string.Empty), serializer.ClassName, duplicate.Key, typeNames));
             isValid = false;
         }
 
         foreach (var message in reachableMessages)
         {
+            // Type-level diagnostics on a closed-generic SCHEMA (MissingFields, NoMatchingConstructor,
+            // ConstructorParameterNotCovered, DuplicateFieldIndex below) redirect to that
+            // construction's own registration attribute -- see MessageTypeLocationKey's doc comment.
+            var messageAt = MessageTypeLocationKey(serializer, message);
+
             if (message.Fields.Length == 0 && !message.AllowEmpty)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.MissingFields, ToDisplayName(message.FullyQualifiedName)));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.MissingFields, messageAt, ToDisplayName(message.FullyQualifiedName)));
                 isValid = false;
             }
 
             foreach (var duplicate in message.Fields.GroupBy(field => field.Index).Where(group => group.Count() > 1))
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateFieldIndex, ToDisplayName(message.FullyQualifiedName), duplicate.Key.ToString()));
+                // Spans multiple fields of the same message -- reports at the message type itself.
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateFieldIndex, messageAt, ToDisplayName(message.FullyQualifiedName), duplicate.Key.ToString()));
                 isValid = false;
             }
 
@@ -590,25 +633,28 @@ public sealed partial class AkkaSerializerGenerator
             // message.Fields, so they cannot double-report through any of the checks below.
             foreach (var invalidField in message.InvalidFields)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FieldPropertyNotAccessible, invalidField.PropertyName, ToDisplayName(message.FullyQualifiedName), invalidField.Reason));
+                var at = new LocationKey(message.Key, invalidField.PropertyName);
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.FieldPropertyNotAccessible, at, invalidField.PropertyName, ToDisplayName(message.FullyQualifiedName), invalidField.Reason));
                 isValid = false;
             }
 
             // Read-side reconstruction: either no constructor could be selected, or the selected
             // constructor leaves [AkkaField] properties uncovered with no accessible setter to fall
-            // back on -- both make deserialize impossible to generate.
+            // back on -- both make deserialize impossible to generate. Not any one field's fault, so
+            // reports at the message type itself.
             foreach (var error in message.ConstructionPlan.Errors)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.NoMatchingConstructor, ToDisplayName(message.FullyQualifiedName), error));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.NoMatchingConstructor, messageAt, ToDisplayName(message.FullyQualifiedName), error));
                 isValid = false;
             }
 
             // Advisory only: the selected constructor still works (its defaulted parameter is simply
             // never supplied), but the parameter's value silently reverts to its default on every
-            // deserialize because no [AkkaField] property feeds it.
+            // deserialize because no [AkkaField] property feeds it. The parameter need not even
+            // correspond to an [AkkaField] property, so this reports at the message type itself too.
             foreach (var parameterName in message.ConstructionPlan.UncoveredDefaultedParameters)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ConstructorParameterNotCovered, parameterName, ToDisplayName(message.FullyQualifiedName)));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ConstructorParameterNotCovered, messageAt, parameterName, ToDisplayName(message.FullyQualifiedName)));
             }
 
             // Error (AKKASG038): an object-typed property is always the envelope-payload boundary
@@ -616,15 +662,16 @@ public sealed partial class AkkaSerializerGenerator
             // never take effect, so this is contradictory author intent, not a harmless no-op.
             foreach (var field in message.Fields.Where(field => field.UnionDeclaredOnObjectField))
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionDeclaredOnObjectField, field.Name, ToDisplayName(message.FullyQualifiedName)));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionDeclaredOnObjectField, new LocationKey(message.Key, field.Name), field.Name, ToDisplayName(message.FullyQualifiedName)));
                 isValid = false;
             }
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Unsupported))
             {
+                var at = new LocationKey(message.Key, field.Name);
                 diagnostics.Add(field.Mapping.SuggestsEnvelopeOrUnion
-                    ? new DiagnosticSpec(DiagnosticKey.UnsupportedFieldTypePolymorphic, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName))
-                    : new DiagnosticSpec(DiagnosticKey.UnsupportedFieldType, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
+                    ? new DiagnosticSpec(DiagnosticKey.UnsupportedFieldTypePolymorphic, at, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName))
+                    : new DiagnosticSpec(DiagnosticKey.UnsupportedFieldType, at, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
                 isValid = false;
             }
 
@@ -636,7 +683,8 @@ public sealed partial class AkkaSerializerGenerator
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.UnsupportedEnumUnderlyingType))
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnsupportedEnumUnderlyingType, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.Mapping.TypeFullName), ToDisplayName(field.Mapping.EnumUnderlyingTypeName)));
+                var at = new LocationKey(message.Key, field.Name);
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnsupportedEnumUnderlyingType, at, field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.Mapping.TypeFullName), ToDisplayName(field.Mapping.EnumUnderlyingTypeName)));
                 isValid = false;
             }
 
@@ -673,7 +721,10 @@ public sealed partial class AkkaSerializerGenerator
                      .Where(group => group.Select(m => m.FullyQualifiedName).Distinct(StringComparer.Ordinal).Count() > 1))
         {
             var typeNames = string.Join(", ", collision.Select(m => ToDisplayName(m.FullyQualifiedName)));
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateGeneratedName, serializer.ClassName, collision.Key, typeNames));
+
+            // Spans multiple messages -- no single message owns this diagnostic, so it reports at the
+            // serializer's own attribute instead.
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.DuplicateGeneratedName, new LocationKey(serializer.Key, string.Empty), serializer.ClassName, collision.Key, typeNames));
             isValid = false;
         }
 
@@ -683,7 +734,9 @@ public sealed partial class AkkaSerializerGenerator
     // Decision table for a nested type this generator cannot serialize today: a closed generic
     // construction reports AKKASG023 (register it with [AkkaSerializable<T>]); a type declared in a
     // referenced assembly reports the AKKASG007 cross-assembly wording; anything else reports the
-    // plain AKKASG007 message.
+    // plain AKKASG007 message. Reports at the LOCAL referencing property -- per Decision 16, this is
+    // true even for the cross-assembly variant: the foreign type's own assembly gets no diagnostic at
+    // all, since no generator work runs there.
     private static void ReportMissingNestedSchema(
         MessageInfo message,
         string fieldName,
@@ -692,15 +745,17 @@ public sealed partial class AkkaSerializerGenerator
         string serializerClassName,
         ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
+        var at = new LocationKey(message.Key, fieldName);
+
         if (mapping.IsGenericConstruction)
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnregisteredClosedGenericField, fieldName, ToDisplayName(message.FullyQualifiedName), ToDisplayName(typeFullName), serializerClassName));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnregisteredClosedGenericField, at, fieldName, ToDisplayName(message.FullyQualifiedName), ToDisplayName(typeFullName), serializerClassName));
             return;
         }
 
         diagnostics.Add(mapping.ForeignAssemblyName.Length > 0
-            ? new DiagnosticSpec(DiagnosticKey.MissingNestedSerializableDefinitionCrossAssembly, fieldName, ToDisplayName(message.FullyQualifiedName), ToDisplayName(typeFullName), mapping.ForeignAssemblyName, serializerClassName)
-            : new DiagnosticSpec(DiagnosticKey.MissingNestedSerializableDefinition, fieldName, ToDisplayName(message.FullyQualifiedName), ToDisplayName(typeFullName)));
+            ? new DiagnosticSpec(DiagnosticKey.MissingNestedSerializableDefinitionCrossAssembly, at, fieldName, ToDisplayName(message.FullyQualifiedName), ToDisplayName(typeFullName), mapping.ForeignAssemblyName, serializerClassName)
+            : new DiagnosticSpec(DiagnosticKey.MissingNestedSerializableDefinition, at, fieldName, ToDisplayName(message.FullyQualifiedName), ToDisplayName(typeFullName)));
     }
 
     /// <summary>
@@ -732,7 +787,10 @@ public sealed partial class AkkaSerializerGenerator
             if (reachableKeys.Contains(schema.Key))
                 continue;
 
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ClosedGenericRegistrationNotInProtocol,
+            // Reports at THIS registration's own [AkkaSerializable<T>] attribute application --
+            // Decision 16: "the registration attribute for a closed generic".
+            var at = new LocationKey(serializer.Key, ClosedGenericLocationMember(registration.TargetDisplayName));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ClosedGenericRegistrationNotInProtocol, at,
                 ToDisplayName(registration.TargetDisplayName), serializer.ClassName, ToDisplayName(serializer.ProtocolTypeFullName)));
             isValid = false;
         }
@@ -744,9 +802,12 @@ public sealed partial class AkkaSerializerGenerator
     // gets the cross-assembly wording; a same-assembly member gets the plain message.
     private static void ReportUnionMemberNotSerializable(MessageInfo message, string fieldName, UnionMemberInfo member, string serializerClassName, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
+        // Cross-assembly variant reports at the LOCAL referencing field too -- per Decision 16, the
+        // foreign member type's own assembly gets no diagnostic at all.
+        var at = new LocationKey(message.Key, fieldName);
         diagnostics.Add(member.ForeignAssemblyName.Length > 0
-            ? new DiagnosticSpec(DiagnosticKey.UnionMemberNotSerializableCrossAssembly, ToDisplayName(member.TypeFullName), fieldName, ToDisplayName(message.FullyQualifiedName), member.ForeignAssemblyName, serializerClassName)
-            : new DiagnosticSpec(DiagnosticKey.UnionMemberNotSerializable, ToDisplayName(member.TypeFullName), fieldName, ToDisplayName(message.FullyQualifiedName)));
+            ? new DiagnosticSpec(DiagnosticKey.UnionMemberNotSerializableCrossAssembly, at, ToDisplayName(member.TypeFullName), fieldName, ToDisplayName(message.FullyQualifiedName), member.ForeignAssemblyName, serializerClassName)
+            : new DiagnosticSpec(DiagnosticKey.UnionMemberNotSerializable, at, ToDisplayName(member.TypeFullName), fieldName, ToDisplayName(message.FullyQualifiedName)));
     }
 
     private static bool ValidateUnionField(
@@ -758,6 +819,10 @@ public sealed partial class AkkaSerializerGenerator
     {
         var isValid = true;
 
+        // Every union diagnostic below reports at the FIELD carrying the union -- not at any one
+        // member's own declaration, which may not even be in this compilation.
+        var at = new LocationKey(message.Key, field.Name);
+
         // AkkaUnionAttribute(Type first, params Type[] rest) makes an empty member set
         // unrepresentable: `first` is a mandatory constructor argument, so [AkkaUnion()] does not
         // compile and field.UnionMembers can never be empty here. The "at least one member type is
@@ -768,7 +833,7 @@ public sealed partial class AkkaSerializerGenerator
                      .GroupBy(member => member.Key)
                      .Where(group => group.Count() > 1))
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidUnionMemberSet, field.Name, ToDisplayName(message.FullyQualifiedName), $"member type '{ToDisplayName(duplicate.Key.DisplayName ?? string.Empty)}' is declared more than once"));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.InvalidUnionMemberSet, at, field.Name, ToDisplayName(message.FullyQualifiedName), $"member type '{ToDisplayName(duplicate.Key.DisplayName ?? string.Empty)}' is declared more than once"));
             isValid = false;
         }
 
@@ -784,7 +849,7 @@ public sealed partial class AkkaSerializerGenerator
 
             if (!member.IsAssignable)
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberNotAssignable, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberNotAssignable, at, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName), ToDisplayName(field.TypeFullName)));
                 isValid = false;
             }
 
@@ -796,13 +861,13 @@ public sealed partial class AkkaSerializerGenerator
             // An abstract member fires AKKASG036 ONLY: it is definitionally unsealed, and stacking
             // the weaker AKKASG025 on top of it would be noise.
             if (member.IsAbstract)
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberAbstract, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberAbstract, at, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
             else if (!member.IsSealed)
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberNotSealed, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberNotSealed, at, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
 
             if (string.IsNullOrWhiteSpace(memberMessage.Manifest))
             {
-                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberMissingManifest, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberMissingManifest, at, ToDisplayName(member.TypeFullName), field.Name, ToDisplayName(message.FullyQualifiedName)));
                 isValid = false;
                 continue;
             }
@@ -818,7 +883,7 @@ public sealed partial class AkkaSerializerGenerator
 
         foreach (var collision in manifests.Where(pair => pair.Value.Distinct(StringComparer.Ordinal).Count() > 1))
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberManifestCollision, field.Name, ToDisplayName(message.FullyQualifiedName), collision.Key, string.Join(", ", collision.Value.Select(ToDisplayName))));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberManifestCollision, at, field.Name, ToDisplayName(message.FullyQualifiedName), collision.Key, string.Join(", ", collision.Value.Select(ToDisplayName))));
             isValid = false;
         }
 

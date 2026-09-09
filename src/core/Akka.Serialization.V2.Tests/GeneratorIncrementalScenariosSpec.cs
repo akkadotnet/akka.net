@@ -123,19 +123,26 @@ public sealed class GeneratorIncrementalScenariosSpec
     [Fact(DisplayName = "Tracked pipeline stages should match TrackingNames.All exactly (a new stage must update this spec)")]
     public void TrackingNames_should_match_expected_stage_count()
     {
-        // Pins today's stage count. Adding a seventh (or removing one) named pipeline stage is a
+        // Pins today's stage count. Adding a ninth (or removing one) named pipeline stage is a
         // deliberate architectural change -- this assertion makes it fail loudly here instead of
         // only surfacing as a silent gap in the scenarios below. ResolvedSerializers (the
-        // per-serializer resolve stage from the S3 architecture pass) is the fifth; CompilationFacts
-        // (the whole-compilation facts stage from the S5 architecture pass) is the sixth. Both were
-        // ADDED downstream of the four stages above, which is why scenarios (a)/(c)/(d)/(e) below
-        // still pin the exact same reasons for those four as before.
-        AkkaSerializerGenerator.TrackingNames.All.Should().HaveCount(6);
+        // per-serializer resolve stage from the S3 architecture pass) and CompilationFacts (the
+        // whole-compilation facts stage from the S5 architecture pass) predate S6. S6 "locations"
+        // adds two: SerializerSchemas/MessageSchemas split ExtractedSerializers'/ExtractedMessages'
+        // raw output (schema vs location bag) -- see each constant's own doc comment in
+        // AkkaSerializerGenerator.cs. A locations-only counterpart to each (SerializerLocations/
+        // MessageLocations) existed briefly during development but was removed: a per-node Select
+        // for a value read back only once, batched, cost more than it saved -- the merged location
+        // bag (allLocations, in Initialize) now collects the raw ExtractedSerializer/ExtractedMessage
+        // values directly instead.
+        AkkaSerializerGenerator.TrackingNames.All.Should().HaveCount(8);
         AkkaSerializerGenerator.TrackingNames.All.Should().BeEquivalentTo(new[]
         {
             AkkaSerializerGenerator.TrackingNames.ExtractedSerializers,
+            AkkaSerializerGenerator.TrackingNames.SerializerSchemas,
             AkkaSerializerGenerator.TrackingNames.CollectedSerializers,
             AkkaSerializerGenerator.TrackingNames.ExtractedMessages,
+            AkkaSerializerGenerator.TrackingNames.MessageSchemas,
             AkkaSerializerGenerator.TrackingNames.CollectedMessages,
             AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
             AkkaSerializerGenerator.TrackingNames.CompilationFacts
@@ -150,13 +157,25 @@ public sealed class GeneratorIncrementalScenariosSpec
     // at -- gives every attributed node a new input identity, so EVERY node's extraction transform
     // re-executes. A node whose resulting model still compares equal to its previous run reports
     // Unchanged (recomputed, but the same value), never Cached (skipped without recomputing); only
-    // a node whose model actually differs reports Modified. Nothing at the per-node
+    // a node whose model actually differs reports Modified. Nothing at the RAW per-node
     // (ExtractedSerializers/ExtractedMessages) level is ever Cached in any scenario below -- the
     // exact same "every node reruns" profile shows up whether the edit lands in the tracked file,
     // an unrelated file, or is a single added reference. Only downstream, at the Collect() level,
     // does the pipeline recover a Cached result -- and only when EVERY individual element that
     // feeds it is Unchanged/Cached; one truly Modified element (scenario (b)) is enough to make the
     // whole collected array report Modified instead.
+    //
+    // S6 "locations" adds a wrinkle: the RAW per-node output now carries a location bag alongside
+    // the schema, and that bag IS whitespace-sensitive (see LocationSpec's own doc comment). So the
+    // raw stage itself can report Modified purely because a span shifted, even when the SCHEMA is
+    // untouched (scenario (c)) or even when the location bag's KEY set changes from a same-length
+    // rename (scenario (b), where field name IS the key). The schemas-only projection immediately
+    // strips that back out, which is what keeps Collect/Resolve/Emit exactly as cached as before S6
+    // -- see each scenario's own comments for the concrete per-element reasons. The merged location
+    // bag (allLocations) that a raw-stage Modified eventually feeds is NOT one of the tracked stages
+    // below -- it collects the raw ExtractedSerializer/ExtractedMessage values directly, with no
+    // separate per-node Select of its own -- so it is not asserted on here either; the scenarios only
+    // pin what happens at the RAW/schemas/Collect/Resolve level.
     // ------------------------------------------------------------------------------------------
 
     [Fact(DisplayName = "Scenario (a): editing an unrelated file reuses every tracked stage and re-emits no file")]
@@ -168,10 +187,20 @@ public sealed class GeneratorIncrementalScenariosSpec
 
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedSerializers,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+
+        // S6: neither serializer's location bag shifts (nothing in Main.cs moved), so the
+        // schemas-only projection of ExtractedSerializers reports the same reason as the raw stage.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.SerializerSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedSerializers, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedMessages,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+
+        // S6: same reasoning as the serializer projection above -- no message's location bag shifts.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.MessageSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Cached);
 
         // ResolvedSerializers' own input (serializers.Combine(messages)) is unchanged (both
@@ -205,10 +234,22 @@ public sealed class GeneratorIncrementalScenariosSpec
         // and Collect() lands on Cached.
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedSerializers,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.SerializerSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedSerializers, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedMessages,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Modified, IncrementalStepRunReason.Unchanged,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+
+        // S6: "Count" -> "Total" is the same length, so no message's LOCATION SPAN actually moves --
+        // but AlphaTwo's location bag is keyed by FIELD NAME (LocationKey.Member), and that name
+        // itself changed, so the bag's key set differs from before ("Count" gone, "Total" added).
+        // AlphaTwo's raw ExtractedMessages element is therefore Modified for two independent reasons
+        // (schema AND location both differ), which is exactly what the assertion above already
+        // shows; MessageSchemas reports the SCHEMA half of that on its own.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.MessageSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Modified, IncrementalStepRunReason.Cached,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Modified);
 
         // THE SCENARIO FLIP (S3): CollectedMessages changing forces the ResolvedSerializers
@@ -242,21 +283,43 @@ public sealed class GeneratorIncrementalScenariosSpec
     {
         var result = GeneratorTestHarness.RunIncremental(FixtureSource, FixtureWithCommentInsideBetaTwo);
 
-        // A comment carries no semantic information, so BetaTwo's recomputed model -- like every
-        // other node's -- compares EQUAL to its previous run. This scenario's tracked-step profile
-        // is therefore indistinguishable from scenario (a)'s (an edit to a wholly unrelated file):
-        // proof that the "everything reruns" behavior described above is driven by the Compilation
-        // changing identity, not by whether the edit is textually "inside" a tracked declaration.
+        // THE S6 SCENARIO FLIP: pre-S6, a comment carries no semantic information, so this scenario's
+        // tracked-step profile was indistinguishable from scenario (a)'s. S6 adds a location bag to
+        // the raw ExtractedMessages/ExtractedSerializers output, and a location bag IS
+        // whitespace-sensitive by design (that is the whole point -- it must track real spans, so a
+        // diagnostic points at the right place). The inserted comment sits inside BetaTwo, so every
+        // declaration PHYSICALLY AFTER it in Main.cs -- BetaTwo itself, BetaThree, and BetaSerializer
+        // -- gets a real, different absolute text position; nothing schema-level about any of them
+        // changed. AlphaOne/AlphaTwo/AlphaThree/AlphaSerializer/BetaOne sit BEFORE the comment and are
+        // completely unaffected.
+        //
+        // BetaSerializer's raw stage is Modified (its location bag shifted), but its SCHEMA is
+        // unaffected -- Unchanged, not Cached, since the stage still recomputed and produced an equal
+        // SerializerInfo.
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedSerializers,
-            IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+            IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Modified);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.SerializerSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Unchanged);
+
+        // The schemas-only projection feeds a Collect() whose every element is Cached/Unchanged
+        // (equal to last run), so CollectedSerializers itself lands on Cached -- the raw stage's
+        // Modified-ness for BetaSerializer (its location bag shifted) never reaches here.
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedSerializers, IncrementalStepRunReason.Cached);
+
+        // BetaTwo (the edited message) and BetaThree (physically after it) both shift; BetaOne and
+        // every Alpha message do not.
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedMessages,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged,
-            IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+            IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Modified, IncrementalStepRunReason.Modified);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.MessageSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Cached);
 
-        // Same as scenario (a): ResolvedSerializers' input is unchanged, so both serializers' resolve
-        // steps are skipped entirely (Cached).
+        // Same as scenario (a): both Collect()'d arrays are Cached, so ResolvedSerializers' own input
+        // never changed identity -- both serializers' resolve steps are skipped entirely (Cached).
+        // THIS is the property S6 exists to preserve: a location-only edit reaches neither Resolve nor
+        // Emit.
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
             IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
 
@@ -265,7 +328,8 @@ public sealed class GeneratorIncrementalScenariosSpec
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CompilationFacts, IncrementalStepRunReason.Unchanged);
 
         // TARGET: unchanged from today -- a comment-only edit re-emitting nothing is already the
-        // desired behavior; no migration PR needs to touch this.
+        // desired behavior; S6 must not regress it, and does not: no file is re-emitted even though
+        // three raw extraction nodes (BetaSerializer, BetaTwo, BetaThree) report Modified.
         ChangedHintNames(result).Should().BeEmpty();
     }
 
@@ -276,15 +340,23 @@ public sealed class GeneratorIncrementalScenariosSpec
             new[] { new SourceFile("Main.cs", FixtureSource), new SourceFile("Unrelated.cs", UnrelatedSourceBefore) },
             new[] { new SourceFile("Main.cs", FixtureSource), new SourceFile("Unrelated.cs", UnrelatedSourceWithTrivialKeystroke) });
 
-        // Same profile as (a)/(c): a single appended blank line in a file the generator never looks
-        // at is still enough to make every node's extraction transform recompute (Unchanged), and
-        // Collect() still lands on Cached since nothing actually differs.
+        // Same profile as (a): a single appended blank line in a file the generator never looks at
+        // is still enough to make every node's extraction transform recompute (Unchanged), and
+        // Collect() still lands on Cached since nothing actually differs. The edit is in a file
+        // Main.cs never shares -- no location in it shifts either, so the S6 schemas-only projection
+        // stays Cached for every element too (contrast scenario (c), where the edit lands INSIDE the
+        // tracked file).
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedSerializers,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.SerializerSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedSerializers, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedMessages,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.MessageSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Cached);
 
         // Same as scenario (a): ResolvedSerializers' input is unchanged, so both serializers' resolve
@@ -332,13 +404,19 @@ public sealed class GeneratorIncrementalScenariosSpec
 
         // Same profile again: adding a reference nothing in the fixture uses still changes the
         // Compilation's identity, so every node recomputes (Unchanged) and Collect() lands on
-        // Cached since no extracted model actually differs.
+        // Cached since no extracted model actually differs. No text in Main.cs moved, so the S6
+        // schemas-only projection is Cached too.
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedSerializers,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.SerializerSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedSerializers, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedMessages,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.MessageSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Cached);
 
         // Same as scenario (a): ResolvedSerializers' input is unchanged, so both serializers' resolve
@@ -379,13 +457,19 @@ public sealed class GeneratorIncrementalScenariosSpec
             afterExtraReferences: new[] { extraReference });
 
         // Same profile as scenario (e) up through ResolvedSerializers: nothing in the fixture itself
-        // changed, so every extracted/collected/resolved model still compares equal.
+        // changed, so every extracted/collected/resolved model still compares equal, and the S6
+        // schemas-only projection stays Cached (no text in Main.cs moved).
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedSerializers,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.SerializerSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedSerializers, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ExtractedMessages,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged,
             IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged, IncrementalStepRunReason.Unchanged);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.MessageSchemas,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
         AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CollectedMessages, IncrementalStepRunReason.Cached);
 
         // TARGET (S5): CompilationFacts is NOT combined into ResolvedSerializers' inputs (see

@@ -420,13 +420,25 @@ public sealed partial class AkkaSerializerGenerator
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 
-        public static Diagnostic ToDiagnostic(DiagnosticSpec spec)
+        /// <summary>
+        /// Turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>, resolving
+        /// <see cref="DiagnosticSpec.At"/> against <paramref name="locations"/> -- the ONE place in
+        /// this generator a <see cref="Location"/> is ever attached to a reported diagnostic. Falls
+        /// back to <see cref="Location.None"/> when <see cref="DiagnosticSpec.At"/> is null or
+        /// <paramref name="locations"/> has no entry for it (a site this generator could not resolve,
+        /// for example because the underlying syntax reference could not be re-materialized).
+        /// </summary>
+        public static Diagnostic ToDiagnostic(DiagnosticSpec spec, LocationBag locations)
         {
             var args = new object[spec.MessageArgs.Length];
             for (var i = 0; i < spec.MessageArgs.Length; i++)
                 args[i] = spec.MessageArgs[i];
 
-            return Diagnostic.Create(Resolve(spec.Key), Location.None, args);
+            var location = spec.At is { } key && locations.TryGetLocation(key, out var found)
+                ? found.ToLocation()
+                : Location.None;
+
+            return Diagnostic.Create(Resolve(spec.Key), location, args);
         }
     }
 }
