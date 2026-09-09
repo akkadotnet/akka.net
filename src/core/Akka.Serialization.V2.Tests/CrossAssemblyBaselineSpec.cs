@@ -343,7 +343,7 @@ public sealed class CrossAssemblyBaselineSpec
         generatedSource.Should().Contain("WriteEnvelopePayload");
     }
 
-    [Fact(DisplayName = "Cross-assembly baseline: a protocol implementor declared only in a referenced assembly is invisible to AKKASG029's compilation-local scan, and gets no Manifest dispatch arm")]
+    [Fact(DisplayName = "Cross-assembly baseline: a protocol implementor declared only in a referenced assembly is now discovered by Decision 19's referenced-assembly walk, and gets a Manifest dispatch arm")]
     public void Protocol_implementor_declared_only_in_referenced_assembly()
     {
         const string sourceA = """
@@ -375,13 +375,20 @@ public sealed class CrossAssemblyBaselineSpec
         var (generatorDiagnostics, compileDiagnostics, generatedSource) = RunGeneratorAgainstB(sourceB, assemblyA, "CrossAssemblyBaseline.Case6.B");
         var all = generatorDiagnostics.AddRange(compileDiagnostics);
 
-        // Why AKKASG029 does not fire here.
-        // The protocol-coverage check only looks at types declared in this compilation.
-        // OrderPlaced is declared only in A, so the check never sees it, even though OrderPlaced
-        // implements IOrders. The generated Manifest switch has no case for OrderPlaced.
+        // Why this case now compiles clean, with a dispatch arm (Decision 19).
+        // The generator walks every referenced assembly that itself references
+        // Akka.Serialization.V2 (CrossAssemblyBaseline.Case6.A qualifies), enumerating its public
+        // types from metadata and adopting every [AkkaSerializable] implementor of OrdersSerializer's
+        // protocol it finds -- OrderPlaced, even though it is declared only in A. Its full schema is
+        // extracted the same way a locally-named nested field's foreign type already was (Decision
+        // 16's ComputeMetadataSchemas, now also seeded from this walk), so OrdersSerializer gets a
+        // real WriteOrderPlaced/ReadOrderPlaced pair, a "placed-v1" Manifest dispatch arm, and a
+        // typeof(OrderPlaced) binding -- byte-identical to what a local declaration would produce.
         all.Should().NotContain(d => d.Id == "AKKASG029");
-        generatedSource.Should().NotContain("OrderPlaced");
         all.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+        generatedSource.Should().Contain("OrderPlaced");
+        generatedSource.Should().Contain("placed-v1");
+        generatedSource.Should().Contain("WriteOrderPlaced").And.Contain("ReadOrderPlaced");
     }
 
     // ------------------------------------------------------------------------------------------

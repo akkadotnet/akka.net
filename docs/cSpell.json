@@ -11,6 +11,7 @@
         "struct",
         "structs",
         "uncatchable",
+        "uncompilable",
         "actorref",
         "arounds",
         "Akka",

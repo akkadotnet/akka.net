@@ -167,10 +167,10 @@ public sealed partial class AkkaSerializerGenerator
     /// driver of any kind -- so a test can call it directly on hand-built models (see
     /// GeneratorValidatorSpec.cs) with no generator run at all.
     /// </summary>
-    internal static ImmutableArray<DiagnosticSpec> Validate(SerializerInfo serializer, ImmutableArray<MessageInfo> messages, MetadataSchemaTable? metadataSchemas = null)
+    internal static ImmutableArray<DiagnosticSpec> Validate(SerializerInfo serializer, ImmutableArray<MessageInfo> messages, MetadataSchemaTable? metadataSchemas = null, CompilationFacts? facts = null)
     {
         var schemas = metadataSchemas ?? MetadataSchemaTable.Empty;
-        var resolved = ResolveSerializerMessages(serializer, messages, schemas);
+        var resolved = ResolveSerializerMessages(serializer, messages, schemas, facts ?? CompilationFacts.Empty);
         var diagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
         ValidateResolved(serializer, resolved, schemas, diagnostics);
         return diagnostics.ToImmutable();
@@ -184,7 +184,7 @@ public sealed partial class AkkaSerializerGenerator
     /// itself -- mirroring how <see cref="Validate"/> is <see cref="ResolveSerializer"/>'s
     /// single-serializer counterpart for validation alone.
     /// </summary>
-    internal static ResolvedSerializer ResolveSerializerForTests(SerializerInfo serializer, ImmutableArray<MessageInfo> messages)
+    internal static ResolvedSerializer ResolveSerializerForTests(SerializerInfo serializer, ImmutableArray<MessageInfo> messages, CompilationFacts? facts = null)
     {
         return ResolveSerializer(
             serializer,
@@ -192,7 +192,8 @@ public sealed partial class AkkaSerializerGenerator
             ImmutableDictionary<int, string>.Empty,
             ImmutableDictionary<string, string>.Empty,
             ComputeGenericDefinitions(messages),
-            MetadataSchemaTable.Empty);
+            MetadataSchemaTable.Empty,
+            facts ?? CompilationFacts.Empty);
     }
 
     /// <summary>
@@ -297,14 +298,28 @@ public sealed partial class AkkaSerializerGenerator
         if (serializer.ProtocolTypeFullName.Length == 0)
             return diagnostics.ToImmutable();
 
-        if (!facts.LocalUnmarkedImplementorsByProtocol.TryGetValue(serializer.ProtocolTypeKey, out var implementors))
-            return diagnostics.ToImmutable();
-
         var at = new LocationKey(serializer.Key, string.Empty);
-        foreach (var implementor in implementors)
+
+        if (facts.LocalUnmarkedImplementorsByProtocol.TryGetValue(serializer.ProtocolTypeKey, out var localImplementors))
         {
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ProtocolMessageNotSerializable, at,
-                ToDisplayName(implementor.DisplayName ?? string.Empty), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
+            foreach (var implementor in localImplementors)
+            {
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ProtocolMessageNotSerializable, at,
+                    ToDisplayName(implementor.DisplayName ?? string.Empty), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
+            }
+        }
+
+        // Decision 19: AKKASG029 widens to the combined, cross-assembly set. An unmarked implementor
+        // declared in a referenced assembly is reported the same way a local one is -- there is no
+        // local property or declaration for either shape to attach the diagnostic to, so both report
+        // at the serializer's own attribute.
+        if (facts.ReferencedAssemblyUnmarkedImplementorsByProtocol.TryGetValue(serializer.ProtocolTypeKey, out var referencedImplementors))
+        {
+            foreach (var implementor in referencedImplementors)
+            {
+                diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ProtocolMessageNotSerializable, at,
+                    ToDisplayName(implementor.DisplayName ?? string.Empty), ToDisplayName(serializer.ProtocolTypeFullName), serializer.ClassName));
+            }
         }
 
         return diagnostics.ToImmutable();

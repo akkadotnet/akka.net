@@ -48,7 +48,7 @@ public sealed partial class GoldenSerializer
             global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> => "wrapper-geo-v1",
             global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> => "wrapper-pair-v1",
             global::GoldenSample.Pair<int, string> => "pair-int-string-v1",
-            _ => throw new global::System.ArgumentException($"Unsupported generated serializer type: {obj.GetType()}", nameof(obj))
+            _ => throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorGolden', which does not recognize this type.", nameof(obj))
         };
     }
 
@@ -108,7 +108,7 @@ public sealed partial class GoldenSerializer
                 WritePairIntString(ref writer, message);
                 break;
             default:
-                throw new global::System.ArgumentException($"Unsupported generated serializer type: {obj.GetType()}", nameof(obj));
+                throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorGolden', which does not recognize this type.", nameof(obj));
         }
     }
 

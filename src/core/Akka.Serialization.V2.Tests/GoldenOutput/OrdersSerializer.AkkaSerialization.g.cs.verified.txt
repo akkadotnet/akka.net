@@ -3,31 +3,30 @@
 using System;
 using System.Buffers;
 
-namespace ExpansionGoldenCrossAssembly.AssemblyB;
+namespace ReferencedImplementorGolden.AssemblyB;
 
-public sealed partial class ExpansionGoldenCrossAssemblySerializer
+public sealed partial class OrdersSerializer
 {
-    public ExpansionGoldenCrossAssemblySerializer(global::Akka.Actor.ExtendedActorSystem system) : base(system)
+    public OrdersSerializer(global::Akka.Actor.ExtendedActorSystem system) : base(system)
     {
     }
 
-    public override int Identifier => 190102;
+    public override int Identifier => 190101;
 
     public static partial global::Akka.Serialization.V2.SerializerRegistration CreateRegistration()
     {
-        return global::Akka.Serialization.V2.SerializerRegistration.Create("expansion-golden-cross-assembly",
-            system => new ExpansionGoldenCrossAssemblySerializer(system),
+        return global::Akka.Serialization.V2.SerializerRegistration.Create("referenced-implementor-golden",
+            system => new OrdersSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
-                typeof(global::ExpansionGoldenCrossAssembly.AssemblyB.IComms),
-                typeof(global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp))); 
+                typeof(global::ReferencedImplementorGolden.AssemblyA.IOrders))); 
     }
 
     public override string Manifest(object obj)
     {
         return obj switch
         {
-            global::ExpansionGoldenCrossAssembly.AssemblyB.Ping => "ping-v1",
-            global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp => "audit-override-v1",
+            global::ReferencedImplementorGolden.AssemblyB.OrderCancelled => "cancelled-v1",
+            global::ReferencedImplementorGolden.AssemblyA.OrderPlaced => "placed-v1",
             _ => throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorHarness', which does not recognize this type.", nameof(obj))
         };
     }
@@ -45,11 +44,11 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
     {
         switch (obj)
         {
-            case global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message:
-                WritePing(ref writer, message);
+            case global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message:
+                WriteOrderCancelled(ref writer, message);
                 break;
-            case global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message:
-                WriteAuditStamp(ref writer, message);
+            case global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message:
+                WriteOrderPlaced(ref writer, message);
                 break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. This serializer was generated in assembly 'AkkaSerializationGeneratorHarness', which does not recognize this type.", nameof(obj));
@@ -61,8 +60,8 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
         var reader = new global::MessagePack.MessagePackReader(bytes);
         return manifest switch
         {
-            "ping-v1" => ReadPing(ref reader),
-            "audit-override-v1" => ReadAuditStamp(ref reader),
+            "cancelled-v1" => ReadOrderCancelled(ref reader),
+            "placed-v1" => ReadOrderPlaced(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -71,8 +70,8 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
     {
         return obj switch
         {
-            global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message => SizeOfPing(message),
-            global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message => SizeOfAuditStamp(message),
+            global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message => SizeOfOrderCancelled(message),
+            global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message => SizeOfOrderPlaced(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -105,37 +104,37 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
         }
     }
 
-    private int SizeOfPing(global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message)
+    private int SizeOfOrderCancelled(global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message)
     {
         checked
         {
             var size = SizeOfMapHeader(1);
             size += SizeOfInt32(1);
-            size += SizeOfInt32(message.Value);
+            size += SizeOfString(message.OrderId);
             return size;
         }
     }
 
-    private void WritePing(ref global::MessagePack.MessagePackWriter writer, global::ExpansionGoldenCrossAssembly.AssemblyB.Ping message)
+    private void WriteOrderCancelled(ref global::MessagePack.MessagePackWriter writer, global::ReferencedImplementorGolden.AssemblyB.OrderCancelled message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
-        writer.Write(message.Value);
+        writer.Write(message.OrderId);
     }
 
-    private global::ExpansionGoldenCrossAssembly.AssemblyB.Ping ReadPing(ref global::MessagePack.MessagePackReader reader)
+    private global::ReferencedImplementorGolden.AssemblyB.OrderCancelled ReadOrderCancelled(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
-        int value = 0;
-        var __hasValue = false;
+        string? orderId = null;
+        var __hasOrderId = false;
         for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
         {
             var __fieldId = reader.ReadInt32();
             switch (__fieldId)
             {
                 case 1:
-                    value = reader.ReadInt32();
-                    __hasValue = true;
+                    orderId = reader.ReadString();
+                    __hasOrderId = true;
                     break;
                 default:
                     reader.Skip();
@@ -143,42 +142,42 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
             }
         }
 
-        if (!__hasValue)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Value] with index [1] while deserializing [global::ExpansionGoldenCrossAssembly.AssemblyB.Ping].");
-        return new global::ExpansionGoldenCrossAssembly.AssemblyB.Ping(Value: value);
+        if (!__hasOrderId || orderId is null)
+            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [OrderId] with index [1] while deserializing [global::ReferencedImplementorGolden.AssemblyB.OrderCancelled].");
+        return new global::ReferencedImplementorGolden.AssemblyB.OrderCancelled(OrderId: orderId!);
     }
 
-    private int SizeOfAuditStamp(global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message)
+    private int SizeOfOrderPlaced(global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message)
     {
         checked
         {
             var size = SizeOfMapHeader(1);
             size += SizeOfInt32(1);
-            size += SizeOfString(message.ActorPath);
+            size += SizeOfString(message.OrderId);
             return size;
         }
     }
 
-    private void WriteAuditStamp(ref global::MessagePack.MessagePackWriter writer, global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp message)
+    private void WriteOrderPlaced(ref global::MessagePack.MessagePackWriter writer, global::ReferencedImplementorGolden.AssemblyA.OrderPlaced message)
     {
         writer.WriteMapHeader(1);
         writer.Write(1);
-        writer.Write(message.ActorPath);
+        writer.Write(message.OrderId);
     }
 
-    private global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp ReadAuditStamp(ref global::MessagePack.MessagePackReader reader)
+    private global::ReferencedImplementorGolden.AssemblyA.OrderPlaced ReadOrderPlaced(ref global::MessagePack.MessagePackReader reader)
     {
         var __fieldCount = reader.ReadMapHeader();
-        string? actorPath = null;
-        var __hasActorPath = false;
+        string? orderId = null;
+        var __hasOrderId = false;
         for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
         {
             var __fieldId = reader.ReadInt32();
             switch (__fieldId)
             {
                 case 1:
-                    actorPath = reader.ReadString();
-                    __hasActorPath = true;
+                    orderId = reader.ReadString();
+                    __hasOrderId = true;
                     break;
                 default:
                     reader.Skip();
@@ -186,9 +185,9 @@ public sealed partial class ExpansionGoldenCrossAssemblySerializer
             }
         }
 
-        if (!__hasActorPath || actorPath is null)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [ActorPath] with index [1] while deserializing [global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp].");
-        return new global::ExpansionGoldenCrossAssembly.AssemblyA.AuditStamp(ActorPath: actorPath!);
+        if (!__hasOrderId || orderId is null)
+            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [OrderId] with index [1] while deserializing [global::ReferencedImplementorGolden.AssemblyA.OrderPlaced].");
+        return new global::ReferencedImplementorGolden.AssemblyA.OrderPlaced(OrderId: orderId!);
     }
 
 }

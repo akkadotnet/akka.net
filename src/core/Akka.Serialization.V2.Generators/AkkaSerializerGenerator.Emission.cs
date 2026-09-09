@@ -252,13 +252,14 @@ public sealed partial class AkkaSerializerGenerator
         ImmutableDictionary<int, string> duplicateSerializerIds,
         ImmutableDictionary<string, string> duplicateProtocolBindings,
         ImmutableArray<MessageInfo> genericDefinitions,
-        MetadataSchemaTable metadataSchemas)
+        MetadataSchemaTable metadataSchemas,
+        CompilationFacts facts)
     {
         var gate = EvaluateGate(serializer, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions);
         if (!gate.IsEmittable)
             return ResolvedSerializer.NotEmittable(serializer, gate.Diagnostics);
 
-        var resolved = ResolveSerializerMessages(serializer, declaredMessages, metadataSchemas);
+        var resolved = ResolveSerializerMessages(serializer, declaredMessages, metadataSchemas, facts);
         var validationDiagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
         ValidateResolved(serializer, resolved, metadataSchemas, validationDiagnostics);
 
@@ -397,7 +398,7 @@ public sealed partial class AkkaSerializerGenerator
     /// <c>allMessagesByType</c>/<c>resolvedMessagesByType</c> from. <see cref="MergeWithMetadataSchemas"/>
     /// keeps local declarations taking priority over a metadata schema, per Decision 16.
     /// </summary>
-    private static ResolvedSerializerMessages ResolveSerializerMessages(SerializerInfo serializer, ImmutableArray<MessageInfo> declaredMessages, MetadataSchemaTable metadataSchemas)
+    private static ResolvedSerializerMessages ResolveSerializerMessages(SerializerInfo serializer, ImmutableArray<MessageInfo> declaredMessages, MetadataSchemaTable metadataSchemas, CompilationFacts facts)
     {
         // Decision 18 lets a registration adopt a NON-generic, ordinarily-declared type (for
         // example [AkkaSerializable<AuditStamp>(Manifest = "audit-v1")]), which already has its own
@@ -423,13 +424,30 @@ public sealed partial class AkkaSerializerGenerator
             .Where(message => !message.IsGenericDefinition && (closedGenericSchemaKeys == null || !closedGenericSchemaKeys.Contains(message.Key)))
             .Concat(serializer.ClosedGenericSchemas)
             .ToImmutableArray();
+
+        // Decision 19/21: every [AkkaSerializable] implementor of ANY closed-set key (a serializer's
+        // protocol interface, or a marked union base) declared in a referenced assembly is added to
+        // the SAME candidate pool as a local declaration. This is what widens top-level dispatch
+        // (Decision 19) and the implicit protocol/marked-union-field rule (Decision 18/21) across
+        // assemblies, with no other change needed anywhere the pool is scanned. Not scoped to this
+        // serializer's own protocol key: the pool is compilation-wide, exactly as declaredMessages
+        // already is, and the filters below (topLevelMessages, GetClosedSetMembers) do the scoping.
+        // Each referenced-assembly implementor's full schema was already extracted by
+        // ComputeMetadataSchemas (seeded from CompilationFacts' walk); a key with no schema entry
+        // (an inaccessible or otherwise unreadable type -- AKKASG039 already reports it) is skipped
+        // here rather than crashing the concat below.
+        var referencedAssemblyImplementors = CollectReferencedAssemblyImplementorSchemas(facts, metadataSchemas);
+        if (!referencedAssemblyImplementors.IsEmpty)
+            allMessages = allMessages.AddRange(referencedAssemblyImplementors);
+
         var allMessagesByType = metadataSchemas.SchemasByType.IsEmpty
             ? allMessages.ToImmutableDictionary(message => message.Key)
             : MergeWithMetadataSchemas(allMessages, metadataSchemas.SchemasByType);
 
-        // ResolveMessages scans `allMessages` for the protocol closed set ONLY if it actually needs
-        // to reclassify a protocol-interface field (Decision 18) -- lazily, so a serializer with no
-        // such field (the overwhelming common case) never pays for that scan at all.
+        // ResolveMessages scans `allMessages` for a closed set ONLY if it actually needs to
+        // reclassify a protocol-interface field (Decision 18) or a discovered-mode union field
+        // (Decision 21) -- lazily, so a serializer with neither (the overwhelming common case)
+        // never pays for that scan at all.
         var resolvedMessagesByType = ResolveMessages(allMessagesByType, serializer.Formatters, serializer.ProtocolTypeFullName, allMessages);
 
         // Decision 18's adoption rule: a registration on the serializer -- hand-written or
@@ -458,6 +476,37 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
+    /// Every referenced-assembly implementor's schema (Decision 19/21) that
+    /// <see cref="ComputeCompilationFacts"/> found, across every closed-set key at once, resolved
+    /// against <paramref name="metadataSchemas"/>. Sorted deterministically because
+    /// <see cref="CompilationFacts.ReferencedAssemblyImplementorsByProtocol"/> already sorts each of
+    /// its own key's arrays by <see cref="TypeKey.MetadataName"/>, and this walks the dictionary's
+    /// keys in that same sorted order too, so the result does not depend on the dictionary's own
+    /// (unordered) enumeration order across two otherwise-identical compilations.
+    /// </summary>
+    private static ImmutableArray<MessageInfo> CollectReferencedAssemblyImplementorSchemas(CompilationFacts facts, MetadataSchemaTable metadataSchemas)
+    {
+        if (facts.ReferencedAssemblyImplementorsByProtocol.IsEmpty)
+            return ImmutableArray<MessageInfo>.Empty;
+
+        var seen = new HashSet<TypeKey>();
+        var builder = ImmutableArray.CreateBuilder<MessageInfo>();
+        foreach (var closedSetKey in facts.ReferencedAssemblyImplementorsByProtocol.Keys.OrderBy(key => key.MetadataName, StringComparer.Ordinal))
+        {
+            foreach (var implementorKey in facts.ReferencedAssemblyImplementorsByProtocol[closedSetKey])
+            {
+                if (!seen.Add(implementorKey))
+                    continue;
+
+                if (metadataSchemas.SchemasByType.TryGetValue(implementorKey, out var schema))
+                    builder.Add(schema);
+            }
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
     /// Overlays <paramref name="allMessages"/> (this compilation's own declared messages, plus this
     /// serializer's own closed-generic schemas) on top of <paramref name="metadataSchemasByType"/>
     /// (Decision 16's referenced-assembly schemas): a metadata schema fills a gap the local
@@ -477,17 +526,21 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// Resolves formatter overrides (unchanged) AND, as of Decision 18, reclassifies a field whose
-    /// static type is EXACTLY <paramref name="protocolTypeFullName"/> from <see cref="FieldKind.Unsupported"/>
-    /// to a union over <paramref name="protocolSetMembers"/> -- "a field whose static type is the
-    /// serializer's own protocol interface is a union over the protocol set, with no [AkkaUnion]
-    /// attribute required". This is the ONE place that rule applies, regardless of whether the field
-    /// belongs to an ordinary declared message or to a closed-generic schema (Decision 18's literal
-    /// construction, for example <c>Envelope&lt;ICommsMessage&gt;</c>, has exactly such a field): both
-    /// flow through this same per-serializer resolve step, from <see cref="ResolveSerializerMessages"/>.
-    /// Formatter resolution takes precedence when both could apply to the same field kind (matching
-    /// the existing documented precedence of an explicit formatter registration), but a protocol-typed
-    /// field is never independently registered with a formatter in practice.
+    /// Resolves formatter overrides (unchanged); reclassifies a field whose static type is EXACTLY
+    /// <paramref name="protocolTypeFullName"/> from <see cref="FieldKind.Unsupported"/> to a union
+    /// over the protocol set (Decision 18: "a field whose static type is the serializer's own
+    /// protocol interface is a union over the protocol set, with no [AkkaUnion] attribute
+    /// required"); and, as of Decision 21, resolves a DISCOVERED-mode union field (one whose
+    /// <see cref="FieldInfo.UnionMembers"/> is still empty after extraction -- a parameterless
+    /// <c>[AkkaUnion]</c>) to a union over every visible implementor of ITS OWN static type
+    /// (<see cref="TypeMapping.Key"/> on a <see cref="FieldKind.Union"/> mapping). Both rules pull
+    /// their candidate set from <paramref name="allMessagesForProtocolScan"/>, which -- Decision 19
+    /// -- already includes every referenced-assembly implementor <see cref="ComputeCompilationFacts"/>
+    /// found for any closed-set key (see <see cref="ResolveSerializerMessages"/>'s own injection), so
+    /// no further cross-assembly plumbing is needed here. Formatter resolution takes precedence when
+    /// more than one rule could apply to the same field kind (matching the existing documented
+    /// precedence of an explicit formatter registration), but neither closed-set field is ever
+    /// independently registered with a formatter in practice.
     /// </summary>
     private static ImmutableDictionary<TypeKey, MessageInfo> ResolveMessages(
         ImmutableDictionary<TypeKey, MessageInfo> allMessagesByType,
@@ -495,42 +548,41 @@ public sealed partial class AkkaSerializerGenerator
         string protocolTypeFullName,
         ImmutableArray<MessageInfo> allMessagesForProtocolScan)
     {
-        if (formatters.IsDefaultOrEmpty && protocolTypeFullName.Length == 0)
-            return allMessagesByType;
-
         var formattersByTarget = new Dictionary<TypeKey, FormatterInfo>();
         foreach (var formatter in formatters)
             formattersByTarget[formatter.TargetTypeKey] = formatter;
 
-        // Built lazily, from `allMessagesForProtocolScan`, only on the FIRST field that actually
-        // needs it: the overwhelming common case has no field typed as the protocol interface at
-        // all, so most compilations never scan for the protocol set, let alone allocate one.
-        ImmutableArray<UnionMemberInfo> protocolUnionMembers = default;
-        ImmutableArray<UnionMemberInfo> GetProtocolUnionMembers()
+        // Built lazily, per distinct closed-set key, on the FIRST field that actually needs it: the
+        // overwhelming common case has no field typed as a closed-set key at all, so most
+        // compilations never scan for one, let alone allocate one. One cache serves both the
+        // protocol-interface rule (Decision 18) and the discovered-union rule (Decision 21) --
+        // they are the SAME closed-set-membership scan, just keyed by a different string.
+        var closedSetMembersByKey = new Dictionary<string, ImmutableArray<UnionMemberInfo>>(StringComparer.Ordinal);
+        ImmutableArray<UnionMemberInfo> GetClosedSetMembers(string keyFullName)
         {
-            if (protocolUnionMembers.IsDefault)
+            if (closedSetMembersByKey.TryGetValue(keyFullName, out var cached))
+                return cached;
+
+            var membersBuilder = ImmutableArray.CreateBuilder<UnionMemberInfo>();
+            foreach (var member in allMessagesForProtocolScan)
             {
-                var membersBuilder = ImmutableArray.CreateBuilder<UnionMemberInfo>();
-                foreach (var member in allMessagesForProtocolScan)
-                {
-                    if (!member.Protocols.Contains(protocolTypeFullName))
-                        continue;
+                if (!member.Protocols.Contains(keyFullName) && !member.BaseTypeNames.Contains(keyFullName))
+                    continue;
 
-                    membersBuilder.Add(new UnionMemberInfo(
-                        member.Key, member.IsValueType, isAssignable: true, isSupported: true, member.IsSealed, member.IsAbstract, member.ForeignAssemblyName));
-                }
-
-                protocolUnionMembers = membersBuilder.ToImmutable();
+                membersBuilder.Add(new UnionMemberInfo(
+                    member.Key, member.IsValueType, isAssignable: true, isSupported: true, member.IsSealed, member.IsAbstract, member.ForeignAssemblyName));
             }
 
-            return protocolUnionMembers;
+            var result = membersBuilder.ToImmutable();
+            closedSetMembersByKey[keyFullName] = result;
+            return result;
         }
 
         // Cheap, allocation-free test: does ANY field on this message need a formatter swap or a
-        // protocol-union reclassification? Lets the loop below skip allocating a FieldInfo builder
-        // -- and, if NO message in the whole table needs either, skip allocating the dictionary
+        // closed-set reclassification? Lets the loop below skip allocating a FieldInfo builder --
+        // and, if NO message in the whole table needs either, skip allocating the dictionary
         // builder too -- for the overwhelming common case, matching the old early-exit's zero-cost
-        // behavior for a serializer with formatters but no protocol-typed field anywhere.
+        // behavior for a serializer with formatters but no closed-set-typed field anywhere.
         bool NeedsResolution(MessageInfo message)
         {
             foreach (var field in message.Fields)
@@ -538,6 +590,9 @@ public sealed partial class AkkaSerializerGenerator
                 if (field.Mapping.Kind == FieldKind.Unsupported &&
                     protocolTypeFullName.Length > 0 &&
                     string.Equals(field.TypeFullName, protocolTypeFullName, StringComparison.Ordinal))
+                    return true;
+
+                if (field.Mapping.Kind == FieldKind.Union && field.UnionMembers.IsEmpty)
                     return true;
 
                 if (field.Mapping.Kind != FieldKind.EnvelopePayload &&
@@ -568,7 +623,17 @@ public sealed partial class AkkaSerializerGenerator
                     protocolTypeFullName.Length > 0 &&
                     string.Equals(field.TypeFullName, protocolTypeFullName, StringComparison.Ordinal))
                 {
-                    resolvedFields.Add(field.WithUnion(GetProtocolUnionMembers()));
+                    resolvedFields.Add(field.WithUnion(GetClosedSetMembers(protocolTypeFullName)));
+                }
+                else if (field.Mapping.Kind == FieldKind.Union && field.UnionMembers.IsEmpty)
+                {
+                    // Decision 21: the field's own static-type key IS the closed-set key -- captured
+                    // at extraction time regardless of assembly, on TypeMapping.Key (see that
+                    // property's own doc comment). A default key (no named static type; see
+                    // ExtractMessageCore) leaves the field as-is: there is nothing to resolve it
+                    // against, and it stays an empty union rather than crashing on an empty lookup.
+                    var closedSetKey = field.Mapping.Key.DisplayName ?? string.Empty;
+                    resolvedFields.Add(closedSetKey.Length == 0 ? field : field.WithUnion(GetClosedSetMembers(closedSetKey)));
                 }
                 else if (field.Mapping.Kind != FieldKind.EnvelopePayload &&
                     field.Mapping.TypeFullName.Length > 0 &&
@@ -635,9 +700,9 @@ public sealed partial class AkkaSerializerGenerator
             w.Raw("public override int Identifier => ").Number(serializer.SerializerId).Line(";");
             w.BlankLine();
             GenerateRegistration(w, serializer);
-            GenerateManifest(w, resolved.TopLevelMessages);
+            GenerateManifest(w, resolved.TopLevelMessages, serializer.CompilationAssemblyName);
             GenerateSerialize(w);
-            GenerateSerializeDirect(w, resolved.TopLevelMessages);
+            GenerateSerializeDirect(w, resolved.TopLevelMessages, serializer.CompilationAssemblyName);
             GenerateDeserialize(w, resolved.TopLevelMessages);
             GenerateSizeHint(w, resolved.TopLevelMessages);
             GenerateCountingBufferWriter(w);
@@ -759,7 +824,25 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateManifest(CodeWriter w, ClosedSet messages)
+    /// <summary>
+    /// Decision 19's Rule 4 (the runtime exception text improvement, "making the compiler complain:
+    /// the pit of success" in design.md): the interpolated exception message text every
+    /// "unsupported generated serializer type" throw site shares, naming both the failing value's
+    /// own runtime assembly -- knowable only at run time, via <c>obj.GetType().Assembly</c> -- and
+    /// the assembly this serializer was generated in, a build-time fact (<see cref="SerializerInfo.CompilationAssemblyName"/>).
+    /// A misplaced serializer (Decision 19's placement rules) is the shape this is written for: the
+    /// value's type lives in an assembly this serializer's own compilation could never see.
+    /// </summary>
+    private static string BuildUnsupportedTypeExceptionMessage(string generatingAssemblyName)
+    {
+        var generatingAssemblyText = generatingAssemblyName.Length > 0
+            ? generatingAssemblyName.Replace("\\", "\\\\").Replace("\"", "\\\"")
+            : "(unknown)";
+        return "$\"Unsupported generated serializer type '{obj.GetType()}' from assembly '{obj.GetType().Assembly.GetName().Name}'. " +
+            "This serializer was generated in assembly '" + generatingAssemblyText + "', which does not recognize this type.\"";
+    }
+
+    private static void GenerateManifest(CodeWriter w, ClosedSet messages, string generatingAssemblyName)
     {
         w.Line("public override string Manifest(object obj)");
         using (w.Block())
@@ -769,7 +852,7 @@ public sealed partial class AkkaSerializerGenerator
             {
                 foreach (var message in messages.Members)
                     w.Type(TypeName.Global(message.TypeFullName)).Raw(" => ").StringLiteral(message.Manifest).Line(",");
-                w.Line("_ => throw new global::System.ArgumentException($\"Unsupported generated serializer type: {obj.GetType()}\", nameof(obj))");
+                w.Raw("_ => throw new global::System.ArgumentException(").Raw(BuildUnsupportedTypeExceptionMessage(generatingAssemblyName)).Line(", nameof(obj))");
             }
         }
 
@@ -791,7 +874,7 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateSerializeDirect(CodeWriter w, ClosedSet messages)
+    private static void GenerateSerializeDirect(CodeWriter w, ClosedSet messages, string generatingAssemblyName)
     {
         w.Line("private void SerializeMessagePack(object obj, ref global::MessagePack.MessagePackWriter writer)");
         using (w.Block())
@@ -809,7 +892,7 @@ public sealed partial class AkkaSerializerGenerator
                 }
 
                 using (sw.Default())
-                    w.Line("throw new global::System.ArgumentException($\"Unsupported generated serializer type: {obj.GetType()}\", nameof(obj));");
+                    w.Raw("throw new global::System.ArgumentException(").Raw(BuildUnsupportedTypeExceptionMessage(generatingAssemblyName)).Line(", nameof(obj));");
             }
         }
 

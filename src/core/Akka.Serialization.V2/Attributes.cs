@@ -121,11 +121,13 @@ public sealed class AkkaFieldAttribute : Attribute
 public sealed class AkkaUnionAttribute : Attribute
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AkkaUnionAttribute"/> class.
+    /// Initializes a new instance of the <see cref="AkkaUnionAttribute"/> class with an explicit,
+    /// listed member set.
     /// </summary>
     /// <param name="first">
     /// The first concrete member type this field may hold. A union is never empty: at least one
-    /// member is always required, so <c>[AkkaUnion()]</c> (an empty member set) does not compile.
+    /// member is always required, so <c>[AkkaUnion()]</c> with a comma-separated list does not
+    /// compile.
     /// </param>
     /// <param name="rest">Any additional concrete member types this field may hold.</param>
     public AkkaUnionAttribute(Type first, params Type[] rest)
@@ -137,7 +139,27 @@ public sealed class AkkaUnionAttribute : Attribute
     }
 
     /// <summary>
-    /// The closed set of concrete member types this field may hold.
+    /// Initializes a new instance of the <see cref="AkkaUnionAttribute"/> class with no listed
+    /// member set: the closed set is every <see cref="AkkaSerializableAttribute"/> implementor the
+    /// generator can see, in this compilation and in a referenced assembly that itself references
+    /// <c>Akka.Serialization.V2</c>.
+    /// </summary>
+    /// <remarks>
+    /// Use this parameterless form when the union's base type sits upstream of its members in a
+    /// layered codebase: an assembly cannot name a type from an assembly that references it, so a
+    /// listed member set is not merely tedious there, it is uncompilable. The marker alone declares
+    /// the interface or abstract class a wire contract; the generator finds its members at build
+    /// time. <see cref="MemberTypes"/> is empty for this form -- an empty array here means
+    /// "discover the set", not "the set is empty".
+    /// </remarks>
+    public AkkaUnionAttribute()
+    {
+        MemberTypes = Array.Empty<Type>();
+    }
+
+    /// <summary>
+    /// The closed set of concrete member types this field may hold, or empty when this attribute
+    /// was declared with the parameterless constructor (the set is discovered at build time).
     /// </summary>
     public Type[] MemberTypes { get; }
 }
