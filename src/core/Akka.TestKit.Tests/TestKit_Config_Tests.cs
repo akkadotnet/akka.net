@@ -80,5 +80,23 @@ namespace Akka.TestKit.Tests.Xunit2
             CallingThreadDispatcher.Id.ShouldBe("akka.test.calling-thread-dispatcher");
         }
     }
+
+    // ReSharper disable once InconsistentNaming
+    public class TestKitDefaultConfig_RemoteBatchingOverride_Tests
+    {
+        [Fact]
+        public void DotNetty_batching_override_should_resolve_under_akka_remote()
+        {
+            // The TestKit's Reference.conf disables DotNetty write batching to avoid
+            // flakiness in low-frequency Akka.Remote tests. Akka.Remote only reads this
+            // setting at akka.remote.dot-netty.tcp.batching.enabled -- DotNettyTransportSettings
+            // resolves it via config.GetConfig("batching") relative to akka.remote.dot-netty.tcp
+            // -- so the override has to live at that exact path or it silently never applies.
+            var config = TestKitBase.DefaultConfig;
+
+            config.HasPath("akka.remote.dot-netty.tcp.batching.enabled").ShouldBeTrue();
+            config.GetBoolean("akka.remote.dot-netty.tcp.batching.enabled").ShouldBeFalse();
+        }
+    }
 }
 
