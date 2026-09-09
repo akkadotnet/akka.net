@@ -1,0 +1,91 @@
+﻿Serializer: GoldenSerializer (ns=GoldenSample, name=golden-sample, id=150101)
+Protocol: global::GoldenSample.IProtocol
+IsEmittable: True
+TopLevelMessages (closed set, declaration order):
+  global::GoldenSample.ScalarMessage (manifest=scalars-v1, method=ScalarMessage)
+  global::GoldenSample.CollectionMessage (manifest=collections-v1, method=CollectionMessage)
+  global::GoldenSample.UnionMessage (manifest=union-v1, method=UnionMessage)
+  global::GoldenSample.EnvelopeMessage (manifest=envelope-v1, method=EnvelopeMessage)
+  global::GoldenSample.HybridMessage (manifest=hybrid-v1, method=HybridMessage)
+  global::GoldenSample.NestedMessage (manifest=nested-v1, method=NestedMessage)
+  global::GoldenSample.Ping (manifest=ping-v1, method=Ping)
+  global::GoldenSample.StructMessage (manifest=struct-msg-v1, method=StructMessage)
+  global::GoldenSample.EscapedManifestMessage (manifest=esc-"quote"-\-v1, method=EscapedManifestMessage)
+  global::GoldenSample.Wrapper<int> (manifest=wrapper-int-v1, method=WrapperInt)
+  global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> (manifest=wrapper-geo-v1, method=WrapperGeoPoint)
+  global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> (manifest=wrapper-pair-v1, method=WrapperPairIntString)
+ReachableMessages (18, reachability-walk order):
+  global::GoldenSample.ScalarMessage
+  global::GoldenSample.CollectionMessage
+  global::GoldenSample.UnionMessage
+  global::GoldenSample.EnvelopeMessage
+  global::GoldenSample.HybridMessage
+  global::GoldenSample.NestedMessage
+  global::GoldenSample.Ping
+  global::GoldenSample.StructMessage
+  global::GoldenSample.EscapedManifestMessage
+  global::GoldenSample.Wrapper<int>
+  global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint>
+  global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>>
+  global::GoldenSample.Reading
+  global::GoldenSample.GeoPoint
+  global::GoldenSample.OrderPlaced
+  global::GoldenSample.OrderCancelled
+  global::GoldenSample.OrderExpired
+  global::GoldenSample.Pair<int, string>
+ResolvedMessagesByType keys (sorted):
+  global::GoldenSample.CollectionMessage
+  global::GoldenSample.EnvelopeMessage
+  global::GoldenSample.EscapedManifestMessage
+  global::GoldenSample.GeoPoint
+  global::GoldenSample.HybridMessage
+  global::GoldenSample.NestedMessage
+  global::GoldenSample.OrderCancelled
+  global::GoldenSample.OrderExpired
+  global::GoldenSample.OrderPlaced
+  global::GoldenSample.Pair<int, string>
+  global::GoldenSample.Ping
+  global::GoldenSample.Reading
+  global::GoldenSample.ScalarMessage
+  global::GoldenSample.StructMessage
+  global::GoldenSample.UnionMessage
+  global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint>
+  global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>>
+  global::GoldenSample.Wrapper<int>
+ResolvedClosedGenericRegistrations:
+  global::GoldenSample.Wrapper<int> -> global::GoldenSample.Wrapper<int>
+  global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> -> global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint>
+  global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> -> global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>>
+  global::GoldenSample.Pair<int, string> -> global::GoldenSample.Pair<int, string>
+UsedFormatters:
+  global::GoldenSample.Foreign -> global::GoldenSample.ForeignFormatter (ctorKind=Parameterless)
+  global::GoldenSample.Temperature -> global::GoldenSample.TemperatureFormatter (ctorKind=System)
+UnionPlan:
+  Union_IOrderEvent (fieldType=global::GoldenSample.IOrderEvent, signature=global::GoldenSample.IOrderEvent|global::GoldenSample.OrderPlaced):
+    global::GoldenSample.OrderPlaced (manifest=order-placed-v1, method=OrderPlaced)
+  Union_IOrderEvent_2 (fieldType=global::GoldenSample.IOrderEvent, signature=global::GoldenSample.IOrderEvent|global::GoldenSample.OrderPlaced|global::GoldenSample.OrderCancelled|global::GoldenSample.OrderExpired):
+    global::GoldenSample.OrderPlaced (manifest=order-placed-v1, method=OrderPlaced)
+    global::GoldenSample.OrderCancelled (manifest=order-cancelled-v1, method=OrderCancelled)
+    global::GoldenSample.OrderExpired (manifest=order-expired-v1, method=OrderExpired)
+
+================================================================================
+Serializer: MiniSerializer (ns=GoldenSample, name=golden-mini, id=150102)
+Protocol: global::GoldenSample.IMiniProtocol
+IsEmittable: True
+TopLevelMessages (closed set, declaration order):
+  global::GoldenSample.MiniMessage (manifest=mini-v1, method=MiniMessage)
+ReachableMessages (1, reachability-walk order):
+  global::GoldenSample.MiniMessage
+ResolvedMessagesByType keys (sorted):
+  global::GoldenSample.MiniMessage
+
+================================================================================
+Serializer: RootSerializer (ns=, name=golden-root, id=150103)
+Protocol: global::IRootProtocol
+IsEmittable: True
+TopLevelMessages (closed set, declaration order):
+  global::RootMessage (manifest=root-v1, method=RootMessage)
+ReachableMessages (1, reachability-walk order):
+  global::RootMessage
+ResolvedMessagesByType keys (sorted):
+  global::RootMessage

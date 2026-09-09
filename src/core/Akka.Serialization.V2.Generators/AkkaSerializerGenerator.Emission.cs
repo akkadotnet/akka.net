@@ -25,10 +25,11 @@ namespace Akka.Serialization.V2.Generators;
 /// which of those are top-level (dispatched directly by this serializer's Manifest/Serialize/
 /// Deserialize switches), and which are reachable from a top-level message (and therefore need
 /// generated Write/Read/SizeOf methods at all). Computed once per gate-passing serializer and shared
-/// between validation (<see cref="AkkaSerializerGenerator.Validate"/>) and emission
-/// (<see cref="AkkaSerializerGenerator.EmitSerializers"/>) so the two never see a different message
-/// table for the same input. Not a cached pipeline model -- like <see cref="SerializerGate"/>, it
-/// lives at namespace scope instead of nested under <see cref="AkkaSerializerGenerator"/>.
+/// between validation (<see cref="AkkaSerializerGenerator.Validate"/>) and the cached
+/// <see cref="AkkaSerializerGenerator.ResolvedSerializer"/> model (<see cref="AkkaSerializerGenerator.ResolveSerializer"/>)
+/// so the two never see a different message table for the same input. Not itself a cached pipeline
+/// model -- like <see cref="SerializerGate"/>, it lives at namespace scope instead of nested under
+/// <see cref="AkkaSerializerGenerator"/>.
 /// </summary>
 internal readonly struct ResolvedSerializerMessages
 {
@@ -49,7 +50,46 @@ internal readonly struct ResolvedSerializerMessages
 
 public sealed partial class AkkaSerializerGenerator
 {
-    private static void EmitSerializers(
+    /// <summary>
+    /// Every non-null message model, cast down from the raw collected array. Shared by
+    /// <see cref="ReportCrossSerializerDiagnostics"/>, <see cref="ReportProtocolCoverage"/>, and the
+    /// per-serializer <see cref="ResolveSerializer"/> step so the three never risk computing this
+    /// projection differently.
+    /// </summary>
+    private static ImmutableArray<MessageInfo> ComputeDeclaredMessages(ImmutableArray<MessageInfo?> messages)
+    {
+        return messages
+            .Where(message => message != null)
+            .Cast<MessageInfo>()
+            .ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Generic definitions are placeholders: never serialized, never top-level, never in the
+    /// message dictionary (their arity-less key could even collide with a same-named non-generic
+    /// type). They exist only for the AKKASG022/AKKASG037 checks.
+    /// </summary>
+    private static ImmutableArray<MessageInfo> ComputeGenericDefinitions(ImmutableArray<MessageInfo> declaredMessages)
+    {
+        return declaredMessages
+            .Where(message => message.IsGenericDefinition)
+            .ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The cross-serializer diagnostics that cannot be attached to any one serializer's
+    /// <see cref="ResolvedSerializer"/> without either duplicating them (one copy per serializer) or
+    /// picking an arbitrary "owner" serializer to carry them: AKKASG013 (duplicate serializer id),
+    /// AKKASG031 (duplicate protocol binding), and AKKASG037 (Manifest ignored on a generic
+    /// definition, which is not even serializer-scoped). Registered as its own
+    /// <c>RegisterSourceOutput</c> over the collected serializers and messages, separate from
+    /// <see cref="ResolveSerializer"/>'s per-serializer output, so each of these is reported EXACTLY
+    /// ONCE regardless of how many serializers are declared -- the per-serializer output would
+    /// otherwise need to single out one serializer as the "owner" to avoid reporting a duplicate-id
+    /// pair once per serializer in the group. This mirrors the diagnostics-only shape
+    /// <see cref="ReportProtocolCoverage"/> already used for AKKASG029.
+    /// </summary>
+    private static void ReportCrossSerializerDiagnostics(
         SourceProductionContext context,
         ImmutableArray<SerializerInfo?> serializers,
         ImmutableArray<MessageInfo?> messages)
@@ -71,10 +111,7 @@ public sealed partial class AkkaSerializerGenerator
             context.ReportDiagnostic(Diagnostic.Create(DuplicateProtocolBinding, Location.None, ToDisplayName(duplicate.Key), duplicate.Value));
         }
 
-        var declaredMessages = messages
-            .Where(message => message != null)
-            .Cast<MessageInfo>()
-            .ToImmutableArray();
+        var declaredMessages = ComputeDeclaredMessages(messages);
 
         // Advisory only (AKKASG037): a Manifest on a generic [AkkaSerializable] DEFINITION is
         // silently ignored -- the definition is never serialized directly (see ExtractMessage),
@@ -84,52 +121,124 @@ public sealed partial class AkkaSerializerGenerator
         {
             context.ReportDiagnostic(Diagnostic.Create(ManifestIgnoredOnGenericDefinition, Location.None, ToDisplayName(definition.FullyQualifiedName), definition.Manifest));
         }
+    }
 
-        // Generic definitions are placeholders: never serialized, never top-level, never in
-        // the message dictionary (their arity-less key could even collide with a same-named
-        // non-generic type). They exist only for the AKKASG022/AKKASG037 checks.
-        var genericDefinitions = declaredMessages
-            .Where(message => message.IsGenericDefinition)
-            .ToImmutableArray();
+    /// <summary>
+    /// Resolves ONE serializer -- gate, message table, closed dispatch sets, union plan, and
+    /// validation diagnostics -- into the cached, value-equatable <see cref="ResolvedSerializer"/>
+    /// model. This is the per-serializer <c>Select</c> node of the pipeline
+    /// (<see cref="TrackingNames.ResolvedSerializers"/> in <see cref="Initialize"/>): its input is
+    /// this ONE serializer plus the FULL collected messages array (a message can only be judged
+    /// top-level/reachable/duplicate against every other message), so an edit to any message still
+    /// recomputes every serializer's resolve step -- but the resulting <see cref="ResolvedSerializer"/>
+    /// for a serializer that does not own the edited message compares EQUAL to its previous run,
+    /// which is what lets <see cref="EmitResolvedSerializer"/>'s <c>RegisterSourceOutput</c> skip
+    /// re-emitting that serializer's file. <paramref name="duplicateSerializerIds"/>,
+    /// <paramref name="duplicateProtocolBindings"/>, and <paramref name="genericDefinitions"/> are
+    /// precomputed by the caller from the same collected arrays every other serializer's resolve
+    /// step also sees, exactly as <see cref="ReportCrossSerializerDiagnostics"/> and
+    /// <see cref="ReportProtocolCoverage"/> independently recompute them from the same source --
+    /// see <see cref="EvaluateGate"/>'s doc comment.
+    /// </summary>
+    private static ResolvedSerializer ResolveSerializer(
+        SerializerInfo serializer,
+        ImmutableArray<MessageInfo> declaredMessages,
+        ImmutableDictionary<int, string> duplicateSerializerIds,
+        ImmutableDictionary<string, string> duplicateProtocolBindings,
+        ImmutableArray<MessageInfo> genericDefinitions)
+    {
+        var gate = EvaluateGate(serializer, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions);
+        if (!gate.IsEmittable)
+            return ResolvedSerializer.NotEmittable(serializer, gate.Diagnostics);
 
-        foreach (var serializer in serializers)
-        {
-            if (serializer == null)
-                continue;
+        var resolved = ResolveSerializerMessages(serializer, declaredMessages);
+        var validationDiagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
+        ValidateResolved(serializer, resolved, validationDiagnostics);
 
-            // One gate ladder, shared with ReportProtocolCoverage below: is this serializer's own
-            // declaration usable as a codegen target at all? See EvaluateGate's doc comment in
-            // AkkaSerializerGenerator.Validation.cs.
-            var gate = EvaluateGate(serializer, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions);
-            foreach (var gateDiagnostic in gate.Diagnostics)
-                context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(gateDiagnostic));
+        var topLevelMessages = BuildClosedSet(resolved.TopLevelMessages);
+        var usedFormatters = CollectUsedFormatters(resolved.ReachableMessages);
 
-            if (!gate.IsEmittable)
-                continue;
+        // PlanUnionHelpers and ResolveClosedGenericRegistrations both look up against
+        // resolved.ResolvedMessagesByType -- the FULL, whole-compilation dictionary
+        // ResolveSerializerMessages builds from declaredMessages, exactly as validation already
+        // does (see ValidateResolved). That full dictionary must NOT become the model's OWN stored
+        // ResolvedMessagesByType, though: it carries every OTHER serializer's messages too, so a
+        // serializer that adopts none of them would still see this model change shape whenever any
+        // of them do -- exactly the cross-serializer poisoning ResolvedSerializer.Equals must avoid
+        // (see BuildResolvedMessageTable's doc comment).
+        var unionPlan = PlanUnionHelpers(resolved.ReachableMessages, resolved.ResolvedMessagesByType);
+        var resolvedClosedGenericRegistrations = ResolveClosedGenericRegistrations(serializer.ClosedGenericRegistrations, resolved.ResolvedMessagesByType);
+        var resolvedMessagesByType = BuildResolvedMessageTable(resolved.ReachableMessages);
 
-            var resolved = ResolveSerializerMessages(serializer, declaredMessages);
-            var validationDiagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
-            ValidateResolved(serializer, resolved, validationDiagnostics);
+        return ResolvedSerializer.Emittable(
+            serializer,
+            gate.Diagnostics,
+            resolvedMessagesByType,
+            topLevelMessages,
+            resolved.ReachableMessages,
+            resolvedClosedGenericRegistrations,
+            usedFormatters,
+            unionPlan,
+            validationDiagnostics.ToImmutable());
+    }
 
-            var reportable = validationDiagnostics.ToImmutable();
-            foreach (var diagnostic in reportable)
-                context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic));
+    /// <summary>
+    /// The message table actually STORED on <see cref="ResolvedSerializer.ResolvedMessagesByType"/>:
+    /// only this serializer's own reachable messages, keyed by type name -- deliberately narrower
+    /// than the full, whole-compilation dictionary <see cref="ResolveSerializerMessages"/> builds
+    /// (and validation still uses, unchanged) internally. A serializer's cached
+    /// <see cref="ResolvedSerializer"/> must depend only on what actually shapes ITS OWN output; the
+    /// full dictionary includes every other serializer's messages too, so storing it verbatim would
+    /// make an untouched serializer's resolved model compare UNEQUAL whenever some unrelated
+    /// serializer's message changed -- defeating the per-serializer caching this stage exists for.
+    /// Every top-level message is already a member of <paramref name="reachableMessages"/> (see
+    /// <see cref="CollectReachableMessages"/>, which seeds its walk from the top-level set), so
+    /// nothing is lost by keying only off it.
+    /// </summary>
+    private static ImmutableDictionary<string, MessageInfo> BuildResolvedMessageTable(ImmutableArray<MessageInfo> reachableMessages)
+    {
+        var builder = ImmutableDictionary.CreateBuilder<string, MessageInfo>(StringComparer.Ordinal);
+        foreach (var message in reachableMessages)
+            builder[message.FullyQualifiedName] = message;
 
-            // Emission is suppressed by an ERROR-severity diagnostic only -- a Warning (e.g.
-            // AKKASG027) or Info (e.g. AKKASG025) still lets the serializer generate normally, exactly
-            // as the old isValid-returning Validate* chain already behaved (see ValidateResolved).
-            if (reportable.Any(diagnostic => DiagnosticRegistry.Resolve(diagnostic.Key).DefaultSeverity == DiagnosticSeverity.Error))
-                continue;
+        return builder.ToImmutable();
+    }
 
-            context.AddSource(serializer.ClassName + ".AkkaSerialization.g.cs", Generate(serializer, resolved.TopLevelMessages, resolved.ReachableMessages, resolved.ResolvedMessagesByType));
-        }
+    /// <summary>
+    /// Reports a resolved serializer's own diagnostics (gate, then validation -- the same order
+    /// <see cref="ResolveSerializer"/>'s predecessor, the single-output <c>EmitSerializers</c>, used
+    /// to report them in) and emits its generated source, PURELY over the resolved model -- no
+    /// <see cref="Compilation"/>, no other serializer's data. Registered directly on the
+    /// <see cref="TrackingNames.ResolvedSerializers"/> values provider in <see cref="Initialize"/>,
+    /// so the driver's own per-element caching (not any code here) is what makes an unrelated
+    /// serializer's <c>AddSource</c> call Cached instead of re-running: this callback simply never
+    /// executes for an element whose resolved model still compares equal to last time.
+    /// </summary>
+    private static void EmitResolvedSerializer(SourceProductionContext context, ResolvedSerializer resolved)
+    {
+        foreach (var gateDiagnostic in resolved.GateDiagnostics)
+            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(gateDiagnostic));
+
+        if (!resolved.IsEmittable)
+            return;
+
+        foreach (var diagnostic in resolved.ValidationDiagnostics)
+            context.ReportDiagnostic(DiagnosticRegistry.ToDiagnostic(diagnostic));
+
+        // Emission is suppressed by an ERROR-severity diagnostic only -- a Warning (e.g. AKKASG027)
+        // or Info (e.g. AKKASG025) still lets the serializer generate normally, exactly as the old
+        // isValid-returning Validate* chain already behaved (see ValidateResolved).
+        if (resolved.ValidationDiagnostics.Any(diagnostic => DiagnosticRegistry.Resolve(diagnostic.Key).DefaultSeverity == DiagnosticSeverity.Error))
+            return;
+
+        context.AddSource(resolved.Serializer.ClassName + ".AkkaSerialization.g.cs", Generate(resolved));
     }
 
     /// <summary>
     /// Resolves one serializer's message table -- formatter substitution, top-level selection,
     /// reachability -- into the shape both validation (<see cref="ValidateResolved"/>/<see cref="Validate"/>)
     /// and code generation (<see cref="Generate"/>) need. Extracted so the two never risk seeing a
-    /// different table for the same input: <see cref="EmitSerializers"/> computes it once per
+    /// different table for the same input: <see cref="ResolveSerializer"/> computes it once per
     /// gate-passing serializer and passes the SAME <see cref="ResolvedSerializerMessages"/> to both.
     /// </summary>
     private static ResolvedSerializerMessages ResolveSerializerMessages(SerializerInfo serializer, ImmutableArray<MessageInfo> declaredMessages)
@@ -190,9 +299,16 @@ public sealed partial class AkkaSerializerGenerator
         return builder.ToImmutable();
     }
 
-    private static string Generate(SerializerInfo serializer, ImmutableArray<MessageInfo> topLevelMessages, ImmutableArray<MessageInfo> reachableMessages, ImmutableDictionary<string, MessageInfo> messagesByType)
+    /// <summary>
+    /// Renders one serializer's generated source PURELY from its <see cref="ResolvedSerializer"/> --
+    /// no <see cref="Compilation"/>, no other serializer's data, and (since <see cref="ResolvedSerializer.UsedFormatters"/>
+    /// and <see cref="ResolvedSerializer.UnionPlan"/> are already resolved) no re-derivation of
+    /// anything <see cref="ResolveSerializer"/> already computed once.
+    /// </summary>
+    private static string Generate(ResolvedSerializer resolved)
     {
-        var usedFormatters = CollectUsedFormatters(reachableMessages);
+        var serializer = resolved.Serializer;
+        var usedFormatters = resolved.UsedFormatters;
 
         var sb = new StringBuilder();
         var w = new CodeWriter(sb);
@@ -230,25 +346,77 @@ public sealed partial class AkkaSerializerGenerator
             w.Raw("public override int Identifier => ").Number(serializer.SerializerId).Line(";");
             w.BlankLine();
             GenerateRegistration(w, serializer);
-            GenerateManifest(w, topLevelMessages);
+            GenerateManifest(w, resolved.TopLevelMessages);
             GenerateSerialize(w);
-            GenerateSerializeDirect(w, topLevelMessages);
-            GenerateDeserialize(w, topLevelMessages);
-            GenerateSizeHint(w, topLevelMessages);
+            GenerateSerializeDirect(w, resolved.TopLevelMessages);
+            GenerateDeserialize(w, resolved.TopLevelMessages);
+            GenerateSizeHint(w, resolved.TopLevelMessages);
             GenerateCountingBufferWriter(w);
 
-            var unionHelpers = PlanUnionHelpers(reachableMessages);
-            foreach (var message in reachableMessages)
+            // The union plan was already resolved to (signature -> helper name) once, in
+            // ResolveSerializer; this dictionary is just that view, rebuilt here for the per-field
+            // Write/Read/SizeOf call sites below (GenerateSizeField et al.) that look a helper up by
+            // BuildUnionSignature(field) rather than iterating the plan.
+            var unionHelpers = resolved.UnionPlan.Helpers.ToImmutableDictionary(helper => helper.Signature, helper => helper.HelperName, StringComparer.Ordinal);
+            foreach (var message in resolved.ReachableMessages)
             {
                 GenerateSizeMessage(w, message, unionHelpers);
                 GenerateWriteMessage(w, message, unionHelpers);
                 GenerateReadMessage(w, message, unionHelpers);
             }
 
-            GenerateUnionHelpers(w, unionHelpers, messagesByType);
+            GenerateUnionHelpers(w, resolved.UnionPlan);
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Reduces an ordered <see cref="MessageInfo"/> array to a <see cref="ClosedSet"/> of (type name,
+    /// manifest, method name) triples -- everything <see cref="GenerateManifest"/>,
+    /// <see cref="GenerateSerializeDirect"/>, <see cref="GenerateDeserialize"/>, and
+    /// <see cref="GenerateSizeHint"/> need for top-level dispatch, and nothing more (in particular,
+    /// no <see cref="FieldInfo"/>, so the top-level set stays cheap to hold in the cached
+    /// <see cref="ResolvedSerializer"/> model). Preserves <paramref name="messages"/>'s exact order --
+    /// the same order the dispatch switches have always emitted in.
+    /// </summary>
+    private static ClosedSet BuildClosedSet(ImmutableArray<MessageInfo> messages)
+    {
+        var builder = ImmutableArray.CreateBuilder<ClosedSetMember>(messages.Length);
+        foreach (var message in messages)
+            builder.Add(new ClosedSetMember(message.FullyQualifiedName, message.Manifest, GetMessageMethodName(message)));
+
+        return new ClosedSet(builder.ToImmutable());
+    }
+
+    /// <summary>
+    /// Rewrites each closed-generic registration's <see cref="ClosedGenericRegistrationInfo.Message"/>
+    /// to the FORMATTER-RESOLVED version of that message from <paramref name="resolvedMessagesByType"/>
+    /// (see <see cref="ResolveMessages"/>) -- a registration's message, as extracted, predates
+    /// per-serializer formatter substitution, exactly like every other message
+    /// <see cref="ResolveSerializerMessages"/> folds in. An invalid registration
+    /// (<see cref="ClosedGenericRegistrationInfo.Message"/> is null, or its type never made it into
+    /// the resolved table) passes through unchanged -- AKKASG020 already gates that case in
+    /// <see cref="EvaluateGate"/>, so this never actually happens for an emittable serializer, but a
+    /// bare pass-through is simpler than asserting it here too.
+    /// </summary>
+    private static ImmutableArray<ClosedGenericRegistrationInfo> ResolveClosedGenericRegistrations(
+        ImmutableArray<ClosedGenericRegistrationInfo> registrations,
+        ImmutableDictionary<string, MessageInfo> resolvedMessagesByType)
+    {
+        if (registrations.IsDefaultOrEmpty)
+            return ImmutableArray<ClosedGenericRegistrationInfo>.Empty;
+
+        var builder = ImmutableArray.CreateBuilder<ClosedGenericRegistrationInfo>(registrations.Length);
+        foreach (var registration in registrations)
+        {
+            if (registration.Message != null && resolvedMessagesByType.TryGetValue(registration.Message.FullyQualifiedName, out var resolvedMessage))
+                builder.Add(new ClosedGenericRegistrationInfo(registration.TargetDisplayName, resolvedMessage));
+            else
+                builder.Add(registration);
+        }
+
+        return builder.ToImmutable();
     }
 
     private static ImmutableArray<FormatterInfo> CollectUsedFormatters(ImmutableArray<MessageInfo> reachableMessages)
@@ -308,7 +476,7 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateManifest(CodeWriter w, ImmutableArray<MessageInfo> messages)
+    private static void GenerateManifest(CodeWriter w, ClosedSet messages)
     {
         w.Line("public override string Manifest(object obj)");
         using (w.Block())
@@ -316,8 +484,8 @@ public sealed partial class AkkaSerializerGenerator
             w.Line("return obj switch");
             using (w.ExpressionBlock())
             {
-                foreach (var message in messages)
-                    w.Type(TypeName.Global(message.FullyQualifiedName)).Raw(" => ").StringLiteral(message.Manifest).Line(",");
+                foreach (var message in messages.Members)
+                    w.Type(TypeName.Global(message.TypeFullName)).Raw(" => ").StringLiteral(message.Manifest).Line(",");
                 w.Line("_ => throw new global::System.ArgumentException($\"Unsupported generated serializer type: {obj.GetType()}\", nameof(obj))");
             }
         }
@@ -340,7 +508,7 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateSerializeDirect(CodeWriter w, ImmutableArray<MessageInfo> messages)
+    private static void GenerateSerializeDirect(CodeWriter w, ClosedSet messages)
     {
         w.Line("private void SerializeMessagePack(object obj, ref global::MessagePack.MessagePackWriter writer)");
         using (w.Block())
@@ -348,11 +516,11 @@ public sealed partial class AkkaSerializerGenerator
             w.Line("switch (obj)");
             using (var sw = w.Switch())
             {
-                foreach (var message in messages)
+                foreach (var message in messages.Members)
                 {
-                    using (sw.CaseTypePattern(TypeName.Global(message.FullyQualifiedName), "message"))
+                    using (sw.CaseTypePattern(TypeName.Global(message.TypeFullName), "message"))
                     {
-                        w.Raw("Write").Identifier(GetMessageMethodName(message)).Line("(ref writer, message);");
+                        w.Raw("Write").Identifier(message.MethodName).Line("(ref writer, message);");
                         w.Line("break;");
                     }
                 }
@@ -365,7 +533,7 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateDeserialize(CodeWriter w, ImmutableArray<MessageInfo> messages)
+    private static void GenerateDeserialize(CodeWriter w, ClosedSet messages)
     {
         w.Line("public override object Deserialize(ReadOnlySequence<byte> bytes, string manifest)");
         using (w.Block())
@@ -374,8 +542,8 @@ public sealed partial class AkkaSerializerGenerator
             w.Line("return manifest switch");
             using (w.ExpressionBlock())
             {
-                foreach (var message in messages)
-                    w.StringLiteral(message.Manifest).Raw(" => Read").Identifier(GetMessageMethodName(message)).Line("(ref reader),");
+                foreach (var message in messages.Members)
+                    w.StringLiteral(message.Manifest).Raw(" => Read").Identifier(message.MethodName).Line("(ref reader),");
                 w.Line("_ => throw new global::System.Runtime.Serialization.SerializationException($\"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].\")");
             }
         }
@@ -383,7 +551,7 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateSizeHint(CodeWriter w, ImmutableArray<MessageInfo> messages)
+    private static void GenerateSizeHint(CodeWriter w, ClosedSet messages)
     {
         w.Line("public override int SizeHint(object obj)");
         using (w.Block())
@@ -391,8 +559,8 @@ public sealed partial class AkkaSerializerGenerator
             w.Line("return obj switch");
             using (w.ExpressionBlock())
             {
-                foreach (var message in messages)
-                    w.Type(TypeName.Global(message.FullyQualifiedName)).Raw(" message => SizeOf").Identifier(GetMessageMethodName(message)).Line("(message),");
+                foreach (var message in messages.Members)
+                    w.Type(TypeName.Global(message.TypeFullName)).Raw(" message => SizeOf").Identifier(message.MethodName).Line("(message),");
                 w.Line("_ => global::Akka.Serialization.SerializerV2.UnknownSize");
             }
         }
@@ -436,7 +604,7 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateSizeMessage(CodeWriter w, MessageInfo message, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers)
+    private static void GenerateSizeMessage(CodeWriter w, MessageInfo message, ImmutableDictionary<string, string> unionHelpers)
     {
         w.Raw("private int SizeOf").Identifier(GetMessageMethodName(message))
             .Raw("(").Type(TypeName.Global(message.FullyQualifiedName)).Line(" message)");
@@ -456,7 +624,7 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateSizeField(CodeWriter w, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, NameAlloc alloc)
+    private static void GenerateSizeField(CodeWriter w, ImmutableDictionary<string, string> unionHelpers, FieldInfo field, NameAlloc alloc)
     {
         var value = ValueExpr.GeneratorOwned("message").Member(field.Name);
         var localName = Local.ForField(field.Name).WithSuffix("Size");
@@ -533,7 +701,7 @@ public sealed partial class AkkaSerializerGenerator
         return true;
     }
 
-    private static void GenerateSizeExpression(CodeWriter w, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, ValueExpr value)
+    private static void GenerateSizeExpression(CodeWriter w, ImmutableDictionary<string, string> unionHelpers, FieldInfo field, ValueExpr value)
     {
         switch (field.Mapping.Kind)
         {
@@ -541,10 +709,10 @@ public sealed partial class AkkaSerializerGenerator
                 w.Raw("SizeOfEnvelopePayload(").Value(value).Raw(")");
                 break;
             case FieldKind.Union when field.IsNullable:
-                w.Value(value).Raw(" is null ? SizeOfNil() : SizeOf").Identifier(unionHelpers[BuildUnionSignature(field)].HelperName).Raw("(").Value(value).Raw(")");
+                w.Value(value).Raw(" is null ? SizeOfNil() : SizeOf").Identifier(unionHelpers[BuildUnionSignature(field)]).Raw("(").Value(value).Raw(")");
                 break;
             case FieldKind.Union:
-                w.Raw("SizeOf").Identifier(unionHelpers[BuildUnionSignature(field)].HelperName).Raw("(").Value(value).Raw(")");
+                w.Raw("SizeOf").Identifier(unionHelpers[BuildUnionSignature(field)]).Raw("(").Value(value).Raw(")");
                 break;
             case FieldKind.Object when IsNullableValueField(field):
                 w.Value(value).Raw(" is null ? SizeOfNil() : SizeOf").Identifier(GetObjectMethodName(field.Mapping)).Raw("(").Value(value).Raw(".Value)");
@@ -616,7 +784,7 @@ public sealed partial class AkkaSerializerGenerator
         }
     }
 
-    private static void GenerateWriteMessage(CodeWriter w, MessageInfo message, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers)
+    private static void GenerateWriteMessage(CodeWriter w, MessageInfo message, ImmutableDictionary<string, string> unionHelpers)
     {
         w.Raw("private void Write").Identifier(GetMessageMethodName(message))
             .Raw("(ref global::MessagePack.MessagePackWriter writer, ").Type(TypeName.Global(message.FullyQualifiedName)).Line(" message)");
@@ -631,7 +799,7 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateReadMessage(CodeWriter w, MessageInfo message, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers)
+    private static void GenerateReadMessage(CodeWriter w, MessageInfo message, ImmutableDictionary<string, string> unionHelpers)
     {
         w.Raw("private ").Type(TypeName.Global(message.FullyQualifiedName)).Raw(" Read").Identifier(GetMessageMethodName(message))
             .Line("(ref global::MessagePack.MessagePackReader reader)");
@@ -777,12 +945,19 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
-    /// Plans one helper per distinct union signature across all reachable messages. Helpers are
-    /// named after the union's folded static type ("Union_IOrderEvent"); when several distinct
-    /// member sets share a static type (field-level overrides), later ones -- ordered by signature
-    /// for determinism -- get a numeric suffix.
+    /// Plans one helper per distinct union signature across all reachable messages, as a
+    /// <see cref="UnionPlan"/> whose <see cref="UnionPlan.Helpers"/> are ALREADY ordered by helper
+    /// name (the order <see cref="GenerateUnionHelpers"/> used to derive itself, via
+    /// <c>unionHelpers.Values.OrderBy(...)</c>, every time it ran) and whose member lists are
+    /// ALREADY resolved to <see cref="ClosedSet"/>s against <paramref name="messagesByType"/> --
+    /// baking both derivations in here, once, at resolve time keeps <see cref="ResolvedSerializer"/>
+    /// a pure function of its inputs and keeps <see cref="Generate"/> from having to re-touch
+    /// <paramref name="messagesByType"/> at all. Helpers are named after the union's folded static
+    /// type ("Union_IOrderEvent"); when several distinct member sets share a static type
+    /// (field-level overrides), later ones -- ordered by signature for determinism -- get a numeric
+    /// suffix.
     /// </summary>
-    private static ImmutableDictionary<string, (string HelperName, FieldInfo Field)> PlanUnionHelpers(ImmutableArray<MessageInfo> reachableMessages)
+    private static UnionPlan PlanUnionHelpers(ImmutableArray<MessageInfo> reachableMessages, ImmutableDictionary<string, MessageInfo> messagesByType)
     {
         var representatives = new Dictionary<string, FieldInfo>(StringComparer.Ordinal);
         foreach (var message in reachableMessages)
@@ -795,56 +970,72 @@ public sealed partial class AkkaSerializerGenerator
             }
         }
 
-        var builder = ImmutableDictionary.CreateBuilder<string, (string, FieldInfo)>(StringComparer.Ordinal);
+        var helpers = ImmutableArray.CreateBuilder<UnionHelperPlan>();
         foreach (var group in representatives.GroupBy(pair => FoldTypeName(pair.Value.TypeFullName), StringComparer.Ordinal))
         {
             var ordered = group.OrderBy(pair => pair.Key, StringComparer.Ordinal).ToList();
             for (var i = 0; i < ordered.Count; i++)
             {
                 var helperName = i == 0 ? "Union_" + group.Key : "Union_" + group.Key + "_" + (i + 1);
-                builder[ordered[i].Key] = (helperName, ordered[i].Value);
+                var field = ordered[i].Value;
+                helpers.Add(new UnionHelperPlan(ordered[i].Key, helperName, field.TypeFullName, BuildUnionMembers(field, messagesByType)));
             }
         }
 
-        return builder.ToImmutable();
+        // GenerateUnionHelpers used to derive this ordering itself, on every (re)generation, from
+        // the dictionary's Values; baking it in here means Generate() can iterate Helpers as-is.
+        var orderedHelpers = helpers.ToImmutable().Sort((a, b) => string.CompareOrdinal(a.HelperName, b.HelperName));
+        return new UnionPlan(orderedHelpers);
     }
 
-    private static void GenerateUnionHelpers(
-        CodeWriter w,
-        ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers,
-        ImmutableDictionary<string, MessageInfo> messagesByType)
+    /// <summary>
+    /// The declared members of one union field, filtered to the supported/known ones (mirrors the
+    /// old inline filter in <see cref="GenerateUnionHelpers"/>: <c>member.IsSupported &amp;&amp;
+    /// messagesByType.ContainsKey(...)</c>) and reduced to the (type name, manifest, method name)
+    /// triple every union write/read/size helper actually needs -- exactly a <see cref="ClosedSet"/>.
+    /// </summary>
+    private static ClosedSet BuildUnionMembers(FieldInfo field, ImmutableDictionary<string, MessageInfo> messagesByType)
     {
-        foreach (var plan in unionHelpers.Values.OrderBy(plan => plan.HelperName, StringComparer.Ordinal))
+        var builder = ImmutableArray.CreateBuilder<ClosedSetMember>();
+        foreach (var member in field.UnionMembers)
         {
-            var field = plan.Field;
-            var members = field.UnionMembers
-                .Where(member => member.IsSupported && messagesByType.ContainsKey(member.TypeFullName))
-                .Select(member => (Member: member, Message: messagesByType[member.TypeFullName]))
-                .ToImmutableArray();
+            if (!member.IsSupported || !messagesByType.TryGetValue(member.TypeFullName, out var memberMessage))
+                continue;
 
-            GenerateUnionWrite(w, field, plan.HelperName, members);
-            GenerateUnionRead(w, field, plan.HelperName, members);
-            GenerateUnionSize(w, field, plan.HelperName, members);
+            builder.Add(new ClosedSetMember(member.TypeFullName, memberMessage.Manifest, GetMessageMethodName(memberMessage)));
+        }
+
+        return new ClosedSet(builder.ToImmutable());
+    }
+
+    private static void GenerateUnionHelpers(CodeWriter w, UnionPlan unionPlan)
+    {
+        // Already ordered by helper name -- see PlanUnionHelpers.
+        foreach (var helper in unionPlan.Helpers)
+        {
+            GenerateUnionWrite(w, helper);
+            GenerateUnionRead(w, helper);
+            GenerateUnionSize(w, helper);
         }
     }
 
-    private static void GenerateUnionWrite(CodeWriter w, FieldInfo field, string helperName, ImmutableArray<(UnionMemberInfo Member, MessageInfo Message)> members)
+    private static void GenerateUnionWrite(CodeWriter w, UnionHelperPlan helper)
     {
-        w.Raw("private void Write").Identifier(helperName)
-            .Raw("(ref global::MessagePack.MessagePackWriter writer, ").Type(TypeName.Global(field.TypeFullName)).Line(" value)");
+        w.Raw("private void Write").Identifier(helper.HelperName)
+            .Raw("(ref global::MessagePack.MessagePackWriter writer, ").Type(TypeName.Global(helper.FieldTypeFullName)).Line(" value)");
         using (w.Block())
         {
             w.Line("var runtimeType = value.GetType();");
-            foreach (var (member, memberMessage) in members)
+            foreach (var member in helper.Members.Members)
             {
                 w.Raw("if (runtimeType == typeof(").Type(TypeName.Global(member.TypeFullName)).Line("))");
                 using (w.Block())
                 {
                     w.Line("writer.WriteMapHeader(2);");
                     w.Line("writer.Write(1);");
-                    w.Raw("writer.Write(").StringLiteral(memberMessage.Manifest).Line(");");
+                    w.Raw("writer.Write(").StringLiteral(member.Manifest).Line(");");
                     w.Line("writer.Write(2);");
-                    w.Raw("Write").Identifier(GetMessageMethodName(memberMessage)).Raw("(ref writer, (").Type(TypeName.Global(member.TypeFullName)).Line(")value);");
+                    w.Raw("Write").Identifier(member.MethodName).Raw("(ref writer, (").Type(TypeName.Global(member.TypeFullName)).Line(")value);");
                     w.Line("return;");
                 }
 
@@ -852,21 +1043,21 @@ public sealed partial class AkkaSerializerGenerator
             }
 
             w.Raw("throw new global::System.Runtime.Serialization.SerializationException($\"Type [{runtimeType}] is not a declared union member for union [")
-                .LiteralText(field.TypeFullName).Line("].\");");
+                .LiteralText(helper.FieldTypeFullName).Line("].\");");
         }
 
         w.BlankLine();
     }
 
-    private static void GenerateUnionRead(CodeWriter w, FieldInfo field, string helperName, ImmutableArray<(UnionMemberInfo Member, MessageInfo Message)> members)
+    private static void GenerateUnionRead(CodeWriter w, UnionHelperPlan helper)
     {
-        w.Raw("private ").Type(TypeName.Global(field.TypeFullName)).Raw(" Read").Identifier(helperName)
+        w.Raw("private ").Type(TypeName.Global(helper.FieldTypeFullName)).Raw(" Read").Identifier(helper.HelperName)
             .Line("(ref global::MessagePack.MessagePackReader reader)");
         using (w.Block())
         {
             w.Line("var fieldCount = reader.ReadMapHeader();");
             w.Line("string? manifest = null;");
-            w.Type(TypeName.Global(field.TypeFullName)).Line("? result = default;");
+            w.Type(TypeName.Global(helper.FieldTypeFullName)).Line("? result = default;");
             w.Line("var hasPayload = false;");
             w.Line("for (var entryIndex = 0; entryIndex < fieldCount; entryIndex++)");
             using (w.Block())
@@ -886,11 +1077,11 @@ public sealed partial class AkkaSerializerGenerator
                         w.Line("switch (manifest)");
                         using (var manifestSwitch = w.Switch())
                         {
-                            foreach (var (_, memberMessage) in members)
+                            foreach (var member in helper.Members.Members)
                             {
-                                using (manifestSwitch.CaseStringLiteral(memberMessage.Manifest))
+                                using (manifestSwitch.CaseStringLiteral(member.Manifest))
                                 {
-                                    w.Raw("result = Read").Identifier(GetMessageMethodName(memberMessage)).Line("(ref reader);");
+                                    w.Raw("result = Read").Identifier(member.MethodName).Line("(ref reader);");
                                     w.Line("break;");
                                 }
                             }
@@ -898,13 +1089,13 @@ public sealed partial class AkkaSerializerGenerator
                             using (manifestSwitch.CaseNull())
                             {
                                 w.Raw("throw new global::System.Runtime.Serialization.SerializationException(\"Union manifest must precede the payload for union [")
-                                    .LiteralText(field.TypeFullName).Line("].\");");
+                                    .LiteralText(helper.FieldTypeFullName).Line("].\");");
                             }
 
                             using (manifestSwitch.Default())
                             {
                                 w.Raw("throw new global::System.Runtime.Serialization.SerializationException($\"Unknown union manifest [{manifest}] for union [")
-                                    .LiteralText(field.TypeFullName).Line("].\");");
+                                    .LiteralText(helper.FieldTypeFullName).Line("].\");");
                             }
                         }
 
@@ -926,7 +1117,7 @@ public sealed partial class AkkaSerializerGenerator
             using (w.Indented())
             {
                 w.Raw("throw new global::System.Runtime.Serialization.SerializationException(\"Missing union payload for union [")
-                    .LiteralText(field.TypeFullName).Line("].\");");
+                    .LiteralText(helper.FieldTypeFullName).Line("].\");");
             }
 
             w.Line("return result;");
@@ -935,23 +1126,23 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateUnionSize(CodeWriter w, FieldInfo field, string helperName, ImmutableArray<(UnionMemberInfo Member, MessageInfo Message)> members)
+    private static void GenerateUnionSize(CodeWriter w, UnionHelperPlan helper)
     {
-        w.Raw("private int SizeOf").Identifier(helperName)
-            .Raw("(").Type(TypeName.Global(field.TypeFullName)).Line(" value)");
+        w.Raw("private int SizeOf").Identifier(helper.HelperName)
+            .Raw("(").Type(TypeName.Global(helper.FieldTypeFullName)).Line(" value)");
         using (w.Block())
         {
             w.Line("var runtimeType = value.GetType();");
-            foreach (var (member, memberMessage) in members)
+            foreach (var member in helper.Members.Members)
             {
                 w.Raw("if (runtimeType == typeof(").Type(TypeName.Global(member.TypeFullName)).Line("))");
                 using (w.Block())
                 {
-                    w.Raw("var payloadSize = SizeOf").Identifier(GetMessageMethodName(memberMessage)).Raw("((").Type(TypeName.Global(member.TypeFullName)).Line(")value);");
+                    w.Raw("var payloadSize = SizeOf").Identifier(member.MethodName).Raw("((").Type(TypeName.Global(member.TypeFullName)).Line(")value);");
                     w.Line("if (payloadSize < 0)");
                     using (w.Indented())
                         w.Line("return global::Akka.Serialization.SerializerV2.UnknownSize;");
-                    w.Raw("return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString(").StringLiteral(memberMessage.Manifest)
+                    w.Raw("return checked(SizeOfMapHeader(2) + SizeOfInt32(1) + SizeOfString(").StringLiteral(member.Manifest)
                         .Line(") + SizeOfInt32(2) + payloadSize);");
                 }
 
@@ -964,7 +1155,7 @@ public sealed partial class AkkaSerializerGenerator
         w.BlankLine();
     }
 
-    private static void GenerateWriteField(CodeWriter w, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, NameAlloc alloc)
+    private static void GenerateWriteField(CodeWriter w, ImmutableDictionary<string, string> unionHelpers, FieldInfo field, NameAlloc alloc)
     {
         var value = ValueExpr.GeneratorOwned("message").Member(field.Name);
         w.Raw("writer.Write(").Number(field.Index).Line(");");
@@ -982,7 +1173,7 @@ public sealed partial class AkkaSerializerGenerator
         GenerateWriteFieldValue(w, unionHelpers, field, value, alloc);
     }
 
-    private static void GenerateWriteFieldValue(CodeWriter w, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, ValueExpr value, NameAlloc alloc)
+    private static void GenerateWriteFieldValue(CodeWriter w, ImmutableDictionary<string, string> unionHelpers, FieldInfo field, ValueExpr value, NameAlloc alloc)
     {
         if (IsCollectionKind(field.Mapping.Kind))
         {
@@ -1066,17 +1257,17 @@ public sealed partial class AkkaSerializerGenerator
                         w.Line("writer.WriteNil();");
                     w.Line("else");
                     using (w.Indented())
-                        w.Raw("Write").Identifier(unionHelpers[BuildUnionSignature(field)].HelperName).Raw("(ref writer, ").Value(value).Line(");");
+                        w.Raw("Write").Identifier(unionHelpers[BuildUnionSignature(field)]).Raw("(ref writer, ").Value(value).Line(");");
                 }
                 else
                 {
-                    w.Raw("Write").Identifier(unionHelpers[BuildUnionSignature(field)].HelperName).Raw("(ref writer, ").Value(value).Line(");");
+                    w.Raw("Write").Identifier(unionHelpers[BuildUnionSignature(field)]).Raw("(ref writer, ").Value(value).Line(");");
                 }
                 break;
         }
     }
 
-    private static void GenerateReadField(CodeWriter w, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, NameAlloc alloc)
+    private static void GenerateReadField(CodeWriter w, ImmutableDictionary<string, string> unionHelpers, FieldInfo field, NameAlloc alloc)
     {
         var target = Local.ForField(field.Name);
 
@@ -1120,7 +1311,7 @@ public sealed partial class AkkaSerializerGenerator
         GenerateReadFieldValue(w, unionHelpers, field, target, alloc);
     }
 
-    private static void GenerateReadFieldValue(CodeWriter w, ImmutableDictionary<string, (string HelperName, FieldInfo Field)> unionHelpers, FieldInfo field, Local target, NameAlloc alloc)
+    private static void GenerateReadFieldValue(CodeWriter w, ImmutableDictionary<string, string> unionHelpers, FieldInfo field, Local target, NameAlloc alloc)
     {
         if (IsCollectionKind(field.Mapping.Kind))
         {
@@ -1177,7 +1368,7 @@ public sealed partial class AkkaSerializerGenerator
                 w.Local(target).Raw(" = ").Identifier(GetFormatterFieldName(field.Formatter!)).Line(".Read(ref reader);");
                 break;
             case FieldKind.Union:
-                w.Local(target).Raw(" = Read").Identifier(unionHelpers[BuildUnionSignature(field)].HelperName).Line("(ref reader);");
+                w.Local(target).Raw(" = Read").Identifier(unionHelpers[BuildUnionSignature(field)]).Line("(ref reader);");
                 break;
         }
     }
