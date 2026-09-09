@@ -119,15 +119,26 @@ namespace Akka.Remote.Tests.Artery
                 $"the {streamId} stream's materialize-once gate must stay open until outbound-restart-backoff has actually elapsed");
         }
 
-        [Fact(DisplayName = "P1: an EnqueueControl call during the backoff window must not re-materialize the control stream early")]
+        [Fact(DisplayName = "P1: an EnqueueControl call during the backoff window must not trigger a second materialize callback before outbound-restart-backoff elapses")]
         public void EnqueueControl_during_backoff_window_should_not_bypass_backoff()
         {
             var transport = (ArteryRemoting)RARP.For(Sys).Provider.Transport;
             var remoteAddress = DeadPeerAddress();
             var association = transport.Registry.AssociationFor(remoteAddress);
 
-            association.EnsureControlOutboundMaterialized(_ => { });
+            // Count materialize callback invocations rather than asserting on
+            // IsControlOutboundMaterialized alone: on the buggy code (gate reset
+            // synchronously inside ScheduleOutboundRestart, before the backoff elapses) the
+            // EnqueueControl call below observes the gate already closed and re-materializes
+            // through it immediately, a full backoff early -- and MaterializeOnceGate.EnsureStarted
+            // still leaves IsControlOutboundMaterialized == true afterwards, same as the fixed
+            // code, just for the opposite reason (a second materialization instead of none). A
+            // bare "is it still materialized" assertion is therefore true in both worlds and
+            // cannot tell them apart; only the callback count does.
+            var materializeCount = 0;
+            association.EnsureControlOutboundMaterialized(_ => materializeCount++);
             association.IsControlOutboundMaterialized.Should().BeTrue();
+            materializeCount.Should().Be(1);
 
             ScheduleOutboundRestartMethod.Invoke(transport, new object[] { remoteAddress, association, ArteryStreamId.Control });
 
@@ -135,6 +146,11 @@ namespace Akka.Remote.Tests.Artery
             // DaemonMsgCreate) does on its way out -- EnqueueControl materializes on demand
             // whenever it observes the gate closed.
             EnqueueControlMethod.Invoke(transport, new object[] { remoteAddress, new ArteryHeartbeat() });
+
+            materializeCount.Should().Be(1,
+                "an outbound enqueue landing inside the backoff window must not trigger a second " +
+                "materialize callback -- the gate must still be open from the materialization " +
+                "already running, so EnqueueControl's on-demand path must be a no-op here");
 
             association.IsControlOutboundMaterialized.Should().BeTrue(
                 "the control stream must not be torn down and re-materialized by an outbound enqueue landing inside the backoff window");

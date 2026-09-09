@@ -448,10 +448,19 @@ namespace Akka.Remote.Artery
             // from bindingTask, the promise the bind itself completes.
             _localUniqueAddress = new UniqueAddress(address, AddressUidExtension.Uid(System));
             _inboundContext = new AssociationRegistryInboundContext(_registry, _localUniqueAddress, SendControlToAddress);
-            _onBoundPortKnown?.Invoke(_inboundContext is not null);
 
             _defaultAddress = address;
             _addresses = new HashSet<Address> { address };
+
+            // Fire the P5 regression-guard hook only AFTER _defaultAddress/_addresses are
+            // published, not right after _inboundContext above. The hook's argument is
+            // `_inboundContext is not null`, read at this fixed point in the method -- so it
+            // actually proves the ordering the comment above requires (inbound context
+            // published before anything else that runs once the bound port is known), instead
+            // of trivially reporting the field it inspects one statement after that same field
+            // was assigned. If these four assignments are ever reordered so _inboundContext
+            // stops being set first, this reads null here and reports false.
+            _onBoundPortKnown?.Invoke(_inboundContext is not null);
 
             // Self-subscribe to handle ArteryHeartbeat (reply) and ArteryQuarantined (publish
             // ThisActorSystemQuarantinedEvent) -- see IControlMessageSubscriber.ControlMessageReceived.
@@ -1577,13 +1586,36 @@ namespace Akka.Remote.Artery
         /// <paramref name="envelope"/> -- an element a gating <see cref="OutboundHandshakeStage"/>
         /// had already dequeued and was holding when its materialization stopped -- to the SAME
         /// association-owned channel <paramref name="streamId"/> (and, for the ordinary stream at
-        /// <c>outbound-lanes &gt; 1</c>, <paramref name="lane"/>) reads from. Publishes a
-        /// <see cref="Dropped"/> event, exactly like every other full-queue path in this class,
-        /// when that channel has no room (or is already closed) -- never a silent discard.
+        /// <c>outbound-lanes &gt; 1</c>, <paramref name="lane"/>) reads from. A
+        /// <see cref="SystemMessageEnvelope"/> is the one exception -- see the check at the top of
+        /// this method's body and <see cref="IOutboundContext.ReturnUndelivered"/>'s remarks. Publishes
+        /// a <see cref="Dropped"/> event, exactly like every other full-queue path in this class, when
+        /// that channel has no room (or is already closed) -- never a silent discard.
+        ///
+        /// <para>
+        /// The re-offer lands at the channel's TAIL, behind everything enqueued while the handshake
+        /// gated this element -- <see cref="System.Threading.Channels.Channel{T}"/> has no head-insert
+        /// operation. See <see cref="IOutboundContext.ReturnUndelivered"/>'s ordering remarks for what
+        /// that means for an unwrapped <c>DaemonMsgCreate</c>.
+        /// </para>
         /// </summary>
         private void ReturnUndeliveredOutboundElement(
             Address remoteAddress, Association association, ArteryStreamId streamId, IOutboundEnvelope envelope, int lane = 0)
         {
+            // On the CONTROL stream, SystemMessageDeliveryStage sits UPSTREAM of
+            // OutboundHandshakeStage (see MaterializeControlOutbound), so a held element can
+            // already be a SystemMessageEnvelope that stage wrapped and assigned a sequence
+            // number to. That traffic has its own delivery guarantee independent of this
+            // channel -- SystemMessageDeliveryStage's association-owned resend buffer keeps
+            // retransmitting it until the peer's SystemMessageAckerStage acks that sequence
+            // number -- so re-offering it here would only hand the same envelope back to a
+            // fresh SystemMessageDeliveryStage instance on the next materialization, producing
+            // a duplicate for the acker to discard rather than anything useful. This is exactly
+            // what this method's own doc comment on IOutboundContext.ReturnUndelivered already
+            // says is covered elsewhere; skip it here so the code agrees with that rationale.
+            if (envelope.Message is SystemMessageEnvelope)
+                return;
+
             var requeued = streamId switch
             {
                 ArteryStreamId.Control => association.TryEnqueueControl(envelope),
@@ -2409,7 +2441,20 @@ namespace Akka.Remote.Artery
                 System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
                 {
                     if (!association.ShouldRestartLargeOutbound())
+                    {
+                        // Same anti-wedge release as the pre-schedule check above. Quarantine is
+                        // not permanent, and it (not a shutdown) can be exactly what refused this
+                        // restart when the callback fires -- the peer's uid may have been
+                        // quarantined at any point during the backoff window that just elapsed.
+                        // Returning here with the gate still latched would wedge this stream
+                        // forever: nothing else ever runs to release it, so every later large
+                        // send -- including one to a new incarnation of the peer, once its
+                        // handshake ends the quarantine -- would enqueue into a channel nothing
+                        // drains. See the ordinary branch's longer remarks below.
+                        if (!association.IsLargeShutDown)
+                            association.ResetLargeGate();
                         return;
+                    }
 
                     // Same move as the control branch above: open the gate only once the backoff
                     // has actually elapsed, so an on-demand large-message enqueue during the
@@ -2449,7 +2494,22 @@ namespace Akka.Remote.Artery
             System.Scheduler.Advanced.ScheduleOnce(_settings.OutboundRestartBackoff, () =>
             {
                 if (!association.ShouldRestartOutbound())
+                {
+                    // Same anti-wedge release as the pre-schedule check above, and for the same
+                    // reason: the callback runs after the backoff has ALREADY elapsed, and a
+                    // quarantine of the peer's current uid can land at any point during that
+                    // window. ShouldRestartOutbound() being false here is therefore not
+                    // necessarily a permanent shutdown -- it may be exactly the transient
+                    // quarantine case the pre-schedule remarks above describe. Returning with the
+                    // gate still latched and no stream behind it, and nothing left to ever reset
+                    // it, would permanently wedge ordinary sends to this peer -- including the two
+                    // sends that must still get through a quarantine: an ActorSelectionMessage,
+                    // and any send to a new incarnation of the peer once its handshake ends the
+                    // quarantine. A permanent shutdown still keeps the gate latched, same as above.
+                    if (!association.IsOutboundShutDown)
+                        association.ResetOutboundGate();
                     return;
+                }
 
                 // Same move as the control branch above: open the gate only once the backoff has
                 // actually elapsed, so an on-demand ordinary-message enqueue during the backoff

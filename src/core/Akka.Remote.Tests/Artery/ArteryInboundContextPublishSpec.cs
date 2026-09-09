@@ -38,10 +38,15 @@ namespace Akka.Remote.Tests.Artery
     /// <para>
     /// The actual OS-level race is not reproducible deterministically in a unit test (that is
     /// exactly what makes it a bug), so this spec observes the ORDERING directly via
-    /// <see cref="ArteryTransportSetup.OnBoundPortKnown"/>, a test-observability hook invoked at the
-    /// fixed point in <see cref="ArteryRemoting.Start"/> where the two field assignments moved to
-    /// (see that method's remarks) -- exactly the same technique <c>ArteryInboundLanesSpec</c>/
-    /// <c>ArteryInboundLanesQuarantineSpec</c> use for the lane-count hook.
+    /// <see cref="ArteryTransportSetup.OnBoundPortKnown"/>, a test-observability hook invoked in
+    /// <see cref="ArteryRemoting.Start"/> AFTER <c>_defaultAddress</c>/<c>_addresses</c> are
+    /// published (see that method's remarks), passed <c>_inboundContext is not null</c> read at
+    /// that point. That makes the hook's argument order-dependent rather than tautological: it
+    /// reads <see langword="true"/> only because <c>_localUniqueAddress</c>/<c>_inboundContext</c>
+    /// were assigned earlier in the method, and would read <see langword="false"/> here if those
+    /// two assignments were ever moved back down after <c>_defaultAddress</c>/<c>_addresses</c> --
+    /// exactly the same technique <c>ArteryInboundLanesSpec</c>/<c>ArteryInboundLanesQuarantineSpec</c>
+    /// use for the lane-count hook.
     /// </para>
     /// </summary>
     public class ArteryInboundContextPublishSpec : AkkaSpec

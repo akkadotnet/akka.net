@@ -103,10 +103,30 @@ namespace Akka.Remote.Artery
         /// holds it (<c>_pendingMessage</c>) while it waits out the handshake; if this materialization
         /// stops before ever delivering it (a failed reconnect, a killed stream), the element is
         /// already out of the channel and would otherwise vanish with no <see cref="Akka.Event.Dropped"/>
-        /// event and no log -- <see cref="SystemMessageDeliveryStage"/> traffic is covered by its own
-        /// association-owned resend buffer, but plain control traffic (<see cref="HandshakeReq"/>,
-        /// <see cref="ArteryHeartbeat"/>, <see cref="ArteryQuarantined"/>,
-        /// <see cref="ClearSystemMessageDelivery"/>, and an unwrapped <c>DaemonMsgCreate</c>) is not.
+        /// event and no log -- <see cref="SystemMessageDeliveryStage"/> traffic (already-wrapped
+        /// <see cref="SystemMessageEnvelope"/>s) is covered by its own association-owned resend
+        /// buffer and is NOT re-offered here (the implementation drops it silently, on purpose, rather
+        /// than handing a duplicate back to a fresh <see cref="SystemMessageDeliveryStage"/> instance),
+        /// but plain control traffic (<see cref="HandshakeReq"/>, <see cref="ArteryHeartbeat"/>,
+        /// <see cref="ArteryQuarantined"/>, <see cref="ClearSystemMessageDelivery"/>, and an unwrapped
+        /// <c>DaemonMsgCreate</c>) is not, and IS re-offered.
+        ///
+        /// <para>
+        /// <b>Ordering: the channel is FIFO and this re-offer goes to the TAIL, not the head.</b>
+        /// <see cref="System.Threading.Channels.Channel{T}"/> has no head-insert operation, so the
+        /// returned element lands behind everything else that was enqueued into this channel while
+        /// the handshake gated it -- it does NOT resume the position it was dequeued from. For an
+        /// unwrapped <c>DaemonMsgCreate</c> this can invert the ordering the type-level remarks on
+        /// <c>ArteryRemoting</c> describe as deliberately engineered (the create ordered ahead of the
+        /// <c>Watch</c> remote deployment sends immediately afterwards): if a <c>Watch</c> for the
+        /// same recipient was enqueued and delivered on a later materialization while this
+        /// <c>DaemonMsgCreate</c> sat held, the returned <c>DaemonMsgCreate</c> can now arrive after
+        /// it. This does not dead-letter the first message that races ahead of the create -- the
+        /// inbound side already tolerates that (see <c>RetryResolveRemoteDeployedRecipient</c>) -- but
+        /// it does reopen, for this one held-and-returned element, the exact race the create/Watch
+        /// ordering was added to close.
+        /// </para>
+        ///
         /// The implementation re-offers <paramref name="envelope"/> to that same channel when there is
         /// room, and publishes a <see cref="Akka.Event.Dropped"/> event instead of discarding it
         /// silently when there is not.
