@@ -22,13 +22,30 @@ namespace Akka.Remote.Artery
     internal sealed class LaneWriteBatchStage : GraphStage<FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>>
     {
         private readonly long _maxBytes;
+        private readonly Action<long>? _onDropped;
 
-        public LaneWriteBatchStage(long maxBytes)
+        /// <param name="maxBytes">The batching weight cap -- see <see cref="ArteryRemoting.LaneWriteBatchMaxBytes"/>.</param>
+        /// <param name="onDropped">
+        /// Invoked from <see cref="Logic.PostStop"/> with the total byte count still retained in the
+        /// batch/pending buffer when this stage stops before ever pushing it downstream (a killed or
+        /// failed materialization, e.g. the connection-restart tail settling for the last time). By
+        /// this point the data is already-ENCODED, merged-lane frame bytes -- it crossed
+        /// <see cref="OutboundHandshakeStage"/> and <see cref="ArteryEncodeStage"/> long ago and the
+        /// MergeHub upstream has already interleaved multiple lanes' output into one sequence -- so,
+        /// unlike <see cref="IOutboundContext.ReturnUndelivered"/>, there is no single
+        /// <see cref="IOutboundEnvelope"/> left to hand back to an association-owned channel. The
+        /// caller's own job is only to make the loss VISIBLE (publish a <see cref="Akka.Event.Dropped"/>
+        /// event) instead of the silent pooled-buffer reclaim this stage used to do alone. Defaults to
+        /// a no-op so existing callers (and the lane-batching unit specs, which never drive a mid-batch
+        /// stop) are unaffected.
+        /// </param>
+        public LaneWriteBatchStage(long maxBytes, Action<long>? onDropped = null)
         {
             if (maxBytes <= 0)
                 throw new ArgumentOutOfRangeException(nameof(maxBytes));
 
             _maxBytes = maxBytes;
+            _onDropped = onDropped;
             Shape = new FlowShape<ReadOnlySequence<byte>, ReadOnlySequence<byte>>(In, Out);
         }
 
@@ -117,10 +134,20 @@ namespace Akka.Remote.Artery
 
             public override void PostStop()
             {
+                // Account for the loss BEFORE disposing: once DisposeOwnedSegments runs, the byte
+                // count is the only thing left worth reporting anyway, but computing it after would
+                // invite a future edit to read a disposed segment's Length. Whatever the caller's
+                // onDropped does (publish a Dropped event, log, both) it must not throw -- this is
+                // teardown, and PostStop has nowhere to propagate an exception to.
+                var lost = (_hasBatch ? _batch.Length : 0) + (_hasPending ? _pending.Length : 0);
+
                 if (_hasBatch)
                     _batch.DisposeOwnedSegments();
                 if (_hasPending)
                     _pending.DisposeOwnedSegments();
+
+                if (lost > 0)
+                    _stage._onDropped?.Invoke(lost);
             }
 
             private void Seed(ReadOnlySequence<byte> frame)

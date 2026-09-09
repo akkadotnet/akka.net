@@ -22,6 +22,8 @@ using Akka.Event;
 using Akka.Remote.Transport;
 using Akka.Streams;
 using Akka.Streams.Dsl;
+using Akka.Streams.Implementation;
+using Akka.Util;
 // Akka.IO types aliased individually rather than imported wholesale: `using Akka.IO;` would make
 // Tcp/TcpExt ambiguous with the Akka.Streams.Dsl Tcp/TcpExt this file uses for the transport.
 using Inet = Akka.IO.Inet;
@@ -350,7 +352,23 @@ namespace Akka.Remote.Artery
                 "(akka.remote.artery.advanced.inbound-lanes) have landed; no compression yet. " +
                 "Do not use in production.");
 
-            _materializer = ActorMaterializer.Create(System);
+            // /system, NOT /user. RemotingTerminator's TerminationHook -- the thing that eventually
+            // calls Shutdown() below, including its outbound flush -- only fires once the SYSTEM
+            // guardian observes Terminated(userGuardian) (BuiltInActors.cs's SystemGuardianActor;
+            // RemoteActorRefProvider.cs's remoting-terminator/WaitDaemonShutdown). ActorMaterializer.Create(System)
+            // hosts its StreamSupervisor as a /user actor (it is the process-wide DefaultMaterializer,
+            // shared with ordinary Streams usage), so a graceful ActorSystem.Terminate() stops every
+            // Artery stream -- via the ordinary /user guardian teardown -- BEFORE Shutdown() ever runs.
+            // FlushOutboundStreamsAsync then finds every stream already faulted with
+            // AbruptStageTerminationException, and akka.remote.artery.advanced.flush-wait-on-shutdown
+            // flushes nothing. Classic remoting already avoids this by hosting its whole transport tree
+            // under /system (Remoting.cs's /system/transports, /system/endpointManager); Pekko's artery
+            // does the same for its own materializer (ArteryTransport.scala's SystemMaterializer). A
+            // /system-hosted StreamSupervisor survives the /user teardown, so the outbound streams are
+            // still alive -- and the flush has something left to flush -- when Shutdown() finally runs.
+            // This transport still reaps it explicitly at the end of Shutdown() (materializer?.Shutdown()),
+            // so its lifetime does not depend on when /system itself eventually tears down either.
+            _materializer = CreateSystemMaterializer();
             _tcp = System.TcpStream();
             var arteryTransportSetup = System.Settings.Setup.Get<ArteryTransportSetup>();
             // Default the encode pool to a transport-scoped ArrayPool<byte>.Create() instance rather
@@ -440,6 +458,39 @@ namespace Akka.Remote.Artery
             SubscribeControl(this);
 
             _log.Info("Artery TCP remoting started; listening on [{0}]", address);
+        }
+
+        /// <summary>
+        /// Builds a materializer whose <see cref="StreamSupervisor"/> is a <c>/system</c> actor
+        /// rather than the process-wide, <c>/user</c>-hosted one <see cref="ActorMaterializer.Create(Akka.Actor.IActorRefFactory,ActorMaterializerSettings,string)"/>
+        /// returns -- see <see cref="Start"/>'s remarks for why that placement matters for a
+        /// graceful shutdown's outbound flush. Assembled entirely from PUBLIC Akka.Streams API
+        /// (<see cref="ActorMaterializerImpl"/>'s constructor, <see cref="StreamSupervisor.Props"/>/
+        /// <see cref="StreamSupervisor.NextName"/>, <see cref="EnumerableActorName.Create"/>,
+        /// <see cref="ActorMaterializerSettings.Create"/>, <see cref="AtomicBoolean"/>), so this
+        /// needs no <c>InternalsVisibleTo</c> and adds no new public surface of its own -- mirrors
+        /// what <c>DefaultMaterializer</c> (<c>ActorMaterializer.cs</c>) already does for the
+        /// ordinary <c>/user</c> case, with <see cref="ExtendedActorSystem.SystemActorOf"/> standing
+        /// in for <c>system.ActorOf</c>.
+        /// </summary>
+        private ActorMaterializer CreateSystemMaterializer()
+        {
+            // Idempotent: DefaultMaterializer (ActorMaterializer.cs) does the same injection for the
+            // /user-hosted materializer, and InjectTopLevelFallback is safe to call more than once.
+            System.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
+            var settings = ActorMaterializerSettings.Create(System);
+            var haveShutDown = new AtomicBoolean();
+            var supervisor = System.SystemActorOf(
+                StreamSupervisor.Props(settings, haveShutDown).WithDispatcher(settings.Dispatcher),
+                StreamSupervisor.NextName());
+
+            return new ActorMaterializerImpl(
+                system: System,
+                settings: settings,
+                dispatchers: System.Dispatchers,
+                supervisor: supervisor,
+                haveShutDown: haveShutDown,
+                flowNames: EnumerableActorName.Create("remote"));
         }
 
         /// <inheritdoc/>
@@ -1620,8 +1671,13 @@ namespace Akka.Remote.Artery
         {
             // Same shutdown/materializer-liveness guard as MaterializeOutboundStream -- see its
             // remarks for the full rationale (late system message racing teardown; materializer
-            // reclaimed independently of _isShutdown).
-            if (_isShutdown || _materializer is null || _materializer.IsShutdown)
+            // reclaimed independently of _isShutdown). Also check IsActorSystemTerminating(): now
+            // that the materializer's StreamSupervisor is a /system actor (see CreateSystemMaterializer),
+            // _materializer.IsShutdown no longer flips early at /user teardown, so this closes the
+            // window between /user teardown and Shutdown() actually setting _isShutdown/tearing the
+            // materializer down -- it already covers CoordinatedShutdown.ShutdownReason and
+            // System.WhenTerminated.
+            if (_isShutdown || _materializer is null || _materializer.IsShutdown || IsActorSystemTerminating())
                 return;
 
             var lanes = association.OutboundLanes;
@@ -1721,12 +1777,31 @@ namespace Akka.Remote.Artery
                 // LaneWriteBatchStage is a 1:1 pass-through; under downstream backpressure, frames
                 // coalesce. Placed AFTER WatchTermination so the termination-signal wiring is
                 // unchanged. Unlike generic BatchWeighted, its PostStop returns owners retained in
-                // an aggregate or pending frame when cancellation interrupts the stage.
+                // an aggregate or pending frame when cancellation interrupts the stage -- and,
+                // via onDropped, publishes a Dropped event for that many bytes rather than reclaiming
+                // them silently. There is no IOutboundEnvelope left to hand back through
+                // ReturnUndelivered at this point in the pipeline (this stage sits AFTER encode and
+                // the lane merge, so a held batch is already-encoded bytes from however many
+                // messages/lanes happened to coalesce); visibility is the fix this stage can offer.
                 ((mergeSink, mergeTailTermination), _) = mergeHubSource
                     .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
                     .Via(laneKillSwitch.Flow<ReadOnlySequence<byte>>())
                     .WatchTermination(Keep.Both)
-                    .Via(Flow.FromGraph(new LaneWriteBatchStage(LaneWriteBatchMaxBytes)))
+                    .Via(Flow.FromGraph(new LaneWriteBatchStage(LaneWriteBatchMaxBytes,
+                        onDropped: bytes =>
+                        {
+                            _log.Debug(
+                                "Outbound Artery ordinary-lanes write batch to [{0}] held {1} bytes of " +
+                                "already-encoded frame data when its stream stopped; dropping it.",
+                                remoteAddress, bytes);
+
+                            System.EventStream.Publish(new Dropped(
+                                $"{bytes} bytes of already-encoded Artery frame data",
+                                $"Outbound Artery ordinary-lanes write batch to [{remoteAddress}] held {bytes} " +
+                                "bytes of already-encoded frame data across one or more lanes when its stream stopped",
+                                ActorRefs.NoSender,
+                                System.DeadLetters));
+                        })))
                     .Via(connectionWithRestart)
                     .ToMaterialized(Sink.Ignore<ReadOnlySequence<byte>>(), Keep.Both)
                     .Run(_materializer!);
@@ -1950,13 +2025,16 @@ namespace Akka.Remote.Artery
             // teardown has begun. Mirrors Pekko's `if (transport.isShutdown) throw ShuttingDown` guard
             // before run() (Association.scala) -- but we RETURN quietly rather than throw, since our
             // caller (RemoteActorRef.SendSystemMessage) logs a thrown exception as a noisy ERROR. We
-            // ALSO check the materializer itself: unlike Pekko, our ActorMaterializer.Create(System) is
-            // reclaimed by the ActorSystem's OWN teardown (its StreamSupervisor.PostStop flips
-            // IsShutdown) independently of _isShutdown, so it can already be dead here while _isShutdown
-            // is still false. The message stays in the association-owned channel undelivered -- correct,
-            // the transport is going away. The residual race (materializer reclaimed between this check
-            // and Run() below) is caught around Run().
-            if (_isShutdown || _materializer is null || _materializer.IsShutdown)
+            // ALSO check the materializer itself, and IsActorSystemTerminating(): CreateSystemMaterializer
+            // hosts the StreamSupervisor as a /system actor precisely so it does NOT get reclaimed by
+            // the ordinary /user teardown, which means _materializer.IsShutdown no longer flips early
+            // the way it used to -- so lean on the broader state filter too. It already covers
+            // CoordinatedShutdown.ShutdownReason and System.WhenTerminated, closing the window between
+            // /user teardown and Shutdown() actually setting _isShutdown/tearing the materializer down.
+            // The message stays in the association-owned channel undelivered -- correct, the transport
+            // is going away. The residual race (materializer reclaimed between this check and Run()
+            // below) is caught around Run().
+            if (_isShutdown || _materializer is null || _materializer.IsShutdown || IsActorSystemTerminating())
                 return;
 
             var isControlStream = streamId == ArteryStreamId.Control;
