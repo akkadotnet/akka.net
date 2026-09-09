@@ -210,16 +210,17 @@ public sealed class AkkaSerializerGeneratorDiagnosticLocationsSpec
 
     // ------------------------------------------------------------------------------------------
     // Cross-assembly: the LOCAL referencing property, in THIS compilation -- never a location
-    // inside the referenced assembly, which the generator never even parses (Decision 16).
+    // inside the referenced assembly, which the generator never even parses (Decision 16). Money
+    // deliberately carries NO [AkkaSerializable] here: since Decision 16, a referenced type that IS
+    // [AkkaSerializable] and accessible resolves through metadata (CrossAssemblyBaselineSpec covers
+    // that success path); this fixture keeps testing the LOCATION mechanism for the one failure mode
+    // Decision 16 does not touch -- a referenced type with no schema this generator can read at all.
     // ------------------------------------------------------------------------------------------
     private const string CrossAssemblySourceA = """
         #nullable enable
-        using Akka.Serialization.V2;
-
         namespace LocationSample.CrossAssembly.AssemblyA;
 
-        [AkkaSerializable]
-        public sealed record Money([property: AkkaField(1)] long Cents);
+        public sealed record Money(long Cents);
         """;
 
     private const string CrossAssemblySourceB = """

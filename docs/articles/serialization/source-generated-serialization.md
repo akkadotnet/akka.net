@@ -448,6 +448,54 @@ catching an invalid or a duplicate one. **AKKASG037**, info, fires when a `Manif
 *open* definition, where the generator ignores it. **AKKASG034** fires when a registered
 construction implements no protocol and is unreachable from any field.
 
+## Cross-Assembly Types
+
+A nested field, a union member, or a closed generic's own open definition can live in a
+**referenced assembly** instead of the serializer's own compilation. Three shapes work today:
+
+* **A nested field type.** `Pay` in assembly B can have an `[AkkaField]` property typed `Money`,
+  where `Money` is declared and `[AkkaSerializable]` in assembly A.
+* **A union member type.** `[AkkaUnion(typeof(Placed), typeof(Cancelled))]` can list member types
+  declared in a referenced assembly, as long as the `[AkkaUnion]` attribute itself is applied to a
+  type that assembly A also declares (for example the union's own base interface).
+* **A generic definition behind a closed generic registration.** `Wrapper<T>` can live in assembly
+  A. `[AkkaSerializable<Wrapper<int>>]` on the serializer in assembly B still registers it. This
+  shape needed no new work: a closed generic registration already reads its target off the type
+  symbol directly, which works the same way regardless of which assembly declared it.
+
+The generator reads the nested field's or union member's schema from the referenced assembly's
+**compiled metadata**: the `[AkkaSerializable]` attribute, the `[AkkaField]` properties and their
+indexes, and the constructor shape. It runs that schema through the same extraction path a local
+type uses, so the generated `Write`, `Read`, and `SizeOf` helpers are identical to what they would
+be if the type were declared locally. Assembly A needs no reference to the source generator and
+gets no generated code of its own. Nothing couples A and B at run time.
+
+**The accessibility rule.** A referenced type must be `[AkkaSerializable]`, and it must be
+accessible from B: public, or internal with `[InternalsVisibleTo]` granted to B. The same rule
+applies to each of its own `[AkkaField]` properties. A type that is not `[AkkaSerializable]`
+anywhere this generator can see fails with **AKKASG007** (nested field) or **AKKASG015** (union
+member), the same diagnostics a same-assembly gap already uses. A type that carries the attribute
+but that B cannot fully read fails instead with **AKKASG039**: the type itself might be internal
+with no `InternalsVisibleTo` grant, or one of its `[AkkaField]` properties might be. The problem
+can also sit one level down, inside the referenced type's own nested field or union member; the
+message names the type and member that is actually inaccessible, wherever it sits.
+
+Every diagnostic in this section reports at the **local reference site** in B: the property that
+names the type, or the `[AkkaUnion]`/`[AkkaSerializable<T>]` attribute application. Assembly A
+never gets a diagnostic, because no generator work runs there. Each message offers two fixes:
+register a hand-written `[AkkaSerializerFormatter<TTarget, TFormatter>]` on B's serializer, or
+declare the type directly in B.
+
+Two serializers in different assemblies can both nest the same referenced type. Each one generates
+its own private copy of the `Write`/`Read`/`SizeOf` helpers, built from the same metadata. The
+copies are byte-identical by construction; there is no shared runtime codec to keep in sync.
+
+What does not work yet: the generator still discovers **top-level protocol messages** only within
+its own compilation. A type in a referenced assembly that implements a serializer's protocol
+interface stays invisible to that serializer's dispatch switches, even when it is
+`[AkkaSerializable]` and otherwise fully accessible. See
+[Limitations Today and Planned Changes](#limitations-today-and-planned-changes).
+
 ## Envelope Payloads
 
 A property typed `object` or `object?` is always an **Akka serializer boundary**, not a
@@ -738,30 +786,27 @@ was retired, so the diagnostic was retired with it, and the id stays a permanent
 | AKKASG036 | Warning | Union member type is abstract | An abstract union member can never be the exact runtime type, so its dispatch branch is dead code. |
 | AKKASG037 | Info | Manifest on a generic [AkkaSerializable] definition is ignored | A `Manifest` set on the *open* generic definition is ignored; only closed constructions carry one. |
 | AKKASG038 | Error | Union declaration on an object-typed property | A property typed `object` also carries a field-level `[AkkaUnion]`. `object` is always an envelope payload boundary, so the union declaration is contradictory. |
+| AKKASG039 | Error | Referenced type or member is not accessible | A referenced-assembly nested field or union member type is `[AkkaSerializable]`, but this compilation cannot see it, or one of its own `[AkkaField]` properties, or a type it itself nests. See [Cross-assembly types](#cross-assembly-types). |
 
 ## Limitations Today and Planned Changes
 
-The generator is syntax-driven. It discovers `[AkkaSerializable]`, `[AkkaSerializer<T>]`, and
-protocol-implementing types by walking the current compilation's own syntax trees. Four concrete
-consequences follow today. First, a type used as a nested field or a union member must be declared
-in the same compilation as the serializer that uses it. One exception applies: a closed generic's
-own open definition may live in a referenced assembly. Only its registration,
-`[AkkaSerializable<T>]`, must stay local to the serializer's compilation. Second, the generator
-discovers top-level protocol messages only within the serializer's own compilation. A type in a
-referenced assembly might implement the protocol interface. If this generator run never saw it, it
-stays invisible. Third, a construction built through reflection over a type the generator never
-saw at compile time fails only when it is first sent. This never happens at compile time. A
-generic instantiation assembled dynamically at runtime is one example. Fourth, an `object` element
-inside a collection, such as `List<object>` or `object[]`, is not yet a supported envelope
-boundary; it fails compilation with **AKKASG003**.
+The generator is syntax-driven. It discovers `[AkkaSerializer<T>]` and protocol-implementing types
+by walking the current compilation's own syntax trees. Three concrete consequences follow today.
+First, the generator discovers top-level protocol messages only within the serializer's own
+compilation. A type in a referenced assembly might implement the protocol interface. If this
+generator run never saw it, it stays invisible. Second, a construction built through reflection
+over a type the generator never saw at compile time fails only when it is first sent. This never
+happens at compile time. A generic instantiation assembled dynamically at runtime is one example.
+Third, an `object` element inside a collection, such as `List<object>` or `object[]`, is not yet a
+supported envelope boundary; it fails compilation with **AKKASG003**.
+
+A nested field type, a union member type, and a closed generic's own open definition can all live
+in a referenced assembly today; see [Cross-assembly types](#cross-assembly-types).
 
 The following work is planned. None of it ships on `dev` today. It is tracked against
 [issue #8384](https://github.com/akkadotnet/akka.net/issues/8384) and
 `openspec/changes/messagepack-sourcegen-validation/design.md`:
 
-* **Schema extraction from referenced-assembly metadata.** The generator will read a type's
-  `[AkkaField]` schema from a referenced assembly's compiled metadata. The type's declaration
-  syntax will no longer need to be in the current compilation.
 * **Expansion of a registration over a closed set with a `ManifestPrefix`.** One registration
   will cover many closed constructions from a declared set. Today each construction needs its own
   `[AkkaSerializable<T>]` attribute.

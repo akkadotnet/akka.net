@@ -367,6 +367,37 @@ public sealed partial class AkkaSerializerGenerator
         isEnabledByDefault: true);
 
     /// <summary>
+    /// Decision 16 (openspec/changes/messagepack-sourcegen-validation/design.md): a referenced-
+    /// assembly type carries <c>[AkkaSerializable]</c>, but this compilation cannot see it, or one of
+    /// its own <c>[AkkaField]</c> properties, or a type it itself nests. Distinct from
+    /// <see cref="MissingNestedSerializableDefinitionCrossAssembly"/> (the type is not
+    /// <c>[AkkaSerializable]</c> anywhere): here the schema exists, but this assembly is not allowed
+    /// to read it. Reports at the LOCAL nested-field property, per Decision 16's placement rule; the
+    /// message names both the directly-referenced type and, via <c>{4}</c>, the actual failing
+    /// type/member, which may sit one or more levels below it.
+    /// </summary>
+    private static readonly DiagnosticDescriptor NestedFieldNotAccessibleCrossAssembly = new(
+        "AKKASG039",
+        "Referenced type or member is not accessible",
+        "Property '{0}' on type '{1}' uses nested value object type '{2}' from assembly '{3}', but {4}. " +
+        "Make it public, or internal with [InternalsVisibleTo] granted to this assembly, or register [AkkaSerializerFormatter<{2}, TFormatter>] on '{5}'.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    // Same id/title/severity as NestedFieldNotAccessibleCrossAssembly. Used only for a union member
+    // whose type is [AkkaSerializable] but not accessible from this assembly, or one of its own
+    // members. Reports at the LOCAL union field, per Decision 16's placement rule.
+    private static readonly DiagnosticDescriptor UnionMemberNotAccessibleCrossAssembly = new(
+        "AKKASG039",
+        "Referenced type or member is not accessible",
+        "Union member '{0}' on property '{1}' of type '{2}' is declared in assembly '{3}', but {4}. " +
+        "Make it public, or internal with [InternalsVisibleTo] granted to this assembly, or register [AkkaSerializerFormatter<{0}, TFormatter>] on '{5}'.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
     /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
     /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
     /// -- the ONE place in this generator that happens. Private, not a cached pipeline model: it
@@ -417,6 +448,8 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.UnionMemberAbstract => UnionMemberAbstract,
             DiagnosticKey.ManifestIgnoredOnGenericDefinition => ManifestIgnoredOnGenericDefinition,
             DiagnosticKey.UnionDeclaredOnObjectField => UnionDeclaredOnObjectField,
+            DiagnosticKey.NestedFieldNotAccessibleCrossAssembly => NestedFieldNotAccessibleCrossAssembly,
+            DiagnosticKey.UnionMemberNotAccessibleCrossAssembly => UnionMemberNotAccessibleCrossAssembly,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 

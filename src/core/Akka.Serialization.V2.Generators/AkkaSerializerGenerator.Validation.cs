@@ -167,11 +167,12 @@ public sealed partial class AkkaSerializerGenerator
     /// driver of any kind -- so a test can call it directly on hand-built models (see
     /// GeneratorValidatorSpec.cs) with no generator run at all.
     /// </summary>
-    internal static ImmutableArray<DiagnosticSpec> Validate(SerializerInfo serializer, ImmutableArray<MessageInfo> messages)
+    internal static ImmutableArray<DiagnosticSpec> Validate(SerializerInfo serializer, ImmutableArray<MessageInfo> messages, MetadataSchemaTable? metadataSchemas = null)
     {
-        var resolved = ResolveSerializerMessages(serializer, messages);
+        var schemas = metadataSchemas ?? MetadataSchemaTable.Empty;
+        var resolved = ResolveSerializerMessages(serializer, messages, schemas);
         var diagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
-        ValidateResolved(serializer, resolved, diagnostics);
+        ValidateResolved(serializer, resolved, schemas, diagnostics);
         return diagnostics.ToImmutable();
     }
 
@@ -190,7 +191,8 @@ public sealed partial class AkkaSerializerGenerator
             messages,
             ImmutableDictionary<int, string>.Empty,
             ImmutableDictionary<string, string>.Empty,
-            ComputeGenericDefinitions(messages));
+            ComputeGenericDefinitions(messages),
+            MetadataSchemaTable.Empty);
     }
 
     /// <summary>
@@ -202,9 +204,9 @@ public sealed partial class AkkaSerializerGenerator
     /// (a message-level error already means nothing will be emitted, so the AKKASG034 coverage scan
     /// over a table already known to be broken is skipped, exactly as before).
     /// </summary>
-    private static void ValidateResolved(SerializerInfo serializer, ResolvedSerializerMessages resolved, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
+    private static void ValidateResolved(SerializerInfo serializer, ResolvedSerializerMessages resolved, MetadataSchemaTable metadataSchemas, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
-        if (!ValidateMessages(serializer, resolved.TopLevelMessages, resolved.ReachableMessages, resolved.ResolvedMessagesByType, diagnostics))
+        if (!ValidateMessages(serializer, resolved.TopLevelMessages, resolved.ReachableMessages, resolved.ResolvedMessagesByType, metadataSchemas.AccessibilityFailuresByType, diagnostics))
             return;
 
         ValidateClosedGenericProtocolCoverage(serializer, resolved.ReachableMessages, diagnostics);
@@ -583,6 +585,7 @@ public sealed partial class AkkaSerializerGenerator
         ImmutableArray<MessageInfo> topLevelMessages,
         ImmutableArray<MessageInfo> reachableMessages,
         ImmutableDictionary<TypeKey, MessageInfo> messagesByType,
+        ImmutableDictionary<TypeKey, AccessibilityFailure> accessibilityFailuresByType,
         ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
         var isValid = true;
@@ -677,7 +680,7 @@ public sealed partial class AkkaSerializerGenerator
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.MissingSerializableDefinition))
             {
-                ReportMissingNestedSchema(message, field.Name, field.TypeFullName, field.Mapping, serializer.ClassName, diagnostics);
+                ReportMissingNestedSchema(message, field.Name, field.TypeFullName, field.Mapping, serializer.ClassName, accessibilityFailuresByType, diagnostics);
                 isValid = false;
             }
 
@@ -690,15 +693,17 @@ public sealed partial class AkkaSerializerGenerator
 
             foreach (var field in message.Fields.Where(field => field.Mapping.Kind == FieldKind.Union))
             {
-                if (!ValidateUnionField(message, field, messagesByType, serializer.ClassName, diagnostics))
+                if (!ValidateUnionField(message, field, messagesByType, accessibilityFailuresByType, serializer.ClassName, diagnostics))
                     isValid = false;
             }
 
             // An Object mapping that resolves to no known message would generate a call to a
-            // nonexistent Write/Read/SizeOf method. ReportMissingNestedSchema tells apart the two
-            // ways that happens: a genuine unregistered closed generic construction (AKKASG023), or
-            // a non-generic type with no syntax in THIS compilation (AKKASG007, cross-assembly
-            // wording when the type's declaring assembly says so).
+            // nonexistent Write/Read/SizeOf method. ReportMissingNestedSchema tells apart three ways
+            // that happens: a genuine unregistered closed generic construction (AKKASG023), a
+            // referenced-assembly type this compilation cannot see or read a member of even though it
+            // carries [AkkaSerializable] (AKKASG039), or a non-generic type with no [AkkaSerializable]
+            // anywhere this generator can see (AKKASG007, cross-assembly wording when the type's
+            // declaring assembly says so).
             foreach (var field in message.Fields)
             {
                 var seenTypeKeys = new HashSet<TypeKey>();
@@ -707,7 +712,7 @@ public sealed partial class AkkaSerializerGenerator
                     if (!seenTypeKeys.Add(objectMapping.Key) || messagesByType.ContainsKey(objectMapping.Key))
                         continue;
 
-                    ReportMissingNestedSchema(message, field.Name, objectMapping.TypeFullName, objectMapping, serializer.ClassName, diagnostics);
+                    ReportMissingNestedSchema(message, field.Name, objectMapping.TypeFullName, objectMapping, serializer.ClassName, accessibilityFailuresByType, diagnostics);
                     isValid = false;
                 }
             }
@@ -733,16 +738,19 @@ public sealed partial class AkkaSerializerGenerator
 
     // Decision table for a nested type this generator cannot serialize today: a closed generic
     // construction reports AKKASG023 (register it with [AkkaSerializable<T>]); a type declared in a
-    // referenced assembly reports the AKKASG007 cross-assembly wording; anything else reports the
-    // plain AKKASG007 message. Reports at the LOCAL referencing property -- per Decision 16, this is
-    // true even for the cross-assembly variant: the foreign type's own assembly gets no diagnostic at
-    // all, since no generator work runs there.
+    // referenced assembly that this compilation cannot see (or cannot read a member of) reports the
+    // new AKKASG039; a type declared in a referenced assembly with no schema this generator can read
+    // at all reports the AKKASG007 cross-assembly wording; anything else reports the plain AKKASG007
+    // message. Reports at the LOCAL referencing property -- per Decision 16, this is true even for
+    // both cross-assembly variants: the foreign type's own assembly gets no diagnostic at all, since
+    // no generator work runs there.
     private static void ReportMissingNestedSchema(
         MessageInfo message,
         string fieldName,
         string typeFullName,
         TypeMapping mapping,
         string serializerClassName,
+        ImmutableDictionary<TypeKey, AccessibilityFailure> accessibilityFailuresByType,
         ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
         var at = new LocationKey(message.Key, fieldName);
@@ -750,6 +758,12 @@ public sealed partial class AkkaSerializerGenerator
         if (mapping.IsGenericConstruction)
         {
             diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnregisteredClosedGenericField, at, fieldName, ToDisplayName(message.FullyQualifiedName), ToDisplayName(typeFullName), serializerClassName));
+            return;
+        }
+
+        if (mapping.ForeignAssemblyName.Length > 0 && accessibilityFailuresByType.TryGetValue(mapping.Key, out var failure))
+        {
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.NestedFieldNotAccessibleCrossAssembly, at, fieldName, ToDisplayName(message.FullyQualifiedName), ToDisplayName(typeFullName), mapping.ForeignAssemblyName, failure.Description, serializerClassName));
             return;
         }
 
@@ -798,13 +812,27 @@ public sealed partial class AkkaSerializerGenerator
         return isValid;
     }
 
-    // Reports AKKASG015 for a union member with no known message. A referenced-assembly member
-    // gets the cross-assembly wording; a same-assembly member gets the plain message.
-    private static void ReportUnionMemberNotSerializable(MessageInfo message, string fieldName, UnionMemberInfo member, string serializerClassName, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
+    // Reports AKKASG015 for a union member with no known message, or AKKASG039 when the member IS
+    // [AkkaSerializable] but this compilation cannot see it or one of its members. A same-assembly
+    // member with no known message gets the plain AKKASG015 message.
+    private static void ReportUnionMemberNotSerializable(
+        MessageInfo message,
+        string fieldName,
+        UnionMemberInfo member,
+        string serializerClassName,
+        ImmutableDictionary<TypeKey, AccessibilityFailure> accessibilityFailuresByType,
+        ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
-        // Cross-assembly variant reports at the LOCAL referencing field too -- per Decision 16, the
-        // foreign member type's own assembly gets no diagnostic at all.
+        // Both cross-assembly variants report at the LOCAL referencing field too -- per Decision 16,
+        // the foreign member type's own assembly gets no diagnostic at all.
         var at = new LocationKey(message.Key, fieldName);
+
+        if (member.ForeignAssemblyName.Length > 0 && accessibilityFailuresByType.TryGetValue(member.Key, out var failure))
+        {
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.UnionMemberNotAccessibleCrossAssembly, at, ToDisplayName(member.TypeFullName), fieldName, ToDisplayName(message.FullyQualifiedName), member.ForeignAssemblyName, failure.Description, serializerClassName));
+            return;
+        }
+
         diagnostics.Add(member.ForeignAssemblyName.Length > 0
             ? new DiagnosticSpec(DiagnosticKey.UnionMemberNotSerializableCrossAssembly, at, ToDisplayName(member.TypeFullName), fieldName, ToDisplayName(message.FullyQualifiedName), member.ForeignAssemblyName, serializerClassName)
             : new DiagnosticSpec(DiagnosticKey.UnionMemberNotSerializable, at, ToDisplayName(member.TypeFullName), fieldName, ToDisplayName(message.FullyQualifiedName)));
@@ -814,6 +842,7 @@ public sealed partial class AkkaSerializerGenerator
         MessageInfo message,
         FieldInfo field,
         ImmutableDictionary<TypeKey, MessageInfo> messagesByType,
+        ImmutableDictionary<TypeKey, AccessibilityFailure> accessibilityFailuresByType,
         string serializerClassName,
         ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
@@ -842,7 +871,7 @@ public sealed partial class AkkaSerializerGenerator
         {
             if (!member.IsSupported || !messagesByType.TryGetValue(member.Key, out var memberMessage))
             {
-                ReportUnionMemberNotSerializable(message, field.Name, member, serializerClassName, diagnostics);
+                ReportUnionMemberNotSerializable(message, field.Name, member, serializerClassName, accessibilityFailuresByType, diagnostics);
                 isValid = false;
                 continue;
             }

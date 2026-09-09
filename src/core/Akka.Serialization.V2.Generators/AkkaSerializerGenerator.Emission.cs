@@ -152,22 +152,29 @@ public sealed partial class AkkaSerializerGenerator
     /// precomputed by the caller from the same collected arrays every other serializer's resolve
     /// step also sees, exactly as <see cref="ReportCrossSerializerDiagnostics"/> and
     /// <see cref="ReportProtocolCoverage"/> independently recompute them from the same source --
-    /// see <see cref="EvaluateGate"/>'s doc comment.
+    /// see <see cref="EvaluateGate"/>'s doc comment. <paramref name="metadataSchemas"/> is the
+    /// whole-compilation Decision 16 table (see <see cref="ComputeMetadataSchemas"/>): unlike
+    /// <see cref="CompilationFacts"/>, this one DOES feed message resolution directly (a metadata
+    /// schema must be visible to <see cref="ResolveSerializerMessages"/>'s own message table for a
+    /// referenced-assembly nested field or union member to resolve at all), so this parameter -- and
+    /// therefore the whole-compilation stage behind it -- IS combined into this stage's own inputs.
+    /// See <see cref="TrackingNames.MetadataSchemas"/> for the run-reason consequence.
     /// </summary>
     private static ResolvedSerializer ResolveSerializer(
         SerializerInfo serializer,
         ImmutableArray<MessageInfo> declaredMessages,
         ImmutableDictionary<int, string> duplicateSerializerIds,
         ImmutableDictionary<string, string> duplicateProtocolBindings,
-        ImmutableArray<MessageInfo> genericDefinitions)
+        ImmutableArray<MessageInfo> genericDefinitions,
+        MetadataSchemaTable metadataSchemas)
     {
         var gate = EvaluateGate(serializer, duplicateSerializerIds, duplicateProtocolBindings, genericDefinitions);
         if (!gate.IsEmittable)
             return ResolvedSerializer.NotEmittable(serializer, gate.Diagnostics);
 
-        var resolved = ResolveSerializerMessages(serializer, declaredMessages);
+        var resolved = ResolveSerializerMessages(serializer, declaredMessages, metadataSchemas);
         var validationDiagnostics = ImmutableArray.CreateBuilder<DiagnosticSpec>();
-        ValidateResolved(serializer, resolved, validationDiagnostics);
+        ValidateResolved(serializer, resolved, metadataSchemas, validationDiagnostics);
 
         var topLevelMessages = BuildClosedSet(resolved.TopLevelMessages);
         var usedFormatters = CollectUsedFormatters(resolved.ReachableMessages);
@@ -296,14 +303,23 @@ public sealed partial class AkkaSerializerGenerator
     /// and code generation (<see cref="Generate"/>) need. Extracted so the two never risk seeing a
     /// different table for the same input: <see cref="ResolveSerializer"/> computes it once per
     /// gate-passing serializer and passes the SAME <see cref="ResolvedSerializerMessages"/> to both.
+    /// <paramref name="metadataSchemas"/>' <see cref="MetadataSchemaTable.SchemasByType"/> (Decision
+    /// 16) is merged in beside <paramref name="declaredMessages"/> and
+    /// <see cref="SerializerInfo.ClosedGenericSchemas"/>, so a referenced-assembly nested field or
+    /// union member resolves through the exact same lookup every local message already uses -- no
+    /// other change is needed anywhere reachability, union planning, or emission reads
+    /// <c>allMessagesByType</c>/<c>resolvedMessagesByType</c> from. <see cref="MergeWithMetadataSchemas"/>
+    /// keeps local declarations taking priority over a metadata schema, per Decision 16.
     /// </summary>
-    private static ResolvedSerializerMessages ResolveSerializerMessages(SerializerInfo serializer, ImmutableArray<MessageInfo> declaredMessages)
+    private static ResolvedSerializerMessages ResolveSerializerMessages(SerializerInfo serializer, ImmutableArray<MessageInfo> declaredMessages, MetadataSchemaTable metadataSchemas)
     {
         var allMessages = declaredMessages
             .Where(message => !message.IsGenericDefinition)
             .Concat(serializer.ClosedGenericSchemas)
             .ToImmutableArray();
-        var allMessagesByType = allMessages.ToImmutableDictionary(message => message.Key);
+        var allMessagesByType = metadataSchemas.SchemasByType.IsEmpty
+            ? allMessages.ToImmutableDictionary(message => message.Key)
+            : MergeWithMetadataSchemas(allMessages, metadataSchemas.SchemasByType);
         var resolvedMessagesByType = ResolveMessages(allMessagesByType, serializer.Formatters);
         var topLevelMessages = allMessages
             .Where(message => serializer.ProtocolTypeFullName.Length > 0 && message.Protocols.Contains(serializer.ProtocolTypeFullName))
@@ -312,6 +328,25 @@ public sealed partial class AkkaSerializerGenerator
         var reachableMessages = CollectReachableMessages(topLevelMessages, resolvedMessagesByType);
 
         return new ResolvedSerializerMessages(topLevelMessages, reachableMessages, resolvedMessagesByType);
+    }
+
+    /// <summary>
+    /// Overlays <paramref name="allMessages"/> (this compilation's own declared messages, plus this
+    /// serializer's own closed-generic schemas) on top of <paramref name="metadataSchemasByType"/>
+    /// (Decision 16's referenced-assembly schemas): a metadata schema fills a gap the local
+    /// compilation leaves open, but never overrides a local declaration -- "local declarations keep
+    /// priority" is Decision 16's own rule. A key collision between the two is not expected in
+    /// practice (a well-formed compilation cannot itself be ambiguous about which type a property
+    /// names), but this ordering is what the rule requires if one ever occurs.
+    /// </summary>
+    private static ImmutableDictionary<TypeKey, MessageInfo> MergeWithMetadataSchemas(
+        ImmutableArray<MessageInfo> allMessages, ImmutableDictionary<TypeKey, MessageInfo> metadataSchemasByType)
+    {
+        var builder = metadataSchemasByType.ToBuilder();
+        foreach (var message in allMessages)
+            builder[message.Key] = message;
+
+        return builder.ToImmutable();
     }
 
     private static ImmutableDictionary<TypeKey, MessageInfo> ResolveMessages(

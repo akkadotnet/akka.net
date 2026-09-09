@@ -123,7 +123,7 @@ public sealed class GeneratorIncrementalScenariosSpec
     [Fact(DisplayName = "Tracked pipeline stages should match TrackingNames.All exactly (a new stage must update this spec)")]
     public void TrackingNames_should_match_expected_stage_count()
     {
-        // Pins today's stage count. Adding a ninth (or removing one) named pipeline stage is a
+        // Pins today's stage count. Adding a tenth (or removing one) named pipeline stage is a
         // deliberate architectural change -- this assertion makes it fail loudly here instead of
         // only surfacing as a silent gap in the scenarios below. ResolvedSerializers (the
         // per-serializer resolve stage from the S3 architecture pass) and CompilationFacts (the
@@ -134,8 +134,15 @@ public sealed class GeneratorIncrementalScenariosSpec
         // MessageLocations) existed briefly during development but was removed: a per-node Select
         // for a value read back only once, batched, cost more than it saved -- the merged location
         // bag (allLocations, in Initialize) now collects the raw ExtractedSerializer/ExtractedMessage
-        // values directly instead.
-        AkkaSerializerGenerator.TrackingNames.All.Should().HaveCount(8);
+        // values directly instead. MetadataSchemas is Decision 16's addition: the whole-compilation
+        // stage that reads a referenced-assembly type's schema from its compiled metadata (see
+        // AkkaSerializerGenerator.MetadataSchemas.cs and TrackingNames.MetadataSchemas's own doc
+        // comment) -- unlike CompilationFacts, it IS combined into ResolvedSerializers' own inputs.
+        // Scenarios (a)/(c)/(e) below still report ResolvedSerializers as Cached: empirically, adding
+        // this third combined input does not cost that stage its Cached best case for an edit
+        // MetadataSchemas itself does not care about (none of those fixtures use a referenced-
+        // assembly type) -- see scenarios (f)/(g) further down for the case where one is in play.
+        AkkaSerializerGenerator.TrackingNames.All.Should().HaveCount(9);
         AkkaSerializerGenerator.TrackingNames.All.Should().BeEquivalentTo(new[]
         {
             AkkaSerializerGenerator.TrackingNames.ExtractedSerializers,
@@ -145,7 +152,8 @@ public sealed class GeneratorIncrementalScenariosSpec
             AkkaSerializerGenerator.TrackingNames.MessageSchemas,
             AkkaSerializerGenerator.TrackingNames.CollectedMessages,
             AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
-            AkkaSerializerGenerator.TrackingNames.CompilationFacts
+            AkkaSerializerGenerator.TrackingNames.CompilationFacts,
+            AkkaSerializerGenerator.TrackingNames.MetadataSchemas
         });
     }
 
@@ -491,6 +499,118 @@ public sealed class GeneratorIncrementalScenariosSpec
         // AKKASG029 diagnostic appears.
         ChangedHintNames(result).Should().BeEmpty();
         result.After.RunResult.Diagnostics.Where(d => d.Id == "AKKASG029").Should().BeEmpty();
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // Decision 16 caching proof: a metadata schema is in play (AlphaOne nests Money, declared in a
+    // referenced assembly), and (f) an edit that touches neither the referenced type-key set nor
+    // any message that names one leaves every stage Cached or Unchanged and re-emits nothing;
+    // (g) an edit to the LOCAL message that references the metadata-derived type re-emits only the
+    // one serializer that owns it, exactly as an ordinary local nested-field edit already does.
+    // ------------------------------------------------------------------------------------------
+
+    // Money lives in a referenced assembly, compiled once via GeneratorTestHarness.CompileToReference
+    // and passed as the SAME extra reference to both the "before" and "after" compilation in every
+    // scenario below -- only the source text changes between runs, never the reference itself.
+    private const string CrossAssemblyMoneySource = """
+        #nullable enable
+        using Akka.Serialization.V2;
+
+        namespace MetadataScenarioSample.AssemblyA;
+
+        [AkkaSerializable]
+        public sealed record Money([property: AkkaField(1)] long Cents);
+        """;
+
+    private const string CrossAssemblyFixtureSource = """
+        #nullable enable
+        using Akka.Actor;
+        using Akka.Serialization.V2;
+        using MetadataScenarioSample.AssemblyA;
+
+        namespace MetadataScenarioSample;
+
+        public interface IAlphaProtocol
+        {
+        }
+
+        public interface IBetaProtocol
+        {
+        }
+
+        [AkkaSerializable(Manifest = "alpha-one-v1")]
+        public sealed record AlphaOne(
+            [property: AkkaField(1)] string Name,
+            [property: AkkaField(2)] Money Amount) : IAlphaProtocol;
+
+        [AkkaSerializer<IAlphaProtocol>("scenario-alpha-money", 170003)]
+        public sealed partial class AlphaSerializer : AkkaSerializer
+        {
+            public static partial SerializerRegistration CreateRegistration();
+        }
+
+        [AkkaSerializable(Manifest = "beta-one-v1")]
+        public sealed record BetaOne([property: AkkaField(1)] string Label) : IBetaProtocol;
+
+        [AkkaSerializer<IBetaProtocol>("scenario-beta-money", 170004)]
+        public sealed partial class BetaSerializer : AkkaSerializer
+        {
+            public static partial SerializerRegistration CreateRegistration();
+        }
+        """;
+
+    // AlphaOne's OWN scalar field renamed ("Name" -> "Label2") -- not the Money reference itself.
+    // Money's schema, and the referenced type-key set ComputeMetadataSchemas keys off, are both
+    // completely untouched by this edit.
+    private static readonly string CrossAssemblyFixtureWithAlphaFieldRenamed = CrossAssemblyFixtureSource.Replace(
+        "[property: AkkaField(1)] string Name,",
+        "[property: AkkaField(1)] string Label2,");
+
+    [Fact(DisplayName = "Scenario (f): with a metadata schema in play, an unrelated edit reuses every tracked stage and re-emits nothing")]
+    public void Scenario_f_metadata_schema_unrelated_file_edited()
+    {
+        var money = GeneratorTestHarness.CompileToReference(CrossAssemblyMoneySource, "ScenarioCrossAssemblyMoney");
+
+        var result = GeneratorTestHarness.RunIncremental(
+            new[] { new SourceFile("Main.cs", CrossAssemblyFixtureSource), new SourceFile("Unrelated.cs", UnrelatedSourceBefore) },
+            new[] { new SourceFile("Main.cs", CrossAssemblyFixtureSource), new SourceFile("Unrelated.cs", UnrelatedSourceAfter) },
+            beforeExtraReferences: new[] { money },
+            afterExtraReferences: new[] { money });
+
+        // MetadataSchemas recomputes (it combines the live Compilation, which always differs), but
+        // Money's schema and the referenced type-key set it was built from are both untouched by an
+        // edit to Unrelated.cs, so the produced MetadataSchemaTable compares equal to the previous
+        // run -- Unchanged, never Modified.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.MetadataSchemas, IncrementalStepRunReason.Unchanged);
+
+        // ResolvedSerializers now combines MetadataSchemas directly (see that constant's own doc
+        // comment). Empirically this does not cost the Cached result for an edit MetadataSchemas
+        // itself does not care about: the driver still recognizes the combined input as unchanged
+        // once MetadataSchemas' own produced value compares equal, exactly like scenario (a)'s
+        // existing serializers.Combine(messages) input.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
+
+        ChangedHintNames(result).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Scenario (g): with a metadata schema in play, editing the LOCAL message that references it re-emits only the serializer that owns it")]
+    public void Scenario_g_metadata_schema_local_referencing_message_edited()
+    {
+        var money = GeneratorTestHarness.CompileToReference(CrossAssemblyMoneySource, "ScenarioCrossAssemblyMoney2");
+
+        var result = GeneratorTestHarness.RunIncremental(
+            new[] { new SourceFile("Main.cs", CrossAssemblyFixtureSource) },
+            new[] { new SourceFile("Main.cs", CrossAssemblyFixtureWithAlphaFieldRenamed) },
+            beforeExtraReferences: new[] { money },
+            afterExtraReferences: new[] { money });
+
+        // Renaming AlphaOne's own scalar field does not touch Money or the referenced type-key set,
+        // so MetadataSchemas' produced value is unaffected -- Unchanged.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.MetadataSchemas, IncrementalStepRunReason.Unchanged);
+
+        // Only AlphaSerializer owns AlphaOne; BetaSerializer's resolved model is untouched.
+        ChangedHintNames(result).Should().BeEquivalentTo(new[] { "AlphaSerializer.AkkaSerialization.g.cs" });
     }
 
     private static void AssertReasons(IncrementalGeneratorRunResult result, string trackingName, params IncrementalStepRunReason[] expected)

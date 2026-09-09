@@ -1204,7 +1204,9 @@ public sealed partial class AkkaSerializerGenerator
         ClosedGenericRegistrationNotInProtocol,
         UnionMemberAbstract,
         ManifestIgnoredOnGenericDefinition,
-        UnionDeclaredOnObjectField
+        UnionDeclaredOnObjectField,
+        NestedFieldNotAccessibleCrossAssembly,
+        UnionMemberNotAccessibleCrossAssembly
     }
 
     /// <summary>
@@ -1701,6 +1703,114 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, ReferencedAssembliesUsingV2);
             hash = ValueEquality.CombineArrayDictionary(hash, LocalUnmarkedImplementorsByProtocol);
             hash = ValueEquality.CombineArrayDictionary(hash, ReferencedAssemblyImplementorsByProtocol);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// One cross-assembly accessibility problem found while building a metadata schema (Decision 16
+    /// in openspec/changes/messagepack-sourcegen-validation/design.md): a referenced type, or one of
+    /// its own <c>[AkkaField]</c> properties, that this compilation cannot see. Carries a single
+    /// ready-to-render description ("type 'Money' is internal, ..." or "property 'Street' on type
+    /// 'Address' is private") instead of the symbol itself, so it stays a plain value the AKKASG039
+    /// message text can drop in directly. When the broken member sits one or more levels below the
+    /// type a local property names directly (Money is fine, but its own nested field Address is not),
+    /// this describes THAT failing type/member, not Money -- see
+    /// <see cref="AkkaSerializerGenerator.ComputeMetadataSchemas"/>'s propagation step.
+    /// </summary>
+    internal sealed class AccessibilityFailure : IEquatable<AccessibilityFailure>
+    {
+        public AccessibilityFailure(string description)
+        {
+            Description = description;
+        }
+
+        public string Description { get; }
+
+        public bool Equals(AccessibilityFailure? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return string.Equals(Description, other.Description, StringComparison.Ordinal);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as AccessibilityFailure);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, Description);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// The Decision 16 metadata-schema stage's cached output (see
+    /// <see cref="AkkaSerializerGenerator.ComputeMetadataSchemas"/>): the schema for every
+    /// referenced-assembly type any local message, union field, or closed-generic schema names as a
+    /// nested field type or union member type, extracted from that assembly's compiled metadata
+    /// through the SAME <c>ExtractMessageCore</c> routine a local type goes through -- so the schema
+    /// is identical to what the type's own compilation would have produced for it. Symbol-free and
+    /// value-equatable like every other cached pipeline model.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="SchemasByType"/> is merged directly into <see cref="AkkaSerializerGenerator.ResolveSerializerMessages"/>'s
+    /// own message table, so every downstream stage (reachability, union planning, emission) treats
+    /// a metadata schema exactly like a local or closed-generic one -- no other code needed to change
+    /// for a resolved schema to flow through validation and code generation. <see cref="AccessibilityFailuresByType"/>
+    /// is consulted ONLY when a lookup against the merged table misses, to tell a genuine "not
+    /// [AkkaSerializable] anywhere" gap (unchanged AKKASG007/AKKASG015 behavior) apart from "carries
+    /// the attribute, but this compilation cannot see it or one of its members" (the new AKKASG039).
+    /// </remarks>
+    internal sealed class MetadataSchemaTable : IEquatable<MetadataSchemaTable>
+    {
+        public static readonly MetadataSchemaTable Empty = new(
+            ImmutableDictionary<TypeKey, MessageInfo>.Empty,
+            ImmutableDictionary<TypeKey, AccessibilityFailure>.Empty);
+
+        public MetadataSchemaTable(
+            ImmutableDictionary<TypeKey, MessageInfo> schemasByType,
+            ImmutableDictionary<TypeKey, AccessibilityFailure> accessibilityFailuresByType)
+        {
+            SchemasByType = schemasByType;
+            AccessibilityFailuresByType = accessibilityFailuresByType;
+        }
+
+        /// <summary>Every referenced-assembly type successfully extracted, keyed by its own <see cref="TypeKey"/>.</summary>
+        public ImmutableDictionary<TypeKey, MessageInfo> SchemasByType { get; }
+
+        /// <summary>
+        /// Every referenced-assembly type that carries <c>[AkkaSerializable]</c> but could not be
+        /// turned into a schema because this compilation cannot see it, or one of its own
+        /// <c>[AkkaField]</c> properties, or a type it itself nests -- keyed by the type a local
+        /// message/union field named DIRECTLY (which may differ from the type the failure
+        /// description names, when the problem sits one or more levels down).
+        /// </summary>
+        public ImmutableDictionary<TypeKey, AccessibilityFailure> AccessibilityFailuresByType { get; }
+
+        public bool Equals(MetadataSchemaTable? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return ValueEquality.DictionaryEquals(SchemasByType, other.SchemasByType)
+                && ValueEquality.DictionaryEquals(AccessibilityFailuresByType, other.AccessibilityFailuresByType);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as MetadataSchemaTable);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.CombineDictionary(hash, SchemasByType);
+            hash = ValueEquality.CombineDictionary(hash, AccessibilityFailuresByType);
             return hash;
         }
     }
