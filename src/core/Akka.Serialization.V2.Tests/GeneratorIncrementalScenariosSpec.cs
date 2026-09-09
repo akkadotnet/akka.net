@@ -151,7 +151,15 @@ public sealed class GeneratorIncrementalScenariosSpec
         // this third combined input does not cost that stage its Cached best case for an edit
         // MetadataSchemas itself does not care about (none of those fixtures use a referenced-
         // assembly type) -- see scenarios (f)/(g) further down for the case where one is in play.
-        AkkaSerializerGenerator.TrackingNames.All.Should().HaveCount(9);
+        // ClosedGenericExpansions is S7's addition: the whole-compilation stage that hoists
+        // ManifestPrefix expansion (Decision 18) out of the per-node serializer extraction transform
+        // and into a stage that shares CompilationFacts' own cached closed-set buckets -- see
+        // AkkaSerializerGenerator.Expansion.cs and TrackingNames.ClosedGenericExpansions's own doc
+        // comment. Unlike MetadataSchemas/CompilationFacts, no output below combines this stage (or
+        // its own merge step, MergeSerializerClosedGenericExpansions) directly -- MetadataSchemas and
+        // ResolvedSerializers instead combine effectiveSerializers, the ALREADY-MERGED array, so this
+        // stage's own run reason is asserted on separately -- see scenarios (i)/(j)/(k) further down.
+        AkkaSerializerGenerator.TrackingNames.All.Should().HaveCount(10);
         AkkaSerializerGenerator.TrackingNames.All.Should().BeEquivalentTo(new[]
         {
             AkkaSerializerGenerator.TrackingNames.ExtractedSerializers,
@@ -162,7 +170,8 @@ public sealed class GeneratorIncrementalScenariosSpec
             AkkaSerializerGenerator.TrackingNames.CollectedMessages,
             AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
             AkkaSerializerGenerator.TrackingNames.CompilationFacts,
-            AkkaSerializerGenerator.TrackingNames.MetadataSchemas
+            AkkaSerializerGenerator.TrackingNames.MetadataSchemas,
+            AkkaSerializerGenerator.TrackingNames.ClosedGenericExpansions
         });
     }
 
@@ -653,6 +662,159 @@ public sealed class GeneratorIncrementalScenariosSpec
 
         var alphaSource = result.After.GeneratedSources["AlphaSerializer.AkkaSerialization.g.cs"];
         alphaSource.Should().Contain("AlphaFour").And.Contain("alpha-four-v1");
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // S7 caching proof: ManifestPrefix expansion hoisted out of the per-node serializer extraction
+    // transform and into its own per-compilation stage (TrackingNames.ClosedGenericExpansions, see
+    // AkkaSerializerGenerator.Expansion.cs). (i) an edit to an unrelated file, and (j) a whitespace
+    // edit inside a message, both leave the expansion stage's own tracked (table-only) value equal
+    // to its previous run -- Unchanged, not Modified -- so ResolvedSerializers stays Cached for
+    // both serializers and nothing re-emits; (k) adding a new local marked implementor of the
+    // expanded protocol changes the expansion stage's OWN table (a new construction joins it), so
+    // only the serializer that registered the ManifestPrefix expansion re-emits.
+    // ------------------------------------------------------------------------------------------
+
+    private const string PrefixFixtureSource = """
+        #nullable enable
+        using Akka.Actor;
+        using Akka.Serialization.V2;
+
+        namespace PrefixScenarioSample;
+
+        public interface IGammaProtocol
+        {
+        }
+
+        [AkkaSerializable(Manifest = "gamma-one-v1")]
+        public sealed record GammaOne([property: AkkaField(1)] string Name) : IGammaProtocol;
+
+        [AkkaSerializable(Manifest = "gamma-two-v1")]
+        public sealed record GammaTwo([property: AkkaField(1)] int Count) : IGammaProtocol;
+
+        [AkkaSerializable]
+        public sealed record Envelope<T>(
+            [property: AkkaField(1)] T Message,
+            [property: AkkaField(2)] string TraceId);
+
+        [AkkaSerializer<IGammaProtocol>("scenario-gamma", 170101)]
+        [AkkaSerializable<Envelope<IGammaProtocol>>(ManifestPrefix = "gamma")]
+        public sealed partial class GammaSerializer : AkkaSerializer
+        {
+            public static partial SerializerRegistration CreateRegistration();
+        }
+
+        public interface IDeltaProtocol
+        {
+        }
+
+        [AkkaSerializable(Manifest = "delta-one-v1")]
+        public sealed record DeltaOne([property: AkkaField(1)] string Label) : IDeltaProtocol;
+
+        [AkkaSerializer<IDeltaProtocol>("scenario-delta", 170102)]
+        public sealed partial class DeltaSerializer : AkkaSerializer
+        {
+            public static partial SerializerRegistration CreateRegistration();
+        }
+        """;
+
+    // A trailing comment inside GammaTwo's own declaration -- no semantic change, exactly like
+    // FixtureWithCommentInsideBetaTwo above.
+    private static readonly string PrefixFixtureWithCommentInsideGammaTwo = PrefixFixtureSource.Replace(
+        "[property: AkkaField(1)] int Count) : IGammaProtocol;",
+        "[property: AkkaField(1)] /* a trailing comment, no semantic change */ int Count) : IGammaProtocol;");
+
+    // A NEW local, marked implementor of IGammaProtocol, appended after the fixture's own last
+    // declaration -- changes CompilationFacts.LocalMarkedImplementorsByClosedSetKey for
+    // IGammaProtocol's own key, which is exactly the closed-set key GammaSerializer's
+    // ManifestPrefix registration asks about.
+    private static readonly string PrefixFixtureWithNewGammaImplementorAdded = PrefixFixtureSource +
+        "\n[AkkaSerializable(Manifest = \"gamma-three-v1\")]\n" +
+        "public sealed record GammaThree([property: AkkaField(1)] bool Flag) : IGammaProtocol;\n";
+
+    [Fact(DisplayName = "Scenario (i): with a ManifestPrefix registration in play, editing an unrelated file reuses ClosedGenericExpansions and re-emits no file")]
+    public void Scenario_i_prefix_expansion_unrelated_file_edited()
+    {
+        var result = GeneratorTestHarness.RunIncremental(
+            new[] { new SourceFile("Main.cs", PrefixFixtureSource), new SourceFile("Unrelated.cs", UnrelatedSourceBefore) },
+            new[] { new SourceFile("Main.cs", PrefixFixtureSource), new SourceFile("Unrelated.cs", UnrelatedSourceAfter) });
+
+        // The expansion stage's own RAW step (ComputeClosedGenericExpansions) recomputes -- it
+        // combines context.CompilationProvider directly, which never itself compares equal across
+        // an edit -- but neither IGammaProtocol's own closed set nor anything else GammaSerializer's
+        // registration asks about is touched by an edit to an unrelated file, and nothing shifts any
+        // location the raw step's own LocationBag half carries either (Main.cs itself is byte-for-
+        // byte unchanged), so the RAW step's produced value (table AND locations) compares equal to
+        // its previous run. That is exactly the shape TrackingNames.SerializerSchemas/MessageSchemas
+        // already document for the SAME reason (see scenario (a) above): a table-only PROJECTION
+        // (closedGenericExpansions = closedGenericExpansionsRaw.Select(r => r.Table)) downstream of
+        // an unchanged raw value gets to report Cached -- skipped entirely, not merely recomputed to
+        // an equal result -- since the driver recognizes the projection's own input never changed.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CompilationFacts, IncrementalStepRunReason.Unchanged);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ClosedGenericExpansions, IncrementalStepRunReason.Cached);
+
+        // ResolvedSerializers combines effectiveSerializers (built from ClosedGenericExpansions'
+        // own Unchanged table), so both serializers' resolve steps are skipped entirely -- Cached.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
+
+        ChangedHintNames(result).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Scenario (j): with a ManifestPrefix registration in play, a comment added inside one message's declaration reuses ClosedGenericExpansions and re-emits no file")]
+    public void Scenario_j_prefix_expansion_comment_added_inside_message_body()
+    {
+        var result = GeneratorTestHarness.RunIncremental(PrefixFixtureSource, PrefixFixtureWithCommentInsideGammaTwo);
+
+        // A comment carries no semantic information CompilationFacts or the expansion stage cares
+        // about -- both rerun (their own Select combines context.CompilationProvider) but compare
+        // equal to their previous run. GammaTwo's own location shifts (S6 "locations"), and so does
+        // the expansion stage's OWN raw location bag for Envelope<T>'s substituted properties if
+        // Envelope<T> sits after GammaTwo in the file -- but neither stage's TRACKED value carries
+        // any location data (see ClosedGenericExpansions' own doc comment), so that shift never
+        // reaches either tracked reason below.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CompilationFacts, IncrementalStepRunReason.Unchanged);
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ClosedGenericExpansions, IncrementalStepRunReason.Unchanged);
+
+        // Same as scenario (i): ResolvedSerializers' own combined input is unchanged, so both
+        // serializers' resolve steps are skipped entirely (Cached), and no file re-emits.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
+            IncrementalStepRunReason.Cached, IncrementalStepRunReason.Cached);
+
+        ChangedHintNames(result).Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "Scenario (k): adding a new local marked implementor of the expanded protocol marks ClosedGenericExpansions Modified and re-emits only the serializer whose closed set changed")]
+    public void Scenario_k_prefix_expansion_new_local_implementor_added()
+    {
+        var result = GeneratorTestHarness.RunIncremental(
+            new[] { new SourceFile("Main.cs", PrefixFixtureSource) },
+            new[] { new SourceFile("Main.cs", PrefixFixtureWithNewGammaImplementorAdded) });
+
+        // GammaThree is a NEW [AkkaSerializable] implementor of IGammaProtocol -- CompilationFacts'
+        // own local-marked-implementor walk finds it, so the produced CompilationFacts value
+        // genuinely differs from the previous run.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.CompilationFacts, IncrementalStepRunReason.Modified);
+
+        // The expansion stage combines CompilationFacts directly, so it reruns and its OWN table
+        // genuinely differs too: GammaSerializer's ManifestPrefix registration over
+        // Envelope<IGammaProtocol> now expands to a THIRD construction, Envelope<GammaThree>.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ClosedGenericExpansions, IncrementalStepRunReason.Modified);
+
+        // ResolvedSerializers combines effectiveSerializers (rebuilt from the modified expansion
+        // table) and CompilationFacts directly, so both serializers' own SelectMany elements
+        // re-execute -- but only GammaSerializer's RESOLVED MODEL actually changes (it gains
+        // Envelope<GammaThree>'s own dispatch arm); DeltaSerializer's compares equal to its previous
+        // run, since IGammaProtocol's own bucket never touches IDeltaProtocol's.
+        AssertReasons(result, AkkaSerializerGenerator.TrackingNames.ResolvedSerializers,
+            IncrementalStepRunReason.Modified, IncrementalStepRunReason.Unchanged);
+
+        // Only GammaSerializer's generated file actually changes text (it gains
+        // Envelope<GammaThree>'s dispatch arm and helpers); DeltaSerializer's is skipped entirely.
+        ChangedHintNames(result).Should().BeEquivalentTo(new[] { "GammaSerializer.AkkaSerialization.g.cs" });
+
+        var gammaSource = result.After.GeneratedSources["GammaSerializer.AkkaSerialization.g.cs"];
+        gammaSource.Should().Contain("GammaThree").And.Contain("gamma/gamma-three-v1");
     }
 
     private static void AssertReasons(IncrementalGeneratorRunResult result, string trackingName, params IncrementalStepRunReason[] expected)

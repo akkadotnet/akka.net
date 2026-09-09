@@ -458,3 +458,80 @@ Decision 19 addendum).
       freshly compiled, distinct reference over identical source -- and neutralizes an incidental
       confound in the test harness itself (its own base reference set independently qualifies the
       executing test assembly for this same walk) by warming that entry before measuring
+
+## 16. ManifestPrefix Expansion Hoisted To A Per-Compilation Stage (S7)
+
+Stacks on F3 (`feature/serialization-v2-implementor-walk`, commit `ab82136da`). Closes the
+caching-granularity gap 15's own intro text and design.md's F3 addendum both flagged and
+deliberately deferred: `ManifestPrefix` expansion (Decision 18) still ran its own closed-set walk
+and construction/schema extraction once per registration, inside the per-node serializer
+extraction transform, instead of sharing `CompilationFacts`' own cached buckets the way top-level
+dispatch and the implicit-union rules already do. Behavior-neutral: no new diagnostic, no changed
+diagnostic text, no changed generated output for any existing fixture.
+
+- [x] 16.1 Replace `ExpandClosedGenericRegistration`/`TryGetClosedSetMembers`/`AddDiscoveredClosedSetMembers`/
+      `ComputeLocalMarkedProtocolImplementors`/`EnumerateReferencedAssemblyMarkedImplementors`
+      (`AkkaSerializerGenerator.Extraction.cs`) with `BuildPrefixExpansionSpec`/`TryClassifyPrefixArgumentPosition`:
+      classifies each `ManifestPrefix` target's own type-argument position from the argument's own
+      symbol alone (no walk of the compilation's declared types), recording a light
+      `PrefixExpansionSpec` (`SerializerInfo.PrefixExpansions`) for a registration with at least one
+      protocol- or `[AkkaUnion]`-flavored position. An invalid target, an unresolvable fixed
+      argument, or no closed-set-flavored position at all is still resolved as an AKKASG040 error
+      entirely in the transform, exactly as before -- none of those depend on a whole-compilation
+      walk. `ImplementsOrDerivesFromClosedSetKey` (`AkkaSerializerGenerator.Facts.cs`), whose only
+      callers were the two removed walks, is deleted alongside them
+- [x] 16.2 Add the S7 expansion stage, `ComputeClosedGenericExpansions` (`AkkaSerializerGenerator.Expansion.cs`),
+      a per-compilation stage next to `CompilationFacts`/`ComputeMetadataSchemas`: consumes the
+      collected serializers' own `PrefixExpansions` plus `CompilationFacts`' `LocalMarkedImplementorsByClosedSetKey`/
+      `ReferencedAssemblyImplementorsByProtocol` buckets, re-resolves each candidate `TypeKey` back
+      to a symbol (`ResolveTypeSymbol`, recursing through `TypeKey.TypeArguments` for a candidate
+      that is itself a closed generic construction -- `Compilation.GetTypeByMetadataName` alone only
+      ever resolves a type's own open definition), runs the same cartesian product and manifest
+      formula F2 ran inline, and extracts each construction's schema through the same
+      `ExtractMessageCore`. `ComputeDistinctClosedSetKeys` (`AkkaSerializerGenerator.Facts.cs`) is
+      extended to also request every `PrefixExpansionSpec`'s own discovered-mode keys, so
+      `CompilationFacts`' shared buckets already cover them. Tracking name
+      `TrackingNames.ClosedGenericExpansions`, added to `TrackingNames.All`
+      (`GeneratorIncrementalScenariosSpec`'s stage-count pin updated 9 -> 10)
+- [x] 16.3 Merge the expansion stage's own table back into each `SerializerInfo` with ONE function,
+      `SerializerInfo.WithClosedGenericExpansion` (called from `MergeSerializerClosedGenericExpansions`,
+      producing `effectiveSerializers`, which `ComputeMetadataSchemas`, the per-serializer resolve
+      stage, and every diagnostics output now combine instead of the raw collected array), splicing
+      each `PrefixExpansionGroup` back into `ClosedGenericRegistrations`/`ClosedGenericSchemas` at
+      the exact insertion point (`PrefixExpansionSpec.RegistrationInsertionIndex`/`SchemaInsertionIndex`,
+      `SpliceExpansionGroups<T>`) F2/F3's own inline, per-attribute expansion left them at -- an
+      append-only first version of this merge reordered the golden corpus's own dispatch switch and
+      failed the byte-identical gate
+- [x] 16.4 Redirect `MessageTypeLocationKey` (`AkkaSerializerGenerator.Locations.cs`) to resolve an
+      expansion member's own type-level location through `ClosedGenericRegistrationInfo.ExpansionGroup`
+      (the base attribute's own location entry `BuildSerializerLocationBag` already records) instead
+      of a per-member entry, so the expansion stage needs no attribute-location plumbing of its own;
+      field-level locations for an expanded member's own `[AkkaField]` properties still resolve
+      through `ExtractMessageCore`'s existing inlined capture, carried in the expansion stage's own
+      raw `LocationBag` half (`ExpandedPrefixRegistrations`) and merged into `allLocations`
+- [x] 16.5 Add three caching-proof scenarios to `GeneratorIncrementalScenariosSpec.cs` over a new
+      fixture with a `ManifestPrefix` registration (scenarios (i)/(j)/(k)): an unrelated edit and a
+      whitespace edit inside a message both leave `ResolvedSerializers` `Cached` and re-emit nothing
+      (the expansion stage's own tracked, table-only projection reports `Cached` when its raw input
+      compares equal -- the same "Unchanged upstream lets a trivial downstream projection go
+      Cached" shape `SerializerSchemas`/`MessageSchemas` already document -- or `Unchanged` when a
+      location-only shift forces the raw stage to rerun but its own table half still compares
+      equal); adding a new local marked implementor of the expanded protocol marks `CompilationFacts`
+      and the expansion stage `Modified` and re-emits only the serializer whose closed set changed
+- [x] 16.6 Add a `PrefixVariant` corpus variant to `SourceGeneratorBenchmarks`/`SourceGeneratorBenchmarkCorpus`
+      (`src/benchmark/Akka.Benchmarks/Serialization/SourceGeneratorBenchmarks.cs`): one serializer
+      additionally registers `Envelope0<IProtocol0>` with `ManifestPrefix`, expanding over all 100 of
+      its own protocol messages. Measured against `ab82136da` (ShortRun, same machine, back to
+      back): the existing (non-prefix) corpus lands within ~1% on allocations for every row; the
+      prefix variant's rows that do not force a re-emission (trailing whitespace/comment edit,
+      unrelated file edited) drop ~8-9% on allocations, and the fresh/cold run drops ~2% (one fewer
+      redundant walk over the same closed set `CompilationFacts` already covers for top-level
+      dispatch); the field-rename row drops a smaller ~3% because it still forces a genuine
+      re-emission of the owning serializer's file (the renamed message's own field is part of the
+      emitted text), independent of this hoist. Wall-clock (`Mean`) numbers were noisy under
+      `ShortRun`'s three iterations on a shared machine; `Allocated` (deterministic per run) is the
+      metric actually compared
+- [x] 16.7 Add design.md's own S7 addendum under Decision 18: what moved, where it lives now, the
+      merge point, why an append-only first version of the merge failed the byte-identical gate and
+      needed a splice instead, the `ResolveTypeSymbol` fix for a nested closed-generic candidate, and
+      the run-reason shape for the three new caching-proof scenarios
