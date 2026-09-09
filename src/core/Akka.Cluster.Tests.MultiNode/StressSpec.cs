@@ -47,7 +47,35 @@ public class StressSpecConfig : MultiNodeConfig
         foreach (var i in Enumerable.Range(1, TotalNumberOfNodes))
             Role("node-" + i);
 
-        CommonConfig = ConfigurationFactory.ParseString(@"
+        CommonConfig = ConfigurationFactory.ParseString(BuildConfig(TotalNumberOfNodes));
+
+        TestTransport = true;
+    }
+
+    /// <summary>
+    /// Builds the `akka.test.cluster-stress-spec` (plus supporting actor/remote) config for a run
+    /// of <paramref name="totalNumberOfNodes"/> nodes.
+    ///
+    /// The reference node count (matching Pekko's stress spec) is 10, and with the full 10-node
+    /// `nr-of-nodes-*` defaults below, 10 also happens to be the *smallest* count that fits every
+    /// phase -- see the arithmetic in <see cref="Settings"/>'s constructor. The joining phases need
+    /// >= 7 nodes on their own (3 seed nodes + 4 singleton join phases), and the leaving/shutdown
+    /// phases together remove 7 nodes' worth of `nr-of-nodes-*`, which requires
+    /// `totalNumberOfNodes - 3 >= 7`, i.e. `totalNumberOfNodes >= 10`. So on the 2-vCPU hosted CI
+    /// agents, lowering `MNTR_STRESSSPEC_NODECOUNT` below 10 by itself is not enough -- <see cref="Settings"/>
+    /// throws unless the phase counts shrink too. Below 10 nodes, this method drops the two
+    /// "-large" one-by-one leave/shutdown phases (each mostly redundant with the "-small" one-by-one
+    /// phase that already covers that code path, just at a different point in the cluster's
+    /// lifecycle) and halves the simultaneous "shutdown" phase from 2 to 1, freeing exactly the 3
+    /// nodes needed to fit a 7-node run.
+    /// </summary>
+    internal static string BuildConfig(int totalNumberOfNodes)
+    {
+        var leavingOneByOneLarge = totalNumberOfNodes < 10 ? 0 : 1;
+        var shutdownOneByOneLarge = totalNumberOfNodes < 10 ? 0 : 1;
+        var shutdown = totalNumberOfNodes < 10 ? 1 : 2;
+
+        return @"
 akka.test.cluster-stress-spec {
     infolog = on
     # scale the nr-of-nodes* settings with this factor
@@ -59,12 +87,12 @@ akka.test.cluster-stress-spec {
     nr-of-nodes-joining-one-by-one-large = 1
     nr-of-nodes-joining-to-one = 1
     nr-of-nodes-leaving-one-by-one-small = 1
-    nr-of-nodes-leaving-one-by-one-large = 1
+    nr-of-nodes-leaving-one-by-one-large = " + leavingOneByOneLarge + @"
     nr-of-nodes-leaving = 1
     nr-of-nodes-shutdown-one-by-one-small = 1
-    nr-of-nodes-shutdown-one-by-one-large = 1
+    nr-of-nodes-shutdown-one-by-one-large = " + shutdownOneByOneLarge + @"
     nr-of-nodes-partition = 2
-    nr-of-nodes-shutdown = 2
+    nr-of-nodes-shutdown = " + shutdown + @"
     nr-of-nodes-join-remove = 2
     # not scaled
     # scale the *-duration settings with this factor
@@ -76,7 +104,7 @@ akka.test.cluster-stress-spec {
     convergence-within-factor = 1.0
 }
 akka.actor.provider = cluster
-    
+
 akka.cluster {
     # akka.test.timefactor does NOT reach cluster settings. TestKitBase.Dilated scales TestKit
     # waits only; ClusterSettings reads this value raw. So a lane that declares ""this box is 3x
@@ -134,9 +162,7 @@ akka.remote.default-remote-dispatcher {
         parallelism-factor = 0.5
         parallelism-max = 16
     }
-}");
-
-        TestTransport = true;
+}";
     }
 
     public class Settings

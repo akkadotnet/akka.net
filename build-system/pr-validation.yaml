@@ -112,6 +112,10 @@ jobs:
       artifactName: "net_mntr_windows-$(Build.BuildId)"
       mntrFailuresDir: 'TestResults\\multinode'
       mntrFailuresArtifactName: "net_7_mntr_FAILED_windows-$(Build.BuildId)"
+      env:
+        # 2-vCPU hosted agents can't comfortably run StressSpec's 10-node default; 7 is the
+        # smallest count StressSpecConfig.BuildConfig can still fit (see its doc comment).
+        MNTR_STRESSSPEC_NODECOUNT: "7"
 
   # First-ever Linux MNTR lane: same suite, same incrementalist scoping and
   # command as "net_mntr_windows" above, on ubuntu-latest (matching the Linux
@@ -129,6 +133,10 @@ jobs:
       mntrFailuresDir: 'TestResults/multinode'
       mntrFailuresArtifactName: "net_mntr_FAILED_linux-$(Build.BuildId)"
       continueOnError: true
+      env:
+        # 2-vCPU hosted agents can't comfortably run StressSpec's 10-node default; 7 is the
+        # smallest count StressSpecConfig.BuildConfig can still fit (see its doc comment).
+        MNTR_STRESSSPEC_NODECOUNT: "7"
 
   # Independent, parallel, NON-BLOCKING Artery MNTR stage. Runs the exact same
   # incrementally-scoped multi-node suite as "net_mntr_windows" above, but
@@ -167,6 +175,9 @@ jobs:
       continueOnError: true
       env:
         AKKA_MNTR_TRANSPORT: artery
+        # 2-vCPU hosted agents can't comfortably run StressSpec's 10-node default; 7 is the
+        # smallest count StressSpecConfig.BuildConfig can still fit (see its doc comment).
+        MNTR_STRESSSPEC_NODECOUNT: "7"
 
   # Fourth lane, completing the classic/Artery x Windows/Linux MNTR matrix
   # (only classic Windows is blocking). Same rationale and known/accepted
@@ -184,6 +195,9 @@ jobs:
       continueOnError: true
       env:
         AKKA_MNTR_TRANSPORT: artery
+        # 2-vCPU hosted agents can't comfortably run StressSpec's 10-node default; 7 is the
+        # smallest count StressSpecConfig.BuildConfig can still fit (see its doc comment).
+        MNTR_STRESSSPEC_NODECOUNT: "7"
 
   - template: azure-pipeline.template.yaml
     parameters:
