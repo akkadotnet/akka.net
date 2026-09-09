@@ -199,17 +199,16 @@ public sealed partial class AkkaSerializerGenerator
     /// Shared by <see cref="Validate"/> and <see cref="ResolveSerializer"/> so both run the exact same
     /// validation over the exact same <see cref="ResolvedSerializerMessages"/> -- <see cref="ResolveSerializer"/>
     /// calls this with a table it also reuses for code generation; <see cref="Validate"/> computes one
-    /// just for the call. <see cref="ValidateClosedGenericProtocolCoverage"/> runs only when
-    /// <see cref="ValidateMessages"/> found no error, mirroring the old stage's short-circuit exactly
-    /// (a message-level error already means nothing will be emitted, so the AKKASG034 coverage scan
-    /// over a table already known to be broken is skipped, exactly as before).
+    /// just for the call. There is no closed-generic protocol-coverage scan here anymore: Decision 18
+    /// (openspec/changes/messagepack-sourcegen-validation/design.md) retires AKKASG034, since every
+    /// registered or expanded construction is now unconditionally a top-level message (see the
+    /// adoption rule in <see cref="ResolveSerializerMessages"/>), whether or not it implements the
+    /// protocol -- the "registration has no effect" condition AKKASG034 used to guard can no longer
+    /// occur.
     /// </summary>
     private static void ValidateResolved(SerializerInfo serializer, ResolvedSerializerMessages resolved, MetadataSchemaTable metadataSchemas, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
-        if (!ValidateMessages(serializer, resolved.TopLevelMessages, resolved.ReachableMessages, resolved.ResolvedMessagesByType, metadataSchemas.AccessibilityFailuresByType, diagnostics))
-            return;
-
-        ValidateClosedGenericProtocolCoverage(serializer, resolved.ReachableMessages, diagnostics);
+        ValidateMessages(serializer, resolved.TopLevelMessages, resolved.ReachableMessages, resolved.ResolvedMessagesByType, metadataSchemas.AccessibilityFailuresByType, diagnostics);
     }
 
     /// <summary>
@@ -456,7 +455,12 @@ public sealed partial class AkkaSerializerGenerator
     /// <see cref="ClosedGenericRegistrationInfo"/>) carries only the target's own key, so a target
     /// this serializer never managed to extract a schema for (not a type, non-generic, unbound, or
     /// its definition lacks <c>[AkkaSerializable]</c>) is exactly the registration with no matching
-    /// key in <see cref="SerializerInfo.ClosedGenericSchemas"/>.
+    /// key in <see cref="SerializerInfo.ClosedGenericSchemas"/>. A <c>ManifestPrefix</c>-only BASE
+    /// entry (<see cref="ClosedGenericRegistrationInfo.ManifestPrefix"/> set, <see cref="ClosedGenericRegistrationInfo.Manifest"/>
+    /// empty, no <see cref="ClosedGenericRegistrationInfo.ExpansionError"/>) is EXEMPT: Decision 18
+    /// says <c>ManifestPrefix</c> alone does not register the literal construction, so it legitimately
+    /// has no schema. Also fires AKKASG040 for an <see cref="ClosedGenericRegistrationInfo.ExpansionError"/>
+    /// entry, and AKKASG042 (info) once per successfully-expanding <c>ManifestPrefix</c> registration.
     /// </summary>
     private static bool ValidateClosedGenericRegistrations(SerializerInfo serializer, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
     {
@@ -468,7 +472,38 @@ public sealed partial class AkkaSerializerGenerator
             schemaKeys.Add(schema.Key);
 
         var isValid = true;
-        foreach (var registration in serializer.ClosedGenericRegistrations.Where(registration => !schemaKeys.Contains(registration.Target)))
+
+        // AKKASG040: a ManifestPrefix registration that could not expand at all.
+        foreach (var registration in serializer.ClosedGenericRegistrations.Where(r => r.ExpansionError.Length > 0))
+        {
+            var at = new LocationKey(serializer.Key, ClosedGenericLocationMember(registration.TargetDisplayName));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ClosedSetExpansionRequiresClosedSet, at,
+                ToDisplayName(registration.TargetDisplayName), registration.ManifestPrefix, serializer.ClassName, registration.ExpansionError));
+            isValid = false;
+        }
+
+        // AKKASG042 (info): the construction count for every ManifestPrefix registration that DID
+        // expand -- grouped by ExpansionGroup, which every member an expansion produced shares.
+        var baseRegistrationsByTargetName = serializer.ClosedGenericRegistrations
+            .Where(r => r.ExpansionGroup.Length == 0 && r.ManifestPrefix.Length > 0)
+            .ToDictionary(r => r.TargetDisplayName, StringComparer.Ordinal);
+        foreach (var expansion in serializer.ClosedGenericRegistrations
+                     .Where(r => r.ExpansionGroup.Length > 0)
+                     .GroupBy(r => r.ExpansionGroup, StringComparer.Ordinal))
+        {
+            var prefix = baseRegistrationsByTargetName.TryGetValue(expansion.Key, out var baseRegistration) ? baseRegistration.ManifestPrefix : string.Empty;
+            var at = new LocationKey(serializer.Key, ClosedGenericLocationMember(expansion.Key));
+            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ClosedSetExpansionCount, at,
+                ToDisplayName(expansion.Key), prefix, serializer.ClassName, expansion.Count().ToString()));
+        }
+
+        bool IsManifestPrefixOnlyBase(ClosedGenericRegistrationInfo r) =>
+            r.ExpansionGroup.Length == 0 && r.ExpansionError.Length == 0 && r.ManifestPrefix.Length > 0 && r.Manifest.Length == 0;
+
+        bool IsValidRegistration(ClosedGenericRegistrationInfo r) =>
+            r.ExpansionError.Length == 0 && (schemaKeys.Contains(r.Target) || IsManifestPrefixOnlyBase(r));
+
+        foreach (var registration in serializer.ClosedGenericRegistrations.Where(r => r.ExpansionError.Length == 0 && !IsValidRegistration(r)))
         {
             // Reports at THIS registration's own [AkkaSerializable<T>] attribute application --
             // Decision 16: "the registration attribute for a closed generic".
@@ -478,7 +513,7 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         foreach (var duplicate in serializer.ClosedGenericRegistrations
-                     .Where(registration => schemaKeys.Contains(registration.Target))
+                     .Where(IsValidRegistration)
                      .GroupBy(registration => registration.Target)
                      .Where(group => group.Count() > 1))
         {
@@ -772,45 +807,10 @@ public sealed partial class AkkaSerializerGenerator
             : new DiagnosticSpec(DiagnosticKey.MissingNestedSerializableDefinition, at, fieldName, ToDisplayName(message.FullyQualifiedName), ToDisplayName(typeFullName)));
     }
 
-    /// <summary>
-    /// Fires AKKASG034 when a valid <c>[AkkaSerializable&lt;T&gt;]</c> registration's construction
-    /// neither implements the serializer's protocol (so it can never become a top-level message)
-    /// nor is referenced by any [AkkaField] property of a message reachable from a top-level
-    /// message (so it can never be emitted as a nested Object field either, AKKASG023's mechanism).
-    /// Such a registration compiles clean today and simply does nothing: <see cref="CollectReachableMessages"/>
-    /// never reaches it, so it gets no generated Write/Read/SizeOf methods at all. A construction
-    /// registered ONLY for nested-field use (legitimate; it need not implement the protocol) is
-    /// exempt as long as it is actually reachable.
-    /// </summary>
-    private static bool ValidateClosedGenericProtocolCoverage(SerializerInfo serializer, ImmutableArray<MessageInfo> reachableMessages, ImmutableArray<DiagnosticSpec>.Builder diagnostics)
-    {
-        if (serializer.ClosedGenericRegistrations.IsDefaultOrEmpty || serializer.ProtocolTypeFullName.Length == 0)
-            return true;
-
-        var schemasByKey = serializer.ClosedGenericSchemas.ToDictionary(schema => schema.Key);
-        var reachableKeys = new HashSet<TypeKey>(reachableMessages.Select(message => message.Key));
-        var isValid = true;
-        foreach (var registration in serializer.ClosedGenericRegistrations)
-        {
-            if (!schemasByKey.TryGetValue(registration.Target, out var schema))
-                continue;
-
-            if (schema.Protocols.Contains(serializer.ProtocolTypeFullName))
-                continue;
-
-            if (reachableKeys.Contains(schema.Key))
-                continue;
-
-            // Reports at THIS registration's own [AkkaSerializable<T>] attribute application --
-            // Decision 16: "the registration attribute for a closed generic".
-            var at = new LocationKey(serializer.Key, ClosedGenericLocationMember(registration.TargetDisplayName));
-            diagnostics.Add(new DiagnosticSpec(DiagnosticKey.ClosedGenericRegistrationNotInProtocol, at,
-                ToDisplayName(registration.TargetDisplayName), serializer.ClassName, ToDisplayName(serializer.ProtocolTypeFullName)));
-            isValid = false;
-        }
-
-        return isValid;
-    }
+    // AKKASG034 is retired (Decision 18): a registration's construction is now unconditionally a
+    // top-level message (see the adoption rule in ResolveSerializerMessages), whether or not it
+    // implements the protocol or is reachable from any [AkkaField] property, so the "the
+    // registration has no effect" condition this coverage scan used to guard can no longer occur.
 
     // Reports AKKASG015 for a union member with no known message, or AKKASG039 when the member IS
     // [AkkaSerializable] but this compilation cannot see it or one of its members. A same-assembly

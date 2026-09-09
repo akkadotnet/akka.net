@@ -60,7 +60,7 @@ public sealed partial class AkkaSerializerGenerator
         // this serializer registers (appended inline by ExtractSerializerCore -> ExtractClosedGenericRegistrations
         // -> ExtractMessageCore, the same inlining ExtractMessage below uses for ordinary messages).
         var locationEntries = ImmutableArray.CreateBuilder<LocationEntry>();
-        var info = ExtractSerializerCore(symbol, attribute, compilation, knownTypes, locationEntries);
+        var info = ExtractSerializerCore(symbol, attribute, compilation, knownTypes, cancellationToken, locationEntries);
         BuildSerializerLocationBag(locationEntries, symbol, attribute, info.Key, knownTypes, cancellationToken);
         return new ExtractedSerializer(info, new LocationBag(locationEntries.ToImmutable()));
     }
@@ -83,7 +83,7 @@ public sealed partial class AkkaSerializerGenerator
         if (attribute == null)
             return null;
 
-        return ExtractSerializerCore(symbol, attribute, compilation, GetKnownTypes(compilation));
+        return ExtractSerializerCore(symbol, attribute, compilation, GetKnownTypes(compilation), CancellationToken.None);
     }
 
     private static SerializerInfo ExtractSerializerCore(
@@ -91,6 +91,7 @@ public sealed partial class AkkaSerializerGenerator
         AttributeData attribute,
         Compilation compilation,
         KnownTypes knownTypes,
+        CancellationToken cancellationToken,
         ImmutableArray<LocationEntry>.Builder? locationEntries = null)
     {
         string? name = null;
@@ -118,12 +119,13 @@ public sealed partial class AkkaSerializerGenerator
 
         var extendedActorSystemType = compilation.GetTypeByMetadataName(ExtendedActorSystemFullName);
         var formatters = ExtractFormatters(symbol, knownTypes.FormatterAttribute, extendedActorSystemType);
-        var (closedGenericRegistrations, closedGenericSchemas) = ExtractClosedGenericRegistrations(symbol, compilation, knownTypes, locationEntries);
+        var serializerKey = TypeKey.FromSymbol(symbol);
+        var (closedGenericRegistrations, closedGenericSchemas) = ExtractClosedGenericRegistrations(symbol, serializerKey, compilation, knownTypes, protocolType, cancellationToken, locationEntries);
 
         return new SerializerInfo(
             GetNamespace(symbol),
             symbol.Name,
-            TypeKey.FromSymbol(symbol),
+            serializerKey,
             GetFullyQualifiedTypeName(symbol),
             name ?? string.Empty,
             serializerId,
@@ -183,18 +185,29 @@ public sealed partial class AkkaSerializerGenerator
     /// <summary>
     /// Extracts <c>[AkkaSerializable&lt;T&gt;]</c> registrations from the serializer class, as light
     /// specs (see <see cref="ClosedGenericRegistrationInfo"/>) plus the full schema for every VALID
-    /// target (see <see cref="SerializerInfo.ClosedGenericSchemas"/>). A valid target is a CLOSED
-    /// generic construction (no unbound generics, no type parameters anywhere in its arguments) whose
-    /// definition is annotated <c>[AkkaSerializable]</c>; its schema is built from the constructed
-    /// symbol through the SAME <see cref="ExtractMessageCore"/> routine every other schema goes
-    /// through, so all field types arrive already substituted. An invalid target gets a registration
-    /// with no matching schema entry, so AKKASG020 fires instead of the registration silently
-    /// vanishing.
+    /// target (see <see cref="SerializerInfo.ClosedGenericSchemas"/>). Decision 18: a registration
+    /// ADOPTS <typeparamref name="TMessage"/> into this serializer -- a closed generic construction is
+    /// the common case, not the only one, so a valid target is any type (generic or not, closed:
+    /// no unbound generics, no type parameters anywhere in its arguments) whose definition is
+    /// annotated <c>[AkkaSerializable]</c>; its schema is built through the SAME
+    /// <see cref="ExtractMessageCore"/> routine every other schema goes through, so all field types
+    /// arrive already substituted. An invalid target gets a registration with no matching schema
+    /// entry, so AKKASG020 fires instead of the registration silently vanishing.
+    /// <para>
+    /// A registration that also sets <c>ManifestPrefix</c> additionally expands over the closed
+    /// member set of one or more of the target's own type arguments (the serializer's protocol
+    /// interface, or a type-level <c>[AkkaUnion]</c>-marked type), synthesizing one construction --
+    /// with its own manifest, from the Decision 18 formula -- per combination. See
+    /// <see cref="ExpandClosedGenericRegistration"/>.
+    /// </para>
     /// </summary>
     private static (ImmutableArray<ClosedGenericRegistrationInfo> Registrations, ImmutableArray<MessageInfo> Schemas) ExtractClosedGenericRegistrations(
         INamedTypeSymbol symbol,
+        TypeKey serializerKey,
         Compilation compilation,
         KnownTypes knownTypes,
+        INamedTypeSymbol? protocolType,
+        CancellationToken cancellationToken,
         ImmutableArray<LocationEntry>.Builder? locationEntries = null)
     {
         if (knownTypes.GenericSerializableAttribute == null)
@@ -206,51 +219,384 @@ public sealed partial class AkkaSerializerGenerator
         if (attributes.IsEmpty)
             return (ImmutableArray<ClosedGenericRegistrationInfo>.Empty, ImmutableArray<MessageInfo>.Empty);
 
+        // First pass: every EXPLICITLY registered target's own manifest, keyed by TypeKey --
+        // Decision 18's nested-construction case ("G<H<M>>" needs H<M> registered separately") looks
+        // an argument's manifest up here when the argument is itself a generic construction, so
+        // declaration order on the serializer class never matters.
+        var explicitManifestByTarget = new Dictionary<TypeKey, string>();
+        foreach (var attribute in attributes)
+        {
+            var manifest = ReadStringNamedArgument(attribute, "Manifest");
+            if (string.IsNullOrEmpty(manifest))
+                continue;
+
+            if (attribute.AttributeClass!.TypeArguments[0] is INamedTypeSymbol explicitTarget)
+                explicitManifestByTarget[TypeKey.FromSymbol(explicitTarget)] = manifest!;
+        }
+
         var registrationsBuilder = ImmutableArray.CreateBuilder<ClosedGenericRegistrationInfo>(attributes.Length);
         var schemasBuilder = ImmutableArray.CreateBuilder<MessageInfo>();
         foreach (var attribute in attributes)
         {
-            var manifest = string.Empty;
-            foreach (var argument in attribute.NamedArguments)
-            {
-                if (argument.Key == "Manifest" && argument.Value.Value is string value)
-                    manifest = value;
-            }
+            cancellationToken.ThrowIfCancellationRequested();
 
+            var manifest = ReadStringNamedArgument(attribute, "Manifest") ?? string.Empty;
+            var manifestPrefix = ReadStringNamedArgument(attribute, "ManifestPrefix") ?? string.Empty;
             var target = attribute.AttributeClass!.TypeArguments[0] as INamedTypeSymbol;
             var serializableAttribute = target?.OriginalDefinition.GetAttributes()
                 .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
-            var isValidTarget = target is { IsGenericType: true, IsUnboundGenericType: false }
+
+            // Decision 18: a target no longer needs to be generic to be adopted -- only that its
+            // definition (itself, for a non-generic type) carries [AkkaSerializable] and every type
+            // argument (if any) is closed.
+            var isValidTarget = target is { IsUnboundGenericType: false }
                 && IsFullyClosed(target)
                 && serializableAttribute != null;
 
-            if (!isValidTarget)
+            // "Manifest alone" or "neither property" registers (or attempts to register) the literal
+            // target, exactly as before Decision 18. "ManifestPrefix alone" does NOT register the
+            // literal construction -- only its expansion, below.
+            if (manifest.Length > 0 || manifestPrefix.Length == 0)
             {
-                var targetKey = TypeKey.FromSymbol(attribute.AttributeClass!.TypeArguments[0]);
-                registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetKey, manifest: string.Empty, allowEmpty: false));
+                if (!isValidTarget)
+                {
+                    var targetKey = TypeKey.FromSymbol(attribute.AttributeClass!.TypeArguments[0]);
+                    registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetKey, manifest: string.Empty, allowEmpty: false, manifestPrefix: manifestPrefix));
+                }
+                else
+                {
+                    // AllowEmpty travels with the definition's [AkkaSerializable]; the manifest is
+                    // per-registration and comes from the registration attribute.
+                    var allowEmpty = serializableAttribute!.NamedArguments
+                        .Any(argument => argument.Key == "AllowEmpty" && argument.Value.Value is true);
+                    var targetTypeKey = TypeKey.FromSymbol(target!);
+                    var message = ExtractMessageCore(
+                        target!,
+                        targetTypeKey,
+                        manifest,
+                        allowEmpty,
+                        knownTypes,
+                        compilation,
+                        definitionFullName: GetFullyQualifiedTypeName(target!.OriginalDefinition),
+                        locationEntries);
+                    registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetTypeKey, manifest, allowEmpty, manifestPrefix: manifestPrefix));
+                    schemasBuilder.Add(message);
+                }
+            }
+
+            if (manifestPrefix.Length == 0)
+                continue;
+
+            // ManifestPrefix on a target with no type argument (not generic at all, so certainly no
+            // closed-set argument), or on an otherwise-invalid target, has nothing to expand: record
+            // the failure (AKKASG040) instead of silently skipping the expansion. A base entry with
+            // ManifestPrefix set was already recorded above only when Manifest was ALSO set; add one
+            // here too when it was not, so AKKASG040/AKKASG042 always have a registration entry to
+            // attach to.
+            if (!isValidTarget || target is not { IsGenericType: true })
+            {
+                if (manifest.Length == 0)
+                {
+                    var targetKey = TypeKey.FromSymbol(attribute.AttributeClass!.TypeArguments[0]);
+                    registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetKey, manifest: string.Empty, allowEmpty: false, manifestPrefix: manifestPrefix,
+                        expansionError: "the registration's target is not a valid closed generic construction (see AKKASG020)"));
+                }
+
                 continue;
             }
 
-            // AllowEmpty travels with the definition's [AkkaSerializable]; the manifest is
-            // per-construction (each closed form needs its own identity) and comes from the
-            // registration attribute.
-            var allowEmpty = serializableAttribute!.NamedArguments
-                .Any(argument => argument.Key == "AllowEmpty" && argument.Value.Value is true);
-            var targetTypeKey = TypeKey.FromSymbol(target!);
-            var message = ExtractMessageCore(
-                target!,
-                targetTypeKey,
-                manifest,
-                allowEmpty,
-                knownTypes,
-                compilation,
-                definitionFullName: GetFullyQualifiedTypeName(target!.OriginalDefinition),
-                locationEntries);
-            registrationsBuilder.Add(new ClosedGenericRegistrationInfo(targetTypeKey, manifest, allowEmpty));
-            schemasBuilder.Add(message);
+            ExpandClosedGenericRegistration(
+                target!, manifest, manifestPrefix, serializerKey, protocolType, compilation, knownTypes,
+                explicitManifestByTarget, cancellationToken, locationEntries, attribute,
+                registrationsBuilder, schemasBuilder);
         }
 
         return (registrationsBuilder.ToImmutable(), schemasBuilder.ToImmutable());
+    }
+
+    private static string? ReadStringNamedArgument(AttributeData attribute, string name)
+    {
+        foreach (var argument in attribute.NamedArguments)
+        {
+            if (argument.Key == name && argument.Value.Value is string value)
+                return value;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Decision 18's closed-set expansion: <paramref name="target"/>'s own type arguments (every one
+    /// of them, not only the first -- a multi-argument generic expands to the product of its
+    /// arguments' sets) are each tested for a closed member set (<see cref="TryGetClosedSetMembers"/>).
+    /// An argument position with no closed set must instead resolve to exactly one already-known
+    /// manifest (<see cref="TryResolveFixedArgumentManifest"/>) -- its own, for an ordinary concrete
+    /// type, or a sibling registration's, for a nested generic construction ("G&lt;H&lt;M&gt;&gt;"
+    /// needs H&lt;M&gt; registered separately). The cartesian product of every position's choices
+    /// becomes one synthesized construction per combination, each with its own manifest (the
+    /// Decision 18 formula: <c>prefix + "/" + string.Join("/", chosen member manifests)</c>) and its
+    /// own field schema (from <c>target</c>'s open generic definition, <c>Construct()</c>-ed with the
+    /// chosen type arguments and run through the same <see cref="ExtractMessageCore"/> every other
+    /// schema goes through). A combination whose constructed target already has an EXPLICIT
+    /// registration on this serializer is skipped: the explicit registration's own manifest wins,
+    /// exactly as Decision 18 specifies.
+    /// </summary>
+    private static void ExpandClosedGenericRegistration(
+        INamedTypeSymbol target,
+        string literalManifest,
+        string manifestPrefix,
+        TypeKey serializerKey,
+        INamedTypeSymbol? protocolType,
+        Compilation compilation,
+        KnownTypes knownTypes,
+        Dictionary<TypeKey, string> explicitManifestByTarget,
+        CancellationToken cancellationToken,
+        ImmutableArray<LocationEntry>.Builder? locationEntries,
+        AttributeData attribute,
+        ImmutableArray<ClosedGenericRegistrationInfo>.Builder registrationsBuilder,
+        ImmutableArray<MessageInfo>.Builder schemasBuilder)
+    {
+        var definitionAttribute = target.OriginalDefinition.GetAttributes()
+            .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
+        var baseTargetKey = TypeKey.FromSymbol(target);
+        var baseTargetDisplayName = baseTargetKey.DisplayName ?? string.Empty;
+
+        if (definitionAttribute == null)
+        {
+            // Already reported as an invalid registration above when literalManifest is empty (no
+            // base entry was added for the literal case there); when literalManifest is non-empty
+            // the invalid-target base entry from the caller already exists, so nothing more to add.
+            if (literalManifest.Length == 0)
+            {
+                registrationsBuilder.Add(new ClosedGenericRegistrationInfo(baseTargetKey, manifest: string.Empty, allowEmpty: false, manifestPrefix: manifestPrefix,
+                    expansionError: $"'{ToDisplayName(GetFullyQualifiedTypeName(target.OriginalDefinition))}' is not [AkkaSerializable]"));
+            }
+
+            return;
+        }
+
+        var allowEmpty = definitionAttribute.NamedArguments.Any(a => a.Key == "AllowEmpty" && a.Value.Value is true);
+
+        // Per type-argument position: either a closed set (one or more candidate (symbol, manifest)
+        // choices) or a single fixed choice. Built up front so a failure on any position reports
+        // AKKASG040 once, before any construction is synthesized.
+        var positions = new List<List<(INamedTypeSymbol Symbol, string Manifest)>>(target.TypeArguments.Length);
+        var anyClosedSet = false;
+        foreach (var argument in target.TypeArguments)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (TryGetClosedSetMembers(argument, protocolType, compilation, knownTypes, cancellationToken, out var members))
+            {
+                anyClosedSet = true;
+                positions.Add(members);
+                continue;
+            }
+
+            if (argument is INamedTypeSymbol fixedArgument && TryResolveFixedArgumentManifest(fixedArgument, knownTypes, explicitManifestByTarget, out var fixedManifest))
+            {
+                positions.Add(new List<(INamedTypeSymbol, string)> { (fixedArgument, fixedManifest) });
+                continue;
+            }
+
+            registrationsBuilder.Add(new ClosedGenericRegistrationInfo(baseTargetKey, manifest: string.Empty, allowEmpty: false, manifestPrefix: manifestPrefix,
+                expansionError: $"type argument '{ToDisplayName(argument.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))}' has no closed member set, and is not itself a registered [AkkaSerializable] type with its own manifest"));
+            return;
+        }
+
+        if (!anyClosedSet)
+        {
+            registrationsBuilder.Add(new ClosedGenericRegistrationInfo(baseTargetKey, manifest: string.Empty, allowEmpty: false, manifestPrefix: manifestPrefix,
+                expansionError: $"none of '{ToDisplayName(baseTargetDisplayName)}''s type arguments has a closed member set; use the serializer's protocol interface, or declare [AkkaUnion] on the type argument"));
+            return;
+        }
+
+        var attributeLocation = GetAttributeLocation(attribute, cancellationToken);
+        var combinations = CartesianProduct(positions);
+        foreach (var combination in combinations)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var constructedSymbol = target.OriginalDefinition.Construct(combination.Select(c => (ITypeSymbol)c.Symbol).ToArray());
+            var constructedKey = TypeKey.FromSymbol(constructedSymbol);
+
+            // An explicit registration for this exact construction wins -- it keeps its own manifest
+            // and is already in registrationsBuilder/schemasBuilder from the main loop above.
+            if (explicitManifestByTarget.ContainsKey(constructedKey))
+                continue;
+
+            var derivedManifest = manifestPrefix + "/" + string.Join("/", combination.Select(c => c.Manifest));
+            var constructedMessage = ExtractMessageCore(
+                constructedSymbol,
+                constructedKey,
+                derivedManifest,
+                allowEmpty,
+                knownTypes,
+                compilation,
+                definitionFullName: GetFullyQualifiedTypeName(target.OriginalDefinition),
+                locationEntries);
+
+            registrationsBuilder.Add(new ClosedGenericRegistrationInfo(constructedKey, derivedManifest, allowEmpty, expansionGroup: baseTargetDisplayName));
+            schemasBuilder.Add(constructedMessage);
+
+            // MessageTypeLocationKey (AkkaSerializerGenerator.Locations.cs) resolves a closed-generic
+            // schema's type-level location by looking up ITS OWN target display name in the location
+            // bag -- BuildSerializerLocationBag only ever adds one for the base attribute's own
+            // (unexpanded) type argument, so every synthesized member needs its own entry here,
+            // pointing at the same base attribute application.
+            if (locationEntries != null)
+                AddLocationEntry(locationEntries, new LocationKey(serializerKey, ClosedGenericLocationMember(constructedKey.DisplayName ?? string.Empty)), attributeLocation);
+        }
+    }
+
+    /// <summary>
+    /// Every combination of one choice per position, preserving each position's own order and the
+    /// positions' own order -- the deterministic order every downstream consumer (dispatch arms,
+    /// golden output, the AKKASG042 count) relies on.
+    /// </summary>
+    private static List<List<(INamedTypeSymbol Symbol, string Manifest)>> CartesianProduct(
+        List<List<(INamedTypeSymbol Symbol, string Manifest)>> positions)
+    {
+        var result = new List<List<(INamedTypeSymbol, string)>> { new() };
+        foreach (var position in positions)
+        {
+            var next = new List<List<(INamedTypeSymbol, string)>>(result.Count * position.Count);
+            foreach (var partial in result)
+            {
+                foreach (var choice in position)
+                {
+                    var combination = new List<(INamedTypeSymbol, string)>(partial) { choice };
+                    next.Add(combination);
+                }
+            }
+
+            result = next;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="argument"/> has a Decision 18 closed member set: the serializer's own
+    /// protocol interface (its set is every LOCAL, non-generic <c>[AkkaSerializable]</c> implementor
+    /// -- the referenced-assembly walk from Decision 19 is a follow-up, out of scope here), or a type
+    /// carrying a type-level <c>[AkkaUnion]</c> with an explicit member list (works regardless of
+    /// where each listed member lives, exactly like the existing field-level union path). Each member
+    /// is paired with its own top-level manifest (<see cref="GetOwnManifest"/>), sorted by metadata
+    /// name for a deterministic expansion order.
+    /// </summary>
+    private static bool TryGetClosedSetMembers(
+        ITypeSymbol argument,
+        INamedTypeSymbol? protocolType,
+        Compilation compilation,
+        KnownTypes knownTypes,
+        CancellationToken cancellationToken,
+        out List<(INamedTypeSymbol Symbol, string Manifest)> members)
+    {
+        members = new List<(INamedTypeSymbol, string)>();
+
+        if (argument is not INamedTypeSymbol namedArgument)
+            return false;
+
+        if (protocolType != null && SymbolEqualityComparer.Default.Equals(namedArgument, protocolType))
+        {
+            foreach (var implementor in ComputeLocalMarkedProtocolImplementors(compilation, protocolType, knownTypes, cancellationToken))
+                members.Add((implementor, GetOwnManifest(implementor, knownTypes) ?? string.Empty));
+
+            return true;
+        }
+
+        if (namedArgument.TypeKind is not (TypeKind.Interface or TypeKind.Class) || knownTypes.UnionAttribute == null)
+            return false;
+
+        var unionAttribute = namedArgument.OriginalDefinition.GetAttributes()
+            .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.UnionAttribute));
+        if (unionAttribute is not { ConstructorArguments.Length: 2 })
+            return false;
+
+        if (unionAttribute.ConstructorArguments[0].Value is INamedTypeSymbol first && !first.IsUnboundGenericType)
+            members.Add((first, GetOwnManifest(first, knownTypes) ?? string.Empty));
+
+        foreach (var value in unionAttribute.ConstructorArguments[1].Values)
+        {
+            if (value.Value is INamedTypeSymbol memberType && !memberType.IsUnboundGenericType)
+                members.Add((memberType, GetOwnManifest(memberType, knownTypes) ?? string.Empty));
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The LOCAL, non-generic, non-abstract <c>[AkkaSerializable]</c> implementors of
+    /// <paramref name="protocolType"/> -- the current compilation's scope of Decision 19's future
+    /// referenced-assembly walk (see <c>ComputeLocalUnmarkedImplementorsByProtocol</c> in
+    /// AkkaSerializerGenerator.Facts.cs for its unmarked/AKKASG029 counterpart). A member of the set
+    /// that is itself a generic construction is out of scope for this compilation-only, symbol-based
+    /// walk; the "G&lt;H&lt;M&gt;&gt;" nested case in the Decision 18 formula covers that shape
+    /// instead, through an explicit sibling registration (<see cref="TryResolveFixedArgumentManifest"/>).
+    /// Sorted by fully-qualified name (ordinal) so expansion order -- and with it, generated dispatch
+    /// order and the AKKASG042 count -- is deterministic across runs.
+    /// </summary>
+    private static ImmutableArray<INamedTypeSymbol> ComputeLocalMarkedProtocolImplementors(
+        Compilation compilation, INamedTypeSymbol protocolType, KnownTypes knownTypes, CancellationToken cancellationToken)
+    {
+        if (knownTypes.SerializableAttribute == null)
+            return ImmutableArray<INamedTypeSymbol>.Empty;
+
+        var results = new List<INamedTypeSymbol>();
+        foreach (var candidate in GetSourceDeclaredTypes(compilation))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (candidate.TypeKind is not (TypeKind.Class or TypeKind.Struct) || candidate.IsAbstract || candidate.IsGenericType)
+                continue;
+
+            var isMarked = candidate.GetAttributes().Any(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
+            if (!isMarked)
+                continue;
+
+            var implementsProtocol = candidate.AllInterfaces.Any(i => SymbolEqualityComparer.Default.Equals(i, protocolType));
+            if (implementsProtocol)
+                results.Add(candidate);
+        }
+
+        results.Sort((a, b) => string.CompareOrdinal(GetFullyQualifiedTypeName(a), GetFullyQualifiedTypeName(b)));
+        return results.ToImmutableArray();
+    }
+
+    /// <summary>A type's own top-level manifest, from its own (non-generic-registration) <c>[AkkaSerializable(Manifest = ...)]</c> attribute. Null when it has none.</summary>
+    private static string? GetOwnManifest(INamedTypeSymbol type, KnownTypes knownTypes)
+    {
+        var attribute = type.GetAttributes().FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, knownTypes.SerializableAttribute));
+        return attribute == null ? null : ReadStringNamedArgument(attribute, "Manifest");
+    }
+
+    /// <summary>
+    /// The manifest for a FIXED (non-closed-set) Decision 18 expansion argument position: an ordinary
+    /// concrete <c>[AkkaSerializable]</c> type's own manifest, or -- for a nested generic construction
+    /// ("G&lt;H&lt;M&gt;&gt;") -- the manifest of a SIBLING literal registration of that exact
+    /// construction on this same serializer (a generic definition's own Manifest is always ignored,
+    /// AKKASG037, so there is nowhere else H&lt;M&gt;'s manifest could come from).
+    /// </summary>
+    private static bool TryResolveFixedArgumentManifest(
+        INamedTypeSymbol argument, KnownTypes knownTypes, Dictionary<TypeKey, string> explicitManifestByTarget, out string manifest)
+    {
+        manifest = string.Empty;
+
+        if (argument.IsGenericType)
+        {
+            if (!IsFullyClosed(argument))
+                return false;
+
+            return explicitManifestByTarget.TryGetValue(TypeKey.FromSymbol(argument), out manifest!) && manifest.Length > 0;
+        }
+
+        var own = GetOwnManifest(argument, knownTypes);
+        if (string.IsNullOrEmpty(own))
+            return false;
+
+        manifest = own!;
+        return true;
     }
 
     /// <summary>
@@ -583,10 +929,14 @@ public sealed partial class AkkaSerializerGenerator
             fields.OrderBy(f => f.Index).ToImmutableArray(),
             GetProtocolNames(symbol),
             allowEmpty,
+            invalidFields: invalidFields.ToImmutable(),
+            constructionPlan: constructionPlan,
             isGenericDefinition: false,
             definitionFullName: definitionFullName,
-            invalidFields: invalidFields.ToImmutable(),
-            constructionPlan: constructionPlan);
+            isSealed: symbol.IsSealed || symbol.TypeKind == TypeKind.Struct,
+            isAbstract: symbol.IsAbstract,
+            isValueType: symbol.IsValueType,
+            foreignAssemblyName: GetForeignAssemblyName(symbol, knownTypes));
     }
 
     /// <summary>

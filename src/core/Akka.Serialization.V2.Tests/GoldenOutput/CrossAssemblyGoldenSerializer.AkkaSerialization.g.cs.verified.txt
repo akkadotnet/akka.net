@@ -18,7 +18,8 @@ public sealed partial class CrossAssemblyGoldenSerializer
         return global::Akka.Serialization.V2.SerializerRegistration.Create("cross-assembly-golden",
             system => new CrossAssemblyGoldenSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
-                typeof(global::CrossAssemblyGolden.AssemblyB.IComms))); 
+                typeof(global::CrossAssemblyGolden.AssemblyB.IComms),
+                typeof(global::CrossAssemblyGolden.AssemblyA.Wrapper<int>))); 
     }
 
     public override string Manifest(object obj)
@@ -28,6 +29,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
             global::CrossAssemblyGolden.AssemblyB.Pay => "pay-v1",
             global::CrossAssemblyGolden.AssemblyB.OrderNotice => "order-notice-v1",
             global::CrossAssemblyGolden.AssemblyB.Holder => "holder-v1",
+            global::CrossAssemblyGolden.AssemblyA.Wrapper<int> => "wrapper-int-v1",
             _ => throw new global::System.ArgumentException($"Unsupported generated serializer type: {obj.GetType()}", nameof(obj))
         };
     }
@@ -54,6 +56,9 @@ public sealed partial class CrossAssemblyGoldenSerializer
             case global::CrossAssemblyGolden.AssemblyB.Holder message:
                 WriteHolder(ref writer, message);
                 break;
+            case global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message:
+                WriteWrapperInt(ref writer, message);
+                break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type: {obj.GetType()}", nameof(obj));
         }
@@ -67,6 +72,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
             "pay-v1" => ReadPay(ref reader),
             "order-notice-v1" => ReadOrderNotice(ref reader),
             "holder-v1" => ReadHolder(ref reader),
+            "wrapper-int-v1" => ReadWrapperInt(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -78,6 +84,7 @@ public sealed partial class CrossAssemblyGoldenSerializer
             global::CrossAssemblyGolden.AssemblyB.Pay message => SizeOfPay(message),
             global::CrossAssemblyGolden.AssemblyB.OrderNotice message => SizeOfOrderNotice(message),
             global::CrossAssemblyGolden.AssemblyB.Holder message => SizeOfHolder(message),
+            global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message => SizeOfWrapperInt(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -248,6 +255,61 @@ public sealed partial class CrossAssemblyGoldenSerializer
         return new global::CrossAssemblyGolden.AssemblyB.Holder(Count: count!);
     }
 
+    private int SizeOfWrapperInt(global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message)
+    {
+        checked
+        {
+            var size = SizeOfMapHeader(2);
+            size += SizeOfInt32(1);
+            size += SizeOfString(message.Id);
+            size += SizeOfInt32(2);
+            size += SizeOfInt32(message.Payload);
+            return size;
+        }
+    }
+
+    private void WriteWrapperInt(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message)
+    {
+        writer.WriteMapHeader(2);
+        writer.Write(1);
+        writer.Write(message.Id);
+        writer.Write(2);
+        writer.Write(message.Payload);
+    }
+
+    private global::CrossAssemblyGolden.AssemblyA.Wrapper<int> ReadWrapperInt(ref global::MessagePack.MessagePackReader reader)
+    {
+        var __fieldCount = reader.ReadMapHeader();
+        string? id = null;
+        var __hasId = false;
+        int payload = 0;
+        var __hasPayload = false;
+        for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
+        {
+            var __fieldId = reader.ReadInt32();
+            switch (__fieldId)
+            {
+                case 1:
+                    id = reader.ReadString();
+                    __hasId = true;
+                    break;
+                case 2:
+                    payload = reader.ReadInt32();
+                    __hasPayload = true;
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        if (!__hasId || id is null)
+            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Id] with index [1] while deserializing [global::CrossAssemblyGolden.AssemblyA.Wrapper<int>].");
+        if (!__hasPayload)
+            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Payload] with index [2] while deserializing [global::CrossAssemblyGolden.AssemblyA.Wrapper<int>].");
+        return new global::CrossAssemblyGolden.AssemblyA.Wrapper<int>(Id: id!, Payload: payload);
+    }
+
     private int SizeOfMoney(global::CrossAssemblyGolden.AssemblyA.Money message)
     {
         checked
@@ -375,61 +437,6 @@ public sealed partial class CrossAssemblyGoldenSerializer
         if (!__hasOrderId || orderId is null)
             throw new global::System.Runtime.Serialization.SerializationException("Missing required field [OrderId] with index [1] while deserializing [global::CrossAssemblyGolden.AssemblyA.Cancelled].");
         return new global::CrossAssemblyGolden.AssemblyA.Cancelled(OrderId: orderId!);
-    }
-
-    private int SizeOfWrapperInt(global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message)
-    {
-        checked
-        {
-            var size = SizeOfMapHeader(2);
-            size += SizeOfInt32(1);
-            size += SizeOfString(message.Id);
-            size += SizeOfInt32(2);
-            size += SizeOfInt32(message.Payload);
-            return size;
-        }
-    }
-
-    private void WriteWrapperInt(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.Wrapper<int> message)
-    {
-        writer.WriteMapHeader(2);
-        writer.Write(1);
-        writer.Write(message.Id);
-        writer.Write(2);
-        writer.Write(message.Payload);
-    }
-
-    private global::CrossAssemblyGolden.AssemblyA.Wrapper<int> ReadWrapperInt(ref global::MessagePack.MessagePackReader reader)
-    {
-        var __fieldCount = reader.ReadMapHeader();
-        string? id = null;
-        var __hasId = false;
-        int payload = 0;
-        var __hasPayload = false;
-        for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
-        {
-            var __fieldId = reader.ReadInt32();
-            switch (__fieldId)
-            {
-                case 1:
-                    id = reader.ReadString();
-                    __hasId = true;
-                    break;
-                case 2:
-                    payload = reader.ReadInt32();
-                    __hasPayload = true;
-                    break;
-                default:
-                    reader.Skip();
-                    break;
-            }
-        }
-
-        if (!__hasId || id is null)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Id] with index [1] while deserializing [global::CrossAssemblyGolden.AssemblyA.Wrapper<int>].");
-        if (!__hasPayload)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Payload] with index [2] while deserializing [global::CrossAssemblyGolden.AssemblyA.Wrapper<int>].");
-        return new global::CrossAssemblyGolden.AssemblyA.Wrapper<int>(Id: id!, Payload: payload);
     }
 
     private void WriteUnion_IOrderEvent(ref global::MessagePack.MessagePackWriter writer, global::CrossAssemblyGolden.AssemblyA.IOrderEvent value)

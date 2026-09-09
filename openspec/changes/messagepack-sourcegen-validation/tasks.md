@@ -268,3 +268,93 @@ not implement Decisions 17-21 (later PRs).
 - [x] 13.7 Document cross-assembly support in the user guide (new "Cross-Assembly Types" section,
       AKKASG039 in the diagnostics table, updated Limitations section) and record the implementation
       choices the design text did not cover as an addendum under Decision 16 in design.md
+
+## 14. Closed-Set Expansion And Adoption On The Serializer (Decisions 17 And 18)
+
+Stacks on F1 (`feature/serialization-v2-metadata-schemas`, PR #8534). F2 of the follow-on
+cross-assembly work. Decision 17 ("Unknown Union Members: The Generator Throws, The Caller
+Decides") needed no code change: the generated union write/read dispatch already throws
+`SerializationException` on an unmatched runtime type or an unrecognized manifest, confirmed by
+inspection of `GenerateUnionWrite`/`GenerateUnionRead` and unchanged by this phase. Decision 18
+("Closed-Set Expansion And Adoption On The Serializer") is the substance of this phase. Does not
+implement Decisions 19 or 21 (the referenced-assembly implementor walk and the union-without-a-
+member-list form; later PRs) -- the closed set `ManifestPrefix` expands over, and the walk a
+one-owner conflict compares against, are both scoped to the current compilation only.
+
+- [x] 14.1 Add `ManifestPrefix` to `AkkaSerializableAttribute<TMessage>` (extend-only; `Attributes.cs`),
+      alongside the existing `Manifest`. `ClosedGenericRegistrationInfo` gains `ManifestPrefix`,
+      `ExpansionGroup` (empty for a directly-written registration; the base target's display name for
+      a synthesized expansion member), and `ExpansionError` (non-empty when a `ManifestPrefix`
+      registration could not expand)
+- [x] 14.2 Relax `ExtractClosedGenericRegistrations`'s target validity check to accept a non-generic
+      concrete type (Decision 18's adoption rule), not only a closed generic construction; AKKASG020
+      stops rejecting a non-generic type argument
+- [x] 14.3 Implement `ManifestPrefix` expansion (`ExpandClosedGenericRegistration`,
+      `AkkaSerializerGenerator.Extraction.cs`): a type argument's closed set is either the
+      serializer's own protocol interface (`TryGetClosedSetMembers`, walking this compilation's own
+      non-generic `[AkkaSerializable]` implementors, `ComputeLocalMarkedProtocolImplementors`) or a
+      type-level `[AkkaUnion]`'s explicit member list. Every type argument is tested independently, so
+      a multi-argument registration expands to the product of its arguments' sets
+      (`CartesianProduct`); an argument with no closed set must instead resolve to exactly one
+      already-known manifest (`TryResolveFixedArgumentManifest`) -- its own, for an ordinary concrete
+      type, or a sibling literal registration's, for a nested generic construction. Each combination
+      is `Construct()`-ed off the open generic definition and run through the same `ExtractMessageCore`
+      every other schema uses, with a manifest derived by the formula
+      `prefix + "/" + string.Join("/", memberManifests)`. An explicit registration for one specific
+      construction is skipped during expansion and keeps its own manifest, overriding the derived one
+- [x] 14.4 Add AKKASG040 (`ClosedSetExpansionRequiresClosedSet`, Error): a `ManifestPrefix`
+      registration whose target has no closed set to expand (not generic, a concrete class, or one
+      of its arguments resolves to neither a closed set nor a registered sibling manifest). Gate-level,
+      alongside AKKASG020/AKKASG021 in `ValidateClosedGenericRegistrations`
+- [x] 14.5 Add AKKASG042 (`ClosedSetExpansionCount`, Info): reported once per successfully-expanding
+      `ManifestPrefix` registration, naming the resulting construction count. Unconditional -- the
+      design specifies no size threshold
+- [x] 14.6 Implement the adoption rule in `ResolveSerializerMessages`
+      (`AkkaSerializerGenerator.Emission.cs`): every registered/expanded closed-generic-schema target
+      is unconditionally top-level, whether or not it implements the protocol. Retire AKKASG034 (its
+      descriptor, `DiagnosticKey` entry, and registry mapping removed; the id stays a permanent gap
+      like AKKASG030/AKKASG035) -- the "registration has no effect" condition it guarded can no
+      longer occur. `GenerateRegistration` binds the concrete type of every entry in
+      `SerializerInfo.ClosedGenericSchemas`, not only the protocol interface, sorted by fully-qualified
+      name for deterministic output
+- [x] 14.7 Implement the protocol-interface-field-as-union rule in `ResolveMessages`
+      (`AkkaSerializerGenerator.Emission.cs`): a field whose static type is exactly the serializer's
+      own protocol interface is reclassified from `FieldKind.Unsupported` to a union over the
+      protocol closed set, with no `[AkkaUnion]` attribute needed. `MessageInfo` gains `IsSealed`/
+      `IsAbstract`/`IsValueType`/`ForeignAssemblyName` (captured once at extraction) so the implicit
+      union's `UnionMemberInfo` list needs no symbol access at resolve time; `FieldInfo.WithUnion`
+      performs the reclassification. AKKASG003's polymorphic hint text gains the protocol-interface
+      option
+- [x] 14.8 Add AKKASG041 (`AdoptedMessageOwnedByMultipleSerializers`, Error): the one-owner rule.
+      `ComputeMultiOwnedMessages` (`AkkaSerializerGenerator.Emission.cs`) maps every message type to
+      its owning serializer(s) -- by protocol membership or by `ClosedGenericSchemas` adoption --
+      across the whole compilation; a type with more than one owner is reported at every owning
+      serializer's own attribute, from `ReportCrossSerializerDiagnostics`
+- [x] 14.9 Fix a duplicate-key crash `ResolveSerializerMessages` would otherwise hit when a
+      non-generic type is both ordinarily declared (`declaredMessages`) and separately adopted
+      (`ClosedGenericSchemas`): the adopted entry wins and the plain declaration is excluded from the
+      concat, preserving declaration order and the registration's own manifest override
+- [x] 14.10 Rewrite `CrossAssemblyBaselineSpec`'s case 4 (`Unreachable_closed_generic_registration_of_customer_envelope`)
+      from a pinned AKKASG034 failure to a pinned adoption success: the customer's own motivating
+      shape now emits, dispatches by its derived/explicit manifest, and gets its own concrete
+      `typeof()` binding. Rewrite the AKKASG020/AKKASG034 cases in `GeneratorValidatorSpec.cs` and
+      `AkkaSerializerGeneratorDiagnosticsSpec.cs` the same way; add a `Manifest` to the golden
+      corpus's nested-only `Pair<int, string>` registration, now that every registration is
+      unconditionally top-level too
+- [x] 14.11 Add `GeneratedClosedGenericExpansionSpec.cs` (round-trip specs: derived manifest,
+      explicit-override manifest, the literal construction's implicit protocol union, a multi-argument
+      expansion with a nested fixed-argument manifest lookup, a non-generic non-protocol adoption with
+      a manifest override, and reflection-built constructions both inside and outside the registered
+      set) and `ClosedGenericExpansionDiagnosticsSpec.cs` (AKKASG040, AKKASG041, AKKASG042, an
+      AKKASG012 collision from a derived manifest, and AKKASG003's non-firing for a protocol-interface
+      field)
+- [x] 14.12 Add `ClosedGenericExpansionGoldenOutputSpec.cs`: golden-output coverage for a derived
+      manifest, an explicit override, the implicit protocol union, a nested nested-fixed-argument
+      construction, and a concrete type adopted from a referenced assembly, each pinned against a
+      checked-in baseline
+- [x] 14.13 Document `ManifestPrefix`, the manifest formula (with worked examples), the adoption
+      rule, the protocol-interface-field-as-union rule, and the one-owner rule in the user guide (new
+      subsections under "Closed Generic Registrations"); update the diagnostics table (AKKASG034
+      removed, AKKASG040/041/042 added, AKKASG020/003 descriptions updated); remove the delivered
+      `ManifestPrefix` bullet from "Limitations Today and Planned Changes"; add an addendum under
+      Decision 18 in design.md for choices the design text left to the implementation

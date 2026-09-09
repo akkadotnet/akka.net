@@ -55,7 +55,7 @@ public sealed partial class AkkaSerializerGenerator
     private static readonly DiagnosticDescriptor UnsupportedFieldTypePolymorphic = new(
         "AKKASG003",
         "Unsupported field type",
-        "Property '{0}' on type '{1}' has unsupported generated serializer field type '{2}'. Declare a closed member set with [AkkaUnion], or type the property as object.",
+        "Property '{0}' on type '{1}' has unsupported generated serializer field type '{2}'. Declare a closed member set with [AkkaUnion], type it as the serializer's own protocol interface, or type the property as object.",
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -327,13 +327,12 @@ public sealed partial class AkkaSerializerGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor ClosedGenericRegistrationNotInProtocol = new(
-        "AKKASG034",
-        "Registered closed generic type does not implement the serializer protocol",
-        "Closed generic construction '{0}' registered on serializer '{1}' does not implement protocol '{2}' and is not referenced by any [AkkaField] property of a message reachable from it; the registration has no effect",
-        "Akka.Serialization.V2",
-        DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
+    // AKKASG034 stays a permanent gap. Decision 18 (openspec/changes/messagepack-sourcegen-validation/design.md)
+    // retires it: a registration on the serializer class now ADOPTS the registered type into the
+    // serializer, whether or not it implements the protocol or is reachable from any [AkkaField]
+    // property -- see ResolveSerializerMessages's adoption rule. The condition this diagnostic used
+    // to guard ("the registration has no effect") can no longer occur, the same way AKKASG030 and
+    // AKKASG035 are permanent gaps left by earlier decisions.
 
     private static readonly DiagnosticDescriptor UnionMemberAbstract = new(
         "AKKASG036",
@@ -398,6 +397,50 @@ public sealed partial class AkkaSerializerGenerator
         isEnabledByDefault: true);
 
     /// <summary>
+    /// Decision 18: <c>ManifestPrefix</c> expands a registration over a type argument's closed
+    /// member set. A type argument has a closed set only when it is the serializer's own protocol
+    /// interface, or a type carrying a type-level <c>[AkkaUnion]</c> with an explicit member list.
+    /// Fires at the registration itself when <c>ManifestPrefix</c> is set but no type argument has
+    /// one -- including a non-generic target, which has no type argument to expand over at all.
+    /// </summary>
+    private static readonly DiagnosticDescriptor ClosedSetExpansionRequiresClosedSet = new(
+        "AKKASG040",
+        "ManifestPrefix has no closed set to expand",
+        "[AkkaSerializable<{0}>(ManifestPrefix = \"{1}\")] registration on serializer '{2}' has no closed member set to expand: {3}",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 18's one-owner rule: a message type belongs to only one serializer's closed set in
+    /// one compilation, whether it gets there by implementing a protocol or by an explicit
+    /// <c>[AkkaSerializable&lt;T&gt;]</c> adoption (a literal registration or a <c>ManifestPrefix</c>
+    /// expansion member). Two serializers claiming the same type is a build error reported at BOTH
+    /// serializers. Across compilations that cannot see each other this becomes a startup check
+    /// instead (Decision 19, not part of this change).
+    /// </summary>
+    private static readonly DiagnosticDescriptor AdoptedMessageOwnedByMultipleSerializers = new(
+        "AKKASG041",
+        "Message type is owned by more than one serializer",
+        "Type '{0}' belongs to more than one serializer's closed set in this compilation: {1}. A message type may have only one owner.",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// Decision 18: "the generator reports the number of constructions it produced as an info
+    /// diagnostic, so nobody is surprised by the size of the output" -- unconditionally, for every
+    /// <c>ManifestPrefix</c> expansion; the design specifies no size threshold.
+    /// </summary>
+    private static readonly DiagnosticDescriptor ClosedSetExpansionCount = new(
+        "AKKASG042",
+        "Closed-set expansion produced constructions",
+        "[AkkaSerializable<{0}>(ManifestPrefix = \"{1}\")] registration on serializer '{2}' expanded to {3} closed generic construction(s)",
+        "Akka.Serialization.V2",
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true);
+
+    /// <summary>
     /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
     /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
     /// -- the ONE place in this generator that happens. Private, not a cached pipeline model: it
@@ -444,12 +487,14 @@ public sealed partial class AkkaSerializerGenerator
             DiagnosticKey.DuplicateProtocolBinding => DuplicateProtocolBinding,
             DiagnosticKey.InvalidSerializerShape => InvalidSerializerShape,
             DiagnosticKey.ProtocolTypeMustBeInterface => ProtocolTypeMustBeInterface,
-            DiagnosticKey.ClosedGenericRegistrationNotInProtocol => ClosedGenericRegistrationNotInProtocol,
             DiagnosticKey.UnionMemberAbstract => UnionMemberAbstract,
             DiagnosticKey.ManifestIgnoredOnGenericDefinition => ManifestIgnoredOnGenericDefinition,
             DiagnosticKey.UnionDeclaredOnObjectField => UnionDeclaredOnObjectField,
             DiagnosticKey.NestedFieldNotAccessibleCrossAssembly => NestedFieldNotAccessibleCrossAssembly,
             DiagnosticKey.UnionMemberNotAccessibleCrossAssembly => UnionMemberNotAccessibleCrossAssembly,
+            DiagnosticKey.ClosedSetExpansionRequiresClosedSet => ClosedSetExpansionRequiresClosedSet,
+            DiagnosticKey.AdoptedMessageOwnedByMultipleSerializers => AdoptedMessageOwnedByMultipleSerializers,
+            DiagnosticKey.ClosedSetExpansionCount => ClosedSetExpansionCount,
             _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
         };
 

@@ -167,7 +167,46 @@ public sealed class AkkaSerializableAttribute<TMessage> : Attribute
     /// construction implements the serializer's protocol interface (top-level dispatch); also the
     /// union discriminator when the construction is an <see cref="AkkaUnionAttribute"/> member.
     /// </summary>
+    /// <remarks>
+    /// A registration on the serializer class means <em>adopt this type into this serializer</em>:
+    /// <typeparamref name="TMessage"/> need not implement the serializer's protocol interface, and
+    /// need not be a closed generic construction at all. When <typeparamref name="TMessage"/> also
+    /// has a <see cref="ManifestPrefix"/> set, <see cref="Manifest"/> registers the literal
+    /// construction alongside the expansion <see cref="ManifestPrefix"/> produces, overriding the
+    /// manifest the formula would otherwise derive for that one construction.
+    /// </remarks>
     public string? Manifest { get; init; }
+
+    /// <summary>
+    /// Expands this registration over the closed member set of <typeparamref name="TMessage"/>'s
+    /// type argument, instead of registering only the single construction named by
+    /// <typeparamref name="TMessage"/> itself.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A type argument has a closed set when it is the serializer's own protocol interface (see
+    /// <see cref="AkkaSerializerAttribute{TProtocol}"/>), or an interface or abstract class carrying
+    /// a type-level <see cref="AkkaUnionAttribute"/>. For example,
+    /// <c>[AkkaSerializable&lt;Envelope&lt;ICommsMessage&gt;&gt;(ManifestPrefix = "env")]</c> on a
+    /// serializer whose protocol is <c>ICommsMessage</c> registers one closed construction of
+    /// <c>Envelope&lt;T&gt;</c> per member of the protocol set -- <c>Envelope&lt;AcceptCassette&gt;</c>,
+    /// <c>Envelope&lt;OrderCancelled&gt;</c>, and so on -- each with its own generated dispatch arm,
+    /// private helpers, and a manifest derived from <see cref="ManifestPrefix"/> and the member's own
+    /// manifest: <c>"env/dmac"</c>, <c>"env/ocan"</c>, and so on. The rule applies to every type
+    /// argument, so a multi-argument generic expands to the product of its arguments' closed sets.
+    /// </para>
+    /// <para>
+    /// <see cref="ManifestPrefix"/> alone does not register the literal construction (the one whose
+    /// type argument is the closed-set type itself, for example <c>Envelope&lt;ICommsMessage&gt;</c>);
+    /// set <see cref="Manifest"/> as well to also register it. A field whose static type is the
+    /// closed-set type -- the protocol interface, or a type-level <see cref="AkkaUnionAttribute"/>
+    /// base -- is treated as a union over that same closed set, with no
+    /// <see cref="AkkaUnionAttribute"/> needed on the field. Setting <see cref="ManifestPrefix"/> on
+    /// a registration whose type argument has no closed set (a concrete class, for example) is a
+    /// compile-time error: a concrete class has nothing to expand over.
+    /// </para>
+    /// </remarks>
+    public string? ManifestPrefix { get; init; }
 }
 
 /// <summary>

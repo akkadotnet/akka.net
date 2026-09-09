@@ -231,8 +231,8 @@ public sealed class GeneratorValidatorSpec
             diagnostic.MessageArgs[3] == "TestSerializer");
     }
 
-    [Fact(DisplayName = "Validate should report AKKASG034 when a closed generic registration is orphaned")]
-    public void Validate_should_report_AKKASG034_when_registration_is_orphaned()
+    [Fact(DisplayName = "Validate should not report an error when a closed generic registration is orphaned (AKKASG034 retired, Decision 18)")]
+    public void Validate_should_not_report_an_error_when_registration_is_orphaned()
     {
         const string source = """
             #nullable enable
@@ -282,15 +282,19 @@ public sealed class GeneratorValidatorSpec
             closedGenericSchemas: ImmutableArray.Create(wrapperInt));
 
         // Outer neither references Wrapper<int> nor is related to it -- the registration is
-        // reachable from nothing, which is exactly the "orphaned" condition AKKASG034 flags.
+        // reachable from nothing. Before Decision 18 this "orphaned" condition was AKKASG034, and it
+        // suppressed emission of the whole serializer. Decision 18 retires that check: a registration
+        // on the serializer ADOPTS the type unconditionally, so Wrapper<int> is now a top-level
+        // message of its own, with no error at all.
         var outer = ParseMessage(compilation, "ValidatorSample.Outer");
 
         var diagnostics = AkkaSerializerGenerator.Validate(serializer, ImmutableArray.Create(outer));
 
-        diagnostics.Should().Contain(diagnostic =>
-            diagnostic.Key == AkkaSerializerGenerator.DiagnosticKey.ClosedGenericRegistrationNotInProtocol &&
-            diagnostic.MessageArgs[0] == "ValidatorSample.Wrapper<int>" &&
-            diagnostic.MessageArgs[1] == "TestSerializer");
+        diagnostics.Should().BeEmpty();
+
+        var resolved = AkkaSerializerGenerator.ResolveSerializerForTests(serializer, ImmutableArray.Create(outer));
+        resolved.IsEmittable.Should().BeTrue();
+        resolved.TopLevelMessages.Members.Should().Contain(member => member.Key.Equals(wrapperInt.Key));
     }
 
     [Fact(DisplayName = "ValidateProtocolCoverage should report AKKASG029 when a protocol message forgets [AkkaSerializable]")]

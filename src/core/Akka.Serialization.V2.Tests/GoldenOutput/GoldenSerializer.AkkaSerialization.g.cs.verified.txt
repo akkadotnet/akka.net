@@ -23,7 +23,11 @@ public sealed partial class GoldenSerializer
         return global::Akka.Serialization.V2.SerializerRegistration.Create("golden-sample",
             system => new GoldenSerializer(system),
             global::System.Collections.Immutable.ImmutableHashSet.Create<global::System.Type>(
-                typeof(global::GoldenSample.IProtocol))); 
+                typeof(global::GoldenSample.IProtocol),
+                typeof(global::GoldenSample.Pair<int, string>),
+                typeof(global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint>),
+                typeof(global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>>),
+                typeof(global::GoldenSample.Wrapper<int>))); 
     }
 
     public override string Manifest(object obj)
@@ -43,6 +47,7 @@ public sealed partial class GoldenSerializer
             global::GoldenSample.Wrapper<int> => "wrapper-int-v1",
             global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> => "wrapper-geo-v1",
             global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> => "wrapper-pair-v1",
+            global::GoldenSample.Pair<int, string> => "pair-int-string-v1",
             _ => throw new global::System.ArgumentException($"Unsupported generated serializer type: {obj.GetType()}", nameof(obj))
         };
     }
@@ -99,6 +104,9 @@ public sealed partial class GoldenSerializer
             case global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> message:
                 WriteWrapperPairIntString(ref writer, message);
                 break;
+            case global::GoldenSample.Pair<int, string> message:
+                WritePairIntString(ref writer, message);
+                break;
             default:
                 throw new global::System.ArgumentException($"Unsupported generated serializer type: {obj.GetType()}", nameof(obj));
         }
@@ -122,6 +130,7 @@ public sealed partial class GoldenSerializer
             "wrapper-int-v1" => ReadWrapperInt(ref reader),
             "wrapper-geo-v1" => ReadWrapperGeoPoint(ref reader),
             "wrapper-pair-v1" => ReadWrapperPairIntString(ref reader),
+            "pair-int-string-v1" => ReadPairIntString(ref reader),
             _ => throw new global::System.Runtime.Serialization.SerializationException($"Unknown generated serializer manifest [{manifest}] for serializer [{GetType()}].")
         };
     }
@@ -143,6 +152,7 @@ public sealed partial class GoldenSerializer
             global::GoldenSample.Wrapper<int> message => SizeOfWrapperInt(message),
             global::GoldenSample.Wrapper<global::GoldenSample.GeoPoint> message => SizeOfWrapperGeoPoint(message),
             global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>> message => SizeOfWrapperPairIntString(message),
+            global::GoldenSample.Pair<int, string> message => SizeOfPairIntString(message),
             _ => global::Akka.Serialization.SerializerV2.UnknownSize
         };
     }
@@ -2532,6 +2542,61 @@ public sealed partial class GoldenSerializer
         return new global::GoldenSample.Wrapper<global::GoldenSample.Pair<int, string>>(Id: id!, Payload: payload!);
     }
 
+    private int SizeOfPairIntString(global::GoldenSample.Pair<int, string> message)
+    {
+        checked
+        {
+            var size = SizeOfMapHeader(2);
+            size += SizeOfInt32(1);
+            size += SizeOfInt32(message.First);
+            size += SizeOfInt32(2);
+            size += SizeOfString(message.Second);
+            return size;
+        }
+    }
+
+    private void WritePairIntString(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Pair<int, string> message)
+    {
+        writer.WriteMapHeader(2);
+        writer.Write(1);
+        writer.Write(message.First);
+        writer.Write(2);
+        writer.Write(message.Second);
+    }
+
+    private global::GoldenSample.Pair<int, string> ReadPairIntString(ref global::MessagePack.MessagePackReader reader)
+    {
+        var __fieldCount = reader.ReadMapHeader();
+        int first = 0;
+        var __hasFirst = false;
+        string? second = null;
+        var __hasSecond = false;
+        for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
+        {
+            var __fieldId = reader.ReadInt32();
+            switch (__fieldId)
+            {
+                case 1:
+                    first = reader.ReadInt32();
+                    __hasFirst = true;
+                    break;
+                case 2:
+                    second = reader.ReadString();
+                    __hasSecond = true;
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        if (!__hasFirst)
+            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [First] with index [1] while deserializing [global::GoldenSample.Pair<int, string>].");
+        if (!__hasSecond || second is null)
+            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Second] with index [2] while deserializing [global::GoldenSample.Pair<int, string>].");
+        return new global::GoldenSample.Pair<int, string>(First: first, Second: second!);
+    }
+
     private int SizeOfReading(global::GoldenSample.Reading message)
     {
         checked
@@ -2777,61 +2842,6 @@ public sealed partial class GoldenSerializer
         if (!__hasExpiredAtTicks)
             throw new global::System.Runtime.Serialization.SerializationException("Missing required field [ExpiredAtTicks] with index [1] while deserializing [global::GoldenSample.OrderExpired].");
         return new global::GoldenSample.OrderExpired(ExpiredAtTicks: expiredAtTicks);
-    }
-
-    private int SizeOfPairIntString(global::GoldenSample.Pair<int, string> message)
-    {
-        checked
-        {
-            var size = SizeOfMapHeader(2);
-            size += SizeOfInt32(1);
-            size += SizeOfInt32(message.First);
-            size += SizeOfInt32(2);
-            size += SizeOfString(message.Second);
-            return size;
-        }
-    }
-
-    private void WritePairIntString(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.Pair<int, string> message)
-    {
-        writer.WriteMapHeader(2);
-        writer.Write(1);
-        writer.Write(message.First);
-        writer.Write(2);
-        writer.Write(message.Second);
-    }
-
-    private global::GoldenSample.Pair<int, string> ReadPairIntString(ref global::MessagePack.MessagePackReader reader)
-    {
-        var __fieldCount = reader.ReadMapHeader();
-        int first = 0;
-        var __hasFirst = false;
-        string? second = null;
-        var __hasSecond = false;
-        for (var __entryIndex = 0; __entryIndex < __fieldCount; __entryIndex++)
-        {
-            var __fieldId = reader.ReadInt32();
-            switch (__fieldId)
-            {
-                case 1:
-                    first = reader.ReadInt32();
-                    __hasFirst = true;
-                    break;
-                case 2:
-                    second = reader.ReadString();
-                    __hasSecond = true;
-                    break;
-                default:
-                    reader.Skip();
-                    break;
-            }
-        }
-
-        if (!__hasFirst)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [First] with index [1] while deserializing [global::GoldenSample.Pair<int, string>].");
-        if (!__hasSecond || second is null)
-            throw new global::System.Runtime.Serialization.SerializationException("Missing required field [Second] with index [2] while deserializing [global::GoldenSample.Pair<int, string>].");
-        return new global::GoldenSample.Pair<int, string>(First: first, Second: second!);
     }
 
     private void WriteUnion_IOrderEvent(ref global::MessagePack.MessagePackWriter writer, global::GoldenSample.IOrderEvent value)
