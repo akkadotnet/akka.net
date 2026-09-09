@@ -314,13 +314,28 @@ namespace Akka.DistributedData
         private ImmutableDictionary<UniqueAddress, long> _removedNodes = ImmutableDictionary<UniqueAddress, long>.Empty;
 
         /// <summary>
+        /// Every member address this replicator has seen in a member event, no matter what status
+        /// that event carried. Used only by <see cref="IsKnownNode"/>.
+        ///
+        /// We subscribe to cluster events with `InitialStateAsEvents`, which replays each current
+        /// member at its CURRENT status. If this replicator starts after a member has already
+        /// moved to Leaving or Down, it gets `MemberLeft`/`MemberDowned` for that member and never
+        /// `MemberUp`, so the member would never land in <see cref="_nodes"/>. Without this set,
+        /// `IsKnownNode` would then treat that member as unknown to the cluster and drop every
+        /// `Write` and gossip message it sends, which can stall things like a shard coordinator
+        /// hand-off during a rolling restart.
+        /// </summary>
+        private ImmutableHashSet<Address> _seenNodes = ImmutableHashSet<Address>.Empty;
+
+        /// <summary>
         /// All nodes sorted with the leader first
         /// </summary>
         private ImmutableSortedSet<Member> _leader = ImmutableSortedSet<Member>.Empty.WithComparer(Member.LeaderStatusOrdering);
         private bool IsLeader => !_leader.IsEmpty && _leader.First().Address == _selfAddress;
 
         private bool IsKnownNode(Address node) => _nodes.Contains(node) || _weaklyUpNodes.Contains(node) ||
-                                                  _joiningNodes.Contains(node) || _selfAddress == node;
+                                                  _joiningNodes.Contains(node) || _exitingNodes.Contains(node) ||
+                                                  _seenNodes.Contains(node) || _selfAddress == node;
 
         /// <summary>
         /// For pruning timeouts are based on clock that is only increased when all nodes are reachable.
@@ -1339,6 +1354,7 @@ namespace Akka.DistributedData
                 _weaklyUpNodes = _weaklyUpNodes.Remove(m.Address);
                 _joiningNodes = _joiningNodes.Remove(m.Address);
                 _exitingNodes = _exitingNodes.Remove(m.Address);
+                _seenNodes = _seenNodes.Remove(m.Address);
 
                 _removedNodes = _removedNodes.SetItem(m.UniqueAddress, _allReachableClockTime);
                 _unreachable = _unreachable.Remove(m.Address);
@@ -1362,6 +1378,13 @@ namespace Akka.DistributedData
         {
             if (MatchingRole(m))
             {
+                // This handles MemberLeft, MemberDowned, and any other member status that does not
+                // have its own case above. Record the address here too, so a Write or gossip
+                // message from this member is not mistaken for one from a node outside the
+                // cluster. See the comment on _seenNodes for why this matters.
+                if (m.Address != _selfAddress)
+                    _seenNodes = _seenNodes.Add(m.Address);
+
                 // replace, it's possible that the ordering is changed since it based on MemberStatus
                 _leader = _leader.Where(x => x.UniqueAddress != m.UniqueAddress)
                     .ToImmutableSortedSet(Member.LeaderStatusOrdering);
