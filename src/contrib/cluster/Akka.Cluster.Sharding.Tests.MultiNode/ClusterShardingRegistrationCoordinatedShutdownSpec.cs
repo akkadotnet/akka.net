@@ -67,9 +67,9 @@ namespace Akka.Cluster.Sharding.Tests
         {
             // This 60s is a ceiling sized above every bounded wait this block contains, not a
             // widened wait of its own. The "test" CoordinatedShutdown task below bounds its
-            // ExpectMsgAsync at Dilated(30s) (matching before-cluster-shutdown.timeout in the
+            // ExpectMsgAsync at 30s (matching before-cluster-shutdown.timeout in the
             // config above), and csTaskDone's ExpectMsgAsync<Done> immediately after it bounds at
-            // Dilated(20s) - both run sequentially on Config.Third, so 30 + 20 = 50s for those two
+            // 20s - both run sequentially on Config.Third, so 30 + 20 = 50s for those two
             // alone. The rest of this block (three JoinAsync calls, the members-up
             // AwaitAssertAsync, StartSharding, and two EnterBarrierAsync calls) has never measured
             // above a couple of seconds locally, so 60s keeps 10s of margin above that 50s sum -
@@ -93,7 +93,7 @@ namespace Akka.Cluster.Sharding.Tests
                     CoordinatedShutdown.Get(Sys).AddTask(CoordinatedShutdown.PhaseBeforeClusterShutdown, "test", async () =>
                     {
                         await Task.Delay(200);
-                        // Bound this explicitly at Dilated(30s) - the same 30s the config above
+                        // Bound this explicitly at 30s - the same 30s the config above
                         // gives before-cluster-shutdown.timeout - rather than calling
                         // ExpectMsgAsync(1) with no timeout. An unbounded call resolves through
                         // RemainingOrDefault, which on THIS TestKitBase instance falls back to
@@ -104,10 +104,11 @@ namespace Akka.Cluster.Sharding.Tests
                         // outer budget can already be gone, so an unbounded wait here would shrink
                         // over time and, on a slow enough agent, end up shorter than the 5s
                         // TestProbe default (akka.test.single-expect-default) it was written to
-                        // beat. An explicit Dilated(30s) gives it the same fresh window every run,
+                        // beat. An explicit 30s gives it the same fresh window every run,
                         // tied to the timeout that actually governs how long CoordinatedShutdown
                         // will wait on this task, independent of how much of the outer block's
-                        // budget has already elapsed.
+                        // budget has already elapsed. ExpectMsgAsync dilates an explicit timeout
+                        // itself (RemainingOrDilated), so it is passed undilated here.
                         //
                         // A TestProbe is its own TestKitBase with its own deadline state, so it
                         // would never see either budget - calling ExpectMsgAsync on the spec itself
@@ -125,7 +126,7 @@ namespace Akka.Cluster.Sharding.Tests
                         // default 5s, CoordinatedShutdown would time the phase out and tear the
                         // region down while this task is still waiting on the shard-home handoff.
                         _region.Value.Tell(1, TestActor);
-                        await ExpectMsgAsync(1, Dilated(TimeSpan.FromSeconds(30)));
+                        await ExpectMsgAsync(1, TimeSpan.FromSeconds(30));
                         csTaskDone.Ref.Tell(Done.Instance);
                         return Done.Instance;
                     });
@@ -155,13 +156,13 @@ namespace Akka.Cluster.Sharding.Tests
                     await AwaitConditionAsync(() => Cluster.IsTerminated);
 
                     // csTaskDone is its own TestProbe / TestKitBase and never inherits this
-                    // spec's 30s Within budget, so its wait needs an explicit dilated bound. A
+                    // spec's Within budget, so its wait needs an explicit bound, which ExpectMsgAsync dilates. A
                     // clean local run measured the full handoff this depends on - the
                     // coordinator singleton migrating to `first`, the shard home for [1]
                     // arriving, and the "test" task's ExpectMsgAsync/Tell above completing -
                     // at 5.6s; 20s leaves roughly 3.5x margin for slower/loaded CI machines
                     // while still finishing well inside the phase's own 30s timeout.
-                    await csTaskDone.ExpectMsgAsync<Done>(Dilated(TimeSpan.FromSeconds(20)));
+                    await csTaskDone.ExpectMsgAsync<Done>(TimeSpan.FromSeconds(20));
                 }, Config.Third);
 
                 await EnterBarrierAsync("after-shutdown");
