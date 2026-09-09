@@ -1454,7 +1454,7 @@ public sealed partial class AkkaSerializerGenerator
 
         return mapping.Kind switch
         {
-            FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef => true,
+            FieldKind.String or FieldKind.ByteArray or FieldKind.ActorRef or FieldKind.EnvelopePayload => true,
             FieldKind.Object => !mapping.IsValueType,
             _ => false
         };
@@ -1522,6 +1522,16 @@ public sealed partial class AkkaSerializerGenerator
             w.Line("else");
             using (w.Indented())
                 w.Raw("Write").Identifier(GetObjectMethodName(mapping)).Raw("(ref writer, ").Value(writeValue).Line(");");
+            return;
+        }
+
+        // Mirrors the field-level FieldKind.EnvelopePayload case in GenerateWriteFieldValue: no
+        // explicit null check is needed here (unlike FieldKind.Object above) because
+        // WriteEnvelopePayload(ref MessagePackWriter, object?) already writes nil for a null payload
+        // itself -- true regardless of whether this element's declared type is nullable.
+        if (mapping.Kind == FieldKind.EnvelopePayload)
+        {
+            w.Raw("WriteEnvelopePayload(ref writer, ").Value(value).Line(");");
             return;
         }
 
@@ -1783,6 +1793,31 @@ public sealed partial class AkkaSerializerGenerator
             return;
         }
 
+        if (mapping.Kind == FieldKind.EnvelopePayload)
+        {
+            // Mirrors the field-level FieldKind.EnvelopePayload case in GenerateReadFieldValue/
+            // GenerateReadField: a nullable element pre-checks nil itself and assigns null directly,
+            // never calling the generic ReadEnvelopePayload<TPayload> helper for a nil payload --
+            // "null is TPayload" always fails the runtime pattern match (even for TPayload == object),
+            // so routing a nullable element's nil through the generic helper would throw instead of
+            // producing null. A non-nullable element skips the pre-check and calls the helper
+            // directly; if the wire unexpectedly holds nil there, the same "not assignable" exception
+            // is exactly the desired failure for a slot that promised never to be null.
+            if (mapping.IsNullable)
+            {
+                w.Line("if (reader.TryReadNil())");
+                using (w.Indented())
+                    w.Local(resultVar).Line(" = null;");
+                w.Line("else");
+                using (w.Indented())
+                    w.Local(resultVar).Raw(" = ReadEnvelopePayload<").Type(TypeName.Global(mapping.DeclaredTypeName)).Line(">(ref reader);");
+                return;
+            }
+
+            w.Local(resultVar).Raw(" = ReadEnvelopePayload<").Type(TypeName.Global(mapping.DeclaredTypeName)).Line(">(ref reader);");
+            return;
+        }
+
         if (mapping.IsNullable && IsScalarValueKind(mapping.Kind))
         {
             w.Line("if (reader.TryReadNil())");
@@ -1907,6 +1942,23 @@ public sealed partial class AkkaSerializerGenerator
                 w.Value(value).Raw(" is null ? SizeOfNil() : SizeOf").Identifier(GetObjectMethodName(mapping)).Raw("(").Value(sizedValue).Raw(")");
             }
 
+            w.Line(";");
+            w.Raw("if (").Local(elementSize).Line(" < 0)");
+            using (w.Indented())
+                w.Line("return global::Akka.Serialization.SerializerV2.UnknownSize;");
+            w.Local(sizeVar).Raw(" += ").Local(elementSize).Line(";");
+            return;
+        }
+
+        // Mirrors the field-level FieldKind.EnvelopePayload case in GenerateSizeExpression: no
+        // separate null branch is needed here (unlike FieldKind.Object above) because
+        // SizeOfEnvelopePayload(object?) already returns SizeOfNil() for a null payload itself, so a
+        // single call covers both a genuinely null element and a real payload -- whose own SizeHint
+        // may still be UnknownSize, hence the same "< 0" propagation guard as every other kind here.
+        if (mapping.Kind == FieldKind.EnvelopePayload)
+        {
+            var elementSize = alloc.Next("size");
+            w.Raw("var ").Local(elementSize).Raw(" = SizeOfEnvelopePayload(").Value(value).Raw(")");
             w.Line(";");
             w.Raw("if (").Local(elementSize).Line(" < 0)");
             using (w.Indented())

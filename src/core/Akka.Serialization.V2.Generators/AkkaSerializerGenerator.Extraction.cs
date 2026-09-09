@@ -862,7 +862,10 @@ public sealed partial class AkkaSerializerGenerator
     /// A collection whose element/key/value is itself unsupported collapses to
     /// <see cref="FieldKind.Unsupported"/> so AKKASG003 fires with the full field type -- except an
     /// enum element with an unsupported underlying type, which propagates as
-    /// <see cref="FieldKind.UnsupportedEnumUnderlyingType"/> so AKKASG014 fires naming the enum.
+    /// <see cref="FieldKind.UnsupportedEnumUnderlyingType"/> so AKKASG014 fires naming the enum. An
+    /// element/value typed <c>object</c> maps to <see cref="FieldKind.EnvelopePayload"/> instead (see
+    /// <see cref="MapCollectionElement"/>); a dictionary KEY typed <c>object</c> also collapses to
+    /// <see cref="FieldKind.Unsupported"/>.
     /// <c>byte[]</c> is never seen here (it is intercepted earlier as <see cref="FieldKind.ByteArray"/>).
     /// </summary>
     private static bool TryMapCollection(ITypeSymbol type, KnownTypes knownTypes, out TypeMapping mapping)
@@ -981,7 +984,7 @@ public sealed partial class AkkaSerializerGenerator
 
     private static TypeMapping MapKeyValueCollection(FieldKind kind, INamedTypeSymbol namedType, KnownTypes knownTypes)
     {
-        var key = MapCollectionElement(namedType.TypeArguments[0], knownTypes);
+        var key = MapCollectionElement(namedType.TypeArguments[0], knownTypes, isKeyPosition: true);
         var value = MapCollectionElement(namedType.TypeArguments[1], knownTypes);
         return TryCollapseBadElement(key, out var collapsedKey) ? collapsedKey
             : TryCollapseBadElement(value, out var collapsedValue) ? collapsedValue
@@ -1029,7 +1032,12 @@ public sealed partial class AkkaSerializerGenerator
             or SpecialType.System_Int32;
     }
 
-    private static TypeMapping MapCollectionElement(ITypeSymbol type, KnownTypes knownTypes)
+    /// <summary>
+    /// Maps a single collection element/key/value type. <paramref name="isKeyPosition"/> is true only
+    /// for a dictionary KEY (see <see cref="MapKeyValueCollection"/>); every other caller (an
+    /// array/list element, a set member, or a dictionary value) leaves it false.
+    /// </summary>
+    private static TypeMapping MapCollectionElement(ITypeSymbol type, KnownTypes knownTypes, bool isKeyPosition = false)
     {
         var declaredTypeName = type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
@@ -1037,6 +1045,26 @@ public sealed partial class AkkaSerializerGenerator
             return MapTypeCore(underlyingType, knownTypes).AsCollectionElement(declaredTypeName, isNullable: true);
 
         var isNullable = type.IsReferenceType && type.NullableAnnotation == NullableAnnotation.Annotated;
+
+        // An element/value whose static type is `object` (or `object?`) is always the
+        // envelope-payload boundary, mirroring the property-level rule in ExtractMessageCore -- the
+        // type alone carries that meaning, with no attribute involved, at every position a supported
+        // collection can hold it: an array/list element, a set member, or a dictionary value.
+        //
+        // A dictionary KEY typed `object` is rejected instead (AKKASG003, via the same Unsupported
+        // collapse every other bad element/key/value already uses -- see TryCollapseBadElement):
+        // Dictionary&lt;TKey,TValue&gt; throws on a null key at runtime, so a nullable `object?` key
+        // would crash the first time an envelope legitimately decodes to null; and even a non-null
+        // envelope payload has no stable identity across a round trip (ReadEnvelopePayload always
+        // materializes a brand-new instance on read), so hash/equality-based key lookups could never
+        // reliably rediscover a deserialized entry. Neither failure mode is worth the surface area.
+        if (type.SpecialType == SpecialType.System_Object)
+        {
+            return isKeyPosition
+                ? new TypeMapping(FieldKind.Unsupported)
+                : new TypeMapping(FieldKind.EnvelopePayload).AsCollectionElement(declaredTypeName, isNullable);
+        }
+
         return MapTypeCore(type, knownTypes).AsCollectionElement(declaredTypeName, isNullable);
     }
 
