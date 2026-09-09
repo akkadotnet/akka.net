@@ -171,6 +171,15 @@ namespace Akka.Remote.Tests.MultiNode
                 }
                 return true;
             }
+
+            protected override void PostStop()
+            {
+                // The sliding timer above re-arms on every "shutdown" and is otherwise left
+                // running. Cancel it here so a stopped Subject can't fire it later and terminate
+                // whatever ActorSystem happens to own it at that point.
+                _terminate?.Cancel();
+                base.PostStop();
+            }
         }
     }
 
