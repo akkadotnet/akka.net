@@ -19,7 +19,7 @@ using static FluentAssertions.FluentActions;
 
 namespace Akka.DependencyInjection.Tests
 {
-    public class BugFixSpec: AkkaSpec, IAsyncLifetime
+    public class BugFixSpec: AkkaSpec
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly AkkaService _akkaService;
@@ -59,8 +59,9 @@ namespace Akka.DependencyInjection.Tests
         }
         
         
-        public async ValueTask InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
+            await base.InitializeAsync();
             await _akkaService.StartAsync(default);
             InitializeLogger(_akkaService.ActorSystem);
         }
@@ -72,11 +73,6 @@ namespace Akka.DependencyInjection.Tests
             base.AfterAll();
         }
 
-        public ValueTask DisposeAsync()
-        {
-            return new ValueTask(Task.CompletedTask);
-        }
-        
         internal class AkkaService : IHostedService
         {
             public ActorSystem ActorSystem { get; private set; }

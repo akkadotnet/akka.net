@@ -12,6 +12,7 @@ using Akka.Configuration;
 using Akka.Streams.Dsl;
 using Akka.Streams.TestKit;
 using Akka.TestKit;
+using Akka.TestKit.Extensions;
 using FluentAssertions;
 using System.Linq;
 using System.Threading;
@@ -188,23 +189,28 @@ namespace Akka.Streams.Tests
         }
     }
 
-    public class StreamRefsSpec : AkkaSpec, IAsyncLifetime
+    public class StreamRefsSpec : AkkaSpec
     {
+        // One cold stream-ref handshake is three one-way remote hops. Budget it
+        // explicitly, between the product's own two clocks: demand redelivery retries
+        // every 1 s, and the subscription timeout fires at 30 s. 15 s allows fourteen
+        // redeliveries and still fails before the product's guard would mask it.
+        private static readonly TimeSpan RemoteTimeout = TimeSpan.FromSeconds(15);
+
         public static Config Config()
         {
-            var address = TestUtils.TemporaryServerAddress();
-            return ConfigurationFactory.ParseString($@"
-            akka {{
-              loglevel = INFO
-              actor {{
+            return ConfigurationFactory.ParseString(@"
+            akka {
+              loglevel = DEBUG
+              actor {
                 provider = remote
                 serialize-messages = off
-              }}
-              remote.dot-netty.tcp {{
-                port = {address.Port}
-                hostname = ""{address.Address}""
-              }}
-            }}");
+              }
+              remote.dot-netty.tcp {
+                port = 0
+                hostname = ""127.0.0.1""
+              }
+            }");
         }
 
         public StreamRefsSpec(ITestOutputHelper output) : this(Config(), output: output)
@@ -219,8 +225,10 @@ namespace Akka.Streams.Tests
             _probe = CreateTestProbe();
         }
 
-        public async ValueTask InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
+            await base.InitializeAsync();
+
             var it = RemoteSystem.ActorOf(DataSourceActor.Props(_probe.Ref), "remoteActor");
             var remoteAddress = ((ActorSystemImpl)RemoteSystem).Provider.DefaultAddress;
             Sys.ActorSelection(it.Path.ToStringWithAddress(remoteAddress)).Tell(new Identify("hi"));
@@ -228,9 +236,17 @@ namespace Akka.Streams.Tests
             _remoteActor = (await ExpectMsgAsync<ActorIdentity>(TimeSpan.FromSeconds(30))).Subject;
         }
 
-        public ValueTask DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
-            return new ValueTask(Task.CompletedTask);
+            // Remote system first: its DataSourceActor holds a direct IActorRef into the
+            // local Sys. ShutdownAsync does not pin a thread pool thread the way the
+            // synchronous Shutdown() does, which matters on a 2-vCPU agent.
+            await ShutdownAsync(RemoteSystem);
+
+            // base chains Dispose(true) -> AfterAll() -> BeforeTermination() ->
+            // Materializer.Dispose(), then shuts Sys down without blocking. This keeps
+            // the original teardown order: remote system, local materializer, local Sys.
+            await base.DisposeAsync();
         }
 
         protected readonly ActorSystem RemoteSystem;
@@ -242,12 +258,6 @@ namespace Akka.Streams.Tests
         {
             base.BeforeTermination();
             Materializer.Dispose();
-        }
-
-        protected override void AfterAll()
-        {
-            Shutdown(RemoteSystem);
-            base.AfterAll();
         }
 
         [Fact]
@@ -362,18 +372,28 @@ namespace Akka.Streams.Tests
         }
 
         [Fact]
-        public void SinkRef_must_receive_elements_via_remoting()
+        public async Task SinkRef_must_receive_elements_via_remoting()
         {
             _remoteActor.Tell("receive", TestActor);
-            var remoteSink = ExpectMsg<ISinkRef<string>>();
 
-            Source.From(new[] { "hello", "world" })
+            // one wire round trip plus a remote materialization
+            var remoteSink = await ExpectMsgAsync<ISinkRef<string>>(RemoteTimeout);
+
+            // WatchTermination sits between the source and the SinkRef stage. Source.From
+            // can only emit once the stage pulls, and the stage only pulls once
+            // CumulativeDemand has come back over the wire. So this task completing IS the
+            // handshake, asserted as an event instead of as a wall-clock window.
+            var sent = Source.From(new[] { "hello", "world" })
+                .WatchTermination(Keep.Right)
                 .To(remoteSink.Sink)
                 .Run(Materializer);
 
-            _probe.ExpectMsg("hello");
-            _probe.ExpectMsg("world");
-            _probe.ExpectMsg("<COMPLETE>");
+            (await sent.AwaitWithTimeout(RemoteTimeout))
+                .Should().BeTrue("the SinkRef demand handshake should complete");
+
+            await _probe.ExpectMsgAsync("hello", RemoteTimeout);
+            await _probe.ExpectMsgAsync("world", RemoteTimeout);
+            await _probe.ExpectMsgAsync("<COMPLETE>", RemoteTimeout);
         }
 
         [Fact]
