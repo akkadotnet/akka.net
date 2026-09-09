@@ -65,7 +65,17 @@ namespace Akka.Cluster.Sharding.Tests
 
         private async Task Region_registration_during_CoordinatedShutdown_must_try_next_oldest()
         {
-            await WithinAsync(TimeSpan.FromSeconds(30), async () =>
+            // This 60s is a ceiling sized above every bounded wait this block contains, not a
+            // widened wait of its own. The "test" CoordinatedShutdown task below bounds its
+            // ExpectMsgAsync at Dilated(30s) (matching before-cluster-shutdown.timeout in the
+            // config above), and csTaskDone's ExpectMsgAsync<Done> immediately after it bounds at
+            // Dilated(20s) - both run sequentially on Config.Third, so 30 + 20 = 50s for those two
+            // alone. The rest of this block (three JoinAsync calls, the members-up
+            // AwaitAssertAsync, StartSharding, and two EnterBarrierAsync calls) has never measured
+            // above a couple of seconds locally, so 60s keeps 10s of margin above that 50s sum -
+            // enough that WithinAsync's own outer race timer (TestKitBase_Within.cs:346-350) does
+            // not fire before either inner bound gets a chance to.
+            await WithinAsync(TimeSpan.FromSeconds(60), async () =>
             {
                 // second should be oldest
                 await JoinAsync(Config.Second, Config.Second);
@@ -83,13 +93,25 @@ namespace Akka.Cluster.Sharding.Tests
                     CoordinatedShutdown.Get(Sys).AddTask(CoordinatedShutdown.PhaseBeforeClusterShutdown, "test", async () =>
                     {
                         await Task.Delay(200);
-                        // Wait on the spec's own 30s Within budget rather than a TestProbe's flat
-                        // akka.test.single-expect-default (5s): the shard home for [1] can't arrive
-                        // until the coordinator singleton hands off from `second` to `first`, which
-                        // can take longer than 5s. A TestProbe is its own TestKitBase with its own
-                        // deadline state, so it would never see this spec's Within budget - calling
-                        // ExpectMsgAsync on the spec itself does. This mirrors the JVM spec, which
-                        // sends from its own test actor.
+                        // Bound this explicitly at Dilated(30s) - the same 30s the config above
+                        // gives before-cluster-shutdown.timeout - rather than calling
+                        // ExpectMsgAsync(1) with no timeout. An unbounded call resolves through
+                        // RemainingOrDefault, which on THIS TestKitBase instance falls back to
+                        // whatever the outer WithinAsync below set as its deadline when the block
+                        // started (TestKitBase.cs:483-504) - i.e. the block's remainder, not a
+                        // fresh 30s. By the time this task actually runs (after the coordinator
+                        // singleton hands off from `second` to `first`), a meaningful slice of that
+                        // outer budget can already be gone, so an unbounded wait here would shrink
+                        // over time and, on a slow enough agent, end up shorter than the 5s
+                        // TestProbe default (akka.test.single-expect-default) it was written to
+                        // beat. An explicit Dilated(30s) gives it the same fresh window every run,
+                        // tied to the timeout that actually governs how long CoordinatedShutdown
+                        // will wait on this task, independent of how much of the outer block's
+                        // budget has already elapsed.
+                        //
+                        // A TestProbe is its own TestKitBase with its own deadline state, so it
+                        // would never see either budget - calling ExpectMsgAsync on the spec itself
+                        // does. This mirrors the JVM spec, which sends from its own test actor.
                         //
                         // This task body runs on a thread pool thread, not the test thread, so the
                         // implicit sender isn't set there - pass TestActor explicitly or this would
@@ -103,7 +125,7 @@ namespace Akka.Cluster.Sharding.Tests
                         // default 5s, CoordinatedShutdown would time the phase out and tear the
                         // region down while this task is still waiting on the shard-home handoff.
                         _region.Value.Tell(1, TestActor);
-                        await ExpectMsgAsync(1);
+                        await ExpectMsgAsync(1, Dilated(TimeSpan.FromSeconds(30)));
                         csTaskDone.Ref.Tell(Done.Instance);
                         return Done.Instance;
                     });
