@@ -839,4 +839,105 @@ public sealed partial class AkkaSerializerGenerator
             return hash;
         }
     }
+
+    /// <summary>
+    /// Identifies exactly one <see cref="DiagnosticDescriptor"/> field declared in
+    /// AkkaSerializerGenerator.Diagnostics.cs -- by DESCRIPTOR FIELD, not by public diagnostic id.
+    /// Key scheme: three ids are each backed by TWO distinct descriptor fields with the same
+    /// id/title/severity but different message text (AKKASG003: plain vs. the polymorphic-hint
+    /// variant for an interface/abstract/type-parameter field; AKKASG007 and AKKASG015: same-assembly
+    /// vs. the cross-assembly-hint variant), so the public id alone cannot tell a
+    /// <see cref="DiagnosticSpec"/> apart from its sibling variant. Every member below is named
+    /// IDENTICALLY to the descriptor field it resolves to (see the private DiagnosticRegistry in
+    /// AkkaSerializerGenerator.Diagnostics.cs), so the 1:1 mapping is obvious at both ends.
+    /// </summary>
+    internal enum DiagnosticKey
+    {
+        InvalidSerializerName,
+        InvalidSerializerId,
+        UnsupportedFieldType,
+        UnsupportedFieldTypePolymorphic,
+        MissingFields,
+        DuplicateFieldIndex,
+        MissingManifest,
+        MissingNestedSerializableDefinition,
+        MissingNestedSerializableDefinitionCrossAssembly,
+        InvalidFormatterType,
+        DuplicateFormatterRegistration,
+        FormatterConstructorNotUsable,
+        FormatterTargetNotSupported,
+        DuplicateManifest,
+        DuplicateSerializerId,
+        UnsupportedEnumUnderlyingType,
+        UnionMemberNotSerializable,
+        UnionMemberNotSerializableCrossAssembly,
+        UnionMemberMissingManifest,
+        UnionMemberManifestCollision,
+        UnionMemberNotAssignable,
+        InvalidUnionMemberSet,
+        InvalidClosedGenericRegistration,
+        DuplicateClosedGenericRegistration,
+        GenericSerializableRequiresRegistration,
+        UnregisteredClosedGenericField,
+        DuplicateGeneratedName,
+        UnionMemberNotSealed,
+        NoMatchingConstructor,
+        ConstructorParameterNotCovered,
+        FieldPropertyNotAccessible,
+        ProtocolMessageNotSerializable,
+        DuplicateProtocolBinding,
+        InvalidSerializerShape,
+        ProtocolTypeMustBeInterface,
+        ClosedGenericRegistrationNotInProtocol,
+        UnionMemberAbstract,
+        ManifestIgnoredOnGenericDefinition,
+        UnionDeclaredOnObjectField
+    }
+
+    /// <summary>
+    /// A diagnostic to report, with no live <see cref="Diagnostic"/>, <see cref="Location"/>, or
+    /// symbol reference: just <see cref="Key"/> (which <see cref="DiagnosticDescriptor"/> field --
+    /// see <see cref="DiagnosticKey"/>) and the already display-formatted message arguments (a
+    /// numeric argument, e.g. AKKASG002's serializer id or AKKASG005's field index, is converted to
+    /// its decimal string ahead of time, since <see cref="MessageArgs"/> is homogeneous). Pure
+    /// validation functions in AkkaSerializerGenerator.Validation.cs return these instead of calling
+    /// <c>SourceProductionContext.ReportDiagnostic</c> directly, so validation runs -- and can be
+    /// asserted against directly, by <see cref="Key"/> and <see cref="MessageArgs"/> rather than by
+    /// message substring -- with no driver, context, or <see cref="Compilation"/> at all. The private
+    /// DiagnosticRegistry in AkkaSerializerGenerator.Diagnostics.cs is the one place a
+    /// <see cref="DiagnosticSpec"/> is turned into a real <see cref="Diagnostic"/>, always at
+    /// <see cref="Location.None"/> (every diagnostic this generator has ever reported already was).
+    /// </summary>
+    internal sealed class DiagnosticSpec : IEquatable<DiagnosticSpec>
+    {
+        public DiagnosticSpec(DiagnosticKey key, params string[] messageArgs)
+        {
+            Key = key;
+            MessageArgs = messageArgs.Length == 0 ? ImmutableArray<string>.Empty : ImmutableArray.Create(messageArgs);
+        }
+
+        public DiagnosticKey Key { get; }
+        public ImmutableArray<string> MessageArgs { get; }
+
+        public bool Equals(DiagnosticSpec? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return Key == other.Key && ValueEquality.SequenceEquals(MessageArgs, other.MessageArgs);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as DiagnosticSpec);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, (int)Key);
+            hash = ValueEquality.Combine(hash, MessageArgs);
+            return hash;
+        }
+    }
 }

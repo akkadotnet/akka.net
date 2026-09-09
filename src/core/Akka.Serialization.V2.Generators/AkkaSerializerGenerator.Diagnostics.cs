@@ -365,4 +365,68 @@ public sealed partial class AkkaSerializerGenerator
         "Akka.Serialization.V2",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    /// <summary>
+    /// Resolves a <see cref="DiagnosticKey"/> to the exact <see cref="DiagnosticDescriptor"/> field
+    /// above it names, and turns a <see cref="DiagnosticSpec"/> into a real <see cref="Diagnostic"/>
+    /// -- the ONE place in this generator that happens. Private, not a cached pipeline model: it
+    /// never needs to cross the incremental boundary or appear in a test assertion, since every
+    /// caller either builds a <see cref="DiagnosticSpec"/> for this to resolve, or -- in tests --
+    /// asserts on the <see cref="DiagnosticSpec"/> itself and never calls this at all.
+    /// </summary>
+    private static class DiagnosticRegistry
+    {
+        public static DiagnosticDescriptor Resolve(DiagnosticKey key) => key switch
+        {
+            DiagnosticKey.InvalidSerializerName => InvalidSerializerName,
+            DiagnosticKey.InvalidSerializerId => InvalidSerializerId,
+            DiagnosticKey.UnsupportedFieldType => UnsupportedFieldType,
+            DiagnosticKey.UnsupportedFieldTypePolymorphic => UnsupportedFieldTypePolymorphic,
+            DiagnosticKey.MissingFields => MissingFields,
+            DiagnosticKey.DuplicateFieldIndex => DuplicateFieldIndex,
+            DiagnosticKey.MissingManifest => MissingManifest,
+            DiagnosticKey.MissingNestedSerializableDefinition => MissingNestedSerializableDefinition,
+            DiagnosticKey.MissingNestedSerializableDefinitionCrossAssembly => MissingNestedSerializableDefinitionCrossAssembly,
+            DiagnosticKey.InvalidFormatterType => InvalidFormatterType,
+            DiagnosticKey.DuplicateFormatterRegistration => DuplicateFormatterRegistration,
+            DiagnosticKey.FormatterConstructorNotUsable => FormatterConstructorNotUsable,
+            DiagnosticKey.FormatterTargetNotSupported => FormatterTargetNotSupported,
+            DiagnosticKey.DuplicateManifest => DuplicateManifest,
+            DiagnosticKey.DuplicateSerializerId => DuplicateSerializerId,
+            DiagnosticKey.UnsupportedEnumUnderlyingType => UnsupportedEnumUnderlyingType,
+            DiagnosticKey.UnionMemberNotSerializable => UnionMemberNotSerializable,
+            DiagnosticKey.UnionMemberNotSerializableCrossAssembly => UnionMemberNotSerializableCrossAssembly,
+            DiagnosticKey.UnionMemberMissingManifest => UnionMemberMissingManifest,
+            DiagnosticKey.UnionMemberManifestCollision => UnionMemberManifestCollision,
+            DiagnosticKey.UnionMemberNotAssignable => UnionMemberNotAssignable,
+            DiagnosticKey.InvalidUnionMemberSet => InvalidUnionMemberSet,
+            DiagnosticKey.InvalidClosedGenericRegistration => InvalidClosedGenericRegistration,
+            DiagnosticKey.DuplicateClosedGenericRegistration => DuplicateClosedGenericRegistration,
+            DiagnosticKey.GenericSerializableRequiresRegistration => GenericSerializableRequiresRegistration,
+            DiagnosticKey.UnregisteredClosedGenericField => UnregisteredClosedGenericField,
+            DiagnosticKey.DuplicateGeneratedName => DuplicateGeneratedName,
+            DiagnosticKey.UnionMemberNotSealed => UnionMemberNotSealed,
+            DiagnosticKey.NoMatchingConstructor => NoMatchingConstructor,
+            DiagnosticKey.ConstructorParameterNotCovered => ConstructorParameterNotCovered,
+            DiagnosticKey.FieldPropertyNotAccessible => FieldPropertyNotAccessible,
+            DiagnosticKey.ProtocolMessageNotSerializable => ProtocolMessageNotSerializable,
+            DiagnosticKey.DuplicateProtocolBinding => DuplicateProtocolBinding,
+            DiagnosticKey.InvalidSerializerShape => InvalidSerializerShape,
+            DiagnosticKey.ProtocolTypeMustBeInterface => ProtocolTypeMustBeInterface,
+            DiagnosticKey.ClosedGenericRegistrationNotInProtocol => ClosedGenericRegistrationNotInProtocol,
+            DiagnosticKey.UnionMemberAbstract => UnionMemberAbstract,
+            DiagnosticKey.ManifestIgnoredOnGenericDefinition => ManifestIgnoredOnGenericDefinition,
+            DiagnosticKey.UnionDeclaredOnObjectField => UnionDeclaredOnObjectField,
+            _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown DiagnosticKey: add a case mapping it to its DiagnosticDescriptor.")
+        };
+
+        public static Diagnostic ToDiagnostic(DiagnosticSpec spec)
+        {
+            var args = new object[spec.MessageArgs.Length];
+            for (var i = 0; i < spec.MessageArgs.Length; i++)
+                args[i] = spec.MessageArgs[i];
+
+            return Diagnostic.Create(Resolve(spec.Key), Location.None, args);
+        }
+    }
 }
