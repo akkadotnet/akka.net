@@ -114,8 +114,8 @@ akka.cluster {
     # so 3s means a peer is called unreachable ~4.3s after the last heartbeat, which the logs
     # confirm. Build 131165 measured a 14.8s heartbeat gap on node-2 while it tore down a second
     # ActorSystem, so 10s would still not have covered it. 20s gives ~21.3s of detection and
-    # leaves PartitionSeveral (195s dilated) far more room than it needs for detection plus
-    # stable-after.
+    # leaves PartitionSeveral (150s dilated at the 7 nodes CI now runs) far more room than it needs
+    # for detection plus stable-after.
     failure-detector.acceptable-heartbeat-pause = 20s
     downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
     split-brain-resolver {
@@ -891,20 +891,13 @@ public class StressSpec : MultiNodeClusterSpec
 
     public Lazy<IActorRef> StatsObserver { get; }
 
-    public Option<IActorRef> ClusterResultAggregator()
-    {
-        Sys.ActorSelection(new RootActorPath(GetAddress(Roles.First())) / "user" / ("result" + Step))
-            .Tell(new Identify(Step), IdentifyProbe.Ref);
-        return Option<IActorRef>.Create(IdentifyProbe.ExpectMsg<ActorIdentity>().Subject);
-    }
-
     /// <summary>
-    /// Retrying variant of <see cref="ClusterResultAggregator"/> used at the aggregator
-    /// lifecycle boundaries (creation / await-result), where a one-shot remote <see cref="Identify"/>
-    /// proved to be the tightest undilated window in the spec. Uses a fresh probe per attempt
-    /// (a late reply from a timed-out attempt must not pollute the next one) with a bounded inner
-    /// expect, mirroring the watchee-lookup pattern in <see cref="RemoveOneAsync"/> and the
-    /// fresh-probe-per-attempt pattern from #8363.
+    /// Retrying lookup of the current phase's <see cref="ClusterResultAggregator"/> actor, used at
+    /// the aggregator lifecycle boundaries (creation / await-result), where a one-shot remote
+    /// <see cref="Identify"/> proved to be the tightest undilated window in the spec. Uses a fresh
+    /// probe per attempt (a late reply from a timed-out attempt must not pollute the next one) with
+    /// a bounded inner expect, mirroring the watchee-lookup pattern in <see cref="RemoveOneAsync"/>
+    /// and the fresh-probe-per-attempt pattern from #8363.
     /// </summary>
     public async Task<Option<IActorRef>> ClusterResultAggregatorAsync()
     {
@@ -962,11 +955,20 @@ public class StressSpec : MultiNodeClusterSpec
         await RunOnAsync(async () =>
         {
             var resultAggregator = await ClusterResultAggregatorAsync();
-            resultAggregator.OnSuccess(r =>
+            // Option<T>.OnSuccess only takes a synchronous Action<T>, so it can't host an async
+            // watch/wait -- unwrap the option explicitly instead. The synchronous TestKit members
+            // this replaces were sync-over-async: the watch registration wrapped its async
+            // counterpart in a blocking call that discarded the success flag it returned (so a
+            // failed registration went unnoticed), and the terminated-message expectation blocked
+            // the calling thread for up to the remaining phase budget. This runs on Roles.First()
+            // at the end of every phase -- exactly the pinned-thread-pool-thread pattern this PR
+            // series exists to remove.
+            if (resultAggregator.HasValue)
             {
-                Watch(r);
-                ExpectMsg<Terminated>(t => t.ActorRef.Path == r.Path);
-            });
+                var r = resultAggregator.Value;
+                await WatchAsync(r);
+                await ExpectMsgAsync<Terminated>(t => t.ActorRef.Path == r.Path);
+            }
         }, Roles.First());
         await EnterBarrierAsync("cluster-result-done-" + Step);
     }
@@ -1270,8 +1272,8 @@ public class StressSpec : MultiNodeClusterSpec
         var returnValue = await thunk();
 
         // Use the retrying, fresh-probe-per-attempt aggregator lookup (matches CreateResultAggregatorAsync /
-        // AwaitClusterResultAsync) rather than the old one-shot ClusterResultAggregator(), whose single
-        // non-retried Identify/ExpectMsg made a lone lost reply under this spec's deliberate churn fatal.
+        // AwaitClusterResultAsync) rather than a one-shot, non-retried Identify/ExpectMsg lookup, which
+        // would make a lone lost reply under this spec's deliberate churn fatal.
         (await ClusterResultAggregatorAsync()).OnSuccess(r =>
         {
             r.Tell(new ClusterResult(Cluster.SelfAddress, TimeSpan.FromTicks(MonotonicClock.GetTicks() - startTime), LatestGossipStats - startStats));
@@ -1441,6 +1443,9 @@ public class StressSpec : MultiNodeClusterSpec
         if (Settings.Infolog)
         {
             Log.Info("StressSpec CLR:" + Environment.NewLine + ClrInfo());
+            // NOTE: this RunOnAsync passes no roles, so IsNode(nodes) (nodes.Contains(Myself) on an
+            // empty array) is always false and this block never runs on any node. Pre-existing dead
+            // code, left as-is here rather than changed as part of an unrelated cleanup.
             await RunOnAsync(() =>
             {
                 Log.Info("StressSpec settings:" + Environment.NewLine + Settings);
