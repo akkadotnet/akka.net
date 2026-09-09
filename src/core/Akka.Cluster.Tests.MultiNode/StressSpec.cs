@@ -921,7 +921,7 @@ public class StressSpec : MultiNodeClusterSpec
 
     public async Task CreateResultAggregatorAsync(string title, int expectedResults, bool includeInHistory)
     {
-        RunOn(() =>
+        await RunOnAsync(() =>
             {
                 var aggregator = Sys.ActorOf(
                     Props.Create(() => new ClusterResultAggregator(title, expectedResults, Settings))
@@ -935,6 +935,7 @@ public class StressSpec : MultiNodeClusterSpec
                 {
                     aggregator.Tell(new ReportTo(Option<IActorRef>.None));
                 }
+                return Task.CompletedTask;
             },
             Roles.First());
         await EnterBarrierAsync("result-aggregator-created-" + Step);
@@ -1027,7 +1028,7 @@ public class StressSpec : MultiNodeClusterSpec
                 {
                     await ReportResult(async () =>
                     {
-                        RunOn(() =>
+                        await RunOnAsync(() =>
                         {
                             if (toSeedNodes)
                             {
@@ -1037,6 +1038,7 @@ public class StressSpec : MultiNodeClusterSpec
                             {
                                 Cluster.Join(GetAddress(Roles.First()));
                             }
+                            return Task.CompletedTask;
                         }, joiningRoles);
                         await AwaitMembersUpAsync(currentRoles.Length, timeout: RemainingOrDefault);
                         return true;
@@ -1073,10 +1075,11 @@ public class StressSpec : MultiNodeClusterSpec
             var removeRole = Roles[NbrUsedRoles - 1];
             var removeAddress = GetAddress(removeRole);
             Console.WriteLine($"Preparing to {FormatNodeLeave()}[{removeAddress}] role [{removeRole.Name}] out of [{Roles.Count}]");
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 var watchee = Sys.ActorOf(Props.Create(() => new Watchee()), "watchee");
                 Console.WriteLine("Created watchee [{0}]", watchee);
+                return Task.CompletedTask;
             }, removeRole);
 
             await EnterBarrierAsync("watchee-created-" + Step);
@@ -1115,10 +1118,11 @@ public class StressSpec : MultiNodeClusterSpec
             }, Roles.First());
             await EnterBarrierAsync("watchee-established-" + Step);
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 if (!shutdown)
                     Cluster.Leave(GetAddress(Myself));
+                return Task.CompletedTask;
             }, removeRole);
 
             await RunOnAsync(async () =>
@@ -1172,12 +1176,13 @@ public class StressSpec : MultiNodeClusterSpec
                 var title = $"{FormatNodeLeave()} {numberOfNodes} in {NbrUsedRoles} nodes cluster";
                 await CreateResultAggregatorAsync(title, expectedResults: currentRoles.Length, includeInHistory: true);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     if (!shutdown)
                     {
                         Cluster.Leave(GetAddress(Myself));
                     }
+                    return Task.CompletedTask;
                 }, removeRoles);
 
                 await RunOnAsync(async () =>
@@ -1244,10 +1249,10 @@ public class StressSpec : MultiNodeClusterSpec
                     });
                 }, currentRoles);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     Sys.ActorOf(Props.Create<MeasureDurationUntilDown>());
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Cluster.IsTerminated.Should().BeTrue();
                     });
@@ -1291,10 +1296,11 @@ public class StressSpec : MultiNodeClusterSpec
                 return previousAs;
 
             var t = title + " round " + counter;
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 PhiObserver.Value.Tell(Reset.Instance);
                 StatsObserver.Value.Tell(Reset.Instance);
+                return Task.CompletedTask;
             }, usedRoles);
             await CreateResultAggregatorAsync(t, expectedResults:NbrUsedRoles, includeInHistory:true);
 
@@ -1334,9 +1340,10 @@ public class StressSpec : MultiNodeClusterSpec
                     nextAddresses = ClusterView.Members.Select(x => x.Address).ToImmutableHashSet()
                         .Except(usedAddresses);
 
-                    RunOn(() =>
+                    await RunOnAsync(() =>
                     {
                         nextAddresses.Count.Should().Be(Settings.NumberOfNodesJoinRemove);
+                        return Task.CompletedTask;
                     }, usedRoles);
 
                     return (nextAs, nextAddresses);
@@ -1434,9 +1441,10 @@ public class StressSpec : MultiNodeClusterSpec
         if (Settings.Infolog)
         {
             Log.Info("StressSpec CLR:" + Environment.NewLine + ClrInfo());
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 Log.Info("StressSpec settings:" + Environment.NewLine + Settings);
+                return Task.CompletedTask;
             });
         }
         await EnterBarrierAsync("after-" + Step);
