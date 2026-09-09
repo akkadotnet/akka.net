@@ -134,6 +134,42 @@ namespace Akka.Cluster.Sharding.Tests
         {
             await RunOnAsync(async () =>
             {
+                // The "sharding started" barrier only proves that every node has called
+                // StartSharding; it says nothing about which regions the coordinator has on
+                // its books. A region's first Register can reach the coordinator while it is
+                // still reading its initial state from DData, and DDataShardCoordinator drops
+                // it there ("ShardRegion tried to register but ShardCoordinator not
+                // initialized yet") rather than stashing it; the region re-sends only on its
+                // RegisterRetry timer (250ms, doubling towards retry-interval). Whichever
+                // retry lands first after the state load is the only region the coordinator
+                // knows until the other timers fire, and if the pings below arrive in that
+                // window LeastShardAllocationStrategy can only pick from the regions it has,
+                // so the six shards land 4/1/1 (or 6/0/0) instead of 2/2/2. With
+                // rebalance-interval = 120s that layout is permanent, so the
+                // converge-then-assert loops in the two query phases can never reach
+                // Stats == 4 / Failed == 2: build 131139 (Artery, Windows) hit "Expected ...
+                // Stats.Count).Sum() to be 4, but found 5" on all 30 attempts, with the two
+                // remote Registers arriving 16-36ms before the coordinator's state load
+                // completed. The race is between two remote round trips - the coordinator's
+                // majority read and the regions' singleton identification - so the transport
+                // only shifts the odds; Artery's first-contact path is shorter than
+                // DotNetty's association handshake, which is why the Artery lane sees it.
+                //
+                // Gate on the coordinator reporting all three regions before any entity
+                // traffic triggers allocation. GetCurrentRegions is idempotent and answers
+                // from the coordinator's registered-region set, so once it says three the
+                // allocations below are balanced by construction (each ShardHomeAllocated
+                // update stashes the next GetShardHome, so allocation is sequential against
+                // fresh state). Fresh probe and a 1s bound per attempt, so a late reply from
+                // a timed-out attempt cannot satisfy the next one.
+                await AwaitAssertAsync(async () =>
+                {
+                    var probe = CreateTestProbe();
+                    _region.Value.Tell(GetCurrentRegions.Instance, probe.Ref);
+                    var current = await probe.ExpectMsgAsync<CurrentRegions>(TimeSpan.FromSeconds(1));
+                    current.Regions.Should().HaveCount(3);
+                }, Dilated(TimeSpan.FromSeconds(30)), TimeSpan.FromSeconds(1));
+
                 await WithinAsync(TimeSpan.FromSeconds(10), async () =>
                 {
                     await AwaitAssertAsync(async () =>
@@ -175,9 +211,10 @@ namespace Akka.Cluster.Sharding.Tests
                     regions.Count.Should().Be(3);
                     var timeouts = NumberOfShards / regions.Count;
 
-                    // 3 regions, 2 shards per region; only Busy's 2 shards are unresponsive
-                    // within its 0ms shard-region-query-timeout, so exactly `timeouts` shards
-                    // report as Failed while the other 4 report Stats.
+                    // 3 regions, 2 shards per region (guaranteed by the GetCurrentRegions gate
+                    // in trigger_sharded_actors); only Busy's 2 shards are unresponsive within
+                    // its 0ms shard-region-query-timeout, so exactly `timeouts` shards report
+                    // as Failed while the other 4 report Stats.
                     regions.Values.Select(i => i.Stats.Count).Sum().Should().Be(4);
                     regions.Values.Select(i => i.Failed.Count).Sum().Should().Be(timeouts);
                 }, Dilated(TimeSpan.FromSeconds(30)), TimeSpan.FromSeconds(1));
