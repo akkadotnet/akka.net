@@ -316,12 +316,12 @@ public sealed record ShippingAddress(
 | Nested messages | Any `[AkkaSerializable]` class or struct | See [Nested value objects](#nested-akkaserializable-value-objects). |
 | Closed generic constructions | A `[AkkaSerializable]` generic type, registered per closed construction | See [Closed generic registrations](#closed-generic-registrations). |
 | Unions | A closed, explicitly enumerated set of concrete types | See [Unions](#unions). |
-| Envelope payloads | Any type, resolved through Akka's own serializer lookup at runtime | See [Envelope payloads](#envelope-payloads). |
+| Envelope payloads | A property typed `object` or `object?`, resolved through Akka's own serializer lookup at runtime | See [Envelope payloads](#envelope-payloads). |
 
 **Not supported:** `float`, `single`, plain `byte`, `sbyte`, `short`, `ushort`, `uint`, and `ulong`
 as scalar field types. These are only meaningful as an enum's underlying type. Also not supported:
-a mutable `HashSet<T>` or `ISet<T>`. Use `ImmutableHashSet<T>` instead. Also not supported: a bare
-`object` field with neither `[AkkaEnvelopePayload]` nor `[AkkaUnion]` applied. Any of these fails
+a mutable `HashSet<T>` or `ISet<T>`. Use `ImmutableHashSet<T>` instead. Also not supported yet: an
+`object` element inside a collection, such as `List<object>` or `object[]`. Any of these fails
 compilation with **AKKASG003**, naming the offending property and type.
 
 ## Unions
@@ -384,9 +384,9 @@ type, and an abstract type is never a runtime type (**AKKASG036**, warning). A m
 member is only advisory (**AKKASG025**, info). It works, but an undeclared subtype fails at
 serialize time.
 
-**AKKASG019** guards the member set itself, for example a duplicate member type. **AKKASG035**,
-info, fires when a field carries both `[AkkaEnvelopePayload]` and `[AkkaUnion]`. The envelope
-marker wins. The union declaration is ignored.
+**AKKASG019** guards the member set itself, for example a duplicate member type. A field-level
+`[AkkaUnion]` on a property typed `object` fails compilation with **AKKASG038**. `object` is
+always an envelope payload boundary, so the union declaration is contradictory.
 
 ### Exact-Runtime-Type Dispatch
 
@@ -450,11 +450,16 @@ construction implements no protocol and is unreachable from any field.
 
 ## Envelope Payloads
 
-`[AkkaEnvelopePayload]` marks a field as an **Akka serializer boundary**, not a structurally
-encoded value. The generator does not generate inline MessagePack code for the field's static
-type. Instead, it emits a runtime lookup. It asks the actor system's `Serialization` extension for
-whatever serializer is bound to the payload's *actual* runtime type. It stores the result as a
+A property typed `object` or `object?` is always an **Akka serializer boundary**, not a
+structurally encoded value. The static type alone carries this meaning; no attribute is involved.
+The generator does not generate inline MessagePack code for such a field. Instead, it emits a
+runtime lookup. It asks the actor system's `Serialization` extension for whatever serializer is
+bound to the payload's *actual* runtime type. It stores the result as a
 `{serializer id, manifest, bytes}` triple.
+
+An earlier `dev` build marked this with an explicit `[AkkaEnvelopePayload]` attribute. That
+attribute was removed before the first 1.6 beta; the `object` type now carries the same meaning on
+its own.
 
 Reach for an envelope payload instead of a union when the set of possible payload types is not
 closed at compile time. A generic delivery wrapper is one example: its payload could be *any*
@@ -467,12 +472,21 @@ set is genuinely closed and known up front. A union is cheaper.
 [AkkaSerializable(Manifest = "benchmark-outer-envelope-v1")]
 public sealed record BenchmarkOuterEnvelope(
     [property: AkkaField(0)] string EnvelopeId,
-    [property: AkkaField(1), AkkaEnvelopePayload] BenchmarkInnerEnvelope Inner) : IEnvelopeBenchmarkProtocol;
+    [property: AkkaField(1)] object Inner) : IEnvelopeBenchmarkProtocol;
 
 [AkkaSerializable(Manifest = "benchmark-inner-envelope-v1")]
 public sealed record BenchmarkInnerEnvelope(
     [property: AkkaField(0)] string EnvelopeId,
-    [property: AkkaField(1), AkkaEnvelopePayload] object Payload) : IEnvelopeBenchmarkProtocol;
+    [property: AkkaField(1)] object Payload) : IEnvelopeBenchmarkProtocol;
+```
+
+(`BenchmarkOuterEnvelope` and `BenchmarkInnerEnvelope` are trimmed fixtures from
+`src/benchmark/Akka.Benchmarks/Serialization/GeneratedMessagePackSerializerBenchmarks.cs`.)
+
+`Inner` is `object`, so the consumer casts it back to the concrete type it expects:
+
+```csharp
+var inner = (BenchmarkInnerEnvelope)outer.Inner;
 ```
 
 The wire frame is a 3-entry map: `{1: serializerId, 2: manifest, 3: bytes}`. This is deliberately
@@ -679,16 +693,18 @@ never the CLR type's name. Changing it is exactly as breaking as changing a fiel
 
 ## Diagnostics Reference
 
-Every id below is a `DiagnosticDescriptor` in `AkkaSerializerGenerator.cs`. **AKKASG030** does not
-exist. The C# compiler itself already rejects duplicate `[AkkaSerializer<T>]` attributes on one
-class, as `CS0579`: "Duplicate attribute". So the generator never needs its own diagnostic for
-that case.
+Every id below is a `DiagnosticDescriptor` in `AkkaSerializerGenerator.cs`. Two ids are
+intentionally absent. **AKKASG030** does not exist. The C# compiler itself already rejects
+duplicate `[AkkaSerializer<T>]` attributes on one class, as `CS0579`: "Duplicate attribute". So the
+generator never needs its own diagnostic for that case. **AKKASG035** does not exist either. It
+used to fire when a field carried both `[AkkaEnvelopePayload]` and `[AkkaUnion]`. That attribute
+was retired, so the diagnostic was retired with it, and the id stays a permanent gap.
 
 | Id | Severity | Title | Meaning |
 |---|---|---|---|
 | AKKASG001 | Error | Serializer name must be a non-empty string | The `Name` argument to `[AkkaSerializer<T>]` is null, empty, or whitespace. |
 | AKKASG002 | Error | Serializer id must be a positive integer | The `SerializerId` argument is zero or negative. |
-| AKKASG003 | Error | Unsupported field type | An `[AkkaField]` property's type isn't one the generator can encode. |
+| AKKASG003 | Error | Unsupported field type | An `[AkkaField]` property's type isn't one the generator can encode. On an interface, an abstract class, or a type parameter, the message adds a hint: declare a closed member set with `[AkkaUnion]`, or type the property as `object`. |
 | AKKASG004 | Error | No serializable fields | An `[AkkaSerializable]` type has no `[AkkaField]` properties and didn't opt in with `AllowEmpty`. |
 | AKKASG005 | Error | Duplicate field index | Two `[AkkaField]` properties on the same type share an index. |
 | AKKASG006 | Error | Top-level message manifest is required | A type implementing the serializer's protocol has no `Manifest`. |
@@ -719,14 +735,14 @@ that case.
 | AKKASG032 | Error | Serializer class shape is invalid | The `[AkkaSerializer]` class isn't `partial`, is generic, or doesn't derive from `AkkaSerializer`. |
 | AKKASG033 | Error | Protocol type must be an interface | The `TProtocol` type argument to `[AkkaSerializer<TProtocol>]` isn't an interface. |
 | AKKASG034 | Error | Registered closed generic type does not implement the serializer protocol | A closed generic registration implements no protocol and is unreachable from any field, so it has no effect. |
-| AKKASG035 | Info | Union declaration is ignored on an envelope payload field | A field has both `[AkkaEnvelopePayload]` and `[AkkaUnion]`; the envelope marker wins. |
 | AKKASG036 | Warning | Union member type is abstract | An abstract union member can never be the exact runtime type, so its dispatch branch is dead code. |
 | AKKASG037 | Info | Manifest on a generic [AkkaSerializable] definition is ignored | A `Manifest` set on the *open* generic definition is ignored; only closed constructions carry one. |
+| AKKASG038 | Error | Union declaration on an object-typed property | A property typed `object` also carries a field-level `[AkkaUnion]`. `object` is always an envelope payload boundary, so the union declaration is contradictory. |
 
 ## Limitations Today and Planned Changes
 
 The generator is syntax-driven. It discovers `[AkkaSerializable]`, `[AkkaSerializer<T>]`, and
-protocol-implementing types by walking the current compilation's own syntax trees. Three concrete
+protocol-implementing types by walking the current compilation's own syntax trees. Four concrete
 consequences follow today. First, a type used as a nested field or a union member must be declared
 in the same compilation as the serializer that uses it. One exception applies: a closed generic's
 own open definition may live in a referenced assembly. Only its registration,
@@ -735,7 +751,9 @@ discovers top-level protocol messages only within the serializer's own compilati
 referenced assembly might implement the protocol interface. If this generator run never saw it, it
 stays invisible. Third, a construction built through reflection over a type the generator never
 saw at compile time fails only when it is first sent. This never happens at compile time. A
-generic instantiation assembled dynamically at runtime is one example.
+generic instantiation assembled dynamically at runtime is one example. Fourth, an `object` element
+inside a collection, such as `List<object>` or `object[]`, is not yet a supported envelope
+boundary; it fails compilation with **AKKASG003**.
 
 The following work is planned. None of it ships on `dev` today. It is tracked against
 [issue #8384](https://github.com/akkadotnet/akka.net/issues/8384) and
@@ -750,7 +768,6 @@ The following work is planned. None of it ships on `dev` today. It is tracked ag
 * **Discovery of protocol implementors in referenced assemblies.** The generator will find types
   that implement a serializer's protocol interface across assembly boundaries. Today it looks only
   in the current compilation.
-* **Removal of `[AkkaEnvelopePayload]`.** This attribute is planned for removal before the first
-  1.6 beta. A property typed `object` will then be the serializer boundary on its own. An
-  interface-typed property will need a closed set, `[AkkaUnion]` or the protocol interface, or it
-  must be retyped to `object`.
+* **Support for an `object` element inside a collection.** A collection element typed `object`,
+  such as `List<object>` or `object[]`, is not yet a supported envelope boundary. It will follow
+  the same rule a property's own `object` type already follows today.
