@@ -26,12 +26,14 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
     public RoleName Second { get; }
     public RoleName Third { get; }
 
-    // Well-known actor on `first` that the restarted `third`'s Shutdown actor pings the moment
-    // it exists (see Shutdown.PreStart below). Must live under /user: a TestKit probe backs onto
-    // SystemActorOf and cannot be addressed at a fixed /user path itself, but a plain
-    // ForwardActor standing under /user in front of one can be.
+    // Well-known actor on `first` that the restarted `third`'s Shutdown actor pings, on a
+    // repeating timer, the moment it exists (see Shutdown.PreStart and ReadyPingForwarder
+    // below). Must live under /user: a TestKit probe backs onto SystemActorOf and cannot be
+    // addressed at a fixed /user path itself, but a plain actor standing under /user in front
+    // of one can be.
     internal const string ReadyActorName = "restart-ready";
     internal const string ReadySignal = "third-restarted";
+    internal const string ReadyAck = "third-restarted-ack";
 
     public DistributedPubSubRestartSpecConfig()
     {
@@ -83,11 +85,21 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
     internal class Shutdown : ReceiveActor
     {
         private readonly Address _firstAddress;
+        private ICancelable? _readyPingTimer;
 
         public Shutdown(Address firstAddress)
         {
             _firstAddress = firstAddress;
             Context.GetLogger().Info("Shutdown actor started on {0}", Context.System.Name);
+
+            // The ping's ack (see PreStart). Stop resending the instant first proves it saw us -
+            // anything after that is a wasted send into an association that is already healed.
+            Receive<string>(str => str.Equals(ReadyAck), _ =>
+            {
+                _readyPingTimer?.Cancel();
+                _readyPingTimer = null;
+            });
+
             Receive<string>(str => str.Equals("shutdown"), _ =>
             {
                 // Reply BEFORE terminating so the sender (first) gets an observable ack that
@@ -105,14 +117,51 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
 
             // This actor existing IS the fact first is waiting on below, so make the ping and
             // that fact the same event instead of signalling readiness some other way that could
-            // race this actor's own creation. This fresh system has no stale association to
-            // first to fight through - unlike first's outbound path to US, which still carries
-            // the dead old incarnation's handshake state until something re-associates it - so
-            // this send's own HandshakeReq is normally the first thing that reaches first after
-            // the restart, and completing THAT handshake on first's end is what un-gates the
-            // ordinary lane the kill loop below needs.
-            Context.System.ActorSelection(new RootActorPath(_firstAddress) / "user" / ReadyActorName)
-                .Tell(ReadySignal);
+            // race this actor's own creation.
+            //
+            // A single send is not enough to rely on: it is an ActorSelectionMessage, which rides
+            // the ORDINARY lane, and Artery's OutboundHandshakeStage holds one element on that
+            // lane while the handshake to this fresh incarnation is still gating. If that stage's
+            // materialization stops before the handshake completes, the held element is discarded
+            // and the ping is gone for good - first would then wait out its whole 60s window for
+            // nothing. So resend on a self-scheduled timer instead of sending once: every 500ms,
+            // undilated (this is a resend cadence, not a test assertion bound - see Scheduler
+            // .Advanced), until first proves it got one. The forwarder on first
+            // (ReadyPingForwarder, below) acks the sender directly, and that ack is what cancels
+            // this timer (also cancelled defensively in PostStop, in case the ack is somehow
+            // missed). First itself still only ever waits ONCE, on the first ping it sees, and
+            // ignores every later resend - it never calls ExpectMsg on the probe a second time.
+            var self = Self;
+            var readyActor = Context.System.ActorSelection(new RootActorPath(_firstAddress) / "user" / ReadyActorName);
+            var timer = new Cancelable(Context.System.Scheduler);
+            Context.System.Scheduler.Advanced.ScheduleRepeatedly(
+                TimeSpan.Zero, TimeSpan.FromMilliseconds(500), () => readyActor.Tell(ReadySignal, self), timer);
+            _readyPingTimer = timer;
+        }
+
+        protected override void PostStop()
+        {
+            _readyPingTimer?.Cancel();
+            base.PostStop();
+        }
+    }
+
+    /// <summary>
+    /// Stands in for `first`'s side of the ready-ping handshake (see <see cref="Shutdown"/>
+    /// above). Acks every ping straight back to its sender - which is what lets the restarted
+    /// node's resend timer stop - and separately forwards the signal to <paramref name="target"/>
+    /// so the spec can observe that first contact was made. The spec only ever waits on `target`
+    /// once, so a resend that lands after that wait is simply left unread.
+    /// </summary>
+    internal sealed class ReadyPingForwarder : ReceiveActor
+    {
+        public ReadyPingForwarder(IActorRef target)
+        {
+            Receive<string>(str => str.Equals(ReadySignal), _ =>
+            {
+                Sender.Tell(ReadyAck);
+                target.Tell(ReadySignal);
+            });
         }
     }
 }
@@ -140,7 +189,7 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
     public async Task A_Cluster_with_DistributedPubSub_must_startup_3_node_cluster()
     {
         // No Within wrapper: JoinAsync and "after-1" are barrier waits, and barriers must
-        // not run inside a Within (see the comment on the restart test below).
+        // not run inside a Within block (see the comment on the restart test below).
         await JoinAsync(_config.First, _config.First);
         await JoinAsync(_config.Second, _config.First);
         await JoinAsync(_config.Third, _config.First);
@@ -198,14 +247,16 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
             // Stand this up BEFORE Shutdown(third) so it exists no matter how fast the restarted
             // incarnation comes back. It is the receiving end of the ready-ping the fresh
-            // Shutdown actor sends from its own PreStart (see that class, above) - reversing the
-            // direction of first contact from "first polls a stale association" to "third
-            // announces itself over an association with no history to carry".
+            // Shutdown actor repeats from its own PreStart (see that class and
+            // ReadyPingForwarder, above) - reversing the direction of first contact from "first
+            // polls a stale association" to "third announces itself over an association with no
+            // history to carry", and acking every ping so third's resend timer knows to stop.
             var readyProbe = CreateTestProbe();
-            Sys.ActorOf(Akka.TestKit.TestActors.ForwardActor.Props(readyProbe.Ref),
+            Sys.ActorOf(
+                Props.Create(() => new DistributedPubSubRestartSpecConfig.ReadyPingForwarder(readyProbe.Ref)),
                 DistributedPubSubRestartSpecConfig.ReadyActorName);
 
-            await TestConductor.Shutdown(_config.Third).WaitAsync(30.Seconds());
+            await TestConductor.ShutdownAsync(_config.Third).WaitAsync(30.Seconds());
 
             // Wait for third's restarted incarnation to make first contact, instead of starting
             // this window's clock at Shutdown()'s return - before graceful CoordinatedShutdown,
@@ -214,17 +265,24 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
             // it is what completes first's outbound handshake to the new incarnation
             // (InboundHandshakeStage.HandleReq -> CompleteHandshake), so by the time this
             // returns, the ordinary lane the kill loop below uses is no longer gated on the dead
-            // old uid.
+            // old uid. Measured worst case for that whole sequence: 12.9s of graceful shutdown +
+            // 6s before the restarted actors even exist + 21s of re-association = 39.9s: the 60s
+            // bound leaves about 20s of margin above the measured worst case. And unlike a single
+            // send, this wait cannot be defeated by the ping itself getting lost in flight - see
+            // the resend timer in Shutdown.PreStart above - so it does not depend on any fix to
+            // how Artery's handshake stage handles a held element on stop.
             await readyProbe.ExpectMsgAsync<string>(
                 msg => msg == DistributedPubSubRestartSpecConfig.ReadySignal, 60.Seconds());
 
             // ActorSelection.Tell, not ResolveOne + a resolved ref: only an ActorSelectionMessage
             // pierces a quarantined association (ArteryRemoting.Send drops a plain Tell to a
             // quarantined peer; Pekko's Association.scala carries the identical carve-out, and
-            // upstream's own restart spec relies on exactly that). The ready-ping above should
-            // already have healed the association, so this loop is a short closed-loop
-            // confirmation - not the thing racing third's restart cost the way the old,
-            // Shutdown()-anchored window did.
+            // upstream's own restart spec relies on exactly that). The ready-ping above is
+            // guaranteed to have healed the association by this point: readyProbe could only have
+            // received the ping above once first's inbound handshake to third's new incarnation
+            // had already completed (see the comment on that wait). So this loop is a short
+            // closed-loop confirmation, not the thing racing third's restart cost the way the
+            // old, Shutdown()-anchored window did.
             var shutdownSelection = Sys.ActorSelection(new RootActorPath(thirdAddress) / "user" / "shutdown");
             await AwaitAssertAsync(async () =>
             {
@@ -275,18 +333,20 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                         $"akka.remote.artery.canonical.port={node3Address.Port}")
                     .WithFallback(Sys.Settings.Config));
 
-            // Settle, on the next Linux failure, whether the listener came up on the pinned port
-            // at all. First's whole restart-detection path - the ready ping above and the kill
-            // loop's ActorSelection - depends on this system actually listening on
-            // node3Address's port, and nothing upstream of this line would surface a silent
-            // mismatch; it would just look like first's ready-ping wait timing out.
-            var actualAddress = Cluster.Get(newSystem).SelfAddress;
-            newSystem.Log.Info("Restarted system bound to [{0}] (pinned [{1}])", actualAddress, node3Address);
-            actualAddress.Port.Should().Be(node3Address.Port,
-                "the fresh system must rebind the address the other nodes still address it by");
-
             try
             {
+                // Settle, on the next Linux failure, whether the listener came up on the pinned
+                // port at all. First's whole restart-detection path - the ready ping above and
+                // the kill loop's ActorSelection - depends on this system actually listening on
+                // node3Address's port, and nothing upstream of this line would surface a silent
+                // mismatch; it would just look like first's ready-ping wait timing out. Kept
+                // inside this try so a failed assertion still runs the finally below and shuts
+                // newSystem down instead of leaking it (and its pinned port).
+                var actualAddress = Cluster.Get(newSystem).SelfAddress;
+                newSystem.Log.Info("Restarted system bound to [{0}] (pinned [{1}])", actualAddress, node3Address);
+                actualAddress.Port.Should().Be(node3Address.Port,
+                    "the fresh system must rebind the address the other nodes still address it by");
+
                 // don't join the old cluster
                 await Cluster.Get(newSystem).JoinAsync(Cluster.Get(newSystem).SelfAddress);
                 var newMediator = DistributedPubSub.Get(newSystem).Mediator;
@@ -311,9 +371,11 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
                 // First's closed-loop kill (above) normally drives this WhenTerminated: it keeps
                 // re-poking the association until third's /user/shutdown acks the kill, at which
-                // point newSystem terminates and this wait completes. Give it a generous 120s
-                // upper bound so first's whole worst-case pipeline (the 30s Shutdown cap, plus
-                // the dilated 60s ready-ping wait, plus the 20s closed-loop kill) fits comfortably.
+                // point newSystem terminates and this wait completes. First's own worst-case
+                // pipeline before it can even send that kill is 30s (Shutdown cap) + 60s
+                // (ready-ping wait) + 20s (closed-loop kill) = 110s, so this bound has to clear
+                // that first. 155s = 110s + 45s of slack (the same 45s of slack this wait
+                // originally carried, back when the pipeline above it was 75s instead of 110s).
                 //
                 // This wait is BEST-EFFORT: the spec's REAL assertions - the SubscribeAck /
                 // ExpectNoMsg / DeltaCount == 0 gossip-isolation checks above - have already run
@@ -323,12 +385,12 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                 // of the isolation assertions that already succeeded.
                 try
                 {
-                    await newSystem.WhenTerminated.WaitAsync(120.Seconds());
+                    await newSystem.WhenTerminated.WaitAsync(155.Seconds());
                 }
                 catch (TimeoutException)
                 {
                     newSystem.Log.Warning(
-                        "newSystem did not observe first's shutdown within 120s; terminating self (best-effort). " +
+                        "newSystem did not observe first's shutdown within 155s; terminating self (best-effort). " +
                         "The gossip-isolation assertions (SubscribeAck / ExpectNoMsg / DeltaCount == 0) already passed, " +
                         "so the spec's subject-under-test is verified regardless.");
                 }
