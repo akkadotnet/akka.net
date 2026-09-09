@@ -66,11 +66,16 @@ namespace Akka.DependencyInjection.Tests
             InitializeLogger(_akkaService.ActorSystem);
         }
 
-        protected override void AfterAll()
+        public override async ValueTask DisposeAsync()
         {
-            var sys = _serviceProvider.GetRequiredService<AkkaService>().ActorSystem;
-            Shutdown(sys);
-            base.AfterAll();
+            // The DI-created "TestSystem" ActorSystem is separate from Sys and is not torn
+            // down by the base dispose chain, so it must be shut down explicitly here.
+            // ShutdownAsync does not block a thread pool thread the way the synchronous
+            // Shutdown() does. This keeps the original teardown order: the DI-managed
+            // system first, then the base class's own AfterAll()/Sys shutdown.
+            await ShutdownAsync(_akkaService.ActorSystem);
+
+            await base.DisposeAsync();
         }
 
         internal class AkkaService : IHostedService

@@ -15,7 +15,6 @@ using Akka.TestKit;
 using Akka.TestKit.Extensions;
 using FluentAssertions;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.TestKit.Xunit.Attributes;
 using FluentAssertions.Extensions;
@@ -201,7 +200,7 @@ namespace Akka.Streams.Tests
         {
             return ConfigurationFactory.ParseString(@"
             akka {
-              loglevel = DEBUG
+              loglevel = INFO
               actor {
                 provider = remote
                 serialize-messages = off
@@ -306,15 +305,15 @@ namespace Akka.Streams.Tests
 
             var probe = sourceRef.Source.RunWith(this.SinkProbe<string>(), Materializer);
 
-            probe.EnsureSubscription();
+            await probe.EnsureSubscriptionAsync();
             await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
             probe.Request(1);
-            probe.ExpectNext("ping-1");
+            await probe.ExpectNextAsync("ping-1");
             await probe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100));
 
             probe.Request(20);
-            probe.ExpectNextN(Enumerable.Range(1, 20).Select(i => "ping-" + (i + 1)));
+            await probe.ExpectNextNAsync(Enumerable.Range(1, 20).Select(i => "ping-" + (i + 1)));
             probe.Cancel();
 
             // since no demand anyway
@@ -332,14 +331,17 @@ namespace Akka.Streams.Tests
             var sourceRef = await ExpectMsgAsync<ISourceRef<string>>();
 
 
-            // not materializing it, awaiting the timeout...
-            Thread.Sleep(800);
+            // not materializing it, awaiting the timeout... There is no observable event to
+            // wait on here (the subscription timeout fires on the remote side with nothing
+            // materialized locally to signal it), so this is a genuine wall-clock wait for the
+            // 500 ms subscription timeout to elapse.
+            await Task.Delay(Dilated(800.Milliseconds()));
 
             var probe = sourceRef.Source.RunWith(this.SinkProbe<string>(), Materializer);
 
             // the local "remote sink" should cancel, since it should notice the origin target actor is dead
-            probe.EnsureSubscription();
-            var ex = probe.ExpectError();
+            await probe.EnsureSubscriptionAsync();
+            var ex = await probe.ExpectErrorAsync();
             ex.Message.Should().Contain("has terminated unexpectedly");
         }
 
@@ -435,8 +437,11 @@ namespace Akka.Streams.Tests
             _remoteActor.Tell("receive-subscribe-timeout", TestActor);
             var remoteSink = await ExpectMsgAsync<ISinkRef<string>>();
 
-            // not materializing it, awaiting the timeout...
-            Thread.Sleep(800);
+            // not materializing it, awaiting the timeout... There is no observable event to
+            // wait on here (the subscription timeout fires on the remote side with nothing
+            // materialized locally to signal it), so this is a genuine wall-clock wait for the
+            // 500 ms subscription timeout to elapse.
+            await Task.Delay(Dilated(800.Milliseconds()));
 
             var probe = this.SourceProbe<string>().To(remoteSink.Sink).Run(Materializer);
 
@@ -444,7 +449,7 @@ namespace Akka.Streams.Tests
             failure.Cause.Message.Should().Contain("Remote side did not subscribe (materialize) handed out Sink reference");
 
             // the local "remote sink" should cancel, since it should notice the origin target actor is dead
-            probe.ExpectCancellation();
+            await probe.ExpectCancellationAsync();
         }
 
         [LocalFact(SkipLocal = "Racy on Azure DevOps")]
@@ -502,12 +507,12 @@ namespace Akka.Streams.Tests
             var sinkRef = await ExpectMsgAsync<ISinkRef<string>>();
 
             var p1 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
-            p1.EnsureSubscription();
-            var req = p1.ExpectRequest();
+            await p1.EnsureSubscriptionAsync();
+            var req = await p1.ExpectRequestAsync();
 
             var p2 = this.SourceProbe<string>().To(sinkRef.Sink).Run(Materializer);
-            p2.EnsureSubscription(); // will be cancelled immediately, since it's 2nd
-            p2.ExpectCancellation();
+            await p2.EnsureSubscriptionAsync(); // will be cancelled immediately, since it's 2nd
+            await p2.ExpectCancellationAsync();
         }
 
         [Fact]
