@@ -195,13 +195,25 @@ namespace Akka.Remote.Tests
         [Fact]
         public void Remoting_should_contain_correct_BatchWriter_settings_in_ReferenceConf()
         {
-            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            var c = Akka.Remote.Configuration.RemoteConfigFactory.Default().GetConfig("akka.remote.dot-netty.tcp");
             var s = DotNettyTransportSettings.Create(c);
 
             s.BatchWriterSettings.EnableBatching.Should().BeTrue();
             s.BatchWriterSettings.MaxExplicitFlushes.Should().Be(BatchWriterSettings.DefaultMaxPendingWrites);
         }
-        
+
+        [Fact]
+        public void Remoting_should_apply_TestKit_batching_override_to_the_running_system()
+        {
+            // The Akka.TestKit reference.conf (src/core/Akka.TestKit/Internal/Reference.conf) turns
+            // batching off for test systems, so the running system's settings should reflect that
+            // override rather than the Akka.Remote reference config default asserted above.
+            var c = RARP.For(Sys).Provider.RemoteSettings.Config.GetConfig("akka.remote.dot-netty.tcp");
+            var s = DotNettyTransportSettings.Create(c);
+
+            s.BatchWriterSettings.EnableBatching.Should().BeFalse();
+        }
+
         [Fact]
         public void Remoting_should_contain_correct_PrimitiveSerializer_settings_in_ReferenceConf()
         {
