@@ -270,11 +270,11 @@ namespace Akka.Cluster.Tests
                 LeaderActions(); // Exiting --> Removed
 
                 // Member should leave even a task was cancelled
-                ExpectMsg<ClusterEvent.MemberRemoved>().Member.Address.Should().Be(_selfAddress);
+                (await ExpectMsgAsync<ClusterEvent.MemberRemoved>()).Member.Address.Should().Be(_selfAddress);
 
                 // Second task should complete (not cancelled)
                 await AwaitConditionAsync(() => Task.FromResult(task2.IsCompleted && !task2.IsCanceled), null, "Task should be completed, but not cancelled.");
-            }, cancellationToken: cts.Token);
+            });
 
             // Subsequent LeaveAsync() tasks expected to complete immediately (not cancelled)
             var task3 = _cluster.LeaveAsync();
