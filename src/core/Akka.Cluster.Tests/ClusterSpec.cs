@@ -282,6 +282,61 @@ namespace Akka.Cluster.Tests
         }
 
         [Fact]
+        public async Task A_cluster_must_process_a_Leave_issued_immediately_after_Join_from_the_same_thread()
+        {
+            // Ordering-contract regression test for Cluster.ClusterCore (see the XML doc on that
+            // property in Cluster.cs for the full mechanism). ClusterCore used to switch from the
+            // /system/cluster supervisor to a direct reference to the resolved core daemon the
+            // instant that ref was published, mid-startup. Akka's FIFO delivery guarantee holds only
+            // per (sender, receiver) pair, so a Join and a Leave issued back-to-back by the same
+            // caller -- one on each side of that switch, with no await between them -- could ride
+            // different mailboxes for part of the trip and arrive at the core daemon reordered. A
+            // Leave that overtook its own JoinTo was dead-lettered by ClusterCoreDaemon's
+            // Uninitialized behavior (it does not handle ClusterUserAction.Leave), and because
+            // LeaveSelf used to send its Leave message only once, that loss was permanent: the
+            // member never left the cluster and every later LeaveAsync() call returned the same
+            // memoized, never-completing task.
+            //
+            // This test does not try to land inside that (sub-millisecond) window -- the point of
+            // the fix is that it no longer matters whether it does. Subscribe first so no
+            // MemberRemoved can be missed, then issue Join immediately followed by Leave with no
+            // await between them, exactly as described above, then drive the leader until the
+            // member is removed. LeaderActionsTick is an at-most-once drive (nothing on the periodic
+            // schedule ever fires here -- see periodic-tasks-initial-delay = 120s on the class-level
+            // Config -- so LeaderActions() is the only thing that ever advances the member), and
+            // re-ticking is required rather than firing a fixed number of times: Exiting -> Removed
+            // runs through a CoordinatedShutdown round-trip, so the number of ticks it takes is not
+            // fixed. Over-ticking is free -- Leaving(address) is a no-op once the member is not
+            // Joining/WeaklyUp/Up, and a tick that finds nothing to do logs nothing.
+            var probe = CreateTestProbe();
+            _cluster.Subscribe(probe.Ref, typeof(ClusterEvent.MemberRemoved));
+            await probe.ExpectMsgAsync<ClusterEvent.CurrentClusterState>();
+
+            _cluster.Join(_selfAddress);
+            _cluster.Leave(_selfAddress); // <-- no await between this and the Join above
+
+            // Settings-derived bound: ten leader-action intervals is generous headroom for the
+            // handful of ticks a real periodic scheduler would need to walk this member through
+            // Joining -> Up -> Leaving -> Exiting -> Removed, while still failing promptly -- rather
+            // than hanging for the test-runner's own timeout -- if the Leave was lost.
+            var bound = TimeSpan.FromTicks(_cluster.Settings.LeaderActionsInterval.Ticks * 10);
+
+            ClusterEvent.MemberRemoved removed = null;
+            await AwaitConditionAsync(
+                async () =>
+                {
+                    LeaderActions();
+                    removed = await probe.ReceiveOneAsync(TimeSpan.FromMilliseconds(200)) as ClusterEvent.MemberRemoved;
+                    return removed != null;
+                },
+                bound,
+                TimeSpan.FromMilliseconds(50),
+                "Leave issued immediately after Join (same thread, no await between them) must still remove the member");
+
+            removed.Member.Address.Should().Be(_selfAddress);
+        }
+
+        [Fact]
         public async Task A_cluster_must_be_allowed_to_join_and_leave_with_local_address()
         {
             var sys2 = ActorSystem.Create("ClusterSpec2", ConfigurationFactory.ParseString(@"akka.actor.provider = ""Akka.Cluster.ClusterActorRefProvider, Akka.Cluster""
