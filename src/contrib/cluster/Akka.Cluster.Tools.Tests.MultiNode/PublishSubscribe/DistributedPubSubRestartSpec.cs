@@ -86,6 +86,7 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
     {
         private readonly Address _firstAddress;
         private ICancelable? _readyPingTimer;
+        private ICancelable? _terminateTimer;
 
         public Shutdown(Address firstAddress)
         {
@@ -105,9 +106,34 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
                 // Reply BEFORE terminating so the sender (first) gets an observable ack that
                 // proves this incarnation received the kill. This ack is what lets first run a
                 // CLOSED-LOOP, self-verifying retry instead of an open-loop blind resend
-                // (mirrors the Subject actor in RemoteNodeRestartDeathWatchSpec, PR #8404).
+                // (mirrors the Subject actor in RemoteNodeRestartDeathWatchSpec, PR #8404) - but
+                // the ack still has to actually leave before the transport underneath it dies.
+                // Build 131332 (this PR's own CI run, Linux Artery) showed why an inline
+                // Terminate() cannot be trusted to let that happen: third's Shutdown actor replied
+                // "shutdown-ack" and called Context.System.Terminate() in the same handler at
+                // 02:26:57.990, and Artery tore down third's outbound streams before any of them
+                // could flush - "Artery Ordinary outbound connection to [first] failed ... with
+                // AbruptStageTerminationException" at 57.992 - so the ack never reached the socket.
+                // First then kept retrying "shutdown" every 500ms against a process that had
+                // already exited, and its 20s closed-loop kill timed out ("AwaitAssert failed,
+                // timeout [00:00:20] is over after [9] attempts"). Local runs only passed because
+                // the ack happened to win that race on a fast machine.
+                //
+                // So slide the terminate behind a timer instead of calling it inline - the same
+                // shape as the Subject actor in RemoteNodeRestartDeathWatchSpec (PR #8557): cancel
+                // any previous timer and re-arm a fresh one on every "shutdown", so a retried kill
+                // can never have its ack racing a system that is already tearing itself down.
+                // Capture the system reference, not Context, since the scheduled callback runs off
+                // the actor after this handler returns. 2s is far above a loopback round trip
+                // (this spec's own retry interval is 500ms) and far below first's 20s closed-loop
+                // kill budget, so whichever "shutdown" attempt first's loop last sends always gets
+                // a live system - and the warmed-up lane under it - for its ack to leave on before
+                // this timer fires.
                 Sender.Tell("shutdown-ack");
-                Context.System.Terminate();
+                _terminateTimer?.Cancel();
+                var system = Context.System;
+                _terminateTimer = system.Scheduler.Advanced.ScheduleOnceCancelable(
+                    TimeSpan.FromSeconds(2), () => system.Terminate());
             });
         }
 
@@ -142,6 +168,11 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
         protected override void PostStop()
         {
             _readyPingTimer?.Cancel();
+
+            // The sliding terminate timer above re-arms on every "shutdown" and is otherwise left
+            // running. Cancel it here so a stopped Shutdown actor can't have it fire later and
+            // terminate whatever ActorSystem happens to own it at that point.
+            _terminateTimer?.Cancel();
             base.PostStop();
         }
     }
@@ -376,6 +407,10 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                 // (ready-ping wait) + 20s (closed-loop kill) = 110s, so this bound has to clear
                 // that first. 155s = 110s + 45s of slack (the same 45s of slack this wait
                 // originally carried, back when the pipeline above it was 75s instead of 110s).
+                // Shutdown's own sliding terminate timer (see that class) adds at most 2s on top
+                // of whichever "shutdown" attempt first's loop last sends before newSystem actually
+                // goes down - negligible against the 45s of slack already in this bound, so 155s
+                // does not need to move.
                 //
                 // This wait is BEST-EFFORT: the spec's REAL assertions - the SubscribeAck /
                 // ExpectNoMsg / DeltaCount == 0 gossip-isolation checks above - have already run
