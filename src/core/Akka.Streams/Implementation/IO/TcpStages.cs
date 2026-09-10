@@ -38,7 +38,11 @@ namespace Akka.Streams.Implementation.IO
         {
             private const string BindShutdownTimer = "BindTimer";
 
-            private readonly AtomicCounterLong _connectionFlowsAwaitingInitialization = new();
+            // This counter tracks the number of connection flows awaiting initialization, not
+            // ids, so it must start at 0, matching JVM Akka's `new AtomicLong()`. Seeded at -1
+            // (the id-generator default), the idle fast path in UnbindCompleted() below can
+            // never fire, and every graceful Unbind() waits out the full BindShutdownTimer.
+            private readonly AtomicCounterLong _connectionFlowsAwaitingInitialization = new(0);
             private readonly ConnectionSourceStage _stage;
             private IActorRef _listener;
             private readonly TaskCompletionSource<StreamTcp.ServerBinding> _bindingPromise;
