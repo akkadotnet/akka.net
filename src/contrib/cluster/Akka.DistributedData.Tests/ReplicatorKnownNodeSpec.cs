@@ -128,6 +128,33 @@ namespace Akka.DistributedData.Tests
             }
         }
 
+        [Fact(DisplayName = "Replicator should accept a Write from a member it first saw as Downed")]
+        public async Task Should_accept_write_from_member_first_seen_as_Downed()
+        {
+            // MemberDowned shares the generic ReceiveOtherMemberEvent path with MemberLeft, so this
+            // covers the third status a late subscriber can be handed on InitialStateAsEvents replay.
+            try
+            {
+                await SelfJoinAndGetUpMemberAsync(Sys);
+                var remoteUp = await SelfJoinAndGetUpMemberAsync(_remoteSys);
+                var downedMember = remoteUp.Copy(MemberStatus.Down);
+
+                var replicator = Sys.ActorOf(Replicator.Props(ReplicatorSettings.Create(Sys)));
+
+                replicator.Tell(new ClusterEvent.MemberDowned(downedMember));
+
+                var probe = CreateTestProbe();
+                var envelope = new DataEnvelope(GCounter.Empty.Increment(downedMember.UniqueAddress));
+                replicator.Tell(new Write("known-node-downed", envelope, downedMember.UniqueAddress), probe.Ref);
+
+                await probe.ExpectMsgAsync<WriteAck>(TimeSpan.FromSeconds(3));
+            }
+            finally
+            {
+                await ShutdownAsync(_remoteSys);
+            }
+        }
+
         [Fact(DisplayName = "Replicator should still ignore a Write from a node it has never seen in any member event")]
         public async Task Should_ignore_write_from_node_never_seen()
         {
