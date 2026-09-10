@@ -44,43 +44,46 @@ namespace Akka.Tests.Actor
         }
 
         [Fact]
-        public void Inbox_support_queueing_multiple_queries()
+        public async Task Inbox_support_queueing_multiple_queries()
         {
-            var tasks = new[]
-                {
-                    Task.Factory.StartNew(() => _inbox.Receive()),
-                    Task.Factory.StartNew(() =>
-                    {
-                        Thread.Sleep(100);
-                        return _inbox.ReceiveWhere(x => x.ToString() == "world");
-                    }),
-                    Task.Factory.StartNew(() =>
-                    {
-                        Thread.Sleep(200);
-                        return _inbox.ReceiveWhere(x => x.ToString() == "hello");
-                    })
-                };
+            // Use ReceiveAsync instead of the synchronous Receive: Receive's AwaitResult blocks the
+            // calling thread on the wall clock for the same duration the inbox actor uses for its
+            // own scheduled deadline. When that deadline fires first, it faults the task with
+            // Status.Failure(TimeoutException), and the blocking wall-clock wait then rethrows it
+            // wrapped in AggregateException instead of letting the intended TimeoutException surface
+            // directly.
+            var task0 = _inbox.ReceiveAsync();
+            var task1 = Task.Factory.StartNew(() =>
+            {
+                Thread.Sleep(100);
+                return _inbox.ReceiveWhere(x => x.ToString() == "world");
+            });
+            var task2 = Task.Factory.StartNew(() =>
+            {
+                Thread.Sleep(200);
+                return _inbox.ReceiveWhere(x => x.ToString() == "hello");
+            });
 
             _inbox.Receiver.Tell(42);
             _inbox.Receiver.Tell("hello");
             _inbox.Receiver.Tell("world");
 
-            Task.WaitAll(tasks.Cast<Task>().ToArray());
+            await Task.WhenAll(task0, task1, task2);
 
-            tasks[0].Result.ShouldBe(42);
-            tasks[1].Result.ShouldBe("world");
-            tasks[2].Result.ShouldBe("hello");
+            (await task0).ShouldBe(42);
+            (await task1).ShouldBe("world");
+            (await task2).ShouldBe("hello");
         }
 
         [Fact]
-        public void Inbox_support_selective_receives()
+        public async Task Inbox_support_selective_receives()
         {
             _inbox.Receiver.Tell("hello");
             _inbox.Receiver.Tell("world");
 
             var selection = _inbox.ReceiveWhere(x => x.ToString() == "world");
             selection.ShouldBe("world");
-            _inbox.Receive().ShouldBe("hello");
+            (await _inbox.ReceiveAsync()).ShouldBe("hello");
         }
 
         [Fact]
@@ -102,18 +105,14 @@ namespace Akka.Tests.Actor
                 await ExpectNoMsgAsync(TimeSpan.FromSeconds(1));
 
                 //Receive all messages from the inbox
-                var gotit = Enumerable.Repeat(0, 1000).Select(_ => _inbox.Receive());
-                foreach (var o in gotit)
+                for (var i = 0; i < 1000; i++)
                 {
+                    var o = await _inbox.ReceiveAsync();
                     o.ShouldBe(0);
                 }
 
                 //The inbox should be empty now, so receiving should result in a timeout
-                Assert.Throws<TimeoutException>(() =>
-                {
-                    var received = _inbox.Receive(TimeSpan.FromSeconds(1));
-                    Log.Error("Received " + received);
-                });
+                await Assert.ThrowsAsync<TimeoutException>(() => _inbox.ReceiveAsync(TimeSpan.FromSeconds(1)));
             }
             finally
             {
@@ -124,29 +123,15 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task Inbox_have_a_default_and_custom_timeouts()
         {
-            await WithinAsync(TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(6), () =>
+            await WithinAsync(TimeSpan.FromSeconds(4), TimeSpan.FromSeconds(6), async () =>
             {
-                // Inbox.Receive() may throw TimeoutException directly or wrapped in AggregateException
-                // depending on internal implementation (sync vs async path)
-                var ex = Record.Exception(() => _inbox.Receive());
-                Assert.NotNull(ex);
-                Assert.True(IsTimeoutException(ex), $"Expected TimeoutException but got: {ex.GetType().Name}");
-                return Task.CompletedTask;
+                await Assert.ThrowsAsync<TimeoutException>(() => _inbox.ReceiveAsync());
             });
 
-            await WithinAsync(TimeSpan.FromSeconds(1), () =>
+            await WithinAsync(TimeSpan.FromSeconds(1), async () =>
             {
-                var ex = Record.Exception(() => _inbox.Receive(TimeSpan.FromMilliseconds(100)));
-                Assert.NotNull(ex);
-                Assert.True(IsTimeoutException(ex), $"Expected TimeoutException but got: {ex.GetType().Name}");
-                return Task.CompletedTask;
+                await Assert.ThrowsAsync<TimeoutException>(() => _inbox.ReceiveAsync(TimeSpan.FromMilliseconds(100)));
             });
-        }
-
-        private static bool IsTimeoutException(Exception ex)
-        {
-            return ex is TimeoutException ||
-                   (ex is AggregateException agg && agg.Flatten().InnerExceptions.Any(e => e is TimeoutException));
         }
 
         [Fact]
