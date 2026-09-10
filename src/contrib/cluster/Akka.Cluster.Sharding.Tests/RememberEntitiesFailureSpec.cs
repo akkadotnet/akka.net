@@ -121,6 +121,23 @@ namespace Akka.Cluster.Sharding.Tests
             public override string ToString() => $"Delay{HowLong.TotalMilliseconds}";
         }
 
+        // Unlike Delay (whose delayed reply on the update-entity path carries the wrong payload type,
+        // so it's stashed as unrecognized and the write always times out, no matter how short the
+        // delay is - that's fine, every existing Delay fact below only wants "eventually fails"), this
+        // acknowledges the write correctly with RememberEntitiesShardStore.UpdateDone once the delay
+        // elapses, so a write can genuinely complete late but within its timeout.
+        private class DelayedSuccess : IFail
+        {
+            public DelayedSuccess(TimeSpan howLong)
+            {
+                HowLong = howLong;
+            }
+
+            public TimeSpan HowLong { get; }
+
+            public override string ToString() => $"DelayedSuccess{HowLong.TotalMilliseconds}";
+        }
+
         // outside store since we need to be able to set them before sharding initializes
         private static ImmutableDictionary<string, IFail> _failShardGetEntities = ImmutableDictionary<string, IFail>.Empty;
         private static readonly IFail FailCoordinatorGetShards = null;
@@ -257,6 +274,13 @@ namespace Akka.Cluster.Sharding.Tests
                             case Delay f:
                                 log.Debug("Delaying response for AddEntity with {0}", f.HowLong);
                                 Timers.StartSingleTimer("add-entity-delay", new Delayed(Sender, ImmutableHashSet<string>.Empty), f.HowLong);
+                                return true;
+                            case DelayedSuccess f:
+                                log.Debug("Delaying but eventually acknowledging AddEntity with {0}", f.HowLong);
+                                Timers.StartSingleTimer(
+                                    "add-entity-delay",
+                                    new Delayed(Sender, new RememberEntitiesShardStore.UpdateDone(m.Started, m.Stopped)),
+                                    f.HowLong);
                                 return true;
                         }
                         return true;
@@ -766,6 +790,47 @@ namespace Akka.Cluster.Sharding.Tests
                 sharding.Tell(new EntityEnvelope(1, "hello-2"), probe.Ref);
                 await probe.ExpectMsgAsync("hello-2"); // should now work again
             }, TimeSpan.FromSeconds(5));
+
+            Sys.Stop(sharding);
+        }
+
+        [Fact(DisplayName =
+            "Shard must not restart a remember-entities write that finishes within updating-state-timeout " +
+            "even though it is slower than waiting-for-state-timeout, and must deliver the buffered message")]
+        public async Task Remember_entities_handling_in_sharding_must_not_restart_for_a_write_slower_than_waiting_for_state_timeout_but_within_updating_state_timeout()
+        {
+            var storeProbe = CreateTestProbe();
+            Sys.EventStream.Subscribe(storeProbe.Ref, typeof(ShardStoreCreated));
+
+            // Class config shortens updating-state-timeout to 1s for the other facts; restore it here,
+            // for this shard type only, to its reference.conf default (5s), alongside the untouched
+            // waiting-for-state-timeout default (2s). A 3s write delay then sits strictly between: 2s < 3s < 5s.
+            var settings = ClusterShardingSettings.Create(Sys).WithRememberEntities(true);
+            settings = settings.WithTuningParameters(settings.TuningParameters.WithUpdatingStateTimeout(TimeSpan.FromSeconds(5)));
+
+            var sharding = ClusterSharding.Get(Sys).Start(
+                "shardStoreSlowWrite", Props.Create(() => new EntityActor()), settings, new MessageExtractor());
+            var probe = CreateTestProbe();
+
+            // trigger shard start and store creation
+            sharding.Tell(new EntityEnvelope(1, "hello-1"), probe.Ref);
+            var shardStore = (await storeProbe.ExpectMsgAsync<ShardStoreCreated>()).Store;
+            await probe.ExpectMsgAsync("hello-1");
+
+            // delay-but-still-acknowledge the *next* remember-entities write by 3s
+            shardStore.Tell(new FakeShardStoreActor.FailUpdateEntity(new DelayedSuccess(TimeSpan.FromSeconds(3))), storeProbe.Ref);
+            await storeProbe.ExpectMsgAsync<Done>();
+
+            // new entity in the same shard (11 % 10 == 1 == 1 % 10): its start-event write is delayed
+            sharding.Tell(new EntityEnvelope(11, "hello-11"), probe.Ref);
+
+            // 5s updating-state-timeout + 3s margin for CI jitter: fixed code lets the delayed-but-valid
+            // ack (at 3s) land and delivers the buffered message; pre-fix code arms the timer with the
+            // 2s waiting-for-state-timeout instead, restarts the shard at ~2s, and drops it (no redelivery).
+            await probe.ExpectMsgAsync("hello-11", TimeSpan.FromSeconds(8));
+
+            // no second store should have been created - the shard must not have restarted
+            await storeProbe.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
 
             Sys.Stop(sharding);
         }
