@@ -124,16 +124,19 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
                 // any previous timer and re-arm a fresh one on every "shutdown", so a retried kill
                 // can never have its ack racing a system that is already tearing itself down.
                 // Capture the system reference, not Context, since the scheduled callback runs off
-                // the actor after this handler returns. 2s is far above a loopback round trip
-                // (this spec's own retry interval is 500ms) and far below first's 20s closed-loop
-                // kill budget, so whichever "shutdown" attempt first's loop last sends always gets
-                // a live system - and the warmed-up lane under it - for its ack to leave on before
-                // this timer fires.
+                // the actor after this handler returns. 5s, not 2s: the timer has to outlive
+                // first's retry CYCLE, not just its retry interval. First's cycle is a 2s
+                // ExpectMsgAsync on the kill probe plus the 500ms AwaitAssertAsync interval between
+                // attempts = 2.5s, so a 2s timer can fire half a second before the next attempt
+                // lands - if THIS ack is lost, the system is already gone before first retries. 5s
+                // covers one full 2.5s cycle plus the same again, so the acked-and-then-lost case
+                // still gets a second attempt while this incarnation is alive, and it stays far
+                // below first's 20s closed-loop kill budget.
                 Sender.Tell("shutdown-ack");
                 _terminateTimer?.Cancel();
                 var system = Context.System;
                 _terminateTimer = system.Scheduler.Advanced.ScheduleOnceCancelable(
-                    TimeSpan.FromSeconds(2), () => system.Terminate());
+                    TimeSpan.FromSeconds(5), () => system.Terminate());
             });
         }
 
@@ -402,15 +405,15 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
                 // First's closed-loop kill (above) normally drives this WhenTerminated: it keeps
                 // re-poking the association until third's /user/shutdown acks the kill, at which
-                // point newSystem terminates and this wait completes. First's own worst-case
-                // pipeline before it can even send that kill is 30s (Shutdown cap) + 60s
-                // (ready-ping wait) + 20s (closed-loop kill) = 110s, so this bound has to clear
-                // that first. 155s = 110s + 45s of slack (the same 45s of slack this wait
-                // originally carried, back when the pipeline above it was 75s instead of 110s).
-                // Shutdown's own sliding terminate timer (see that class) adds at most 2s on top
-                // of whichever "shutdown" attempt first's loop last sends before newSystem actually
-                // goes down - negligible against the 45s of slack already in this bound, so 155s
-                // does not need to move.
+                // point newSystem terminates and this wait completes. This wait's clock starts
+                // HERE, after the Shutdown actor above is already created - and that actor's own
+                // PreStart is what sends the ready ping - so by this instant first's 30s
+                // Shutdown(third) cap and its 60s ready-ping wait are already behind it; first is
+                // already inside (or past) its closed-loop kill. What is actually left of first's
+                // pipeline from this point is the 20s closed-loop kill, its last 2s ExpectMsgAsync
+                // attempt, and Shutdown's own 5s sliding terminate timer (see that class): about
+                // 27s worst case. 120s leaves roughly 90s of margin on top of that, which is why
+                // it is restored here rather than widened - there was no shortfall to fix.
                 //
                 // This wait is BEST-EFFORT: the spec's REAL assertions - the SubscribeAck /
                 // ExpectNoMsg / DeltaCount == 0 gossip-isolation checks above - have already run
@@ -420,12 +423,12 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                 // of the isolation assertions that already succeeded.
                 try
                 {
-                    await newSystem.WhenTerminated.WaitAsync(155.Seconds());
+                    await newSystem.WhenTerminated.WaitAsync(120.Seconds());
                 }
                 catch (TimeoutException)
                 {
                     newSystem.Log.Warning(
-                        "newSystem did not observe first's shutdown within 155s; terminating self (best-effort). " +
+                        "newSystem did not observe first's shutdown within 120s; terminating self (best-effort). " +
                         "The gossip-isolation assertions (SubscribeAck / ExpectNoMsg / DeltaCount == 0) already passed, " +
                         "so the spec's subject-under-test is verified regardless.");
                 }
@@ -463,11 +466,10 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
 
     private async Task JoinAsync(RoleName from, RoleName to)
     {
-        await RunOnAsync(() =>
+        await RunOnAsync(async () =>
         {
-            Cluster.Get(Sys).Join(Node(to).Address);
+            Cluster.Get(Sys).Join((await NodeAsync(to)).Address);
             CreateMediator();
-            return Task.CompletedTask;
         }, from);
         await EnterBarrierAsync(from.Name + "-joined");
     }
