@@ -7,16 +7,12 @@
 
 #nullable enable
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
-using System.Reflection;
-using Akka.Actor;
 using Akka.Serialization.V2.Generators;
+using Akka.Serialization.V2.Tests.Harness;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
 namespace Akka.Serialization.V2.Tests;
@@ -393,71 +389,24 @@ public sealed class CrossAssemblyBaselineSpec
         all.Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
 
+    // Delegates to the shared harness (Harness/GeneratorTestHarness.cs), which builds the base
+    // metadata reference set once per process instead of once per test.
     private static MetadataReference CompileAssemblyAToReference(string source, string assemblyName)
     {
-        var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
-        var syntaxTree = CSharpSyntaxTree.ParseText(source, parseOptions);
-        var compilation = CSharpCompilation.Create(
-            assemblyName,
-            new[] { syntaxTree },
-            CreateMetadataReferences(),
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
-
-        var errors = compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToImmutableArray();
-        errors.Should().BeEmpty($"assembly A ('{assemblyName}') must compile with no errors -- it does no generator work, it only supplies types for B to reference");
-
-        using var stream = new MemoryStream();
-        var emitResult = compilation.Emit(stream);
-        emitResult.Success.Should().BeTrue($"assembly A ('{assemblyName}') must emit successfully");
-
-        return MetadataReference.CreateFromImage(stream.ToArray());
+        return GeneratorTestHarness.CompileToReference(source, assemblyName);
     }
 
     private static (ImmutableArray<Diagnostic> GeneratorDiagnostics, ImmutableArray<Diagnostic> CompileDiagnostics, string GeneratedSource) RunGeneratorAgainstB(
         string sourceB, MetadataReference assemblyAReference, string assemblyName)
     {
-        var parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
-        var syntaxTree = CSharpSyntaxTree.ParseText(sourceB, parseOptions);
-        var references = CreateMetadataReferences().Append(assemblyAReference);
-        var compilation = CSharpCompilation.Create(
-            assemblyName,
-            new[] { syntaxTree },
-            references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
+        // assemblyName previously named the "B" compilation itself, purely for debugging -- it
+        // never appears in any assertion (only assembly A's name, baked into assemblyAReference by
+        // CompileAssemblyAToReference above, does). The harness names every compilation it builds
+        // uniformly, so assemblyName is unused here now.
+        _ = assemblyName;
 
-        GeneratorDriver driver = CSharpGeneratorDriver.Create(
-            new[] { new AkkaSerializerGenerator().AsSourceGenerator() },
-            parseOptions: parseOptions);
-        driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var updatedCompilation, out var generatorDiagnostics);
-
-        var runResult = driver.GetRunResult();
-        var generatedSource = string.Join(
-            Environment.NewLine,
-            runResult.GeneratedTrees.Select(tree => tree.ToString()));
-
-        return (generatorDiagnostics, updatedCompilation.GetDiagnostics(), generatedSource);
-    }
-
-    // Same base reference set as AkkaSerializerGeneratorDiagnosticsSpec. The [AkkaSerializer] and
-    // [AkkaSerializable] attributes and runtime types resolve the same way here.
-    private static IEnumerable<MetadataReference> CreateMetadataReferences()
-    {
-        var trustedAssemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))?
-            .Split(Path.PathSeparator)
-            .Where(File.Exists)
-            .Select(path => MetadataReference.CreateFromFile(path)) ?? Enumerable.Empty<MetadataReference>();
-
-        var explicitAssemblies = new[]
-        {
-            typeof(ActorSystem).Assembly,
-            typeof(AkkaSerializerAttribute<>).Assembly,
-            typeof(SerializerV2).Assembly,
-            typeof(ImmutableHashSet<>).Assembly,
-            Assembly.GetExecutingAssembly()
-        };
-
-        return trustedAssemblies.Concat(explicitAssemblies.Select(assembly => MetadataReference.CreateFromFile(assembly.Location)))
-            .GroupBy(reference => reference.Display)
-            .Select(group => group.First());
+        var result = GeneratorTestHarness.Run(sourceB, assemblyAReference);
+        var generatedSource = string.Join(Environment.NewLine, result.RunResult.GeneratedTrees.Select(tree => tree.ToString()));
+        return (result.GeneratorDiagnostics, result.CompileDiagnostics, generatedSource);
     }
 }

@@ -299,7 +299,9 @@ namespace Akka.Streams.Tests.Dsl
                             else
                                 return false;
                         })
-                        .ExpectAsync(0, async () =>
+                        // Give the zero-count filter its own 3s (filter-leeway) window instead of
+                        // the Within's remaining time - see BugFix3724Spec for the full mechanism.
+                        .ExpectAsync(0, TimeSpan.FromSeconds(3), async () =>
                         {
                             Source.Failed<int>(ActorPublisher.NormalShutdownReason).RunWith(sink, Materializer);
                             Source.From(Enumerable.Range(1, 10)).RunWith(sink, Materializer);
