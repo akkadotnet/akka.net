@@ -470,28 +470,34 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
-        /// Builds a materializer whose <see cref="StreamSupervisor"/> is a <c>/system</c> actor
-        /// rather than the process-wide, <c>/user</c>-hosted one <see cref="ActorMaterializer.Create(Akka.Actor.IActorRefFactory,ActorMaterializerSettings,string)"/>
-        /// returns -- see <see cref="Start"/>'s remarks for why that placement matters for a
-        /// graceful shutdown's outbound flush. Assembled entirely from PUBLIC Akka.Streams API
-        /// (<see cref="ActorMaterializerImpl"/>'s constructor, <see cref="StreamSupervisor.Props"/>/
-        /// <see cref="StreamSupervisor.NextName"/>, <see cref="EnumerableActorName.Create"/>,
-        /// <see cref="ActorMaterializerSettings.Create"/>, <see cref="AtomicBoolean"/>), so this
-        /// needs no <c>InternalsVisibleTo</c> and adds no new public surface of its own -- mirrors
-        /// what <c>DefaultMaterializer</c> (<c>ActorMaterializer.cs</c>) already does for the
-        /// ordinary <c>/user</c> case, with <see cref="ExtendedActorSystem.SystemActorOf"/> standing
-        /// in for <c>system.ActorOf</c>.
+        /// Builds a materializer whose <see cref="StreamSupervisor"/> is a stable, named <c>/system</c>
+        /// actor (<c>/system/artery-stream-supervisor</c>) rather than one of <see cref="StreamSupervisor.NextName"/>'s
+        /// generated names, or the process-wide, <c>/user</c>-hosted one
+        /// <see cref="ActorMaterializer.Create(Akka.Actor.IActorRefFactory,ActorMaterializerSettings,string)"/>
+        /// returns -- see <see cref="Start"/>'s remarks for why that placement matters for a graceful
+        /// shutdown's outbound flush, and the fixed name so every Artery stream has a known owner. It
+        /// still has to be a real <see cref="StreamSupervisor"/>: <see cref="ActorMaterializerImpl"/>
+        /// attaches interpreter actors straight to the supervisor's cell, but it still needs the
+        /// <see cref="StreamSupervisor"/> message protocol for the not-yet-started
+        /// <see cref="RepointableActorRef"/> case, and its <c>PostStop</c> sets the flag behind
+        /// <see cref="ActorMaterializer.IsShutdown"/>. Assembled entirely from PUBLIC Akka.Streams API
+        /// (<see cref="ActorMaterializerImpl"/>'s constructor, <see cref="StreamSupervisor.Props"/>,
+        /// <see cref="EnumerableActorName.Create"/>, <see cref="ActorMaterializerSettings.Create"/>,
+        /// <see cref="AtomicBoolean"/>), so this needs no <c>InternalsVisibleTo</c> and adds no new
+        /// public surface of its own -- mirrors what <c>DefaultMaterializer</c> (<c>ActorMaterializer.cs</c>)
+        /// already does for the ordinary <c>/user</c> case, with <see cref="ExtendedActorSystem.SystemActorOf"/>
+        /// standing in for <c>system.ActorOf</c>.
         /// </summary>
         private ActorMaterializer CreateSystemMaterializer()
         {
-            // Idempotent: DefaultMaterializer (ActorMaterializer.cs) does the same injection for the
-            // /user-hosted materializer, and InjectTopLevelFallback is safe to call more than once.
-            System.Settings.InjectTopLevelFallback(ActorMaterializer.DefaultConfig());
+            // ActorMaterializerSettings.Create(System) already injects the default materializer
+            // config as a fallback (ActorMaterializer.cs), so no separate InjectTopLevelFallback
+            // call is needed here.
             var settings = ActorMaterializerSettings.Create(System);
             var haveShutDown = new AtomicBoolean();
             var supervisor = System.SystemActorOf(
                 StreamSupervisor.Props(settings, haveShutDown).WithDispatcher(settings.Dispatcher),
-                StreamSupervisor.NextName());
+                "artery-stream-supervisor");
 
             return new ActorMaterializerImpl(
                 system: System,
@@ -1706,8 +1712,8 @@ namespace Akka.Remote.Artery
             // reclaimed independently of _isShutdown; the materializer's StreamSupervisor is now a
             // /system actor, see CreateSystemMaterializer, so it does NOT start terminating at
             // /user teardown the way it used to -- IsTransportTerminating() covers the states that
-            // remain: _isShutdown, materializer shutdown/absent, the supervisor's own cell,
-            // Aborting, WhenTerminated). Deliberately IsTransportTerminating(), not
+            // remain: _isShutdown, materializer shutdown, the supervisor's own cell, Aborting,
+            // WhenTerminated). Deliberately IsTransportTerminating(), not
             // IsActorSystemTerminating() -- see its remarks: this method is called for reconnects
             // and fresh associations formed DURING a graceful cluster leave, which runs for tens of
             // seconds with CoordinatedShutdown.ShutdownReason already set and this transport fully
@@ -1817,16 +1823,11 @@ namespace Akka.Remote.Artery
                 // LaneWriteBatchMaxBytes before crossing (AppendFrameToBatch chains the segments
                 // zero-copy; see its remarks for the ownership-transfer invariant). Wire bytes are
                 // IDENTICAL either way -- the inbound side parses frames off the byte stream and
-                // never sees element boundaries. When the connection keeps up,
-                // LaneWriteBatchStage is a 1:1 pass-through; under downstream backpressure, frames
-                // coalesce. Placed AFTER WatchTermination so the termination-signal wiring is
-                // unchanged. Unlike generic BatchWeighted, its PostStop returns owners retained in
-                // an aggregate or pending frame when cancellation interrupts the stage -- and,
-                // via onDropped, publishes a Dropped event for that many bytes rather than reclaiming
-                // them silently. There is no IOutboundEnvelope left to hand back through
-                // ReturnUndelivered at this point in the pipeline (this stage sits AFTER encode and
-                // the lane merge, so a held batch is already-encoded bytes from however many
-                // messages/lanes happened to coalesce); visibility is the fix this stage can offer.
+                // never sees element boundaries. If bytes are still held (an aggregate or a pending
+                // frame) when the stream stops, the stage reports them: onDropped logs the count and
+                // publishes a Dropped event, because this late in the pipeline -- after encode and
+                // the lane merge -- there is no IOutboundEnvelope left to hand back through
+                // ReturnUndelivered.
                 ((mergeSink, mergeTailTermination), _) = mergeHubSource
                     .Via(_killSwitch.Flow<ReadOnlySequence<byte>>())
                     .Via(laneKillSwitch.Flow<ReadOnlySequence<byte>>())
@@ -1912,7 +1913,7 @@ namespace Akka.Remote.Artery
                     laneTerminations[i] = laneTermination;
                 }
             }
-            catch (Akka.Pattern.IllegalStateException) when (_isShutdown || _materializer is null || _materializer.IsShutdown)
+            catch (Akka.Pattern.IllegalStateException) when (IsTransportTerminating())
             {
                 // Same shutdown race MaterializeOutboundStream's matching catch documents -- lost
                 // the race with teardown (materializer reclaimed between the guard above and Run()).
@@ -2308,13 +2309,13 @@ namespace Akka.Remote.Artery
                         association.SetOutboundKillSwitch(killSwitch);
                 }
             }
-            catch (Akka.Pattern.IllegalStateException) when (_isShutdown || _materializer is null || _materializer.IsShutdown)
+            catch (Akka.Pattern.IllegalStateException) when (IsTransportTerminating())
             {
                 // Lost the race with teardown: the ActorSystem reclaimed the materializer (its
                 // StreamSupervisor stopped) between the guard at the top of this method and Run() here,
-                // so Materialize() threw. The transport is going away -- drop quietly. Gated on an
-                // actually-shut-down materializer so a genuine IllegalStateException from a live
-                // materializer still propagates. The stream's materialize-once gate is released first
+                // so Materialize() threw. The transport is going away -- drop quietly. Gated on
+                // IsTransportTerminating() so a genuine IllegalStateException from a live, non-terminating
+                // transport still propagates. The stream's materialize-once gate is released first
                 // -- this catch-and-return path otherwise leaves it latched "started" with NO stream
                 // materialized and NO restart scheduled (a permanent wedge if the association
                 // outlives the race: producers keep enqueueing, nothing ever drains).
@@ -2716,30 +2717,40 @@ namespace Akka.Remote.Artery
         /// window would make graceful leave undeliverable, exactly the failure mode Pekko avoids by
         /// gating only on the transport's own <c>isShutdown</c> flag (<c>Association.scala</c>).
         /// </summary>
-        private bool IsTransportTerminating() =>
-            _isShutdown
-            || _materializer is null || _materializer.IsShutdown
-            || IsStreamSupervisorTerminating()
-            || (System is ActorSystemImpl systemImpl && systemImpl.Aborting)
-            || System.WhenTerminated.IsCompleted;
+        private bool IsTransportTerminating()
+        {
+            if (_isShutdown)
+                return true;
+
+            if (_materializer is { IsShutdown: true })
+                return true;
+
+            if (IsStreamSupervisorTerminating())
+                return true;
+
+            if (System is ActorSystemImpl { Aborting: true })
+                return true;
+
+            // No null-materializer check: _materializer is assigned as Start()'s first statement,
+            // so nothing can materialize before Start() runs -- null here means "not started", not
+            // "terminating".
+            return System.WhenTerminated.IsCompleted;
+        }
 
         /// <summary>
-        /// Returns whether the actor system, materializer, or transport has entered termination.
-        /// This state-based filter narrows the materialization catches so an unrelated
-        /// <see cref="InvalidOperationException"/> from a live system still propagates. Broader
-        /// than <see cref="IsTransportTerminating"/> on purpose: it also includes
-        /// <see cref="CoordinatedShutdown.ShutdownReason"/>, which is harmless here because these
-        /// filters only narrow an exception that has ALREADY been thrown by a failed
-        /// materialization -- they do not decide whether to attempt one. Do not reuse this for a
-        /// materialize guard; see <see cref="IsTransportTerminating"/> for why.
+        /// Broader than <see cref="IsTransportTerminating"/>: also true once
+        /// <see cref="CoordinatedShutdown.ShutdownReason"/> is set. Only for the materialization
+        /// catches' exception filters, never a materialize guard -- see
+        /// <see cref="IsTransportTerminating"/> for why.
         /// </summary>
-        private bool IsActorSystemTerminating() =>
-            _isShutdown
-            || _materializer is null || _materializer.IsShutdown
-            || IsStreamSupervisorTerminating()
-            || (System.TryGetExtension<CoordinatedShutdown>(out var coordinatedShutdown) && coordinatedShutdown.ShutdownReason != null)
-            || (System is ActorSystemImpl systemImpl && systemImpl.Aborting)
-            || System.WhenTerminated.IsCompleted;
+        private bool IsActorSystemTerminating()
+        {
+            if (IsTransportTerminating())
+                return true;
+
+            return System.TryGetExtension<CoordinatedShutdown>(out var coordinatedShutdown)
+                   && coordinatedShutdown.ShutdownReason != null;
+        }
 
         /// <summary>
         /// Whether the materializer's StreamSupervisor -- the cell every <c>Run()</c> in this
@@ -2748,9 +2759,13 @@ namespace Akka.Remote.Artery
         /// cases; an <c>UnstartedCell</c> (supervisor still spinning up) reports an empty,
         /// non-terminating container, so this can never false-positive during startup.
         /// </summary>
-        private bool IsStreamSupervisorTerminating() =>
-            _materializer?.Supervisor is ActorRefWithCell { Underlying: { } supervisorCell }
-            && (supervisorCell.IsTerminated || supervisorCell.ChildrenContainer.IsTerminating);
+        private bool IsStreamSupervisorTerminating()
+        {
+            if (_materializer?.Supervisor is not ActorRefWithCell { Underlying: { } supervisorCell })
+                return false;
+
+            return supervisorCell.IsTerminated || supervisorCell.ChildrenContainer.IsTerminating;
+        }
 
         /// <summary>
         /// Releases <paramref name="streamId"/>'s materialize-once gate on
