@@ -121,13 +121,6 @@ namespace Akka.Cluster.Sharding.Tests
                 entityProps: SimpleEchoActor.Props(),
                 settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(rememberEntities),
                 messageExtractor: new MessageExtractor());
-
-            // JoinAsync completes with RunContinuationsAsynchronously, so we resume on a different
-            // pool thread than the constructor ran on. InternalCurrentActorCellKeeper.Current is
-            // [ThreadStatic] and does not flow across that hop. Reading TestActor runs
-            // TestKit.EnsureImplicitSender on the thread xUnit will run the facts on. See #8144.
-            // The facts also pass TestActor explicitly, which is the part that must not regress.
-            _ = TestActor;
         }
 
         // xUnit v3's DisposalTracker calls IAsyncDisposable.DisposeAsync and skips
