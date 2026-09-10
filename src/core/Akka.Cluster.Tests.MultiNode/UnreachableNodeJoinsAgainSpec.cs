@@ -38,7 +38,15 @@ namespace Akka.Cluster.Tests.MultiNode
             Second = Role("second");
             Third = Role("third");
             Fourth = Role("fourth");
-            CommonConfig = ConfigurationFactory.ParseString("akka.remote.log-remote-lifecycle-events = off")
+            // The master's end-of-spec path is now its 20s wait for End followed by up to 25s waiting
+            // for the victim to go unreachable, 45s back to back, while first and third are already
+            // parked on the final barrier. The conductor arms the barrier's clock at the FIRST arrival
+            // and never extends it, so the default 30s barrier could expire before the master's own
+            // assertion reports. 60s is the value InitialHeartbeatSpec and six other multi-node specs
+            // use for the same reason.
+            CommonConfig = ConfigurationFactory.ParseString(@"
+                akka.remote.log-remote-lifecycle-events = off
+                akka.testconductor.barrier-timeout = 60s")
                 .WithFallback(DebugConfig(false)).WithFallback(MultiNodeClusterSpec.ClusterConfig());
             TestTransport = true; // need to use the throttler and blackhole
         }
@@ -145,7 +153,7 @@ namespace Akka.Cluster.Tests.MultiNode
             await RunOnAsync(async () =>
             {
                 MarkNodeAsUnavailable(GetAddress(_victim.Value));
-                var victimNodeAddress = Node(_victim.Value).Address;
+                var victimNodeAddress = GetAddress(_victim.Value);
                 await WithinAsync(TimeSpan.FromSeconds(30), async () =>
                 {
                     // victim becomes unreachable
