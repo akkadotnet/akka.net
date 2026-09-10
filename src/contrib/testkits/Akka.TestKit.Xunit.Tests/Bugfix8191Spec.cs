@@ -27,10 +27,12 @@ public class Bugfix8191Spec
     private sealed class TrackingTestKit : TestKit
     {
         public bool AfterAllRan { get; private set; }
+        public int AfterAllRanCount { get; private set; }
 
         protected override void AfterAll()
         {
             AfterAllRan = true;
+            AfterAllRanCount++;
             base.AfterAll();
         }
     }
@@ -69,5 +71,25 @@ public class Bugfix8191Spec
 
         Assert.True(testKit.DisposeAsyncOverrideRan, "the derived DisposeAsync override should run");
         Assert.True(system.WhenTerminated.IsCompleted, "base.DisposeAsync() should shut the ActorSystem down");
+    }
+
+    [Fact(DisplayName = "Calling Dispose() after DisposeAsync() should not run the dispose chain twice")]
+    public async Task Should_not_run_dispose_chain_twice_When_Dispose_called_after_DisposeAsync()
+    {
+        var testKit = new TrackingTestKit();
+        var system = testKit.Sys;
+
+        await ((IAsyncDisposable)testKit).DisposeAsync();
+        Assert.Equal(1, testKit.AfterAllRanCount);
+        Assert.True(system.WhenTerminated.IsCompleted, "the ActorSystem should be shut down");
+
+        // A re-entrant call to the sync Dispose() path — e.g. a using block disposing an
+        // instance xUnit already tore down via DisposeAsync() — must be a no-op: it must not
+        // run AfterAll()/the dispose chain again, and must not attempt to shut down an
+        // already-terminated ActorSystem a second time.
+        ((IDisposable)testKit).Dispose();
+
+        Assert.Equal(1, testKit.AfterAllRanCount);
+        Assert.True(system.WhenTerminated.IsCompleted, "the ActorSystem should remain shut down");
     }
 }

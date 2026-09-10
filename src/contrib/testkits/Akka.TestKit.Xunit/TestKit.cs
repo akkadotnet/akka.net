@@ -84,8 +84,6 @@ public class TestKit : TestKitBase, IDisposable, IAsyncLifetime
     protected readonly ITestOutputHelper? Output;
 
     private bool _disposed;
-    private bool _disposing;
-    private bool _disposingAsync;
 
     /// <summary>
     /// <para>
@@ -261,6 +259,11 @@ public class TestKit : TestKitBase, IDisposable, IAsyncLifetime
 
     /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+    /// Runs <see cref="AfterAll"/>; this is the one place the dispose chain and any derived override run.
+    /// Overriders must not depend on the <see cref="ActorSystem"/> having been terminated when this method
+    /// returns — that happens afterward, in whichever public entry point invoked the chain
+    /// (<see cref="Dispose()"/> via <see cref="Akka.TestKit.TestKitBase.Shutdown(System.Nullable{System.TimeSpan},System.Boolean)"/>,
+    /// or <see cref="DisposeAsync"/> via <see cref="Akka.TestKit.TestKitBase.ShutdownAsync(System.Nullable{System.TimeSpan},System.Boolean)"/>).
     /// </summary>
     /// <param name="disposing">
     /// if set to <c>true</c> the method has been called directly or indirectly by a  user's code.
@@ -270,34 +273,39 @@ public class TestKit : TestKitBase, IDisposable, IAsyncLifetime
     /// </param>
     protected virtual void Dispose(bool disposing)
     {
-        if (_disposing || _disposed)
-            return;
-
-        _disposing = true;
-        try
-        {
-            AfterAll();
-        }
-        finally
-        {
-            // DisposeAsync() terminates the ActorSystem asynchronously and sets this flag,
-            // so we don't also block here with a synchronous Shutdown().
-            if (!_disposingAsync)
-                Shutdown();
-            _disposed = true;
-        }
-    }
-
-    public void Dispose()
-    {
-        Dispose(true);
+        AfterAll();
     }
 
     /// <summary>
-    /// xUnit lifecycle hook, invoked once after the test method completes. The default
-    /// implementation runs the synchronous dispose chain (<see cref="Dispose(bool)"/> and
-    /// therefore <see cref="AfterAll"/>) and then asynchronously terminates the
-    /// <see cref="ActorSystem"/>, without blocking the calling thread.
+    /// Runs the dispose chain (<see cref="Dispose(bool)"/>, and therefore <see cref="AfterAll"/> and any
+    /// override) exactly once, then synchronously terminates the <see cref="ActorSystem"/> via
+    /// <see cref="Akka.TestKit.TestKitBase.Shutdown(System.Nullable{System.TimeSpan},System.Boolean)"/> —
+    /// even if the chain throws. Calling this again, including after <see cref="DisposeAsync"/> has
+    /// already run the chain, is a no-op.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+        _disposed = true;
+
+        try
+        {
+            Dispose(true);
+        }
+        finally
+        {
+            Shutdown();
+        }
+    }
+
+    /// <summary>
+    /// xUnit lifecycle hook, invoked once after the test method completes. Runs the dispose chain
+    /// (<see cref="Dispose(bool)"/>, and therefore <see cref="AfterAll"/> and any override) exactly
+    /// once, then asynchronously terminates the <see cref="ActorSystem"/> via
+    /// <see cref="Akka.TestKit.TestKitBase.ShutdownAsync(System.Nullable{System.TimeSpan},System.Boolean)"/>,
+    /// without blocking the calling thread — even if the chain throws. Calling this again, including
+    /// after <see cref="Dispose()"/> has already run the chain, is a no-op.
     /// <para>
     /// Override this for asynchronous teardown, and always call <c>await base.DisposeAsync()</c>
     /// from your override. xUnit v3 invokes <see cref="System.IAsyncDisposable.DisposeAsync"/> in
@@ -308,14 +316,10 @@ public class TestKit : TestKitBase, IDisposable, IAsyncLifetime
     /// </summary>
     public virtual async ValueTask DisposeAsync()
     {
-        if (_disposing || _disposed)
+        if (_disposed)
             return;
+        _disposed = true;
 
-        // Run the synchronous dispose chain — AfterAll() plus any overridden Dispose(bool) —
-        // but suppress its blocking Shutdown() call; the ActorSystem is terminated
-        // asynchronously below instead. The finally guarantees shutdown still runs even if
-        // AfterAll() throws, matching the synchronous Dispose() behavior.
-        _disposingAsync = true;
         try
         {
             Dispose(true);
