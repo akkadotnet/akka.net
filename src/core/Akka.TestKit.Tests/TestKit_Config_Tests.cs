@@ -52,9 +52,6 @@ namespace Akka.TestKit.Tests.Xunit2
               type = "Akka.Dispatch.DispatcherConfigurator, Akka"
               throughput = 2147483647
             }
-            
-            # Disable batching in order to prevent flakiness with Akka.Remote tests (since they have low message frequency)
-            remote.dot-netty.tcp.batching.enabled = false
         }
         """;
         
