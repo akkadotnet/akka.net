@@ -62,17 +62,14 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
 
     private IActorRef _remoteWatcher;
 
-    protected IActorRef RemoteWatcher
+    private async Task<IActorRef> GetRemoteWatcherAsync()
     {
-        get
+        if (_remoteWatcher == null)
         {
-            if (_remoteWatcher == null)
-            {
-                Sys.ActorSelection("/system/remote-watcher").Tell(new Identify(null), TestActor);
-                _remoteWatcher = ExpectMsg<ActorIdentity>().Subject;
-            }
-            return _remoteWatcher;
+            Sys.ActorSelection("/system/remote-watcher").Tell(new Identify(null), TestActor);
+            _remoteWatcher = (await ExpectMsgAsync<ActorIdentity>()).Subject;
         }
+        return _remoteWatcher;
     }
 
     protected override void AtStartup()
@@ -112,7 +109,11 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
                 Sys.ActorOf(Props.Create(() => new Observer(path2, path3, watchEstablished, TestActor))
                     .WithDeploy(Deploy.Local), "observer1");
 
-                watchEstablished.Ready();
+                // TestLatch has no async Ready(); await the same condition it polls internally
+                // (CountdownEvent.CurrentCount == 0) instead of blocking a pool thread on it.
+                // 5s is the latch's own default; AwaitConditionAsync dilates it like every TestKit wait.
+                await AwaitConditionAsync(() => watchEstablished.IsOpen, TimeSpan.FromSeconds(5),
+                    TimeSpan.FromMilliseconds(100), "both remote watches should be established");
                 await EnterBarrierAsync("watch-established");
                 await ExpectMsgAsync(path2);
                 await ExpectNoMsgAsync(TimeSpan.FromSeconds(2));
@@ -181,7 +182,11 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
     {
         await WithinAsync(TimeSpan.FromSeconds(20), async () =>
         {
-            RunOn(() => Sys.ActorOf(BlackHoleActor.Props.WithDeploy(Deploy.Local), "subject5"), _config.Fifth);
+            await RunOnAsync(() =>
+            {
+                Sys.ActorOf(BlackHoleActor.Props.WithDeploy(Deploy.Local), "subject5");
+                return Task.CompletedTask;
+            }, _config.Fifth);
             await EnterBarrierAsync("subjected-started");
 
             await RunOnAsync(async () =>
@@ -193,7 +198,7 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
                 //fifth is not a cluster member, so the watch is handled by the RemoteWatcher
                 await AwaitAssertAsync(async () =>
                 {
-                    RemoteWatcher.Tell(Remote.RemoteWatcher.Stats.Empty);
+                    (await GetRemoteWatcherAsync()).Tell(Remote.RemoteWatcher.Stats.Empty);
                     var stats = await ExpectMsgAsync<Remote.RemoteWatcher.Stats>();
                     stats.WatchingRefs.Contains((subject5, TestActor)).ShouldBeTrue();
                     stats.WatchingAddresses.Contains(GetAddress(_config.Fifth)).ShouldBeTrue();
@@ -210,7 +215,7 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
                 // and cleaned up from RemoteWatcher
                 await AwaitAssertAsync(async () =>
                 {
-                    RemoteWatcher.Tell(Remote.RemoteWatcher.Stats.Empty);
+                    (await GetRemoteWatcherAsync()).Tell(Remote.RemoteWatcher.Stats.Empty);
                     var stats = await ExpectMsgAsync<Remote.RemoteWatcher.Stats>();
                     stats.WatchingRefs.Select(x => x.Item1.Path.Name).Contains("subject5").ShouldBeTrue();
                     stats.WatchingAddresses.Contains(GetAddress(_config.Fifth)).ShouldBeFalse();
@@ -247,9 +252,10 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
             // fourth actor system will be shutdown, not part of testConductor any more
             // so we can't use barriers to synchronize with it
             var firstAddress = GetAddress(_config.First);
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 Sys.ActorOf(Props.Create(() => new EndActor(TestActor, null)), "end");
+                return Task.CompletedTask;
             }, _config.First);
             await EnterBarrierAsync("end-actor-created");
 
@@ -287,14 +293,40 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
                 try
                 {
                     var endProbe = CreateTestProbe(endSystem);
+
+                    // Resolve first's end actor BEFORE sending End. The EndAck first sends back
+                    // rides a brand-new outbound Artery lane from first to EndSystem, and on the
+                    // Windows Artery lane first has been observed terminating its ActorSystem
+                    // about 340ms after replying -- before that lane finishes materializing,
+                    // handshaking and connecting. An ActorIdentity reply can only travel back over
+                    // that same outbound lane, so a successful resolve proves the lane is already
+                    // up. It is safe to resolve before sending End because first is parked in its
+                    // own ExpectMsgAsync<End>() and cannot start tearing down until the End we have
+                    // not sent yet arrives.
+                    await endSystem
+                        .ActorSelection(new RootActorPath(firstAddress) / "user" / "end")
+                        .ResolveOne(Dilated(TimeSpan.FromSeconds(8)));
+
                     var endActor = endSystem.ActorOf(Props.Create(() => new EndActor(endProbe.Ref, firstAddress)),
                         "end");
                     endActor.Tell(EndActor.SendEnd.Instance);
-                    await endProbe.ExpectMsgAsync<EndActor.EndAck>();
+
+                    // Explicit and undilated: ExpectMsgAsync's timeout parameter is [AutoDilate]
+                    // and dilates it internally, so passing an already-dilated value here would
+                    // scale it twice. With the return lane already hot (proved by the resolve
+                    // above) the EndAck is a single enqueue-and-write on a live association, so 5s
+                    // is generous. 8s (resolve) + 5s (ack) = 13s, strictly narrower than the 15s
+                    // akka.test.single-expect-default that EndSystem used to inherit unbounded
+                    // from MultiNodeClusterSpec.ClusterConfig(). The ShutdownAsync in the finally
+                    // below carries its own 10s bound and also sits inside the enclosing
+                    // WithinAsync(20s): on the passing path the whole step takes a few seconds,
+                    // and on the failure path one of these inner bounds reports first, so the
+                    // outer window is a ceiling, not the budget.
+                    await endProbe.ExpectMsgAsync<EndActor.EndAck>(TimeSpan.FromSeconds(5));
                 }
                 finally
                 {
-                    Shutdown(endSystem, TimeSpan.FromSeconds(10));
+                    await ShutdownAsync(endSystem, TimeSpan.FromSeconds(10));
                 }
 
                 // no barrier here, because it is not part of TestConductor roles any more
