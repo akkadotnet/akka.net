@@ -122,6 +122,22 @@ namespace Akka.Cluster.Sharding.Tests
         }
 
         /// <summary>
+        /// Asks the region for its state through a fresh probe. A fresh probe per request means a reply that
+        /// arrives after the caller stopped waiting goes to an actor nobody reads, instead of sitting in the
+        /// test actor's queue where a later expect would take it for a current snapshot. The region's own
+        /// query timeout is 3 s, which is longer than the per-attempt bound the polling helper uses.
+        /// </summary>
+        private async Task<CurrentShardRegionState> QueryRegionStateAsync(IActorRef sharding, TimeSpan timeout)
+        {
+            var probe = CreateTestProbe();
+            probe.Send(sharding, GetShardRegionState.Instance);
+            var state = await probe.ExpectMsgAsync<CurrentShardRegionState>(timeout);
+            state.Failed.Should().BeEmpty("every shard must answer the state query");
+            state.Shards.Should().HaveCount(1);
+            return state;
+        }
+
+        /// <summary>
         /// Polls the region until the shard's active entity set is exactly <paramref name="expected"/>.
         /// An entity's Terminated reaches the shard as a user message, queued behind whatever else is in the
         /// shard's mailbox, so the test actor seeing Terminated says nothing about the shard having processed
@@ -131,13 +147,20 @@ namespace Akka.Cluster.Sharding.Tests
         {
             await AwaitAssertAsync(async () =>
             {
-                sharding.Tell(GetShardRegionState.Instance);
-                var state = await ExpectMsgAsync<CurrentShardRegionState>(TimeSpan.FromSeconds(1));
-                state.Shards.Should().HaveCount(1);
-                if (expected.Length == 0)
-                    state.Shards.First().EntityIds.Should().BeEmpty();
-                else
-                    state.Shards.First().EntityIds.Should().BeEquivalentTo(expected);
+                var state = await QueryRegionStateAsync(sharding, TimeSpan.FromSeconds(1));
+                state.Shards.First().EntityIds.Should().BeEquivalentTo(expected);
+            }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(100));
+        }
+
+        /// <summary>
+        /// Polls the region until the shard's active entity set is empty. See <see cref="AwaitActiveEntitiesAsync"/>.
+        /// </summary>
+        private async Task AwaitNoActiveEntitiesAsync(IActorRef sharding)
+        {
+            await AwaitAssertAsync(async () =>
+            {
+                var state = await QueryRegionStateAsync(sharding, TimeSpan.FromSeconds(1));
+                state.Shards.First().EntityIds.Should().BeEmpty();
             }, TimeSpan.FromSeconds(5), TimeSpan.FromMilliseconds(100));
         }
 
@@ -218,21 +241,22 @@ namespace Akka.Cluster.Sharding.Tests
             sharding.Tell(new EntityEnvelope("1", "passivate"));
             await ExpectTerminatedAsync(entity, TimeSpan.FromSeconds(3));
 
-            // Anchor on the shard's own bookkeeping first. A shard that mistook the passivation for a crash
-            // would arm the entity-restart-backoff timer (250 ms) at the same moment, so once the entity has
-            // left the active set the clock for a wrongful restart is running.
-            await AwaitActiveEntitiesAsync(sharding);
+            // Anchor on the shard's own bookkeeping first. The entity leaves the active set when the shard
+            // processes its Terminated, which is also the moment a shard that mistook the passivation for a
+            // crash would arm the entity-restart-backoff timer (250 ms). The remember-entities write for the
+            // stop may still be in flight at this point; it does not matter for what follows.
+            await AwaitNoActiveEntitiesAsync(sharding);
 
-            // Wait out that backoff without blocking a thread-pool worker: this test body runs on one, and on
-            // a two-core agent the pool has only two. 400 ms is longer than the 250 ms backoff plus the entity
-            // start, so a wrongful restart has happened and is visible by the time we look.
-            await Task.Delay(TimeSpan.FromMilliseconds(400));
+            // Now nothing may restart. "Started entity" is the shard's own restart line, so a zero-count filter
+            // held open for longer than the backoff observes a wrongful restart directly. The filter waits the
+            // whole window without blocking a thread-pool worker: this test body runs on one, and on a two-core
+            // agent the pool has only two.
+            await EventFilter.Debug(contains: "Started entity")
+                .ExpectAsync(0, TimeSpan.FromMilliseconds(600), () => Task.CompletedTask);
 
             // Deliberately a single read, not a poll: polling for "empty" would accept the first empty reading
-            // and stop proving that nothing restarts afterwards.
-            sharding.Tell(GetShardRegionState.Instance);
-            var regionState = await ExpectMsgAsync<CurrentShardRegionState>(TimeSpan.FromSeconds(3));
-            regionState.Shards.Should().HaveCount(1);
+            // and stop proving that nothing restarted in the meantime.
+            var regionState = await QueryRegionStateAsync(sharding, TimeSpan.FromSeconds(5));
             regionState.Shards.First().EntityIds.Should().BeEmpty();
         }
     }
