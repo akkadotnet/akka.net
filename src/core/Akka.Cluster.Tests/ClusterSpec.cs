@@ -214,25 +214,24 @@ namespace Akka.Cluster.Tests
         [Fact]
         public async Task A_cluster_must_return_completed_LeaveAsync_task_if_member_already_removed()
         {
-            // Join cluster
-            _cluster.Join(_selfAddress);
-            LeaderActions(); // Joining -> Up
-
-            // Subscribe to MemberRemoved and wait for confirmation
-            _cluster.Subscribe(TestActor, typeof(ClusterEvent.MemberRemoved));
+            // Subscribe before joining and await the snapshot, so the publisher has registered the
+            // subscription before any membership event can be published.
+            _cluster.Subscribe(TestActor, typeof(ClusterEvent.MemberUp), typeof(ClusterEvent.MemberRemoved));
             await ExpectMsgAsync<ClusterEvent.CurrentClusterState>();
+
+            // Join cluster. Awaiting MemberUp before issuing any further command orders everything
+            // behind the join. Cluster.ClusterCore re-targets from the supervisor to the core daemon
+            // when the ref is published, and a later command can otherwise overtake the join.
+            _cluster.Join(_selfAddress);
+            await ExpectMsgAsync<ClusterEvent.MemberUp>(TimeSpan.FromSeconds(10));
 
             // Leave the cluster prior to calling LeaveAsync()
             _cluster.Leave(_selfAddress);
 
-            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
-            {
-                LeaderActions(); // Leaving --> Exiting
-                LeaderActions(); // Exiting --> Removed
-
-                // Member should leave
-                (await ExpectMsgAsync<ClusterEvent.MemberRemoved>()).Member.Address.Should().Be(_selfAddress);
-            });
+            // Leaving to Exiting takes exactly one leader pass, and removal follows from the
+            // coordinated-shutdown round trip that pass starts, so no further tick is needed.
+            LeaderActions();
+            (await ExpectMsgAsync<ClusterEvent.MemberRemoved>(TimeSpan.FromSeconds(10))).Member.Address.Should().Be(_selfAddress);
 
             // LeaveAsync() task expected to complete immediately
             await _cluster.LeaveAsync().WaitAsync(RemainingOrDefault);
@@ -241,13 +240,14 @@ namespace Akka.Cluster.Tests
         [Fact]
         public async Task A_cluster_must_cancel_LeaveAsync_task_if_CancellationToken_fired_before_node_left()
         {
-            // Join cluster
-            _cluster.Join(_selfAddress);
-            LeaderActions(); // Joining -> Up
-
-            // Subscribe to MemberRemoved and wait for confirmation
-            _cluster.Subscribe(TestActor, typeof(ClusterEvent.MemberRemoved));
+            // See the sibling already-removed fact above for why the MemberUp wait below is a
+            // barrier: subscribe before joining and await the snapshot, so the publisher has
+            // registered the subscription before any membership event can be published.
+            _cluster.Subscribe(TestActor, typeof(ClusterEvent.MemberUp), typeof(ClusterEvent.MemberRemoved));
             await ExpectMsgAsync<ClusterEvent.CurrentClusterState>();
+
+            _cluster.Join(_selfAddress);
+            await ExpectMsgAsync<ClusterEvent.MemberUp>(TimeSpan.FromSeconds(10));
 
             // Requesting leave with cancellation token
             var cts = new CancellationTokenSource();
@@ -258,27 +258,22 @@ namespace Akka.Cluster.Tests
 
             // Cancelling the first task
             cts.Cancel();
-            await AwaitConditionAsync(() => Task.FromResult(task1.IsCanceled), null, "Task should be cancelled");
+            await AwaitConditionAsync(() => task1.IsCanceled, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100), "Task should be cancelled");
 
-            await WithinAsync(TimeSpan.FromSeconds(10), async () =>
-            {
-                // Second task should continue awaiting for cluster leave
-                task2.IsCompleted.Should().BeFalse();
+            // Second task should continue awaiting for cluster leave
+            task2.IsCompleted.Should().BeFalse();
 
-                // Waiting for leave
-                LeaderActions(); // Leaving --> Exiting
-                LeaderActions(); // Exiting --> Removed
+            // Leaving to Exiting takes exactly one leader pass, and removal follows from the
+            // coordinated-shutdown round trip that pass starts, so no further tick is needed.
+            LeaderActions();
+            (await ExpectMsgAsync<ClusterEvent.MemberRemoved>(TimeSpan.FromSeconds(10))).Member.Address.Should().Be(_selfAddress);
 
-                // Member should leave even a task was cancelled
-                (await ExpectMsgAsync<ClusterEvent.MemberRemoved>()).Member.Address.Should().Be(_selfAddress);
-
-                // Second task should complete (not cancelled)
-                await AwaitConditionAsync(() => Task.FromResult(task2.IsCompleted && !task2.IsCanceled), null, "Task should be completed, but not cancelled.");
-            });
+            // Second task should complete (not cancelled)
+            await AwaitConditionAsync(() => task2.IsCompleted && !task2.IsCanceled, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100), "Task should be completed, but not cancelled.");
 
             // Subsequent LeaveAsync() tasks expected to complete immediately (not cancelled)
             var task3 = _cluster.LeaveAsync();
-            await AwaitConditionAsync(() => Task.FromResult(task3.IsCompleted && !task3.IsCanceled), null, "Task should be completed, but not cancelled.");
+            await AwaitConditionAsync(() => task3.IsCompleted && !task3.IsCanceled, TimeSpan.FromSeconds(3), TimeSpan.FromMilliseconds(100), "Task should be completed, but not cancelled.");
         }
 
         [Fact]
