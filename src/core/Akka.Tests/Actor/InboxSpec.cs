@@ -53,14 +53,19 @@ namespace Akka.Tests.Actor
             // wrapped in AggregateException instead of letting the intended TimeoutException surface
             // directly.
             var task0 = _inbox.ReceiveAsync();
-            var task1 = Task.Factory.StartNew(() =>
+            // ReceiveWhere has no async overload, and it isn't in the race described above: by
+            // the time each of these runs, the matching message has already been told, so
+            // ReceiveWhere finds it queued and returns immediately instead of waiting on the
+            // inbox actor's scheduled deadline. Only the stagger before each call needs to be
+            // async; swap Thread.Sleep for Task.Delay so nothing blocks a pool thread.
+            var task1 = Task.Run(async () =>
             {
-                Thread.Sleep(100);
+                await Task.Delay(100);
                 return _inbox.ReceiveWhere(x => x.ToString() == "world");
             });
-            var task2 = Task.Factory.StartNew(() =>
+            var task2 = Task.Run(async () =>
             {
-                Thread.Sleep(200);
+                await Task.Delay(200);
                 return _inbox.ReceiveWhere(x => x.ToString() == "hello");
             });
 
@@ -153,8 +158,16 @@ namespace Akka.Tests.Actor
         [Fact]
         public async Task Inbox_Receive_will_timeout_gracefully_if_timeout_is_already_expired()
         {
+            // Deterministic: Get's deadline is already in the past when it reaches InboxActor, so
+            // Receive (Inbox.Actor.cs) enqueues it and immediately self-Tells a Kick instead of
+            // scheduling one. Kick finds the query overdue and replies with
+            // Status.Failure(new TimeoutException("Deadline passed")); the reply target is the
+            // FutureActorRef<object> behind ReceiveAsync's Ask, whose TellInternal faults the task
+            // with that bare TimeoutException instead of wrapping it. AwaitWithTimeout rethrows a
+            // single inner exception unwrapped, so the exact type surfacing here is always
+            // TimeoutException.
             var task = _inbox.ReceiveAsync(TimeSpan.FromSeconds(-1));
-            await Assert.ThrowsAnyAsync<Exception>(() => task.AwaitWithTimeout(TimeSpan.FromMilliseconds(1000)));
+            await Assert.ThrowsAsync<TimeoutException>(() => task.AwaitWithTimeout(TimeSpan.FromMilliseconds(1000)));
         }
     }
 }
