@@ -361,6 +361,54 @@ public sealed partial class AkkaSerializerGenerator
     }
 
     /// <summary>
+    /// Test-only entry point: extracts a <see cref="MessageInfo"/> straight from a symbol and its
+    /// <see cref="Compilation"/>, with no <see cref="GeneratorAttributeSyntaxContext"/> syntax hook
+    /// to drive it. Mirrors <see cref="ExtractMessage"/>'s attribute-argument handling exactly (the
+    /// [AkkaSerializable] Manifest/AllowEmpty named-argument read and the generic-definition
+    /// placeholder branch) -- the only extraction logic this duplicates is the small read of those
+    /// named arguments, which <see cref="ExtractMessage"/> can only obtain from
+    /// <see cref="GeneratorAttributeSyntaxContext.Attributes"/>, something this overload has no
+    /// syntax context to supply the equivalent of. Everything else delegates to the same, unmodified
+    /// <see cref="ExtractMessageCore"/> routine the real pipeline uses.
+    /// </summary>
+    internal static MessageInfo? ParseMessageForTests(INamedTypeSymbol type, Compilation compilation)
+    {
+        var serializableAttributeType = compilation.GetTypeByMetadataName(SerializableAttributeFullName);
+        var attribute = type.GetAttributes()
+            .FirstOrDefault(attr => SymbolEqualityComparer.Default.Equals(attr.AttributeClass, serializableAttributeType));
+        if (attribute == null)
+            return null;
+
+        var knownTypes = KnownTypes.From(compilation);
+        var manifest = string.Empty;
+        var allowEmpty = false;
+        foreach (var argument in attribute.NamedArguments)
+        {
+            if (argument.Key == "Manifest" && argument.Value.Value is string value)
+                manifest = value;
+            else if (argument.Key == "AllowEmpty" && argument.Value.Value is bool allowEmptyValue)
+                allowEmpty = allowEmptyValue;
+        }
+
+        if (type.IsGenericType)
+        {
+            return new MessageInfo(
+                type.Name,
+                GetFullyQualifiedTypeName(type),
+                manifest,
+                ImmutableArray<FieldInfo>.Empty,
+                GetProtocolNames(type),
+                allowEmpty: true,
+                isGenericDefinition: true,
+                definitionFullName: GetFullyQualifiedTypeName(type),
+                invalidFields: ImmutableArray<InvalidFieldInfo>.Empty,
+                constructionPlan: ConstructionPlan.Empty);
+        }
+
+        return ExtractMessageCore(type, GetFullyQualifiedTypeName(type), manifest, allowEmpty, knownTypes, compilation, definitionFullName: string.Empty);
+    }
+
+    /// <summary>
     /// Builds the <see cref="MessageInfo"/> for a concrete serializable type: either an ordinary
     /// non-generic <c>[AkkaSerializable]</c> declaration or a registered closed generic
     /// construction. For a closed construction, <see cref="INamedTypeSymbol.GetMembers"/> returns
