@@ -238,7 +238,8 @@ public class ShardingBufferAdapterSpec: AkkaSpec
 
         _regionA.Tell(1, _pA.Ref);
         await _pA.ExpectMsgAsync(1, warm);
-        // Same entity incarnation as phase one - ActorPath.Equals includes the uid, so a
+        // Same entity incarnation as phase one. IActorRef equality compares the path's uid as
+        // well as the path (ActorPath.Equals alone compares only address and names), so a
         // Shard restart between phases (which would recreate the entity under a new uid)
         // shows up here instead of leaving the counter assertions below comparing two
         // different buffer histories.
