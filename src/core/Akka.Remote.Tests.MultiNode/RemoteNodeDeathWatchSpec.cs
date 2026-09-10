@@ -166,9 +166,13 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
     /// <see cref="RemoteNodeDeathWatch_must_receive_Terminated_when_remote_actor_is_stoppedAsync"/>) that
     /// the <c>DeathWatchNotification</c> system message was already handed to remoting. Nominal cost from
     /// there is one one-way hop on an association this phase has already exercised in both directions
-    /// (identify out, "helloN" back) - single-digit ms. A lost or unacked frame is recovered by the
-    /// repeating AttemptSysMsgRedelivery timer at akka.remote.resend-interval (Remote.conf, 2s), so budget
-    /// two resend cycles plus one hop and dispatcher scheduling slack on a loaded CI agent: 2s + 2s + 2s = 6s.
+    /// (identify out, "helloN" back), plus three local mailbox hops on the receiving side
+    /// (/system/remote-watcher, then the watcher actor, then the TestActor) - single-digit ms. A lost or
+    /// unacked frame is recovered by system-message redelivery: on classic remoting the repeating
+    /// AttemptSysMsgRedelivery timer at akka.remote.resend-interval (Remote.conf, 2s), which is the value
+    /// read below; Artery resends at akka.remote.artery.advanced.system-message-resend-interval (1s), so
+    /// the same budget covers it with more room. Budget two resend cycles plus one hop and dispatcher
+    /// scheduling slack on a loaded CI agent: 2s + 2s + 2s = 6s.
     ///
     /// NOT derived from the watch failure detector: the peer stays alive and keeps heartbeating in this
     /// scenario, so RemoteWatcher never marks it unreachable and AddressTerminated never fires. The FD is
@@ -184,7 +188,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
     {
         get
         {
-            var resend = RARP.For(Sys).Provider.RemoteSettings.SysResendTimeout; // 2s
+            var resend = RARP.For(Sys).Provider.RemoteSettings.SysResendTimeout; // classic resend-interval, 2s
             return resend + resend + TimeSpan.FromSeconds(2);                   // = 6s
         }
     }
@@ -198,10 +202,7 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
             await AwaitAssertAsync(async () =>
             {
                 (await GetRemoteWatcherAsync()).Tell(RemoteWatcher.Stats.Empty);
-                // Explicit bound: an unbounded expect here takes RemainingOrDefault, i.e. the whole
-                // remaining WithinAsync window, so a slow first reply would leave AwaitAssertAsync only
-                // one attempt instead of retrying at its ~100ms interval.
-                await ExpectMsgAsync<RemoteWatcher.Stats>(s => Equals(s, RemoteWatcher.Stats.Empty), TimeSpan.FromSeconds(1));
+                await ExpectMsgAsync<RemoteWatcher.Stats>(s => Equals(s, RemoteWatcher.Stats.Empty));
             });
         });
     }
@@ -250,11 +251,14 @@ public abstract class RemoteNodeDeathWatchSpec : MultiNodeSpec
 
             await SleepAsync();
             // A local watch on second's own TestActor + Sys.Stop proves the subject is dead on second
-            // before first's window opens. ActorCell.TellWatchersWeDied notifies REMOTE watchers
-            // (first's watcher1) in a strictly earlier loop than LOCAL watchers (second's TestActor
-            // here), so by the time ExpectTerminatedAsync completes, the DeathWatchNotification bound
-            // for first has already been handed to the remoting stack. That closes out the independent
-            // Task.Delay(3000) timer-skew term that used to be part of first's wait budget.
+            // before first's window opens. ActorCell.TellWatchersWeDied notifies REMOTE watchers in a
+            // strictly earlier loop than LOCAL watchers (second's TestActor here). The remote watcher
+            // recorded on the subject is first's /system/remote-watcher, which re-issued watcher1's
+            // watch over the wire (RemoteActorRef intercepts Watch; RemoteWatcher forwards the
+            // notification to watcher1 locally). So by the time ExpectTerminatedAsync completes, the
+            // DeathWatchNotification bound for first has already been handed to the remoting stack.
+            // That closes out the independent Task.Delay(3000) timer-skew term that used to be part
+            // of first's wait budget.
             await WatchAsync(subject);
             Sys.Stop(subject);
             await ExpectTerminatedAsync(subject);
