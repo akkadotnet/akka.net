@@ -7,7 +7,7 @@
 
 using System;
 using System.Linq;
-using System.Threading;
+using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
 using Akka.Cluster.Tools.Singleton;
@@ -16,7 +16,6 @@ using Akka.Event;
 using Akka.MultiNode.TestAdapter;
 using Akka.Remote.TestKit;
 using Akka.TestKit;
-using Akka.Util.Internal;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 
@@ -104,7 +103,25 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
     public class ClusterSingletonManagerLeave2Spec : MultiNodeClusterSpec
     {
         private readonly ClusterSingletonManagerLeave2SpecConfig _config;
-        private readonly Lazy<IActorRef> _echoProxy;
+
+        /// <summary>
+        /// Watches <c>echoProxy</c> from its own queue, not the test actor's.
+        ///
+        /// The proxy stops itself when it observes <c>MemberRemoved</c> for its own node
+        /// (<see cref="ClusterSingletonProxy"/>'s handler for <see cref="ClusterEvent.MemberRemoved"/>) -
+        /// the very same cluster event that drives the <c>RegisterOnMemberRemoved</c> callback below,
+        /// which tells the test actor "MemberRemoved". Both reactions are fanned out from one
+        /// EventStream publication to two independent subscribers on two dispatchers, so nothing
+        /// orders them relative to each other. If the test actor were doing the watching, the
+        /// proxy's death-watch <c>Terminated</c> would land in the same single FIFO queue as
+        /// "MemberRemoved" and could be dequeued first, stealing the message the
+        /// <c>ExpectMsgAsync("MemberRemoved", ...)</c> below is waiting for. A dedicated probe gives
+        /// <c>Terminated</c> its own queue, exactly like upstream Akka JVM/Pekko and the sibling
+        /// <see cref="ClusterSingletonManagerLeaveSpec"/>.
+        /// </summary>
+        private TestProbe EchoProxyTerminatedProbe { get; }
+
+        private readonly Lazy<Task<IActorRef>> _echoProxy;
 
         protected override int InitialParticipantsValueFactory => Roles.Count;
 
@@ -116,17 +133,19 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
             : base(config, typeof(ClusterSingletonManagerLeave2Spec))
         {
             _config = config;
-            _echoProxy = new Lazy<IActorRef>(() => Watch(Sys.ActorOf(ClusterSingletonProxy.Props(
-                singletonManagerPath: "/user/echo",
-                settings: ClusterSingletonProxySettings.Create(Sys)),
-                name: "echoProxy")));
+            EchoProxyTerminatedProbe = CreateTestProbe();
+            _echoProxy = new Lazy<Task<IActorRef>>(async () =>
+                await EchoProxyTerminatedProbe.WatchAsync(Sys.ActorOf(ClusterSingletonProxy.Props(
+                    singletonManagerPath: "/user/echo",
+                    settings: ClusterSingletonProxySettings.Create(Sys)),
+                    name: "echoProxy")));
         }
 
-        private void Join(RoleName from, RoleName to)
+        private async Task JoinAsync(RoleName from, RoleName to)
         {
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Cluster.Join(Node(to).Address);
+                Cluster.Join((await NodeAsync(to)).Address);
                 CreateSingleton();
             }, from);
         }
@@ -141,125 +160,129 @@ namespace Akka.Cluster.Tools.Tests.MultiNode.Singleton
         }
 
         [MultiNodeFact]
-        public void ClusterSingletonManagerLeave2Specs()
+        public async Task ClusterSingletonManagerLeave2Specs()
         {
-            Leaving_ClusterSingletonManager_with_two_nodes_must_handover_to_new_instance();
+            await Leaving_ClusterSingletonManager_with_two_nodes_must_handover_to_new_instance();
         }
 
-        public void Leaving_ClusterSingletonManager_with_two_nodes_must_handover_to_new_instance()
+        private async Task Leaving_ClusterSingletonManager_with_two_nodes_must_handover_to_new_instance()
         {
-            Join(_config.First, _config.First);
-            RunOn(() =>
+            await JoinAsync(_config.First, _config.First);
+            await RunOnAsync(async () =>
             {
-                Within(5.Seconds(), () =>
+                await WithinAsync(5.Seconds(), async () =>
                 {
-                    ExpectMsg("preStart");
-                    _echoProxy.Value.Tell("hello");
-                    ExpectMsg<IActorRef>();
+                    await ExpectMsgAsync("preStart");
+                    (await _echoProxy.Value).Tell("hello");
+                    await ExpectMsgAsync<IActorRef>();
                 });
             }, _config.First);
-            EnterBarrier("first-active");
+            await EnterBarrierAsync("first-active");
 
-            Join(_config.Second, _config.First);
-            RunOn(() =>
+            await JoinAsync(_config.Second, _config.First);
+            await RunOnAsync(async () =>
             {
-                Within(10.Seconds(), () =>
+                await WithinAsync(10.Seconds(), async () =>
                 {
-                    AwaitAssert(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(2));
+                    await AwaitAssertAsync(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(2));
                 });
             }, _config.First, _config.Second);
-            EnterBarrier("second-up");
+            await EnterBarrierAsync("second-up");
 
-            Join(_config.Third, _config.First);
-            RunOn(() =>
+            await JoinAsync(_config.Third, _config.First);
+            await RunOnAsync(async () =>
             {
-                Within(10.Seconds(), () =>
+                await WithinAsync(10.Seconds(), async () =>
                 {
-                    AwaitAssert(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3));
+                    await AwaitAssertAsync(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(3));
                 });
             }, _config.First, _config.Second, _config.Third);
-            EnterBarrier("third-up");
-            
-            Join(_config.Fourth, _config.First);
-            RunOn(() =>
+            await EnterBarrierAsync("third-up");
+
+            await JoinAsync(_config.Fourth, _config.First);
+            await RunOnAsync(async () =>
             {
-                Within(10.Seconds(), () =>
+                await WithinAsync(10.Seconds(), async () =>
                 {
-                    AwaitAssert(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(4));
+                    await AwaitAssertAsync(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(4));
                 });
             }, _config.First, _config.Second, _config.Third, _config.Fourth);
-            EnterBarrier("fourth-up");
+            await EnterBarrierAsync("fourth-up");
 
-            Join(_config.Fifth, _config.First);
-            Within(10.Seconds(), () =>
+            await JoinAsync(_config.Fifth, _config.First);
+            await WithinAsync(10.Seconds(), async () =>
             {
-                AwaitAssert(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(5));
+                await AwaitAssertAsync(() => Cluster.State.Members.Count(m => m.Status == MemberStatus.Up).Should().Be(5));
             });
-            EnterBarrier("all-up");
+            await EnterBarrierAsync("all-up");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 Cluster.RegisterOnMemberRemoved(() => TestActor.Tell("MemberRemoved"));
                 Cluster.Leave(Cluster.SelfAddress);
-                ExpectMsg("stop", 10.Seconds()); // from singleton manager, but will not stop immediately
+                await ExpectMsgAsync("stop", 10.Seconds()); // from singleton manager, but will not stop immediately
             }, _config.First);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 Cluster.RegisterOnMemberRemoved(() => TestActor.Tell("MemberRemoved"));
                 Cluster.Leave(Cluster.SelfAddress);
-                ExpectMsg("MemberRemoved", 10.Seconds()); 
+                await ExpectMsgAsync("MemberRemoved", 10.Seconds());
             }, _config.Second, _config.Fourth);
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                Enumerable.Range(1, 3).ForEach(i =>
+                for (var i = 1; i <= 3; i++)
                 {
-                    Thread.Sleep(1000);
+                    // Deliberate 1s soak, not a stand-in for a real event: this is a negative
+                    // assertion (the singleton must not have restarted on second/third yet
+                    // while first still holds it), and there is nothing to await instead.
+                    await Task.Delay(1000);
                     // singleton should not be started before old has been stopped
                     Sys.ActorSelection("/user/echo/singleton").Tell(new Identify(i));
-                    ExpectMsg<ActorIdentity>(msg =>
+                    await ExpectMsgAsync<ActorIdentity>(msg =>
                     {
                         // not started
                         msg.MessageId.Should().Be(i);
                         msg.Subject.ShouldBe(null);
                     });
-                });
+                }
             }, _config.Second, _config.Third);
 
-            EnterBarrier("still-running-at-first");
+            await EnterBarrierAsync("still-running-at-first");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 Sys.ActorSelection("/user/echo/singleton").Tell(PoisonPill.Instance);
-                ExpectMsg("postStop"); 
+                await ExpectMsgAsync("postStop");
                 // CoordinatedShutdown makes sure that singleton actors are stopped before Cluster shutdown
-                ExpectMsg("MemberRemoved", 10.Seconds()); 
-                ExpectTerminated(_echoProxy.Value, 10.Seconds());
+                await ExpectMsgAsync("MemberRemoved", 10.Seconds());
+                await EchoProxyTerminatedProbe.ExpectTerminatedAsync(await _echoProxy.Value, 10.Seconds());
             }, _config.First);
-            EnterBarrier("stopped");
+            await EnterBarrierAsync("stopped");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
-                ExpectMsg("preStart"); 
+                await ExpectMsgAsync("preStart");
             }, _config.Third);
-            EnterBarrier("third-started");
+            await EnterBarrierAsync("third-started");
 
-            RunOn(() =>
+            await RunOnAsync(async () =>
             {
                 var p = CreateTestProbe();
-                var firstAddress = Node(_config.First).Address;
-                p.Within(15.Seconds(), () =>
+                var firstAddress = (await NodeAsync(_config.First)).Address;
+                var echoProxy = await _echoProxy.Value;
+                await p.WithinAsync(15.Seconds(), async () =>
                 {
-                    p.AwaitAssert(() =>
+                    await p.AwaitAssertAsync(async () =>
                     {
-                        _echoProxy.Value.Tell("hello2", p.Ref);
-                        p.ExpectMsg<IActorRef>(1.Seconds()).Path.Address.Should().NotBe(firstAddress);
+                        echoProxy.Tell("hello2", p.Ref);
+                        (await p.ExpectMsgAsync<IActorRef>(1.Seconds())).Path.Address.Should().NotBe(firstAddress);
                     });
                 });
 
             }, _config.Third, _config.Fifth);
-            EnterBarrier("third-working");
+            await EnterBarrierAsync("third-working");
         }
     }
 }
