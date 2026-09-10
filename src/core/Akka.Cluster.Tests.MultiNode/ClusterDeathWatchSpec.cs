@@ -303,10 +303,9 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
                     // up. It is safe to resolve before sending End because first is parked in its
                     // own ExpectMsgAsync<End>() and cannot start tearing down until the End we have
                     // not sent yet arrives.
-                    var firstEndActor = await endSystem
+                    await endSystem
                         .ActorSelection(new RootActorPath(firstAddress) / "user" / "end")
                         .ResolveOne(Dilated(TimeSpan.FromSeconds(8)));
-                    Assert.NotNull(firstEndActor);
 
                     var endActor = endSystem.ActorOf(Props.Create(() => new EndActor(endProbe.Ref, firstAddress)),
                         "end");
@@ -318,8 +317,11 @@ public class ClusterDeathWatchSpec : MultiNodeClusterSpec
                     // above) the EndAck is a single enqueue-and-write on a live association, so 5s
                     // is generous. 8s (resolve) + 5s (ack) = 13s, strictly narrower than the 15s
                     // akka.test.single-expect-default that EndSystem used to inherit unbounded
-                    // from MultiNodeClusterSpec.ClusterConfig(), and it keeps this whole step
-                    // inside the enclosing WithinAsync(20s) instead of racing past it.
+                    // from MultiNodeClusterSpec.ClusterConfig(). The ShutdownAsync in the finally
+                    // below carries its own 10s bound and also sits inside the enclosing
+                    // WithinAsync(20s): on the passing path the whole step takes a few seconds,
+                    // and on the failure path one of these inner bounds reports first, so the
+                    // outer window is a ceiling, not the budget.
                     await endProbe.ExpectMsgAsync<EndActor.EndAck>(TimeSpan.FromSeconds(5));
                 }
                 finally
