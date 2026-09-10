@@ -120,10 +120,20 @@ namespace Akka.Remote.Tests.Artery
                 // outbound stream out from under a live ActorGraphInterpreter, which ALWAYS faults
                 // its WatchTermination monitor and logs this WARNING. Post-fix, Shutdown()'s own
                 // graceful CompleteOutbound() + kill-switch sequence gets to run first, so the
-                // stream finishes on its own and this WARNING never fires.
+                // stream finishes on its own and this WARNING never fires. The warning is also
+                // cadence-gated on the association's reconnect attempt counter being 1 (only the
+                // FIRST outage after a successful connect logs at Warning; a later one logs at
+                // Debug) -- true here because AwaitAssociationAsync leaves the association warm and
+                // never disconnected, but a future edit that adds a reconnect to the warm-up would
+                // silently defang this assertion.
+                //
+                // 3 s, explicit rather than the implicit akka.test.single-expect-default: an
+                // expected count of 0 polls the FULL window before concluding nothing was logged, so
+                // this is the actual width of the "no warning" observation -- pin it so a future
+                // config or `single-expect-default` change cannot silently shrink it.
                 await CreateEventFilter(senderSys)
                     .Warning(contains: "outbound stream has ended")
-                    .ExpectAsync(0, async () =>
+                    .ExpectAsync(0, TimeSpan.FromSeconds(3), async () =>
                     {
                         (await senderSys.Terminate().AwaitWithTimeout(TimeSpan.FromSeconds(30)))
                             .Should().BeTrue("graceful termination must actually complete");

@@ -1703,14 +1703,26 @@ namespace Akka.Remote.Artery
         {
             // Same shutdown/materializer-liveness guard as MaterializeOutboundStream -- see its
             // remarks for the full rationale (late system message racing teardown; materializer
-            // reclaimed independently of _isShutdown). Also check IsActorSystemTerminating(): now
-            // that the materializer's StreamSupervisor is a /system actor (see CreateSystemMaterializer),
-            // _materializer.IsShutdown no longer flips early at /user teardown, so this closes the
-            // window between /user teardown and Shutdown() actually setting _isShutdown/tearing the
-            // materializer down -- it already covers CoordinatedShutdown.ShutdownReason and
-            // System.WhenTerminated.
-            if (_isShutdown || _materializer is null || _materializer.IsShutdown || IsActorSystemTerminating())
+            // reclaimed independently of _isShutdown; the materializer's StreamSupervisor is now a
+            // /system actor, see CreateSystemMaterializer, so it does NOT start terminating at
+            // /user teardown the way it used to -- IsTransportTerminating() covers the states that
+            // remain: _isShutdown, materializer shutdown/absent, the supervisor's own cell,
+            // Aborting, WhenTerminated). Deliberately IsTransportTerminating(), not
+            // IsActorSystemTerminating() -- see its remarks: this method is called for reconnects
+            // and fresh associations formed DURING a graceful cluster leave, which runs for tens of
+            // seconds with CoordinatedShutdown.ShutdownReason already set and this transport fully
+            // alive.
+            if (IsTransportTerminating())
+            {
+                // This callback runs INSIDE MaterializeOnceGate.EnsureStarted, which already
+                // flipped the gate to "started" before invoking it and only resets on throw --
+                // returning quietly here would otherwise latch the gate with NO stream
+                // materialized and NO restart scheduled, the exact permanent wedge the catch
+                // blocks below take care to avoid. Release it here too, same anti-wedge rationale.
+                association.ResetOutboundGate();
+                _log.Debug("Artery {0} outbound lanes stream to [{1}] not materialized: transport is terminating.", ArteryStreamId.Ordinary, remoteAddress);
                 return;
+            }
 
             var lanes = association.OutboundLanes;
 
@@ -1921,8 +1933,9 @@ namespace Akka.Remote.Artery
             catch (InvalidOperationException) when (IsActorSystemTerminating())
             {
                 // Same second shutdown race MaterializeOutboundStream's matching catch documents --
-                // /user guardian tearing down ahead of ArteryRemoting.Shutdown() itself. Narrowed by
-                // actual termination state (see IsActorSystemTerminating): a spurious
+                // see its remarks for the full explanation of what this guards now that the
+                // materializer's StreamSupervisor is a /system actor (CreateSystemMaterializer).
+                // Narrowed by actual termination state (see IsActorSystemTerminating): a spurious
                 // InvalidOperationException from a LIVE system propagates instead -- up through
                 // MaterializeOnceGate.EnsureStarted, which resets the gate and rethrows, so the
                 // failure is observable AND the next send can retry. Kill switch tripped before the
@@ -2057,17 +2070,30 @@ namespace Akka.Remote.Artery
             // teardown has begun. Mirrors Pekko's `if (transport.isShutdown) throw ShuttingDown` guard
             // before run() (Association.scala) -- but we RETURN quietly rather than throw, since our
             // caller (RemoteActorRef.SendSystemMessage) logs a thrown exception as a noisy ERROR. We
-            // ALSO check the materializer itself, and IsActorSystemTerminating(): CreateSystemMaterializer
+            // ALSO check the materializer itself via IsTransportTerminating(): CreateSystemMaterializer
             // hosts the StreamSupervisor as a /system actor precisely so it does NOT get reclaimed by
             // the ordinary /user teardown, which means _materializer.IsShutdown no longer flips early
-            // the way it used to -- so lean on the broader state filter too. It already covers
-            // CoordinatedShutdown.ShutdownReason and System.WhenTerminated, closing the window between
-            // /user teardown and Shutdown() actually setting _isShutdown/tearing the materializer down.
-            // The message stays in the association-owned channel undelivered -- correct, the transport
-            // is going away. The residual race (materializer reclaimed between this check and Run()
-            // below) is caught around Run().
-            if (_isShutdown || _materializer is null || _materializer.IsShutdown || IsActorSystemTerminating())
+            // the way it used to -- IsTransportTerminating() covers what remains (the supervisor's
+            // own cell, Aborting, WhenTerminated). Deliberately NOT IsActorSystemTerminating(): that
+            // also trips on CoordinatedShutdown.ShutdownReason, which is set at the very first phase
+            // of a graceful leave -- long before this transport, or /user, actually starts tearing
+            // down -- and this method is exactly what a leave needs for a fresh association, a
+            // reconnect after backoff, or a handshake reply while cluster-sharding-shutdown-region/
+            // cluster-leave/cluster-exiting are still running. Refusing then would make graceful
+            // leave undeliverable; see IsTransportTerminating's remarks. The message stays in the
+            // association-owned channel undelivered -- correct, the transport is going away. The
+            // residual race (materializer reclaimed between this check and Run() below) is caught
+            // around Run().
+            if (IsTransportTerminating())
+            {
+                // Same anti-wedge concern as MaterializeOrdinaryOutboundWithLanes' matching guard:
+                // this callback runs inside MaterializeOnceGate.EnsureStarted, which already
+                // latched the gate to "started" before invoking it and only resets on throw. A
+                // quiet return here would leave it latched with no stream and no restart scheduled.
+                ResetGateFor(association, streamId);
+                _log.Debug("Artery {0} outbound stream to [{1}] not materialized: transport is terminating.", streamId, remoteAddress);
                 return;
+            }
 
             var isControlStream = streamId == ArteryStreamId.Control;
             var isLargeStream = streamId == ArteryStreamId.Large;
@@ -2299,14 +2325,16 @@ namespace Akka.Remote.Artery
             catch (InvalidOperationException) when (IsActorSystemTerminating())
             {
                 // A SECOND, DIFFERENT shutdown race (this transport's own flags don't cover it --
-                // read on). ActorMaterializer.Create(system)'s StreamSupervisor is a TOP-LEVEL
-                // actor created via system.ActorOf(...), i.e. it lives under /user -- so it starts
-                // terminating (ActorCell then throws InvalidOperationException for any new
-                // graph-interpreter child Run() tries to create) as soon as /user guardian tears
-                // down, which happens WELL BEFORE ArteryRemoting.Shutdown() runs (that is gated
-                // behind /system's RemotingTerminator phase, later in CoordinatedShutdown). During
-                // that window BOTH _isShutdown and _materializer.IsShutdown are still false -- so
-                // the filter consults actual termination state (the supervisor's own cell,
+                // read on). CreateSystemMaterializer hosts the StreamSupervisor as a /system actor
+                // (via System.SystemActorOf), so it does NOT start terminating at /user teardown the
+                // way ActorMaterializer.Create(system)'s top-level /user actor used to -- it survives
+                // until ArteryRemoting.Shutdown() runs (gated behind /system's RemotingTerminator
+                // phase) and is reaped there (materializer?.Shutdown()) and again, structurally, when
+                // the /system guardian itself stops. This catch still exists for the residual race
+                // AROUND that teardown: the supervisor's cell can start terminating (ActorCell then
+                // throws InvalidOperationException for any new graph-interpreter child Run() tries to
+                // create) a moment before _isShutdown/_materializer.IsShutdown are set -- so the
+                // filter consults actual termination state (the supervisor's own cell,
                 // CoordinatedShutdown, WhenTerminated) instead of swallowing the whole exception
                 // TYPE (see IsActorSystemTerminating): a spurious InvalidOperationException from a LIVE system
                 // propagates up through MaterializeOnceGate.EnsureStarted (which resets the gate and
@@ -2676,9 +2704,34 @@ namespace Akka.Remote.Artery
         }
 
         /// <summary>
+        /// Whether THIS transport's own streams are going away: the materializer/StreamSupervisor
+        /// side of termination, deliberately WITHOUT <see cref="CoordinatedShutdown.ShutdownReason"/>.
+        /// Used by the up-front materialize guards (<see cref="MaterializeOrdinaryOutboundWithLanes"/>,
+        /// <see cref="MaterializeOutboundStream"/>) precisely BECAUSE it excludes that broader
+        /// clause: <c>ShutdownReason</c> is set as the first statement of <c>CoordinatedShutdown.Run</c>
+        /// (before phase one), and the whole graceful-leave sequence --
+        /// <c>cluster-sharding-shutdown-region</c>, <c>cluster-leave</c>, <c>cluster-exiting</c> --
+        /// runs behind it with <c>/user</c> still alive and this transport very much not tearing
+        /// down. Refusing to materialize (or reconnect, or answer a handshake) for that whole
+        /// window would make graceful leave undeliverable, exactly the failure mode Pekko avoids by
+        /// gating only on the transport's own <c>isShutdown</c> flag (<c>Association.scala</c>).
+        /// </summary>
+        private bool IsTransportTerminating() =>
+            _isShutdown
+            || _materializer is null || _materializer.IsShutdown
+            || IsStreamSupervisorTerminating()
+            || (System is ActorSystemImpl systemImpl && systemImpl.Aborting)
+            || System.WhenTerminated.IsCompleted;
+
+        /// <summary>
         /// Returns whether the actor system, materializer, or transport has entered termination.
         /// This state-based filter narrows the materialization catches so an unrelated
-        /// <see cref="InvalidOperationException"/> from a live system still propagates.
+        /// <see cref="InvalidOperationException"/> from a live system still propagates. Broader
+        /// than <see cref="IsTransportTerminating"/> on purpose: it also includes
+        /// <see cref="CoordinatedShutdown.ShutdownReason"/>, which is harmless here because these
+        /// filters only narrow an exception that has ALREADY been thrown by a failed
+        /// materialization -- they do not decide whether to attempt one. Do not reuse this for a
+        /// materialize guard; see <see cref="IsTransportTerminating"/> for why.
         /// </summary>
         private bool IsActorSystemTerminating() =>
             _isShutdown
