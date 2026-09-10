@@ -134,13 +134,27 @@ namespace Akka.Remote.Tests.Artery
             // still leaves IsControlOutboundMaterialized == true afterwards, same as the fixed
             // code, just for the opposite reason (a second materialization instead of none). A
             // bare "is it still materialized" assertion is therefore true in both worlds and
-            // cannot tell them apart; only the callback count does.
+            // cannot tell them apart. The callback count does not discriminate either, for a
+            // related reason -- see the HasControlEverRestarted assertion below, which does.
             var materializeCount = 0;
             association.EnsureControlOutboundMaterialized(_ => materializeCount++);
             association.IsControlOutboundMaterialized.Should().BeTrue();
             materializeCount.Should().Be(1);
 
             ScheduleOutboundRestartMethod.Invoke(transport, new object[] { remoteAddress, association, ArteryStreamId.Control });
+
+            // The discriminating assertion. MaterializeOnceGate.Reset() latches HasEverRestarted
+            // synchronously (AssociationRegistry.cs), so this is the tell for exactly the bug this
+            // spec guards against: if the CONTROL branch of ScheduleOutboundRestart resets the gate
+            // BEFORE scheduling the backoff callback (the original bug) rather than inside it AFTER
+            // outbound-restart-backoff elapses, HasControlEverRestarted is already true here -- no
+            // time has passed since the Invoke above returned. materializeCount cannot show this:
+            // MaterializeOnceGate.EnsureStarted runs the WINNING caller's callback, and once the
+            // gate has been reset the winner of the very next materialize race is EnqueueControl's
+            // own on-demand lambda below, not this test's -- so materializeCount stays 1 in both
+            // the buggy and the fixed world, for opposite reasons, and cannot tell them apart.
+            association.HasControlEverRestarted.Should().BeFalse(
+                "the control stream's restart bookkeeping must not be latched until outbound-restart-backoff has actually elapsed");
 
             // Exactly what a housekeeping control message (HandshakeReq/ArteryHeartbeat/
             // DaemonMsgCreate) does on its way out -- EnqueueControl materializes on demand
