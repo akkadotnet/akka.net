@@ -288,6 +288,22 @@ namespace Akka.Remote.Artery
                 // harmless on its own: the interpreter drops async input for a completed logic.
                 // This is hygiene, not a race fix.
                 UnsubscribeHandshakeStateChanged();
+
+                // _pendingMessage is ALREADY out of the association-owned channel (OnPush grabbed
+                // it, see below) -- if this materialization stops here, before ever completing the
+                // handshake, that element would otherwise vanish with no Dropped event and no log.
+                // SystemMessageDeliveryStage traffic is covered upstream by its own
+                // association-owned resend buffer, which survives a restart; plain control traffic
+                // is not (HandshakeReq, ArteryHeartbeat, ArteryQuarantined,
+                // ClearSystemMessageDelivery, and -- unwrapped, see
+                // ArteryRemoting.EnqueueDaemonMsgCreate -- DaemonMsgCreate). ReturnUndelivered
+                // re-offers it to the same channel this materialization was reading from, and
+                // publishes Dropped instead of discarding it silently when that channel has no room.
+                if (_pendingMessage is { } orphan)
+                {
+                    _pendingMessage = null;
+                    _stage.Context.ReturnUndelivered(orphan);
+                }
             }
 
             private void UnsubscribeHandshakeStateChanged()

@@ -96,6 +96,42 @@ namespace Akka.Remote.Artery
         /// no known peer uid yet (still <c>Associating</c> -- nothing to quarantine).
         /// </summary>
         void Quarantine();
+
+        /// <summary>
+        /// Returns <paramref name="envelope"/> to the association-owned channel this materialization
+        /// reads from. <see cref="OutboundHandshakeStage"/> dequeues one element from that channel and
+        /// holds it (<c>_pendingMessage</c>) while it waits out the handshake; if this materialization
+        /// stops before ever delivering it (a failed reconnect, a killed stream), the element is
+        /// already out of the channel and would otherwise vanish with no <see cref="Akka.Event.Dropped"/>
+        /// event and no log -- <see cref="SystemMessageDeliveryStage"/> traffic (already-wrapped
+        /// <see cref="SystemMessageEnvelope"/>s) is covered by its own association-owned resend
+        /// buffer and is NOT re-offered here (the implementation drops it silently, on purpose, rather
+        /// than handing a duplicate back to a fresh <see cref="SystemMessageDeliveryStage"/> instance),
+        /// but plain control traffic (<see cref="HandshakeReq"/>, <see cref="ArteryHeartbeat"/>,
+        /// <see cref="ArteryQuarantined"/>, <see cref="ClearSystemMessageDelivery"/>, and an unwrapped
+        /// <c>DaemonMsgCreate</c>) is not, and IS re-offered.
+        ///
+        /// <para>
+        /// <b>Ordering: the channel is FIFO and this re-offer goes to the TAIL, not the head.</b>
+        /// <see cref="System.Threading.Channels.Channel{T}"/> has no head-insert operation, so the
+        /// returned element lands behind everything else that was enqueued into this channel while
+        /// the handshake gated it -- it does NOT resume the position it was dequeued from. For an
+        /// unwrapped <c>DaemonMsgCreate</c> this can invert the ordering the type-level remarks on
+        /// <c>ArteryRemoting</c> describe as deliberately engineered (the create ordered ahead of the
+        /// <c>Watch</c> remote deployment sends immediately afterwards): if a <c>Watch</c> for the
+        /// same recipient was enqueued and delivered on a later materialization while this
+        /// <c>DaemonMsgCreate</c> sat held, the returned <c>DaemonMsgCreate</c> can now arrive after
+        /// it. This does not dead-letter the first message that races ahead of the create -- the
+        /// inbound side already tolerates that (see <c>RetryResolveRemoteDeployedRecipient</c>) -- but
+        /// it does reopen, for this one held-and-returned element, the exact race the create/Watch
+        /// ordering was added to close.
+        /// </para>
+        ///
+        /// The implementation re-offers <paramref name="envelope"/> to that same channel when there is
+        /// room, and publishes a <see cref="Akka.Event.Dropped"/> event instead of discarding it
+        /// silently when there is not.
+        /// </summary>
+        void ReturnUndelivered(IOutboundEnvelope envelope);
     }
 
     /// <summary>
@@ -113,6 +149,7 @@ namespace Akka.Remote.Artery
         private readonly Action<IControlMessageSubscriber> _subscribeControl;
         private readonly Action<IControlMessageSubscriber> _unsubscribeControl;
         private readonly Action<Address, long> _quarantine;
+        private readonly Action<IOutboundEnvelope> _returnUndelivered;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AssociationRegistryOutboundContext"/> class.
@@ -131,6 +168,13 @@ namespace Akka.Remote.Artery
         /// Quarantines <paramref name="remoteAddress"/> for a given uid (design.md gate G3's
         /// give-up-&gt;quarantine invariant). Defaults to a no-op.
         /// </param>
+        /// <param name="returnUndelivered">
+        /// Returns an element a gating <see cref="OutboundHandshakeStage"/> was holding back to the
+        /// association-owned channel this materialization reads from -- see
+        /// <see cref="IOutboundContext.ReturnUndelivered"/>. Defaults to a no-op so pre-existing
+        /// callers (tests that never exercise a mid-handshake stage failure) do not need to supply
+        /// it.
+        /// </param>
         public AssociationRegistryOutboundContext(
             AssociationRegistry registry,
             UniqueAddress localAddress,
@@ -138,7 +182,8 @@ namespace Akka.Remote.Artery
             Action<object> sendControl,
             Action<IControlMessageSubscriber>? subscribeControl = null,
             Action<IControlMessageSubscriber>? unsubscribeControl = null,
-            Action<Address, long>? quarantine = null)
+            Action<Address, long>? quarantine = null,
+            Action<IOutboundEnvelope>? returnUndelivered = null)
         {
             _registry = registry;
             LocalAddress = localAddress;
@@ -147,6 +192,7 @@ namespace Akka.Remote.Artery
             _subscribeControl = subscribeControl ?? (static _ => { });
             _unsubscribeControl = unsubscribeControl ?? (static _ => { });
             _quarantine = quarantine ?? (static (_, _) => { });
+            _returnUndelivered = returnUndelivered ?? (static _ => { });
         }
 
         /// <inheritdoc/>
@@ -187,5 +233,8 @@ namespace Akka.Remote.Artery
             if (AssociationState.UniqueRemoteAddress is { } peer)
                 _quarantine(RemoteAddress, peer.Uid);
         }
+
+        /// <inheritdoc/>
+        public void ReturnUndelivered(IOutboundEnvelope envelope) => _returnUndelivered(envelope);
     }
 }
