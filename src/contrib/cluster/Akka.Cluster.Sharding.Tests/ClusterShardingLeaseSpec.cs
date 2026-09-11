@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Akka.Cluster.Sharding.Tests
 {
-    public class ClusterShardingLeaseSpec : AkkaSpec, IAsyncLifetime
+    public class ClusterShardingLeaseSpec : AkkaSpec
     {
         private sealed class MessageExtractor: IMessageExtractor
         {
@@ -111,8 +111,10 @@ namespace Akka.Cluster.Sharding.Tests
         // awaiting it here parks nothing: xUnit v3 awaits InitializeAsync inside its own async
         // pipeline, so the worker goes back to the pool while the cluster forms. StartAsync avoids
         // ClusterSharding.Start's Ask(...).Result on the same thread.
-        public async ValueTask InitializeAsync()
+        public override async ValueTask InitializeAsync()
         {
+            await base.InitializeAsync();
+
             using var cts = new CancellationTokenSource(Dilated(TimeSpan.FromSeconds(30)));
             await cluster.JoinAsync(cluster.SelfAddress, cts.Token);
 
@@ -121,17 +123,6 @@ namespace Akka.Cluster.Sharding.Tests
                 entityProps: SimpleEchoActor.Props(),
                 settings: ClusterShardingSettings.Create(Sys).WithRememberEntities(rememberEntities),
                 messageExtractor: new MessageExtractor());
-        }
-
-        // xUnit v3's DisposalTracker calls IAsyncDisposable.DisposeAsync and skips
-        // IDisposable.Dispose when a type implements both, and IAsyncLifetime carries
-        // IAsyncDisposable. Without this bridge TestKit.Dispose never runs and every fact leaks a
-        // clustered ActorSystem. PR #8545 turns this into an override that chains to base.DisposeAsync
-        // once Akka.TestKit.Xunit.TestKit owns the async dispose chain.
-        public ValueTask DisposeAsync()
-        {
-            Dispose();
-            return default;
         }
 
         private async Task<TestLease> LeaseForShardAsync(int shardId)
