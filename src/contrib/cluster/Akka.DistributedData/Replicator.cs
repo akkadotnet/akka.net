@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Replicator.cs" company="Akka.NET Project">
 //     Copyright (C) 2009-2022 Lightbend Inc. <http://www.lightbend.com>
 //     Copyright (C) 2013-2025 .NET Foundation <https://github.com/akkadotnet/akka.net>
@@ -319,8 +319,18 @@ namespace Akka.DistributedData
         private ImmutableSortedSet<Member> _leader = ImmutableSortedSet<Member>.Empty.WithComparer(Member.LeaderStatusOrdering);
         private bool IsLeader => !_leader.IsEmpty && _leader.First().Address == _selfAddress;
 
+        // A Replicator subscribes to cluster events with InitialStateAsEvents, and that replay
+        // reports each current member at its CURRENT status. A Replicator that starts after a
+        // member has already moved to Leaving/Exiting therefore receives MemberLeft/MemberExited
+        // for it and never MemberUp, so membership can't be inferred from MemberUp alone.
+        //
+        // _exitingNodes covers MemberExited. _leader covers MemberLeft/MemberDowned, which land
+        // there via ReceiveOtherMemberEvent. Both sets are pruned in ReceiveMemberRemoved, so a
+        // removed node stops being trusted. Reusing sets that are already maintained avoids
+        // introducing new membership state purely to answer this question.
         private bool IsKnownNode(Address node) => _nodes.Contains(node) || _weaklyUpNodes.Contains(node) ||
-                                                  _joiningNodes.Contains(node) || _selfAddress == node;
+                                                  _joiningNodes.Contains(node) || _exitingNodes.Contains(node) ||
+                                                  _leader.Any(x => x.Address == node) || _selfAddress == node;
 
         /// <summary>
         /// For pruning timeouts are based on clock that is only increased when all nodes are reachable.
