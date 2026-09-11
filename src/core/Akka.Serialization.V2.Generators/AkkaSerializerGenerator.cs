@@ -140,10 +140,31 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         /// </summary>
         public const string MetadataSchemas = nameof(MetadataSchemas);
 
+        /// <summary>
+        /// The S7 whole-compilation expansion stage: <c>context.CompilationProvider.Combine(CollectedSerializers).Combine(CompilationFacts).Select(...)</c>,
+        /// projected to its value-equatable <see cref="PrefixExpansionTable"/> half (see
+        /// <see cref="ComputeClosedGenericExpansions"/> and <see cref="ExpandedPrefixRegistrations"/>'s
+        /// own doc comment for why the raw stage's location-bag half is projected away here, exactly
+        /// like <see cref="ExtractedSerializers"/>/<see cref="SerializerSchemas"/>). Hoists Decision
+        /// 18's <c>ManifestPrefix</c> expansion out of the per-node serializer extraction transform
+        /// (where F2/F3 left it -- see design.md's Decision 19 implementation addendum) and into a
+        /// stage that shares <see cref="CompilationFacts"/>' own cached closed-set buckets instead of
+        /// re-walking the compilation once per registration. Like <see cref="CompilationFacts"/> and
+        /// <see cref="MetadataSchemas"/>, it recomputes on every edit (it combines
+        /// <see cref="Microsoft.CodeAnalysis.IIncrementalGenerator"/>'s <c>CompilationProvider</c>
+        /// directly) but its OUTPUT compares equal whenever no serializer's own closed set actually
+        /// changed. <see cref="MergeSerializerClosedGenericExpansions"/> folds this table back into
+        /// each <see cref="SerializerInfo"/> immediately afterward, so <see cref="MetadataSchemas"/>,
+        /// <see cref="ResolvedSerializers"/>, and every diagnostics output below keep reading
+        /// <see cref="SerializerInfo.ClosedGenericRegistrations"/>/<see cref="SerializerInfo.ClosedGenericSchemas"/>
+        /// exactly as before -- none of them combine this stage, or its merge step, directly.
+        /// </summary>
+        public const string ClosedGenericExpansions = nameof(ClosedGenericExpansions);
+
         public static ImmutableArray<string> All { get; } = ImmutableArray.Create(
             ExtractedSerializers, SerializerSchemas, CollectedSerializers,
             ExtractedMessages, MessageSchemas, CollectedMessages,
-            ResolvedSerializers, CompilationFacts, MetadataSchemas);
+            ResolvedSerializers, CompilationFacts, MetadataSchemas, ClosedGenericExpansions);
     }
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -197,13 +218,6 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
             .Collect()
             .WithTrackingName(TrackingNames.CollectedMessages);
 
-        // Every serializer's and message's location bag, merged into ONE compilation-wide lookup.
-        // Feeds every diagnostics-only Report output below, never Collect/Resolve/Emit -- see
-        // MergeExtractedLocations's own doc comment.
-        var allLocations = extractedSerializers.Collect()
-            .Combine(extractedMessages.Collect())
-            .Select(static (pair, cancellationToken) => MergeExtractedLocations(pair.Left, pair.Right, cancellationToken));
-
         // The S5 whole-compilation facts stage: everything the pipeline needs to know about the
         // WHOLE compilation, computed ONCE per compilation change and shared by every serializer --
         // see ComputeCompilationFacts and CompilationFacts's own doc comment. Combines the live
@@ -222,42 +236,85 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
             .Select(static (pair, cancellationToken) => ComputeCompilationFacts(pair.Left.Left, pair.Left.Right, pair.Right, cancellationToken))
             .WithTrackingName(TrackingNames.CompilationFacts);
 
+        // S7: the ManifestPrefix expansion stage -- see AkkaSerializerGenerator.Expansion.cs's own
+        // file header and TrackingNames.ClosedGenericExpansions for the full rationale. Combines the
+        // live Compilation (constructing a closed generic and extracting its schema needs real
+        // symbols, exactly like MetadataSchemas) with the collected serializers (their light
+        // SerializerInfo.PrefixExpansions specs) and compilationFacts (the closed-set buckets a
+        // DiscoveredClosedSet position resolves against). The raw stage's own output bundles a
+        // value-equatable PrefixExpansionTable with this run's own LocationBag (an expanded member's
+        // [AkkaField] property locations) -- ONLY the table is projected out here to feed the rest of
+        // the pipeline, exactly like ExtractedSerializers/SerializerSchemas split a schema from its
+        // own location bag; the raw stage's location half is combined into allLocations below instead.
+        var closedGenericExpansionsRaw = context.CompilationProvider
+            .Combine(serializers)
+            .Combine(compilationFacts)
+            .Select(static (pair, cancellationToken) => ComputeClosedGenericExpansions(pair.Left.Left, pair.Left.Right, pair.Right, cancellationToken));
+
+        var closedGenericExpansions = closedGenericExpansionsRaw
+            .Select(static (expanded, _) => expanded.Table)
+            .WithTrackingName(TrackingNames.ClosedGenericExpansions);
+
+        // Every serializer topped up with its own ManifestPrefix expansion members -- the ONE merge
+        // point that lets MetadataSchemas, the per-serializer resolve stage, and every diagnostics
+        // output below keep reading SerializerInfo.ClosedGenericRegistrations/ClosedGenericSchemas
+        // exactly as they did before S7, with no expansion-table parameter of their own. See
+        // SerializerInfo.WithClosedGenericExpansion's own doc comment.
+        var effectiveSerializers = serializers
+            .Combine(closedGenericExpansions)
+            .Select(static (pair, cancellationToken) => MergeSerializerClosedGenericExpansions(pair.Left, pair.Right, cancellationToken));
+
+        // Every serializer's and message's location bag, merged into ONE compilation-wide lookup,
+        // plus (S7) the expansion stage's own raw location bag (an expanded member's own [AkkaField]
+        // property locations). Feeds every diagnostics-only Report output below, never
+        // Collect/Resolve/Emit -- see MergeExtractedLocations's own doc comment.
+        var allLocations = extractedSerializers.Collect()
+            .Combine(extractedMessages.Collect())
+            .Combine(closedGenericExpansionsRaw)
+            .Select(static (pair, cancellationToken) => MergeExtractedLocations(pair.Left.Left, pair.Left.Right, pair.Right.Locations, cancellationToken));
+
         // Decision 16's whole-compilation metadata-schema stage: everything the pipeline needs to
         // read a nested field's or a union member's schema from a REFERENCED assembly's compiled
         // metadata, computed once per compilation change and shared by every serializer -- see
         // ComputeMetadataSchemas and TrackingNames.MetadataSchemas's own doc comment for the
         // resulting run-reason trade-off. Combines the live Compilation (real symbol resolution is
-        // unavoidable here, exactly like CompilationFacts) with the collected messages and serializers
-        // (only for the referenced type keys they actually name -- ComputeReferencedTypeKeys -- so
-        // the resolution walk below only ever visits types someone actually referenced) and, as of
-        // Decisions 19 and 21, compilationFacts too: a referenced-assembly protocol/marked-union-base
-        // implementor CompilationFacts' own walk found also needs its full schema extracted here, the
-        // same way a locally-named nested field's foreign type already does.
+        // unavoidable here, exactly like CompilationFacts) with the collected messages and the
+        // EFFECTIVE serializers (only for the referenced type keys they actually name --
+        // ComputeReferencedTypeKeys -- so the resolution walk below only ever visits types someone
+        // actually referenced; using effectiveSerializers here, rather than the raw collected array,
+        // is what lets an expanded ManifestPrefix member's own foreign field references seed this
+        // walk exactly as a literal registration's already did before S7) and, as of Decisions 19 and
+        // 21, compilationFacts too: a referenced-assembly protocol/marked-union-base implementor
+        // CompilationFacts' own walk found also needs its full schema extracted here, the same way a
+        // locally-named nested field's foreign type already does.
         var metadataSchemas = context.CompilationProvider
             .Combine(messages)
-            .Combine(serializers)
+            .Combine(effectiveSerializers)
             .Combine(compilationFacts)
             .Select(static (pair, cancellationToken) => ComputeMetadataSchemas(pair.Left.Left.Left, pair.Left.Left.Right, pair.Left.Right, pair.Right, cancellationToken))
             .WithTrackingName(TrackingNames.MetadataSchemas);
 
-        // The per-serializer resolve stage: each serializer plus ALL collected messages (a message's
-        // top-level/reachable status can only be judged against the full set) resolves, via
-        // ResolveSerializer, to ONE cached, value-equatable ResolvedSerializer. SelectMany splits the
-        // single (serializers, messages, metadataSchemas, compilationFacts) combined value back out
-        // into one independently-cached element per serializer -- the driver diffs each element
-        // against its previous run by VALUE (ResolvedSerializer.Equals), so a serializer whose
-        // resolved model is unaffected by an edit reports Unchanged here even though the whole stage
-        // recomputed. See ResolveSerializer's doc comment for why this dependency shape is
-        // unavoidable, and the RegisterSourceOutput below for why an Unchanged/Cached element here is
-        // what makes that serializer's own emitted file Cached, not just this stage. metadataSchemas
-        // and compilationFacts are BOTH combined in directly, as of Decisions 19 and 21: a
-        // referenced-assembly nested field, union member, or top-level protocol/marked-union-base
+        // The per-serializer resolve stage: each EFFECTIVE serializer (its own ManifestPrefix
+        // expansion members already merged in -- see effectiveSerializers above) plus ALL collected
+        // messages (a message's top-level/reachable status can only be judged against the full set)
+        // resolves, via ResolveSerializer, to ONE cached, value-equatable ResolvedSerializer.
+        // SelectMany splits the single (serializers, messages, metadataSchemas, compilationFacts)
+        // combined value back out into one independently-cached element per serializer -- the driver
+        // diffs each element against its previous run by VALUE (ResolvedSerializer.Equals), so a
+        // serializer whose resolved model is unaffected by an edit reports Unchanged here even though
+        // the whole stage recomputed. See ResolveSerializer's doc comment for why this dependency
+        // shape is unavoidable, and the RegisterSourceOutput below for why an Unchanged/Cached element
+        // here is what makes that serializer's own emitted file Cached, not just this stage.
+        // metadataSchemas and compilationFacts are BOTH combined in directly, as of Decisions 19 and
+        // 21: a referenced-assembly nested field, union member, or top-level protocol/marked-union-base
         // implementor needs its schema (metadataSchemas) and its closed-set membership
         // (compilationFacts) visible to ResolveSerializerMessages to resolve at all. See
         // TrackingNames.MetadataSchemas and TrackingNames.CompilationFacts for the run-reason
         // consequence: neither, in practice, costs this stage its Cached best case for an edit that
-        // stage itself does not care about.
-        var resolvedSerializers = serializers
+        // stage itself does not care about -- and neither does TrackingNames.ClosedGenericExpansions,
+        // whose own Unchanged output leaves effectiveSerializers' produced array equal to its
+        // previous run for the same reason.
+        var resolvedSerializers = effectiveSerializers
             .Combine(messages)
             .Combine(metadataSchemas)
             .Combine(compilationFacts)
@@ -316,7 +373,7 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // a time -- is genuinely different: folding them together would force this output to
         // re-execute once per serializer instead of once per compilation change.
         context.RegisterSourceOutput(
-            serializers.Combine(messages).Combine(allLocations),
+            effectiveSerializers.Combine(messages).Combine(allLocations),
             static (ctx, pair) => ReportCrossSerializerDiagnostics(ctx, pair.Left.Left, pair.Left.Right, pair.Right));
 
         // AKKASG029's whole-compilation protocol-coverage check ("does any source-declared type
@@ -358,7 +415,7 @@ public sealed partial class AkkaSerializerGenerator : IIncrementalGenerator
         // input every rule needs), combined with the merged location bag so each can report at its
         // own local site (a message's own declaration, or a serializer's own attribute).
         context.RegisterSourceOutput(
-            serializers.Combine(messages).Combine(compilationFacts).Combine(allLocations),
+            effectiveSerializers.Combine(messages).Combine(compilationFacts).Combine(allLocations),
             static (ctx, pair) => ReportPlacementDiagnostics(ctx, pair.Left.Left.Left, pair.Left.Left.Right, pair.Left.Right, pair.Right));
     }
 }

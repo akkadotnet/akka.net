@@ -50,10 +50,10 @@ public sealed partial class AkkaSerializerGenerator
     /// <see cref="CompilationFacts.ReferencedAssemblyImplementorsByProtocol"/>), the same way
     /// <c>ExtractMessageCore</c> resolves a local type. This is the "construction extraction" for a
     /// plain (non-generic) referenced-assembly implementor: it needs no symbol beyond the one this
-    /// method already resolves per key, unlike a <c>ManifestPrefix</c> expansion member (a closed
-    /// GENERIC construction), which still resolves its own symbols inline in
-    /// <c>ExpandClosedGenericRegistration</c> (AkkaSerializerGenerator.Extraction.cs) -- see that
-    /// method's own doc comment for why.
+    /// method already resolves per key. A <c>ManifestPrefix</c> expansion member (a closed GENERIC
+    /// construction) resolves its own symbols the same way, but in its OWN per-compilation stage,
+    /// <c>ComputeClosedGenericExpansions</c> (AkkaSerializerGenerator.Expansion.cs) -- see that
+    /// method's own doc comment.
     /// </summary>
     internal static MetadataSchemaTable ComputeMetadataSchemas(
         Compilation compilation,

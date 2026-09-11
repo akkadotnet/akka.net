@@ -93,11 +93,18 @@ public sealed partial class AkkaSerializerGenerator
     /// (<paramref name="protocolKeys"/>) plus, for Decision 21, every discovered-mode union field's
     /// own static-type key -- a <see cref="FieldKind.Union"/> field whose <see cref="FieldInfo.UnionMembers"/>
     /// is still empty after extraction, the unambiguous "parameterless <c>[AkkaUnion]</c>, resolve
-    /// the set here" signal (see <c>ExtractUnionMembers</c>). Scans both <paramref name="messages"/>
-    /// (ordinary declarations) and every serializer's <see cref="SerializerInfo.ClosedGenericSchemas"/>
-    /// (a registered construction's own substituted fields can name a marked union base too), the
-    /// same two sources <c>ComputeReferencedTypeKeys</c> in AkkaSerializerGenerator.MetadataSchemas.cs
-    /// scans for foreign type references.
+    /// the set here" signal (see <c>ExtractUnionMembers</c>) -- plus, as of S7, every
+    /// <see cref="PrefixArgumentKind.DiscoveredClosedSet"/> position any serializer's own
+    /// <see cref="SerializerInfo.PrefixExpansions"/> asks about: a <c>ManifestPrefix</c> registration
+    /// whose type argument is the protocol interface, or a parameterless <c>[AkkaUnion]</c>, needs
+    /// EXACTLY the same closed-set bucket this stage already builds for every other consumer, so its
+    /// own key must be requested here too for <see cref="ComputeLocalMarkedImplementorsFromMessages"/>/
+    /// <see cref="ComputeReferencedAssemblyImplementors"/> to compute (and cache) a bucket for it.
+    /// Scans <paramref name="messages"/> (ordinary declarations) and every serializer's
+    /// <see cref="SerializerInfo.ClosedGenericSchemas"/> (a registered construction's own substituted
+    /// fields can name a marked union base too) for the discovered-union-field half, the same two
+    /// sources <c>ComputeReferencedTypeKeys</c> in AkkaSerializerGenerator.MetadataSchemas.cs scans
+    /// for foreign type references.
     /// </summary>
     private static ImmutableArray<TypeKey> ComputeDistinctClosedSetKeys(
         ImmutableArray<TypeKey> protocolKeys,
@@ -123,6 +130,14 @@ public sealed partial class AkkaSerializerGenerator
             }
         }
 
+        void CollectKey(TypeKey key)
+        {
+            if (key.MetadataName.Length == 0 || !seen.Add(key))
+                return;
+
+            builder.Add(key);
+        }
+
         foreach (var message in messages)
         {
             if (message != null)
@@ -136,6 +151,15 @@ public sealed partial class AkkaSerializerGenerator
 
             foreach (var schema in serializer.ClosedGenericSchemas)
                 CollectFrom(schema);
+
+            foreach (var expansion in serializer.PrefixExpansions)
+            {
+                foreach (var position in expansion.Positions)
+                {
+                    if (position.Kind == PrefixArgumentKind.DiscoveredClosedSet)
+                        CollectKey(position.DiscoveredKey);
+                }
+            }
         }
 
         return builder.ToImmutable();
@@ -587,40 +611,6 @@ public sealed partial class AkkaSerializerGenerator
         }
 
         return result.ToImmutable();
-    }
-
-    /// <summary>
-    /// Whether <paramref name="candidate"/> implements the interface, or derives from the abstract
-    /// class, identified by <paramref name="key"/> -- shared by <c>ComputeLocalMarkedProtocolImplementors</c>
-    /// and <c>EnumerateReferencedAssemblyMarkedImplementors</c> in AkkaSerializerGenerator.Extraction.cs,
-    /// the two symbol-based walks <c>ManifestPrefix</c> expansion (Decision 18) still runs per
-    /// registration -- that hoist to a shared, cached stage is intentionally out of scope for this
-    /// change; see design.md's Decision 19 implementation addendum. Not used by this file's own
-    /// facts computation: <see cref="ComputeLocalMarkedImplementorsFromMessages"/> and
-    /// <see cref="ComputeReferencedAssemblyImplementors"/> both test ordinal string membership
-    /// against an already-cached <c>Protocols</c>/<c>BaseTypeNames</c> list instead of comparing
-    /// symbols directly.
-    /// </summary>
-    private static bool ImplementsOrDerivesFromClosedSetKey(INamedTypeSymbol candidate, TypeKey key)
-    {
-        foreach (var implemented in candidate.AllInterfaces)
-        {
-            if (CouldMatchByMetadataName(key.MetadataName, implemented.MetadataName) &&
-                TypeKey.FromSymbol(implemented, includeDisplayName: false).Equals(key))
-                return true;
-        }
-
-        for (var baseType = candidate.BaseType; baseType != null; baseType = baseType.BaseType)
-        {
-            if (baseType.SpecialType == SpecialType.System_Object)
-                break;
-
-            if (CouldMatchByMetadataName(key.MetadataName, baseType.MetadataName) &&
-                TypeKey.FromSymbol(baseType, includeDisplayName: false).Equals(key))
-                return true;
-        }
-
-        return false;
     }
 
     /// <summary>

@@ -323,7 +323,9 @@ public sealed partial class AkkaSerializerGenerator
             bool isPartial,
             bool isGeneric,
             bool derivesFromAkkaSerializerBase,
-            string compilationAssemblyName = "")
+            string compilationAssemblyName = "",
+            ImmutableArray<PrefixExpansionSpec> prefixExpansions = default,
+            ImmutableArray<ExplicitTargetManifest> explicitManifestsByTarget = default)
         {
             Namespace = ns;
             ClassName = className;
@@ -341,6 +343,8 @@ public sealed partial class AkkaSerializerGenerator
             IsGeneric = isGeneric;
             DerivesFromAkkaSerializerBase = derivesFromAkkaSerializerBase;
             CompilationAssemblyName = compilationAssemblyName;
+            PrefixExpansions = prefixExpansions.IsDefault ? ImmutableArray<PrefixExpansionSpec>.Empty : prefixExpansions;
+            ExplicitManifestsByTarget = explicitManifestsByTarget.IsDefault ? ImmutableArray<ExplicitTargetManifest>.Empty : explicitManifestsByTarget;
         }
 
         public string Namespace { get; }
@@ -417,6 +421,71 @@ public sealed partial class AkkaSerializerGenerator
         /// </summary>
         public string CompilationAssemblyName { get; }
 
+        /// <summary>
+        /// The light, symbol-free specs for this serializer's own <c>ManifestPrefix</c> registrations
+        /// that could not be resolved to a fixed error at extraction time (see <see cref="PrefixExpansionSpec"/>'s
+        /// own doc comment): everything the transform can read straight off the attribute and the
+        /// target's own definition, with no whole-compilation walk. Consumed only by
+        /// <see cref="AkkaSerializerGenerator.ComputeClosedGenericExpansions"/>, the S7 per-compilation
+        /// expansion stage (AkkaSerializerGenerator.Expansion.cs) -- nothing downstream of that stage
+        /// reads this array directly, since its own output (merged into <see cref="ClosedGenericRegistrations"/>/
+        /// <see cref="ClosedGenericSchemas"/> by <see cref="WithClosedGenericExpansion"/>) already carries
+        /// everything else needs.
+        /// </summary>
+        public ImmutableArray<PrefixExpansionSpec> PrefixExpansions { get; }
+
+        /// <summary>
+        /// Every <c>[AkkaSerializable&lt;T&gt;(Manifest = ...)]</c> registration this serializer
+        /// declares, keyed by its own (possibly invalid) target -- read straight off each attribute
+        /// application, regardless of whether that registration turned out to be valid. Decision 18's
+        /// override rule ("an explicit registration for this exact construction wins") needs this
+        /// exact set, built once here at extraction time from the SAME small, fixed attribute list
+        /// <see cref="ClosedGenericRegistrations"/> is built from -- not recomputed from that array,
+        /// since an invalid registration's own (non-empty) attribute manifest would otherwise be lost
+        /// (<see cref="ClosedGenericRegistrationInfo.Manifest"/> is empty for an invalid target).
+        /// </summary>
+        public ImmutableArray<ExplicitTargetManifest> ExplicitManifestsByTarget { get; }
+
+        /// <summary>
+        /// Returns a copy of this serializer with <paramref name="expansionGroups"/> -- the S7
+        /// expansion stage's own output for this serializer's key (<see cref="AkkaSerializerGenerator.PrefixExpansionTable.GetForSerializer"/>)
+        /// -- SPLICED into <see cref="ClosedGenericRegistrations"/>/<see cref="ClosedGenericSchemas"/>
+        /// at each group's own insertion point (<see cref="AkkaSerializerGenerator.SpliceExpansionGroups{T}"/>),
+        /// reproducing the exact interleaved order F2/F3's inline expansion left them in -- see
+        /// <see cref="PrefixExpansionSpec.RegistrationInsertionIndex"/>'s own doc comment. Every OTHER
+        /// consumer of either property (<see cref="AkkaSerializerGenerator.ResolveSerializerMessages"/>,
+        /// validation, location resolution, placement diagnostics, Decision 16's metadata-schema seed
+        /// scan) keeps reading them exactly as before; this is the one, single merge point that makes
+        /// that possible without threading the expansion table through every one of those call sites.
+        /// Returns <c>this</c>, unchanged, when there is nothing to merge -- the overwhelming common
+        /// case (no <c>ManifestPrefix</c> registration on this serializer at all).
+        /// </summary>
+        public SerializerInfo WithClosedGenericExpansion(ImmutableArray<PrefixExpansionGroup> expansionGroups)
+        {
+            if (expansionGroups.IsDefaultOrEmpty)
+                return this;
+
+            return new SerializerInfo(
+                Namespace,
+                ClassName,
+                Key,
+                FullyQualifiedName,
+                Name,
+                SerializerId,
+                ProtocolTypeKey,
+                ProtocolTypeIsInterface,
+                DeclaredAccessibility,
+                Formatters,
+                AkkaSerializerGenerator.SpliceExpansionGroups(ClosedGenericRegistrations, expansionGroups, static group => group.RegistrationInsertionIndex, static group => group.Registrations),
+                AkkaSerializerGenerator.SpliceExpansionGroups(ClosedGenericSchemas, expansionGroups, static group => group.SchemaInsertionIndex, static group => group.Schemas),
+                IsPartial,
+                IsGeneric,
+                DerivesFromAkkaSerializerBase,
+                CompilationAssemblyName,
+                PrefixExpansions,
+                ExplicitManifestsByTarget);
+        }
+
         public bool Equals(SerializerInfo? other)
         {
             if (ReferenceEquals(this, other))
@@ -440,7 +509,9 @@ public sealed partial class AkkaSerializerGenerator
                 && string.Equals(CompilationAssemblyName, other.CompilationAssemblyName, StringComparison.Ordinal)
                 && ValueEquality.SequenceEquals(Formatters, other.Formatters)
                 && ValueEquality.SequenceEquals(ClosedGenericRegistrations, other.ClosedGenericRegistrations)
-                && ValueEquality.SequenceEquals(ClosedGenericSchemas, other.ClosedGenericSchemas);
+                && ValueEquality.SequenceEquals(ClosedGenericSchemas, other.ClosedGenericSchemas)
+                && ValueEquality.SequenceEquals(PrefixExpansions, other.PrefixExpansions)
+                && ValueEquality.SequenceEquals(ExplicitManifestsByTarget, other.ExplicitManifestsByTarget);
         }
 
         public override bool Equals(object? obj) => Equals(obj as SerializerInfo);
@@ -464,6 +535,8 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, Formatters);
             hash = ValueEquality.Combine(hash, ClosedGenericRegistrations);
             hash = ValueEquality.Combine(hash, ClosedGenericSchemas);
+            hash = ValueEquality.Combine(hash, PrefixExpansions);
+            hash = ValueEquality.Combine(hash, ExplicitManifestsByTarget);
             return hash;
         }
     }
@@ -861,6 +934,340 @@ public sealed partial class AkkaSerializerGenerator
             hash = ValueEquality.Combine(hash, ExpansionGroup);
             hash = ValueEquality.Combine(hash, ManifestPrefix);
             hash = ValueEquality.Combine(hash, ExpansionError);
+            return hash;
+        }
+    }
+
+    /// <summary>One <c>[AkkaSerializable&lt;T&gt;(Manifest = ...)]</c> registration's own target and manifest, read straight off its attribute regardless of validity. See <see cref="SerializerInfo.ExplicitManifestsByTarget"/>.</summary>
+    internal readonly record struct ExplicitTargetManifest(TypeKey Target, string Manifest);
+
+    /// <summary>
+    /// What kind of candidate set a <c>ManifestPrefix</c> target's own type-argument position
+    /// resolves to (Decision 18). See <see cref="PrefixArgumentPosition"/>.
+    /// </summary>
+    internal enum PrefixArgumentKind
+    {
+        /// <summary>A single, already-known candidate: an ordinary concrete type's own manifest, or a nested generic construction's sibling registration. See <c>TryResolveFixedArgumentManifest</c>.</summary>
+        Fixed,
+
+        /// <summary>An explicit, already-known member list from a type-level <c>[AkkaUnion(typeof(A), typeof(B))]</c> on the argument.</summary>
+        ExplicitClosedSet,
+
+        /// <summary>The serializer's own protocol interface, or a parameterless <c>[AkkaUnion]</c> on the argument: its member set must be discovered from <see cref="CompilationFacts"/>' own closed-set buckets at expansion time.</summary>
+        DiscoveredClosedSet
+    }
+
+    /// <summary>
+    /// One (symbol, manifest) candidate for a <c>ManifestPrefix</c> target's own type-argument
+    /// position -- either resolved fully at extraction time (<see cref="PrefixArgumentKind.Fixed"/>/
+    /// <see cref="PrefixArgumentKind.ExplicitClosedSet"/>), or one member of a
+    /// <see cref="PrefixArgumentKind.DiscoveredClosedSet"/> position's own <see cref="CompilationFacts"/>
+    /// closed set, resolved by <see cref="AkkaSerializerGenerator.ComputeClosedGenericExpansions"/> at
+    /// expansion time. <see cref="Argument"/> is re-resolved to a symbol via
+    /// <see cref="Microsoft.CodeAnalysis.Compilation.GetTypeByMetadataName"/> there -- the same
+    /// technique <see cref="AkkaSerializerGenerator.ComputeMetadataSchemas"/> already uses for a
+    /// referenced-assembly type key.
+    /// </summary>
+    internal readonly record struct PrefixArgumentCandidate(TypeKey Argument, string Manifest);
+
+    /// <summary>
+    /// One type-argument position of a <c>ManifestPrefix</c> target, classified entirely from data
+    /// the target's own type argument carries -- no walk of the compilation's declared types. Built
+    /// once, per position, by <c>AkkaSerializerGenerator.TryClassifyPrefixArgumentPosition</c>
+    /// (AkkaSerializerGenerator.Extraction.cs) inside the per-node serializer extraction transform.
+    /// </summary>
+    internal sealed class PrefixArgumentPosition : IEquatable<PrefixArgumentPosition>
+    {
+        public PrefixArgumentPosition(PrefixArgumentKind kind, TypeKey discoveredKey, ImmutableArray<PrefixArgumentCandidate> candidates)
+        {
+            Kind = kind;
+            DiscoveredKey = discoveredKey;
+            Candidates = candidates.IsDefault ? ImmutableArray<PrefixArgumentCandidate>.Empty : candidates;
+        }
+
+        public PrefixArgumentKind Kind { get; }
+
+        /// <summary>
+        /// The closed-set key to look up in <see cref="CompilationFacts.LocalMarkedImplementorsByClosedSetKey"/>/
+        /// <see cref="CompilationFacts.ReferencedAssemblyImplementorsByProtocol"/> at expansion time.
+        /// Meaningful only when <see cref="Kind"/> is <see cref="PrefixArgumentKind.DiscoveredClosedSet"/>;
+        /// default otherwise.
+        /// </summary>
+        public TypeKey DiscoveredKey { get; }
+
+        /// <summary>
+        /// This position's already-known candidates: the single candidate for
+        /// <see cref="PrefixArgumentKind.Fixed"/>, or the full listed member set for
+        /// <see cref="PrefixArgumentKind.ExplicitClosedSet"/>. Always empty for
+        /// <see cref="PrefixArgumentKind.DiscoveredClosedSet"/> -- that position's own candidates come
+        /// entirely from <see cref="CompilationFacts"/> at expansion time.
+        /// </summary>
+        public ImmutableArray<PrefixArgumentCandidate> Candidates { get; }
+
+        public bool Equals(PrefixArgumentPosition? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return Kind == other.Kind
+                && DiscoveredKey.Equals(other.DiscoveredKey)
+                && ValueEquality.SequenceEquals(Candidates, other.Candidates);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as PrefixArgumentPosition);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, (int)Kind);
+            hash = ValueEquality.Combine(hash, DiscoveredKey.GetHashCode());
+            hash = ValueEquality.Combine(hash, Candidates);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// The light, symbol-free spec for one <c>ManifestPrefix</c> registration that DID classify
+    /// (every type-argument position resolved to a <see cref="PrefixArgumentPosition"/>, and at least
+    /// one is closed-set-flavored) -- recorded by the serializer extraction transform, consumed by
+    /// <see cref="AkkaSerializerGenerator.ComputeClosedGenericExpansions"/>, the S7 per-compilation
+    /// expansion stage (AkkaSerializerGenerator.Expansion.cs). A registration that could not classify
+    /// at all (an invalid target, an argument with no closed set and no fixed manifest, or no
+    /// closed-set-flavored position anywhere) never reaches here: its AKKASG040 error entry is added
+    /// directly to <see cref="SerializerInfo.ClosedGenericRegistrations"/> by the transform, exactly as
+    /// before this hoist -- see <c>BuildPrefixExpansionSpec</c>'s own doc comment.
+    /// </summary>
+    internal sealed class PrefixExpansionSpec : IEquatable<PrefixExpansionSpec>
+    {
+        public PrefixExpansionSpec(
+            TypeKey targetDefinitionKey,
+            string baseTargetDisplayName,
+            string manifestPrefix,
+            bool allowEmpty,
+            ImmutableArray<PrefixArgumentPosition> positions,
+            int registrationInsertionIndex,
+            int schemaInsertionIndex)
+        {
+            TargetDefinitionKey = targetDefinitionKey;
+            BaseTargetDisplayName = baseTargetDisplayName;
+            ManifestPrefix = manifestPrefix;
+            AllowEmpty = allowEmpty;
+            Positions = positions.IsDefault ? ImmutableArray<PrefixArgumentPosition>.Empty : positions;
+            RegistrationInsertionIndex = registrationInsertionIndex;
+            SchemaInsertionIndex = schemaInsertionIndex;
+        }
+
+        /// <summary>The target's own OPEN GENERIC DEFINITION key (e.g. <c>Envelope\`1</c>) -- re-resolved via <see cref="Microsoft.CodeAnalysis.Compilation.GetTypeByMetadataName"/> at expansion time, then <c>Construct()</c>-ed per combination.</summary>
+        public TypeKey TargetDefinitionKey { get; }
+
+        /// <summary>Display name of the registration's own (unexpanded) target, e.g. <c>"Envelope&lt;ICommsMessage&gt;"</c> -- becomes every expanded member's <see cref="ClosedGenericRegistrationInfo.ExpansionGroup"/>.</summary>
+        public string BaseTargetDisplayName { get; }
+
+        public string ManifestPrefix { get; }
+        public bool AllowEmpty { get; }
+
+        /// <summary>This target's own type arguments, one position per argument, in declaration order.</summary>
+        public ImmutableArray<PrefixArgumentPosition> Positions { get; }
+
+        /// <summary>
+        /// <see cref="SerializerInfo.ClosedGenericRegistrations"/>' own length at the moment this
+        /// registration's attribute was processed by the extraction transform (see
+        /// <c>BuildPrefixExpansionSpec</c>'s caller) -- where this spec's own expanded members must be
+        /// SPLICED back in for the pre-S7 attribute-declaration interleaving (literal-then-expansion,
+        /// per attribute, in class declaration order) to come out byte-identical. Pre-S7, F2/F3
+        /// expanded a registration'S OWN members INLINE, in the SAME loop iteration that added its
+        /// literal entry (if any); post-S7, the transform records only this INSERTION POINT, and
+        /// <see cref="AkkaSerializerGenerator.SpliceExpansionGroups{T}"/> (called from
+        /// <see cref="SerializerInfo.WithClosedGenericExpansion"/>) puts each spec's own expanded
+        /// members back at it.
+        /// </summary>
+        public int RegistrationInsertionIndex { get; }
+
+        /// <summary>
+        /// <see cref="SerializerInfo.ClosedGenericSchemas"/>' own length at the same moment
+        /// <see cref="RegistrationInsertionIndex"/> was captured -- kept SEPARATE from it because the
+        /// two arrays are not index-aligned (a registration with an invalid target has an entry in
+        /// <see cref="SerializerInfo.ClosedGenericRegistrations"/> but none in
+        /// <see cref="SerializerInfo.ClosedGenericSchemas"/>).
+        /// </summary>
+        public int SchemaInsertionIndex { get; }
+
+        public bool Equals(PrefixExpansionSpec? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return TargetDefinitionKey.Equals(other.TargetDefinitionKey)
+                && string.Equals(BaseTargetDisplayName, other.BaseTargetDisplayName, StringComparison.Ordinal)
+                && string.Equals(ManifestPrefix, other.ManifestPrefix, StringComparison.Ordinal)
+                && AllowEmpty == other.AllowEmpty
+                && RegistrationInsertionIndex == other.RegistrationInsertionIndex
+                && SchemaInsertionIndex == other.SchemaInsertionIndex
+                && ValueEquality.SequenceEquals(Positions, other.Positions);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as PrefixExpansionSpec);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, TargetDefinitionKey.GetHashCode());
+            hash = ValueEquality.Combine(hash, BaseTargetDisplayName);
+            hash = ValueEquality.Combine(hash, ManifestPrefix);
+            hash = ValueEquality.Combine(hash, AllowEmpty);
+            hash = ValueEquality.Combine(hash, RegistrationInsertionIndex);
+            hash = ValueEquality.Combine(hash, SchemaInsertionIndex);
+            hash = ValueEquality.Combine(hash, Positions);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// One <c>ManifestPrefix</c> registration's own expanded output: the constructions synthesized
+    /// from ONE <see cref="PrefixExpansionSpec"/>, carried alongside the two insertion points that
+    /// splice them back into <see cref="SerializerInfo.ClosedGenericRegistrations"/>/<see cref="SerializerInfo.ClosedGenericSchemas"/>
+    /// at the exact position F2/F3's inline expansion used to leave them (see
+    /// <see cref="PrefixExpansionSpec.RegistrationInsertionIndex"/>/<see cref="PrefixExpansionSpec.SchemaInsertionIndex"/>'s
+    /// own doc comments). One group per <see cref="SerializerInfo.PrefixExpansions"/> entry that
+    /// produced at least one construction; a spec whose every combination was skipped (an explicit
+    /// override on this serializer already covers it, or its closed set resolved to zero members)
+    /// contributes no group at all. See <see cref="PrefixExpansionEntry"/>.
+    /// </summary>
+    internal sealed class PrefixExpansionGroup : IEquatable<PrefixExpansionGroup>
+    {
+        public PrefixExpansionGroup(
+            int registrationInsertionIndex,
+            int schemaInsertionIndex,
+            ImmutableArray<ClosedGenericRegistrationInfo> registrations,
+            ImmutableArray<MessageInfo> schemas)
+        {
+            RegistrationInsertionIndex = registrationInsertionIndex;
+            SchemaInsertionIndex = schemaInsertionIndex;
+            Registrations = registrations.IsDefault ? ImmutableArray<ClosedGenericRegistrationInfo>.Empty : registrations;
+            Schemas = schemas.IsDefault ? ImmutableArray<MessageInfo>.Empty : schemas;
+        }
+
+        public int RegistrationInsertionIndex { get; }
+        public int SchemaInsertionIndex { get; }
+        public ImmutableArray<ClosedGenericRegistrationInfo> Registrations { get; }
+        public ImmutableArray<MessageInfo> Schemas { get; }
+
+        public bool Equals(PrefixExpansionGroup? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return RegistrationInsertionIndex == other.RegistrationInsertionIndex
+                && SchemaInsertionIndex == other.SchemaInsertionIndex
+                && ValueEquality.SequenceEquals(Registrations, other.Registrations)
+                && ValueEquality.SequenceEquals(Schemas, other.Schemas);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as PrefixExpansionGroup);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, RegistrationInsertionIndex);
+            hash = ValueEquality.Combine(hash, SchemaInsertionIndex);
+            hash = ValueEquality.Combine(hash, Registrations);
+            hash = ValueEquality.Combine(hash, Schemas);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// One serializer's own expanded <c>ManifestPrefix</c> output: one <see cref="PrefixExpansionGroup"/>
+    /// per registration that expanded to at least one construction, in
+    /// <see cref="SerializerInfo.PrefixExpansions"/>' own (attribute declaration) order -- which is
+    /// also, by construction, non-decreasing order of each group's own insertion indices. See
+    /// <see cref="PrefixExpansionTable"/>.
+    /// </summary>
+    internal sealed class PrefixExpansionEntry : IEquatable<PrefixExpansionEntry>
+    {
+        public static readonly PrefixExpansionEntry Empty = new(ImmutableArray<PrefixExpansionGroup>.Empty);
+
+        public PrefixExpansionEntry(ImmutableArray<PrefixExpansionGroup> groups)
+        {
+            Groups = groups.IsDefault ? ImmutableArray<PrefixExpansionGroup>.Empty : groups;
+        }
+
+        public ImmutableArray<PrefixExpansionGroup> Groups { get; }
+
+        public bool Equals(PrefixExpansionEntry? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return ValueEquality.SequenceEquals(Groups, other.Groups);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as PrefixExpansionEntry);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.Combine(hash, Groups);
+            return hash;
+        }
+    }
+
+    /// <summary>
+    /// The S7 expansion stage's cached output (see <see cref="AkkaSerializerGenerator.ComputeClosedGenericExpansions"/>):
+    /// every serializer's own expanded <c>ManifestPrefix</c> registrations and schemas, keyed by the
+    /// serializer's own <see cref="TypeKey"/>. <see cref="AkkaSerializerGenerator.MergeSerializerClosedGenericExpansions"/>
+    /// merges this back into each <see cref="SerializerInfo"/> (via <see cref="SerializerInfo.WithClosedGenericExpansion"/>)
+    /// immediately after this stage runs, so nothing downstream of that merge point needs to know this
+    /// table exists at all. Symbol-free and value-equatable like every other cached pipeline model --
+    /// omits a serializer's own entry entirely when it has nothing to expand, so a compilation with no
+    /// <c>ManifestPrefix</c> registration anywhere produces a genuinely empty table.
+    /// </summary>
+    internal sealed class PrefixExpansionTable : IEquatable<PrefixExpansionTable>
+    {
+        public static readonly PrefixExpansionTable Empty = new(ImmutableDictionary<TypeKey, PrefixExpansionEntry>.Empty);
+
+        public PrefixExpansionTable(ImmutableDictionary<TypeKey, PrefixExpansionEntry> entriesBySerializer)
+        {
+            EntriesBySerializer = entriesBySerializer;
+        }
+
+        public ImmutableDictionary<TypeKey, PrefixExpansionEntry> EntriesBySerializer { get; }
+
+        /// <summary>This serializer's own expansion entry, or <see cref="PrefixExpansionEntry.Empty"/> when it registered nothing to expand.</summary>
+        public PrefixExpansionEntry GetForSerializer(TypeKey serializerKey)
+        {
+            return EntriesBySerializer.TryGetValue(serializerKey, out var entry) ? entry : PrefixExpansionEntry.Empty;
+        }
+
+        public bool Equals(PrefixExpansionTable? other)
+        {
+            if (ReferenceEquals(this, other))
+                return true;
+
+            if (other is null)
+                return false;
+
+            return ValueEquality.DictionaryEquals(EntriesBySerializer, other.EntriesBySerializer);
+        }
+
+        public override bool Equals(object? obj) => Equals(obj as PrefixExpansionTable);
+
+        public override int GetHashCode()
+        {
+            var hash = ValueEquality.Seed;
+            hash = ValueEquality.CombineDictionary(hash, EntriesBySerializer);
             return hash;
         }
     }

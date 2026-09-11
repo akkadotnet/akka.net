@@ -44,6 +44,21 @@ public class SourceGeneratorBenchmarks
     [Params(100)]
     public int MessagesPerSerializer { get; set; }
 
+    /// <summary>
+    /// S7: when true, serializer 0 ALSO carries an <c>[AkkaSerializable&lt;Envelope0&lt;IProtocol0&gt;&gt;(ManifestPrefix = "env")]</c>
+    /// registration -- <see cref="SourceGeneratorBenchmarkCorpus.BuildSource"/>'s
+    /// <c>includeManifestPrefixVariant</c> parameter -- expanding over all
+    /// <see cref="MessagesPerSerializer"/> of serializer 0's own protocol messages. Runs every
+    /// existing benchmark method against BOTH the plain corpus (<c>false</c>, S7's own baseline) and
+    /// this prefix variant (<c>true</c>), back to back, in the same BenchmarkDotNet invocation: the
+    /// hoist this hierarchy exists to measure moves the ManifestPrefix closed-set walk and its ~100
+    /// constructions out of the per-node serializer transform, so ONLY this variant's warm
+    /// (incremental) rows are expected to drop -- the plain corpus carries no ManifestPrefix
+    /// registration at all and should stay flat.
+    /// </summary>
+    [Params(false, true)]
+    public bool PrefixVariant { get; set; }
+
     private CSharpParseOptions _parseOptions = null!;
     private ImmutableArray<MetadataReference> _references;
 
@@ -64,8 +79,8 @@ public class SourceGeneratorBenchmarks
         _parseOptions = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp12);
         _references = CreateMetadataReferences().ToImmutableArray();
 
-        var mainSource = SourceGeneratorBenchmarkCorpus.BuildSource(Serializers, MessagesPerSerializer);
-        var fieldRenameSource = SourceGeneratorBenchmarkCorpus.BuildSource(Serializers, MessagesPerSerializer, renameFirstScalarFieldOfMessage: (0, 0));
+        var mainSource = SourceGeneratorBenchmarkCorpus.BuildSource(Serializers, MessagesPerSerializer, includeManifestPrefixVariant: PrefixVariant);
+        var fieldRenameSource = SourceGeneratorBenchmarkCorpus.BuildSource(Serializers, MessagesPerSerializer, renameFirstScalarFieldOfMessage: (0, 0), includeManifestPrefixVariant: PrefixVariant);
         var whitespaceEditSource = mainSource + Environment.NewLine + "// a trivial trailing benchmark comment" + Environment.NewLine;
 
         const string unrelatedSourceBefore = "namespace SourceGeneratorBenchmarkCorpus.Unrelated;\n\npublic static class Untouched\n{\n    public static int Value => 1;\n}\n";
@@ -168,8 +183,17 @@ internal static class SourceGeneratorBenchmarkCorpus
     /// (serializer index, message index), that one message's first scalar field is named
     /// "RenamedField" instead of "Name" -- a structurally distinct source used to drive
     /// <c>IncrementalEditOneMessage</c> without any fragile string-replace over the generated text.
+    /// When <paramref name="includeManifestPrefixVariant"/> is true (S7's own benchmark variant, see
+    /// <see cref="SourceGeneratorBenchmarks.PrefixVariant"/>), serializer 0 ALSO gets an
+    /// <c>Envelope0&lt;T&gt;</c> generic wrapper and an <c>[AkkaSerializable&lt;Envelope0&lt;IProtocol0&gt;&gt;(ManifestPrefix = "env")]</c>
+    /// registration, expanding over all of serializer 0's own <paramref name="messagesPerSerializer"/>
+    /// protocol messages -- the shape the S7 hoist exists to make cheap on every keystroke.
     /// </summary>
-    public static string BuildSource(int serializers, int messagesPerSerializer, (int SerializerIndex, int MessageIndex)? renameFirstScalarFieldOfMessage = null)
+    public static string BuildSource(
+        int serializers,
+        int messagesPerSerializer,
+        (int SerializerIndex, int MessageIndex)? renameFirstScalarFieldOfMessage = null,
+        bool includeManifestPrefixVariant = false)
     {
         var sb = new StringBuilder();
         sb.AppendLine("#nullable enable");
@@ -181,13 +205,13 @@ internal static class SourceGeneratorBenchmarkCorpus
 
         for (var s = 0; s < serializers; s++)
         {
-            AppendSerializer(sb, s, messagesPerSerializer, renameFirstScalarFieldOfMessage);
+            AppendSerializer(sb, s, messagesPerSerializer, renameFirstScalarFieldOfMessage, includeManifestPrefixVariant: includeManifestPrefixVariant && s == 0);
         }
 
         return sb.ToString();
     }
 
-    private static void AppendSerializer(StringBuilder sb, int s, int messagesPerSerializer, (int SerializerIndex, int MessageIndex)? renamed)
+    private static void AppendSerializer(StringBuilder sb, int s, int messagesPerSerializer, (int SerializerIndex, int MessageIndex)? renamed, bool includeManifestPrefixVariant = false)
     {
         sb.AppendLine($"public interface IProtocol{s}");
         sb.AppendLine("{");
@@ -226,6 +250,19 @@ internal static class SourceGeneratorBenchmarkCorpus
         sb.AppendLine("    [property: AkkaField(1)] string Id,");
         sb.AppendLine($"    [property: AkkaField(2)] T Payload) : IProtocol{s};");
         sb.AppendLine();
+
+        // S7 benchmark variant: a second generic definition, registered with ManifestPrefix instead
+        // of a literal Manifest. Its closed set is IProtocol{s} itself, so it expands over every
+        // Message{s}_m below (all messagesPerSerializer of them) -- the shape whose per-keystroke
+        // walk this hierarchy's hoist moves out of the per-node serializer transform.
+        if (includeManifestPrefixVariant)
+        {
+            sb.AppendLine($"[AkkaSerializable]");
+            sb.AppendLine($"public sealed record Envelope{s}<T>(");
+            sb.AppendLine("    [property: AkkaField(1)] T Payload,");
+            sb.AppendLine("    [property: AkkaField(2)] string TraceId);");
+            sb.AppendLine();
+        }
 
         for (var m = 0; m < messagesPerSerializer; m++)
         {
@@ -272,6 +309,10 @@ internal static class SourceGeneratorBenchmarkCorpus
 
         sb.AppendLine($"[AkkaSerializer<IProtocol{s}>(\"bench-serializer-{s}\", {190000 + s})]");
         sb.AppendLine($"[AkkaSerializable<Wrapper{s}<int>>(Manifest = \"wrapper{s}-int-v1\")]");
+
+        if (includeManifestPrefixVariant)
+            sb.AppendLine($"[AkkaSerializable<Envelope{s}<IProtocol{s}>>(ManifestPrefix = \"env\")]");
+
         sb.AppendLine($"public sealed partial class BenchSerializer{s} : AkkaSerializer");
         sb.AppendLine("{");
         sb.AppendLine("    public static partial SerializerRegistration CreateRegistration();");

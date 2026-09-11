@@ -226,11 +226,14 @@ public sealed partial class AkkaSerializerGenerator
     internal readonly record struct ExtractedMessage(MessageInfo? Info, LocationBag Locations);
 
     /// <summary>
-    /// Merges every extracted serializer's and message's location bag into ONE compilation-wide bag,
-    /// by plain concatenation into a single pre-sized array -- cheaper than folding into a dictionary
-    /// one entry at a time. <see cref="LocationKey"/> values never collide across a serializer and a
-    /// message (each key's <see cref="TypeKey"/> owner identifies exactly one declared type), so no
-    /// de-duplication is needed. Reads <see cref="ExtractedSerializer.Locations"/>/
+    /// Merges every extracted serializer's and message's location bag, plus (S7) the ManifestPrefix
+    /// expansion stage's own raw location bag (<paramref name="expansionLocations"/> -- an expanded
+    /// member's own <c>[AkkaField]</c> property locations, see <see cref="ExpandedPrefixRegistrations"/>'s
+    /// own doc comment), into ONE compilation-wide bag, by plain concatenation into a single pre-sized
+    /// array -- cheaper than folding into a dictionary one entry at a time. <see cref="LocationKey"/>
+    /// values never collide across a serializer, a message, and an expanded member (each key's
+    /// <see cref="TypeKey"/> owner identifies exactly one declared type, or one closed-generic
+    /// construction), so no de-duplication is needed. Reads <see cref="ExtractedSerializer.Locations"/>/
     /// <see cref="ExtractedMessage.Locations"/> straight off the COLLECTED raw extraction results --
     /// there is deliberately no separate locations-only <c>Select</c> stage feeding this (see
     /// <see cref="Initialize"/>'s own comment on <c>allLocations</c>): a per-node Select still builds
@@ -241,9 +244,10 @@ public sealed partial class AkkaSerializerGenerator
     private static LocationBag MergeExtractedLocations(
         ImmutableArray<ExtractedSerializer> serializers,
         ImmutableArray<ExtractedMessage> messages,
+        LocationBag expansionLocations,
         CancellationToken cancellationToken)
     {
-        var total = 0;
+        var total = expansionLocations.Entries.Length;
         foreach (var extracted in serializers)
             total += extracted.Locations.Entries.Length;
         foreach (var extracted in messages)
@@ -261,6 +265,8 @@ public sealed partial class AkkaSerializerGenerator
             cancellationToken.ThrowIfCancellationRequested();
             builder.AddRange(extracted.Locations.Entries);
         }
+
+        builder.AddRange(expansionLocations.Entries);
 
         return new LocationBag(builder.MoveToImmutable());
     }
@@ -351,15 +357,28 @@ public sealed partial class AkkaSerializerGenerator
     /// own key has no location bag entry to resolve: a CLOSED CONSTRUCTION (e.g. <c>Wrapper&lt;int&gt;</c>)
     /// has no separate syntax of its own -- only the GENERIC DEFINITION does. In that case the closed
     /// construction's own <c>[AkkaSerializable&lt;T&gt;]</c> registration attribute IS the local
-    /// reference site (Decision 16), so this returns that instead -- the SAME key
-    /// <see cref="BuildSerializerLocationBag"/> already populated for it.
+    /// reference site (Decision 16), so this returns that instead. For a literal (non-expanded)
+    /// registration that is the SAME key <see cref="BuildSerializerLocationBag"/> already populated
+    /// (<see cref="ClosedGenericRegistrationInfo.TargetDisplayName"/>, the target as written on the
+    /// attribute). For a <c>ManifestPrefix</c> EXPANSION member (<see cref="ClosedGenericRegistrationInfo.ExpansionGroup"/>
+    /// non-empty), this returns that SAME base-attribute key instead of the constructed member's own
+    /// display name: every member an expansion produces shares one base attribute, and
+    /// <see cref="BuildSerializerLocationBag"/> only ever records ONE entry for it (keyed by the
+    /// attribute's own, unexpanded type argument) -- see <see cref="ClosedGenericRegistrationInfo.ExpansionGroup"/>'s
+    /// own doc comment. This is what lets the S7 expansion stage (AkkaSerializerGenerator.Expansion.cs)
+    /// skip producing its own per-member type-level location entry entirely: every expanded member's
+    /// resolved <see cref="Microsoft.CodeAnalysis.Location"/> is, and always was, the SAME base
+    /// attribute application's location.
     /// </summary>
     private static LocationKey MessageTypeLocationKey(SerializerInfo serializer, MessageInfo message)
     {
         foreach (var registration in serializer.ClosedGenericRegistrations)
         {
-            if (registration.Target.Equals(message.Key))
-                return new LocationKey(serializer.Key, ClosedGenericLocationMember(registration.TargetDisplayName));
+            if (!registration.Target.Equals(message.Key))
+                continue;
+
+            var attributeTargetName = registration.ExpansionGroup.Length > 0 ? registration.ExpansionGroup : registration.TargetDisplayName;
+            return new LocationKey(serializer.Key, ClosedGenericLocationMember(attributeTargetName));
         }
 
         return new LocationKey(message.Key, string.Empty);
