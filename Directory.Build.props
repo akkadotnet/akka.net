@@ -27,7 +27,7 @@
     <XunitRunnerVersion>2.8.1</XunitRunnerVersion>
     <TestSdkVersion>18.7.0</TestSdkVersion>
     <HyperionVersion>0.12.2</HyperionVersion>
-    <NewtonsoftJsonVersion>[13.0.1,)</NewtonsoftJsonVersion>
+    <NewtonsoftJsonVersion>13.0.4</NewtonsoftJsonVersion>
     <NBenchVersion>2.0.1</NBenchVersion>
     <ProtobufVersion>3.35.1</ProtobufVersion>
     <GrpcToolsVersion>2.82.0</GrpcToolsVersion>
