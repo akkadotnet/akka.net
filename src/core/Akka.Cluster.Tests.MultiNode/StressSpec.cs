@@ -12,7 +12,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Akka.Actor;
 using Akka.Cluster.TestKit;
@@ -47,7 +46,35 @@ public class StressSpecConfig : MultiNodeConfig
         foreach (var i in Enumerable.Range(1, TotalNumberOfNodes))
             Role("node-" + i);
 
-        CommonConfig = ConfigurationFactory.ParseString(@"
+        CommonConfig = ConfigurationFactory.ParseString(BuildConfig(TotalNumberOfNodes));
+
+        TestTransport = true;
+    }
+
+    /// <summary>
+    /// Builds the `akka.test.cluster-stress-spec` (plus supporting actor/remote) config for a run
+    /// of <paramref name="totalNumberOfNodes"/> nodes.
+    ///
+    /// The reference node count (matching Pekko's stress spec) is 10, and with the full 10-node
+    /// `nr-of-nodes-*` defaults below, 10 also happens to be the *smallest* count that fits every
+    /// phase -- see the arithmetic in <see cref="Settings"/>'s constructor. The joining phases need
+    /// >= 7 nodes on their own (3 seed nodes + 4 singleton join phases), and the leaving/shutdown
+    /// phases together remove 7 nodes' worth of `nr-of-nodes-*`, which requires
+    /// `totalNumberOfNodes - 3 >= 7`, i.e. `totalNumberOfNodes >= 10`. So on the 2-vCPU hosted CI
+    /// agents, lowering `MNTR_STRESSSPEC_NODECOUNT` below 10 by itself is not enough -- <see cref="Settings"/>
+    /// throws unless the phase counts shrink too. Below 10 nodes, this method drops the two
+    /// "-large" one-by-one leave/shutdown phases (each mostly redundant with the "-small" one-by-one
+    /// phase that already covers that code path, just at a different point in the cluster's
+    /// lifecycle) and halves the simultaneous "shutdown" phase from 2 to 1, freeing exactly the 3
+    /// nodes needed to fit a 7-node run.
+    /// </summary>
+    internal static string BuildConfig(int totalNumberOfNodes)
+    {
+        var leavingOneByOneLarge = totalNumberOfNodes < 10 ? 0 : 1;
+        var shutdownOneByOneLarge = totalNumberOfNodes < 10 ? 0 : 1;
+        var shutdown = totalNumberOfNodes < 10 ? 1 : 2;
+
+        return @"
 akka.test.cluster-stress-spec {
     infolog = on
     # scale the nr-of-nodes* settings with this factor
@@ -59,12 +86,12 @@ akka.test.cluster-stress-spec {
     nr-of-nodes-joining-one-by-one-large = 1
     nr-of-nodes-joining-to-one = 1
     nr-of-nodes-leaving-one-by-one-small = 1
-    nr-of-nodes-leaving-one-by-one-large = 1
+    nr-of-nodes-leaving-one-by-one-large = " + leavingOneByOneLarge + @"
     nr-of-nodes-leaving = 1
     nr-of-nodes-shutdown-one-by-one-small = 1
-    nr-of-nodes-shutdown-one-by-one-large = 1
+    nr-of-nodes-shutdown-one-by-one-large = " + shutdownOneByOneLarge + @"
     nr-of-nodes-partition = 2
-    nr-of-nodes-shutdown = 2
+    nr-of-nodes-shutdown = " + shutdown + @"
     nr-of-nodes-join-remove = 2
     # not scaled
     # scale the *-duration settings with this factor
@@ -76,9 +103,19 @@ akka.test.cluster-stress-spec {
     convergence-within-factor = 1.0
 }
 akka.actor.provider = cluster
-    
+
 akka.cluster {
-    failure-detector.acceptable-heartbeat-pause = 3s
+    # akka.test.timefactor does NOT reach cluster settings. TestKitBase.Dilated scales TestKit
+    # waits only; ClusterSettings reads this value raw. So a lane that declares ""this box is 3x
+    # slow"" still judges liveness on an unscaled budget.
+    # PhiAccrualFailureDetector crosses threshold 8.0 at about
+    #   heartbeat-interval + acceptable-heartbeat-pause + 3 * min-std-deviation
+    # so 3s means a peer is called unreachable ~4.3s after the last heartbeat, which the logs
+    # confirm. Build 131165 measured a 14.8s heartbeat gap on node-2 while it tore down a second
+    # ActorSystem, so 10s would still not have covered it. 20s gives ~21.3s of detection and
+    # leaves PartitionSeveral (150s dilated at the 7 nodes CI now runs) far more room than it needs
+    # for detection plus stable-after.
+    failure-detector.acceptable-heartbeat-pause = 20s
     downing-provider-class = ""Akka.Cluster.SplitBrainResolver, Akka.Cluster""
     split-brain-resolver {
         active-strategy = keep-majority #TODO: remove this once it's been made default
@@ -124,9 +161,7 @@ akka.remote.default-remote-dispatcher {
         parallelism-factor = 0.5
         parallelism-max = 16
     }
-}");
-
-        TestTransport = true;
+}";
     }
 
     public class Settings
@@ -819,20 +854,13 @@ public class StressSpec : MultiNodeClusterSpec
 
     public Lazy<IActorRef> StatsObserver { get; }
 
-    public Option<IActorRef> ClusterResultAggregator()
-    {
-        Sys.ActorSelection(new RootActorPath(GetAddress(Roles.First())) / "user" / ("result" + Step))
-            .Tell(new Identify(Step), IdentifyProbe.Ref);
-        return Option<IActorRef>.Create(IdentifyProbe.ExpectMsg<ActorIdentity>().Subject);
-    }
-
     /// <summary>
-    /// Retrying variant of <see cref="ClusterResultAggregator"/> used at the aggregator
-    /// lifecycle boundaries (creation / await-result), where a one-shot remote <see cref="Identify"/>
-    /// proved to be the tightest undilated window in the spec. Uses a fresh probe per attempt
-    /// (a late reply from a timed-out attempt must not pollute the next one) with a bounded inner
-    /// expect, mirroring the watchee-lookup pattern in <see cref="RemoveOneAsync"/> and the
-    /// fresh-probe-per-attempt pattern from #8363.
+    /// Retrying lookup of the current phase's <see cref="ClusterResultAggregator"/> actor, used at
+    /// the aggregator lifecycle boundaries (creation / await-result), where a one-shot remote
+    /// <see cref="Identify"/> proved to be the tightest undilated window in the spec. Uses a fresh
+    /// probe per attempt (a late reply from a timed-out attempt must not pollute the next one) with
+    /// a bounded inner expect, mirroring the watchee-lookup pattern in <see cref="RemoveOneAsync"/>
+    /// and the fresh-probe-per-attempt pattern from #8363.
     /// </summary>
     public async Task<Option<IActorRef>> ClusterResultAggregatorAsync()
     {
@@ -849,7 +877,7 @@ public class StressSpec : MultiNodeClusterSpec
 
     public async Task CreateResultAggregatorAsync(string title, int expectedResults, bool includeInHistory)
     {
-        RunOn(() =>
+        await RunOnAsync(() =>
             {
                 var aggregator = Sys.ActorOf(
                     Props.Create(() => new ClusterResultAggregator(title, expectedResults, Settings))
@@ -863,6 +891,7 @@ public class StressSpec : MultiNodeClusterSpec
                 {
                     aggregator.Tell(new ReportTo(Option<IActorRef>.None));
                 }
+                return Task.CompletedTask;
             },
             Roles.First());
         await EnterBarrierAsync("result-aggregator-created-" + Step);
@@ -889,11 +918,20 @@ public class StressSpec : MultiNodeClusterSpec
         await RunOnAsync(async () =>
         {
             var resultAggregator = await ClusterResultAggregatorAsync();
-            resultAggregator.OnSuccess(r =>
+            // Option<T>.OnSuccess only takes a synchronous Action<T>, so it can't host an async
+            // watch/wait -- unwrap the option explicitly instead. The synchronous TestKit members
+            // this replaces were sync-over-async: the watch registration wrapped its async
+            // counterpart in a blocking call that discarded the success flag it returned (so a
+            // failed registration went unnoticed), and the terminated-message expectation blocked
+            // the calling thread for up to the remaining phase budget. This runs on Roles.First()
+            // at the end of every phase -- exactly the pinned-thread-pool-thread pattern this PR
+            // series exists to remove.
+            if (resultAggregator.HasValue)
             {
-                Watch(r);
-                ExpectMsg<Terminated>(t => t.ActorRef.Path == r.Path);
-            });
+                var r = resultAggregator.Value;
+                await WatchAsync(r);
+                await ExpectMsgAsync<Terminated>(t => t.ActorRef.Path == r.Path);
+            }
         }, Roles.First());
         await EnterBarrierAsync("cluster-result-done-" + Step);
     }
@@ -911,6 +949,36 @@ public class StressSpec : MultiNodeClusterSpec
     public TimeSpan ConvergenceWithin(TimeSpan baseDuration, int nodes)
     {
         return TimeSpan.FromMilliseconds(baseDuration.TotalMilliseconds * Settings.ConvergenceWithinFactor * nodes);
+    }
+
+    /// <summary>
+    /// How long it takes an abruptly-terminated churn member to actually disappear from the
+    /// ring: the phi accrual failure detector must first mark it unreachable, the
+    /// SplitBrainResolver must then sit through its stable-after window before downing it, and
+    /// the leader needs a further gossip round or two to move Down -> Removed and have that
+    /// reach every observer.
+    ///
+    /// Detection = heartbeat-interval + acceptable-heartbeat-pause + 3 * min-std-deviation (the
+    /// phi accrual detector's own crossing-threshold expectation -- see the failure-detector
+    /// comment on the spec config above). At this spec's config that is 1s + 20s + 3 * 0.1s =
+    /// 21.3s.
+    /// Then + split-brain-resolver.stable-after (10s here) before KeepMajority decides, plus a
+    /// 3 * gossip-interval (3 * 1s = 3s) margin for the leader's Down -> Removed gossip round to
+    /// actually reach the observers. Total at this spec's config: 21.3s + 10s + 3s = 34.3s.
+    /// </summary>
+    public TimeSpan ChurnMemberRemovalWithin()
+    {
+        var failureDetectorConfig = Cluster.Settings.FailureDetectorConfig;
+        var detection = Cluster.Settings.HeartbeatInterval
+                        + failureDetectorConfig.GetTimeSpan("acceptable-heartbeat-pause")
+                        + TimeSpan.FromTicks(failureDetectorConfig.GetTimeSpan("min-std-deviation").Ticks * 3);
+
+        var stableAfter = Sys.Settings.Config.GetTimeSpan("akka.cluster.split-brain-resolver.stable-after");
+
+        // margin for the leader's Down -> Removed gossip round to reach every observer
+        var leaderRemovalMargin = TimeSpan.FromTicks(Cluster.Settings.GossipInterval.Ticks * 3);
+
+        return detection + stableAfter + leaderRemovalMargin;
     }
 
     public async Task JoinOneAsync()
@@ -955,7 +1023,7 @@ public class StressSpec : MultiNodeClusterSpec
                 {
                     await ReportResult(async () =>
                     {
-                        RunOn(() =>
+                        await RunOnAsync(() =>
                         {
                             if (toSeedNodes)
                             {
@@ -965,6 +1033,7 @@ public class StressSpec : MultiNodeClusterSpec
                             {
                                 Cluster.Join(GetAddress(Roles.First()));
                             }
+                            return Task.CompletedTask;
                         }, joiningRoles);
                         await AwaitMembersUpAsync(currentRoles.Length, timeout: RemainingOrDefault);
                         return true;
@@ -1001,10 +1070,11 @@ public class StressSpec : MultiNodeClusterSpec
             var removeRole = Roles[NbrUsedRoles - 1];
             var removeAddress = GetAddress(removeRole);
             Console.WriteLine($"Preparing to {FormatNodeLeave()}[{removeAddress}] role [{removeRole.Name}] out of [{Roles.Count}]");
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 var watchee = Sys.ActorOf(Props.Create(() => new Watchee()), "watchee");
                 Console.WriteLine("Created watchee [{0}]", watchee);
+                return Task.CompletedTask;
             }, removeRole);
 
             await EnterBarrierAsync("watchee-created-" + Step);
@@ -1043,10 +1113,11 @@ public class StressSpec : MultiNodeClusterSpec
             }, Roles.First());
             await EnterBarrierAsync("watchee-established-" + Step);
 
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 if (!shutdown)
                     Cluster.Leave(GetAddress(Myself));
+                return Task.CompletedTask;
             }, removeRole);
 
             await RunOnAsync(async () =>
@@ -1100,12 +1171,13 @@ public class StressSpec : MultiNodeClusterSpec
                 var title = $"{FormatNodeLeave()} {numberOfNodes} in {NbrUsedRoles} nodes cluster";
                 await CreateResultAggregatorAsync(title, expectedResults: currentRoles.Length, includeInHistory: true);
 
-                RunOn(() =>
+                await RunOnAsync(() =>
                 {
                     if (!shutdown)
                     {
                         Cluster.Leave(GetAddress(Myself));
                     }
+                    return Task.CompletedTask;
                 }, removeRoles);
 
                 await RunOnAsync(async () =>
@@ -1172,10 +1244,10 @@ public class StressSpec : MultiNodeClusterSpec
                     });
                 }, currentRoles);
 
-                RunOn(() =>
+                await RunOnAsync(async () =>
                 {
                     Sys.ActorOf(Props.Create<MeasureDurationUntilDown>());
-                    AwaitAssert(() =>
+                    await AwaitAssertAsync(() =>
                     {
                         Cluster.IsTerminated.Should().BeTrue();
                     });
@@ -1193,8 +1265,8 @@ public class StressSpec : MultiNodeClusterSpec
         var returnValue = await thunk();
 
         // Use the retrying, fresh-probe-per-attempt aggregator lookup (matches CreateResultAggregatorAsync /
-        // AwaitClusterResultAsync) rather than the old one-shot ClusterResultAggregator(), whose single
-        // non-retried Identify/ExpectMsg made a lone lost reply under this spec's deliberate churn fatal.
+        // AwaitClusterResultAsync) rather than a one-shot, non-retried Identify/ExpectMsg lookup, which
+        // would make a lone lost reply under this spec's deliberate churn fatal.
         (await ClusterResultAggregatorAsync()).OnSuccess(r =>
         {
             r.Tell(new ClusterResult(Cluster.SelfAddress, TimeSpan.FromTicks(MonotonicClock.GetTicks() - startTime), LatestGossipStats - startStats));
@@ -1206,7 +1278,13 @@ public class StressSpec : MultiNodeClusterSpec
     public async Task ExerciseJoinRemoveAsync(string title, TimeSpan duration)
     {
         var activeRoles = Roles.Take(Settings.NumberOfNodesJoinRemove).ToArray();
-        var loopDuration = TimeSpan.FromSeconds(10) +
+
+        // Each round tears down the previous round's churn system abruptly (no cluster Leave --
+        // see ChurnMemberRemovalWithin), so the round's Within budget has to cover the full
+        // detector + resolver + leader removal path in addition to the new churn system joining
+        // and the ring converging. At this spec's config: ~34.3s removal (ChurnMemberRemovalWithin)
+        // + 10s + ConvergenceWithin(4s, members).
+        var loopDuration = ChurnMemberRemovalWithin() + TimeSpan.FromSeconds(10) +
                            ConvergenceWithin(TimeSpan.FromSeconds(4), NbrUsedRoles + activeRoles.Length);
         var rounds = (int)Math.Max(1.0d, (duration - loopDuration).TotalMilliseconds / loopDuration.TotalMilliseconds);
         var usedRoles = Roles.Take(NbrUsedRoles).ToArray();
@@ -1219,10 +1297,11 @@ public class StressSpec : MultiNodeClusterSpec
                 return previousAs;
 
             var t = title + " round " + counter;
-            RunOn(() =>
+            await RunOnAsync(() =>
             {
                 PhiObserver.Value.Tell(Reset.Instance);
                 StatsObserver.Value.Tell(Reset.Instance);
+                return Task.CompletedTask;
             }, usedRoles);
             await CreateResultAggregatorAsync(t, expectedResults:NbrUsedRoles, includeInHistory:true);
 
@@ -1236,8 +1315,12 @@ public class StressSpec : MultiNodeClusterSpec
 
                     if (activeRoles.Contains(Myself))
                     {
-                        // await the teardown instead of blocking on it: the sync Shutdown pins a thread
-                        // pool thread for the whole wait, starving this node's own heartbeat sender.
+                        // Abrupt shutdown -- no cluster Leave. The previous churn member has to
+                        // vanish and be removed by the failure detector plus the
+                        // SplitBrainResolver, the property this phase exists to prove (see
+                        // ChurnMemberRemovalWithin). Await the teardown instead of blocking on it:
+                        // the sync Shutdown pins a thread pool thread for the whole wait, starving
+                        // this node's own heartbeat sender.
                         if (previousAs.HasValue)
                             await ShutdownAsync(previousAs.Value);
 
@@ -1262,9 +1345,10 @@ public class StressSpec : MultiNodeClusterSpec
                     nextAddresses = ClusterView.Members.Select(x => x.Address).ToImmutableHashSet()
                         .Except(usedAddresses);
 
-                    RunOn(() =>
+                    await RunOnAsync(() =>
                     {
                         nextAddresses.Count.Should().Be(Settings.NumberOfNodesJoinRemove);
+                        return Task.CompletedTask;
                     }, usedRoles);
 
                     return (nextAs, nextAddresses);
@@ -1279,12 +1363,17 @@ public class StressSpec : MultiNodeClusterSpec
             return await Loop(counter + 1, nextAs, nextAddresses);
         }
 
-        // await the teardown instead of blocking on it: the sync Shutdown pins a thread pool thread for the
-        // whole wait, which on a busy agent starves this node's own heartbeat sender and gets it downed.
+        // Abrupt shutdown here too -- no cluster Leave. Await the teardown instead of blocking on
+        // it: the sync Shutdown pins a thread pool thread for the whole wait, which on a busy
+        // agent starves this node's own heartbeat sender and gets it downed.
         var lastAs = await Loop(1, Option<ActorSystem>.None, ImmutableHashSet<Address>.Empty);
         if (lastAs.HasValue)
             await ShutdownAsync(lastAs.Value);
 
+        // The last churn member also vanishes rather than leaving, so the observers see
+        // "NbrUsedRoles members, all Up" only after that member goes through the same
+        // detector + resolver + leader removal path as every round before it. loopDuration
+        // already budgets for that full removal window (see ChurnMemberRemovalWithin).
         await WithinAsync(loopDuration, async () =>
         {
             await RunOnAsync(async () =>
@@ -1357,9 +1446,13 @@ public class StressSpec : MultiNodeClusterSpec
         if (Settings.Infolog)
         {
             Log.Info("StressSpec CLR:" + Environment.NewLine + ClrInfo());
-            RunOn(() =>
+            // NOTE: this RunOnAsync passes no roles, so IsNode(nodes) (nodes.Contains(Myself) on an
+            // empty array) is always false and this block never runs on any node. Pre-existing dead
+            // code, left as-is here rather than changed as part of an unrelated cleanup.
+            await RunOnAsync(() =>
             {
                 Log.Info("StressSpec settings:" + Environment.NewLine + Settings);
+                return Task.CompletedTask;
             });
         }
         await EnterBarrierAsync("after-" + Step);
