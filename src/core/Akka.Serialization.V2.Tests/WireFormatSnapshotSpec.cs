@@ -13,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Akka.Actor;
+using Akka.Actor.Setup;
 using VerifyXunit;
 using Xunit;
 
@@ -90,8 +91,12 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
         // Keyword-named property/constructor-parameter escaping.
         "keyword-named-property",
 
-        // [AkkaEnvelopePayload]-shaped opaque payload: fixed inner serializer id + manifest + bytes.
+        // Object-typed envelope payload: fixed inner serializer id + manifest + bytes.
         "envelope-payload-fixed-inner-serializer",
+
+        // Object elements inside a collection: each element is its own envelope-payload boundary,
+        // same as an object-typed property above -- fixture from ObjectElementSpec.
+        "envelope-list-element-string-and-message",
 
         // AllowEmpty fieldless message: the smallest possible wire shape (a bare 1-byte map header).
         "fieldless-message-allow-empty",
@@ -107,7 +112,14 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
 
     public ValueTask InitializeAsync()
     {
-        _system = ActorSystem.Create("wire-format-snapshot-spec");
+        // Bind IGeneratedTestProtocol to GeneratedTestSerializer via the generator's own registration
+        // (rather than a bare, unregistered ActorSystem) so that the "envelope-list-element..." case's
+        // List<object> element -- a RequiredMessage, an IGeneratedTestProtocol type -- resolves through
+        // system.Serialization.FindSerializerFor to the SAME generated serializer instead of the
+        // system's default fallback. Every other case in this corpus is unaffected: none of them route
+        // an IGeneratedTestProtocol-typed value through FindSerializerFor.
+        var setup = ActorSystemSetup.Create(GeneratedTestSerializer.CreateRegistration().CreateSetup());
+        _system = ActorSystem.Create("wire-format-snapshot-spec", setup);
         var extendedSystem = (ExtendedActorSystem)_system;
         _generatedSerializer = new GeneratedTestSerializer(extendedSystem);
         _collectionSerializer = new CollectionTestSerializer(extendedSystem);
@@ -270,6 +282,14 @@ public sealed class WireFormatSnapshotSpec : IAsyncLifetime
                 CustomProtobufPayloadSerializer.IdentifierValue,
                 CustomProtobufPayloadSerializer.ManifestName,
                 Encoding.UTF8.GetBytes("fake-protobuf|payload-1|17")))),
+
+        // --------------------------------------------------------------------------------------
+        // Object elements inside a collection: each List<object> element is its own envelope-payload
+        // boundary, framed exactly like the object-typed property above -- fixture from
+        // ObjectElementSpec. A plain string then a message from the SAME generated serializer.
+        // --------------------------------------------------------------------------------------
+        "envelope-list-element-string-and-message" => Case(_generatedSerializer, new ObjectListMessage(
+            new List<object> { "note", new RequiredMessage("order-1", 42) })),
 
         // --------------------------------------------------------------------------------------
         // AllowEmpty fieldless message -- fixture from FieldlessAndStructFieldSpec. The smallest

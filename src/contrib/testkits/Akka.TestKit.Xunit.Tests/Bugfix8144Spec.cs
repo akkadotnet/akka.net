@@ -17,22 +17,19 @@ namespace Akka.TestKit.Tests;
 /// Verifies that implicit sender (TestActor) is preserved across async boundaries.
 /// Regression test for https://github.com/akkadotnet/akka.net/issues/8144
 /// </summary>
-public class Bugfix8144Spec: Xunit.TestKit, IAsyncLifetime
+public class Bugfix8144Spec: Xunit.TestKit
 {
-    public ValueTask DisposeAsync()
+    public override async ValueTask InitializeAsync()
     {
-        return new ValueTask(Task.CompletedTask);
-    }
+        await base.InitializeAsync();
 
-    public async ValueTask InitializeAsync()
-    {
         // Any await here can cause a thread switch, which previously
         // lost the [ThreadStatic] InternalCurrentActorCellKeeper.Current
         await Task.Delay(TimeSpan.FromMilliseconds(100));
     }
 
     [Fact]
-    public void Should_use_implicit_TestActor_sender_after_async_initialization()
+    public async Task Should_use_implicit_TestActor_sender_after_async_initialization()
     {
         // SimpleEchoActor echoes back to Sender - tests that implicit sender works
         var actor = Sys.ActorOf(SimpleEchoActor.Props());
@@ -42,6 +39,6 @@ public class Bugfix8144Spec: Xunit.TestKit, IAsyncLifetime
         actor.Tell("hello");
 
         // Should receive the echo back at TestActor
-        ExpectMsg("hello");
+        await ExpectMsgAsync("hello");
     }
 }

@@ -38,11 +38,19 @@ namespace Akka.Remote.Artery
     /// — a lookup against the SHARED <see cref="AssociationRegistry"/> keyed by the envelope's own
     /// <see cref="IInboundEnvelope.OriginUid"/> (always present in the decoded header, regardless
     /// of which connection/stream carried the envelope). This is safe because the SENDING side's
-    /// <see cref="OutboundHandshakeStage"/> holds all ordinary/large traffic behind its own
-    /// handshake-completion gate, which — by construction — cannot complete before the RECEIVING
-    /// side has already processed the peer's <see cref="HandshakeReq"/> (registering the uid) and
-    /// sent its <see cref="HandshakeRsp"/>. So by the time a receiver's ordinary connection ever
-    /// delivers a real user envelope for some uid, that uid is already registered.
+    /// <see cref="OutboundHandshakeStage"/> holds all ordinary/large traffic until a
+    /// <see cref="HandshakeRsp"/> answers a <see cref="HandshakeReq"/> of ITS OWN — and the only
+    /// thing that sends a Rsp is <c>HandleReq</c> below, immediately after it registers the
+    /// requester's uid. So by the time a sender releases its first ordinary envelope, this side has
+    /// already registered that sender's uid.
+    ///
+    /// <para>
+    /// That construction does NOT follow from the sender merely having an association with a known
+    /// <see cref="AssociationState.UniqueRemoteAddress"/> — our own <see cref="HandshakeReq"/> sets
+    /// that field on the sender, and it tells the sender nothing about whether WE know its uid. The
+    /// outbound stage used to shortcut on exactly that (issue #8496); see
+    /// <see cref="AssociationState.OutboundHandshakeCompleted"/>.
+    /// </para>
     /// </para>
     ///
     /// <list type="bullet">
@@ -67,20 +75,36 @@ namespace Akka.Remote.Artery
     /// <see cref="IControlMessageSubscriber"/>s.
     /// </description></item>
     /// <item><description>
-    /// Any ordinary (non-control) envelope: dropped with a debug log while the origin is unknown;
-    /// passed through once known (per the registry-based check above).
+    /// Any ordinary (non-control) envelope: dropped while the origin is unknown — with a
+    /// rate-limited WARNING, since that drop is unrecoverable loss (ordinary messages are never
+    /// resent); passed through once known (per the registry-based check above).
     /// </description></item>
     /// </list>
     /// </summary>
     internal sealed class InboundHandshakeStage : GraphStage<FlowShape<IInboundEnvelope, IInboundEnvelope>>
     {
-        public InboundHandshakeStage(IInboundContext context)
+        /// <param name="context">See <see cref="Context"/>.</param>
+        /// <param name="timeProvider">
+        /// Clock for the unknown-origin drop-warning rate limit -- see <see cref="TimeProvider"/>.
+        /// <see langword="null"/> (the default) resolves to the materializing
+        /// <see cref="Akka.Actor.ActorSystem"/>'s scheduler when the stream starts.
+        /// </param>
+        public InboundHandshakeStage(IInboundContext context, ITimeProvider? timeProvider = null)
         {
             Context = context;
+            TimeProvider = timeProvider;
             Shape = new FlowShape<IInboundEnvelope, IInboundEnvelope>(In, Out);
         }
 
         public IInboundContext Context { get; }
+
+        /// <summary>
+        /// Explicit clock for the drop-warning throttle, or <see langword="null"/> to use the
+        /// materializing system's scheduler. Typed as the BASE <see cref="ITimeProvider"/> rather
+        /// than <see cref="IScheduler"/> so a virtual clock (<c>TestScheduler</c>) satisfies it and
+        /// a spec can drive the throttle window with <c>Advance</c> instead of waiting it out.
+        /// </summary>
+        public ITimeProvider? TimeProvider { get; }
 
         public Inlet<IInboundEnvelope> In { get; } = new("InboundHandshake.in");
         public Outlet<IInboundEnvelope> Out { get; } = new("InboundHandshake.out");
@@ -91,7 +115,26 @@ namespace Akka.Remote.Artery
 
         private sealed class Logic : GraphStageLogic, IInHandler, IOutHandler
         {
+            /// <summary>
+            /// Minimum gap between unknown-origin drop warnings on this connection: the drop is
+            /// unrecoverable loss and must be visible, but a peer that restarted mid-flight can
+            /// produce a burst of them, so the rest are folded into a suppressed count. No
+            /// synchronization -- the stream runs one stage callback at a time.
+            /// </summary>
+            private static readonly TimeSpan UnknownOriginWarnInterval = TimeSpan.FromSeconds(10);
+
             private readonly InboundHandshakeStage _stage;
+            /// <summary>
+            /// Clock reading at the last warning; <see langword="null"/> until the first one.
+            /// Read via <see cref="ITimeProvider.Now"/> -- the only reading <c>TestScheduler</c>
+            /// virtualizes, so this is what makes the window testable without real waiting.
+            /// </summary>
+            private DateTimeOffset? _lastUnknownOriginWarning;
+
+            private long _suppressedUnknownOriginDrops;
+
+            /// <summary>Resolved once at <see cref="PreStart"/>; see <see cref="InboundHandshakeStage.TimeProvider"/>.</summary>
+            private ITimeProvider _timeProvider = null!;
 
             public Logic(InboundHandshakeStage stage) : base(stage.Shape)
             {
@@ -99,6 +142,13 @@ namespace Akka.Remote.Artery
                 SetHandler(stage.In, this);
                 SetHandler(stage.Out, this);
             }
+
+            public override void PreStart() =>
+                _timeProvider = _stage.TimeProvider
+                                ?? (Materializer as ActorMaterializer)?.System.Scheduler
+                                ?? throw new InvalidOperationException(
+                                    "No ITimeProvider available: this stream was not materialized " +
+                                    "by an ActorMaterializer, so pass one to the stage explicitly.");
 
             public void OnPush()
             {
@@ -129,9 +179,22 @@ namespace Akka.Remote.Artery
 
                 if (!_stage.Context.IsKnownOrigin(envelope.OriginUid))
                 {
-                    Log.Debug(
-                        "Dropping inbound message [{0}] from unknown origin uid [{1}] (no completed handshake for this uid yet).",
-                        envelope.Message.GetType(), envelope.OriginUid);
+                    var now = _timeProvider.Now;
+                    if (_lastUnknownOriginWarning is not { } lastWarning ||
+                        now - lastWarning >= UnknownOriginWarnInterval)
+                    {
+                        Log.Warning(
+                            "Dropping inbound message [{0}] from unknown origin uid [{1}]: no completed handshake for this uid yet. " +
+                            "The message is LOST - ordinary messages are not resent. [{2}] further drop(s) suppressed since the last warning.",
+                            envelope.Message.GetType(), envelope.OriginUid, _suppressedUnknownOriginDrops);
+                        _lastUnknownOriginWarning = now;
+                        _suppressedUnknownOriginDrops = 0;
+                    }
+                    else
+                    {
+                        _suppressedUnknownOriginDrops++;
+                    }
+
                     Pull(_stage.In);
                     return;
                 }
@@ -161,7 +224,11 @@ namespace Akka.Remote.Artery
                 _stage.Context.SendControl(req.From.Address, new HandshakeRsp(_stage.Context.LocalAddress));
             }
 
-            private void HandleRsp(HandshakeRsp rsp) => _stage.Context.CompleteHandshake(rsp.From);
+            // CompleteOutboundHandshake, not CompleteHandshake: a Rsp is the only proof that the
+            // peer has registered OUR uid, which is what gates our ordinary outbound streams
+            // (issue #8496). Re-completing with the same uid stays an idempotent no-op, so the
+            // duplicate Rsps our own idempotent Req retries produce cost nothing.
+            private void HandleRsp(HandshakeRsp rsp) => _stage.Context.CompleteOutboundHandshake(rsp.From);
         }
     }
 }

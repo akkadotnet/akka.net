@@ -66,28 +66,44 @@ The system SHALL provide a Roslyn incremental source generator that emits `Seria
 
 ### Requirement: Generated serializers support envelope payload boundaries
 
-Generated serializers SHALL support `[AkkaEnvelopePayload]` fields as Akka serializer boundaries rather than inline generated schemas.
+Generated serializers SHALL treat a field whose static type, after generic substitution, is `object` (or `object?`) as an Akka serializer boundary rather than an inline generated schema. No attribute is required, and none exists for this purpose.
 
 #### Scenario: Envelope payload field serialized
-- **WHEN** a generated serializer writes a field marked `[AkkaEnvelopePayload]`
+- **WHEN** a generated serializer writes an `object`-typed field
 - **THEN** it SHALL resolve the field value through normal Akka serializer lookup
 - **AND** it SHALL store the payload serializer id, serializer manifest, and opaque serialized payload bytes
 
 #### Scenario: Envelope payload field deserialized
-- **WHEN** a generated serializer reads a non-null `[AkkaEnvelopePayload]` field
+- **WHEN** a generated serializer reads a non-null `object`-typed field
 - **THEN** it SHALL recover the field value through normal Akka deserialization using the stored serializer id, manifest, and bytes
 
 #### Scenario: V2 envelope payload deserialized without byte-array copy
-- **WHEN** a generated serializer reads a non-null `[AkkaEnvelopePayload]` field whose payload serializer is V2
+- **WHEN** a generated serializer reads a non-null `object`-typed field whose payload serializer is V2
 - **THEN** it SHALL dispatch the MessagePack `bin` payload as a `ReadOnlySequence<byte>` without first copying it into a byte array
 
 #### Scenario: Unknown-size envelope payload serialized through staging buffer
-- **WHEN** a generated serializer writes a non-null `[AkkaEnvelopePayload]` field whose serialized length is not known before writing the MessagePack `bin` header
+- **WHEN** a generated serializer writes a non-null `object`-typed field whose serialized length is not known before writing the MessagePack `bin` header
 - **THEN** it SHALL stage the inner payload bytes before writing the outer `bin` field
 
 #### Scenario: Nested envelope payload chain
-- **WHEN** generated envelopes contain nested `[AkkaEnvelopePayload]` fields
+- **WHEN** generated envelopes contain nested `object`-typed fields
 - **THEN** generated V2 payloads and custom V1 payloads SHALL round-trip without requiring structural MessagePack encoding for the inner payload object
+
+#### Scenario: Generic wrapper closed over object is a boundary
+- **WHEN** a generic `[AkkaSerializable]` definition has a `[AkkaField]` property typed by its type parameter, and a registered closed construction substitutes `object` for that parameter
+- **THEN** the generator SHALL treat that field as a serializer boundary in the closed construction
+
+#### Scenario: Object elements inside a collection are boundaries
+- **WHEN** a supported collection's element type is `object` (an array, a list, a read-only or immutable collection, or a dictionary value -- a dictionary KEY typed `object` is rejected with AKKASG003 instead)
+- **THEN** the generator SHALL treat each element as its own serializer boundary, writing and reading it as an envelope payload the same way an `object`-typed field is
+
+#### Scenario: Union declaration on an object-typed field rejected
+- **WHEN** an `[AkkaField]` property typed `object` carries a field-level `[AkkaUnion]`
+- **THEN** the generator SHALL fail compilation with a diagnostic (AKKASG038), because an `object`-typed field is always a serializer boundary
+
+#### Scenario: Interface field without a closed set names the fixes
+- **WHEN** an `[AkkaField]` property's static type is an interface, an abstract class, or a type parameter with no closed member set
+- **THEN** the generator SHALL fail compilation with a diagnostic (AKKASG003) whose message names both fixes: declare a closed member set with `[AkkaUnion]`, or type the property as `object`
 
 ### Requirement: Generated serializers use explicit registration
 
@@ -167,7 +183,7 @@ Generated serializers SHALL initially support immutable message designs and nest
 
 ### Requirement: Generated serializers support manifest-discriminated closed unions
 
-The system SHALL support declaring a closed, explicitly-enumerated set of concrete `[AkkaSerializable]` member types for a field via `[AkkaUnion]`, encoded structurally inline and discriminated by manifest, distinct from the runtime-resolved `[AkkaEnvelopePayload]` serializer boundary.
+The system SHALL support declaring a closed, explicitly-enumerated set of concrete `[AkkaSerializable]` member types for a field via `[AkkaUnion]`, encoded structurally inline and discriminated by manifest, distinct from the runtime-resolved serializer boundary of an `object`-typed field.
 
 #### Scenario: Type-level union declaration
 - **WHEN** a union base interface or abstract class is annotated with `[AkkaUnion]`

@@ -102,7 +102,7 @@ namespace Akka.Remote.Tests.Artery
 
             // Simulate what InboundHandshakeStage does when the peer's HandshakeRsp arrives on
             // OUR inbound pipeline for the return direction.
-            registry.CompleteHandshake(remoteAddress, new UniqueAddress(remoteAddress, 222L));
+            registry.CompleteOutboundHandshake(remoteAddress, new UniqueAddress(remoteAddress, 222L));
 
             // Nothing re-triggers the stage directly; per the documented notification mechanism,
             // the retry timer (still running) is what notices completion and delivers the held
@@ -152,7 +152,7 @@ namespace Akka.Remote.Tests.Artery
             // slow to arrive.
             await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(300));
 
-            registry.CompleteHandshake(remoteAddress, new UniqueAddress(remoteAddress, 222L));
+            registry.CompleteOutboundHandshake(remoteAddress, new UniqueAddress(remoteAddress, 222L));
 
             // The retry timer (still running) is what notices completion and releases the held
             // element - bounded by one retry interval; a legal idempotent retry HandshakeReq may
@@ -268,7 +268,7 @@ namespace Akka.Remote.Tests.Artery
             await pub.SendNextAsync(new OutboundEnvelope("user-message", null, null));
             await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(200));
 
-            registry.CompleteHandshake(remoteAddress, new UniqueAddress(remoteAddress, 555L));
+            registry.CompleteOutboundHandshake(remoteAddress, new UniqueAddress(remoteAddress, 555L));
 
             var delivered = await sub.ExpectNextAsync(TimeSpan.FromSeconds(3));
             delivered.Message.Should().Be("user-message");
@@ -285,7 +285,7 @@ namespace Akka.Remote.Tests.Artery
 
             // Already-associated at PreStart (Completed immediately) -- exercises the
             // "ShouldReinjectForLiveness" path directly rather than the initial handshake path.
-            registry.CompleteHandshake(remoteAddress, new UniqueAddress(remoteAddress, 777L));
+            registry.CompleteOutboundHandshake(remoteAddress, new UniqueAddress(remoteAddress, 777L));
 
             var stage = new OutboundHandshakeStage(
                 context,
@@ -316,6 +316,63 @@ namespace Akka.Remote.Tests.Artery
             delivered.Message.Should().Be("immediate-payload");
 
             sentControl.Should().ContainSingle().Which.Should().BeOfType<HandshakeReq>("liveness re-injection still fires, just via the control side channel");
+        }
+
+        [Fact(DisplayName = "P2: OutboundHandshakeStage must return a held pending element to the association's channel on PostStop, not silently drop it")]
+        public async Task OutboundHandshakeStage_should_return_pending_element_to_channel_on_post_stop()
+        {
+            var registry = new AssociationRegistry();
+            var localAddress = NewLocal();
+            var remoteAddress = NewRemote();
+            var association = registry.AssociationFor(remoteAddress);
+
+            // Wired to the SAME association's control channel a real MaterializeOutboundStream
+            // materialization would use -- see IOutboundContext.ReturnUndelivered's remarks.
+            var context = new AssociationRegistryOutboundContext(
+                registry, localAddress, remoteAddress,
+                sendControl: _ => { },
+                returnUndelivered: envelope => association.TryEnqueueControl(envelope));
+
+            // A short handshakeTimeout is the trigger: it fails the stage (HandshakeTimeoutException)
+            // while an element is still held, exactly like a failed reconnect or a killed stream --
+            // the scenario P2 covers. retryInterval/injectHandshakeInterval are irrelevant here and
+            // set long so no retry Req competes with the assertions below.
+            var stage = new OutboundHandshakeStage(
+                context,
+                retryInterval: TimeSpan.FromSeconds(30),
+                handshakeTimeout: TimeSpan.FromMilliseconds(300),
+                injectHandshakeInterval: TimeSpan.FromSeconds(30));
+
+            var materializer = ActorMaterializer.Create(Sys);
+            var (pub, sub) = this.SourceProbe<IOutboundEnvelope>()
+                .ViaMaterialized(Flow.FromGraph(stage), Keep.Left)
+                .ToMaterialized(this.SinkProbe<IOutboundEnvelope>(), Keep.Both)
+                .Run(materializer);
+
+            // Drain the injected HandshakeReq first.
+            await sub.RequestAsync(1);
+            (await sub.ExpectNextAsync(TimeSpan.FromSeconds(2))).Message.Should().BeOfType<HandshakeReq>();
+
+            // A user element arrives while the handshake is still incomplete: OnPush grabs it off
+            // upstream and holds it (_pendingMessage) -- it is now OUT of whatever channel it came
+            // from, exactly like a real association's control queue holding a HandshakeReq,
+            // ArteryHeartbeat, or unwrapped DaemonMsgCreate.
+            var held = new OutboundEnvelope("payload-that-must-not-vanish", null, null);
+            await pub.SendNextAsync(held);
+            await sub.RequestAsync(1);
+            await sub.ExpectNoMsgAsync(TimeSpan.FromMilliseconds(100)); // genuinely held, not merely slow
+
+            // The handshake never completes, so the stage fails on its own timeout -- PostStop
+            // runs with the element still held.
+            var error = await sub.ExpectErrorAsync();
+            error.Should().BeOfType<HandshakeTimeoutException>();
+
+            // The held element must come back through the association's own channel -- never
+            // silently discarded. Before the P2 fix, PostStop only unsubscribed the handshake
+            // listener and the held element vanished with no Dropped event and no log.
+            association.ControlReader.TryRead(out var returned).Should().BeTrue(
+                "the element PostStop was still holding must be returned to the association's control channel");
+            returned!.Message.Should().Be("payload-that-must-not-vanish");
         }
 
         #endregion

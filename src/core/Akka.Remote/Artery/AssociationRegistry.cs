@@ -991,26 +991,105 @@ namespace Akka.Remote.Artery
         public long HandshakeGeneration => Interlocked.Read(ref _handshakeGeneration);
 
         /// <summary>
+        /// Stages waiting for this association's handshake to advance, keyed by subscriber so a
+        /// stage can register and deregister exactly its own entry. See
+        /// <see cref="SubscribeHandshakeStateChanged"/>.
+        /// </summary>
+        private readonly ConcurrentDictionary<object, Action> _handshakeListeners = new();
+
+        /// <summary>
+        /// Registers <paramref name="listener"/>, invoked on EVERY completion this association
+        /// records -- either direction -- so a waiting <see cref="OutboundHandshakeStage"/> learns
+        /// about it immediately instead of finding out on its next retry tick (which cost the first
+        /// message on a fresh association up to a full <c>handshake-retry-interval</c>).
+        ///
+        /// <para>
+        /// Firing on BOTH directions, rather than only on <see cref="CompleteOutboundHandshake"/>,
+        /// is deliberate and safe: this is a "something changed, re-check" nudge, and every
+        /// subscriber re-verifies the association state against its OWN completion rule before
+        /// acting (<c>OutboundHandshakeStage.RefreshCompletionFromContext</c>). A wake that does not
+        /// satisfy that rule -- an inbound Req while an ordinary stream waits for its Rsp, or a
+        /// completion belonging to a NEWER incarnation than the subscriber registered against --
+        /// leaves the subscriber exactly as it was. The broader trigger costs one no-op callback and
+        /// removes the same latency for the control stream and for reconnects.
+        /// </para>
+        ///
+        /// <para>
+        /// Listeners are invoked on whichever thread completed the handshake (an inbound stream's
+        /// thread) and MUST NOT throw or block -- the only production subscriber hands over via
+        /// <c>GraphStageLogic.GetAsyncCallback</c>, which merely enqueues to the subscriber's own
+        /// interpreter (and is a documented no-op once that stage has stopped).
+        /// </para>
+        /// </summary>
+        public void SubscribeHandshakeStateChanged(object subscriber, Action listener) =>
+            _handshakeListeners[subscriber] = listener;
+
+        /// <summary>Reverses <see cref="SubscribeHandshakeStateChanged"/>. Unknown keys are ignored.</summary>
+        public void UnsubscribeHandshakeStateChanged(object subscriber) =>
+            _handshakeListeners.TryRemove(subscriber, out _);
+
+        /// <summary>
+        /// Number of live <see cref="SubscribeHandshakeStateChanged"/> subscribers. Exposed so a
+        /// test can assert that a stopped stream leaves no registration behind -- outbound streams
+        /// are restarted repeatedly against an association that outlives them.
+        /// </summary>
+        public int HandshakeListenerCount => _handshakeListeners.Count;
+
+        /// <summary>
         /// CAS loop applying <see cref="AssociationState.CompleteHandshake"/>. Returns both the
         /// snapshot immediately before this call's effective transition and the resulting
         /// snapshot, so <see cref="AssociationRegistry"/> can tell — without a separate,
         /// racy read — whether (and from what uid) an incarnation change just happened.
         /// </summary>
-        public (AssociationState Previous, AssociationState Updated) CompleteHandshake(UniqueAddress peer)
+        public (AssociationState Previous, AssociationState Updated) CompleteHandshake(UniqueAddress peer) =>
+            Transition(peer, static (state, p) => state.CompleteHandshake(p));
+
+        /// <summary>
+        /// As <see cref="CompleteHandshake"/>, but applying
+        /// <see cref="AssociationState.CompleteOutboundHandshake"/> -- the only path that sets
+        /// <see cref="AssociationState.OutboundHandshakeCompleted"/> (issue #8496).
+        /// </summary>
+        public (AssociationState Previous, AssociationState Updated) CompleteOutboundHandshake(UniqueAddress peer) =>
+            Transition(peer, static (state, p) => state.CompleteOutboundHandshake(p));
+
+        private (AssociationState Previous, AssociationState Updated) Transition(
+            UniqueAddress peer,
+            Func<AssociationState, UniqueAddress, AssociationState> transition)
         {
             Interlocked.Increment(ref _handshakeGeneration);
 
             while (true)
             {
                 var current = _state;
-                var updated = current.CompleteHandshake(peer);
+                var updated = transition(current, peer);
 
                 if (ReferenceEquals(updated, current))
+                {
+                    // A no-op on the SNAPSHOT is still an event: the generation counter advanced,
+                    // and that is precisely what a restarted (ForceReqOnStart) stream waits for.
+                    NotifyHandshakeStateChanged();
                     return (current, current);
+                }
 
-                if (Interlocked.CompareExchange(ref _state, updated, current) == current)
+                // ReferenceEquals, not ==: AssociationState is a record, so == would be
+                // compiler-generated VALUE equality and a lost CAS could masquerade as a won one.
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _state, updated, current), current))
+                {
+                    NotifyHandshakeStateChanged();
                     return (current, updated);
+                }
             }
+        }
+
+        /// <summary>
+        /// Nudges every <see cref="SubscribeHandshakeStateChanged"/> subscriber. Called AFTER the
+        /// state swap and the generation increment, so a woken subscriber always reads the snapshot
+        /// the notification belongs to.
+        /// </summary>
+        private void NotifyHandshakeStateChanged()
+        {
+            foreach (var listener in _handshakeListeners.Values)
+                listener();
         }
 
         /// <summary>
@@ -1030,7 +1109,8 @@ namespace Akka.Remote.Artery
                 if (ReferenceEquals(updated, current))
                     return true;
 
-                if (Interlocked.CompareExchange(ref _state, updated, current) == current)
+                // Reference comparison -- see the matching note in Transition.
+                if (ReferenceEquals(Interlocked.CompareExchange(ref _state, updated, current), current))
                     return true;
             }
         }
@@ -1137,7 +1217,27 @@ namespace Akka.Remote.Artery
         public AssociationState CompleteHandshake(Address remoteAddress, UniqueAddress peer)
         {
             var association = AssociationFor(remoteAddress);
-            var (previous, updated) = association.CompleteHandshake(peer);
+            return Complete(association, peer, association.CompleteHandshake(peer));
+        }
+
+        /// <summary>
+        /// As <see cref="CompleteHandshake"/>, but records that the peer answered a
+        /// <see cref="HandshakeReq"/> of OURS -- see
+        /// <see cref="AssociationState.OutboundHandshakeCompleted"/>. Called only from
+        /// <see cref="InboundHandshakeStage"/>'s <c>HandleRsp</c>.
+        /// </summary>
+        public AssociationState CompleteOutboundHandshake(Address remoteAddress, UniqueAddress peer)
+        {
+            var association = AssociationFor(remoteAddress);
+            return Complete(association, peer, association.CompleteOutboundHandshake(peer));
+        }
+
+        private AssociationState Complete(
+            Association association,
+            UniqueAddress peer,
+            (AssociationState Previous, AssociationState Updated) transition)
+        {
+            var (previous, updated) = transition;
 
             if (!ReferenceEquals(previous, updated) &&
                 previous.UniqueRemoteAddress is { } previousPeer &&

@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.Versioning;
@@ -33,6 +34,21 @@ namespace Akka.MultiNode.TestAdapter.Internal
     {
         // Fixed TCP buffer size
         public const int TcpBufferSize = 10240;
+
+        /// <summary>
+        /// Value handed to the conductor node as <c>multinode.server-port</c>. Zero tells the node
+        /// to bind a free port and print it, which removes the race a probe-then-hand-over would
+        /// leave open.
+        /// </summary>
+        private const int AutoAssignConductorPort = 0;
+
+        /// <summary>
+        /// How long to wait for the conductor node to publish its port. Generous on purpose: the
+        /// node has to boot the runtime, load the test assembly and discover its specs before it
+        /// reaches the conductor bind. This only fires when that node hangs - a node that fails
+        /// outright exits, and the exit is detected immediately.
+        /// </summary>
+        private static readonly TimeSpan ConductorStartupTimeout = TimeSpan.FromSeconds(60);
 
         private ActorSystem TestRunSystem { get; set; }
         private IActorRef SinkCoordinator { get; set; }
@@ -145,41 +161,72 @@ akka.io.tcp {{
 
             var timelineCollector = TestRunSystem.ActorOf(Props.Create(() => new TimelineLogCollectorActor(Options.AppendLogOutput)));
 
-            var tasks = new List<Task<RunSummary>>();
-            var serverPort = SocketUtil.TemporaryTcpAddress("localhost").Port;
-            foreach (var nodeTest in _testCase.Nodes)
-            {
-                //Loop through each test, work out number of nodes to run on and kick off process
-                var args = new []
-                    {
-                        $@"-Dmultinode.test-class=""{nodeTest.TestCase.TypeName}""",
-                        $@"-Dmultinode.test-method=""{nodeTest.TestCase.MethodName}""",
-                        $@"-Dmultinode.max-nodes={_testCase.Nodes.Count}",
-                        $@"-Dmultinode.server-host=""{"localhost"}""",
-                        $@"-Dmultinode.server-port={serverPort}",
-                        $@"-Dmultinode.host=""{"localhost"}""",
-                        $@"-Dmultinode.index={nodeTest.Node - 1}",
-                        $@"-Dmultinode.role=""{nodeTest.Role}""",
-                        $@"-Dmultinode.listen-address={Options.ListenAddress}",
-                        $@"-Dmultinode.listen-port={Options.ListenPort}",
-                        $@"-Dmultinode.test-assembly=""{_testCase.AssemblyPath}"""
-                    };
-
-                // Start process for node
-                var runner = new MultiNodeTestRunner(
-                    nodeTest, _messageBus, args, _skipReason, _aggregator, SinkCoordinator,
-                    timelineCollector, Options, _cancellationTokenSource);
-
-                tasks.Add(runner.RunAsync());
-            }
-
             var summary = new RunSummary();
-            // Wait for all nodes to finish and collect results
-            while (tasks.Count > 0)
+            var tasks = new List<Task<RunSummary>>();
+            var nodes = _testCase.Nodes;
+
+            // The first node hosts the TestConductor. Start it alone with server-port=0, let it bind
+            // a free port, and read the port back off its stdout. Probing for a free port here and
+            // handing the number to the node is a race: the port is in the ephemeral range, so any
+            // outbound connection on the machine can take it before the conductor binds.
+            var conductorNode = nodes[0];
+            var conductorPortSource = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            // Own token source so the conductor node can be killed on its own when it never
+            // publishes a port, without cancelling the whole test run.
+            var conductorCts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token);
+            try
             {
-                var finished = await Task.WhenAny(tasks);
-                tasks.Remove(finished);
-                summary.Aggregate(finished.Result);
+                var conductorRunner = new MultiNodeTestRunner(
+                    conductorNode, _messageBus, BuildNodeArgs(conductorNode, AutoAssignConductorPort), _skipReason,
+                    _aggregator, SinkCoordinator, timelineCollector, Options, conductorCts, conductorPortSource);
+
+                var conductorTask = conductorRunner.RunAsync();
+                tasks.Add(conductorTask);
+
+                var serverPort = await AwaitConductorPortAsync(conductorPortSource.Task, conductorTask, conductorCts);
+                if (serverPort.HasValue)
+                {
+                    foreach (var nodeTest in nodes.Skip(1))
+                    {
+                        // Start process for node
+                        var runner = new MultiNodeTestRunner(
+                            nodeTest, _messageBus, BuildNodeArgs(nodeTest, serverPort.Value), _skipReason, _aggregator,
+                            SinkCoordinator, timelineCollector, Options, _cancellationTokenSource);
+
+                        tasks.Add(runner.RunAsync());
+                    }
+                }
+                else
+                {
+                    // No conductor, so there is nothing for the other nodes to attach to. Fail them
+                    // now with a message that names the cause, instead of starting them and letting
+                    // each one burn a 30 second attach timeout against a dead conductor.
+                    var failure = new ConductorStartupException(
+                        $"Node {conductorNode.Node} [{conductorNode.Role}] hosts the TestConductor but never published " +
+                        "its port, so this node was never started. See that node's output for the conductor failure.");
+
+                    foreach (var nodeTest in nodes.Skip(1))
+                    {
+                        _messageBus.QueueMessage(CreateTestStarting(nodeTest));
+                        _messageBus.QueueMessage(CreateTestFailed(nodeTest, 0, "", failure));
+                        _messageBus.QueueMessage(CreateTestFinished(nodeTest));
+                        summary.Total++;
+                        summary.Failed++;
+                    }
+                }
+
+                // Wait for all started nodes to finish and collect results
+                while (tasks.Count > 0)
+                {
+                    var finished = await Task.WhenAny(tasks);
+                    tasks.Remove(finished);
+                    summary.Aggregate(await finished);
+                }
+            }
+            finally
+            {
+                conductorCts.Dispose();
             }
 
             try
@@ -220,6 +267,69 @@ akka.io.tcp {{
             }
 
             return summary;
+        }
+
+        /// <summary>
+        /// Builds the command line for one node process.
+        /// </summary>
+        /// <param name="nodeTest">The node to start.</param>
+        /// <param name="serverPort">
+        /// Conductor port. <see cref="AutoAssignConductorPort"/> for the conductor node itself,
+        /// otherwise the port the conductor published.
+        /// </param>
+        private string[] BuildNodeArgs(NodeTest nodeTest, int serverPort)
+        {
+            return new[]
+            {
+                $@"-Dmultinode.test-class=""{nodeTest.TestCase.TypeName}""",
+                $@"-Dmultinode.test-method=""{nodeTest.TestCase.MethodName}""",
+                $@"-Dmultinode.max-nodes={_testCase.Nodes.Count}",
+                $@"-Dmultinode.server-host=""{"localhost"}""",
+                $@"-Dmultinode.server-port={serverPort}",
+                $@"-Dmultinode.host=""{"localhost"}""",
+                $@"-Dmultinode.index={nodeTest.Node - 1}",
+                $@"-Dmultinode.role=""{nodeTest.Role}""",
+                $@"-Dmultinode.listen-address={Options.ListenAddress}",
+                $@"-Dmultinode.listen-port={Options.ListenPort}",
+                $@"-Dmultinode.test-assembly=""{_testCase.AssemblyPath}"""
+            };
+        }
+
+        /// <summary>
+        /// Waits for the conductor node to publish the port its TestConductor bound to.
+        /// </summary>
+        /// <param name="portTask">Completes with the published port.</param>
+        /// <param name="conductorTask">The conductor node's run. Completing means that node exited.</param>
+        /// <param name="conductorCts">Cancelling this kills the conductor node process.</param>
+        /// <returns>The published port, or <c>null</c> when the conductor never came up.</returns>
+        private async Task<int?> AwaitConductorPortAsync(
+            Task<int> portTask,
+            Task<RunSummary> conductorTask,
+            CancellationTokenSource conductorCts)
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token);
+            var timeout = Task.Delay(ConductorStartupTimeout, timeoutCts.Token);
+            var completed = await Task.WhenAny(portTask, conductorTask, timeout);
+            timeoutCts.Cancel();
+
+            // Checked first: a node that exited has no live conductor, even if it managed to print
+            // the port on its way out.
+            if (conductorTask.IsCompleted)
+            {
+                PublishRunnerMessage(
+                    $"Node {_testCase.Nodes[0].Node} [{_testCase.Nodes[0].Role}] exited before its TestConductor was " +
+                    "reachable. The remaining nodes were not started.");
+                return null;
+            }
+
+            if (completed == portTask)
+                return await portTask;
+
+            PublishRunnerMessage(
+                $"Node {_testCase.Nodes[0].Node} [{_testCase.Nodes[0].Role}] did not publish a TestConductor port " +
+                $"within {ConductorStartupTimeout}; killing it. The remaining nodes were not started.");
+            conductorCts.Cancel();
+            return null;
         }
 
         #region Message factory methods
@@ -279,6 +389,28 @@ akka.io.tcp {{
                 FinishTime = DateTimeOffset.UtcNow,
                 Output = output,
                 Warnings = null
+            };
+        }
+
+        /// <summary>
+        /// Closes out a node that was reported without running a process. Every
+        /// <see cref="TestStarting"/> needs a matching <see cref="TestFinished"/>.
+        /// </summary>
+        internal TestFinished CreateTestFinished(NodeTest test)
+        {
+            return new TestFinished
+            {
+                AssemblyUniqueID = _ids.AssemblyUniqueID,
+                TestCollectionUniqueID = _ids.TestCollectionUniqueID,
+                TestClassUniqueID = _ids.TestClassUniqueID,
+                TestMethodUniqueID = _ids.TestMethodUniqueID,
+                TestCaseUniqueID = _ids.TestCaseUniqueID,
+                TestUniqueID = test.UniqueID,
+                ExecutionTime = 0m,
+                FinishTime = DateTimeOffset.UtcNow,
+                Output = "",
+                Warnings = null,
+                Attachments = new Dictionary<string, TestAttachment>()
             };
         }
 
