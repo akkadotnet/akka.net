@@ -41,7 +41,7 @@ namespace Akka.Cluster.Serialization;
 /// mirror (below) and delegates the MessagePack encoding to the source-generated
 /// <see cref="ReliableDeliveryMessagePackCodec"/>, exactly as the protobuf serializer translates
 /// domain object &lt;-&gt; generated proto message. Nested user payloads are serializer boundaries:
-/// the codec's <c>[AkkaEnvelopePayload]</c> fields preserve the (serializerId, manifest, bytes)
+/// the codec's <c>object</c>-typed payload fields preserve the (serializerId, manifest, bytes)
 /// triple, the direct analog of the protobuf side's <c>WrappedPayloadSupport</c>. Chunked payloads
 /// ride through as raw bytes.
 /// </para>
@@ -365,7 +365,7 @@ internal sealed partial class ReliableDeliveryMessagePackCodec : AkkaSerializer
 // ---------------------------------------------------------------------------------------------
 // Wire mirrors. Field ids and manifests are PERMANENT WIRE FORMAT once shipped - extend-only.
 // The shapes mirror src/protobuf/ReliableDelivery.proto field-for-field, with two deltas:
-//  * the protobuf Payload sub-message (WrappedPayloadSupport) becomes an [AkkaEnvelopePayload]
+//  * the protobuf Payload sub-message (WrappedPayloadSupport) becomes an object-typed
 //    field (same (serializerId, manifest, bytes) triple, MessagePack-framed);
 //  * the chunk flags live on ChunkedMessageWire instead of duplicated top-level
 //    firstChunk/lastChunk/isChunk booleans (they are derived properties on the domain types).
@@ -384,7 +384,7 @@ internal sealed record SequencedMessageWire(
     [property: AkkaField(4)] bool First,
     [property: AkkaField(5)] bool Ack,
     [property: AkkaField(6)] IActorRef? ProducerControllerRef,
-    [property: AkkaField(7), AkkaEnvelopePayload] object? Payload,
+    [property: AkkaField(7)] object? Payload,
     [property: AkkaField(8)] ChunkedMessageWire? Chunk) : IReliableDeliveryWireMessage;
 
 /// <summary>
@@ -430,7 +430,7 @@ internal sealed record MessageSentWire(
     [property: AkkaField(2)] string Qualifier,
     [property: AkkaField(3)] bool Ack,
     [property: AkkaField(4)] long Timestamp,
-    [property: AkkaField(5), AkkaEnvelopePayload] object? Payload,
+    [property: AkkaField(5)] object? Payload,
     [property: AkkaField(6)] ChunkedMessageWire? Chunk,
     [property: AkkaField(7)] string TypeName) : IReliableDeliveryWireMessage;
 
