@@ -108,12 +108,11 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
                 // CLOSED-LOOP, self-verifying retry instead of an open-loop blind resend
                 // (mirrors the Subject actor in RemoteNodeRestartDeathWatchSpec, PR #8404) - but
                 // the ack still has to actually leave before the transport underneath it dies.
-                // Build 131332 (this PR's own CI run, Linux Artery) showed why an inline
-                // Terminate() cannot be trusted to let that happen: third's Shutdown actor replied
-                // "shutdown-ack" and called Context.System.Terminate() in the same handler at
-                // 02:26:57.990, and Artery tore down third's outbound streams before any of them
-                // could flush - "Artery Ordinary outbound connection to [first] failed ... with
-                // AbruptStageTerminationException" at 57.992 - so the ack never reached the socket.
+                // A CI run showed why an inline Terminate() cannot be trusted to let that happen:
+                // third's Shutdown actor replied "shutdown-ack" and called
+                // Context.System.Terminate() in the same handler, and the transport tore down
+                // third's outbound connections before any of them could flush the ack - so it
+                // never reached the socket.
                 // First then kept retrying "shutdown" every 500ms against a process that had
                 // already exited, and its 20s closed-loop kill timed out ("AwaitAssert failed,
                 // timeout [00:00:20] is over after [9] attempts"). Local runs only passed because
@@ -148,11 +147,10 @@ public class DistributedPubSubRestartSpecConfig : MultiNodeConfig
             // that fact the same event instead of signalling readiness some other way that could
             // race this actor's own creation.
             //
-            // A single send is not enough to rely on: it is an ActorSelectionMessage, which rides
-            // the ORDINARY lane, and Artery's OutboundHandshakeStage holds one element on that
-            // lane while the handshake to this fresh incarnation is still gating. If that stage's
-            // materialization stops before the handshake completes, the held element is discarded
-            // and the ping is gone for good - first would then wait out its whole 60s window for
+            // A single send is not enough to rely on: it is an ActorSelectionMessage, which
+            // crosses the outbound handshake gate to this fresh incarnation, and a message held
+            // there can be discarded if the handshake does not complete in time - the ping would
+            // then be gone for good and first would wait out its whole 60s window for
             // nothing. So resend on a self-scheduled timer instead of sending once: every 500ms,
             // undilated (this is a resend cadence, not a test assertion bound - see Scheduler
             // .Advanced), until first proves it got one. The forwarder on first
@@ -295,22 +293,21 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
             // Wait for third's restarted incarnation to make first contact, instead of starting
             // this window's clock at Shutdown()'s return - before graceful CoordinatedShutdown,
             // the fresh ActorSystem, the rebind, the self-join and third's own 5s ExpectNoMsg
-            // have even begun. This is not merely a signal: the inbound HandshakeReq that carries
-            // it is what completes first's outbound handshake to the new incarnation
-            // (InboundHandshakeStage.HandleReq -> CompleteHandshake), so by the time this
-            // returns, the ordinary lane the kill loop below uses is no longer gated on the dead
+            // have even begun. This is not merely a signal: the handshake message that carries
+            // it is what completes first's outbound handshake to the new incarnation, so by the
+            // time this returns, the lane the kill loop below uses is no longer gated on the dead
             // old uid. Measured worst case for that whole sequence: 12.9s of graceful shutdown +
             // 6s before the restarted actors even exist + 21s of re-association = 39.9s: the 60s
             // bound leaves about 20s of margin above the measured worst case. And unlike a single
             // send, this wait cannot be defeated by the ping itself getting lost in flight - see
-            // the resend timer in Shutdown.PreStart above - so it does not depend on any fix to
-            // how Artery's handshake stage handles a held element on stop.
+            // the resend timer in Shutdown.PreStart above - so it does not depend on how the
+            // transport's handshake gate handles a held element on stop.
             await readyProbe.ExpectMsgAsync<string>(
                 msg => msg == DistributedPubSubRestartSpecConfig.ReadySignal, 60.Seconds());
 
             // ActorSelection.Tell, not ResolveOne + a resolved ref: only an ActorSelectionMessage
-            // pierces a quarantined association (ArteryRemoting.Send drops a plain Tell to a
-            // quarantined peer; Pekko's Association.scala carries the identical carve-out, and
+            // pierces a quarantined association (a plain Tell to a quarantined peer is dropped at
+            // the transport layer; Pekko's Association.scala carries the identical carve-out, and
             // upstream's own restart spec relies on exactly that). The ready-ping above is
             // guaranteed to have healed the association by this point: readyProbe could only have
             // received the ping above once first's inbound handshake to third's new incarnation
@@ -357,14 +354,11 @@ public class DistributedPubSubRestartSpec : MultiNodeClusterSpec
                     $"cannot rebind [{node3Address}] until the old one releases it.", e);
             }
 
-            // Pin the fresh system to the SAME wire address for BOTH transports - under
-            // AKKA_MNTR_TRANSPORT=artery the classic dot-netty key is inert and the fresh
-            // system would bind a random artery canonical.port instead.
+            // Pin the fresh system to the SAME wire address the old one held.
             var newSystem = ActorSystem.Create(
                 Sys.Name,
                 ConfigurationFactory
-                    .ParseString($"akka.remote.dot-netty.tcp.port={node3Address.Port}\n" +
-                        $"akka.remote.artery.canonical.port={node3Address.Port}")
+                    .ParseString($"akka.remote.dot-netty.tcp.port={node3Address.Port}")
                     .WithFallback(Sys.Settings.Config));
 
             try
