@@ -253,13 +253,23 @@ public class ClusterClientSpec : MultiNodeClusterSpec
         ClusterClientReceptionist.Get(Sys);
     }
 
-    private async Task AwaitCount(int expected)
+    /// <summary>
+    /// Polls the local DistributedPubSub mediator until it holds <paramref name="expected"/> entries.
+    /// </summary>
+    /// <param name="expected">The registration count to converge on.</param>
+    /// <param name="max">
+    /// Explicit budget for the convergence poll. Callers that still sit inside a Within may leave this
+    /// null to keep inheriting that block's remaining time; callers with no ambient budget must pass a
+    /// value, otherwise this falls back to SingleExpectDefault (3s) and fails long before the mediators
+    /// have gossiped.
+    /// </param>
+    private async Task AwaitCount(int expected, TimeSpan? max = null)
     {
         await AwaitAssertAsync(async () =>
         {
             DistributedPubSub.Get(Sys).Mediator.Tell(Count.Instance);
             (await ExpectMsgAsync<int>()).Should().Be(expected);
-        });
+        }, max ?? RemainingOrDefault);
     }
 
     private RoleName GetRoleName(Address address)
@@ -293,26 +303,30 @@ public class ClusterClientSpec : MultiNodeClusterSpec
 
     public async Task ClusterClient_must_startup_cluster()
     {
-        await WithinAsync(30.Seconds(), async () =>
+        // No umbrella on this phase: it is five barriers around one convergence poll, and a barrier
+        // inside a Within takes RemainingOr(barrier-timeout), so the ambient budget starves the
+        // rendezvous as the phase runs long instead of failing at whatever actually ran long.
+        await Join(_config.First, _config.First);
+        await Join(_config.Second, _config.First);
+        await Join(_config.Third, _config.First);
+        await Join(_config.Fourth, _config.First);
+
+        RunOn(() =>
         {
-            await Join(_config.First, _config.First);
-            await Join(_config.Second, _config.First);
-            await Join(_config.Third, _config.First);
-            await Join(_config.Fourth, _config.First);
+            var service = Sys.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "testService");
+            ClusterClientReceptionist.Get(Sys).RegisterService(service);
+        }, _config.Fourth);
 
-            RunOn(() =>
-            {
-                var service = Sys.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "testService");
-                ClusterClientReceptionist.Get(Sys).RegisterService(service);
-            }, _config.Fourth);
+        await RunOnAsync(async () =>
+        {
+            // The registration has to reach every node's mediator, and DistributedPubSub gossips on
+            // akka.cluster.pub-sub.gossip-interval (1s) in a cluster that has only just formed. 20s
+            // is ~20 gossip rounds, and matches what the 30s umbrella left here once the four join
+            // barriers had run.
+            await AwaitCount(1, 20.Seconds());
+        }, _config.First, _config.Second, _config.Third, _config.Fourth);
 
-            await RunOnAsync(async () =>
-            {
-                await AwaitCount(1);
-            }, _config.First, _config.Second, _config.Third, _config.Fourth);
-
-            await EnterBarrierAsync("after-1");
-        });
+        await EnterBarrierAsync("after-1");
     }
 
     public async Task ClusterClient_must_communicate_to_any_node_in_cluster()
@@ -331,9 +345,11 @@ public class ClusterClientSpec : MultiNodeClusterSpec
             {
                 await ExpectMsgAsync("hello");
             }, _config.Fourth);
-
-            await EnterBarrierAsync("after-2");
         });
+
+        // Outside the Within. A barrier inside one enters with RemainingOr(barrier-timeout), so it
+        // starves exactly when the phase it is closing has run long and needs the rendezvous most.
+        await EnterBarrierAsync("after-2");
     }
 
     public async Task ClusterClient_must_work_with_ask()
@@ -353,9 +369,10 @@ public class ClusterClientSpec : MultiNodeClusterSpec
             {
                 await ExpectMsgAsync("hello-request");
             }, _config.Fourth);
-
-            await EnterBarrierAsync("after-3");
         });
+
+        // Outside the Within - see the note on "after-2".
+        await EnterBarrierAsync("after-3");
     }
 
     public async Task ClusterClient_must_demonstrate_usage()
@@ -404,8 +421,10 @@ public class ClusterClientSpec : MultiNodeClusterSpec
 
             // strange, barriers fail without this sleep
             await Task.Delay(1000);
-            await EnterBarrierAsync("after-4");
         });
+
+        // Outside the Within - see the note on "after-2".
+        await EnterBarrierAsync("after-4");
     }
 
     public async Task ClusterClient_must_report_events()
@@ -474,9 +493,10 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                 }
 
             }, _config.First, _config.Second, _config.Third);
-
-            await EnterBarrierAsync("after-5");
         });
+
+        // Outside the Within - see the note on "after-2".
+        await EnterBarrierAsync("after-5");
     }
 
     public async Task ClusterClient_must_report_removal_of_a_receptionist()
@@ -512,9 +532,10 @@ public class ClusterClientSpec : MultiNodeClusterSpec
 
                 await probe.FishForMessageAsync(o => (o is ContactPointRemoved cp && cp.ContactPoint.Equals(unreachableContact)), TimeSpan.FromSeconds(10), "removal");
             }, _config.Client);
+        });
 
-            await EnterBarrierAsync("after-7");
-        }); 
+        // Outside the Within - see the note on "after-2".
+        await EnterBarrierAsync("after-7");
     }
 
     public async Task ClusterClient_must_reestablish_connection_to_another_receptionist_when_server_is_shutdown()
@@ -582,9 +603,10 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                     });
                 });
             }, _config.Client);
-
-            await EnterBarrierAsync("after-6");
         });
+
+        // Outside the Within - see the note on "after-2".
+        await EnterBarrierAsync("after-6");
     }
 
     public async Task ClusterClient_must_reestablish_connection_to_receptionist_after_partition()
@@ -630,71 +652,113 @@ public class ClusterClientSpec : MultiNodeClusterSpec
                 });
                 Sys.Stop(c);
             }, _config.Client);
-
-            await EnterBarrierAsync("after-8");
         });
+
+        // Outside the Within - see the note on "after-2". This one closes the phase that hands the
+        // server-restart phase its single surviving receptionist, so a starved rendezvous here lands
+        // the next phase on a partially torn-down cluster.
+        await EnterBarrierAsync("after-8");
     }
 
     public async Task ClusterClient_must_reestablish_connection_to_receptionist_after_server_restart()
     {
-        await WithinAsync(60.Seconds(), async () =>
+        // No umbrella Within on this phase. It ends in a barrier, and EnterBarrier's budget is
+        // RemainingOr(barrier-timeout): inside a Within the rendezvous inherits whatever is left of
+        // the umbrella and starves as the phase runs long, so the spec reports a barrier failure
+        // instead of naming the wait that actually overran. Every wait below carries its own bound,
+        // derived from the cadence it is waiting on.
+        await RunOnAsync(async () =>
         {
-            await RunOnAsync(async () =>
+            _remainingServerRoleNames.Count.Should().Be(1);
+            var remainingContacts = _remainingServerRoleNames.Select(r => Node(r) / "system" / "receptionist").ToImmutableHashSet();
+            var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(remainingContacts)), "client4");
+
+            c.Tell(new ClusterClient.Send("/user/service2", "bonjour4", localAffinity: true));
+            var reply = await ExpectMsgAsync<ClusterClientSpecConfig.Reply>(10.Seconds());
+            reply.Msg.Should().Be("bonjour4-ack");
+            reply.Node.Should().Be(remainingContacts.First().Address);
+
+            var logSource = $"{Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress}/user/client4";
+
+            // Both filters take an explicit budget. Left implicit, EventFilter falls back to
+            // RemainingOrDefault - under the old umbrella that meant "whatever is left of the 60s",
+            // so the filter and the umbrella expired at the same instant and the umbrella's
+            // "Block was still running" won the race, hiding WHICH log line never arrived.
+            //
+            // Inner window, "Lost contact". Clock starts when the conductor kills the server:
+            //   the client's DeadlineFailureDetector trips at
+            //     heartbeat-interval (1s) + acceptable-heartbeat-pause (3s)                = 4s
+            //   and is only consulted on a HeartbeatTick, so detection lands within one
+            //     further heartbeat-interval                                               = 1s
+            //   plus the conductor round trip carrying the shutdown and the server's own
+            //     CoordinatedShutdown (flush-wait-on-shutdown is 2s on classic)           ~= 2s
+            //   = 7s of real cadence -> 10s.
+            //
+            // Outer window, "Connected to". EventFilter starts its clock AFTER the inner block
+            // returns, so this budget is measured from the moment "Lost contact" fired:
+            //   the client's association to the dead incarnation is gated for
+            //     akka.remote.retry-gate-closed-for                                        = 5s
+            //   and an Identify sent into a closed gate is dropped, so it takes up to
+            //     3 x establishing-get-contacts-interval (3s)                              = 9s
+            //   to land one after the gate reopens. The restarted server's rebind, Join and
+            //   RegisterService (~3s) run inside that same window.
+            //   = 14s of real cadence -> 20s, so a loaded agent may slip a retry cycle.
+            await EventFilter.Info(start: "Connected to", source: logSource).ExpectOneAsync(20.Seconds(), async () =>
             {
-                _remainingServerRoleNames.Count.Should().Be(1);
-                var remainingContacts = _remainingServerRoleNames.Select(r => Node(r) / "system" / "receptionist").ToImmutableHashSet();
-                var c = Sys.ActorOf(ClusterClient.Props(ClusterClientSettings.Create(Sys).WithInitialContacts(remainingContacts)), "client4");
-
-                c.Tell(new ClusterClient.Send("/user/service2", "bonjour4", localAffinity: true));
-                var reply = ExpectMsg<ClusterClientSpecConfig.Reply>(10.Seconds());
-                reply.Msg.Should().Be("bonjour4-ack");
-                reply.Node.Should().Be(remainingContacts.First().Address);
-
-                var logSource = $"{Sys.AsInstanceOf<ExtendedActorSystem>().Provider.DefaultAddress}/user/client4";
-
-                await EventFilter.Info(start: "Connected to", source:logSource).ExpectOneAsync(async () =>
+                await EventFilter.Info(start: "Lost contact", source: logSource).ExpectOneAsync(10.Seconds(), async () =>
                 {
-                    await EventFilter.Info(start: "Lost contact", source:logSource).ExpectOneAsync(async () =>
-                    {
-                        // shutdown server
-                        await TestConductor.ShutdownAsync(_remainingServerRoleNames.First());
-                    });
+                    // shutdown server
+                    await TestConductor.ShutdownAsync(_remainingServerRoleNames.First());
                 });
+            });
 
-                // After reconnection, verify we can communicate with the restarted server
-                // by sending a test message and expecting a reply. This ensures service2
-                // is fully registered on sys2 before we send the shutdown command.
-                await AwaitAssertAsync(async () =>
-                {
-                    var probe = CreateTestProbe();
-                    c.Tell(new ClusterClient.Send("/user/service2", "bonjour5", localAffinity: true), probe.Ref);
-                    var reply2 = await probe.ExpectMsgAsync<ClusterClientSpecConfig.Reply>(3.Seconds());
-                    reply2.Msg.Should().Be("bonjour5-ack");
-                }, 15.Seconds());
-
-                // Verify reconnection works by confirming service2 is responsive
-                // The test goal (reconnection after restart) is now proven
-                await EnterBarrierAsync("reconnection-verified");
-            }, _config.Client);
-
-            await RunOnAsync(async () =>
+            // "Connected to" only proves the client found the restarted receptionist. Prove the
+            // round trip too: ClusterClientReceptionist.Get(sys2) and RegisterService(service2) are
+            // two separate messages on the server, so the client can connect between them.
+            // 10s = 10 attempts at the 1s per-attempt expect below; the connection is already up,
+            // so one retry is the realistic worst case.
+            await AwaitAssertAsync(async () =>
             {
-                await Sys.WhenTerminated.WaitAsync(20.Seconds());
-                // start new system on same port
-                var port = Cluster.Get(Sys).SelfAddress.Port;
-                var sys2 = ActorSystem.Create(
-                    Sys.Name,
-                    ConfigurationFactory.ParseString($"akka.remote.dot-netty.tcp.port={port}").WithFallback(Sys.Settings.Config));
-                Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
-                var service2 = sys2.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "service2");
-                ClusterClientReceptionist.Get(sys2).RegisterService(service2);
+                var probe = CreateTestProbe();
+                c.Tell(new ClusterClient.Send("/user/service2", "bonjour5", localAffinity: true), probe.Ref);
+                var reply2 = await probe.ExpectMsgAsync<ClusterClientSpecConfig.Reply>(1.Seconds());
+                reply2.Msg.Should().Be("bonjour5-ack");
+            }, 10.Seconds());
 
-                // Wait for client to confirm reconnection test passed
-                await EnterBarrierAsync("reconnection-verified");
+            // Reconnection after restart is now proven. Release the restarted server.
+            await EnterBarrierAsync("reconnection-verified");
+        }, _config.Client);
 
-                // Terminate sys2 directly - don't rely on ClusterClient message delivery
-                await sys2.Terminate();
-            }, _remainingServerRoleNames.ToArray());
-        });
+        await RunOnAsync(async () =>
+        {
+            // Bound on the old system releasing the wire address the fresh system rebinds below:
+            // flush-wait-on-shutdown (2s) plus the CoordinatedShutdown phases, observed at ~2s on
+            // classic and ~0.03s on artery. 20s names the dependency without inviting a hang.
+            await Sys.WhenTerminated.WaitAsync(20.Seconds());
+
+            // StartNewSystemAsync, not a hand-rolled ActorSystem.Create. It does two things this
+            // phase cannot work without:
+            //   1. it pins the fresh system to the SAME host:port on BOTH transports. The old code
+            //      set only akka.remote.dot-netty.tcp.port, which is inert under
+            //      AKKA_MNTR_TRANSPORT=artery, so the replacement bound a random canonical port and
+            //      the client - still polling the address it was handed - could never reconnect.
+            //   2. it attaches a fresh TestConductor. TestConductor.Shutdown took the old Sys down
+            //      and the conductor client went with it, so until a new one is attached this node
+            //      has no barrier to rendezvous on at all.
+            var sys2 = await StartNewSystemAsync();
+            Cluster.Get(sys2).Join(Cluster.Get(sys2).SelfAddress);
+            var service2 = sys2.ActorOf(Props.Create(() => new ClusterClientSpecConfig.TestService(TestActor)), "service2");
+            ClusterClientReceptionist.Get(sys2).RegisterService(service2);
+
+            // A real rendezvous now: this node parks here while the client proves it reconnected,
+            // and that is what keeps sys2 alive long enough for the client to reach it. Before the
+            // conductor was re-attached this await could never complete on this node, while on the
+            // client side the conductor had already dropped this role - so the same barrier passed
+            // in ~1ms without synchronizing anything.
+            await EnterBarrierAsync("reconnection-verified");
+
+            // Terminate sys2 directly - don't rely on ClusterClient message delivery
+            await sys2.Terminate();
+        }, _remainingServerRoleNames.ToArray());
     }
 }
